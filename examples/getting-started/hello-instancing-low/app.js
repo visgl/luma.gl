@@ -1,6 +1,8 @@
-/* global document, window, requestAnimationFrame, cancelAnimationFrame */
+/* global window, requestAnimationFrame, cancelAnimationFrame */
 import {assembleShaders} from '@luma.gl/shadertools';
 import {polyfillContext} from '@luma.gl/gltools';
+import {MiniAnimationLoop} from '../../utils';
+
 const INFO_HTML = `
 <p>
 Hello Instancing - Low-level
@@ -26,24 +28,13 @@ const colorShaderModule = {
   `
 };
 
-export default class AppAnimationLoop {
+export default class AppAnimationLoop extends MiniAnimationLoop {
   static getInfo() {
     return INFO_HTML;
   }
 
   start(props) {
-    let canvas;
-    if (props.canvas) {
-      canvas = document.getElementById(props.canvas);
-      const dpr = window.devicePixelRatio || 1;
-      canvas.height = canvas.clientHeight * dpr;
-      canvas.width = canvas.clientWidth * dpr;
-    } else {
-      canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 600;
-      document.body.appendChild(canvas);
-    }
+    const canvas = this._getCanvas(props);
 
     const gl = polyfillContext(canvas.getContext('webgl'));
     gl.clearColor(0, 0, 0, 1);
@@ -153,8 +144,6 @@ export default class AppAnimationLoop {
   stop() {
     cancelAnimationFrame(this.resources.rafHandle);
   }
-
-  _setDisplay() {}
 
   delete() {
     const {gl, positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
