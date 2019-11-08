@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/addons",
-  "version": "8.0.0-alpha.1",
+  "version": "8.0.0-alpha.2",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,7 @@
   "dependencies": {
     "@loaders.gl/gltf": "^1.3.0",
     "@loaders.gl/images": "^1.3.0",
-    "@luma.gl/constants": "8.0.0-alpha.1",
+    "@luma.gl/constants": "8.0.0-alpha.2",
     "math.gl": "^3.0.0"
   },
   "peerDependencies": {
@@ -44,5 +44,6 @@
   "devDependencies": {
     "@loaders.gl/core": "^1.3.0",
     "@loaders.gl/polyfills": "^1.3.0"
-  }
+  },
+  "gitHead": "8879619ac0a9f82671715f78e98958051da8f6c5"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/shadertools",
-  "version": "8.0.0-alpha.1",
+  "version": "8.0.0-alpha.2",
   "description": "Shader module system for luma.gl",
   "license": "MIT",
   "repository": {
@@ -38,5 +38,6 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "math.gl": "^3.0.0"
-  }
+  },
+  "gitHead": "8879619ac0a9f82671715f78e98958051da8f6c5"
 }
