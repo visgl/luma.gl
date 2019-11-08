@@ -13,52 +13,22 @@
       "title": "Getting Started",
       "entries": [
         { "entry": "docs/get-started/README" },
-        { "entry": "docs/get-started/examples" }
+        { "entry": "docs/get-started/hello-triangle" },
+        { "entry": "docs/get-started/high-medium-low" },
+        { "entry": "docs/get-started/hello-instancing-high" },
+        { "entry": "docs/get-started/hello-instancing-mid" },
+        { "entry": "docs/get-started/hello-instancing-low" },
+        { "entry": "docs/get-started/whats-next" }
       ]
     },
     {
       "title": "Developer Guide",
-      "chapters": [
-        {
-          "title": "Overview",
-          "entries": [
-            { "entry": "docs/developer-guide/README.md" }
-          ]
-        },
-        {
-          "title": "Shadertools",
-          "entries": [
-            { "entry": "docs/developer-guide/shadertools/README" },
-            { "entry": "docs/developer-guide/shadertools/shader-assembly" },
-            { "entry": "docs/developer-guide/shadertools/using-shader-modules" },
-            { "entry": "docs/developer-guide/shadertools/model-integration" },
-            { "entry": "docs/developer-guide/shadertools/writing-shader-modules" },
-            { "entry": "docs/developer-guide/shadertools/writing-glsl-shaders" },
-            { "entry": "docs/developer-guide/using-glsl-300-es.md" }
-          ]
-        },
-        {
-          "title": "Using WebGL",
-          "entries": [
-            { "entry": "docs/developer-guide/drawing" },
-            { "entry": "docs/developer-guide/buffers" },
-            { "entry": "docs/developer-guide/stencil-buffers" },
-            { "entry": "docs/developer-guide/attributes" },
-            { "entry": "docs/developer-guide/accessors" },
-            { "entry": "docs/developer-guide/extensions" },
-            { "entry": "docs/developer-guide/transform-feedback" }
-          ]
-        },
-        {
-          "title": "Tools and Tips",
-          "entries": [
-            { "entry": "docs/developer-guide/building-apps" },
-            { "entry": "docs/developer-guide/configuring" },
-            { "entry": "docs/developer-guide/debugging" },
-            { "entry": "docs/developer-guide/portability" },
-            { "entry": "docs/developer-guide/programs-and-shaders.md" }
-          ]
-        }
+      "entries": [
+        { "entry": "docs/developer-guide/accessors" },
+        { "entry": "docs/developer-guide/transform-feedback" },
+        { "entry": "docs/developer-guide/shader-modules.md" },
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/bundling" }
       ]
     },
     {
@@ -78,7 +48,7 @@
             { "entry": "docs/api-reference/engine/transform" },
             { "entry": "docs/api-reference/engine/animation/timeline" },
             { "entry": "docs/api-reference/engine/animation/key-frames" },
-            { "entry": "docs/api-reference/engine/effects/glfx-shader-modules" }
+            { "entry": "docs/api-reference/engine/effects/effects" }
           ]
         },
         {
@@ -94,16 +64,14 @@
           ]
         },
         {
-          "title": "WebGL2 Classes",
+          "title": "WebGL",
           "entries": [
             { "entry": "docs/api-reference/webgl/accessor" },
             { "entry": "docs/api-reference/webgl/buffer" },
             { "entry": "docs/api-reference/webgl/framebuffer" },
             { "entry": "docs/api-reference/webgl/program" },
             { "entry": "docs/api-reference/webgl/query" },
-            { "entry": "docs/api-reference/webgl/copy-and-blit" },
             { "entry": "docs/api-reference/webgl/renderbuffer" },
-            { "entry": "docs/api-reference/webgl/resource" },
             { "entry": "docs/api-reference/webgl/shader" },
             { "entry": "docs/api-reference/webgl/texture" },
             { "entry": "docs/api-reference/webgl/texture-2d" },
@@ -113,29 +81,25 @@
             { "entry": "docs/api-reference/webgl/uniform-buffer-layout" },
             { "entry": "docs/api-reference/webgl/vertex-array" },
             { "entry": "docs/api-reference/webgl/vertex-array-object" },
+            { "entry": "docs/api-reference/webgl/resource" },
             { "entry": "docs/api-reference/webgl/context/context" },
-            { "entry": "docs/api-reference/webgl/context/is-webGL2" },
-            { "entry": "docs/api-reference/webgl/context/has-features" },
-            { "entry": "docs/api-reference/webgl/context/get-features" },
-            { "entry": "docs/api-reference/webgl/context/get-context-info" },
-            { "entry": "docs/api-reference/webgl/context/get-context-limits" },
-            { "entry": "docs/api-reference/webgl/context/get-gl-context-info" },
-            { "entry": "docs/api-reference/webgl/context/get-parameters" },
-            { "entry": "docs/api-reference/webgl/context/reset-parameters" },
-            { "entry": "docs/api-reference/webgl/context/with-parameters" },
+            { "entry": "docs/api-reference/webgl/context/feature-checking" },
+            { "entry": "docs/api-reference/webgl/context/context-properties" },
+            { "entry": "docs/api-reference/webgl/moving-data" },
             { "entry": "docs/api-reference/webgl/device-pixels" }
+          ]
+        },
+        {
+          "title": "GLTools",
+          "entries": [
+            { "entry": "docs/api-reference/gltools/with-parameters" },
+            { "entry": "docs/api-reference/gltools/parameter-setting" }
           ]
         },
         {
           "title": "Shadertools",
           "entries": [
             { "entry": "docs/api-reference/shadertools/assemble-shaders" },
-            { "entry": "docs/api-reference/shadertools/glsl-reference" }
-          ]
-        },
-        {
-          "title": "Shader Modules",
-          "entries": [
             { "entry": "docs/api-reference/shadertools/shader-module-picking" }
           ]
         },
@@ -147,6 +111,12 @@
             { "entry": "docs/api-reference/addons/scenegraph/group-node" }
           ]
         }
+      ]
+    },
+    {
+      "title": "Contributor Guide",
+      "entries": [
+        { "entry": "docs/contributor-guide/README.md" }
       ]
     }
   ]

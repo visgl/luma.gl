@@ -6,7 +6,7 @@ if (typeof window !== 'undefined') {
   window.website = true;
 }
 
-const HeroExample = require('./core/example-instancing').default;
+const HeroExample = require('./showcase/example-instancing').default;
 
 export default class IndexPage extends React.Component {
   render() {

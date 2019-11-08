@@ -31,8 +31,7 @@ module.exports = {
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'uber',
   PROJECT_URL: `https://luma.gl`,
-  PROJECT_DESC:
-    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+  PROJECT_DESC: 'High-performance Toolkit for WebGL-based Data Visualization',
 
   PATH_PREFIX: '/',
 
@@ -48,28 +47,27 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING:
-    'High-performance WebGL2 components for GPU-powered data visualization and computation.',
+  HOME_HEADING: 'High-performance toolkit for WebGL-based data visualization.',
 
   HOME_RIGHT: null,
 
   HOME_BULLETS: [
     {
-      text: 'Advanced GPU Usage',
+      text: 'Flexibility',
       desc:
-        'luma.gl facilitates use of advanced GPU techniques, such as Instanced Rendering, Transform Feedback and WebGL2 features.',
+        'luma.gl can provide high-level drawing classes or simply enhance programming directly with the WebGL API.',
       img: 'images/icon-high-precision.svg'
     },
     {
-      text: 'Shader Programming Power',
+      text: 'Consistency',
       desc:
-        'Modularized shader code, classes for controlling GPU inputs and outputs, and support for debugging and profiling GLSL shaders.',
+        'luma.gl polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.',
       img: 'images/icon-high-precision.svg'
     },
     {
-      text: 'Performance Focus',
+      text: 'Performance',
       desc:
-        'Strong focus on performance enables visualization and GPU processing of very large data sets.',
+        'luma.gl simplifies usage of high-performance APIs for data visualization like instanced rendering and transform feedback.',
       img: 'images/icon-high-precision.svg'
     }
   ],
@@ -99,184 +97,103 @@ module.exports = {
 
   EXAMPLES: [
     {
-      title: 'Cubemap',
-      componentUrl: resolve(__dirname, './templates/core/example-cubemap.jsx'),
-      path: 'examples/core/cubemap/',
-      image: 'images/example-cubemap.jpg'
+      title: 'Hello Triangle',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-hello-triangle.jsx'),
+      path: 'examples/getting-started/hello-triangle',
+      image: 'images/example-hello-triangle.png'
     },
     {
-      title: 'Fragment',
-      componentUrl: resolve(__dirname, './templates/core/example-fragment.jsx'),
-      path: 'examples/core/fragment/',
-      image: 'images/example-fragment.jpg'
+      title: 'Hello Instancing - High-level',
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-high.jsx'
+      ),
+      path: 'examples/getting-started/hello-instancing-high',
+      image: 'images/example-hello-instancing.png'
+    },
+    {
+      title: 'Hello Instancing - Mid-level',
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-mid.jsx'
+      ),
+      path: 'examples/getting-started/hello-instancing-mid',
+      image: 'images/example-hello-instancing.png'
+    },
+    {
+      title: 'Hello Instancing - Low-level',
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-hello-instancing-low.jsx'
+      ),
+      path: 'examples/getting-started/hello-instancing-low',
+      image: 'images/example-hello-instancing.png'
     },
     {
       title: 'Instancing',
-      componentUrl: resolve(__dirname, './templates/core/example-instancing.jsx'),
-      path: 'examples/core/instancing/',
+      componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
+      path: 'examples/showcase/instancing/',
       image: 'images/example-instancing.jpg'
     },
     {
-      title: 'Mandelbrot',
-      componentUrl: resolve(__dirname, './templates/core/example-mandelbrot.jsx'),
-      path: 'examples/core/mandelbrot/',
-      image: 'images/example-mandelbrot.jpg'
-    },
-    {
       title: 'Persistence',
-      componentUrl: resolve(__dirname, './templates/core/example-persistence.jsx'),
-      path: 'examples/core/persistence/',
+      componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
+      path: 'examples/showcase/persistence/',
       image: 'images/example-persistence.jpg'
     },
     {
-      title: 'Shadowmap',
-      componentUrl: resolve(__dirname, './templates/core/example-shadowmap.jsx'),
-      path: 'examples/core/shadowmap/',
-      image: 'images/example-shadowmap.jpg'
-    },
-    {
-      title: 'Animation',
-      componentUrl: resolve(__dirname, './templates/core/example-animation.jsx'),
-      path: 'examples/core/animation/',
-      image: 'images/example-animation.png'
-    },
-    {
-      title: 'Program Management',
-      componentUrl: resolve(__dirname, './templates/core/example-program-management.jsx'),
-      path: 'examples/core/program-management/',
-      image: 'images/example-program-management.png'
-    },
-    {
-      title: 'TransformFeedback',
-      componentUrl: resolve(__dirname, './templates/core/example-transform-feedback.jsx'),
-      path: 'examples/core/transform-feedback/app',
-      image: 'images/example-transform-feedback.jpg'
-    },
-    {
       title: 'Transform',
-      componentUrl: resolve(__dirname, './templates/core/example-transform.jsx'),
-      path: 'examples/core/transform/',
+      componentUrl: resolve(__dirname, './templates/showcase/example-transform.jsx'),
+      path: 'examples/showcase/transform/',
       image: 'images/example-transform.png'
     },
     {
       title: 'DOF',
-      componentUrl: resolve(__dirname, './templates/core/example-dof.jsx'),
-      path: 'examples/core/dof/',
+      componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
+      path: 'examples/showcase/dof/',
       image: 'images/example-dof.jpg'
     },
     {
       title: 'GLTF',
-      componentUrl: resolve(__dirname, './templates/core/example-gltf.jsx'),
-      path: 'examples/core/gltf',
+      componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
+      path: 'examples/showcase/gltf/',
       image: 'images/example-gltf.jpg'
     },
     {
-      title: 'Quasicrystals',
-      componentUrl: resolve(__dirname, './templates/core/example-quasicrystals.jsx'),
-      path: 'examples/core/quasicrystals/',
-      image: 'images/example-quasicrystals.jpg'
+      title: 'Animation',
+      componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
+      path: 'examples/api/animation/',
+      image: 'images/example-animation.png'
+    },
+    {
+      title: 'Program Management',
+      componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
+      path: 'examples/api/program-management/',
+      image: 'images/example-program-management.png'
+    },
+    {
+      title: 'TransformFeedback',
+      componentUrl: resolve(__dirname, './templates/api/example-transform-feedback.jsx'),
+      path: 'examples/api/transform-feedback/app',
+      image: 'images/example-transform-feedback.jpg'
+    },
+    {
+      title: 'Cubemap',
+      componentUrl: resolve(__dirname, './templates/api/example-cubemap.jsx'),
+      path: 'examples/api/cubemap/',
+      image: 'images/example-cubemap.jpg'
     },
     {
       title: 'Texture3D',
-      componentUrl: resolve(__dirname, './templates/core/example-texture-3d.jsx'),
-      path: 'examples/core/texture3d/',
+      componentUrl: resolve(__dirname, './templates/api/example-texture-3d.jsx'),
+      path: 'examples/api/texture3d/',
       image: 'images/example-texture3d.png'
     },
     {
-      title: 'Lesson01',
-      componentUrl: resolve(__dirname, './templates/lessons/example-01.jsx'),
-      path: 'examples/lessons/01/',
-      image: 'images/lesson-1.png'
-    },
-    {
-      title: 'Lesson02',
-      componentUrl: resolve(__dirname, './templates/lessons/example-02.jsx'),
-      path: 'examples/lessons/02/',
-      image: 'images/lesson-2.png'
-    },
-    {
-      title: 'Lesson03',
-      componentUrl: resolve(__dirname, './templates/lessons/example-03.jsx'),
-      path: 'examples/lessons/03/',
-      image: 'images/lesson-3.png'
-    },
-    {
-      title: 'Lesson04',
-      componentUrl: resolve(__dirname, './templates/lessons/example-04.jsx'),
-      path: 'examples/lessons/04/',
-      image: 'images/lesson-4.png'
-    },
-    {
-      title: 'Lesson05',
-      componentUrl: resolve(__dirname, './templates/lessons/example-05.jsx'),
-      path: 'examples/lessons/05/',
-      image: 'images/lesson-5.png'
-    },
-    {
-      title: 'Lesson06',
-      componentUrl: resolve(__dirname, './templates/lessons/example-06.jsx'),
-      path: 'examples/lessons/06/',
-      image: 'images/lesson-6.png'
-    },
-    {
-      title: 'Lesson07',
-      componentUrl: resolve(__dirname, './templates/lessons/example-07.jsx'),
-      path: 'examples/lessons/07/',
-      image: 'images/lesson-7.png'
-    },
-    {
-      title: 'Lesson08',
-      componentUrl: resolve(__dirname, './templates/lessons/example-08.jsx'),
-      path: 'examples/lessons/08/',
-      image: 'images/lesson-8.png'
-    },
-    {
-      title: 'Lesson09',
-      componentUrl: resolve(__dirname, './templates/lessons/example-09.jsx'),
-      path: 'examples/lessons/09/',
-      image: 'images/lesson-9.png'
-    },
-    {
-      title: 'Lesson10',
-      componentUrl: resolve(__dirname, './templates/lessons/example-10.jsx'),
-      path: 'examples/lessons/10/',
-      image: 'images/lesson-10.png'
-    },
-    {
-      title: 'Lesson11',
-      componentUrl: resolve(__dirname, './templates/lessons/example-11.jsx'),
-      path: 'examples/lessons/11/',
-      image: 'images/lesson-11.png'
-    },
-    {
-      title: 'Lesson12',
-      componentUrl: resolve(__dirname, './templates/lessons/example-12.jsx'),
-      path: 'examples/lessons/12/',
-      image: 'images/lesson-12.png'
-    },
-    {
-      title: 'Lesson13',
-      componentUrl: resolve(__dirname, './templates/lessons/example-13.jsx'),
-      path: 'examples/lessons/13/',
-      image: 'images/lesson-13.png'
-    },
-    {
-      title: 'Lesson14',
-      componentUrl: resolve(__dirname, './templates/lessons/example-14.jsx'),
-      path: 'examples/lessons/14/',
-      image: 'images/lesson-14.png'
-    },
-    {
-      title: 'Lesson15',
-      componentUrl: resolve(__dirname, './templates/lessons/example-15.jsx'),
-      path: 'examples/lessons/15/',
-      image: 'images/lesson-15.png'
-    },
-    {
-      title: 'Lesson16',
-      componentUrl: resolve(__dirname, './templates/lessons/example-16.jsx'),
-      path: 'examples/lessons/16/',
-      image: 'images/lesson-16.png'
+      title: 'Stress Test',
+      componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
+      path: 'examples/performance/stress-test/',
+      image: 'images/example-stress-test.png'
     }
   ],
 

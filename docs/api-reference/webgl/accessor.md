@@ -1,4 +1,4 @@
-# Accessor (Experimental)
+# Accessor
 
 The `Accessor` class is a helper class that describes how a buffers memory is structured and should be accessed. Accessors are used.
 

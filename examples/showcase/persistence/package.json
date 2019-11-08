@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "start": "webpack-dev-server --progress --hot --open",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open --mode=development"
+  },
+  "dependencies": {
+    "@luma.gl/core": "^8.0.0-alpha.2",
+    "@luma.gl/engine": "^8.0.0-alpha.2",
+    "@luma.gl/webgl": "^8.0.0-alpha.2",
+    "@luma.gl/gltools": "^8.0.0-alpha.2",
+    "@luma.gl/addons": "^8.0.0-alpha.2",
+    "math.gl": "^3.0.0"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^3.2.0",
+    "webpack": "^4.3.0",
+    "webpack-dev-server": "^3.1.1"
+  }
+}

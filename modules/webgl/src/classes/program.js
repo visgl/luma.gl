@@ -113,8 +113,8 @@ export default class Program extends Resource {
     end,
     isIndexed = false,
     indexType = GL.UNSIGNED_SHORT,
-    isInstanced = false,
     instanceCount = 0,
+    isInstanced = instanceCount > 0,
 
     vertexArray = null,
     transformFeedback,
@@ -224,6 +224,8 @@ export default class Program extends Resource {
             if (!texture.loaded) {
               this._texturesRenderable = false;
             }
+          } else {
+            value = uniformSetter.textureIndex;
           }
         }
 
