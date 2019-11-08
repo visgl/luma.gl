@@ -47,7 +47,7 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING: 'High-performance Toolkit for WebGL-based data visualization.',
+  HOME_HEADING: 'High-performance toolkit for WebGL-based data visualization.',
 
   HOME_RIGHT: null,
 
