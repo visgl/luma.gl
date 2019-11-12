@@ -83,6 +83,7 @@ export {
   Transform,
   ClipSpace,
   ProgramManager,
+  Timeline,
   Geometry,
   ConeGeometry,
   CubeGeometry,
