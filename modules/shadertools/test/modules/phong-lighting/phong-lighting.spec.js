@@ -23,5 +23,17 @@ test('shadertools#phonglighting', t => {
   });
   t.equal(uniforms.lighting_uEnabled, false, 'Disable lighting without material');
 
+  uniforms = phonglighting.getUniforms({
+    material: true
+  });
+  t.equal(uniforms.lighting_uAmbient, 0.35, `lighting_uAmbient`);
+  t.equal(uniforms.lighting_uDiffuse, 0.6, `lighting_uDiffuse`);
+  t.equal(uniforms.lighting_uShininess, 32, `lighting_uShininess`);
+  t.deepEqual(
+    uniforms.lighting_uSpecularColor,
+    [30 / 255, 30 / 255, 30 / 255],
+    `lighting_uSpecularColor`
+  );
+
   t.end();
 });

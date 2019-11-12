@@ -21,6 +21,13 @@ const phonglighting = {
   getUniforms
 };
 
+const DEFAULT_MATERIAL_PROPERTIES = {
+  ambient: 0.35,
+  diffuse: 0.6,
+  shininess: 32,
+  specularColor: [30, 30, 30]
+};
+
 const INITIAL_MODULE_OPTIONS = {};
 
 function getMaterialUniforms(material) {
@@ -43,7 +50,7 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
     return {lighting_uEnabled: false};
   }
 
-  return getMaterialUniforms(material);
+  return getMaterialUniforms(Object.assign({}, DEFAULT_MATERIAL_PROPERTIES, material));
 }
 
 export {gouraudlighting, phonglighting};
