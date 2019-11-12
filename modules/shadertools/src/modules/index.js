@@ -6,7 +6,7 @@ export {default as lights} from './lights/lights';
 export {default as dirlight} from './dirlight/dirlight';
 export {default as picking} from './picking/picking';
 export {default as diffuse} from './diffuse/diffuse';
-export {gouraudlighting, phonglighting} from './phong-lighting/phong-lighting';
+export {gouraudLighting, phongLighting} from './phong-lighting/phong-lighting';
 export {default as pbr} from './pbr/pbr';
 
 // experimental

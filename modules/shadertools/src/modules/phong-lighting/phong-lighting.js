@@ -1,7 +1,7 @@
 import lights from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
-const gouraudlighting = {
+const gouraudLighting = {
   name: 'gouraud-lighting',
   dependencies: [lights],
   vs: lightingShader,
@@ -11,7 +11,7 @@ const gouraudlighting = {
   getUniforms
 };
 
-const phonglighting = {
+const phongLighting = {
   name: 'phong-lighting',
   dependencies: [lights],
   fs: lightingShader,
@@ -53,4 +53,4 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   return getMaterialUniforms(Object.assign({}, DEFAULT_MATERIAL_PROPERTIES, material));
 }
 
-export {gouraudlighting, phonglighting};
+export {gouraudLighting, phongLighting};
