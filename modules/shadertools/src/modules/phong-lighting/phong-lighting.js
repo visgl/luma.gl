@@ -21,22 +21,17 @@ const phongLighting = {
   getUniforms
 };
 
-const DEFAULT_MATERIAL_PROPERTIES = {
-  ambient: 0.35,
-  diffuse: 0.6,
-  shininess: 32,
-  specularColor: [30, 30, 30]
-};
-
 const INITIAL_MODULE_OPTIONS = {};
 
 function getMaterialUniforms(material) {
-  const materialUniforms = {};
-  materialUniforms.lighting_uAmbient = material.ambient;
-  materialUniforms.lighting_uDiffuse = material.diffuse;
-  materialUniforms.lighting_uShininess = material.shininess;
-  materialUniforms.lighting_uSpecularColor = material.specularColor.map(x => x / 255);
-  return materialUniforms;
+  const {ambient = 0.35, diffuse = 0.6, shininess = 32, specularColor = [30, 30, 30]} = material;
+
+  return {
+    lighting_uAmbient: ambient,
+    lighting_uDiffuse: diffuse,
+    lighting_uShininess: shininess,
+    lighting_uSpecularColor: specularColor.map(x => x / 255)
+  };
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
@@ -50,7 +45,7 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
     return {lighting_uEnabled: false};
   }
 
-  return getMaterialUniforms(Object.assign({}, DEFAULT_MATERIAL_PROPERTIES, material));
+  return getMaterialUniforms(material);
 }
 
 export {gouraudLighting, phongLighting};
