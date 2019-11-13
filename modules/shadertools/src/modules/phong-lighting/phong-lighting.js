@@ -1,7 +1,7 @@
 import lights from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
-const gouraudlighting = {
+const gouraudLighting = {
   name: 'gouraud-lighting',
   dependencies: [lights],
   vs: lightingShader,
@@ -11,7 +11,7 @@ const gouraudlighting = {
   getUniforms
 };
 
-const phonglighting = {
+const phongLighting = {
   name: 'phong-lighting',
   dependencies: [lights],
   fs: lightingShader,
@@ -24,12 +24,14 @@ const phonglighting = {
 const INITIAL_MODULE_OPTIONS = {};
 
 function getMaterialUniforms(material) {
-  const materialUniforms = {};
-  materialUniforms.lighting_uAmbient = material.ambient;
-  materialUniforms.lighting_uDiffuse = material.diffuse;
-  materialUniforms.lighting_uShininess = material.shininess;
-  materialUniforms.lighting_uSpecularColor = material.specularColor.map(x => x / 255);
-  return materialUniforms;
+  const {ambient = 0.35, diffuse = 0.6, shininess = 32, specularColor = [30, 30, 30]} = material;
+
+  return {
+    lighting_uAmbient: ambient,
+    lighting_uDiffuse: diffuse,
+    lighting_uShininess: shininess,
+    lighting_uSpecularColor: specularColor.map(x => x / 255)
+  };
 }
 
 function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
@@ -46,4 +48,4 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   return getMaterialUniforms(material);
 }
 
-export {gouraudlighting, phonglighting};
+export {gouraudLighting, phongLighting};

@@ -83,6 +83,7 @@ export {
   Transform,
   ClipSpace,
   ProgramManager,
+  Timeline,
   Geometry,
   ConeGeometry,
   CubeGeometry,
@@ -114,8 +115,8 @@ export {
   dirlight,
   picking,
   diffuse,
-  gouraudlighting,
-  phonglighting,
+  gouraudLighting,
+  phongLighting,
   pbr,
   // experimental
   _transform,
