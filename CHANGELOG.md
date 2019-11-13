@@ -1,3 +1,31 @@
+## v8.0.0-alpha.3
+
+- Fix deps, simplify materials (#1292)
+
+## v8.0.0-alpha.3
+
+- Update docs and examples (#1291)
+
+## v8.0.0-alpha.2
+
+- Module refactor (#1288)
+- Fix usage with rollup (#1266)
+- Optimizations (#1283)
+- Used device pixel ratio in picogl stress test
+- PicoGL port of stress test for comparison (#1284)
+- Update RFC and change status to approved (#1282)
+- Transform Fix: elmentCount update, feedback buffer creation (#1281)
+- Remove docs for removed classes (#1280)
+- Remove core/multipass, main, wip folder (#1278)
+- Remove CameraNode, Lights, Materials (#1279)
+- Model cleanup (#1276)
+- Prettier
+- Tweak stress test
+- Prettier
+- Simplify stress test
+- Improve startup time of stress test app
+- Stress test (#1271)
+
 ## v7.4.0-alpha.2
 - DevicePixelRatio: Cache canvas size to avoid expensive setting on each frame (#1269)
 - WebGL Features: add caching (#1270)
