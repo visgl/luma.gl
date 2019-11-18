@@ -1,5 +1,5 @@
 import {pushContextState, popContextState} from './track-context-state';
-import {setParameters} from '../unified-parameter-api/set-parameters';
+import {setParameters} from '../unified-parameter-api/unified-parameter-api';
 import {assert, isObjectEmpty} from '../utils';
 
 // Stores current "global" WebGL context settings, changes selected parameters,

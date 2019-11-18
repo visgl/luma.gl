@@ -8,15 +8,7 @@
 export {lumaStats} from './init';
 
 // TODO - should we reexport these?
-export {
-  resetParameters,
-  getParameter,
-  getParameters,
-  setParameter,
-  setParameters,
-  withParameters,
-  getModifiedParameters
-} from '@luma.gl/gltools';
+export {resetParameters, getParameters, setParameters, withParameters} from '@luma.gl/gltools';
 
 // Exports WebGL API constants and types, plus some basic type checks
 export {

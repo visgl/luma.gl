@@ -5,25 +5,9 @@ import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS,
   GL_COMPOSITE_PARAMETER_SETTERS,
-  GL_PARAMETER_GETTERS
+  GL_PARAMETER_GETTERS,
+  FUNCTION_STYLE_PARAMETER_SETTERS
 } from './webgl-parameter-tables';
-
-import deepArrayEqual from '../utils/deep-array-equal';
-import {assert} from '../utils';
-
-// PUBLIC METHODS
-
-// Sets any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
-// Returns the previous value
-// Note: limited to parameter values
-export function setParameter(gl, key, value) {
-  const getter = GL_PARAMETER_GETTERS[key];
-  const prevValue = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
-  const setter = GL_PARAMETER_SETTERS[key];
-  assert(typeof setter === 'function');
-  setter(gl, value, Number(key));
-  return prevValue;
-}
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
@@ -69,13 +53,14 @@ export function setParameters(gl, values) {
       compositeSetter(gl, mergedValues);
     }
   }
-  // Add a log for the else case?
-}
 
-// Queries any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
-export function getParameter(gl, key) {
-  const getter = GL_PARAMETER_GETTERS[key];
-  return getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
+  for (const key in values) {
+    const setter = FUNCTION_STYLE_PARAMETER_SETTERS[key];
+    if (setter) {
+      setter(gl, values[key], key);
+    }
+  }
+  // Add a log for the else case?
 }
 
 // Copies the state from a context (gl.getParameter should not be overriden)
@@ -92,35 +77,13 @@ export function getParameters(gl, parameters) {
 
   const state = {};
   for (const key of parameterKeys) {
-    state[key] = getParameter(gl, key);
+    const getter = GL_PARAMETER_GETTERS[key];
+    state[key] = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
   }
   return state;
 }
 
-export function getDefaultParameters(gl) {
-  // TODO - Query GL.VIEWPORT and GL.SCISSOR_BOX since these are dynamic
-  return Object.assign({}, GL_PARAMETER_DEFAULTS, {
-    // TODO: For viewport and scissor default values are set at the time of
-    // context creation based on canvas size, we can query them here but it will
-    // not match with what we have in GL_PARAMETER_DEFAULTS table, we should revisit.
-    // [GL.VIEWPORT]: gl.constructor.prototype.getParameter.call(gl, GL.VIEWPORT),
-    // [GL.SCISSOR_BOX]: gl.constructor.prototype.getParameter.call(gl, GL.SCISSOR_BOX)
-  });
-}
-
 // Reset all parameters to a pure context state
 export function resetParameters(gl) {
-  setParameters(gl, getDefaultParameters(gl));
-}
-
-// Get all parameters that have been modified from a pure context state
-export function getModifiedParameters(gl) {
-  const values = getParameters(gl, Object.keys(GL_PARAMETER_DEFAULTS));
-  const modified = {};
-  for (const key in GL_PARAMETER_DEFAULTS) {
-    if (!deepArrayEqual(values[key], GL_PARAMETER_DEFAULTS[key])) {
-      modified[key] = values[key];
-    }
-  }
-  return modified;
+  setParameters(gl, GL_PARAMETER_DEFAULTS);
 }
