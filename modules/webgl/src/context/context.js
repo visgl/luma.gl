@@ -208,7 +208,7 @@ function setDevicePixelRatio(gl, devicePixelRatio, options) {
   let clientHeight = 'height' in options ? options.height : gl.canvas.clientHeight;
 
   if (!clientWidth || !clientHeight) {
-    log.warn('Canvas clientWidth/clientHeight is 0')();
+    log.log(1, 'Canvas clientWidth/clientHeight is 0')();
     // by forcing devicePixel ratio to 1, we do not scale gl.canvas.width and height in each frame.
     devicePixelRatio = 1;
     clientWidth = gl.canvas.width || 1;
