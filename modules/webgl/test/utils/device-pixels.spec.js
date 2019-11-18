@@ -10,9 +10,12 @@ const MAP_TEST_CASES = [
     gl: {
       drawingBufferWidth: 10,
       drawingBufferHeight: 10,
-      canvas: {
-        clientWidth: 10,
-        clientHeight: 10
+      canvas: {}, // To emulate real context
+      luma: {
+        canvasSizeInfo: {
+          clientWidth: 10,
+          clientHeight: 10
+        }
       }
     },
     ratio: 1,
@@ -63,9 +66,12 @@ const MAP_TEST_CASES = [
     gl: {
       drawingBufferWidth: 1,
       drawingBufferHeight: 1,
-      canvas: {
-        clientWidth: 1,
-        clientHeight: 1
+      canvas: {},
+      luma: {
+        canvasSizeInfo: {
+          clientWidth: 1,
+          clientHeight: 1
+        }
       }
     },
     ratio: 1,
@@ -92,9 +98,12 @@ const MAP_TEST_CASES = [
     gl: {
       drawingBufferWidth: 10 * HIGH_DPR,
       drawingBufferHeight: 10 * HIGH_DPR,
-      canvas: {
-        clientWidth: 10,
-        clientHeight: 10
+      canvas: {},
+      luma: {
+        canvasSizeInfo: {
+          clientWidth: 10,
+          clientHeight: 10
+        }
       }
     },
     ratio: HIGH_DPR,
@@ -148,9 +157,12 @@ const MAP_TEST_CASES = [
     gl: {
       drawingBufferWidth: 10 * HIGH_DPR_FRACTION,
       drawingBufferHeight: 10 * HIGH_DPR_FRACTION,
-      canvas: {
-        clientWidth: 10,
-        clientHeight: 10
+      canvas: {},
+      luma: {
+        canvasSizeInfo: {
+          clientWidth: 10,
+          clientHeight: 10
+        }
       }
     },
     ratio: HIGH_DPR_FRACTION,
@@ -208,9 +220,12 @@ const MAP_TEST_CASES = [
     gl: {
       drawingBufferWidth: 10 * LOW_DPR,
       drawingBufferHeight: 10 * LOW_DPR,
-      canvas: {
-        clientWidth: 10,
-        clientHeight: 10
+      canvas: {},
+      luma: {
+        canvasSizeInfo: {
+          clientWidth: 10,
+          clientHeight: 10
+        }
       }
     },
     ratio: LOW_DPR,
@@ -313,7 +328,7 @@ test('webgl#getDevicePixelRatio', t => {
   t.end();
 });
 
-test('webgl#cssToDevicePixels', t => {
+test.only('webgl#cssToDevicePixels', t => {
   MAP_TEST_CASES.forEach(tc => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true

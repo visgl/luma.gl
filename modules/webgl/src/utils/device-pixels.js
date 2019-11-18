@@ -2,12 +2,11 @@
 
 // multiplier need to convert CSS size to Device size
 export function cssToDeviceRatio(gl) {
-  if (!gl.canvas.clientWidth || !gl.canvas.clientHeight) {
-    // canvas client size is not valid, use 1.0 to avoid invalid scaling.
-    return 1;
-  }
-  if (gl.canvas) {
-    return gl.drawingBufferWidth / (gl.canvas.clientWidth || 1);
+  if (gl.canvas && gl.luma) {
+    // For headless gl we might have used custom width and height
+    // hence use cached clientWidth
+    const {clientWidth} = gl.luma.canvasSizeInfo;
+    return clientWidth ? gl.drawingBufferWidth / clientWidth : 1;
   }
   // use default device pixel ratio
   return 1;
