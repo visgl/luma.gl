@@ -43,14 +43,12 @@ export function setParameters(gl, values) {
   // This is the ONLY external dependency in this module/
   const cache = gl.state && gl.state.cache;
   if (cache) {
-    const mergedValues = Object.assign({}, cache, values);
-
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.
       const compositeSetter = GL_COMPOSITE_PARAMETER_SETTERS[key];
       // Note - if `trackContextState` has been called,
       // the setter will automatically update this.state.cache
-      compositeSetter(gl, mergedValues);
+      compositeSetter(gl, values, cache);
     }
   }
 

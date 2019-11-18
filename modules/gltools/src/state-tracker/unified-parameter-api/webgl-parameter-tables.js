@@ -164,48 +164,61 @@ export const GL_PARAMETER_SETTERS = {
   [GL.UNPACK_SKIP_IMAGES]: pixelStorei
 };
 
+function getValue(glEnum, values, cache) {
+  return values[glEnum] !== undefined ? values[glEnum] : cache[glEnum];
+}
+
 // COMPOSITE_WEBGL_PARAMETER_
 export const GL_COMPOSITE_PARAMETER_SETTERS = {
-  blendEquation: (gl, values) =>
-    gl.blendEquationSeparate(values[GL.BLEND_EQUATION_RGB], values[GL.BLEND_EQUATION_ALPHA]),
-  blendFunc: (gl, values) =>
+  blendEquation: (gl, values, cache) =>
+    gl.blendEquationSeparate(
+      getValue(GL.BLEND_EQUATION_RGB, values, cache),
+      getValue(GL.BLEND_EQUATION_ALPHA, values, cache)
+    ),
+  blendFunc: (gl, values, cache) =>
     gl.blendFuncSeparate(
-      values[GL.BLEND_SRC_RGB],
-      values[GL.BLEND_DST_RGB],
-      values[GL.BLEND_SRC_ALPHA],
-      values[GL.BLEND_DST_ALPHA]
+      getValue(GL.BLEND_SRC_RGB, values, cache),
+      getValue(GL.BLEND_DST_RGB, values, cache),
+      getValue(GL.BLEND_SRC_ALPHA, values, cache),
+      getValue(GL.BLEND_DST_ALPHA, values, cache)
     ),
-  polygonOffset: (gl, values) =>
-    gl.polygonOffset(values[GL.POLYGON_OFFSET_FACTOR], values[GL.POLYGON_OFFSET_UNITS]),
-  sampleCoverage: (gl, values) =>
-    gl.sampleCoverage(values[GL.SAMPLE_COVERAGE_VALUE], values[GL.SAMPLE_COVERAGE_INVERT]),
-  stencilFuncFront: (gl, values) =>
+  polygonOffset: (gl, values, cache) =>
+    gl.polygonOffset(
+      getValue(GL.POLYGON_OFFSET_FACTOR, values, cache),
+      getValue(GL.POLYGON_OFFSET_UNITS, values, cache)
+    ),
+  sampleCoverage: (gl, values, cache) =>
+    gl.sampleCoverage(
+      getValue(GL.SAMPLE_COVERAGE_VALUE, values, cache),
+      getValue(GL.SAMPLE_COVERAGE_INVERT, values, cache)
+    ),
+  stencilFuncFront: (gl, values, cache) =>
     gl.stencilFuncSeparate(
       GL.FRONT,
-      values[GL.STENCIL_FUNC],
-      values[GL.STENCIL_REF],
-      values[GL.STENCIL_VALUE_MASK]
+      getValue(GL.STENCIL_FUNC, values, cache),
+      getValue(GL.STENCIL_REF, values, cache),
+      getValue(GL.STENCIL_VALUE_MASK, values, cache)
     ),
-  stencilFuncBack: (gl, values) =>
+  stencilFuncBack: (gl, values, cache) =>
     gl.stencilFuncSeparate(
       GL.BACK,
-      values[GL.STENCIL_BACK_FUNC],
-      values[GL.STENCIL_BACK_REF],
-      values[GL.STENCIL_BACK_VALUE_MASK]
+      getValue(GL.STENCIL_BACK_FUNC, values, cache),
+      getValue(GL.STENCIL_BACK_REF, values, cache),
+      getValue(GL.STENCIL_BACK_VALUE_MASK, values, cache)
     ),
-  stencilOpFront: (gl, values) =>
+  stencilOpFront: (gl, values, cache) =>
     gl.stencilOpSeparate(
       GL.FRONT,
-      values[GL.STENCIL_FAIL],
-      values[GL.STENCIL_PASS_DEPTH_FAIL],
-      values[GL.STENCIL_PASS_DEPTH_PASS]
+      getValue(GL.STENCIL_FAIL, values, cache),
+      getValue(GL.STENCIL_PASS_DEPTH_FAIL, values, cache),
+      getValue(GL.STENCIL_PASS_DEPTH_PASS, values, cache)
     ),
-  stencilOpBack: (gl, values) =>
+  stencilOpBack: (gl, values, cache) =>
     gl.stencilOpSeparate(
       GL.BACK,
-      values[GL.STENCIL_BACK_FAIL],
-      values[GL.STENCIL_BACK_PASS_DEPTH_FAIL],
-      values[GL.STENCIL_BACK_PASS_DEPTH_PASS]
+      getValue(GL.STENCIL_BACK_FAIL, values, cache),
+      getValue(GL.STENCIL_BACK_PASS_DEPTH_FAIL, values, cache),
+      getValue(GL.STENCIL_BACK_PASS_DEPTH_PASS, values, cache)
     )
 };
 
