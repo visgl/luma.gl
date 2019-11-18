@@ -328,7 +328,7 @@ test('webgl#getDevicePixelRatio', t => {
   t.end();
 });
 
-test.only('webgl#cssToDevicePixels', t => {
+test('webgl#cssToDevicePixels', t => {
   MAP_TEST_CASES.forEach(tc => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
