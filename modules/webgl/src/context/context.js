@@ -204,10 +204,16 @@ function getVersion(gl) {
 // use devicePixelRatio to set canvas width and height
 function setDevicePixelRatio(gl, devicePixelRatio, options) {
   // NOTE: if options.width and options.height not used remove in v8
-  const clientWidth =
-    'width' in options ? options.width : gl.canvas.clientWidth || gl.canvas.width || 1;
-  const clientHeight =
-    'height' in options ? options.height : gl.canvas.clientHeight || gl.canvas.height || 1;
+  let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth;
+  let clientHeight = 'height' in options ? options.height : gl.canvas.clientHeight;
+
+  if (!clientWidth || !clientHeight) {
+    log.log(1, 'Canvas clientWidth/clientHeight is 0')();
+    // by forcing devicePixel ratio to 1, we do not scale gl.canvas.width and height in each frame.
+    devicePixelRatio = 1;
+    clientWidth = gl.canvas.width || 1;
+    clientHeight = gl.canvas.height || 1;
+  }
 
   gl.luma = gl.luma || {};
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};

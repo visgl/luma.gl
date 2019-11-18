@@ -51,29 +51,91 @@ test('WebGL#isWebGL2', t => {
 
 test('WebGL#resizeGLContext', t => {
   const glContext = {
-    canvas: {width: 10, height: 20}
+    canvas: {clientWidth: 10, clientHeight: 20}
   };
 
+  // Using default pixel ratio of 1
   // update drawing buffer size to simulate gl context
-  glContext.drawingBufferWidth = glContext.canvas.width;
-  glContext.drawingBufferHeight = glContext.canvas.height;
+  glContext.drawingBufferWidth = glContext.canvas.clientWidth;
+  glContext.drawingBufferHeight = glContext.canvas.clientHeight;
   resizeGLContext(glContext);
-
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
     'Canvas size info should be cached'
   );
 
+  // Using custom device pixel ratio
+  let DPR = 12.5;
   // update drawing buffer size to simulate gl context
-  glContext.drawingBufferWidth = Math.floor(glContext.canvas.width * 12.5);
-  glContext.drawingBufferHeight = Math.floor(glContext.canvas.height * 12.5);
-  resizeGLContext(glContext, {useDevicePixels: 12.5});
+  glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
+  glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  resizeGLContext(glContext, {useDevicePixels: DPR});
+  t.deepEqual(
+    glContext.luma.canvasSizeInfo,
+    {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
+    'Cached canvas size info should be updated'
+  );
 
+  // trigger again without any changes
+  resizeGLContext(glContext, {useDevicePixels: 12.5});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
-    'Canvas size info should be updated'
+    'Cached canvas size should remain same'
+  );
+
+  // update device pixel ratio
+  DPR = 5;
+  // update drawing buffer size to simulate gl context
+  glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
+  glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  resizeGLContext(glContext, {useDevicePixels: DPR});
+  t.deepEqual(
+    glContext.luma.canvasSizeInfo,
+    {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
+    'Cached canvas size info should be updated'
+  );
+
+  // update clientWidth and clientHeight
+  Object.assign(glContext, {canvas: {clientWidth: 5, clientHeight: 2}});
+  // update drawing buffer size to simulate gl context
+  glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
+  glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  resizeGLContext(glContext, {useDevicePixels: DPR});
+  t.deepEqual(
+    glContext.luma.canvasSizeInfo,
+    {clientWidth: 5, clientHeight: 2, devicePixelRatio: DPR},
+    'Cached canvas size info should be updated'
+  );
+
+  // update clientWidth and clientHeight to undefiend, should use canvas.width and height
+  // and use 1.0 as devicePixelRatio
+  Object.assign(glContext.canvas, {clientWidth: undefined, clientHeight: undefined});
+  // update drawing buffer size to simulate gl context
+  glContext.drawingBufferWidth = Math.floor(glContext.canvas.width); // DPR is 1
+  glContext.drawingBufferHeight = Math.floor(glContext.canvas.height); // DPR is 1
+  resizeGLContext(glContext, {useDevicePixels: DPR});
+  t.deepEqual(
+    glContext.luma.canvasSizeInfo,
+    {
+      clientWidth: glContext.canvas.width,
+      clientHeight: glContext.canvas.height,
+      devicePixelRatio: 1.0
+    },
+    'Should fallback to canvas size clientWidth/clientHeight are not availbe'
+  );
+
+  // trigger resize again
+  resizeGLContext(glContext, {useDevicePixels: DPR});
+  t.deepEqual(
+    glContext.luma.canvasSizeInfo,
+    {
+      clientWidth: glContext.canvas.width,
+      clientHeight: glContext.canvas.height,
+      devicePixelRatio: 1.0
+    },
+    'Cached canvas size info should remain same'
   );
 
   t.end();
