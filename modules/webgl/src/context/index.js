@@ -1,12 +1,9 @@
 export {
   trackContextState,
   resetParameters,
-  getParameter,
   getParameters,
-  setParameter,
   setParameters,
-  withParameters,
-  getModifiedParameters
+  withParameters
 } from '@luma.gl/gltools';
 
 export {

@@ -1,10 +1,9 @@
 // Support for listening to context state changes and intercepting state queries
 //
 // NOTE: this system does not handle buffer bindings
-import GL_STATE_SETTERS from './webgl-function-to-parameters-table';
-import {GL_PARAMETER_DEFAULTS} from '../unified-parameter-api/webgl-parameter-tables';
-import {setParameters, getParameters} from '../unified-parameter-api/unified-parameter-api';
-import {assert, deepArrayEqual} from '../utils';
+import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS} from './webgl-parameter-tables';
+import {setParameters, getParameters} from './unified-parameter-api';
+import {assert, deepArrayEqual} from './utils';
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
@@ -54,7 +53,6 @@ function installSetterSpy(gl, functionName, setter) {
 
     // Call the original WebGLRenderingContext func to make sure the context actually gets updated
     if (valueChanged) {
-      gl.state.log(`gl.${functionName}`, ...params); // eslint-disable-line
       originalSetterFunc(...params);
     }
 
@@ -117,20 +115,22 @@ class GLState {
 
     for (const key in values) {
       assert(key !== undefined);
+      const value = values[key];
+      const cached = this.cache[key];
       // Check that value hasn't already been shadowed
-      if (!deepArrayEqual(values[key], this.cache[key])) {
+      if (!deepArrayEqual(value, cached)) {
         valueChanged = true;
-        oldValue = this.cache[key];
+        oldValue = cached;
 
         // First, save current value being shadowed
         // If a state stack frame is active, save the current parameter values for pop
         // but first check that value hasn't already been shadowed and saved
         if (oldValues && !(key in oldValues)) {
-          oldValues[key] = this.cache[key];
+          oldValues[key] = cached;
         }
 
         // Save current value being shadowed
-        this.cache[key] = values[key];
+        this.cache[key] = value;
       }
     }
 
@@ -161,8 +161,8 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
     gl.state = new GLState(gl, {copyState, enable});
 
     // intercept all setter functions in the table
-    for (const key in GL_STATE_SETTERS) {
-      const setter = GL_STATE_SETTERS[key];
+    for (const key in GL_HOOKED_SETTERS) {
+      const setter = GL_HOOKED_SETTERS[key];
       installSetterSpy(gl, key, setter);
     }
 

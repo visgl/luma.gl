@@ -5,16 +5,15 @@ import {
   trackContextState,
   pushContextState,
   popContextState,
-  getParameter,
+  getParameters,
   setParameters,
-  resetParameters,
-  getModifiedParameters
+  resetParameters
 } from '@luma.gl/gltools';
 
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
-} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
+} from '@luma.gl/gltools/state-tracker/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from '../data/sample-enum-settings';
 
@@ -22,6 +21,10 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from '../data/sample
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
   return JSON.stringify(v);
+}
+
+function getParameter(gl, param) {
+  return getParameters(gl, [param])[param];
 }
 
 // Settings test, don't reuse a context
@@ -49,10 +52,11 @@ test('WebGLState#push & pop', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
+  let parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -64,8 +68,9 @@ test('WebGLState#push & pop', t => {
 
   // Set custom values and verify.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
@@ -77,8 +82,9 @@ test('WebGLState#push & pop', t => {
 
   // Set custom values and verify
   setParameters(gl, ENUM_STYLE_SETTINGS_SET2);
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET2) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET2[key],
@@ -88,9 +94,10 @@ test('WebGLState#push & pop', t => {
 
   // Pop and verify values restore to previous state
   popContextState(gl);
+  parameters = getParameters(gl);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
@@ -99,9 +106,10 @@ test('WebGLState#push & pop', t => {
   }
 
   popContextState(gl);
+  parameters = getParameters(gl);
 
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -116,10 +124,11 @@ test('WebGLState#gl API', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
+  let parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -139,10 +148,11 @@ test('WebGLState#gl API', t => {
     }
   }
 
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
     if (typeof GL_PARAMETER_SETTERS[key] !== 'string') {
-      const value = getParameter(gl, key);
+      const value = getParameters(gl, [key])[key];
       t.deepEqual(
         value,
         ENUM_STYLE_SETTINGS_SET1[key],
@@ -152,9 +162,9 @@ test('WebGLState#gl API', t => {
   }
 
   popContextState(gl);
-
+  parameters = getParameters(gl);
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -188,50 +198,17 @@ test('WebGLState#intercept gl calls', t => {
   t.is(getParameter(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
 
   popContextState(gl);
+  const parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
       `got expected value ${stringifyTypedArray(value)}`
     );
   }
-
-  t.end();
-});
-
-test('WebGLState#getModifiedParameters', t => {
-  const {gl} = fixture;
-
-  resetParameters(gl);
-
-  let modifiedParameters = getModifiedParameters(gl);
-
-  t.deepEqual(modifiedParameters, {}, 'Nothing is changed');
-
-  pushContextState(gl);
-
-  // Set custom values and verify
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
-  modifiedParameters = getModifiedParameters(gl);
-
-  for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    t.deepEqual(
-      modifiedParameters[key],
-      ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(modifiedParameters[key])} for key: ${key}`
-    );
-  }
-
-  for (const key in modifiedParameters) {
-    if (!(key in ENUM_STYLE_SETTINGS_SET1)) {
-      t.fail('should not contain keys that are not changed');
-    }
-  }
-
-  popContextState(gl);
 
   t.end();
 });

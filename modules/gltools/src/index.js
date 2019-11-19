@@ -4,23 +4,15 @@ export {default as polyfillContext} from './polyfill/polyfill-context';
 
 // unified parameter APIs
 export {
-  getParameter,
   getParameters,
-  setParameter,
+  setParameters,
   resetParameters,
-  getModifiedParameters
-} from './state-tracker/unified-parameter-api/unified-parameter-api';
-
-export {
-  // Support function style parameter keys
-  setParameters // TODO - setParameter should also support function style keys?
-} from './state-tracker/unified-parameter-api/set-parameters';
+  withParameters
+} from './state-tracker/unified-parameter-api';
 
 // state tracking
 export {
   default as trackContextState,
   pushContextState,
   popContextState
-} from './state-tracker/state-tracking/track-context-state';
-
-export {withParameters} from './state-tracker/state-tracking/with-parameters';
+} from './state-tracker/track-context-state';

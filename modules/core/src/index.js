@@ -30,12 +30,9 @@ export {
 export {
   trackContextState,
   resetParameters,
-  getParameter,
   getParameters,
-  setParameter,
   setParameters,
-  withParameters,
-  getModifiedParameters
+  withParameters
 } from '@luma.gl/gltools';
 
 // WEBGL1 OBJECTS/FUNCTIONS

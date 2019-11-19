@@ -8,22 +8,8 @@ import {
   GL_PARAMETER_GETTERS
 } from './webgl-parameter-tables';
 
-import deepArrayEqual from '../utils/deep-array-equal';
-import {assert} from '../utils';
-
-// PUBLIC METHODS
-
-// Sets any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
-// Returns the previous value
-// Note: limited to parameter values
-export function setParameter(gl, key, value) {
-  const getter = GL_PARAMETER_GETTERS[key];
-  const prevValue = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
-  const setter = GL_PARAMETER_SETTERS[key];
-  assert(typeof setter === 'function');
-  setter(gl, value, Number(key));
-  return prevValue;
-}
+import {pushContextState, popContextState} from './track-context-state';
+import {isObjectEmpty} from './utils';
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
@@ -59,23 +45,16 @@ export function setParameters(gl, values) {
   // This is the ONLY external dependency in this module/
   const cache = gl.state && gl.state.cache;
   if (cache) {
-    const mergedValues = Object.assign({}, cache, values);
-
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.
       const compositeSetter = GL_COMPOSITE_PARAMETER_SETTERS[key];
       // Note - if `trackContextState` has been called,
       // the setter will automatically update this.state.cache
-      compositeSetter(gl, mergedValues);
+      compositeSetter(gl, values, cache);
     }
   }
-  // Add a log for the else case?
-}
 
-// Queries any single GL parameter regardless of function (gl.getParameter/gl.isEnabled...)
-export function getParameter(gl, key) {
-  const getter = GL_PARAMETER_GETTERS[key];
-  return getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
+  // Add a log for the else case?
 }
 
 // Copies the state from a context (gl.getParameter should not be overriden)
@@ -92,35 +71,50 @@ export function getParameters(gl, parameters) {
 
   const state = {};
   for (const key of parameterKeys) {
-    state[key] = getParameter(gl, key);
+    const getter = GL_PARAMETER_GETTERS[key];
+    state[key] = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
   }
   return state;
 }
 
-export function getDefaultParameters(gl) {
-  // TODO - Query GL.VIEWPORT and GL.SCISSOR_BOX since these are dynamic
-  return Object.assign({}, GL_PARAMETER_DEFAULTS, {
-    // TODO: For viewport and scissor default values are set at the time of
-    // context creation based on canvas size, we can query them here but it will
-    // not match with what we have in GL_PARAMETER_DEFAULTS table, we should revisit.
-    // [GL.VIEWPORT]: gl.constructor.prototype.getParameter.call(gl, GL.VIEWPORT),
-    // [GL.SCISSOR_BOX]: gl.constructor.prototype.getParameter.call(gl, GL.SCISSOR_BOX)
-  });
-}
-
-// Reset all parameters to a pure context state
+// Reset all parameters to a (almost) pure context state
+// NOTE: viewport and scissor will be set to the values in GL_PARAMETER_DEFAULTS,
+//   NOT the canvas size dimensions, so they will have to be properly set after
+//   calling this function.
 export function resetParameters(gl) {
-  setParameters(gl, getDefaultParameters(gl));
+  setParameters(gl, GL_PARAMETER_DEFAULTS);
 }
 
-// Get all parameters that have been modified from a pure context state
-export function getModifiedParameters(gl) {
-  const values = getParameters(gl, Object.keys(GL_PARAMETER_DEFAULTS));
-  const modified = {};
-  for (const key in GL_PARAMETER_DEFAULTS) {
-    if (!deepArrayEqual(values[key], GL_PARAMETER_DEFAULTS[key])) {
-      modified[key] = values[key];
+// Stores current "global" WebGL context settings, changes selected parameters,
+// executes function, restores parameters
+export function withParameters(gl, parameters, func) {
+  // assertWebGLContext(gl);
+
+  if (isObjectEmpty(parameters)) {
+    // Avoid setting state if no parameters provided. Just call and return
+    return func(gl);
+  }
+
+  const {nocatch = true} = parameters;
+
+  pushContextState(gl);
+  setParameters(gl, parameters);
+
+  // Setup is done, call the function
+  let value;
+
+  if (nocatch) {
+    // Avoid try catch to minimize stack size impact for safe execution paths
+    value = func(gl);
+    popContextState(gl);
+  } else {
+    // Wrap in a try-catch to ensure that parameters are restored on exceptions
+    try {
+      value = func(gl);
+    } finally {
+      popContextState(gl);
     }
   }
-  return modified;
+
+  return value;
 }

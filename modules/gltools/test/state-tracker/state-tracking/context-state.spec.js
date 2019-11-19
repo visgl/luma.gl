@@ -1,16 +1,10 @@
 import test from 'tape-catch';
 import GL from '@luma.gl/constants';
-import {
-  getParameter,
-  getParameters,
-  setParameters,
-  resetParameters,
-  withParameters
-} from '@luma.gl/gltools';
+import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/gltools';
 
 import {getKey, Framebuffer} from '@luma.gl/webgl';
 
-import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/gltools/state-tracker/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1} from '../data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from '../data/sample-function-settings';
@@ -26,8 +20,11 @@ const fixture = {
   gl2: createTestContext({webgl2: true, webgl1: false})
 };
 
+function getParameter(gl, param) {
+  return getParameters(gl, [param])[param];
+}
+
 test('WebGL#state', t => {
-  t.ok(getParameter, 'getParameter imported ok');
   t.ok(getParameters, 'getParameters imported ok');
   t.ok(setParameters, 'setParameters imported ok');
   t.ok(withParameters, 'withParameters imported ok');
@@ -36,25 +33,27 @@ test('WebGL#state', t => {
   t.end();
 });
 
-test('WebGLState#getParameter', t => {
+test('WebGLState#getParameters', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
+  const parameters = getParameters(gl);
 
   for (const setting in GL_PARAMETERS) {
-    const value = getParameter(gl, setting);
+    const value = parameters[setting];
     t.ok(value !== undefined, `${setting}: got a value ${stringifyTypedArray(value)}`);
   }
   t.end();
 });
 
-test('WebGLState#getParameter (WebGL2)', t => {
+test('WebGLState#getParameters (WebGL2)', t => {
   const {gl2} = fixture;
   if (gl2) {
     resetParameters(gl2);
+    const parameters = getParameters(gl2);
 
     for (const setting in GL_PARAMETERS) {
-      const value = getParameter(gl2, setting);
+      const value = parameters[setting];
       t.ok(
         value !== undefined,
         `${getKey(GL, setting)}: got a value ${stringifyTypedArray(value)}`
@@ -70,9 +69,10 @@ test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
   resetParameters(gl);
 
   setParameters(gl, FUNCTION_STYLE_SETTINGS_SET1);
+  const parameters = getParameters(gl);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    const value = getParameter(gl, key);
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
@@ -114,9 +114,10 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
   resetParameters(gl);
 
   setParameters(gl, parameters);
+  const actualParameters = getParameters(gl);
 
   for (const key in expectedValues) {
-    const value = getParameter(gl, key);
+    const value = actualParameters[key];
     t.deepEqual(
       value,
       expectedValues[key],
@@ -130,8 +131,9 @@ test('WebGLState#withParameters', t => {
   const {gl} = fixture;
 
   const checkParameters = expected => {
+    const parameters = getParameters(gl);
     for (const key in expected) {
-      const value = getParameter(gl, key);
+      const value = parameters[key];
       t.deepEqual(value, expected[key], `got expected value ${stringifyTypedArray(value)}`);
     }
   };
@@ -211,10 +213,11 @@ test('WebGLState#withParameters: recursive', t => {
     blendEquation: GL.FUNC_ADD
   });
 
-  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  let blendState = getParameter(gl, GL.BLEND);
-  let blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
-  let blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+  let parameters = getParameters(gl);
+  let clearColor = parameters[GL.COLOR_CLEAR_VALUE];
+  let blendState = parameters[GL.BLEND];
+  let blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
+  let blendEquation = parameters[GL.BLEND_EQUATION_RGB];
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
   t.deepEqual(
@@ -234,10 +237,11 @@ test('WebGLState#withParameters: recursive', t => {
       [GL.BLEND]: true
     },
     () => {
-      clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-      blendState = getParameter(gl, GL.BLEND);
-      blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
-      blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+      parameters = getParameters(gl);
+      clearColor = parameters[GL.COLOR_CLEAR_VALUE];
+      blendState = parameters[GL.BLEND];
+      blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
+      blendEquation = parameters[GL.BLEND_EQUATION_RGB];
       // Verify changed state
       t.deepEqual(
         clearColor,
@@ -264,10 +268,11 @@ test('WebGLState#withParameters: recursive', t => {
           blendEquation: GL.FUNC_SUBTRACT
         },
         () => {
-          clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-          blendState = getParameter(gl, GL.BLEND);
-          blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
-          blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+          parameters = getParameters(gl);
+          clearColor = parameters[GL.COLOR_CLEAR_VALUE];
+          blendState = parameters[GL.BLEND];
+          blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
+          blendEquation = parameters[GL.BLEND_EQUATION_RGB];
           // Verify un-changed state
           t.deepEqual(
             clearColor,
@@ -288,9 +293,9 @@ test('WebGLState#withParameters: recursive', t => {
           );
         }
       );
-
-      blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
-      blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+      parameters = getParameters(gl);
+      blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
+      blendEquation = parameters[GL.BLEND_EQUATION_RGB];
       t.deepEqual(
         blendFuncSrcRGB,
         GL.ONE_MINUS_SRC_ALPHA,
@@ -304,10 +309,11 @@ test('WebGLState#withParameters: recursive', t => {
     }
   );
 
-  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  blendState = getParameter(gl, GL.BLEND);
-  blendFuncSrcRGB = getParameter(gl, GL.BLEND_SRC_RGB);
-  blendEquation = getParameter(gl, GL.BLEND_EQUATION_RGB);
+  parameters = getParameters(gl);
+  clearColor = parameters[GL.COLOR_CLEAR_VALUE];
+  blendState = parameters[GL.BLEND];
+  blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
+  blendEquation = parameters[GL.BLEND_EQUATION_RGB];
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
   t.deepEqual(
@@ -365,9 +371,9 @@ test('WebGLState#BlendEquationMinMax', t => {
 
         setParameters(context, parameters);
 
-        // eslint-disable-next-line max-depth
+        const actualParameters = getParameters(context);
         for (const state in expected) {
-          const value = getParameter(context, state);
+          const value = actualParameters[state];
           t.equal(
             value,
             expected[state],
@@ -419,14 +425,14 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
       framebuffer: framebuffer.handle
     });
 
-    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
     t.equal(
       fbHandle,
       framebuffer.handle,
       'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
     );
-    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
       framebuffer.handle,
@@ -434,13 +440,13 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
     );
 
     gl2.bindFramebuffer(gl2.DRAW_FRAMEBUFFER, framebufferTwo.handle);
-    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
       framebufferTwo.handle,
       'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
     );
-    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
       framebuffer.handle,
@@ -448,13 +454,13 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
     );
 
     gl2.bindFramebuffer(gl2.READ_FRAMEBUFFER, framebufferThree.handle);
-    fbHandle = getParameter(gl2, gl2.DRAW_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
       framebufferTwo.handle,
       'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING'
     );
-    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
       framebufferThree.handle,

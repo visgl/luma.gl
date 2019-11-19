@@ -3,7 +3,7 @@ import {Transform} from '@luma.gl/engine';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
-import {setParameters, getParameter} from '@luma.gl/gltools';
+import {setParameters, getParameters} from '@luma.gl/gltools';
 
 const VS = `\
 #version 300 es
@@ -1350,7 +1350,7 @@ test('WebGL#Transform run (custom parameters)', t => {
   const outTexData = transform.getData({packed: true});
   t.deepEqual(outTexData, expectedData, `${name} Transform should write correct data into Texture`);
 
-  t.ok(getParameter(gl2, GL.BLEND) === true, 'Parameters are properly set');
+  t.ok(getParameters(gl2, [GL.BLEND])[GL.BLEND] === true, 'Parameters are properly set');
 
   setParameters(gl2, {blend: false});
 

@@ -15,7 +15,7 @@ const returnValue = withParameters(gl, {
 }, () = {
   // execute code with new parameters temporarily applied
   program.draw(...);
-  ...
+  // ...
   // parameters will be restored even the function throws an exception
   if (...) {
     throw new Error('Exception after setting parameters');

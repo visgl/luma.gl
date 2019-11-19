@@ -5,17 +5,11 @@ luma.gl simplifies the usage of WebGL parameters by providing a unified API for 
 In addition, state queries are done towards cached values and are thus much faster than working directly with the WebGL API, where synchronous WebGL queries can be a performance bottleneck.
 
 The following functions are provided:
-* `getParameter` - Returns the value(s) of a GL context parameter
 * `getParameters` - Returns the values of some or all GL context parameters
 * `setParameters` - Sets a the value(s) of the specified GL context parameters
 * `resetParameters` - Resets all gl context parameters to default values
 
 ## Usage
-
-Get a global parameter value using a WebGL GLenum
-```js
-const value = getParameter(gl, gl.DEPTH_TEST);
-```
 
 Set a global parameter value using a WebGL GLenum
 ```js
@@ -37,19 +31,6 @@ const values = getParameters(gl);
 ```
 
 ## Functions
-
-### getParameter
-
-Gets the value(s) of a single gl context parameter.
-
-```js
-getParameter(gl, pname)
-```
-
-* `gl` {WebGLRenderingContext} - context
-* `pname` {GLenum}  - parameter name, a GL parameter constant
-Returns {*} - value(s) of this parameter
-
 
 ### getParameters
 
