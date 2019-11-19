@@ -5,8 +5,7 @@ import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS,
   GL_COMPOSITE_PARAMETER_SETTERS,
-  GL_PARAMETER_GETTERS,
-  FUNCTION_STYLE_PARAMETER_SETTERS
+  GL_PARAMETER_GETTERS
 } from './webgl-parameter-tables';
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
@@ -52,12 +51,6 @@ export function setParameters(gl, values) {
     }
   }
 
-  for (const key in values) {
-    const setter = FUNCTION_STYLE_PARAMETER_SETTERS[key];
-    if (setter) {
-      setter(gl, values[key], key);
-    }
-  }
   // Add a log for the else case?
 }
 
