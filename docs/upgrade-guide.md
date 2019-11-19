@@ -30,7 +30,8 @@ The module structure has been significantly changed for v8.0 with the intention 
 - @luma.gl/main has been removed. Use individual modules instead.
 - `Multipass` classes have been removed.
 - Seer support has been removed.
-- Timeline and Keyframes have been moved from @luma.gl/addons to @luma.gl/engine
+- Timeline and Keyframes have been moved from @luma.gl/addons to @luma.gl/engine.
+- `getParameter` and `setParameter` have been removed. Use `getParamters` and `setParameters` instead.
 
 
 ## Upgrading from v7.2 to v7.3
