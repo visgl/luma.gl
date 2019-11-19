@@ -1,6 +1,6 @@
 // Tables describing WebGL parameters
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../utils';
+import {isWebGL2} from './utils';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 

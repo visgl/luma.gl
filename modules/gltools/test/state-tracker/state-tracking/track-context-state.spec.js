@@ -13,7 +13,7 @@ import {
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
-} from '@luma.gl/gltools/state-tracker/unified-parameter-api/webgl-parameter-tables';
+} from '@luma.gl/gltools/state-tracker/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from '../data/sample-enum-settings';
 

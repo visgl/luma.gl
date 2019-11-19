@@ -6,14 +6,13 @@ export {default as polyfillContext} from './polyfill/polyfill-context';
 export {
   getParameters,
   setParameters,
-  resetParameters
-} from './state-tracker/unified-parameter-api/unified-parameter-api';
+  resetParameters,
+  withParameters
+} from './state-tracker/unified-parameter-api';
 
 // state tracking
 export {
   default as trackContextState,
   pushContextState,
   popContextState
-} from './state-tracker/state-tracking/track-context-state';
-
-export {withParameters} from './state-tracker/state-tracking/with-parameters';
+} from './state-tracker/track-context-state';

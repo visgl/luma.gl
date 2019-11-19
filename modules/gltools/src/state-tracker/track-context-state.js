@@ -2,9 +2,9 @@
 //
 // NOTE: this system does not handle buffer bindings
 import GL_STATE_SETTERS from './webgl-function-to-parameters-table';
-import {GL_PARAMETER_DEFAULTS} from '../unified-parameter-api/webgl-parameter-tables';
-import {setParameters, getParameters} from '../unified-parameter-api/unified-parameter-api';
-import {assert, deepArrayEqual} from '../utils';
+import {GL_PARAMETER_DEFAULTS} from './webgl-parameter-tables';
+import {setParameters, getParameters} from './unified-parameter-api';
+import {assert, deepArrayEqual} from './utils';
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
