@@ -53,7 +53,6 @@ function installSetterSpy(gl, functionName, setter) {
 
     // Call the original WebGLRenderingContext func to make sure the context actually gets updated
     if (valueChanged) {
-      gl.state.log(`gl.${functionName}`, ...params); // eslint-disable-line
       originalSetterFunc(...params);
     }
 
@@ -116,20 +115,22 @@ class GLState {
 
     for (const key in values) {
       assert(key !== undefined);
+      const value = values[key];
+      const cached = this.cache[key];
       // Check that value hasn't already been shadowed
-      if (!deepArrayEqual(values[key], this.cache[key])) {
+      if (!deepArrayEqual(value, cached)) {
         valueChanged = true;
-        oldValue = this.cache[key];
+        oldValue = cached;
 
         // First, save current value being shadowed
         // If a state stack frame is active, save the current parameter values for pop
         // but first check that value hasn't already been shadowed and saved
         if (oldValues && !(key in oldValues)) {
-          oldValues[key] = this.cache[key];
+          oldValues[key] = cached;
         }
 
         // Save current value being shadowed
-        this.cache[key] = values[key];
+        this.cache[key] = value;
       }
     }
 
