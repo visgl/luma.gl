@@ -23,6 +23,10 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
+function getParameter(gl, param) {
+  return getParameters(gl, [param])[param];
+}
+
 // Settings test, don't reuse a context
 const fixture = {
   gl: createTestContext({debug: true})
@@ -48,10 +52,11 @@ test('WebGLState#push & pop', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
+  let parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -63,8 +68,9 @@ test('WebGLState#push & pop', t => {
 
   // Set custom values and verify.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
@@ -76,8 +82,9 @@ test('WebGLState#push & pop', t => {
 
   // Set custom values and verify
   setParameters(gl, ENUM_STYLE_SETTINGS_SET2);
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET2) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET2[key],
@@ -87,9 +94,10 @@ test('WebGLState#push & pop', t => {
 
   // Pop and verify values restore to previous state
   popContextState(gl);
+  parameters = getParameters(gl);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
@@ -98,9 +106,10 @@ test('WebGLState#push & pop', t => {
   }
 
   popContextState(gl);
+  parameters = getParameters(gl);
 
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -115,10 +124,11 @@ test('WebGLState#gl API', t => {
   const {gl} = fixture;
 
   resetParameters(gl);
+  let parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -138,6 +148,7 @@ test('WebGLState#gl API', t => {
     }
   }
 
+  parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
     if (typeof GL_PARAMETER_SETTERS[key] !== 'string') {
@@ -151,9 +162,9 @@ test('WebGLState#gl API', t => {
   }
 
   popContextState(gl);
-
+  parameters = getParameters(gl);
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
@@ -172,45 +183,26 @@ test('WebGLState#intercept gl calls', t => {
   pushContextState(gl);
 
   gl.blendEquation(gl.FUNC_SUBTRACT, gl.FUNC_SUBTRACT);
-  t.is(
-    getParameters(gl, [gl.BLEND_EQUATION_RGB])[gl.BLEND_EQUATION_RGB],
-    gl.FUNC_SUBTRACT,
-    'direct gl call is tracked'
-  );
+  t.is(getParameter(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
 
   gl.blendFunc(gl.ONE, gl.ONE);
-  t.is(
-    getParameters(gl, [gl.BLEND_SRC_RGB])[gl.BLEND_SRC_RGB],
-    gl.ONE,
-    'direct gl call is tracked'
-  );
+  t.is(getParameter(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
 
   gl.stencilMask(8);
-  t.is(
-    getParameters(gl, [gl.STENCIL_WRITEMASK])[gl.STENCIL_WRITEMASK],
-    8,
-    'direct gl call is tracked'
-  );
+  t.is(getParameter(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
 
   gl.stencilFunc(gl.NEVER, 0, 1);
-  t.is(
-    getParameters(gl, [gl.STENCIL_FUNC])[gl.STENCIL_FUNC],
-    gl.NEVER,
-    'direct gl call is tracked'
-  );
+  t.is(getParameter(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
 
   gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
-  t.is(
-    getParameters(gl, [gl.STENCIL_PASS_DEPTH_FAIL])[gl.STENCIL_PASS_DEPTH_FAIL],
-    gl.ZERO,
-    'direct gl call is tracked'
-  );
+  t.is(getParameter(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
 
   popContextState(gl);
+  const parameters = getParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
-    const value = getParameters(gl, [key])[key];
+    const value = parameters[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
