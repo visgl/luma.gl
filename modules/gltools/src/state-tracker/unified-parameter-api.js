@@ -9,7 +9,7 @@ import {
 } from './webgl-parameter-tables';
 
 import {pushContextState, popContextState} from './track-context-state';
-import {assert, isObjectEmpty} from './utils';
+import {isObjectEmpty} from './utils';
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
@@ -77,7 +77,10 @@ export function getParameters(gl, parameters) {
   return state;
 }
 
-// Reset all parameters to a pure context state
+// Reset all parameters to a (almost) pure context state
+// NOTE: viewport and scissor will be set to the values in GL_PARAMETER_DEFAULTS,
+//   NOT the canvas size dimensions, so they will have to be properly set after
+//   calling this function.
 export function resetParameters(gl) {
   setParameters(gl, GL_PARAMETER_DEFAULTS);
 }
@@ -93,10 +96,6 @@ export function withParameters(gl, parameters, func) {
   }
 
   const {nocatch = true} = parameters;
-
-  // frameBuffer not supported: use framebuffer API
-  // TODO - is this still true?
-  assert(!parameters.frameBuffer);
 
   pushContextState(gl);
   setParameters(gl, parameters);
