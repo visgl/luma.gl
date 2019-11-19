@@ -1,8 +1,7 @@
 // Support for listening to context state changes and intercepting state queries
 //
 // NOTE: this system does not handle buffer bindings
-import GL_STATE_SETTERS from './webgl-function-to-parameters-table';
-import {GL_PARAMETER_DEFAULTS} from './webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS} from './webgl-parameter-tables';
 import {setParameters, getParameters} from './unified-parameter-api';
 import {assert, deepArrayEqual} from './utils';
 
@@ -161,8 +160,8 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
     gl.state = new GLState(gl, {copyState, enable});
 
     // intercept all setter functions in the table
-    for (const key in GL_STATE_SETTERS) {
-      const setter = GL_STATE_SETTERS[key];
+    for (const key in GL_HOOKED_SETTERS) {
+      const setter = GL_HOOKED_SETTERS[key];
       installSetterSpy(gl, key, setter);
     }
 
