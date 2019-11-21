@@ -70,7 +70,7 @@ export default class Program extends Resource {
     // uniforms
     this.uniforms = {};
 
-    this._texturesUniforms = {};
+    this._textureUniforms = {};
     this._texturesRenderable = true;
 
     // Setup varyings if supplied
@@ -227,12 +227,12 @@ export default class Program extends Resource {
               this._texturesRenderable = false;
             }
 
-            this._texturesUniforms[uniformName] = texture;
+            this._textureUniforms[uniformName] = texture;
           } else {
             value = uniformSetter.textureIndex;
           }
-        } else if (this._texturesUniforms[uniformName]) {
-          delete this._texturesUniforms[uniformName];
+        } else if (this._textureUniforms[uniformName]) {
+          delete this._textureUniforms[uniformName];
         }
 
         // NOTE(Tarek): uniformSetter returns whether
@@ -282,9 +282,9 @@ export default class Program extends Resource {
   // Binds textures
   // Note: This is currently done before every draw call
   _bindTextures() {
-    for (const uniformName in this._texturesUniforms) {
+    for (const uniformName in this._textureUniforms) {
       const textureIndex = this._uniformSetters[uniformName].textureIndex;
-      this.uniforms[uniformName].bind(textureIndex);
+      this._textureUniforms[uniformName].bind(textureIndex);
     }
   }
 
