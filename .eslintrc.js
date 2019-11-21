@@ -10,6 +10,7 @@ module.exports = {
     camelcase: 0,
     'max-statements': 0,
     'max-depth': 0,
+    complexity: 0,
     'luma-gl-custom-rules/check-log-call': 1,
     'import/no-unresolved': ['error'],
     'import/no-extraneous-dependencies': [

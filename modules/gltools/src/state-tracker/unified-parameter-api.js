@@ -15,6 +15,10 @@ import {isObjectEmpty} from './utils';
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
 // This object is used to fill in any missing values for composite setter functions
 export function setParameters(gl, values) {
+  if (isObjectEmpty(values)) {
+    return;
+  }
+
   const compositeSetters = {};
 
   // HANDLE PRIMITIVE SETTERS (and make note of any composite setters)

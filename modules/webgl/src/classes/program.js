@@ -70,6 +70,7 @@ export default class Program extends Resource {
     // uniforms
     this.uniforms = {};
 
+    this._textureUniforms = {};
     this._texturesRenderable = true;
 
     // Setup varyings if supplied
@@ -202,6 +203,7 @@ export default class Program extends Resource {
       if (uniformSetter) {
         let value = uniform;
         let textureUpdate = false;
+
         if (value instanceof Framebuffer) {
           value = value.texture;
         }
@@ -224,9 +226,13 @@ export default class Program extends Resource {
             if (!texture.loaded) {
               this._texturesRenderable = false;
             }
+
+            this._textureUniforms[uniformName] = texture;
           } else {
             value = uniformSetter.textureIndex;
           }
+        } else if (this._textureUniforms[uniformName]) {
+          delete this._textureUniforms[uniformName];
         }
 
         // NOTE(Tarek): uniformSetter returns whether
@@ -276,21 +282,9 @@ export default class Program extends Resource {
   // Binds textures
   // Note: This is currently done before every draw call
   _bindTextures() {
-    for (const uniformName in this.uniforms) {
-      const uniformSetter = this._uniformSetters[uniformName];
-
-      if (uniformSetter && uniformSetter.textureIndex !== undefined) {
-        let uniform = this.uniforms[uniformName];
-
-        if (uniform instanceof Framebuffer) {
-          uniform = uniform.texture;
-        }
-        if (uniform instanceof Texture) {
-          const texture = uniform;
-          // Bind texture to index
-          texture.bind(uniformSetter.textureIndex);
-        }
-      }
+    for (const uniformName in this._textureUniforms) {
+      const textureIndex = this._uniformSetters[uniformName].textureIndex;
+      this._textureUniforms[uniformName].bind(textureIndex);
     }
   }
 

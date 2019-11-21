@@ -71,6 +71,17 @@ function installSetterSpy(gl, functionName, setter) {
   });
 }
 
+function installProgramSpy(gl) {
+  const originalUseProgram = gl.useProgram.bind(gl);
+
+  gl.useProgram = function useProgramLuma(handle) {
+    if (gl.state.program !== handle) {
+      originalUseProgram(handle);
+      gl.state.program = handle;
+    }
+  };
+}
+
 // HELPER CLASS - GLState
 
 /* eslint-disable no-shadow */
@@ -83,6 +94,7 @@ class GLState {
     } = {}
   ) {
     this.gl = gl;
+    this.program = null;
     this.stateStack = [];
     this.enable = true;
     this.cache = copyState ? getParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
@@ -159,6 +171,8 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
 
     // Create a state cache
     gl.state = new GLState(gl, {copyState, enable});
+
+    installProgramSpy(gl);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
