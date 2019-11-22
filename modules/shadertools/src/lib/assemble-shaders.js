@@ -1,5 +1,5 @@
 import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
-import {resolveModules, getShaderModule} from './resolve-modules';
+import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import {assert} from '../utils';
@@ -12,12 +12,12 @@ const SHADER_TYPE = {
   [FRAGMENT_SHADER]: 'fragment'
 };
 
-const HOOK_FUNCTIONS = {
+const DEFAULT_HOOK_FUNCTIONS = {
   [VERTEX_SHADER]: {},
   [FRAGMENT_SHADER]: {}
 };
 
-const MODULE_INJECTIONS = {
+const DEFAULT_MODULE_INJECTIONS = {
   [VERTEX_SHADER]: {},
   [FRAGMENT_SHADER]: {}
 };
@@ -29,37 +29,6 @@ precision highp float;
 
 `;
 
-export function createShaderHook(hook, opts = {}) {
-  hook = hook.trim();
-  const [stage, signature] = hook.split(':');
-  const name = hook.replace(/\(.+/, '');
-  HOOK_FUNCTIONS[stage][name] = Object.assign(opts, {signature});
-}
-
-export function createModuleInjection(moduleName, opts) {
-  const {hook, injection, order = 0} = opts;
-  const shaderStage = hook.slice(0, 2);
-
-  const moduleInjections = MODULE_INJECTIONS[shaderStage];
-  moduleInjections[moduleName] = moduleInjections[moduleName] || {};
-
-  assert(!moduleInjections[moduleName][hook], 'Module injection already created');
-
-  moduleInjections[moduleName][hook] = {
-    injection,
-    order
-  };
-}
-
-// Helpful for tests
-export function resetGlobalShaderHooks() {
-  HOOK_FUNCTIONS[VERTEX_SHADER] = {};
-  HOOK_FUNCTIONS[FRAGMENT_SHADER] = {};
-
-  MODULE_INJECTIONS[VERTEX_SHADER] = {};
-  MODULE_INJECTIONS[FRAGMENT_SHADER] = {};
-}
-
 // Inject a list of modules
 export function assembleShaders(gl, opts) {
   const {vs, fs} = opts;
@@ -68,8 +37,7 @@ export function assembleShaders(gl, opts) {
     gl,
     vs: assembleShader(gl, Object.assign({}, opts, {source: vs, type: VERTEX_SHADER, modules})),
     fs: assembleShader(gl, Object.assign({}, opts, {source: fs, type: FRAGMENT_SHADER, modules})),
-    getUniforms: assembleGetUniforms(modules),
-    modules: assembleModuleMap(modules)
+    getUniforms: assembleGetUniforms(modules)
   };
 }
 
@@ -83,45 +51,14 @@ function assembleShader(
     type,
     modules,
     defines = {},
-    hookFunctions = HOOK_FUNCTIONS,
-    moduleInjections = MODULE_INJECTIONS,
+    hookFunctions = DEFAULT_HOOK_FUNCTIONS,
+    moduleInjections = DEFAULT_MODULE_INJECTIONS,
     inject = {},
     prologue = true,
     log
   }
 ) {
   assert(typeof source === 'string', 'shader source must be a string');
-
-  // TODO(Tarek): Supporting global hooks, remove when they're removed.
-  if (hookFunctions !== HOOK_FUNCTIONS) {
-    hookFunctions = {
-      [VERTEX_SHADER]: Object.assign(
-        {},
-        HOOK_FUNCTIONS[VERTEX_SHADER],
-        hookFunctions[VERTEX_SHADER]
-      ),
-      [FRAGMENT_SHADER]: Object.assign(
-        {},
-        HOOK_FUNCTIONS[FRAGMENT_SHADER],
-        hookFunctions[FRAGMENT_SHADER]
-      )
-    };
-  }
-
-  if (moduleInjections !== MODULE_INJECTIONS) {
-    moduleInjections = {
-      [VERTEX_SHADER]: Object.assign(
-        {},
-        MODULE_INJECTIONS[VERTEX_SHADER],
-        moduleInjections[VERTEX_SHADER]
-      ),
-      [FRAGMENT_SHADER]: Object.assign(
-        {},
-        MODULE_INJECTIONS[FRAGMENT_SHADER],
-        moduleInjections[FRAGMENT_SHADER]
-      )
-    };
-  }
 
   const isVertex = type === VERTEX_SHADER;
 
@@ -240,18 +177,6 @@ function assembleGetUniforms(modules) {
     }
     return uniforms;
   };
-}
-
-// Returns a map with module names as keys, resolving to their module definitions
-// The presence of a key indicates that the module is available in this program,
-// whether directly included, or through a dependency of some other module
-function assembleModuleMap(modules) {
-  const result = {};
-  for (const moduleName of modules) {
-    const shaderModule = getShaderModule(moduleName);
-    result[moduleName] = shaderModule;
-  }
-  return result;
 }
 
 function getShaderType({type}) {

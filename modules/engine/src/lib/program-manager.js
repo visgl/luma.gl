@@ -40,13 +40,13 @@ export default class ProgramManager {
   }
 
   removeDefaultModule(module) {
-    const moduleName = typeof module === 'string' ? module : module.name;
+    const moduleName = module.name;
     this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
     this.stateHash++;
   }
 
   addModuleInjection(module, opts) {
-    const moduleName = typeof module === 'string' ? module : module.name;
+    const moduleName = module.name;
     const {hook, injection, order = 0} = opts;
     const shaderStage = hook.slice(0, 2);
 
@@ -77,7 +77,7 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    const moduleHashes = modules.map(m => this._getHash(typeof m === 'string' ? m : m.name)).sort();
+    const moduleHashes = modules.map(m => this._getHash(m.name)).sort();
     const varyingHashes = varyings.map(v => this._getHash(v));
 
     const defineKeys = Object.keys(defines).sort();
@@ -159,14 +159,14 @@ export default class ProgramManager {
 
     for (let i = 0, len = this._defaultModules.length; i < len; ++i) {
       const module = this._defaultModules[i];
-      const name = typeof module === 'string' ? module : module.name;
+      const name = module.name;
       modules[count++] = module;
       seen[name] = true;
     }
 
     for (let i = 0, len = appModules.length; i < len; ++i) {
       const module = appModules[i];
-      const name = typeof module === 'string' ? module : module.name;
+      const name = module.name;
       if (!seen[name]) {
         modules[count++] = module;
         seen[name] = true;
