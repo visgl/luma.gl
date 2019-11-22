@@ -9,11 +9,11 @@ The module structure has been significantly changed for v8.0 with the intention 
 | New Module | Purpose | Components from v7 |
 | ---------- | ------- |---------- |
 | constants | WebGL enum values | Same as before |
-| shadertools| Tools for manipulating and composing shader text | Same as before |
+| shadertools| Tools for manipulating and composing shader text | shadertools and effects |
 | gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
 | webgl      | Wrapper classes for WebGL | Same as before |
 | core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in addons |
-| engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform and effects|
+| engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform|
 | addons     | Experimental, unsupported APIs | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
 | debug      | Debug tooling for the other modules | Same as before |
 | test-utils | Test tooling for the other modules | Same as before |
@@ -25,6 +25,8 @@ The module structure has been significantly changed for v8.0 with the intention 
 - `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
 - `ShaderCache` has been removed and superseded by `ProgramManager`.
+- `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
+- `createShaderHook` and `createModuleInjection` have been removed. Used `ProgramManager.getDefaultProgramManger().addShaderHook` && `ProgramManager.getDefaultProgramManger().addModuleInjection` instead.
 - `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.
 - @luma.gl/glfx has been renamed to @luma.gl/effects.
 - @luma.gl/main has been removed. Use individual modules instead.
