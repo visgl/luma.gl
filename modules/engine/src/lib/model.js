@@ -19,7 +19,6 @@ import {
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
-import {MODULAR_SHADERS} from '@luma.gl/shadertools';
 import {getBuffersFromGeometry} from './model-utils';
 
 const LOG_DRAW_PRIORITY = 2;
@@ -376,16 +375,7 @@ export default class Model {
     if (program) {
       this._managedProgram = false;
     } else {
-      const {
-        // TODO(Tarek): Are these actually used anywhere?
-        vs = MODULAR_SHADERS.vs,
-        fs = MODULAR_SHADERS.fs,
-        modules,
-        inject,
-        defines,
-        varyings,
-        bufferMode
-      } = this.programProps;
+      const {vs, fs, modules, inject, defines, varyings, bufferMode} = this.programProps;
       program = this.programManager.get({vs, fs, modules, inject, defines, varyings, bufferMode});
       if (this.program && this._managedProgram) {
         this.programManager.release(this.program);

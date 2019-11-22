@@ -1,4 +1,3 @@
-import project2 from '../project2/project2';
 import lights from '../lights/lights';
 
 import vs from './pbr-vertex.glsl';
@@ -11,5 +10,5 @@ export default {
   defines: {
     LIGHTING_FRAGMENT: 1
   },
-  dependencies: [project2, lights]
+  dependencies: [lights]
 };
