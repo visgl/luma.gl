@@ -93,9 +93,7 @@ export default class Texture extends Resource {
       recreate = false,
       parameters = {},
       pixelStore = {},
-      textureUnit = undefined,
-      // Deprecated parameters
-      unpackFlipY = true
+      textureUnit = undefined
     } = props;
 
     let {mipmaps = true} = props;
@@ -137,14 +135,6 @@ export default class Texture extends Resource {
       this.gl.bindTexture(this.target, this.handle);
     }
 
-    // Note: luma.gl defaults to GL.UNPACK_FLIP_Y_WEBGL = true;
-    // TODO - compare v4 and v3
-    const DEFAULT_TEXTURE_SETTINGS = {
-      // Pixel store
-      [GL.UNPACK_FLIP_Y_WEBGL]: unpackFlipY
-    };
-    const glSettings = Object.assign({}, DEFAULT_TEXTURE_SETTINGS, pixelStore);
-
     if (mipmaps && this._isNPOT()) {
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
@@ -164,7 +154,7 @@ export default class Texture extends Resource {
       dataFormat,
       border,
       mipmaps,
-      parameters: glSettings
+      parameters: pixelStore
     });
 
     if (mipmaps) {

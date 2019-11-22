@@ -18,6 +18,18 @@ The module structure has been significantly changed for v8.0 with the intention 
 | debug      | Debug tooling for the other modules | Same as before |
 | test-utils | Test tooling for the other modules | Same as before |
 
+### Breaking changes
+
+- `Texture2D`'s `unpackFlipY` option is removed. This change ensures that all data sources (Image, ImageBitmap, typed array) are treated consistently. As a result, textures created from Image objects and URL strings are now y-flipped from the v7.3 default. To get the old behavior, specify the `pixelStore` option:
+
+```js
+new Texture2D({
+  data,
+  pixelStore: {
+    [GL.UNPACK_FLIP_Y_WEBGL]: true
+  }
+});
+```
 
 ### Smaller changes
 

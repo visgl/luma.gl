@@ -73,9 +73,6 @@ export default class GLTFEnvironment {
           [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
           [GL.TEXTURE_MAG_FILTER]: GL.LINEAR
         },
-        pixelStore: {
-          [this.gl.UNPACK_FLIP_Y_WEBGL]: false
-        },
         // Texture2D accepts a promise that returns an image as data (Async Textures)
         data: loadImage(this.brdfLutUrl)
       });
