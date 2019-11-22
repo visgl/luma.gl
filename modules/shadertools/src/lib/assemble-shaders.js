@@ -12,16 +12,6 @@ const SHADER_TYPE = {
   [FRAGMENT_SHADER]: 'fragment'
 };
 
-const DEFAULT_HOOK_FUNCTIONS = {
-  [VERTEX_SHADER]: {},
-  [FRAGMENT_SHADER]: {}
-};
-
-const DEFAULT_MODULE_INJECTIONS = {
-  [VERTEX_SHADER]: {},
-  [FRAGMENT_SHADER]: {}
-};
-
 // Precision prologue to inject before functions are injected in shader
 // TODO - extract any existing prologue in the fragment source and move it up...
 const FRAGMENT_SHADER_PROLOGUE = `\
@@ -51,8 +41,8 @@ function assembleShader(
     type,
     modules,
     defines = {},
-    hookFunctions = DEFAULT_HOOK_FUNCTIONS,
-    moduleInjections = DEFAULT_MODULE_INJECTIONS,
+    hookFunctions = [],
+    moduleInjections = {},
     inject = {},
     prologue = true,
     log
@@ -99,8 +89,10 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
     : `${versionLine}
 `;
 
+  hookFunctions = normalizeHookFunctions(hookFunctions);
+  moduleInjections = normalizeModuleInjections(moduleInjections);
+
   // Add source of dependent modules in resolved order
-  let injectStandardStubs = false;
   const hookInjections = {};
   const mainInjections = {};
 
@@ -120,31 +112,24 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   }
 
   for (const module of modules) {
-    switch (module.name) {
-      case 'inject':
-        injectStandardStubs = true;
-        break;
+    if (log) {
+      module.checkDeprecations(coreSource, log);
+    }
+    const moduleSource = module.getModuleSource(type, glslVersion);
+    // Add the module source, and a #define that declares it presence
+    assembledSource += moduleSource;
 
-      default:
-        if (log) {
-          module.checkDeprecations(coreSource, log);
+    if (moduleInjections[type][module.name]) {
+      const injections = moduleInjections[type][module.name];
+      for (const key in injections) {
+        if (key.match(/^(v|f)s:#/)) {
+          mainInjections[key] = mainInjections[key] || [];
+          mainInjections[key].push(injections[key]);
+        } else {
+          hookInjections[key] = hookInjections[key] || [];
+          hookInjections[key].push(injections[key]);
         }
-        const moduleSource = module.getModuleSource(type, glslVersion);
-        // Add the module source, and a #define that declares it presence
-        assembledSource += moduleSource;
-
-        if (moduleInjections[type][module.name]) {
-          const injections = moduleInjections[type][module.name];
-          for (const key in injections) {
-            if (key.match(/^(v|f)s:#/)) {
-              mainInjections[key] = mainInjections[key] || [];
-              mainInjections[key].push(injections[key]);
-            } else {
-              hookInjections[key] = hookInjections[key] || [];
-              hookInjections[key].push(injections[key]);
-            }
-          }
-        }
+      }
     }
   }
 
@@ -157,7 +142,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, type, mainInjections, injectStandardStubs);
+  assembledSource = injectShader(assembledSource, type, mainInjections);
 
   return assembledSource;
 }
@@ -238,6 +223,55 @@ function getHookFunctions(hookFunctions, hookInjections) {
       result += `  ${hookFunction.footer}`;
     }
     result += '}\n';
+  }
+
+  return result;
+}
+function normalizeHookFunctions(hookFunctions) {
+  const result = {
+    vs: {},
+    fs: {}
+  };
+
+  hookFunctions.forEach(hook => {
+    let opts;
+    if (typeof hook !== 'string') {
+      opts = hook;
+      hook = opts.hook;
+    } else {
+      opts = {};
+    }
+    hook = hook.trim();
+    const [stage, signature] = hook.split(':');
+    const name = hook.replace(/\(.+/, '');
+    result[stage][name] = Object.assign(opts, {signature});
+  });
+
+  return result;
+}
+
+function normalizeModuleInjections(moduleInjections) {
+  const result = {
+    vs: {},
+    fs: {}
+  };
+
+  for (const moduleName in moduleInjections) {
+    const injections = moduleInjections[moduleName];
+
+    for (const hook in injections) {
+      let injection = injections[hook];
+      const stage = hook.slice(0, 2);
+
+      if (typeof injection === 'string') {
+        injection = {
+          injection
+        };
+      }
+
+      result[stage][moduleName] = result[stage][moduleName] || {};
+      result[stage][moduleName][hook] = injection;
+    }
   }
 
   return result;

@@ -107,40 +107,23 @@ test('assembleShaders#defines', t => {
 });
 
 test('assembleShaders#shaderhooks', t => {
-  const hookFunctions = {
-    vs: {
-      'vs:LUMAGL_pickColor': {
-        signature: 'LUMAGL_pickColor(inout vec4 color)'
-      }
-    },
-    fs: {
-      'fs:LUMAGL_fragmentColor': {
-        signature: 'LUMAGL_fragmentColor(inout vec4 color)',
-        header: 'if (color.a == 0.0) discard;\n',
-        footer: 'color.a *= 1.2;\n'
-      }
+  const hookFunctions = [
+    'vs:LUMAGL_pickColor(inout vec4 color)',
+    {
+      hook: 'fs:LUMAGL_fragmentColor(inout vec4 color)',
+      header: 'if (color.a == 0.0) discard;\n',
+      footer: 'color.a *= 1.2;\n'
     }
-  };
+  ];
 
   const moduleInjections = {
-    vs: {
-      picking: {
-        'vs:LUMAGL_pickColor': {
-          injection: 'picking_setPickingColor(color.rgb);'
-        }
-      }
-    },
-    fs: {
-      picking: {
-        'fs:LUMAGL_fragmentColor': {
-          injection: 'color = picking_filterColor(color);',
-          order: Number.POSITIVE_INFINITY
-        },
-        'fs:#main-end': {
-          injection: 'gl_FragColor = picking_filterColor(gl_FragColor);',
-          order: Number.POSITIVE_INFINITY
-        }
-      }
+    picking: {
+      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+      'fs:LUMAGL_fragmentColor': {
+        injection: 'color = picking_filterColor(color);',
+        order: Number.POSITIVE_INFINITY
+      },
+      'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
     }
   };
 

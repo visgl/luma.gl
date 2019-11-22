@@ -15,14 +15,8 @@ export default class ProgramManager {
     this._programCache = {};
     this._getUniforms = {};
     this._registeredModules = {};
-    this._moduleInjections = {
-      vs: {},
-      fs: {}
-    };
-    this._hookFunctions = {
-      vs: {},
-      fs: {}
-    };
+    this._moduleInjections = {};
+    this._hookFunctions = [];
     this._defaultModules = [];
 
     this._hashes = {};
@@ -47,10 +41,10 @@ export default class ProgramManager {
 
   addModuleInjection(module, opts) {
     const moduleName = module.name;
-    const {hook, injection, order = 0} = opts;
-    const shaderStage = hook.slice(0, 2);
 
-    const moduleInjections = this._moduleInjections[shaderStage];
+    const {hook, injection, order = 0} = opts;
+
+    const moduleInjections = this._moduleInjections;
     moduleInjections[moduleName] = moduleInjections[moduleName] || {};
 
     moduleInjections[moduleName][hook] = {
@@ -61,11 +55,12 @@ export default class ProgramManager {
     this.stateHash++;
   }
 
-  addShaderHook(hook, opts = {}) {
-    hook = hook.trim();
-    const [stage, signature] = hook.split(':');
-    const name = hook.replace(/\(.+/, '');
-    this._hookFunctions[stage][name] = Object.assign(opts, {signature});
+  addShaderHook(hook, opts) {
+    if (opts) {
+      hook = Object.assign(opts, {hook});
+    }
+
+    this._hookFunctions.push(hook);
 
     this.stateHash++;
   }
