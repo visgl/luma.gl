@@ -34,13 +34,13 @@ export default class ProgramManager {
   }
 
   removeDefaultModule(module) {
-    const moduleName = typeof module === "string" ? module : module.name;
+    const moduleName = typeof module === 'string' ? module : module.name;
     this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
     this.stateHash++;
   }
 
   addModuleInjection(module, opts) {
-    const moduleName = typeof module === "string" ? module : module.name;
+    const moduleName = typeof module === 'string' ? module : module.name;
 
     const {hook, injection, order = 0} = opts;
 
