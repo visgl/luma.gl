@@ -26,7 +26,7 @@ The module structure has been significantly changed for v8.0 with the intention 
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
 - `ShaderCache` has been removed and superseded by `ProgramManager`.
 - `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Used `ProgramManager.getDefaultProgramManger().addShaderHook` && `ProgramManager.getDefaultProgramManger().addModuleInjection` instead.
+- `createShaderHook` and `createModuleInjection` have been removed. Used `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` instead.
 - `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.
 - @luma.gl/glfx has been renamed to @luma.gl/effects.
 - @luma.gl/main has been removed. Use individual modules instead.
