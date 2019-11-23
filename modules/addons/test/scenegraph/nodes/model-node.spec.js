@@ -24,11 +24,20 @@ import {fixture} from 'test/setup';
 import {Model} from '@luma.gl/engine';
 import {ModelNode} from '@luma.gl/addons';
 
+const DUMMY_VS = `
+  void main() { gl_Position = vec4(1.0); }
+`;
+
+const DUMMY_FS = `
+  precision highp float;
+  void main() { gl_FragColor = vec4(1.0); }
+`;
+
 test('ModelNode#constructor', t => {
   const {gl} = fixture;
-  const model = new Model(gl);
+  const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
 
-  const mNode1 = new ModelNode(gl);
+  const mNode1 = new ModelNode(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
   t.ok(mNode1.model instanceof Model, 'should get constructed with gl');
 
   const mNode2 = new ModelNode(model);
@@ -42,7 +51,7 @@ test('ModelNode#setProps', t => {
     instanceCount: 100
   };
   const {gl} = fixture;
-  const model = new Model(gl);
+  const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
   const modelSetPropsSpy = makeSpy(model, 'setProps');
   const mNode = new ModelNode(model);
   mNode.setProps(props);
@@ -56,8 +65,8 @@ test('ModelNode#setProps', t => {
 
 test('ModelNode#Model forwards', t => {
   const {gl} = fixture;
-  const model = new Model(gl);
-  const resourceModel = new Model(gl);
+  const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const resourceModel = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
   const resourceSpy = makeSpy(resourceModel, 'delete');
   const managedResources = [resourceModel];
   const mNode = new ModelNode(model, {managedResources});

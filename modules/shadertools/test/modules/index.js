@@ -4,7 +4,12 @@ import './lights/lights.spec';
 import './picking/picking.spec';
 import './phong-lighting/phong-lighting.spec';
 
-import {registerShaderModules, setDefaultShaderModules} from '@luma.gl/shadertools';
+import './adjust-filters';
+import './blur-filters';
+import './fun-filters';
+import './utils';
+import './warp-filters';
+
 import shaderModules from '@luma.gl/shadertools/modules';
 import ShaderModule from '@luma.gl/shadertools/lib/shader-module';
 
@@ -43,9 +48,6 @@ function verifyShaderModule(t, module) {
 }
 
 test('shadertools#module imports are defined', t => {
-  t.ok(registerShaderModules, 'registerShaderModules is defined');
-  t.ok(setDefaultShaderModules, 'setDefaultShaderModules is defined');
-
   for (const name in shaderModules) {
     verifyShaderModule(t, shaderModules[name]);
   }

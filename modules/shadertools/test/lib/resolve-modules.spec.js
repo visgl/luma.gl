@@ -1,10 +1,5 @@
 import test from 'tape-catch';
-import {
-  resolveModules,
-  TEST_EXPORTS,
-  setDefaultShaderModules,
-  getDefaultShaderModules
-} from '@luma.gl/shadertools/lib/resolve-modules';
+import {resolveModules, TEST_EXPORTS} from '@luma.gl/shadertools/lib/resolve-modules';
 
 const {getDependencyGraph} = TEST_EXPORTS;
 
@@ -30,25 +25,6 @@ const project64 = {
 test('ShaderModules#import', t => {
   t.ok(resolveModules !== undefined, 'resolveModules import successful');
   t.ok(getDependencyGraph !== undefined, 'getDependencyGraph import successful');
-  t.ok(setDefaultShaderModules !== undefined, 'setDefaultShaderModules import successful');
-  t.ok(getDefaultShaderModules !== undefined, 'getDefaultShaderModules import successful');
-  t.end();
-});
-
-test('ShaderModules#setAndgetDefaultShaderModules', t => {
-  let modules = [fp32, fp64, project];
-  setDefaultShaderModules(modules);
-  const savedModules1 = getDefaultShaderModules();
-  t.equal(savedModules1.length, 3, 'setDefaultShaderModules is ok');
-  modules = [fp32, fp64];
-  setDefaultShaderModules(modules);
-  let savedModules2 = getDefaultShaderModules();
-  savedModules2.push(project);
-  setDefaultShaderModules(savedModules2);
-  savedModules2 = getDefaultShaderModules();
-  setDefaultShaderModules([]);
-  t.equal(savedModules1.length, savedModules2.length, 'getDefaultShaderModules is ok');
-
   t.end();
 });
 

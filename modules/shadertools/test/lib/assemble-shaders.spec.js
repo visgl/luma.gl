@@ -1,13 +1,6 @@
 /* eslint-disable camelcase */
 import {createGLContext} from '@luma.gl/webgl';
-import {
-  assembleShaders,
-  createShaderHook,
-  createModuleInjection,
-  resetGlobalShaderHooks,
-  picking,
-  fp64
-} from '@luma.gl/shadertools';
+import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {
@@ -61,8 +54,6 @@ test('assembleShaders#version_directive', t => {
 });
 
 test('assembleShaders#getUniforms', t => {
-  const testModuleSettings = {pickingActive: true};
-
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -87,7 +78,7 @@ test('assembleShaders#getUniforms', t => {
       t.ok(context.picking_uActive, 'module getUniforms is called with correct context');
       return {};
     },
-    dependencies: ['picking']
+    dependencies: [picking]
   };
 
   assembleResult = assembleShaders(fixture.gl, {
@@ -98,27 +89,6 @@ test('assembleShaders#getUniforms', t => {
 
   // Verify getUniforms is function
   t.is(typeof assembleResult.getUniforms, 'function', 'getUniforms should be function');
-
-  assembleResult.getUniforms(testModuleSettings);
-
-  // t.ok(module.getUniforms.called, 'module getUniforms is called');
-
-  // TODO: probe.gl spy does not yet support args
-  // t.deepEqual(
-  //   picking.getUniforms.getCall(0).args[0],
-  //   testModuleSettings,
-  //   'module getUniforms is called with correct opts');
-
-  // t.ok(testModule.getUniforms.calledAfter(picking.getUniforms),
-  //   'module getUniforms is called after its dependencies');
-
-  // TODO: probe.gl spy does not yet support args
-  // t.deepEqual(
-  //   testModule.getUniforms.getCall(0).args[0],
-  //   testModuleSettings,
-  //   'module getUniforms is called with correct opts');
-
-  // getUniformsSpy.restore();
 
   t.end();
 });
@@ -137,32 +107,31 @@ test('assembleShaders#defines', t => {
 });
 
 test('assembleShaders#shaderhooks', t => {
-  createShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
-  createShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
-    header: 'if (color.a == 0.0) discard;\n',
-    footer: 'color.a *= 1.2;\n'
-  });
+  const hookFunctions = [
+    'vs:LUMAGL_pickColor(inout vec4 color)',
+    {
+      hook: 'fs:LUMAGL_fragmentColor(inout vec4 color)',
+      header: 'if (color.a == 0.0) discard;\n',
+      footer: 'color.a *= 1.2;\n'
+    }
+  ];
 
-  createModuleInjection('picking', {
-    hook: 'vs:LUMAGL_pickColor',
-    injection: 'picking_setPickingColor(color.rgb);'
-  });
-
-  createModuleInjection('picking', {
-    hook: 'fs:LUMAGL_fragmentColor',
-    injection: 'color = picking_filterColor(color);',
-    order: Number.POSITIVE_INFINITY
-  });
-
-  createModuleInjection('picking', {
-    hook: 'fs:#main-end',
-    injection: 'gl_FragColor = picking_filterColor(gl_FragColor);',
-    order: Number.POSITIVE_INFINITY
-  });
+  const moduleInjections = {
+    picking: {
+      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+      'fs:LUMAGL_fragmentColor': {
+        injection: 'color = picking_filterColor(color);',
+        order: Number.POSITIVE_INFINITY
+      },
+      'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
+    }
+  };
 
   let assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_300,
-    fs: FS_GLSL_300
+    fs: FS_GLSL_300,
+    hookFunctions,
+    moduleInjections
   });
   // Verify version directive remains as first line.
   t.ok(
@@ -194,7 +163,9 @@ test('assembleShaders#shaderhooks', t => {
   assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    modules: [picking]
+    modules: [picking],
+    hookFunctions,
+    moduleInjections
   });
   // Verify version directive remains as first line.
   t.ok(
@@ -229,7 +200,9 @@ test('assembleShaders#shaderhooks', t => {
     inject: {
       'vs:LUMAGL_pickColor': 'color *= 0.1;',
       'fs:LUMAGL_fragmentColor': 'color += 0.1;'
-    }
+    },
+    hookFunctions,
+    moduleInjections
   });
 
   t.ok(
@@ -246,7 +219,9 @@ test('assembleShaders#shaderhooks', t => {
     fs: FS_GLSL_300,
     inject: {
       'fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);': 'fragmentColor -= 0.1;'
-    }
+    },
+    hookFunctions,
+    moduleInjections
   });
 
   t.ok(
@@ -254,6 +229,5 @@ test('assembleShaders#shaderhooks', t => {
     'regex injection code included in shader hook'
   );
 
-  resetGlobalShaderHooks();
   t.end();
 });

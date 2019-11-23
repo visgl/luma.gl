@@ -12,6 +12,15 @@ import {getBuffersFromGeometry} from '@luma.gl/engine/lib/model-utils';
 
 const stats = luma.stats.get('Resource Counts');
 
+const DUMMY_VS = `
+  void main() { gl_Position = vec4(1.0); }
+`;
+
+const DUMMY_FS = `
+  precision highp float;
+  void main() { gl_FragColor = vec4(1.0); }
+`;
+
 test('Model#construct/destruct', t => {
   const {gl} = fixture;
 
@@ -45,7 +54,7 @@ test('Model#setAttribute', t => {
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
-  const model = new Model(gl, {geometry: new CubeGeometry()});
+  const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS, geometry: new CubeGeometry()});
 
   t.is(
     stats.get('Buffers Active').count - initialActiveBuffers,
@@ -75,7 +84,7 @@ test('Model#setAttribute', t => {
 test('Model#setters, getters', t => {
   const {gl} = fixture;
 
-  const model = new Model(gl);
+  const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
 
   model.setUniforms({
     isPickingActive: 1
@@ -97,6 +106,8 @@ test('Model#draw', t => {
   const {gl} = fixture;
 
   const model = new Model(gl, {
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
     geometry: new CubeGeometry(),
     timerQueryEnabled: true
   });

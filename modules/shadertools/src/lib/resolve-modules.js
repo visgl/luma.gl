@@ -1,43 +1,9 @@
-import ShaderModuleRegistry from './shader-module-registry';
+import ShaderModule from './shader-module';
+import {assert} from '../utils';
 
-const shaderModuleRegistry = new ShaderModuleRegistry();
-
-/**
- * Registers an array of default shader modules. These will be concatenated
- * automatically at the end of any shader module list passed to
- * `assembleShaders` (plus `resolveModules` and `getShaderDependencies`)
- * @param {Object[]} modules - Array of shader modules
- */
-export function setDefaultShaderModules(modules) {
-  shaderModuleRegistry.setDefaultShaderModules(modules);
-}
-
-export function getDefaultShaderModules() {
-  return shaderModuleRegistry.getDefaultShaderModules();
-}
-
-/**
- * Registers an array of shader modules
- * @param {Object[]} shaderModuleList - Array of shader modules
- */
-export function registerShaderModules(
-  shaderModuleList,
-  {ignoreMultipleRegistrations = false} = {}
-) {
-  shaderModuleRegistry.registerShaderModules(shaderModuleList, {ignoreMultipleRegistrations});
-}
-
-// registers any supplied modules and returns a list of module names
+// Instantiate shader modules and any dependencies resolve dependencies
 export function resolveModules(modules) {
-  modules = modules.concat(shaderModuleRegistry.defaultShaderModules);
-  modules = shaderModuleRegistry.resolveModules(modules);
-  return getShaderDependencies(modules);
-}
-
-// Looks up a moduleName among registered modules and returns definition.
-// If "inline" module, returns it directly
-export function getShaderModule(moduleOrName) {
-  return shaderModuleRegistry.getShaderModule(moduleOrName);
+  return getShaderDependencies(instantiateModules(modules));
 }
 
 /**
@@ -91,6 +57,23 @@ function getDependencyGraph({modules, level, moduleMap, moduleDepth}) {
       getDependencyGraph({modules: module.dependencies, level: level + 1, moduleMap, moduleDepth});
     }
   }
+}
+
+// registers any supplied modules, resolves any names into modules
+// returns a list of modules
+function instantiateModules(modules, seen) {
+  return modules.map(module => {
+    if (module instanceof ShaderModule) {
+      return module;
+    }
+
+    assert(module.name, 'shader module has no name');
+
+    module = new ShaderModule(module);
+    module.dependencies = instantiateModules(module.dependencies);
+
+    return module;
+  });
 }
 
 export const TEST_EXPORTS = {
