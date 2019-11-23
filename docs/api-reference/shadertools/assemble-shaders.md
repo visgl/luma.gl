@@ -123,7 +123,7 @@ Examples:
 ```
 
 ```js
-ProgramManager.getDefaultProgramManager().addShaderHook('fs:MYHOOK_fragmentColor(inout vec4 color)');
+ProgramManager.getDefaultProgramManager(gl).addShaderHook('fs:MYHOOK_fragmentColor(inout vec4 color)');
 
 new Model(gl, {
   vs,
