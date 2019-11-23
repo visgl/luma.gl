@@ -33,3 +33,6 @@ export {default as swirl} from './warp-filters/swirl';
 
 // Postprocessing
 export {default as fxaa} from './fxaa/fxaa';
+
+// experimental
+export {default as _transform} from './transform/transform';
