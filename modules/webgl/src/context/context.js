@@ -1,13 +1,11 @@
 /* eslint-disable quotes */
-/* global document */
+/* global document, WebGL2RenderingContext */
 // WebGLRenderingContext related methods
 import {trackContextState} from '@luma.gl/gltools';
 
 import {createHeadlessContext} from './create-headless-context';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
-
-import {WebGL2RenderingContext} from '../webgl-utils';
 
 import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
 import {global} from '../utils/globals';

@@ -1,4 +1,3 @@
-// import {WebGLRenderingContext, WebGL2RenderingContext} from './webgl-types';
 import {assert} from '../utils';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
