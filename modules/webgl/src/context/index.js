@@ -13,5 +13,3 @@ export {
   resizeGLContext,
   setGLContextDefaults
 } from './context';
-
-export {getPageLoadPromise, getCanvas} from './create-canvas';
