@@ -27,15 +27,7 @@ export {
   webGLTypesAvailable
 } from './webgl-utils/webgl-types';
 
-export {
-  createGLContext,
-  destroyGLContext,
-  resizeGLContext,
-  instrumentGLContext,
-  setGLContextDefaults
-} from './context/context';
-
-export {getCanvas, getPageLoadPromise} from './context/create-canvas';
+export {createGLContext, resizeGLContext, instrumentGLContext} from './context/context';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';

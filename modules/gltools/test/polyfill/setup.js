@@ -1,16 +1,17 @@
 // Avoid generating a lot of big context divs
 import '@luma.gl/debug';
-import {setGLContextDefaults, createGLContext, makeDebugContext} from '@luma.gl/core';
+import {createGLContext, makeDebugContext} from '@luma.gl/core';
 
-setGLContextDefaults({
+const CONTEXT_DEFAULTS = {
   width: 1,
   height: 1,
   debug: true,
   throwOnFailure: false,
   throwOnError: false
-});
+};
 
 export function createTestContext(opts = {}) {
+  opts = Object.assign(opts, CONTEXT_DEFAULTS);
   return makeDebugContext(createGLContext(opts));
 }
 

@@ -8,7 +8,7 @@ import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {withParameters} from '../context';
+import {withParameters} from '@luma.gl/gltools';
 import {assertWebGL2Context, isWebGL2, getKey} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {log, uid, assert} from '../utils';

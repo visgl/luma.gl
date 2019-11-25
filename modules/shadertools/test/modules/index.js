@@ -10,7 +10,7 @@ import './fun-filters';
 import './utils';
 import './warp-filters';
 
-import shaderModules from '@luma.gl/shadertools/modules';
+import * as shaderModules from '@luma.gl/shadertools/modules';
 import ShaderModule from '@luma.gl/shadertools/lib/shader-module';
 
 import test from 'tape-catch';

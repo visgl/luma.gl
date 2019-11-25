@@ -6,9 +6,7 @@ export {
   isWebGL2,
   lumaStats,
   createGLContext,
-  destroyGLContext,
   resizeGLContext,
-  setGLContextDefaults,
   getContextInfo,
   getGLContextInfo,
   getContextLimits,
@@ -21,10 +19,7 @@ export {
   getKeyValue,
   getKey,
   cssToDeviceRatio,
-  cssToDevicePixels,
-  // DEPRECATED
-  setGLContextDefaults as setContextDefaults,
-  getContextDebugInfo as glGetDebugInfo
+  cssToDevicePixels
 } from '@luma.gl/webgl';
 
 export {

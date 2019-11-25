@@ -4,21 +4,21 @@ import tapePromise from 'tape-promise';
 export default tapePromise(test_);
 export {default as deepCopy} from './deep-copy';
 
-import {setGLContextDefaults, createGLContext} from '@luma.gl/webgl';
+import {createGLContext} from '@luma.gl/webgl';
 import {makeDebugContext} from '@luma.gl/debug';
 
 export {getResourceCounts, getLeakedResources} from './resource-tracker.js';
 
-// Avoid generating a lot of big context divs
-setGLContextDefaults({
+const CONTEXT_DEFAULTS = {
   width: 1,
   height: 1,
   debug: true,
   throwOnFailure: false,
   throwOnError: false
-});
+};
 
 export function createTestContext(opts = {}) {
+  opts = Object.assign(opts, CONTEXT_DEFAULTS);
   return makeDebugContext(createGLContext(opts));
 }
 

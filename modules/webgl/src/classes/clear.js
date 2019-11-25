@@ -1,4 +1,4 @@
-import {withParameters} from '../context';
+import {withParameters} from '@luma.gl/gltools';
 import {assertWebGL2Context} from '../webgl-utils';
 import {assert} from '../utils';
 
