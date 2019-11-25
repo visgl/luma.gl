@@ -18,7 +18,7 @@ const CONTEXT_DEFAULTS = {
 };
 
 export function createTestContext(opts = {}) {
-  opts = Object.assign(opts, CONTEXT_DEFAULTS);
+  opts = Object.assign({}, opts, CONTEXT_DEFAULTS);
   return makeDebugContext(createGLContext(opts));
 }
 
