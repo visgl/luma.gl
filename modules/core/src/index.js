@@ -81,6 +81,7 @@ export {
   ProgramManager,
   Timeline,
   Geometry,
+  ClipSpace,
   ConeGeometry,
   CubeGeometry,
   CylinderGeometry,
@@ -94,12 +95,6 @@ export {
 //  We should have a minimal set of forwarding exports from shadertools (ideally none)
 //  Analyze risk of breaking apps
 export {
-  registerShaderModules,
-  setDefaultShaderModules,
-  getDefaultShaderModules,
-  assembleShaders,
-  createShaderHook,
-  createModuleInjection,
   // HELPERS
   combineInjects,
   normalizeShaderModule,

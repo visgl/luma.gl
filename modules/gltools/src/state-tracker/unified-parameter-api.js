@@ -71,6 +71,14 @@ export function getParameters(gl, parameters) {
   // default to querying all parameters
   parameters = parameters || GL_PARAMETER_DEFAULTS;
   // support both arrays of parameters and objects (keys represent parameters)
+
+  if (typeof parameters === 'number') {
+    // single GL enum
+    const key = parameters;
+    const getter = GL_PARAMETER_GETTERS[key];
+    return getter ? getter(gl, key) : gl.getParameter(key);
+  }
+
   const parameterKeys = Array.isArray(parameters) ? parameters : Object.keys(parameters);
 
   const state = {};

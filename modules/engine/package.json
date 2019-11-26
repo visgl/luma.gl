@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "8.0.0-alpha.6",
+  "version": "8.0.0-alpha.9",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "publishConfig": {
@@ -31,12 +31,12 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "8.0.0-alpha.6",
-    "@luma.gl/shadertools": "8.0.0-alpha.6",
-    "@luma.gl/webgl": "8.0.0-alpha.6",
+    "@luma.gl/constants": "8.0.0-alpha.9",
+    "@luma.gl/shadertools": "8.0.0-alpha.9",
+    "@luma.gl/webgl": "8.0.0-alpha.9",
     "math.gl": "^3.0.0",
     "probe.gl": "^3.1.1",
     "seer": "^0.2.4"
   },
-  "gitHead": "1eb23cd12b4241742f6515daf4e0eaa5d6ee93a5"
+  "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }

@@ -24,7 +24,7 @@
 /* global window, document, */
 
 import {Buffer, Program} from '@luma.gl/webgl';
-import {assembleShaders, registerShaderModules, fp64} from '@luma.gl/shadertools';
+import {assembleShaders, fp64} from '@luma.gl/shadertools';
 import {
   initializeGL,
   initializeTexTarget,
@@ -109,7 +109,7 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op}) {
     assembleShaders(gl, {
       vs,
       fs: FS_RENDER_VCOLOR,
-      modules: ['fp64']
+      modules: [fp64]
     })
   );
 
@@ -157,7 +157,6 @@ canvas.height = 16;
 
 export const gl = initializeGL(canvas);
 initializeTexTarget(gl);
-registerShaderModules([fp64]);
 
 window.onload = () => {
   document.body.appendChild(canvas);

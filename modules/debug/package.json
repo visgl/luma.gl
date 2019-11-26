@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/debug",
-  "version": "8.0.0-alpha.6",
+  "version": "8.0.0-alpha.9",
   "description": "Debug utilities for luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "8.0.0-alpha.6",
+    "@luma.gl/constants": "8.0.0-alpha.9",
     "glsl-transpiler": "^1.8.5",
     "math.gl": "^3.0.0",
     "webgl-debug": "^2.0.1"
@@ -38,5 +38,5 @@
   "peerDependencies": {
     "@luma.gl/core": "^7.1.0"
   },
-  "gitHead": "1eb23cd12b4241742f6515daf4e0eaa5d6ee93a5"
+  "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }

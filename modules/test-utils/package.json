@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/test-utils",
-  "version": "8.0.0-alpha.6",
+  "version": "8.0.0-alpha.9",
   "description": "Automated WebGL testing utilities with Puppeteer and image diffing",
   "license": "MIT",
   "publishConfig": {
@@ -35,5 +35,5 @@
     "@luma.gl/gltools": "^7.1.0",
     "@probe.gl/test-utils": "^3.1.1"
   },
-  "gitHead": "1eb23cd12b4241742f6515daf4e0eaa5d6ee93a5"
+  "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }

@@ -35,6 +35,14 @@ test('ShaderModules#getShaderDependencies', t => {
     [fp32.name, project.name, fp64.name, project64.name],
     'Module order is correct'
   );
+
+  t.throws(
+    () => resolveModules(['project64']),
+    /deprecated.+project64/,
+    'Useful message for deprecated usage'
+  );
+  t.throws(() => resolveModules([{}]), /no name/, 'Alert about invalid modules');
+
   t.end();
 });
 

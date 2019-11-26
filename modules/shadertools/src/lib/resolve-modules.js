@@ -59,14 +59,16 @@ function getDependencyGraph({modules, level, moduleMap, moduleDepth}) {
   }
 }
 
-// registers any supplied modules, resolves any names into modules
-// returns a list of modules
 function instantiateModules(modules, seen) {
   return modules.map(module => {
     if (module instanceof ShaderModule) {
       return module;
     }
 
+    assert(
+      typeof module !== 'string',
+      `Shader module use by name is deprecated. Import shader module '${module}' and use it directly.`
+    );
     assert(module.name, 'shader module has no name');
 
     module = new ShaderModule(module);
