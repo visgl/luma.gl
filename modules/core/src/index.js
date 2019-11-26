@@ -81,6 +81,7 @@ export {
   ProgramManager,
   Timeline,
   Geometry,
+  ClipSpace,
   ConeGeometry,
   CubeGeometry,
   CylinderGeometry,

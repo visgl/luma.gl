@@ -20,10 +20,6 @@ const fixture = {
   gl2: createTestContext({webgl2: true, webgl1: false})
 };
 
-function getParameter(gl, param) {
-  return getParameters(gl, [param])[param];
-}
-
 test('WebGL#state', t => {
   t.ok(getParameters, 'getParameters imported ok');
   t.ok(setParameters, 'setParameters imported ok');
@@ -398,14 +394,14 @@ test('WebGLState#bindFramebuffer (WebGL1)', t => {
 
   resetParameters(gl);
 
-  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
   t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
 
   setParameters(gl, {
     framebuffer
   });
 
-  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
   t.equal(fbHandle, framebuffer.handle, 'setParameters should set framebuffer binding');
 
   t.end();
@@ -480,26 +476,26 @@ test('WebGLState#withParameters framebuffer', t => {
   resetParameters(gl);
 
   let fbHandle;
-  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
   t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
 
   withParameters(gl, {framebuffer: framebufferOne}, () => {
-    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
     t.deepEqual(fbHandle, framebufferOne.handle, 'withParameters should bind framebuffer');
 
     withParameters(gl, {framebuffer: framebufferTwo}, () => {
-      fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+      fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
       t.deepEqual(fbHandle, framebufferTwo.handle, 'Inner withParameters should bind framebuffer');
     });
 
-    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
     t.deepEqual(
       fbHandle,
       framebufferOne.handle,
       'Inner withParameters should restore draw framebuffer binding'
     );
   });
-  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  fbHandle = getParameters(gl, gl.FRAMEBUFFER_BINDING);
   t.deepEqual(fbHandle, null, 'withParameters should restore framebuffer bidning');
 
   t.end();
@@ -515,20 +511,20 @@ test('WebGLState#withParameters empty parameters object', t => {
     [GL.BLEND]: false
   });
 
-  let clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  let blendState = getParameter(gl, GL.BLEND);
+  let clearColor = getParameters(gl, GL.COLOR_CLEAR_VALUE);
+  let blendState = getParameters(gl, GL.BLEND);
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
 
   withParameters(gl, {}, () => {
-    clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-    blendState = getParameter(gl, GL.BLEND);
+    clearColor = getParameters(gl, GL.COLOR_CLEAR_VALUE);
+    blendState = getParameters(gl, GL.BLEND);
     t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
     t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
   });
 
-  clearColor = getParameter(gl, GL.COLOR_CLEAR_VALUE);
-  blendState = getParameter(gl, GL.BLEND);
+  clearColor = getParameters(gl, GL.COLOR_CLEAR_VALUE);
+  blendState = getParameters(gl, GL.BLEND);
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
 

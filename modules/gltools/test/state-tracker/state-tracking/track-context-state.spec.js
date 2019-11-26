@@ -23,10 +23,6 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-function getParameter(gl, param) {
-  return getParameters(gl, [param])[param];
-}
-
 // Settings test, don't reuse a context
 const fixture = {
   gl: createTestContext({debug: true})
@@ -183,19 +179,19 @@ test('WebGLState#intercept gl calls', t => {
   pushContextState(gl);
 
   gl.blendEquation(gl.FUNC_SUBTRACT, gl.FUNC_SUBTRACT);
-  t.is(getParameter(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
+  t.is(getParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
 
   gl.blendFunc(gl.ONE, gl.ONE);
-  t.is(getParameter(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
+  t.is(getParameters(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
 
   gl.stencilMask(8);
-  t.is(getParameter(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
+  t.is(getParameters(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
 
   gl.stencilFunc(gl.NEVER, 0, 1);
-  t.is(getParameter(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
+  t.is(getParameters(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
 
   gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
-  t.is(getParameter(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
+  t.is(getParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
 
   popContextState(gl);
   const parameters = getParameters(gl);
