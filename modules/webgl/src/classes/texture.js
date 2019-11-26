@@ -1,3 +1,4 @@
+/* global WebGLBuffer */
 import GL from '@luma.gl/constants';
 
 import Resource from './resource';
@@ -10,8 +11,8 @@ import {
   isLinearFilteringSupported
 } from './texture-formats';
 
-import {withParameters} from '../context';
-import {isWebGL2, assertWebGL2Context, WebGLBuffer} from '../webgl-utils';
+import {withParameters} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import {log, uid, isPowerOfTwo, assert} from '../utils';
 
 // Supported min filters for NPOT texture.

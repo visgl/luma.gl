@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 
-import {createGLContext} from '@luma.gl/webgl';
+import {createTestContext} from '@luma.gl/test-utils';
 import {makeDebugContext} from '@luma.gl/debug';
 
 function triggerGLError(gl) {
@@ -14,7 +14,7 @@ function triggerValidationError(gl) {
 }
 
 test('WebGL#makeDebugContext', t => {
-  const gl = createGLContext({debug: false});
+  const gl = createTestContext({debug: false});
   t.doesNotThrow(() => triggerGLError(gl), 'The default context does not throw on GL error');
   t.doesNotThrow(
     () => triggerValidationError(gl),

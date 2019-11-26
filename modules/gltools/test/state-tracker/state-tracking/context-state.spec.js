@@ -9,12 +9,13 @@ import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/gltools/state-tra
 import {ENUM_STYLE_SETTINGS_SET1} from '../data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from '../data/sample-function-settings';
 
+import {createTestContext} from '@luma.gl/test-utils';
+
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
   return JSON.stringify(v);
 }
 
-import {createTestContext} from 'test/setup';
 const fixture = {
   gl: createTestContext(),
   gl2: createTestContext({webgl2: true, webgl1: false})

@@ -9,7 +9,7 @@ The module structure has been significantly changed for v8.0 with the intention 
 | New Module | Purpose | Components from v7 |
 | ---------- | ------- |---------- |
 | constants | WebGL enum values | Same as before |
-| shadertools| Tools for manipulating and composing shader text | shadertools and effects |
+| shadertools| Tools for manipulating and composing shader text | shadertools and effects (formerly glfx) |
 | gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
 | webgl      | Wrapper classes for WebGL | Same as before |
 | core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in addons |
@@ -30,6 +30,10 @@ new Texture2D({
   }
 });
 ```
+- `createGLContext` will no longer attempt to create a headlessgl context under node.js. One can either create headless context externally and use `instrumentGLContext` to prepare it for use with luma.gl or use `createHeadlessContext` from `@luma.gl/test-utils` to create a headlessgl context.
+- `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
+- `createShaderHook` and `createModuleInjection` have been removed. Used `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` instead.
+- `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
 
 ### Smaller changes
 
@@ -37,15 +41,11 @@ new Texture2D({
 - `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
 - `ShaderCache` has been removed and superseded by `ProgramManager`.
-- `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Used `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` instead.
 - `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.
-- @luma.gl/glfx has been renamed to @luma.gl/effects.
 - @luma.gl/main has been removed. Use individual modules instead.
 - `Multipass` classes have been removed.
 - Seer support has been removed.
 - Timeline and Keyframes have been moved from @luma.gl/addons to @luma.gl/engine.
-- `getParameter` and `setParameter` have been removed. Use `getParamters` and `setParameters` instead.
 
 
 ## Upgrading from v7.2 to v7.3

@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {withParameters} from '../context';
+import {withParameters} from '@luma.gl/gltools';
 import {isWebGL2, assertWebGL2Context} from '../webgl-utils';
 import Texture from './texture';
 import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';

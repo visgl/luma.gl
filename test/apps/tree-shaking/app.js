@@ -1,12 +1,13 @@
 /* eslint-disable no-var, max-statements */
 import GL from '@luma.gl/constants';
-import {AnimationLoop, createGLContext, Cube} from '@luma.gl/core';
+import {AnimationLoop, Cube} from '@luma.gl/core';
+import {createTestContext} from '@luma.gl/test-utils';
 import {Matrix4, radians} from 'math.gl';
 
 const SIDE = 256;
 
 const animationFrame = new AnimationLoop()
-  .context(() => createGLContext({canvas: 'render-canvas'}))
+  .context(() => createTestContext({canvas: 'render-canvas'}))
   .init(({gl}) => {
     gl.clearColor(1, 1, 1, 1);
     gl.clearDepth(1);

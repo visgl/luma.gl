@@ -1,4 +1,4 @@
-/* global OffscreenCanvas */
+/* global window, OffscreenCanvas */
 import {
   isWebGL,
   createGLContext,
@@ -7,14 +7,16 @@ import {
   resetParameters,
   requestAnimationFrame,
   cancelAnimationFrame,
-  getPageLoadPromise,
   Query,
   lumaStats,
   // TODO - remove dependency on framebuffer (bundle size impact)
   Framebuffer,
   log,
-  assert
+  assert,
+  isBrowser
 } from '@luma.gl/webgl';
+
+const isPage = isBrowser && typeof document !== 'undefined';
 
 let statIdCounter = 0;
 
@@ -88,6 +90,8 @@ export default class AnimationLoop {
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
 
+    this._pageLoadPromise = null;
+
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
   }
@@ -125,7 +129,7 @@ export default class AnimationLoop {
     this._running = true;
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
-    getPageLoadPromise()
+    this._getPageLoadPromise()
       .then(() => {
         if (!this._running || this._initialized) {
           return null;
@@ -280,6 +284,23 @@ export default class AnimationLoop {
   }
 
   // PRIVATE METHODS
+
+  _getPageLoadPromise() {
+    if (!this._pageLoadPromise) {
+      this._pageLoadPromise = isPage
+        ? new Promise((resolve, reject) => {
+            if (isPage && document.readyState === 'complete') {
+              resolve(document);
+              return;
+            }
+            window.onload = () => {
+              resolve(document);
+            };
+          })
+        : Promise.resolve({});
+    }
+    return this._pageLoadPromise;
+  }
 
   _setDisplay(display) {
     if (this.display) {

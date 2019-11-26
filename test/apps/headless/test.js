@@ -1,10 +1,15 @@
-import {setContextDefaults, createGLContext} from '@luma.gl/core';
-import {makeDebugContext} from 'luma.gl/debug';
+import {createHeadlessContext} from '@luma.gl/test-utils';
+import 'luma.gl/debug';
 
 import util from 'util';
 
-setContextDefaults({width: 1, height: 1, debug: true, throwOnFailure: false, throwOnError: false});
-export const gl = makeDebugContext(createGLContext());
+export const gl = createHeadlessContext({
+  width: 1,
+  height: 1,
+  debug: true,
+  throwOnFailure: false,
+  throwOnError: false
+});
 
 const ext = gl.getExtension('EXT_disjoint_timer_query');
 console.error(`EXT_disjoint_timer_query is ${Boolean(ext)} ${ext}`, ext); // eslint-disable-line

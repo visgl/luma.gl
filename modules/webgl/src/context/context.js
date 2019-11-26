@@ -1,13 +1,11 @@
 /* eslint-disable quotes */
+/* global document, WebGL2RenderingContext */
 // WebGLRenderingContext related methods
 import {trackContextState} from '@luma.gl/gltools';
 
-import {createHeadlessContext} from './create-headless-context';
-import {getCanvas} from './create-canvas';
+// import {createHeadlessContext} from './create-headless-context';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
-
-import {WebGL2RenderingContext} from '../webgl-utils';
 
 import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
 import {global} from '../utils/globals';
@@ -15,6 +13,8 @@ import {global} from '../utils/globals';
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
+
+const isPage = isBrowser && typeof document !== 'undefined';
 
 export function isWebGL(gl) {
   return Boolean(gl && Number.isFinite(gl._version));
@@ -34,7 +34,7 @@ export function assertWebGL2Context(gl) {
   assert(isWebGL2(gl), ERR_WEBGL2);
 }
 
-const contextDefaults = {
+const CONTEST_DEFAULTS = {
   // COMMON CONTEXT PARAMETERS
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
@@ -52,19 +52,16 @@ const contextDefaults = {
 };
 
 /*
- * Change default context creation parameters.
- * Main use case is regression test suite.
- */
-export function setGLContextDefaults(options = {}) {
-  Object.assign(contextDefaults, {width: 1, height: 1}, options);
-}
-
-/*
  * Creates a context giving access to the WebGL API
  */
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
-  options = Object.assign({}, contextDefaults, options);
+  assert(
+    isBrowser,
+    "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
+  );
+
+  options = Object.assign({}, CONTEST_DEFAULTS, options);
   const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled
@@ -76,16 +73,11 @@ export function createGLContext(options = {}) {
   }
 
   let gl;
-  if (isBrowser) {
-    // Get or create a canvas
-    const {canvas} = options;
-    const targetCanvas = getCanvas({canvas, width, height, onError});
-    // Create a WebGL context in the canvas
-    gl = createBrowserContext(targetCanvas, options);
-  } else {
-    // Create a headless-gl context under Node.js
-    gl = createHeadlessContext({...options, width, height, onError});
-  }
+  // Get or create a canvas
+  const {canvas} = options;
+  const targetCanvas = getCanvas({canvas, width, height, onError});
+  // Create a WebGL context in the canvas
+  gl = createBrowserContext(targetCanvas, options);
 
   if (!gl) {
     return null;
@@ -102,7 +94,7 @@ export function createGLContext(options = {}) {
 
 export function instrumentGLContext(gl, options = {}) {
   // Avoid multiple instrumentations
-  if (gl._instrumented) {
+  if (!gl || gl._instrumented) {
     return gl;
   }
 
@@ -112,7 +104,7 @@ export function instrumentGLContext(gl, options = {}) {
   gl.luma = gl.luma || {};
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
-  options = Object.assign({}, contextDefaults, options);
+  options = Object.assign({}, CONTEST_DEFAULTS, options);
   const {manageState, debug} = options;
 
   // Install context state tracking
@@ -137,20 +129,6 @@ export function instrumentGLContext(gl, options = {}) {
   gl._instrumented = true;
 
   return gl;
-}
-
-export function destroyGLContext(gl) {
-  // TODO - Remove from seer integration
-
-  // TODO - Unregister any tracking/polyfills
-
-  // There is no way to delete browser based context
-
-  // Destroy headless gl context
-  const ext = gl.getExtension('STACKGL_destroy_context');
-  if (ext) {
-    ext.destroy();
-  }
 }
 
 /**
@@ -183,6 +161,27 @@ export function resizeGLContext(gl, options = {}) {
 }
 
 // HELPER METHODS
+
+function getCanvas({canvas, width = 800, height = 600, onError = () => {}}) {
+  let targetCanvas;
+  if (typeof canvas === 'string') {
+    const isPageLoaded = isPage && document.readyState === 'complete';
+    if (!isPageLoaded) {
+      onError(`createGLContext called on canvas '${canvas}' before page was loaded`);
+    }
+    targetCanvas = document.getElementById(canvas);
+  } else if (canvas) {
+    targetCanvas = canvas;
+  } else {
+    targetCanvas = document.createElement('canvas');
+    targetCanvas.id = 'lumagl-canvas';
+    targetCanvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
+    targetCanvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
+    document.body.insertBefore(targetCanvas, document.body.firstChild);
+  }
+
+  return targetCanvas;
+}
 
 function logInfo(gl) {
   const webGL = isWebGL2(gl) ? 'WebGL2' : 'WebGL1';

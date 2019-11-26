@@ -10,32 +10,7 @@ export {lumaStats} from './init';
 // TODO - should we reexport these?
 export {resetParameters, getParameters, setParameters, withParameters} from '@luma.gl/gltools';
 
-// Exports WebGL API constants and types, plus some basic type checks
-export {
-  Image,
-  WebGLRenderingContext,
-  WebGLProgram,
-  WebGLShader,
-  WebGLBuffer,
-  WebGLFramebuffer,
-  WebGLRenderbuffer,
-  WebGLTexture,
-  WebGLUniformLocation,
-  WebGLActiveInfo,
-  WebGLShaderPrecisionFormat,
-  WebGL2RenderingContext,
-  webGLTypesAvailable
-} from './webgl-utils/webgl-types';
-
-export {
-  createGLContext,
-  destroyGLContext,
-  resizeGLContext,
-  instrumentGLContext,
-  setGLContextDefaults
-} from './context/context';
-
-export {getCanvas, getPageLoadPromise} from './context/create-canvas';
+export {createGLContext, resizeGLContext, instrumentGLContext} from './context/context';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
