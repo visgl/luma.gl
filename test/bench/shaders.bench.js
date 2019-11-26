@@ -18,8 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {createGLContext, Program, VertexShader, FragmentShader} from '@luma.gl/core';
-const gl = createGLContext();
+import {Program, VertexShader, FragmentShader} from '@luma.gl/core';
+import {createTestContext} from '@luma.gl/test-utils';
+const gl = createTestContext();
 
 const VS = `
 attribute vec3 positions;

@@ -1,10 +1,10 @@
 /* eslint-disable camelcase */
-import {createGLContext} from '@luma.gl/webgl';
+import {createTestContext} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {
-  gl: createGLContext()
+  gl: createTestContext()
 };
 
 const VS_GLSL_300 = `\

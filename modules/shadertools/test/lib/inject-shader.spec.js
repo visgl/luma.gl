@@ -1,5 +1,5 @@
 /* eslint-disable camelcase, no-console, no-undef */
-import {createGLContext} from '@luma.gl/webgl';
+import {createTestContext} from '@luma.gl/test-utils';
 import {assembleShaders} from '@luma.gl/shadertools';
 import injectShader, {
   combineInjects,
@@ -8,7 +8,7 @@ import injectShader, {
 import test from 'tape-catch';
 
 const fixture = {
-  gl: createGLContext()
+  gl: createTestContext()
 };
 
 const VS_GLSL_TEMPLATE = `\

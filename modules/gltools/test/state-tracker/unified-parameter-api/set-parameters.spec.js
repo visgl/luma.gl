@@ -4,7 +4,7 @@ import {setParameters, getParameters, resetParameters} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
 import {Framebuffer, getKey} from '@luma.gl/webgl';
 
-import {createTestContext} from 'test/setup';
+import {createTestContext} from '@luma.gl/test-utils';
 
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/gltools/state-tracker/webgl-parameter-tables';
 

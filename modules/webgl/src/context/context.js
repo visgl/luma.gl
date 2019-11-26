@@ -3,7 +3,7 @@
 // WebGLRenderingContext related methods
 import {trackContextState} from '@luma.gl/gltools';
 
-import {createHeadlessContext} from './create-headless-context';
+// import {createHeadlessContext} from './create-headless-context';
 import {createBrowserContext} from './create-browser-context';
 import {getContextDebugInfo} from '../debug/get-context-debug-info';
 
@@ -56,6 +56,8 @@ const CONTEST_DEFAULTS = {
  */
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
+  assert(isBrowser, "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils");
+
   options = Object.assign({}, CONTEST_DEFAULTS, options);
   const {width, height} = options;
 
@@ -68,16 +70,11 @@ export function createGLContext(options = {}) {
   }
 
   let gl;
-  if (isBrowser) {
-    // Get or create a canvas
-    const {canvas} = options;
-    const targetCanvas = getCanvas({canvas, width, height, onError});
-    // Create a WebGL context in the canvas
-    gl = createBrowserContext(targetCanvas, options);
-  } else {
-    // Create a headless-gl context under Node.js
-    gl = createHeadlessContext({...options, width, height, onError});
-  }
+  // Get or create a canvas
+  const {canvas} = options;
+  const targetCanvas = getCanvas({canvas, width, height, onError});
+  // Create a WebGL context in the canvas
+  gl = createBrowserContext(targetCanvas, options);
 
   if (!gl) {
     return null;
@@ -94,7 +91,7 @@ export function createGLContext(options = {}) {
 
 export function instrumentGLContext(gl, options = {}) {
   // Avoid multiple instrumentations
-  if (gl._instrumented) {
+  if (!gl || gl._instrumented) {
     return gl;
   }
 

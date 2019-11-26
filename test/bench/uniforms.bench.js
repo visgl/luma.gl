@@ -18,8 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import {createGLContext, Program} from '@luma.gl/core';
-const gl = createGLContext();
+import {Program} from '@luma.gl/core';
+import {createTestContext} from '@luma.gl/test-utils';
+const gl = createTestContext();
 
 const VS = `
 uniform vec3 positions;

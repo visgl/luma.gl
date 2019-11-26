@@ -1,7 +1,8 @@
 /* eslint-disable max-len, prefer-template, camelcase */
 /* global console */
 /* eslint-disable no-console */
-import {createGLContext, setParameters} from '@luma.gl/core';
+import {setParameters} from '@luma.gl/core';
+import {createTestContext} from '@luma.gl/test-utils';
 
 // Utilities functions that to be moved to a common place for future tests
 
@@ -37,7 +38,7 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
 }
 
 export function initializeGL(canvas) {
-  const gl = createGLContext(canvas);
+  const gl = createTestContext(canvas);
   setParameters(gl, {
     viewport: [0, 0, canvas.width, canvas.height],
     clearColor: [0, 0, 0, 1],

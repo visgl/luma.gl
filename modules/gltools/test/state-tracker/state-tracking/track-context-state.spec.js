@@ -1,5 +1,5 @@
 import test from 'tape-catch';
-import {createTestContext} from 'test/setup';
+import {createTestContext} from '@luma.gl/test-utils';
 
 import {
   trackContextState,

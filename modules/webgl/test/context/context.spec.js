@@ -1,11 +1,6 @@
 const test = require('tape-catch');
-const {
-  createGLContext,
-  getContextDebugInfo,
-  isWebGL,
-  isWebGL2,
-  resizeGLContext
-} = require('@luma.gl/webgl');
+const {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('@luma.gl/webgl');
+const {createTestContext} = require('@luma.gl/test-utils');
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts({webgl2: false});
 test('WebGL#headless context creation', t => {
   t.ok(isWebGL(gl), 'Context creation ok');
@@ -145,9 +140,9 @@ test('WebGL#resizeGLContext', t => {
 
 function getWebGLContexts() {
   return {
-    gl: createGLContext({webgl1: true, webgl2: false, debug: false}),
-    glDebug: createGLContext({webgl1: true, webgl2: false, debug: true}),
-    gl2: createGLContext({webgl1: false, webgl2: true, debug: false}),
-    gl2Debug: createGLContext({webgl1: false, webgl2: true, debug: true})
+    gl: createTestContext({webgl1: true, webgl2: false, debug: false}),
+    glDebug: createTestContext({webgl1: true, webgl2: false, debug: true}),
+    gl2: createTestContext({webgl1: false, webgl2: true, debug: false}),
+    gl2Debug: createTestContext({webgl1: false, webgl2: true, debug: true})
   };
 }

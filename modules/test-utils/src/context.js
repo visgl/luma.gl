@@ -1,3 +1,6 @@
+import {createGLContext, instrumentGLContext, isBrowser} from '@luma.gl/webgl';
+import '@luma.gl/debug';
+
 const ERR_HEADLESSGL_NOT_AVAILABLE =
   'Failed to create WebGL context in Node.js, headless gl not available';
 
@@ -9,9 +12,33 @@ const ERR_HEADLESSGL_LOAD = `\
   contexts can not be created. This may not be an error. For example, this is a \
   typical configuration for isorender applications running on the server.`;
 
+const CONTEXT_DEFAULTS = {
+  width: 1,
+  height: 1,
+  debug: true,
+  throwOnFailure: false,
+  throwOnError: false
+};
+
+export function createTestContext(opts = {}) {
+  opts = Object.assign({}, CONTEXT_DEFAULTS, opts);
+  const context = isBrowser
+    ? createGLContext(opts)
+    : instrumentGLContext(createHeadlessContext(opts), opts);
+  return context;
+}
+
 // Create headless gl context (for running under Node.js)
 export function createHeadlessContext(options) {
-  const {width, height, webgl1, webgl2, onError} = options;
+  const {width, height, webgl1, webgl2} = options;
+
+  function onError(message) {
+    if (options.throwOnError) {
+      throw new Error(message);
+    }
+    return null;
+  }
+
   if (webgl2 && !webgl1) {
     return onError('headless-gl does not support WebGL2');
   }
@@ -25,23 +52,9 @@ export function createHeadlessContext(options) {
   return gl;
 }
 
-// TODO(Tarek): OOGLY HACK to avoid webpack requiring headless
-//   browser bundles. Will be removed in 8.0 when we
-//   remove automatic headless context creation
-// NOTE: Rollup does not process the line `const m = module;`
-//   and writes it out verbatim in its final output, which ends
-//   up falling over in browser environments at runtime. Added
-//   a `try/catch` block to fix usage in rollup builds.
-let m;
-try {
-  m = module;
-} catch (e) {
-  m = null;
-}
-
 // Load headless gl dynamically, if available
 function headlessGL(...args) {
-  const headless = m.require('gl');
+  const headless = module.require('gl');
   if (!headless) {
     throw new Error(ERR_HEADLESSGL_LOAD);
   }

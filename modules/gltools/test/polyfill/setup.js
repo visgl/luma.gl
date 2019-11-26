@@ -1,19 +1,5 @@
 // Avoid generating a lot of big context divs
-import '@luma.gl/debug';
-import {createGLContext, makeDebugContext} from '@luma.gl/core';
-
-const CONTEXT_DEFAULTS = {
-  width: 1,
-  height: 1,
-  debug: true,
-  throwOnFailure: false,
-  throwOnError: false
-};
-
-export function createTestContext(opts = {}) {
-  opts = Object.assign(opts, CONTEXT_DEFAULTS);
-  return makeDebugContext(createGLContext(opts));
-}
+import {createTestContext} from '@luma.gl/test-utils';
 
 export const fixture = {
   gl: createTestContext({webgl2: false, webgl1: true, throwOnFailure: true, throwOnError: true}),
