@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "8.0.0-alpha.6",
+  "version": "8.0.0-alpha.7",
   "description": "WebGL2 Classes",
   "license": "MIT",
   "publishConfig": {
@@ -35,8 +35,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "8.0.0-alpha.6",
-    "@luma.gl/gltools": "8.0.0-alpha.6",
+    "@luma.gl/constants": "8.0.0-alpha.7",
+    "@luma.gl/gltools": "8.0.0-alpha.7",
     "probe.gl": "^3.1.1"
   },
   "gitHead": "1eb23cd12b4241742f6515daf4e0eaa5d6ee93a5"

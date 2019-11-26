@@ -1,3 +1,19 @@
+## v8.0.0-alpha.7
+
+- ClipSpace, getParameters, resolveModules fixes (#1297)
+
+## v8.0.0-alpha.6
+
+- Remove unpackFlipY option from Texture (#1295)
+- Shadertools cleanup (#1296)
+- (more-luma-cleanup) Small optimizations (#1294)
+- Simplify and optimize state tracking (#1293)
+- DevicePixelRatio: Handle invalid client sizes and remove custom width/height support. (#1290)
+
+## v8.0.0-alpha.5
+
+- Fix deps, simplify materials (#1292)
+
 ## v8.0.0-alpha.3
 
 - Fix deps, simplify materials (#1292)
