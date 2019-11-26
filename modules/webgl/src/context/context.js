@@ -56,7 +56,10 @@ const CONTEST_DEFAULTS = {
  */
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
-  assert(isBrowser, "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils");
+  assert(
+    isBrowser,
+    "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
+  );
 
   options = Object.assign({}, CONTEST_DEFAULTS, options);
   const {width, height} = options;
