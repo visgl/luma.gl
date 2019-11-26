@@ -76,7 +76,7 @@ export function getParameters(gl, parameters) {
     // single GL enum
     const key = parameters;
     const getter = GL_PARAMETER_GETTERS[key];
-    return getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
+    return getter ? getter(gl, key) : gl.getParameter(key);
   }
 
   const parameterKeys = Array.isArray(parameters) ? parameters : Object.keys(parameters);
