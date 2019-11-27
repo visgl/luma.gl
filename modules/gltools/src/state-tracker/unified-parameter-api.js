@@ -9,12 +9,14 @@ import {
 } from './webgl-parameter-tables';
 
 import {pushContextState, popContextState} from './track-context-state';
-import {isObjectEmpty} from '../utils';
+import {isObjectEmpty, isWebGL, assert} from '../utils';
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)
 // This object is used to fill in any missing values for composite setter functions
 export function setParameters(gl, values) {
+  assert(isWebGL(gl), 'setParameters requires a WebGL context');
+
   if (isObjectEmpty(values)) {
     return;
   }
@@ -100,8 +102,6 @@ export function resetParameters(gl) {
 // Stores current "global" WebGL context settings, changes selected parameters,
 // executes function, restores parameters
 export function withParameters(gl, parameters, func) {
-  // assertWebGLContext(gl);
-
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(gl);
