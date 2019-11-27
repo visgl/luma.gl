@@ -2,11 +2,7 @@
 
 // WEBGL CONTEXT
 export {
-  isWebGL,
-  isWebGL2,
   lumaStats,
-  createGLContext,
-  resizeGLContext,
   getContextInfo,
   getGLContextInfo,
   getContextLimits,
@@ -17,17 +13,21 @@ export {
   canCompileGLGSExtension,
   cloneTextureFrom,
   getKeyValue,
-  getKey,
-  cssToDeviceRatio,
-  cssToDevicePixels
+  getKey
 } from '@luma.gl/webgl';
 
 export {
+  isWebGL,
+  isWebGL2,
+  createGLContext,
+  resizeGLContext,
   trackContextState,
   resetParameters,
   getParameters,
   setParameters,
-  withParameters
+  withParameters,
+  cssToDeviceRatio,
+  cssToDevicePixels
 } from '@luma.gl/gltools';
 
 // WEBGL1 OBJECTS/FUNCTIONS
@@ -111,4 +111,5 @@ export {
 } from '@luma.gl/shadertools';
 
 // UTILS: undocumented API for other luma.gl modules
-export {log, assert, uid, self, window, global, document} from '@luma.gl/webgl';
+export {log, assert, uid} from '@luma.gl/webgl';
+export {window, global} from '@luma.gl/gltools';

@@ -1,8 +1,7 @@
 import {AnimationLoop, CubeGeometry, Timeline, Model, ProgramManager} from '@luma.gl/engine';
 import {readPixelsToArray, Buffer} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
-import {picking, dirlight} from '@luma.gl/shadertools';
-import {cssToDevicePixels} from '@luma.gl/webgl';
+import {cssToDevicePixels, setParameters} from '@luma.gl/gltools';
+import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {Matrix4, radians} from 'math.gl';
 import {getRandom} from '../../utils';
 
@@ -15,6 +14,29 @@ single GPU draw call using instanced vertex attributes.
 `;
 
 const random = getRandom();
+
+// Add injections to shader modules
+const picking = Object.assign(
+  {
+    inject: {
+      'vs:MY_SHADER_HOOK_pickColor': 'picking_setPickingColor(color.rgb);',
+      'fs:MY_SHADER_HOOK_fragmentColor': {
+        injection: 'color = picking_filterColor(color);',
+        order: Number.POSITIVE_INFINITY
+      }
+    }
+  },
+  pickingBase
+);
+
+const dirlight = Object.assign(
+  {
+    inject: {
+      'fs:MY_SHADER_HOOK_fragmentColor': 'color = dirlight_filterColor(color);'
+    }
+  },
+  dirlightBase
+);
 
 const SIDE = 256;
 
@@ -91,22 +113,6 @@ void main(void) {
     programManager.addShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
 
     programManager.addShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
-
-    programManager.addModuleInjection('picking', {
-      hook: 'vs:MY_SHADER_HOOK_pickColor',
-      injection: 'picking_setPickingColor(color.rgb);'
-    });
-
-    programManager.addModuleInjection('dirlight', {
-      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = dirlight_filterColor(color);'
-    });
-
-    programManager.addModuleInjection('picking', {
-      hook: 'fs:MY_SHADER_HOOK_fragmentColor',
-      injection: 'color = picking_filterColor(color);',
-      order: Number.POSITIVE_INFINITY
-    });
 
     super(
       gl,

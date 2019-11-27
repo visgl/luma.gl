@@ -1,8 +1,7 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../webgl-utils';
 
 import WEBGL_LIMITS from './webgl-limits-table';
-import {getContextDebugInfo} from '../debug/get-context-debug-info';
+import {isWebGL2, getContextDebugInfo} from '@luma.gl/gltools';
 
 export function getContextLimits(gl) {
   gl.luma = gl.luma || {};

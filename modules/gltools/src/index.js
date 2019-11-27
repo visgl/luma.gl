@@ -1,5 +1,4 @@
 // Installs polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
-
 export {default as polyfillContext} from './polyfill/polyfill-context';
 
 // unified parameter APIs
@@ -16,3 +15,24 @@ export {
   pushContextState,
   popContextState
 } from './state-tracker/track-context-state';
+
+export {
+  createGLContext,
+  resizeGLContext,
+  instrumentGLContext,
+  getContextDebugInfo
+} from './context/context';
+
+export {
+  isBrowser,
+  isBrowserMainThread,
+  isNode,
+  isElectron,
+  global,
+  window,
+  self,
+  cssToDeviceRatio,
+  cssToDevicePixels,
+  isWebGL,
+  isWebGL2
+} from './utils/';

@@ -7,7 +7,6 @@ export const gl = createHeadlessContext({
   width: 1,
   height: 1,
   debug: true,
-  throwOnFailure: false,
   throwOnError: false
 });
 

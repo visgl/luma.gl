@@ -1,8 +1,4 @@
-import {createGLContext, instrumentGLContext, isBrowser} from '@luma.gl/webgl';
-import '@luma.gl/debug';
-
-const ERR_HEADLESSGL_NOT_AVAILABLE =
-  'Failed to create WebGL context in Node.js, headless gl not available';
+import {createGLContext, instrumentGLContext, isBrowser} from '@luma.gl/gltools';
 
 const ERR_HEADLESSGL_FAILED =
   'Failed to create WebGL context in Node.js, headless gl returned null';
@@ -16,7 +12,6 @@ const CONTEXT_DEFAULTS = {
   width: 1,
   height: 1,
   debug: true,
-  throwOnFailure: false,
   throwOnError: false
 };
 
@@ -41,9 +36,6 @@ export function createHeadlessContext(options) {
 
   if (webgl2 && !webgl1) {
     return onError('headless-gl does not support WebGL2');
-  }
-  if (!headlessGL) {
-    return onError(ERR_HEADLESSGL_NOT_AVAILABLE);
   }
   const gl = headlessGL(width, height, options);
   if (!gl) {

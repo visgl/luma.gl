@@ -1,5 +1,5 @@
 const test = require('tape-catch');
-const {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('@luma.gl/webgl');
+const {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('@luma.gl/gltools');
 const {createTestContext} = require('@luma.gl/test-utils');
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts({webgl2: false});
 test('WebGL#headless context creation', t => {

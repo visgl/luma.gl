@@ -2,7 +2,7 @@
 /* global requestAnimationFrame */
 import Resource from './resource';
 import {FEATURES, hasFeatures} from '../features';
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '@luma.gl/gltools';
 import {assert} from '../utils';
 
 const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.

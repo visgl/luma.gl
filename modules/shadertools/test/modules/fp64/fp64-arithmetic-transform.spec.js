@@ -20,7 +20,7 @@
 
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
-import {getContextDebugInfo} from '@luma.gl/webgl';
+import {getContextDebugInfo} from '@luma.gl/gltools';
 import {runTests} from './fp64-test-utils-transform';
 const gl = fixture.gl2;
 

@@ -1,11 +1,6 @@
-import isBrowser from './utils/is-browser';
-import {global} from './utils/globals';
+import {isBrowser, global} from '@luma.gl/gltools';
 import log from './utils/log';
 import {Stats} from 'probe.gl';
-
-// TODO - when webgl2 gets ubiquitous, remove default support for webgl1 by dropping next line
-// Can be installed by applications
-import '@luma.gl/gltools';
 
 // Version detection using babel plugin
 /* global __VERSION__ */
@@ -62,16 +57,5 @@ if (!global.luma) {
   };
 }
 
-// Ensures that WebGL2RenderingContext is defined in non-WebGL2 environments
-// so that apps can test their gl contexts with instanceof
-// E.g. if (gl instanceof WebGL2RenderingContext) { }
-class WebGL2RenderingContextNotSupported {}
-global.WebGL2RenderingContext = global.WebGL2RenderingContext || WebGL2RenderingContextNotSupported;
-
-// Ensure that Image is defined under Node.js
-class ImageNotSupported {}
-global.Image = global.Image || ImageNotSupported;
-
-export {global};
 export {lumaStats};
 export default global.luma;

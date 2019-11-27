@@ -7,10 +7,9 @@ import {
   Texture2D,
   VertexArray,
   UniformBufferLayout,
-  Buffer,
-  isWebGL2
+  Buffer
 } from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 /* eslint-disable spaced-comment */
 /* global document */

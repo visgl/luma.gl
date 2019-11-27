@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '@luma.gl/gltools';
 
 // const S3TC = 'WEBGL_compressed_texture_s3tc';
 // const PVRTC = 'WEBGL_compressed_texture_pvrtc';

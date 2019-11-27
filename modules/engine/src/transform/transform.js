@@ -3,8 +3,8 @@ import {getPassthroughFS} from '@luma.gl/shadertools';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
 
-import {isWebGL2, getShaderVersion} from '@luma.gl/webgl';
-import {assert, isObjectEmpty} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
+import {assert, isObjectEmpty, getShaderVersion} from '@luma.gl/webgl';
 import Model from '../lib/model';
 
 // takes source and target buffers/textures and setsup the pipeline

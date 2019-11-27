@@ -1,5 +1,6 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
 import GL from '@luma.gl/constants';
+import {isWebGL2} from '../utils';
 
 const OES_element_index = 'OES_element_index';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';
@@ -103,11 +104,6 @@ const WEBGL_PARAMETERS = {
   [GL.MAX_PROGRAM_TEXEL_OFFSET]: getWebGL2ValueOrZero,
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: getWebGL2ValueOrZero
 };
-
-// Return true if WebGL2 context
-function isWebGL2(gl) {
-  return Boolean(gl && gl._version === 2);
-}
 
 // A "replacement" gl.getParameter that accepts "enums" from extensions and WebGL2
 // and returns reasonably safe defaults

@@ -1,4 +1,4 @@
-import {window} from './globals';
+import {window} from '@luma.gl/gltools';
 
 // opts allows user agent to be overridden for testing
 export default function isOldIE(opts = {}) {

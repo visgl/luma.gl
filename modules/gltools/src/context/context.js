@@ -1,14 +1,11 @@
 /* eslint-disable quotes */
 /* global document, WebGL2RenderingContext */
 // WebGLRenderingContext related methods
-import {trackContextState} from '@luma.gl/gltools';
+import GL from '@luma.gl/constants';
 
-// import {createHeadlessContext} from './create-headless-context';
-import {createBrowserContext} from './create-browser-context';
-import {getContextDebugInfo} from '../debug/get-context-debug-info';
+import trackContextState from '../state-tracker/track-context-state';
 
-import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
-import {global} from '../utils/globals';
+import {log, isBrowser, assert, getDevicePixelRatio, global, isWebGL2} from '../utils';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
@@ -16,30 +13,12 @@ export const ERR_WEBGL2 = 'Requires WebGL2';
 
 const isPage = isBrowser && typeof document !== 'undefined';
 
-export function isWebGL(gl) {
-  return Boolean(gl && Number.isFinite(gl._version));
-}
-
-export function isWebGL2(gl) {
-  return Boolean(gl && gl._version === 2);
-}
-
-export function assertWebGLContext(gl) {
-  // Need to handle debug context
-  assert(isWebGL(gl), ERR_CONTEXT);
-}
-
-export function assertWebGL2Context(gl) {
-  // Need to handle debug context
-  assert(isWebGL2(gl), ERR_WEBGL2);
-}
-
-const CONTEST_DEFAULTS = {
+const CONTEXT_DEFAULTS = {
   // COMMON CONTEXT PARAMETERS
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  throwOnFailure: true,
+  throwOnError: false,
   manageState: true,
   // BROWSER CONTEXT PARAMETERS
   canvas: null, // A canvas element or a canvas string id
@@ -61,7 +40,7 @@ export function createGLContext(options = {}) {
     "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
   );
 
-  options = Object.assign({}, CONTEST_DEFAULTS, options);
+  options = Object.assign({}, CONTEXT_DEFAULTS, options);
   const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled
@@ -104,7 +83,7 @@ export function instrumentGLContext(gl, options = {}) {
   gl.luma = gl.luma || {};
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
-  options = Object.assign({}, CONTEST_DEFAULTS, options);
+  options = Object.assign({}, CONTEXT_DEFAULTS, options);
   const {manageState, debug} = options;
 
   // Install context state tracking
@@ -129,6 +108,28 @@ export function instrumentGLContext(gl, options = {}) {
   gl._instrumented = true;
 
   return gl;
+}
+
+/**
+ * Provides strings identifying the GPU vendor and driver.
+ * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @param {WebGLRenderingContext} gl - context
+ * @return {Object} - 'vendor' and 'renderer' string fields.
+ */
+export function getContextDebugInfo(gl) {
+  const vendorMasked = gl.getParameter(GL.VENDOR);
+  const rendererMasked = gl.getParameter(GL.RENDERER);
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const vendorUnmasked = ext && gl.getParameter(ext.UNMASKED_VENDOR_WEBGL || GL.VENDOR);
+  const rendererUnmasked = ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL || GL.RENDERER);
+  return {
+    vendor: vendorUnmasked || vendorMasked,
+    renderer: rendererUnmasked || rendererMasked,
+    vendorMasked,
+    rendererMasked,
+    version: gl.getParameter(GL.VERSION),
+    shadingLanguageVersion: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
+  };
 }
 
 /**
@@ -161,6 +162,39 @@ export function resizeGLContext(gl, options = {}) {
 }
 
 // HELPER METHODS
+
+/**
+ * Create a WebGL context for a canvas
+ * Note calling this multiple time on the same canvas does return the same context
+ */
+
+function createBrowserContext(canvas, options) {
+  const {onError = message => null} = options;
+
+  // Try to extract any extra information about why context creation failed
+  const onCreateError = error => onError(`WebGL context: ${error.statusMessage || 'error'}`);
+  canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+
+  const {webgl1 = true, webgl2 = true} = options;
+  let gl = null;
+  // Prefer webgl2 over webgl1, prefer conformant over experimental
+  if (webgl2) {
+    gl = gl || canvas.getContext('webgl2', options);
+    gl = gl || canvas.getContext('experimental-webgl2', options);
+  }
+  if (webgl1) {
+    gl = gl || canvas.getContext('webgl', options);
+    gl = gl || canvas.getContext('experimental-webgl', options);
+  }
+
+  canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+
+  if (!gl) {
+    return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
+  }
+
+  return gl;
+}
 
 function getCanvas({canvas, width = 800, height = 600, onError = () => {}}) {
   let targetCanvas;
