@@ -5,10 +5,10 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/core": "^8.0.0-alpha.2",
-    "@luma.gl/engine": "^8.0.0-alpha.2",
-    "@luma.gl/gltools": "^8.0.0-alpha.2",
-    "@luma.gl/shadertools": "^8.0.0-alpha.2",
+    "@luma.gl/core": "^8.0.0-alpha.9",
+    "@luma.gl/engine": "^8.0.0-alpha.9",
+    "@luma.gl/gltools": "^8.0.0-alpha.9",
+    "@luma.gl/shadertools": "^8.0.0-alpha.9",
     "math.gl": "^3.0.0"
   },
   "devDependencies": {
