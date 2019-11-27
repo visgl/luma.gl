@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
-import assert from './assert';
+import {assert, isWebGL2} from '../utils';
 
-import {getParameterPolyfill} from './polyfills/get-parameter-polyfill';
+import {getParameterPolyfill} from './get-parameter-polyfill';
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -10,11 +10,6 @@ const EXT_disjoint_timer_query = 'EXT_disjoint_timer_query';
 const EXT_texture_filter_anisotropic = 'EXT_texture_filter_anisotropic';
 
 const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_object extension';
-
-// Return true if WebGL2 context
-function isWebGL2(gl) {
-  return Boolean(gl && gl._version === 2);
-}
 
 // Return object with webgl2 flag and an extension
 function getExtensionData(gl, extension) {

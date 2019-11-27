@@ -9,7 +9,7 @@ import {
 } from './webgl-parameter-tables';
 
 import {pushContextState, popContextState} from './track-context-state';
-import {isObjectEmpty} from './utils';
+import {isObjectEmpty} from '../utils';
 
 // Sets any GL parameter regardless of function (gl.blendMode, ...)
 // Note: requires a `cache` object to be set on the context (gl.state.cache)

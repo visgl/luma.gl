@@ -8,7 +8,7 @@
 // easy to reuse or repurpose in other projects.
 
 /* eslint-disable camelcase, brace-style */
-import assert from './assert';
+import {assert} from '../utils';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
 

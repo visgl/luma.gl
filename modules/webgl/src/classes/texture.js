@@ -18,6 +18,7 @@ import {log, uid, isPowerOfTwo, assert} from '../utils';
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
 // Polyfill
+// Note (Tarek): Do we really need to support this API?
 const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
 
 export default class Texture extends Resource {

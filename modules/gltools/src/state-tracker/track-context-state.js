@@ -3,7 +3,7 @@
 // NOTE: this system does not handle buffer bindings
 import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS} from './webgl-parameter-tables';
 import {setParameters, getParameters} from './unified-parameter-api';
-import {assert, deepArrayEqual} from './utils';
+import {assert, deepArrayEqual} from '../utils';
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
