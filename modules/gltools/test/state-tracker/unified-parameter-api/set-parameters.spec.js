@@ -39,6 +39,8 @@ test('WebGL#set and get', t => {
   value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   t.is(value, -1, `got expected value ${stringifyTypedArray(value)}`);
 
+  t.throws(() => setParameters({}), 'throws with non WebGL context');
+
   t.end();
 });
 
