@@ -1,3 +1,8 @@
+## v8.0.0-alpha.10
+
+- New module injection api (#1300)
+- Move context creation/query functions to gltools (#1299)
+
 ## v8.0.0-alpha.7
 
 - ClipSpace, getParameters, resolveModules fixes (#1297)
