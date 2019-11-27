@@ -84,8 +84,7 @@ export default class ProgramManager {
         modules,
         inject,
         defines,
-        hookFunctions: this._hookFunctions,
-        moduleInjections: this._moduleInjections
+        hookFunctions: this._hookFunctions
       });
 
       this._programCache[hash] = new Program(this.gl, {
