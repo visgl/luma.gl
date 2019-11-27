@@ -31,7 +31,7 @@ export function assertWebGL2Context(gl) {
   assert(isWebGL2(gl), ERR_WEBGL2);
 }
 
-const CONTEST_DEFAULTS = {
+const CONTEXT_DEFAULTS = {
   // COMMON CONTEXT PARAMETERS
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
@@ -58,7 +58,7 @@ export function createGLContext(options = {}) {
     "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
   );
 
-  options = Object.assign({}, CONTEST_DEFAULTS, options);
+  options = Object.assign({}, CONTEXT_DEFAULTS, options);
   const {width, height} = options;
 
   // Error reporting function, enables exceptions to be disabled
@@ -101,7 +101,7 @@ export function instrumentGLContext(gl, options = {}) {
   gl.luma = gl.luma || {};
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
-  options = Object.assign({}, CONTEST_DEFAULTS, options);
+  options = Object.assign({}, CONTEXT_DEFAULTS, options);
   const {manageState, debug} = options;
 
   // Install context state tracking
