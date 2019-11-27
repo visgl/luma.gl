@@ -30,6 +30,7 @@ const MY_SHADER_MODULE = {
   name: 'my-shader-module',
   vs: ....
   fs: null,
+  inject: {},
   dependencies: [],
   deprecations: [],
   getUniforms
@@ -61,6 +62,7 @@ export const MY_SHADER_MODULE = {
   name: 'my-shader-module',
   vs: '...',
   fs: '...',
+  inject: {},
   dependencies: [],
   deprecations: [],
   getUniforms
@@ -74,6 +76,7 @@ Descriptor objects can define the following fields:
 * `fs` - (String | null)
 * `getUniforms` JavaScript function that maps JavaScript parameter keys to uniforms used by this module
 * `uniforms` (*Object*) - a light alternative to `getUniforms`, see below
+* `inject` (*Object*) - injections the module will make into shader hooks, see below
 * `dependencies` (*Array*) - a list of other shader modules that this module is dependent on
 * `deprecations` (*Array*) - a list of deprecated APIs.
 
@@ -131,6 +134,25 @@ With `type: 'number'`, the following additional fields may be added for validati
 * `max` (*Number*)
 
 Note: `uniforms` is ignored if `getUniforms` is provided.
+
+## inject
+
+A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md) documentation for more information on shader hooks.
+
+For example:
+
+```js
+{
+  picking: {
+    'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
+    'fs:FRAGMENT_HOOK_FUNCTION': {
+      injection: 'color = picking_filterColor(color);',
+      order: Number.POSITIVE_INFINITY
+    },
+    'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
+  }
+}
+```
 
 ## GLSL Syntax Conversion Reference
 

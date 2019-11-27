@@ -1,6 +1,6 @@
 import {AnimationLoop, Model, ProgramManager} from '@luma.gl/core';
 import {setParameters} from '@luma.gl/gltools';
-import {dirlight} from '@luma.gl/shadertools';
+import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from 'math.gl';
 import {getRandom} from '../../utils';
@@ -43,6 +43,17 @@ void main(void) {
 }
 `;
 
+// Create a new version of module with injections
+const dirlight = Object.assign(
+  {
+    inject: {
+      'vs:LUMAGL_normal': 'project_setNormal(normal);',
+      'fs:LUMAGL_fragmentColor': 'color = dirlight_filterColor(color);'
+    }
+  },
+  dirlightBase
+);
+
 export default class AppAnimationLoop extends AnimationLoop {
   constructor() {
     super({debug: true});
@@ -63,14 +74,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     const programManager = new ProgramManager(gl);
     programManager.addShaderHook('vs:LUMAGL_normal(inout vec3 normal)');
     programManager.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
-    programManager.addModuleInjection(dirlight, {
-      hook: 'vs:LUMAGL_normal',
-      injection: 'project_setNormal(normal);'
-    });
-    programManager.addModuleInjection(dirlight, {
-      hook: 'fs:LUMAGL_fragmentColor',
-      injection: 'color = dirlight_filterColor(color);'
-    });
 
     const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
 

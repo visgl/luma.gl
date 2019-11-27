@@ -15,6 +15,7 @@ export default class ShaderModule {
     getUniforms,
     deprecations = [],
     defines = {},
+    inject = {},
     // DEPRECATED
     vertexShader,
     fragmentShader
@@ -27,6 +28,7 @@ export default class ShaderModule {
     this.dependencies = dependencies;
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
     this.defines = defines;
+    this.injections = normalizeInjections(inject);
 
     if (uniforms) {
       this.uniforms = parsePropTypes(uniforms);
@@ -129,4 +131,26 @@ export function normalizeShaderModule(module) {
     }
   }
   return module;
+}
+
+function normalizeInjections(injections) {
+  const result = {
+    vs: {},
+    fs: {}
+  };
+
+  for (const hook in injections) {
+    let injection = injections[hook];
+    const stage = hook.slice(0, 2);
+
+    if (typeof injection === 'string') {
+      injection = {
+        injection
+      };
+    }
+
+    result[stage][hook] = injection;
+  }
+
+  return result;
 }

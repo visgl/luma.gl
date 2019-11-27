@@ -116,22 +116,24 @@ test('assembleShaders#shaderhooks', t => {
     }
   ];
 
-  const moduleInjections = {
-    picking: {
-      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-      'fs:LUMAGL_fragmentColor': {
-        injection: 'color = picking_filterColor(color);',
-        order: Number.POSITIVE_INFINITY
-      },
-      'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
-    }
-  };
+  const pickingInject = Object.assign(
+    {
+      inject: {
+        'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+        'fs:LUMAGL_fragmentColor': {
+          injection: 'color = picking_filterColor(color);',
+          order: Number.POSITIVE_INFINITY
+        },
+        'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
+      }
+    },
+    picking
+  );
 
   let assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    hookFunctions,
-    moduleInjections
+    hookFunctions
   });
   // Verify version directive remains as first line.
   t.ok(
@@ -163,9 +165,8 @@ test('assembleShaders#shaderhooks', t => {
   assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    modules: [picking],
-    hookFunctions,
-    moduleInjections
+    modules: [pickingInject],
+    hookFunctions
   });
   // Verify version directive remains as first line.
   t.ok(
@@ -201,8 +202,7 @@ test('assembleShaders#shaderhooks', t => {
       'vs:LUMAGL_pickColor': 'color *= 0.1;',
       'fs:LUMAGL_fragmentColor': 'color += 0.1;'
     },
-    hookFunctions,
-    moduleInjections
+    hookFunctions
   });
 
   t.ok(
@@ -220,8 +220,7 @@ test('assembleShaders#shaderhooks', t => {
     inject: {
       'fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);': 'fragmentColor -= 0.1;'
     },
-    hookFunctions,
-    moduleInjections
+    hookFunctions
   });
 
   t.ok(

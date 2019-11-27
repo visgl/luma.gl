@@ -131,19 +131,18 @@ test('ProgramManager#hooks', t => {
 
   t.ok(preHookProgram !== postHookProgram, 'Adding hooks changes hash');
 
-  pm.addModuleInjection(picking, {
-    hook: 'vs:LUMAGL_pickColor',
-    injection: 'picking_setPickingColor(color.rgb);'
-  });
-  pm.addModuleInjection(picking, {
-    hook: 'fs:LUMAGL_fragmentColor',
-    injection: 'color = picking_filterColor(color);',
-    order: Number.POSITIVE_INFINITY
-  });
-
-  const postInjectionProgram = pm.get({vs, fs});
-  t.ok(preHookProgram !== postInjectionProgram, 'Adding hooks and injections changes hash');
-  t.ok(postHookProgram !== postInjectionProgram, 'Adding injections changes hash');
+  const pickingInjection = Object.assign(
+    {
+      inject: {
+        'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+        'fs:LUMAGL_fragmentColor': {
+          injection: 'color = picking_filterColor(color);',
+          order: Number.POSITIVE_INFINITY
+        }
+      }
+    },
+    picking
+  );
 
   const noModuleProgram = pm.get({vs, fs});
 
@@ -170,7 +169,7 @@ test('ProgramManager#hooks', t => {
   const modulesProgram = pm.get({
     vs,
     fs,
-    modules: [picking]
+    modules: [pickingInjection]
   });
   const modulesVs = modulesProgram.vs.source;
   const modulesFs = modulesProgram.fs.source;

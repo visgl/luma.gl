@@ -31,20 +31,6 @@ Takes the source code of a vertex shader and a fragment shader, and a list of mo
 ]
 ```
 
-* `moduleInjections`=`{}` Map of module names to injection descriptions. Descriptions are a map of hook funciton signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. For example:
-```js
-{
-  picking: {
-    'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
-    'fs:FRAGMENT_HOOK_FUNCTION': {
-      injection: 'color = picking_filterColor(color);',
-      order: Number.POSITIVE_INFINITY
-    },
-    'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
-  }
-}
-```
-
 Returns:
 * `vs` - the resolved vertex shader
 * `fs` - the resolved fragment shader
