@@ -8,7 +8,7 @@
     "@luma.gl/engine": "^8.0.0-alpha.9",
     "@luma.gl/webgl": "^8.0.0-alpha.9",
     "@luma.gl/gltools": "^8.0.0-alpha.9",
-    "@luma.gl/addons": "^8.0.0-alpha.9",
+    "@luma.gl/experimental": "^8.0.0-alpha.9",
     "math.gl": "^3.0.0"
   },
   "devDependencies": {

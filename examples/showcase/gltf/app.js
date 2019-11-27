@@ -8,7 +8,12 @@ import GL from '@luma.gl/constants';
 import {AnimationLoop, Timeline} from '@luma.gl/engine';
 import {clear, log, lumaStats} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/addons';
+import {
+  GLTFScenegraphLoader,
+  createGLTFObjects,
+  GLTFEnvironment,
+  VRDisplay
+} from '@luma.gl/experimental';
 import {Matrix4, radians} from 'math.gl';
 
 const CUBE_FACE_TO_DIRECTION = {

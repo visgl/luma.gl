@@ -10,9 +10,9 @@ luma.gl contains a lot of classes and functions that might make new users wonder
 | webgl      | Wrapper classes for WebGL |
 | core       | Single module re-exporting key parts of engine, webgl, shadertools |
 | engine     | High-level drawing APIs |
-| addons     | Experimental, unsupported APIs. Use at your own risk! |
 | debug      | Debug tooling for the other modules |
 | test-utils | Test tooling for the other modules |
+| experimental| Experimental, unsupported APIs. Use at your own risk! |
 
 ## WebGL Classes
 

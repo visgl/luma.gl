@@ -12,11 +12,11 @@ The module structure has been significantly changed for v8.0 with the intention 
 | shadertools| Tools for manipulating and composing shader text | shadertools and effects (formerly glfx) |
 | gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
 | webgl      | Wrapper classes for WebGL | Same as before |
-| core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in addons |
+| core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in experimental |
 | engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform|
-| addons     | Experimental, unsupported APIs | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
 | debug      | Debug tooling for the other modules | Same as before |
 | test-utils | Test tooling for the other modules | Same as before |
+| experimental| Experimental, unsupported APIs | core/scenegraph, gpgpu, addons/gltf, addons/webvr|
 
 ### Breaking changes
 

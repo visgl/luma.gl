@@ -1,5 +1,5 @@
 {
-  "name": "@luma.gl/addons",
+  "name": "@luma.gl/experimental",
   "version": "8.0.0-alpha.10",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
