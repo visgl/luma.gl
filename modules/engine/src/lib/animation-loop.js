@@ -5,6 +5,9 @@ import {
   instrumentGLContext,
   resizeGLContext,
   resetParameters,
+  isBrowser
+} from '@luma.gl/gltools';
+import {
   requestAnimationFrame,
   cancelAnimationFrame,
   Query,
@@ -12,8 +15,7 @@ import {
   // TODO - remove dependency on framebuffer (bundle size impact)
   Framebuffer,
   log,
-  assert,
-  isBrowser
+  assert
 } from '@luma.gl/webgl';
 
 const isPage = isBrowser && typeof document !== 'undefined';

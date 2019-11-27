@@ -8,19 +8,22 @@
 export {lumaStats} from './init';
 
 // TODO - should we reexport these?
-export {resetParameters, getParameters, setParameters, withParameters} from '@luma.gl/gltools';
-
-export {createGLContext, resizeGLContext, instrumentGLContext} from './context/context';
+export {
+  resetParameters,
+  getParameters,
+  setParameters,
+  withParameters,
+  isWebGL,
+  isWebGL2
+} from '@luma.gl/gltools';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
 
 // WebGL Functions
-export {isWebGL, isWebGL2} from './webgl-utils/webgl-checks';
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
 export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 export {getContextInfo, getGLContextInfo, getContextLimits} from './features/limits';
-export {getContextDebugInfo} from './debug/get-context-debug-info';
 export {FEATURES} from './features/webgl-features-table';
 export {hasFeature, hasFeatures, getFeatures} from './features/features';
 export {default as canCompileGLGSExtension} from './features/check-glsl-extension';
@@ -69,9 +72,6 @@ export {default as getShaderVersion} from './glsl-utils/get-shader-version';
 export {default as log} from './utils/log';
 export {default as assert} from './utils/assert';
 export {uid, isObjectEmpty} from './utils/utils';
-export {self, window, global, document} from './utils/globals';
-export {default as isBrowser} from './utils/is-browser';
-export {cssToDeviceRatio, cssToDevicePixels} from './utils/device-pixels';
 
 // INTERNAL
 export {parseUniformName, getUniformSetter} from './classes/uniforms';

@@ -1,7 +1,7 @@
 import GL from '@luma.gl/constants';
 import Resource from './resource';
 import Buffer from './buffer';
-import {isWebGL2} from '../webgl-utils';
+import {isWebGL2} from '@luma.gl/gltools';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
 import {getBrowser} from 'probe.gl';

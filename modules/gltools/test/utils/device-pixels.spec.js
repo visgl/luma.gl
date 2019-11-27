@@ -1,5 +1,5 @@
 /* global window */
-import {cssToDevicePixels, cssToDeviceRatio, getDevicePixelRatio} from '@luma.gl/webgl/utils';
+import {cssToDevicePixels, cssToDeviceRatio, getDevicePixelRatio} from '@luma.gl/gltools/utils';
 import test from 'tape-catch';
 const LOW_DPR = 0.5;
 const HIGH_DPR = 4;

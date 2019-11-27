@@ -1,4 +1,4 @@
-import {createGLContext, instrumentGLContext, isBrowser} from '@luma.gl/webgl';
+import {createGLContext, instrumentGLContext, isBrowser} from '@luma.gl/gltools';
 import '@luma.gl/debug';
 
 const ERR_HEADLESSGL_NOT_AVAILABLE =

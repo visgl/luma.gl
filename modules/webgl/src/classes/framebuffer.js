@@ -1,4 +1,5 @@
 import GL from '@luma.gl/constants';
+import {isWebGL2} from '@luma.gl/gltools';
 
 import Resource from './resource';
 import Texture2D from './texture-2d';
@@ -8,7 +9,7 @@ import {copyToDataUrl} from './copy-and-blit.js';
 
 import {getFeatures} from '../features';
 
-import {isWebGL2, assertWebGL2Context, getKey} from '../webgl-utils';
+import {assertWebGL2Context, getKey} from '../webgl-utils';
 
 import {log, assert} from '../utils';
 

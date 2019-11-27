@@ -1,14 +1,11 @@
 /* eslint-disable quotes */
 /* global document, WebGL2RenderingContext */
 // WebGLRenderingContext related methods
-import {trackContextState} from '@luma.gl/gltools';
+import GL from '@luma.gl/constants';
 
-// import {createHeadlessContext} from './create-headless-context';
-import {createBrowserContext} from './create-browser-context';
-import {getContextDebugInfo} from '../debug/get-context-debug-info';
+import trackContextState from '../state-tracker/track-context-state';
 
-import {log, isBrowser, assert, getDevicePixelRatio} from '../utils';
-import {global} from '../utils/globals';
+import {log, isBrowser, assert, getDevicePixelRatio, global} from '../utils';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
@@ -132,6 +129,28 @@ export function instrumentGLContext(gl, options = {}) {
 }
 
 /**
+ * Provides strings identifying the GPU vendor and driver.
+ * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @param {WebGLRenderingContext} gl - context
+ * @return {Object} - 'vendor' and 'renderer' string fields.
+ */
+export function getContextDebugInfo(gl) {
+  const vendorMasked = gl.getParameter(GL.VENDOR);
+  const rendererMasked = gl.getParameter(GL.RENDERER);
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const vendorUnmasked = ext && gl.getParameter(ext.UNMASKED_VENDOR_WEBGL || GL.VENDOR);
+  const rendererUnmasked = ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL || GL.RENDERER);
+  return {
+    vendor: vendorUnmasked || vendorMasked,
+    renderer: rendererUnmasked || rendererMasked,
+    vendorMasked,
+    rendererMasked,
+    version: gl.getParameter(GL.VERSION),
+    shadingLanguageVersion: gl.getParameter(GL.SHADING_LANGUAGE_VERSION)
+  };
+}
+
+/**
  * Resize the canvas' drawing buffer.
  *
  * Can match the canvas CSS size, and optionally also consider devicePixelRatio
@@ -161,6 +180,39 @@ export function resizeGLContext(gl, options = {}) {
 }
 
 // HELPER METHODS
+
+/**
+ * Create a WebGL context for a canvas
+ * Note calling this multiple time on the same canvas does return the same context
+ */
+
+function createBrowserContext(canvas, options) {
+  const {onError = message => null} = options;
+
+  // Try to extract any extra information about why context creation failed
+  const onCreateError = error => onError(`WebGL context: ${error.statusMessage || 'error'}`);
+  canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+
+  const {webgl1 = true, webgl2 = true} = options;
+  let gl = null;
+  // Prefer webgl2 over webgl1, prefer conformant over experimental
+  if (webgl2) {
+    gl = gl || canvas.getContext('webgl2', options);
+    gl = gl || canvas.getContext('experimental-webgl2', options);
+  }
+  if (webgl1) {
+    gl = gl || canvas.getContext('webgl', options);
+    gl = gl || canvas.getContext('experimental-webgl', options);
+  }
+
+  canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+
+  if (!gl) {
+    return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
+  }
+
+  return gl;
+}
 
 function getCanvas({canvas, width = 800, height = 600, onError = () => {}}) {
   let targetCanvas;
