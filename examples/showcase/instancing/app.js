@@ -1,8 +1,7 @@
 import {AnimationLoop, CubeGeometry, Timeline, Model, ProgramManager} from '@luma.gl/engine';
 import {readPixelsToArray, Buffer} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {cssToDevicePixels, setParameters} from '@luma.gl/gltools';
 import {picking, dirlight} from '@luma.gl/shadertools';
-import {cssToDevicePixels} from '@luma.gl/webgl';
 import {Matrix4, radians} from 'math.gl';
 import {getRandom} from '../../utils';
 
