@@ -3,7 +3,8 @@
 import test from 'tape-catch';
 
 import GL from '@luma.gl/constants';
-import {Buffer, Texture2D, getKey, isWebGL2, readPixelsToArray} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
+import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';
 import {

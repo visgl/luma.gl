@@ -1,4 +1,5 @@
-import {isWebGL2, Buffer, TransformFeedback} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
+import {Buffer, TransformFeedback} from '@luma.gl/webgl';
 import {assert} from '@luma.gl/webgl';
 
 export default class BufferTransform {

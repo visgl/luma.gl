@@ -7,16 +7,6 @@
 // Initialize any global state
 export {lumaStats} from './init';
 
-// TODO - should we reexport these?
-export {
-  resetParameters,
-  getParameters,
-  setParameters,
-  withParameters,
-  isWebGL,
-  isWebGL2
-} from '@luma.gl/gltools';
-
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
 

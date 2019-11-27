@@ -1,8 +1,8 @@
 /* global window */
-import {Buffer, isWebGL2, readPixelsToArray, Framebuffer} from '@luma.gl/webgl';
+import {Buffer, readPixelsToArray, Framebuffer} from '@luma.gl/webgl';
 import {picking} from '@luma.gl/shadertools';
 import {AnimationLoop, Model, Transform} from '@luma.gl/engine';
-import {cssToDevicePixels} from '@luma.gl/gltools';
+import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
 import {Log} from 'probe.gl';
 import {getRandom} from '../../utils';
 

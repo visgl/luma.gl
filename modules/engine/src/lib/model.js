@@ -1,9 +1,9 @@
 /* eslint-disable complexity */
 
 import GL from '@luma.gl/constants';
+import {isWebGL} from '@luma.gl/gltools';
 import ProgramManager from './program-manager';
 import {
-  isWebGL,
   Program,
   VertexArray,
   clear,

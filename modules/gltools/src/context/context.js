@@ -5,31 +5,13 @@ import GL from '@luma.gl/constants';
 
 import trackContextState from '../state-tracker/track-context-state';
 
-import {log, isBrowser, assert, getDevicePixelRatio, global} from '../utils';
+import {log, isBrowser, assert, getDevicePixelRatio, global, isWebGL2} from '../utils';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
 const isPage = isBrowser && typeof document !== 'undefined';
-
-export function isWebGL(gl) {
-  return Boolean(gl && Number.isFinite(gl._version));
-}
-
-export function isWebGL2(gl) {
-  return Boolean(gl && gl._version === 2);
-}
-
-export function assertWebGLContext(gl) {
-  // Need to handle debug context
-  assert(isWebGL(gl), ERR_CONTEXT);
-}
-
-export function assertWebGL2Context(gl) {
-  // Need to handle debug context
-  assert(isWebGL2(gl), ERR_WEBGL2);
-}
 
 const CONTEXT_DEFAULTS = {
   // COMMON CONTEXT PARAMETERS

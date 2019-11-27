@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, isWebGL2, log} from '@luma.gl/webgl';
+import {Buffer, log} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 <p>
