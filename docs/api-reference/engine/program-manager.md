@@ -29,12 +29,6 @@ void main() {
 
 pm.addShaderHook('fs:MY_SHADER_HOOK(inout vec4 color)');
 
-pm.addModuleInjection(picking, {
-  hook: 'fs:#MY_SHADER_HOOK',
-  injection: 'color = picking_filterColor(color);',
-  order: Number.POSITIVE_INFINITY
-});
-
 pm.addDefaultModule(dirlight); // Will be included in all following programs
 
 const program1 = pm.get({vs, fs});   // Basic, no defines, only default module
@@ -101,17 +95,6 @@ Creates a shader hook function that shader modules can injection code into. Shad
 will also be used as the name of the shader hook
 - `opts.header` (optional): code always included at the beginning of a hook function
 - `opts.footer` (optional): code always included at the end of a hook function
-
-### `addModuleInjection(module : Object, opts : Object)`
-
-Define a code injection for a particular hook function (defined by `addShaderHook`) and shader module. The injection code will be inserted into the hook function whenever the shader module is included.
-
-- `module`: module object for which the injection is being defined
-- `opts.hook`: the shader hook to inject into. This can be a hook function defined by `addShaderHook` or a predefined injection key (see below),
-prefixed by `vs:` for the vertex shader or `fs:` for the fragment shader.
-- `opts.injection`: the injection code
-- `opts.order` (optional): the priority with which to inject code into the shader hook. Lower priority numbers will
-be injected first
 
 ### getUniforms(program : Program) : Object
 

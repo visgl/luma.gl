@@ -15,7 +15,6 @@ export default class ProgramManager {
     this._programCache = {};
     this._getUniforms = {};
     this._registeredModules = {};
-    this._moduleInjections = {};
     this._hookFunctions = [];
     this._defaultModules = [];
 
@@ -36,22 +35,6 @@ export default class ProgramManager {
   removeDefaultModule(module) {
     const moduleName = typeof module === 'string' ? module : module.name;
     this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
-    this.stateHash++;
-  }
-
-  addModuleInjection(module, opts) {
-    const moduleName = typeof module === 'string' ? module : module.name;
-
-    const {hook, injection, order = 0} = opts;
-
-    const moduleInjections = this._moduleInjections;
-    moduleInjections[moduleName] = moduleInjections[moduleName] || {};
-
-    moduleInjections[moduleName][hook] = {
-      injection,
-      order
-    };
-
     this.stateHash++;
   }
 
