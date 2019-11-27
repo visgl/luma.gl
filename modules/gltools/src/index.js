@@ -25,10 +25,12 @@ export {
 
 export {
   isBrowser,
+  isBrowserMainThread,
   isNode,
   isElectron,
   global,
   window,
+  self,
   cssToDeviceRatio,
   cssToDevicePixels,
   isWebGL,

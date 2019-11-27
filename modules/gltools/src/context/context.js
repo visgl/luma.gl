@@ -36,7 +36,7 @@ const CONTEXT_DEFAULTS = {
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  throwOnFailure: true,
+  throwOnError: false,
   manageState: true,
   // BROWSER CONTEXT PARAMETERS
   canvas: null, // A canvas element or a canvas string id
