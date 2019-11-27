@@ -14,7 +14,7 @@ const ERR_HEADLESSGL_LOAD = `\
 const CONTEXT_DEFAULTS = {
   width: 1,
   height: 1,
-  debug: true,
+  debug: true
   // throwOnFailure: false,
   // throwOnError: false
 };
