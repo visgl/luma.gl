@@ -1,7 +1,7 @@
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
-import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment} from '@luma.gl/addons';
+import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 

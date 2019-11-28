@@ -21,4 +21,4 @@ import '../modules/webgl/test';
 import '../modules/engine/test/';
 
 // luma.gl sub modules
-import '../modules/addons/test/';
+import '../modules/experimental/test/';

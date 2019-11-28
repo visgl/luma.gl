@@ -29,11 +29,11 @@ import {
   buildHistopyramidBaseLevel,
   getHistoPyramid,
   histoPyramidGenerateIndices
-} from '@luma.gl/addons';
+} from '@luma.gl/experimental';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS
-} from '@luma.gl/addons/gpgpu/histopyramid/histopyramid-shaders';
+} from '@luma.gl/experimental/gpgpu/histopyramid/histopyramid-shaders';
 
 const gl = fixture.gl2;
 

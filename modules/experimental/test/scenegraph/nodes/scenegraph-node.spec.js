@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 import test from 'tape-catch';
-import {ScenegraphNode} from '@luma.gl/addons';
+import {ScenegraphNode} from '@luma.gl/experimental';
 import {Matrix4, Vector3} from 'math.gl';
 
 const PROPS = {

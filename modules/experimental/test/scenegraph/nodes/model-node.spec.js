@@ -22,7 +22,7 @@ import test from 'tape-catch';
 import {makeSpy} from '@probe.gl/test-utils';
 import {fixture} from 'test/setup';
 import {Model} from '@luma.gl/engine';
-import {ModelNode} from '@luma.gl/addons';
+import {ModelNode} from '@luma.gl/experimental';
 
 const DUMMY_VS = `
   void main() { gl_Position = vec4(1.0); }
