@@ -35,6 +35,14 @@ new Texture2D({
 - `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/developer-guide/shader-modules.md) instead.
 - `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/developer-guide/shader-modules.md) instead.
 - `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
+- The following are no longer exported by @luma.gl/core, but can still be imported from the modules indicated:
+
+| |Available in|
+|-|------------|
+|Query, VertexArrayObject, VertexArray, UniformBufferLayout, Shader, VertexShader, FragmentShader, clearBuffer, clearBuffer, copyToDataUrl, copyToImage, blit, setPathPrefix, loadFile, loadImage|@luma.gl/webgl|
+|resizeGLContext|@luma.gl/gltools|
+|combineInjects, lights, getQualifierDetails, getPassthroughFS, typeToChannelSuffix, typeToChannelCount, convertToVec4|@luma.gl/shadertools|
+
 
 ### Smaller changes
 
