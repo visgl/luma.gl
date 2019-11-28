@@ -1,74 +1,43 @@
 // CORE MODULE EXPORTS FOR LUMA.GL
 
-// WEBGL CONTEXT
+// GLTOOLS
 export {
-  lumaStats,
-  getContextInfo,
-  getGLContextInfo,
-  getContextLimits,
-  FEATURES,
-  hasFeature,
-  hasFeatures,
-  getFeatures,
-  canCompileGLGSExtension,
-  cloneTextureFrom,
-  getKeyValue,
-  getKey
-} from '@luma.gl/webgl';
-
-export {
+  createGLContext,
+  instrumentGLContext,
   isWebGL,
   isWebGL2,
-  createGLContext,
-  resizeGLContext,
-  trackContextState,
-  resetParameters,
   getParameters,
   setParameters,
   withParameters,
+  resetParameters,
   cssToDeviceRatio,
   cssToDevicePixels
 } from '@luma.gl/gltools';
 
-// WEBGL1 OBJECTS/FUNCTIONS
+// WEBGL
 export {
+  lumaStats,
+  FEATURES,
+  hasFeature,
+  hasFeatures,
   Buffer,
-  Shader,
-  VertexShader,
-  FragmentShader,
   Program,
   Framebuffer,
   Renderbuffer,
   Texture2D,
   TextureCube,
   clear,
-  clearBuffer,
   // Copy and Blit
   readPixelsToArray,
   readPixelsToBuffer,
-  copyToDataUrl,
-  copyToImage,
+  cloneTextureFrom,
   copyToTexture,
-  blit
-} from '@luma.gl/webgl';
-
-export {
   // WebGL2 classes & Extensions
-  Query,
   Texture3D,
-  TransformFeedback,
-  VertexArrayObject,
-  VertexArray,
-  UniformBufferLayout,
-  setPathPrefix,
-  loadFile,
-  loadImage,
-  // experimental WebGL exports
-  Accessor as _Accessor,
-  clearBuffer as _clearBuffer
+  TransformFeedback
 } from '@luma.gl/webgl';
 
-// CORE - WEBGL INDEPENDENT
+// ENGINE
 export {
   AnimationLoop,
   Model,
@@ -91,25 +60,18 @@ export {
 //  Analyze risk of breaking apps
 export {
   // HELPERS
-  combineInjects,
   normalizeShaderModule,
   // SHADER MODULES
   fp32,
   fp64,
   project,
-  lights,
   dirlight,
   picking,
   gouraudLighting,
   phongLighting,
-  pbr,
-  getQualifierDetails,
-  getPassthroughFS,
-  typeToChannelSuffix,
-  typeToChannelCount,
-  convertToVec4
+  pbr
 } from '@luma.gl/shadertools';
 
 // UTILS: undocumented API for other luma.gl modules
 export {log, assert, uid} from '@luma.gl/webgl';
-export {window, global} from '@luma.gl/gltools';
+export {window, global, self} from '@luma.gl/gltools';
