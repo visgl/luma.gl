@@ -1,3 +1,9 @@
+## v8.0.0-alpha.11
+
+- Reduce core to modules used by deck.gl (#1303)
+- Rename addons to experimental (#1302)
+- Set parameters assert (#1301)
+
 ## v8.0.0-alpha.10
 
 - New module injection api (#1300)
