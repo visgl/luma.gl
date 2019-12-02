@@ -90,12 +90,13 @@ The hook function now changes the color from white to red.
 | `fs:#main-start` | Fragment | Injected at the very beginning of main function |
 | `fs:#main-end`   | Fragment | Injected at the very end of main function |
 
-## Usage
+**NOTE**: Injections assume that the `main` function appears last in a shader.
 
+## Usage
 
 ### Injection Map
 
-`assembleShaders` (and `Model` constructor) will take a new `inject` argument that contains a map of:
+`assembleShaders` (and `Model` constructor) will take an `inject` argument that contains a map of:
 
 * keys indicating hooks (predefined or functions)
 * values representing code to be injected. This can be either a simple string or an object containing the `injection` string and an `order` indicating its priority.
@@ -126,10 +127,5 @@ new Model(gl, {
 });
 ```
 
-
-### Remarks
-
-* Injection at the moment only allows code to be added, not replaced.
-* At the moment the implementation for injection are fairly simple. They depend on the shader code being well organized. For instance they require that the main function must come last in the app shader. In case of issues, try to make sure that line breaks, spacing etc are natural.
 
 

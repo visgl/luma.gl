@@ -15,7 +15,7 @@ In addition, luma.gl's WebGL classes transparently use WebGL extensions or WebGL
 
 Check if a feature is available (whether as a WebGL1 or WebGL2 extension or through WebGL2)
 ```js
-import {hasFeature, FEATURES} from '@luma.gl/core';
+import {hasFeature, FEATURES} from '@luma.gl/webgl';
 if (hasFeature(gl, FEATURES.INSTANCED_RENDERING)) {
    // Will work both on WebGL1 (via extension) and WebGL2 via the standard API
    program.draw({instanceCount: ..., ....});
@@ -24,7 +24,7 @@ if (hasFeature(gl, FEATURES.INSTANCED_RENDERING)) {
 
 Another example of feature detection
 ```js
-import {hasFeature, FEATURES} from '@luma.gl/core';
+import {hasFeature, FEATURES} from '@luma.gl/webgl';
 // Checks if `Query` objects can do async queries of GPU timings
 if (hasFeature(gl, FEATURES.TIMER_QUERY)) {
    ...
@@ -38,7 +38,7 @@ if (hasFeature(gl, 'EXT_disjoint_timer_query') || hasFeature(gl, 'EXT_disjoint_t
 
 There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
 ```js
-import {Query} from '@luma.gl/core';
+import {Query} from '@luma.gl/webgl';
 if (Query.isSupported(gl)) {
   ...
 }

@@ -1,21 +1,12 @@
 # Context Properties
 
 luma.gl provides several helper functions for testing properties of a WebGL context:
-- `isWebGL2`: check if a context is a WebGL 2 context (including for debug contexts)
 - `getContextLimits`: get resource limits for a context
 - `getGLContextInfo`: get various properties of a gl context (using WebGL enums as keys)
 - `getContextInfo`: get various properties of a gl context (using strings as keys)
 
 ## Usage
 
-Check if a context is a WebGL 2 context
-```js
-import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/webgl';
-const limits = getContextLimits(gl);
-if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
-   ...
-}
 ```
 
 Check a certain limit (whether through an extension under WebGL1 or through WebGL2)
@@ -37,15 +28,6 @@ if (Query.isSupported(gl)) {
 ```
 
 ## Functions
-
-### isWebGL2
-
-A major check that can be done is whether you are working with a `WebGL2RenderingContext`. An advantage of using this method is that it can correctly identify a luma.gl debug context (which is not a subclass of a `WebGL2RendringContext`).
-
-`isWebGL2(gl)`
-
-* `gl` (WebGLRenderingContext) - gl context
-Returns true if the context is a WebGL2RenderingContext.
 
 ### getContextLimits(gl)
 
