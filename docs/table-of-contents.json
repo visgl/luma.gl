@@ -25,6 +25,12 @@
       "title": "API Reference",
       "chapters": [
         {
+          "title": "Overview",
+          "entries": [
+            { "entry": "docs/api-reference/README" }
+          ]
+        },
+        {
           "title": "Engine",
           "entries": [
             { "entry": "docs/api-reference/engine/model" },
@@ -74,6 +80,12 @@
             { "entry": "docs/api-reference/shadertools/assemble-shaders" },
             { "entry": "docs/api-reference/shadertools/core-shader-modules" },
             { "entry": "docs/api-reference/shadertools/effects-shader-modules" }
+          ]
+        },
+        {
+          "title": "Debug",
+          "entries": [
+            { "entry": "docs/api-reference/debug" }
           ]
         },
         {

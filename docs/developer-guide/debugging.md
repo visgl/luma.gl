@@ -31,28 +31,15 @@ luma.gl runs checks on attributes and buffers when they are being set, catching 
 Buffers will also have their first values checked to ensure that they are not NaN. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
 
 
-## Debug Mode Contexts
+## Debug Module
 
-> Warning: Debug contexts impose a significant performance penalty (due to waiting for the GPU after each WebGL call to check error codes) and should not be used in production builds.
-
-luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and can use these to "instrument" `WebGLRenderingContext`s.
-
-The `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
-
-To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
+Importing `@luma.gl/debug` will enable creation of debug contexts for several **luma.gl** functions. See [@luma.gl/debug](/docs/api-reference/debug.md) for more information.
 
 ```js
+import {createGLContext} from '@luma.gl/gltools';
 import '@luma.gl/debug';
-const gl = getDebugContext(gl);
+const gl = createGLContext(gl, {debug: true});
 ```
-
-If the debug tools haven't been imported, `getDebugContext` will print a warning and simply return the original context, so the debug code can be left in the applicatin even when debug support is not imported.
-
-When the `luma.log.debug` flag is set, a debug contexts does the following:
-
-* **Detects WebGL Errors** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, taking care to extract helpful information into the error message. Raw WebGL calls tend to either fail silently or log something cryptic in the console without making it clear what call generated the warning.
-
-* **Checks WebGL Parameters** - WebGL parameter checks help catch a number of common WebGL coding mistakes, which is important since bad parameters in WebGL often lead to hard to debug symptoms such as silent failures to render, or to inscrutable error messages in the console.
 
 
 
