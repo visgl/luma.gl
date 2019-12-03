@@ -63,15 +63,15 @@
             { "entry": "docs/api-reference/webgl/resource" },
             { "entry": "docs/api-reference/webgl/context/feature-checking" },
             { "entry": "docs/api-reference/webgl/context/context-properties" },
-            { "entry": "docs/api-reference/webgl/moving-data" },
-            { "entry": "docs/api-reference/webgl/device-pixels" }
+            { "entry": "docs/api-reference/webgl/moving-data" }
           ]
         },
         {
           "title": "GLTools",
           "entries": [
             { "entry": "docs/api-reference/gltools/context" },
-            { "entry": "docs/api-reference/gltools/parameter-setting" }
+            { "entry": "docs/api-reference/gltools/parameter-setting" },
+            { "entry": "docs/api-reference/gltools/device-pixels" }
           ]
         },
         {
