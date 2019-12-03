@@ -2,6 +2,8 @@
 
 ## Upgrading from v7.3 to v8.0
 
+The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new.md)) for details).
+
 ### Module Restructure
 
 The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
@@ -10,9 +12,9 @@ The module structure has been significantly changed for v8.0 with the intention 
 | ---------- | ------- |---------- |
 | constants | WebGL enum values | Same as before |
 | shadertools| Tools for manipulating and composing shader text | shadertools and effects (formerly glfx) |
-| gltool     | Tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
+| gltools    | Creation, tooling and polyfilling for the WebGL context| webgl2-polyfill and webgl-state-tracker|
 | webgl      | Wrapper classes for WebGL | Same as before |
-| core       | Single module re-exporting key parts of engine, webgl, shadertools | Same as before, less scenegraph classes which are now in experimental |
+| core       | Single module re-exporting key parts of engine, webgl, gltools, shadertools | Changes described below |
 | engine     | High-level drawing APIs | core/model, core/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform|
 | debug      | Debug tooling for the other modules | Same as before |
 | test-utils | Test tooling for the other modules | Same as before |
@@ -47,7 +49,7 @@ new Texture2D({
 ### Smaller changes
 
 - Functions are no longer accepted as uniform values to the `Model` class. The same effect can be achieved by updating the uniform values each frame prior to drawing.
-- `BaseModel` and `Model` have been consolidated in `Model`. `Model` be used as a substitute for `BaseModel` where necessary.
+- `BaseModel` and `Model` have been consolidated in `Model`. `Model` can be used as a substitute for `BaseModel` where necessary.
 - `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
 - `ShaderCache` has been removed and superseded by `ProgramManager`.
 - `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.

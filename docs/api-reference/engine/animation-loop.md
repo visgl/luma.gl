@@ -18,7 +18,7 @@ References:
 
 Autocreates a canvas/context
 ```js
-import {AnimationLoop, ClipSpace} from '@luma.gl/core';
+import {AnimationLoop, ClipSpace} from '@luma.gl/engine';
 
 const animationLoop = new AnimationLoop({
   onInitialize({gl}) {

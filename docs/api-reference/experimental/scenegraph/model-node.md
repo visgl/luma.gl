@@ -1,12 +1,20 @@
 # ModelNode
 
+`ModelNode` is simply a `ScenegraphNode` that contains a `Model` for drawing.
+
 ## Constructor
 
-### ModelNode(gl: WebGLRenderingContext, props: Object) _or_ ModelNode(model: Model, props: Object)
+`ModelNode(webglContextOrModel, props: Object)`
 
-* `props` is the same props as `Model`
-* Additionally you can pass `props.managedResources` array of objects that this model owns.
-Will automatically call `delete()` on all of them when you call `ModelNode.delete()`
+* If a WebGL context is passed, a `Model` will be created internally, otherwise the passed `Model` will be used.
+* `props` is the same props as `Model`, plus `props.managedResources`, an array of resources that this model owns.
 
 ## Methods
+
+`ModelNode` wraps the following `Model` method and simply proxies them to its internal `Model`:
+* `draw`
+* `setUniforms`
+* `setAttributes`
+* `updateModuleSettings`
+* `delete` (calls `Model.delete` and also deletes managed resource)
 

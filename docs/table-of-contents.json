@@ -22,22 +22,12 @@
       ]
     },
     {
-      "title": "Developer Guide",
-      "entries": [
-        { "entry": "docs/developer-guide/accessors" },
-        { "entry": "docs/developer-guide/transform-feedback" },
-        { "entry": "docs/developer-guide/shader-modules.md" },
-        { "entry": "docs/developer-guide/debugging" },
-        { "entry": "docs/developer-guide/bundling" }
-      ]
-    },
-    {
       "title": "API Reference",
       "chapters": [
         {
-          "title": "API Structure",
+          "title": "Overview",
           "entries": [
-            { "entry": "docs/api-reference/README.md" }
+            { "entry": "docs/api-reference/README" }
           ]
         },
         {
@@ -46,21 +36,10 @@
             { "entry": "docs/api-reference/engine/model" },
             { "entry": "docs/api-reference/engine/animation-loop" },
             { "entry": "docs/api-reference/engine/transform" },
-            { "entry": "docs/api-reference/engine/animation/timeline" },
-            { "entry": "docs/api-reference/engine/animation/key-frames" },
-            { "entry": "docs/api-reference/engine/effects/effects" }
-          ]
-        },
-        {
-          "title": "Geometry",
-          "entries": [
             { "entry": "docs/api-reference/engine/geometry" },
-            { "entry": "docs/api-reference/engine/geometries/cone-geometry" },
-            { "entry": "docs/api-reference/engine/geometries/cube-geometry" },
-            { "entry": "docs/api-reference/engine/geometries/cylinder-geometry" },
-            { "entry": "docs/api-reference/engine/geometries/ico-sphere-geometry" },
-            { "entry": "docs/api-reference/engine/geometries/plane-geometry" },
-            { "entry": "docs/api-reference/engine/geometries/sphere-geometry" }
+            { "entry": "docs/api-reference/engine/geometries" },
+            { "entry": "docs/api-reference/engine/animation/timeline" },
+            { "entry": "docs/api-reference/engine/animation/key-frames" }
           ]
         },
         {
@@ -82,35 +61,52 @@
             { "entry": "docs/api-reference/webgl/vertex-array" },
             { "entry": "docs/api-reference/webgl/vertex-array-object" },
             { "entry": "docs/api-reference/webgl/resource" },
-            { "entry": "docs/api-reference/webgl/context/context" },
             { "entry": "docs/api-reference/webgl/context/feature-checking" },
             { "entry": "docs/api-reference/webgl/context/context-properties" },
-            { "entry": "docs/api-reference/webgl/moving-data" },
-            { "entry": "docs/api-reference/webgl/device-pixels" }
+            { "entry": "docs/api-reference/webgl/moving-data" }
           ]
         },
         {
           "title": "GLTools",
           "entries": [
-            { "entry": "docs/api-reference/gltools/with-parameters" },
-            { "entry": "docs/api-reference/gltools/parameter-setting" }
+            { "entry": "docs/api-reference/gltools/context" },
+            { "entry": "docs/api-reference/gltools/parameter-setting" },
+            { "entry": "docs/api-reference/gltools/device-pixels" }
           ]
         },
         {
           "title": "Shadertools",
           "entries": [
             { "entry": "docs/api-reference/shadertools/assemble-shaders" },
-            { "entry": "docs/api-reference/shadertools/shader-module-picking" }
+            { "entry": "docs/api-reference/shadertools/core-shader-modules" },
+            { "entry": "docs/api-reference/shadertools/effects-shader-modules" }
           ]
         },
         {
-          "title": "Addons",
+          "title": "Debug",
           "entries": [
+            { "entry": "docs/api-reference/debug" }
+          ]
+        },
+        {
+          "title": "Experimental",
+          "entries": [
+            { "entry": "docs/api-reference/experimental/warning" },
             { "entry": "docs/api-reference/experimental/scenegraph/scenegraph-node" },
             { "entry": "docs/api-reference/experimental/scenegraph/model-node" },
             { "entry": "docs/api-reference/experimental/scenegraph/group-node" }
           ]
         }
+      ]
+    },
+    {
+      "title": "Developer Guide",
+      "entries": [
+        { "entry": "docs/developer-guide/accessors" },
+        { "entry": "docs/developer-guide/transform-feedback" },
+        { "entry": "docs/developer-guide/shader-modules.md" },
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/bundling" }
       ]
     },
     {

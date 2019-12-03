@@ -12,7 +12,8 @@ See also:
 
 Use a query to time GPU calls
 ```js
-import {Query, GL} from '@luma.gl/core';
+import {GL} from '@luma.gl/constants';
+import {Query} from '@luma.gl/webgl';
 ...
 const timerQuery = new Query(gl);
 
