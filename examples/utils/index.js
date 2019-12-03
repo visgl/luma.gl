@@ -31,6 +31,40 @@ export class MiniAnimationLoop {
 
     return canvas;
   }
+
+  _getContainer(props = {}) {
+    if (this.container) {
+      return this.container;
+    }
+
+    let width;
+    let height;
+
+    this.container = document.createElement('div');
+
+    if (props.canvas) {
+      const canvas = document.getElementById(props.canvas);
+      this.parent = canvas.parentElement;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      this.container.style.position = 'relative';
+      this.container.style.top = `-${height}px`;
+    } else {
+      this.parent = document.body;
+      width = 800;
+      height = 800;
+    }
+
+    this.container.style.width = `${width}px`;
+    this.container.style.height = `${height}px`;
+    this.parent.appendChild(this.container);
+
+    return this.container;
+  }
+
+  _removeContainer(props = {}) {
+    this.parent.removeChild(this.container);
+  }
 }
 
 // Create a deterministic pseudorandom number generator

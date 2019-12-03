@@ -136,6 +136,12 @@ module.exports = {
       image: 'images/example-instancing.jpg'
     },
     {
+      title: 'Geospatial',
+      componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
+      path: 'examples/showcase/geospatial/',
+      image: 'images/example-geospatial.jpg'
+    },
+    {
       title: 'Persistence',
       componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
       path: 'examples/showcase/persistence/',

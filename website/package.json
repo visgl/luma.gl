@@ -22,7 +22,8 @@
     "@probe.gl/stats-widget": "^3.1.1",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
-    "ocular-gatsby": "1.0.3"
+    "ocular-gatsby": "1.0.3",
+    "mapbox-gl": "^1.2.1"
   },
   "devDependencies": {
     "gatsby": "^2.13.0",
