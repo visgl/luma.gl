@@ -14,4 +14,4 @@ yarn start
 
 This will start a local development server and open the page in your browser. The main application code is in `app.js` and the page will automatically refresh whenever it's udpated.
 
-Note that we checkout the latest release branch here (`8.0-release`), which is recommended as `master` the active developmentment branch.
+Note that we checkout the latest release branch here (`8.0-release`), which is recommended as `master` is the active development branch.

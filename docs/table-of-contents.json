@@ -91,6 +91,7 @@
         {
           "title": "Experimental",
           "entries": [
+            { "entry": "docs/api-reference/experimental/README" },
             { "entry": "docs/api-reference/experimental/scenegraph/scenegraph-node" },
             { "entry": "docs/api-reference/experimental/scenegraph/model-node" },
             { "entry": "docs/api-reference/experimental/scenegraph/group-node" }
