@@ -48,7 +48,6 @@ const model = new Model(gl, options);
 
 ## Functions
 
-
 ### createGLContext
 
 Creates and returns a WebGL context, both in browsers and in Node.js.
