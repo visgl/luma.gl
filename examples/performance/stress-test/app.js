@@ -55,7 +55,7 @@ uniform float alpha;
 
 out vec4 fragColor;
 void main(void) {
-  fragColor.rgb = texture(uTexture, vUV).rgb;
+  fragColor.rgb = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
   fragColor.a = alpha;
   fragColor = dirlight_filterColor(fragColor);
   fragColor.rgb *= fragColor.a;

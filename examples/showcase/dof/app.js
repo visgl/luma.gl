@@ -100,7 +100,7 @@ uniform sampler2D uTexture;
 out vec4 fragColor;
 void main(void) {
   float d = clamp(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 0.2))), 0.0, 1.0);
-  fragColor.rgb = texture(uTexture, vUV).rgb * (d + 0.1);
+  fragColor.rgb = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb * (d + 0.1);
   fragColor.a = 1.0;
 }
 `;
