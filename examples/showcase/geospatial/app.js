@@ -6,13 +6,17 @@ import {Model} from '@luma.gl/engine';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `
-Drawing geometry on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the
+A triangle connecting Times Square, Rockafeller Center, and Columbus Circle in Manhattan, NYC on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the
 <a class="external-link" href="https://docs.mapbox.com/mapbox-gl-js/example/custom-style-layer/">Mapbox GL JS custom layer API</a>.
 `;
 
 mapboxgl.accessToken = process.env.MapboxAccessToken; // eslint-disable-line
 
-const coordinates = [[-73.9819, 40.7681], [-73.98513, 40.758896], [-73.9786, 40.7589]];
+const coordinates = [
+  [-73.9819, 40.7681],    // Columbus Circle
+  [-73.98513, 40.758896], // Times Square
+  [-73.9786, 40.7589]     // Rockafeller Center
+];
 
 // Create a Mapbox custom layer
 // https://docs.mapbox.com/mapbox-gl-js/example/custom-style-layer/

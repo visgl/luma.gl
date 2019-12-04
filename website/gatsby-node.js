@@ -63,10 +63,10 @@ callbacks.onCreateWebpackConfig = function onCreateWebpackConfigOverride(opts) {
   // Omit the default rule where test === '\.jsx?$'
   const rules = [newJSRule];
 
-  if (stage === "build-html") {
+  if (stage === 'build-html') {
     rules.push({
       test: /mapbox-gl/,
-      use: loaders.null(),
+      use: loaders.null()
     });
   }
 
