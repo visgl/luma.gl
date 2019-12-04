@@ -13,9 +13,14 @@
   margin: 24px;
   padding: 12px 24px;
   outline: none;
+  z-index: 99;
 }
 .options-panel h3 {
   margin: 8px 0;
+}
+
+a.external-link {
+  text-decoration: underline;
 }
 
 .options-panel .source-link {

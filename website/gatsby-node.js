@@ -27,7 +27,7 @@ callbacks.onCreateWebpackConfig = function onCreateWebpackConfigOverride(opts) {
   onCreateWebpackConfig(opts);
 
   const {
-    // stage, // build stage: ‘develop’, ‘develop-html’, ‘build-javascript’, or ‘build-html’
+    stage, // build stage: ‘develop’, ‘develop-html’, ‘build-javascript’, or ‘build-html’
     // rules, // Object (map): set of preconfigured webpack config rules
     // plugins, // Object (map): A set of preconfigured webpack config plugins
     // getConfig, // Function that returns the current webpack config
@@ -60,12 +60,19 @@ callbacks.onCreateWebpackConfig = function onCreateWebpackConfigOverride(opts) {
       !/node_modules\/(ocular|ocular-gatsby|gatsby-plugin-ocular)/.test(modulePath)
   });
 
+  // Omit the default rule where test === '\.jsx?$'
+  const rules = [newJSRule];
+
+  if (stage === 'build-html') {
+    rules.push({
+      test: /mapbox-gl/,
+      use: loaders.null()
+    });
+  }
+
   const newConfig = {
     module: {
-      rules: [
-        // Omit the default rule where test === '\.jsx?$'
-        newJSRule
-      ]
+      rules
     },
     node: {
       fs: 'empty'

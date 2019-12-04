@@ -1,9 +1,8 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, TextureCube} from '@luma.gl/webgl';
+import {Texture2D, TextureCube, loadImage} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
-import {loadImage} from '@loaders.gl/images';
 
 const INFO_HTML = `
 <p>
@@ -78,7 +77,7 @@ varying vec3 vNormal;
 varying vec2 vUV;
 
 void main(void) {
-  vec4 color = texture2D(uTexture, vUV);
+  vec4 color = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - uEyePosition), vNormal);
   vec4 reflectedColor = textureCube(uTextureCube, reflectedDir);
 
