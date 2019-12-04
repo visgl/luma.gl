@@ -13,9 +13,9 @@ A triangle connecting Times Square, Rockafeller Center, and Columbus Circle in M
 mapboxgl.accessToken = process.env.MapboxAccessToken; // eslint-disable-line
 
 const coordinates = [
-  [-73.9819, 40.7681],    // Columbus Circle
+  [-73.9819, 40.7681], // Columbus Circle
   [-73.98513, 40.758896], // Times Square
-  [-73.9786, 40.7589]     // Rockafeller Center
+  [-73.9786, 40.7589] // Rockafeller Center
 ];
 
 // Create a Mapbox custom layer
