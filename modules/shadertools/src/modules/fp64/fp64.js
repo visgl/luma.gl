@@ -53,10 +53,3 @@ export default {
   fp64LowPart,
   fp64ifyMatrix4
 };
-
-// Fragment shader fp64
-// export const fp64fs = {
-//   name: 'fp64-fs',
-//   vs: null,
-//   fs: `${fp64arithmeticShader}\n${fp64functionShader}`
-// };
