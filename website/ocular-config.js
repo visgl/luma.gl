@@ -130,6 +130,15 @@ module.exports = {
       image: 'images/example-hello-instancing.png'
     },
     {
+      title: 'Shader Modules',
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-shader-modules.jsx'
+      ),
+      path: 'examples/getting-started/shader-modules',
+      image: 'images/example-shader-modules.png'
+    },
+    {
       title: 'Instancing',
       componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
       path: 'examples/showcase/instancing/',

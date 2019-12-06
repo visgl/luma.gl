@@ -105,7 +105,7 @@ Our `onRender` method is comparitavely much simpler:
     model.draw();
   }
 ```
-This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background.
+This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background. See the live demo [here](/examples/getting-started/hello-triangle).
 
 The entire application should look like the following:
 ```js

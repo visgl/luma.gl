@@ -56,7 +56,9 @@ onRender({gl, program, vertexArray}) {
 }
 ```
 
-The scene should be identical to the one draw with the high-level API. The complete app is as follows:
+The scene should be identical to the one draw with the high-level API. See the live demo [here](/examples/getting-started/hello-instancing-mid).
+
+The complete app is as follows:
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';

@@ -1,11 +1,6 @@
-# Shadertools API Reference
+# Shader Assembly
 
-## Functions
-
-### `getModuleUniforms`
-
-Takes a list of shader module names and an object with options, and creates a combined uniform object that contains all necessary uniforms for all the modules injected into your shader.
-
+luma.gl's module shader system is primarily exposed via the function `assembleShaders` which composes base vertex and fragment shader source with shader modules, hook functions and injections to generate the final vertex and fragment shader source that can be used to create a program.
 
 ### `assembleShaders`
 
