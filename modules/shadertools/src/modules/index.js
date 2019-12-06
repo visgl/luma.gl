@@ -1,5 +1,5 @@
 export {default as fp32} from './fp32/fp32';
-export {default as fp64} from './fp64/fp64';
+export {default as fp64, fp64arithmetic} from './fp64/fp64';
 export {default as project} from './project/project';
 export {default as lights} from './lights/lights';
 export {default as dirlight} from './dirlight/dirlight';

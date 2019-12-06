@@ -50,7 +50,7 @@ export default class ShaderModule {
     }
 
     return `\
-#define MODULE_${this.name.toUpperCase()}
+#define MODULE_${this.name.toUpperCase().replace(/[^0-9a-z]/gi, '_')}
 ${moduleSource}\
 // END MODULE_${this.name}
 
