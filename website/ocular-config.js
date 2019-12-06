@@ -131,10 +131,7 @@ module.exports = {
     },
     {
       title: 'Shader Modules',
-      componentUrl: resolve(
-        __dirname,
-        './templates/getting-started/example-shader-modules.jsx'
-      ),
+      componentUrl: resolve(__dirname, './templates/getting-started/example-shader-modules.jsx'),
       path: 'examples/getting-started/shader-modules',
       image: 'images/example-shader-modules.png'
     },

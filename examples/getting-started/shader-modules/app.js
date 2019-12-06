@@ -8,7 +8,6 @@ Shader Modules
 Re-using shader code with shader modules
 `;
 
-
 // Base vertex and fragment shader code pairs
 const vs1 = `
   attribute vec2 position;
@@ -38,11 +37,10 @@ const fs2 = `
   }
 `;
 
-
 // A module that injects a function into
 // the vertex shader
 const colorModule = {
-  name: "color",
+  name: 'color',
   fs: `
     vec4 color_getColor() {
       return vec4(1.0, 0.0, 0.0, 1.0);
