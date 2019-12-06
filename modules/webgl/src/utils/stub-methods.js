@@ -1,4 +1,4 @@
-import log from './log';
+import {log} from '@luma.gl/gltools';
 
 // Install stubs for removed methods
 export function stubRemovedMethods(instance, className, version, methodNames) {

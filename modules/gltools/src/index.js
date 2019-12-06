@@ -23,16 +23,4 @@ export {
   getContextDebugInfo
 } from './context/context';
 
-export {
-  isBrowser,
-  isBrowserMainThread,
-  isNode,
-  isElectron,
-  global,
-  window,
-  self,
-  cssToDeviceRatio,
-  cssToDevicePixels,
-  isWebGL,
-  isWebGL2
-} from './utils/';
+export {log, cssToDeviceRatio, cssToDevicePixels, isWebGL, isWebGL2} from './utils';

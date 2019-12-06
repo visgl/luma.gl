@@ -4,8 +4,8 @@
 // available in an WebGL1 or WebGL2 environment.
 
 import WEBGL_FEATURES from './webgl-features-table';
-import {isWebGL2} from '@luma.gl/gltools';
-import {assert, log} from '../utils';
+import {isWebGL2, log} from '@luma.gl/gltools';
+import {assert} from '../utils';
 
 const LOG_UNSUPPORTED_FEATURE = 2;
 

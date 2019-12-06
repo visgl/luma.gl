@@ -6,7 +6,8 @@ import {
   getGLTypeFromTypedArray,
   getTypedArrayFromGLType
 } from '../webgl-utils';
-import {log, assert, checkProps} from '../utils';
+import {log} from '@luma.gl/gltools';
+import {assert, checkProps} from '../utils';
 
 const DEBUG_DATA_LENGTH = 10;
 

@@ -10,9 +10,10 @@ import {
   isLinearFilteringSupported
 } from './texture-formats';
 
-import {isWebGL2, withParameters, global} from '@luma.gl/gltools';
+import {isWebGL2, withParameters, log} from '@luma.gl/gltools';
+import {global} from 'probe.gl/env';
 import {assertWebGL2Context} from '../webgl-utils';
-import {log, uid, isPowerOfTwo, assert} from '../utils';
+import {uid, isPowerOfTwo, assert} from '../utils';
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];

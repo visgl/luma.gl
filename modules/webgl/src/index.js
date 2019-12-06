@@ -59,7 +59,7 @@ export {default as getShaderName} from './glsl-utils/get-shader-name';
 export {default as getShaderVersion} from './glsl-utils/get-shader-version';
 
 // UTILS
-export {default as log} from './utils/log';
+export {log} from '@luma.gl/gltools';
 export {default as assert} from './utils/assert';
 export {uid, isObjectEmpty} from './utils/utils';
 

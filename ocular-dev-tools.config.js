@@ -12,11 +12,7 @@ module.exports = {
     'dev-modules': resolve(__dirname, './dev-modules'),
 
     // TEST
-    test: resolve(__dirname, './test'),
-
-    // DEPRECATED - For backwards compatibility
-    'luma.gl/constants': resolve(__dirname, './modules/main/constants'),
-    'luma.gl': resolve(__dirname, './modules/main/src')
+    test: resolve(__dirname, './test')
   },
 
   entry: {

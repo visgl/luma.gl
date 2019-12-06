@@ -2,15 +2,16 @@
 /* global document, WebGL2RenderingContext */
 // WebGLRenderingContext related methods
 import GL from '@luma.gl/constants';
-
+import {global, isBrowser as getIsBrowser} from 'probe.gl/env';
 import trackContextState from '../state-tracker/track-context-state';
 
-import {log, isBrowser, assert, getDevicePixelRatio, global, isWebGL2} from '../utils';
+import {log, assert, getDevicePixelRatio, isWebGL2} from '../utils';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
+const isBrowser = getIsBrowser();
 const isPage = isBrowser && typeof document !== 'undefined';
 
 const CONTEXT_DEFAULTS = {
@@ -101,7 +102,7 @@ export function instrumentGLContext(gl, options = {}) {
     } else {
       gl = global.makeDebugContext(gl, options);
       // Debug forces log level to at least 1
-      log.priority = Math.max(log.priority, 1);
+      log.level = Math.max(log.level, 1);
     }
   }
 

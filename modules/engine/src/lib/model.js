@@ -448,22 +448,22 @@ export default class Model {
     return this;
   }
 
-  _logDrawCallStart(priority) {
-    const logDrawTimeout = priority > 3 ? 0 : LOG_DRAW_TIMEOUT;
-    if (log.priority < priority || Date.now() - this.lastLogTime < logDrawTimeout) {
+  _logDrawCallStart(logLevel) {
+    const logDrawTimeout = logLevel > 3 ? 0 : LOG_DRAW_TIMEOUT;
+    if (log.level < logLevel || Date.now() - this.lastLogTime < logDrawTimeout) {
       return undefined;
     }
 
     this.lastLogTime = Date.now();
 
-    log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.priority <= 2})();
+    log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
 
-    return priority;
+    return logLevel;
   }
 
-  _logDrawCallEnd(priority, vertexArray, uniforms, framebuffer) {
-    // HACK: priority === undefined means logDrawCallStart didn't run
-    if (priority === undefined) {
+  _logDrawCallEnd(logLevel, vertexArray, uniforms, framebuffer) {
+    // HACK: logLevel === undefined means logDrawCallStart didn't run
+    if (logLevel === undefined) {
       return;
     }
 
@@ -489,23 +489,23 @@ export default class Model {
 
     if (missingCount > 0) {
       log.log('MISSING UNIFORMS', Object.keys(missingTable))();
-      // log.table(priority, missingTable)();
+      // log.table(logLevel, missingTable)();
     }
     if (unusedCount > 0) {
       log.log('UNUSED UNIFORMS', Object.keys(unusedTable))();
-      // log.log(priority, 'Unused uniforms ', unusedTable)();
+      // log.log(logLevel, 'Unused uniforms ', unusedTable)();
     }
 
     const configTable = getDebugTableForProgramConfiguration(this.vertexArray.configuration);
 
-    log.table(priority, attributeTable)();
+    log.table(logLevel, attributeTable)();
 
-    log.table(priority, uniformTable)();
+    log.table(logLevel, uniformTable)();
 
-    log.table(priority + 1, configTable)();
+    log.table(logLevel + 1, configTable)();
 
     if (framebuffer) {
-      framebuffer.log({priority: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
+      framebuffer.log({logLevel: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
     }
 
     log.groupEnd(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`)();

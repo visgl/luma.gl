@@ -74,4 +74,3 @@ export {
 
 // UTILS: undocumented API for other luma.gl modules
 export {log, assert, uid} from '@luma.gl/webgl';
-export {window, global, self} from '@luma.gl/gltools';

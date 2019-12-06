@@ -4,8 +4,7 @@ import {
   createGLContext,
   instrumentGLContext,
   resizeGLContext,
-  resetParameters,
-  isBrowser
+  resetParameters
 } from '@luma.gl/gltools';
 import {
   requestAnimationFrame,
@@ -17,8 +16,9 @@ import {
   log,
   assert
 } from '@luma.gl/webgl';
+import {isBrowser} from 'probe.gl/env';
 
-const isPage = isBrowser && typeof document !== 'undefined';
+const isPage = isBrowser() && typeof document !== 'undefined';
 
 let statIdCounter = 0;
 

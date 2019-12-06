@@ -1,4 +1,4 @@
-import {assert} from '../utils';
+import {assert} from './utils';
 
 // Heuristic testing of contexts (to indentify debug wrappers around gl contexts)
 // const GL_ARRAY_BUFFER = 0x8892;

@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2, log} from '@luma.gl/gltools';
 
 import Resource from './resource';
 import Texture2D from './texture-2d';
@@ -11,7 +11,7 @@ import {getFeatures} from '../features';
 
 import {assertWebGL2Context, getKey} from '../webgl-utils';
 
-import {log, assert} from '../utils';
+import {assert} from '../utils';
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
@@ -423,13 +423,13 @@ export default class Framebuffer extends Resource {
     return this;
   }
 
-  log(priority = 0, message = '') {
-    if (priority > log.priority || typeof window === 'undefined') {
+  log(logLevel = 0, message = '') {
+    if (logLevel > log.level || typeof window === 'undefined') {
       return this;
     }
     message = message || `Framebuffer ${this.id}`;
     const image = copyToDataUrl(this, {maxHeight: 100});
-    log.image({priority, message, image}, message)();
+    log.image({logLevel, message, image}, message)();
     return this;
   }
 
