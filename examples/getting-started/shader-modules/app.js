@@ -18,8 +18,10 @@ const vs1 = `
 `;
 
 const fs1 = `
+  uniform vec3 hsvColor;
+
   void main() {
-    gl_FragColor = color_getColor();
+    gl_FragColor = vec4(color_hsv2rgb(hsvColor), 1.0);
   }
 `;
 
@@ -32,18 +34,24 @@ const vs2 = `
 `;
 
 const fs2 = `
+  uniform vec3 hsvColor;
+
   void main() {
-    gl_FragColor = color_getColor() - 0.3;
+    gl_FragColor = vec4(color_hsv2rgb(hsvColor) - 0.3, 1.0);
   }
 `;
 
-// A module that injects a function into
-// the vertex shader
+// A module that injects a function into the fragment shader
+//  to convert from HSV to RGB colorspace
+// From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
 const colorModule = {
   name: 'color',
   fs: `
-    vec4 color_getColor() {
-      return vec4(1.0, 0.0, 0.0, 1.0);
+    vec3 color_hsv2rgb(vec3 hsv) {
+      vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+      vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+      vec3 rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
+      return rgb;
     }
   `
 };
@@ -67,6 +75,9 @@ export default class AppAnimationLoop extends AnimationLoop {
       attributes: {
         position: positionBuffer
       },
+      uniforms: {
+        hsvColor: [0.7, 1.0, 1.0]
+      },
       vertexCount: 3
     });
 
@@ -76,6 +87,9 @@ export default class AppAnimationLoop extends AnimationLoop {
       modules: [colorModule],
       attributes: {
         position: positionBuffer
+      },
+      uniforms: {
+        hsvColor: [1.0, 1.0, 1.0]
       },
       vertexCount: 3
     });
