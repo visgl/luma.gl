@@ -1,3 +1,12 @@
+## v8.0.0-beta.2
+
+- Export fp64-arithmetic shader module (#1309)
+- Upgrade probe.gl (#1310)
+
+## v8.0.0-beta.1
+
+- Reduce core to modules used by deck.gl (#1303)
+
 ## v8.0.0-alpha.11
 
 - Reduce core to modules used by deck.gl (#1303)
