@@ -10,7 +10,7 @@
       ]
     },
     {
-      "title": "Getting Started",
+      "title": "Tutorials",
       "entries": [
         { "entry": "docs/get-started/README" },
         { "entry": "docs/get-started/hello-triangle" },
@@ -18,6 +18,7 @@
         { "entry": "docs/get-started/hello-instancing-high" },
         { "entry": "docs/get-started/hello-instancing-mid" },
         { "entry": "docs/get-started/hello-instancing-low" },
+        { "entry": "docs/get-started/shader-modules" },
         { "entry": "docs/get-started/whats-next" }
       ]
     },
@@ -104,7 +105,7 @@
       "entries": [
         { "entry": "docs/developer-guide/accessors" },
         { "entry": "docs/developer-guide/transform-feedback" },
-        { "entry": "docs/developer-guide/shader-modules.md" },
+        { "entry": "docs/developer-guide/shader-modules" },
         { "entry": "docs/developer-guide/debugging" },
         { "entry": "docs/developer-guide/bundling" }
       ]
@@ -112,7 +113,7 @@
     {
       "title": "Contributor Guide",
       "entries": [
-        { "entry": "docs/contributor-guide/README.md" }
+        { "entry": "docs/contributor-guide/README" }
       ]
     }
   ]

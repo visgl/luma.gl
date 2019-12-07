@@ -146,7 +146,9 @@ requestAnimationFrame(function draw() {
 });
 ```
 
-If all went well, you should see the same scene as drawn by the high- and mid-level apps: four triangles of different colors. We simply used luma.gl's `shadertools` and `gltools` to provide polyfilled instanced drawing and compose our shaders from modules. The full code for the app is available below:
+If all went well, you should see the same scene as drawn by the high- and mid-level apps: four triangles of different colors. See the live demo [here](/examples/getting-started/hello-instancing-low).
+
+We simply used luma.gl's `shadertools` and `gltools` to provide polyfilled instanced drawing and compose our shaders from modules. The full code for the app is available below:
 ```js
 import {assembleShaders} from '@luma.gl/shadertools';
 import {polyfillContext} from '@luma.gl/gltools';
