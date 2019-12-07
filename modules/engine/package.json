@@ -36,8 +36,7 @@
     "@luma.gl/shadertools": "8.0.0-beta.1",
     "@luma.gl/webgl": "8.0.0-beta.1",
     "math.gl": "^3.0.0",
-    "probe.gl": "^3.1.1",
-    "seer": "^0.2.4"
+    "probe.gl": "^3.2.0-beta.3"
   },
   "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }

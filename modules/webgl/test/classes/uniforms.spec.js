@@ -1,7 +1,7 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-catch';
 import {Program, Texture2D} from '@luma.gl/webgl';
-import {isBrowser} from '@luma.gl/webgl/utils';
+import {isBrowser} from 'probe.gl/env';
 import {equals} from 'math.gl';
 import {
   checkUniformValues,
@@ -174,7 +174,7 @@ const getExpectedUniformValues = () => {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];
 
     if (ARRAY_UNIFORM_SIZE[uniformName]) {
-      if (!isBrowser) {
+      if (!isBrowser()) {
         // headless gl does not handle uniform arrays
         continue; // eslint-disable-line
       }
@@ -196,7 +196,7 @@ const getExpectedUniformValues = () => {
 
 const getExpectedUniformValuesScalarArray = () => {
   const result = {};
-  if (!isBrowser) {
+  if (!isBrowser()) {
     // headless gl does not handle uniform arrays
     return result; // eslint-disable-line
   }

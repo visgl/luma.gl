@@ -27,7 +27,7 @@ class Buffer {
   }
 }
 */
-import log from './log';
+import {log} from '@luma.gl/gltools';
 
 export function checkProps(className, props, propChecks) {
   const {removedProps = {}, deprecatedProps = {}, replacedProps = {}} = propChecks;

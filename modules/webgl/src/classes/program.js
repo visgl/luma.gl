@@ -8,10 +8,10 @@ import {VertexShader, FragmentShader} from './shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {isWebGL2, withParameters} from '@luma.gl/gltools';
+import {isWebGL2, withParameters, log} from '@luma.gl/gltools';
 import {assertWebGL2Context, getKey} from '../webgl-utils';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {log, uid, assert} from '../utils';
+import {uid, assert} from '../utils';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -347,7 +347,7 @@ export default class Program extends Resource {
     log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
 
     // Avoid checking program linking error in production
-    if (gl.debug || log.priority > 0) {
+    if (gl.debug || log.level > 0) {
       gl.validateProgram(this.handle);
       const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
       if (!linked) {

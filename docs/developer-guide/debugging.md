@@ -16,7 +16,7 @@ const program = new Program(gl, {id: 'pyramid-program', ...});
 
 ## Logging
 
-luma.gl has a logging mechanism. Set the global variable luma.log.priority to 3 (can be done in the browser console at any time) and luma will print tables for uniforms and attributes providing information about their values and types before each render call. This can be extremely helpful for checking that shaders are getting valid inputs.
+luma.gl has a logging mechanism. Set the global variable luma.log.level to 3 (can be done in the browser console at any time) and luma will print tables for uniforms and attributes providing information about their values and types before each render call. This can be extremely helpful for checking that shaders are getting valid inputs.
 
 
 ## Shader compilation errors

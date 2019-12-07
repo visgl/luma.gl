@@ -83,7 +83,7 @@ function onGLError(opts, err, functionName, args) {
 // Don't generate function string until it is needed
 function onValidateGLFunc(opts, functionName, functionArgs) {
   let functionString;
-  if (log.priority >= 4) {
+  if (log.level >= 4) {
     functionString = getFunctionString(functionName, functionArgs);
     log.log(4, functionString)();
   }

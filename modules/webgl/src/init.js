@@ -1,13 +1,13 @@
-import {isBrowser, global} from '@luma.gl/gltools';
-import log from './utils/log';
+import {log} from '@luma.gl/gltools';
 import {Stats} from 'probe.gl';
+import {isBrowser, global} from 'probe.gl/env';
 
 // Version detection using babel plugin
 /* global __VERSION__ */
 const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
 
-const STARTUP_MESSAGE = 'set luma.log.priority=1 (or higher) to trace rendering';
-// Assign luma.log.priority in console to control logging: \
+const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
+// Assign luma.log.level in console to control logging: \
 // 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
 // luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
@@ -32,7 +32,7 @@ if (global.luma && global.luma.VERSION !== VERSION) {
 }
 
 if (!global.luma) {
-  if (isBrowser) {
+  if (isBrowser()) {
     log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }
 
