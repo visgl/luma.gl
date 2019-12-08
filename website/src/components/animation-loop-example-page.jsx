@@ -62,7 +62,7 @@ export default class AnimationLoopExamplePage extends Component {
     this.animationLoop._setDisplay(new VRDisplay());
 
     // Ensure the example can find its images
-    // TODO - ideally ocular-gatsby should extract images from example source?
+    // TODO - ideally gatsby-theme-ocular should extract images from example source?
     const {exampleConfig} = this.props;
     if (exampleConfig && exampleConfig.path) {
       const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/master';

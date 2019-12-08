@@ -4,7 +4,7 @@
     {
       "title": "Overview",
       "entries": [
-        { "entry": "docs/README" },
+        { "entry": "docs" },
         { "entry": "docs/whats-new" },
         { "entry": "docs/upgrade-guide" }
       ]
@@ -12,7 +12,7 @@
     {
       "title": "Tutorials",
       "entries": [
-        { "entry": "docs/get-started/README" },
+        { "entry": "docs/get-started" },
         { "entry": "docs/get-started/hello-triangle" },
         { "entry": "docs/get-started/high-medium-low" },
         { "entry": "docs/get-started/hello-instancing-high" },
@@ -28,7 +28,7 @@
         {
           "title": "Overview",
           "entries": [
-            { "entry": "docs/api-reference/README" }
+            { "entry": "docs/api-reference" }
           ]
         },
         {
@@ -113,7 +113,7 @@
     {
       "title": "Contributor Guide",
       "entries": [
-        { "entry": "docs/contributor-guide/README" }
+        { "entry": "docs/contributor-guide" }
       ]
     }
   ]
