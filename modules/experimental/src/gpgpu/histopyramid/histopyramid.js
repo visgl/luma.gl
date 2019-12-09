@@ -23,14 +23,14 @@ function nextPowerOfTwo(x) {
 }
 
 const channelToIndexMap = {
-  ['r']: 0,
-  ['x']: 0,
-  ['g']: 1,
-  ['y']: 1,
-  ['b']: 2,
-  ['z']: 2,
-  ['a']: 3,
-  ['w']: 3
+  r: 0,
+  x: 0,
+  g: 1,
+  y: 1,
+  b: 2,
+  z: 2,
+  a: 3,
+  w: 3
 };
 
 // returns a base level texture that packs given weight into a texture

@@ -10,14 +10,14 @@ const ALIASES = require('ocular-dev-tools/config/ocular.config')({
 // When duplicating example dependencies in website, autogenerate
 // aliases to ensure the website version is picked up
 // NOTE: module dependencies are automatically injected
-// TODO - should this be automatically done by ocular-gatsby?
+// TODO - should this be automatically done by gatsby-theme-ocular?
 const dependencyAliases = {};
 for (const dependency in DEPENDENCIES) {
   dependencyAliases[dependency] = `${__dirname}/node_modules/${dependency}`;
 }
 
 module.exports = {
-  logLevel: 3, // Adjusts amount of debug information from ocular-gatsby
+  logLevel: 1, // Adjusts amount of debug information from ocular-gatsby
 
   DOC_FOLDER: `${__dirname}/../docs/`,
   ROOT_FOLDER: `${__dirname}/../`,
@@ -74,19 +74,19 @@ module.exports = {
 
   PROJECTS: [
     {
-      name: 'deck.gl',
+      title: 'deck.gl',
       url: 'https://deck.gl'
     },
     {
-      name: 'luma.gl',
+      title: 'luma.gl',
       url: 'https://luma.gl'
     },
     {
-      name: 'react-map-gl',
+      title: 'react-map-gl',
       url: 'https://uber.github.io/react-map-gl'
     },
     {
-      name: 'react-vis',
+      title: 'react-vis',
       url: 'https://uber.github.io/react-vis'
     }
   ],
