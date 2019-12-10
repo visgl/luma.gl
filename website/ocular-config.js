@@ -178,6 +178,12 @@ module.exports = {
       image: 'images/example-shader-hooks.jpg'
     },
     {
+      title: 'Shader Modules - Low-level',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-shader-modules-low.jsx'),
+      path: 'examples/getting-started/shader-modules-low',
+      image: 'images/example-shader-hooks.jpg'
+    },
+    {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
       path: 'examples/api/animation/',

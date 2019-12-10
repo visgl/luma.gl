@@ -3,9 +3,6 @@ import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';
 import {assembleShaders} from '@luma.gl/shadertools';
 
 const INFO_HTML = `
-<p>
-Hello Instancing - Mid-level
-<p>
 Instanced triangles using luma.gl's mid-level API
 `;
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import AnimationLoopExamplePage from '../../src/components/animation-loop-example-page';
-import AnimationLoop from '../../../examples/getting-started/shader-hooks/app';
+import AnimationLoop from '../../../examples/getting-started/shader-modules-low/app';
 
 export default class Example extends React.Component {
   render() {

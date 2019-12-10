@@ -9,7 +9,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [new HtmlWebpackPlugin({title: 'Hello Instancing - Mid-level'})]
+  plugins: [new HtmlWebpackPlugin({title: 'Shader Modules - Low-level'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module

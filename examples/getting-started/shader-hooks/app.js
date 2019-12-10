@@ -2,9 +2,6 @@ import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `
-<p>
-Shader Hooks
-<p>
 Modifying shader behavior with shader hooks
 `;
 

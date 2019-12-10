@@ -3,9 +3,6 @@ import {polyfillContext} from '@luma.gl/gltools';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `
-<p>
-Hello Instancing - Low-level
-<p>
 Instanced triangles using luma.gl's low-level API
 `;
 

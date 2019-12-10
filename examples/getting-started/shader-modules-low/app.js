@@ -1,12 +1,8 @@
 /* global window, requestAnimationFrame, cancelAnimationFrame */
 import {assembleShaders} from '@luma.gl/shadertools';
-import {polyfillContext} from '@luma.gl/gltools';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `
-<p>
-Shader Modules - Low-level
-<p>
 Shader Modules using luma.gl's low-level API
 `;
 
@@ -48,7 +44,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   start(props) {
     const canvas = this._getCanvas(props);
 
-    const gl = polyfillContext(canvas.getContext('webgl'));
+    const gl = canvas.getContext('webgl');
     gl.clearColor(0, 0, 0, 1);
 
     // Program 1
@@ -101,9 +97,6 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
     const colorLocation2 = gl.getUniformLocation(program2, 'color');
     gl.uniform3fv(colorLocation2, new Float32Array([0.0, 0.0, 1.0]));
 
-    const vertexArray = gl.createVertexArray();
-    gl.bindVertexArray(vertexArray);
-
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(
@@ -120,21 +113,17 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
     gl.vertexAttribPointer(positionLocation2, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(positionLocation2);
 
-    gl.bindVertexArray(null);
-
     const resources = {
       gl,
       positionBuffer,
       program1,
-      program2,
-      vertexArray
+      program2
     };
 
     resources.rafHandle = requestAnimationFrame(function draw() {
       resources.rafHandle = requestAnimationFrame(draw);
 
       gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.bindVertexArray(vertexArray);
       gl.useProgram(program1);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.useProgram(program2);
@@ -154,11 +143,10 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 
   delete() {
-    const {gl, positionBuffer, program1, program2, vertexArray} = this.resources;
+    const {gl, positionBuffer, program1, program2} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);
     gl.deleteProgram(program2);
-    gl.deleteVertexArray(vertexArray);
   }
 }
 

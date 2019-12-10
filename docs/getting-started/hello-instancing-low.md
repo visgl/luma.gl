@@ -7,7 +7,6 @@ npm i @luma.gl/gltools
 
 Now we can update the imports:
 ```js
-import {assembleShaders} from '@luma.gl/shadertools';
 import {polyfillContext} from '@luma.gl/gltools';
 ```
 
@@ -44,11 +43,6 @@ const fs = `
     gl_FragColor = vec4(vColor, 1.0);
   }
 `;
-
-const assembled = assembleShaders(gl, {
-  vs,
-  fs
-});
 
 const vShader = gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vShader, vs);
@@ -137,7 +131,6 @@ If all went well, you should see the same scene as drawn by the high- and mid-le
 
 We simply used luma.gl's `shadertools` and `gltools` to provide polyfilled instanced drawing and compose our shaders from modules. The full code for the app is available below:
 ```js
-import {assembleShaders} from '@luma.gl/shadertools';
 import {polyfillContext} from '@luma.gl/gltools';
 
 const canvas = document.createElement('canvas');
@@ -168,12 +161,6 @@ const fs = `
     gl_FragColor = vec4(vColor, 1.0);
   }
 `;
-
-const assembled = assembleShaders(gl, {
-  vs,
-  fs,
-  modules: [colorShaderModule]
-});
 
 const vShader = gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vShader, vs);

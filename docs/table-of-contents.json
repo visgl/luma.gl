@@ -20,6 +20,7 @@
         { "entry": "docs/getting-started/hello-instancing-low" },
         { "entry": "docs/getting-started/shader-modules" },
         { "entry": "docs/getting-started/shader-hooks" },
+        { "entry": "docs/getting-started/shader-modules-low" },
         { "entry": "docs/getting-started/whats-next" }
       ]
     },
