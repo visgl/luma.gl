@@ -8,7 +8,7 @@ Shader Hooks
 Modifying shader behavior with shader hooks
 `;
 
-// Base vertex and fragment shader code pairs
+// Base vertex and fragment shader code
 const vs = `
   attribute vec2 position;
 
@@ -50,11 +50,10 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
-
     const programManager = new ProgramManager(gl);
-
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+
+    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     const model1 = new Model(gl, {
       vs,

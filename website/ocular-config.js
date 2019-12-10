@@ -97,6 +97,42 @@ module.exports = {
 
   EXAMPLES: [
     {
+      title: 'Instancing',
+      componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
+      path: 'examples/showcase/instancing/',
+      image: 'images/example-instancing.jpg'
+    },
+    {
+      title: 'Geospatial',
+      componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
+      path: 'examples/showcase/geospatial/',
+      image: 'images/example-geospatial.jpg'
+    },
+    {
+      title: 'Persistence',
+      componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
+      path: 'examples/showcase/persistence/',
+      image: 'images/example-persistence.jpg'
+    },
+    {
+      title: 'Transform',
+      componentUrl: resolve(__dirname, './templates/showcase/example-transform.jsx'),
+      path: 'examples/showcase/transform/',
+      image: 'images/example-transform.png'
+    },
+    {
+      title: 'DOF',
+      componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
+      path: 'examples/showcase/dof/',
+      image: 'images/example-dof.jpg'
+    },
+    {
+      title: 'GLTF',
+      componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
+      path: 'examples/showcase/gltf/',
+      image: 'images/example-gltf.jpg'
+    },
+    {
       title: 'Hello Triangle',
       componentUrl: resolve(__dirname, './templates/getting-started/example-hello-triangle.jsx'),
       path: 'examples/getting-started/hello-triangle',
@@ -136,40 +172,10 @@ module.exports = {
       image: 'images/example-shader-modules.png'
     },
     {
-      title: 'Instancing',
-      componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
-      path: 'examples/showcase/instancing/',
-      image: 'images/example-instancing.jpg'
-    },
-    {
-      title: 'Geospatial',
-      componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
-      path: 'examples/showcase/geospatial/',
-      image: 'images/example-geospatial.jpg'
-    },
-    {
-      title: 'Persistence',
-      componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
-      path: 'examples/showcase/persistence/',
-      image: 'images/example-persistence.jpg'
-    },
-    {
-      title: 'Transform',
-      componentUrl: resolve(__dirname, './templates/showcase/example-transform.jsx'),
-      path: 'examples/showcase/transform/',
-      image: 'images/example-transform.png'
-    },
-    {
-      title: 'DOF',
-      componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
-      path: 'examples/showcase/dof/',
-      image: 'images/example-dof.jpg'
-    },
-    {
-      title: 'GLTF',
-      componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
-      path: 'examples/showcase/gltf/',
-      image: 'images/example-gltf.jpg'
+      title: 'Shader Hooks',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-shader-hooks.jsx'),
+      path: 'examples/getting-started/shader-hooks',
+      image: 'images/example-shader-hooks.jpg'
     },
     {
       title: 'Animation',
