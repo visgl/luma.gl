@@ -76,7 +76,6 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
     const colorLocation1 = gl.getUniformLocation(program1, 'color');
     gl.uniform3fv(colorLocation1, new Float32Array([1.0, 0.0, 0.0]));
 
-
     // Program 2
 
     const assembled2 = assembleShaders(gl, {
@@ -155,13 +154,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 
   delete() {
-    const {
-      gl,
-      positionBuffer,
-      program1,
-      program2,
-      vertexArray
-    } = this.resources;
+    const {gl, positionBuffer, program1, program2, vertexArray} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);
     gl.deleteProgram(program2);
