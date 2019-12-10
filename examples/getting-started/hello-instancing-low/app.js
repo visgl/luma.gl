@@ -1,32 +1,10 @@
 /* global window, requestAnimationFrame, cancelAnimationFrame */
-import {assembleShaders} from '@luma.gl/shadertools';
 import {polyfillContext} from '@luma.gl/gltools';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `
-<p>
-Hello Instancing - Low-level
-<p>
 Instanced triangles using luma.gl's low-level API
 `;
-
-const colorShaderModule = {
-  name: 'color',
-  vs: `
-    varying vec3 color_vColor;
-
-    void color_setColor(vec3 color) {
-      color_vColor = color;
-    }
-  `,
-  fs: `
-    varying vec3 color_vColor;
-
-    vec3 color_getColor() {
-      return color_vColor;
-    }
-  `
-};
 
 export default class AppAnimationLoop extends MiniAnimationLoop {
   static getInfo() {
@@ -44,29 +22,29 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
       attribute vec3 color;
       attribute vec2 offset;
 
+      varying vec3 vColor;
+
       void main() {
-        color_setColor(color);
+        vColor = color;
         gl_Position = vec4(position + offset, 0.0, 1.0);
       }
     `;
     const fs = `
+      precision highp float;
+
+      varying vec3 vColor;
+
       void main() {
-        gl_FragColor = vec4(color_getColor(), 1.0);
+        gl_FragColor = vec4(vColor, 1.0);
       }
     `;
 
-    const assembled = assembleShaders(gl, {
-      vs,
-      fs,
-      modules: [colorShaderModule]
-    });
-
     const vShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vShader, assembled.vs);
+    gl.shaderSource(vShader, vs);
     gl.compileShader(vShader);
 
     const fShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fShader, assembled.fs);
+    gl.shaderSource(fShader, fs);
     gl.compileShader(fShader);
 
     const program = gl.createProgram();

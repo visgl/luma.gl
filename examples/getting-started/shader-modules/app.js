@@ -2,9 +2,6 @@ import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `
-<p>
-Shader Modules
-<p>
 Re-using shader code with shader modules
 `;
 

@@ -12,14 +12,16 @@
     {
       "title": "Tutorials",
       "entries": [
-        { "entry": "docs/get-started" },
-        { "entry": "docs/get-started/hello-triangle" },
-        { "entry": "docs/get-started/high-medium-low" },
-        { "entry": "docs/get-started/hello-instancing-high" },
-        { "entry": "docs/get-started/hello-instancing-mid" },
-        { "entry": "docs/get-started/hello-instancing-low" },
-        { "entry": "docs/get-started/shader-modules" },
-        { "entry": "docs/get-started/whats-next" }
+        { "entry": "docs/getting-started" },
+        { "entry": "docs/getting-started/hello-triangle" },
+        { "entry": "docs/getting-started/high-medium-low" },
+        { "entry": "docs/getting-started/hello-instancing-high" },
+        { "entry": "docs/getting-started/hello-instancing-mid" },
+        { "entry": "docs/getting-started/hello-instancing-low" },
+        { "entry": "docs/getting-started/shader-modules" },
+        { "entry": "docs/getting-started/shader-hooks" },
+        { "entry": "docs/getting-started/shader-modules-low" },
+        { "entry": "docs/getting-started/whats-next" }
       ]
     },
     {

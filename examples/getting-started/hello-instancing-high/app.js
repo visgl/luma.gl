@@ -2,9 +2,6 @@ import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `
-<p>
-Hello Instancing - High-level
-<p>
 Instanced triangles using luma.gl's high-level API
 `;
 
