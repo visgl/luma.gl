@@ -13,6 +13,8 @@ export class MiniAnimationLoop {
 
   delete() {}
 
+  onFinalize() {}
+
   _setDisplay() {}
 
   _getCanvas(props = {}) {
