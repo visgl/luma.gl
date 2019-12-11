@@ -39,7 +39,7 @@
     "cover": "ocular-test cover",
     "lint": "ocular-lint",
     "publish": "ocular-publish",
-    "prepublish": "ocular-build webgl",
+    "version": "ocular-build webgl",
     "test": "ocular-test",
     "test-fast": "ocular-test fast",
     "test-browser": "ocular-test browser",
