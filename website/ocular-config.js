@@ -184,6 +184,12 @@ module.exports = {
       image: 'images/example-shader-hooks.jpg'
     },
     {
+      title: 'Transform Feedback',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-transform-feedback.jsx'),
+      path: 'examples/getting-started/transform-feedback',
+      image: 'images/example-transform-feedback.jpg'
+    },
+    {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
       path: 'examples/api/animation/',
@@ -194,12 +200,6 @@ module.exports = {
       componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
       path: 'examples/api/program-management/',
       image: 'images/example-program-management.png'
-    },
-    {
-      title: 'TransformFeedback',
-      componentUrl: resolve(__dirname, './templates/api/example-transform-feedback.jsx'),
-      path: 'examples/api/transform-feedback/app',
-      image: 'images/example-transform-feedback.jpg'
     },
     {
       title: 'Cubemap',

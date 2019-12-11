@@ -59,11 +59,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   onInitialize({gl}) {
     const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-    );
-
     const transform = new Transform(gl, {
       vs: transformVs,
       sourceBuffers: {
@@ -74,6 +69,11 @@ export default class AppAnimationLoop extends AnimationLoop {
       },
       elementCount: 3
     });
+
+    const colorBuffer = new Buffer(
+      gl,
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+    );
 
     const model = new Model(gl, {
       vs: renderVs,
