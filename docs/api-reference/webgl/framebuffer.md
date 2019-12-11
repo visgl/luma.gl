@@ -92,7 +92,7 @@ For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU syn
 
 For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/copy-and-blit.md)
 
-For blitting between framebuffers (WebGL2), check [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
+For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
 
 
 ### Using Multiple Render Targets
@@ -123,7 +123,7 @@ void main(void) {
 }
 ```
 
-Clearing a specific draw buffer in a framebuffer (WebGL2)
+Clearing a specific draw buffer in a framebuffer (WebGL 2)
 ```js
 framebuffer.clear({
   [GL.COLOR]: [0, 0, 1, 1], // Blue
@@ -200,11 +200,11 @@ Initializes the `Framebuffer` to match the supplied parameters. Unattaches any e
 
 ### update(options: Object) : Framebuffer
 
-Updates Framebuffers attachments using provided Texture and Renderbuffer objects. Optionally sets read and draw buffers when using WebGL2 context.
+Updates Framebuffers attachments using provided Texture and Renderbuffer objects. Optionally sets read and draw buffers when using WebGL 2 context.
 
 * `attachments` - a map of attachments.
-* `readBuffer` - Buffer to be set as read buffer (WebGL2)
-* `drawBuffers` - Buffers to be set as draw buffers (WebGL2)
+* `readBuffer` - Buffer to be set as read buffer (WebGL 2)
+* `drawBuffers` - Buffers to be set as draw buffers (WebGL 2)
 * `clearAttachments` - When set to true, will first unattach all  binding points, default value is `false`.
 * `resizeAttachments` - When set to true, all attachments will be re-sized to Framebuffers size, default value is `true`.
 
@@ -245,7 +245,7 @@ The following values can be provided for each attachment
 * `null` - unattaches any current binding
 * `Renderbuffer` - attaches the `Renderbuffer`
 * `Texture` - attaches the `Texture`
-* [`Texture`, layer=0 (Number), mipmapLevel=0 (Number)] - attaches the specific layer from the `Texture` (WebGL2)
+* [`Texture`, layer=0 (Number), mipmapLevel=0 (Number)] - attaches the specific layer from the `Texture` (WebGL 2)
 
 This function makes calls to the following WebGL APIs:
 
@@ -254,7 +254,7 @@ This function makes calls to the following WebGL APIs:
 [`gl.framebufferTexture2D`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/framebufferTexture2D),
 [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer),
 [`gl.framebufferTextureLayer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/framebufferTextureLayer),
-[`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL2 only)
+[`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL 2 only)
 
 
 ### checkStatus() : Framebuffer
@@ -278,7 +278,7 @@ Notes:
 * The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect the operation of `clear`.
 * Alpha function, blend function, logical operation, stenciling, texture mapping, and depth-buffering are ignored by `clear`.
 
-### invalidate (WebGL2)
+### invalidate (WebGL 2)
 
 Signals to the GL that it need not preserve the pixels of a specified region of the framebuffer (by default all pixels of the specified framebuffer attachments are invalidated).
 
@@ -291,8 +291,8 @@ This function makes calls to the following WebGL APIs:
 
 ## Limits
 
-* `GL.MAX_COLOR_ATTACHMENTS` - The maximum number of color attachments supported. Can be `0` in WebGL1.
-* `GL.MAX_DRAW_BUFFERS` - The maximum number of draw buffers supported. Can be `0` in WebGL1, which means that `gl_FragData[]` is not available in shaders.
+* `GL.MAX_COLOR_ATTACHMENTS` - The maximum number of color attachments supported. Can be `0` in WebGL 1.
+* `GL.MAX_DRAW_BUFFERS` - The maximum number of draw buffers supported. Can be `0` in WebGL 1, which means that `gl_FragData[]` is not available in shaders.
 
 It is possible that you can have a certain number of attachments, but you can't draw to all of them at the same time.
 
@@ -311,7 +311,7 @@ It is possible that you can have a certain number of attachments, but you can't 
 
 * The attachment point `GL.BACK` refersn to the default framebuffer's back buffer.
 
-* The set of available attachments is larger in WebGL2, and also the extensions `WEBGL_draw_buffers` and `WEBGL_depth_texture` provide additional attachments that match or exceed the WebGL2 set.
+* The set of available attachments is larger in WebGL 2, and also the extensions `WEBGL_draw_buffers` and `WEBGL_depth_texture` provide additional attachments that match or exceed the WebGL 2 set.
 
 
 ### Framebuffer Attachment Values
@@ -320,8 +320,8 @@ The following values can be provided for each attachment point
 * `null` - unattaches any current binding
 * `Renderbuffer` - attaches the `Renderbuffer`
 * `Texture2D` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
-* [`Texture2D`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D` (WebGL2), or cubemap face. The second element in the array must be `0`. In WebGL1, mipmapLevel must be 0.
-* [`TextureCube`, face (Number), mipmapLevel=0 (Number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level. In WebGL1, mipmapLevel must be 0.
+* [`Texture2D`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D` (WebGL 2), or cubemap face. The second element in the array must be `0`. In WebGL 1, mipmapLevel must be 0.
+* [`TextureCube`, face (Number), mipmapLevel=0 (Number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level. In WebGL 1, mipmapLevel must be 0.
 * [`Texture2DArray`, layer (Number), mipmapLevel=0 (Number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
 * [`Texture3D`, layer (Number), mipmapLevel=0 (Number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
 

@@ -9,17 +9,17 @@ luma.gl provides several helper functions for testing properties of a WebGL cont
 
 ```
 
-Check a certain limit (whether through an extension under WebGL1 or through WebGL2)
+Check a certain limit (whether through an extension under WebGL 1 or through WebGL 2)
 ```js
 import GL from '@luma.gl/constants';
 import {getContextLimits} from '@luma.gl/webgl';
 const limits = getContextLimits(gl);
-if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL1
+if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL 1
    ...
 }
 ```
 
-There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
+There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL 2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
 ```js
 import {Query} from '@luma.gl/webgl';
 if (Query.isSupported(gl)) {
@@ -33,14 +33,14 @@ if (Query.isSupported(gl)) {
 
 Returns an object with limits, each limit is an object with multiple values
 - `value` - the value of the limit in the current context
-- `webgl1` - the minimum allowed value of the limit for WebGL1 contexts
-- `webgl2` - the minimum allowed value of the limit for WebGL2 contexts
+- `webgl1` - the minimum allowed value of the limit for WebGL 1 contexts
+- `webgl2` - the minimum allowed value of the limit for WebGL 2 contexts
 
 ### WebGL Limits
 
 In addition to capabilities, luma.gl can also query the context for all limits.
 
-| Limits                               | WebGL2 | WebGL1 | Description |
+| Limits                               | WebGL 2 | WebGL 1 | Description |
 | ---                                  | ---    | ---    | --- |
 | `GL.ALIASED_LINE_WIDTH_RANGE`        |        | [1, 1] | |
 | `GL.ALIASED_POINT_SIZE_RANGE`        |        | [1, 1] | |
@@ -57,7 +57,7 @@ In addition to capabilities, luma.gl can also query the context for all limits.
 | `GL.MAX_VIEWPORT_DIMS`               |        | [0, 0] | |
 | `GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT`  |  1.0   | 1.0    | ['EXT_texture_filter_anisotropic'](https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic) |
 
-| WebGL2 Limits                        | WebGL2 | WebGL1 (mock) | Description
+| WebGL 2 Limits                        | WebGL 2 | WebGL 1 (mock) | Description
 | ---                                  | ---    | ---           | --- |
 | `GL.MAX_3D_TEXTURE_SIZE`             | `256`  | `0`    | |
 | `GL.MAX_ARRAY_TEXTURE_LAYERS`        | `256`  | `0`    | |
@@ -118,8 +118,8 @@ Returns an object containing following details.
 
 ## Remarks
 
-* WebGL1 only supports one color buffer format (RBG32F is deprecated)
-* WebGL2 supports multiple color buffer formats
+* WebGL 1 only supports one color buffer format (RBG32F is deprecated)
+* WebGL 2 supports multiple color buffer formats
 * Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
 * The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 * Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.

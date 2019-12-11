@@ -172,9 +172,9 @@ Describes luma.gl setting names and values
 | `GL.DEPTH_WRITEMASK`   | GLboolean       | null |  |
 
 
-### Derivative Hints (WebGL2 or extension)
+### Derivative Hints (WebGL 2 or extension)
 
-Requires WebGL2 or `OES_standard_derivatives`.
+Requires WebGL 2 or `OES_standard_derivatives`.
 
 | Parameter              | Type            | Default | Description |
 | ---------------------- | --------------- | -------- | -------- |
@@ -289,7 +289,7 @@ and for rendering solids with highlighted edges.
 * Note: The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
 
 
-### Rasterization (WebGL2)
+### Rasterization (WebGL 2)
 
 Primitives are discarded immediately before the rasterization stage, but after the optional transform feedback stage. `gl.clear()` commands are ignored.
 
@@ -432,7 +432,7 @@ Specifies how bitmaps are written to and read from memory
 | `GL.UNPACK_COLORSPACE_CONVERSION_WEBGL` | GLenum      | `GL.BROWSER_DEFAULT_WEBGL` | Use default or no color space conversion. |
 
 
-## Pixel Pack/Unpack Modes **WebGL2**
+## Pixel Pack/Unpack Modes **WebGL 2**
 
 Specifies how bitmaps are written to and read from memory
 

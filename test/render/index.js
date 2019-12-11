@@ -20,8 +20,8 @@ test('RenderTest', t => {
 
       imageDiffOptions: {
         // uncomment to save screenshot to disk
-        saveOnFail: true,
-        saveAs: '[name].png'
+        // saveOnFail: true,
+        // saveAs: '[name].png'
       }
     })
     .then(t.end);

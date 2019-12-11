@@ -1,4 +1,4 @@
-# Texture3D (WebGL2)
+# Texture3D (WebGL 2)
 
 3D textures hold basic volumetric textures and can be thought of 3-dimentional arrays with a width, height and depth. They hold image memory of a certain format and size, determined at initialization time. They can be sampled in shaders using the `texture` function with a 3D texture coordinate.
 

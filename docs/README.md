@@ -39,7 +39,7 @@ luma.gl aims to provide tools for WebGL developers wether they wish to do high o
 
 The core use case for luma.gl is visualization of large datasets, but its design is generic enough for more general usage. Key strengths of luma.gl include:
 
-- **A WebGL 2-first API** - luma.gl polyfills WebGL 1 contexts insofar as possible to support the WebGL 2 API. This allows applications to code using the latest WebGL2 APIs while transparently keeping the application backwards compatible with WebGL1 (using WebGL extensions, shader transpilation and other techniques).
+- **A WebGL 2-first API** - luma.gl polyfills WebGL 1 contexts insofar as possible to support the WebGL 2 API. This allows applications to code using the latest WebGL 2 APIs while transparently keeping the application backwards compatible with WebGL 1 (using WebGL extensions, shader transpilation and other techniques).
 - **Modular, Composable Tools** - It is left to the develop to decide what parts of luma.gl suit their application. Program at a higher level using WebGL wrapper classes or a `Model`, or simply polyfill the context and program using the WebGL 2 API.
 - **High-performance Data Visualization** - luma.gl focuses on simplifying access to APIs that are particularly useful when visualizing large data sets, such as instanced drawing and transform feedback.
 

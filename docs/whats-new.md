@@ -303,7 +303,7 @@ The `Buffer` class no longer holds on to the complete JavaScript typed arrays us
 A new method `Model.transform` makes it easier to run basic transform feedback operations, when the full power of the new `Transform` class (see below) is not needed.
 
 
-### Transform class (WebGL2)
+### Transform class (WebGL 2)
 
 [`Transform`](/docs/api-reference/core/transform.md) is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
 
@@ -312,7 +312,7 @@ A new method `Model.transform` makes it easier to run basic transform feedback o
 
 ### GLSL Transpilation
 
-The shader assembler now transforms shader code to the GLSL version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa. This allows application to write shader code in the modern GLSL version available (3.00 ES) and still run it under WebGL1 - Shader "transpilation" will automatically convert shader module source code syntax to the target version (assuming that no WebGL2 only features were used).
+The shader assembler now transforms shader code to the GLSL version specified by the top-level shader. GLSL 3.00 ES shader code is transparently transformed into GLSL 1.00 ES compatible code when needed, and vice versa. This allows application to write shader code in the modern GLSL version available (3.00 ES) and still run it under WebGL 1 - Shader "transpilation" will automatically convert shader module source code syntax to the target version (assuming that no WebGL 2 only features were used).
 
 
 ### Shader Code Injection
@@ -363,14 +363,14 @@ A minor release with bug fixes and internal improvements.
 
 Date: Apr 24, 2018
 
-## Transform class (WebGL2, Experimental)
+## Transform class (WebGL 2, Experimental)
 
 The new experimental [`Transform`](/docs/api-reference/core/transform.md) class provides an easy-to-use interface to perform Transform Feedback operations.
 
 
 ## Framebuffer Class
 
-**Pixel Readback to GPU Buffers** (WebGL2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/webgl/framebuffer.md) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/webgl/framebuffer.md) is added to asynchronously read pixel data into a `Buffer` object. This allows  applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 
 ## Bundle Size Reduction
@@ -438,7 +438,7 @@ Additional examples have been ported to the luma.gl v5 API.
 In v4 we added WebGL state management which automatically tracks all WebGL state settings. In this release we extended this feature to support framebuffer bindings. When restoring context settings, the previous framebuffer binding will also be restored.
 
 
-### WebGL2 Improvements
+### WebGL 2 Improvements
 
 Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer` classes based on use in applications.
 
@@ -465,21 +465,21 @@ Release date: July 27th, 2017
   </tbody>
 </table>
 
-A major release that brings full WebGL2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
+A major release that brings full WebGL 2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 
 
-### Full WebGL2 Support
+### Full WebGL 2 Support
 
-luma.gl now exposes the complete WebGL2 APIs:
+luma.gl now exposes the complete WebGL 2 APIs:
 
-* New classes expose all the new WebGL2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
-* Other existing WebGL classes with new functionalites under WebGL2 have been updated.
-* Add new WebGL2 texture formats and types support, including floating point textures, and multiple render targets.
+* New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
+* Other existing WebGL classes with new functionalites under WebGL 2 have been updated.
+* Add new WebGL 2 texture formats and types support, including floating point textures, and multiple render targets.
 
 
 ### WebGL Capability Management
 
-luma.gl provides a single unified WebGL2-style API across WebGL2, WebGL1 and WebGL extensions, and provides a simple mechanisms for querying what capabilities are available. This simplifies building apps that run on both WebGL1 and WebGL2, seamlessly allowing applications to leverage WebGL extensions when available.
+luma.gl provides a single unified WebGL 2-style API across WebGL 2, WebGL 1 and WebGL extensions, and provides a simple mechanisms for querying what capabilities are available. This simplifies building apps that run on both WebGL 1 and WebGL 2, seamlessly allowing applications to leverage WebGL extensions when available.
 
 
 ### WebGL State Management

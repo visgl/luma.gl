@@ -176,16 +176,16 @@ Fragment Shaders
 | `out`           | `gl_FragData`  |         |
 | `texture`       | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below. |
 | `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
-| `gl_FragDepth`  | `gl_FragDepthEXT` | WebGL1: **EXT_frag_depth** |
+| `gl_FragDepth`  | `gl_FragDepthEXT` | WebGL 1: **EXT_frag_depth** |
 
 
 | 3.00 ES             | 1.00 ES                | Comment |
 | ---                 | ---                    | --- |
-| `texture2DLod`      | `texture2DLodEXT`      | WebGL1: **EXT_shader_texture_lod** |
-| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL1: **EXT_shader_texture_lod** |
-| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL1: **EXT_shader_texture_lod** |
-| `textureCubeLod`    | `textureCubeLodEXT`    | WebGL1: **EXT_shader_texture_lod** |
-| `texture2DGrad`     | `texture2DGradEXT`     | WebGL1: **EXT_shader_texture_lod** |
-| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL1: **EXT_shader_texture_lod** |
-| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL1: **EXT_shader_texture_lod** |
-| `textureCubeGrad`   | `textureCubeGradEXT`   | WebGL1: **EXT_shader_texture_lod** |
+| `texture2DLod`      | `texture2DLodEXT`      | WebGL 1: **EXT_shader_texture_lod** |
+| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL 1: **EXT_shader_texture_lod** |
+| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL 1: **EXT_shader_texture_lod** |
+| `textureCubeLod`    | `textureCubeLodEXT`    | WebGL 1: **EXT_shader_texture_lod** |
+| `texture2DGrad`     | `texture2DGradEXT`     | WebGL 1: **EXT_shader_texture_lod** |
+| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL 1: **EXT_shader_texture_lod** |
+| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL 1: **EXT_shader_texture_lod** |
+| `textureCubeGrad`   | `textureCubeGradEXT`   | WebGL 1: **EXT_shader_texture_lod** |

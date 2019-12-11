@@ -17,7 +17,7 @@ This is an overview of the object accessor fields that are available to applicat
 | `size`      | Yes          | `1`        | Components per element (`1`-`4`) |
 | `divisor`   | Yes          | `0`        | Enables/disables instancing |
 | `normalize` | N/A          | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
-| `integer`   | N/A          | `false`    | Disable conversion of integer values to floats **WebGL2** |
+| `integer`   | N/A          | `false`    | Disable conversion of integer values to floats **WebGL 2** |
 
 
 ## Combining Accessors with Buffers

@@ -1,6 +1,6 @@
 # Renderbuffer
 
-`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/docs/api-reference/webgl/texture.md) instead. In addition, in WebGL2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
+`Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/docs/api-reference/webgl/texture.md) instead. In addition, in WebGL 2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
 
 For additional information, see [OpenGL Wiki](https://www.opengl.org/wiki/Renderbuffer_Object)
 
@@ -38,7 +38,7 @@ framebuffer.attach({
 * `width` (number) - width of renderbuffer in pixels
 * `height` (number) - height of renderbuffer in pixels
 * `format` (number) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
-* `samples` (number) - samples (always `0` in non-WebGL2 contexts)
+* `samples` (number) - samples (always `0` in non-WebGL 2 contexts)
 
 
 ## Methods
@@ -53,7 +53,7 @@ Queries valid sample counts for a `Renderbuffer` format. The sample counts can b
 
 Returns (Number[]) - An list of valid sample counts in descending order.
 
-If multisampling is not supported the returned value will be `[0]`, e.g. signed and unsigned integer internal formats in WebGL2. Note that this method always returns `[0]` in WebGL1.
+If multisampling is not supported the returned value will be `[0]`, e.g. signed and unsigned integer internal formats in WebGL 2. Note that this method always returns `[0]` in WebGL 1.
 
 ### constructor
 
@@ -66,7 +66,7 @@ Creates a new `Renderbuffer` and initalizes it by calling `initialize` with the 
 * `format` (GLenum) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
 * `width`=`1` (GLint) - width of renderbuffer in pixels
 * `height`=`1` (GLint) - height of renderbuffer in pixels
-* `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
+* `samples`=0 (GLint) - (WebGL 2) number of samples to be used for storage.
 
 WebGL References [gl.createRenderbuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createRenderbuffer), also see `initialize`.
 
@@ -79,14 +79,14 @@ Creates and initializes a renderbuffer object's data store. Used to update a `Re
 * `format` (GLenum) - internal format of the renderbuffer (e.g. `GL.DEPTH_COMPONENT16`)
 * `width`=`1` (GLint) - width of renderbuffer in pixels
 * `height`=`1` (GLint) - height of renderbuffer in pixels
-* `samples`=0 (GLint) - (WebGL2) number of samples to be used for storage.
+* `samples`=0 (GLint) - (WebGL 2) number of samples to be used for storage.
 
 Returns itself to enable chaining
 
 * `initialize` erases the current content of the `Renderbuffer`.
 
 
-WebGL References [gl.renderbufferStorage](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/renderbufferStorage), [gl.renderbufferStorageMultisample](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/renderbufferStorageMultisample) (WebGL2), [gl.bindRenderbuffer](WebGLRenderingContext.bindRenderbuffer())
+WebGL References [gl.renderbufferStorage](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/renderbufferStorage), [gl.renderbufferStorageMultisample](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/renderbufferStorageMultisample) (WebGL 2), [gl.bindRenderbuffer](WebGLRenderingContext.bindRenderbuffer())
 
 ### resize
 
@@ -116,7 +116,7 @@ The "internal" format of the `Renderbuffer`.
 | `GL.DEPTH_COMPONENT16` |  16 depth bits |
 | `GL.STENCIL_INDEX8`    |  8 stencil bits |
 
-This table lists the basic formats supported in WebGL1. For a full table of formats supported in WebGL2 and via WebGL extensions, see [Texture](/docs/api-reference/webgl/texture.md).
+This table lists the basic formats supported in WebGL 1. For a full table of formats supported in WebGL 2 and via WebGL extensions, see [Texture](/docs/api-reference/webgl/texture.md).
 
 | Sized Internal Format   | Format               | Type | Depth Bits | Stencil Bits |
 | ---                     | ---                  | ---  | ---        | --- |
@@ -173,11 +173,11 @@ When using a WebGL 2 context, the following values are available additionally:
 | `GL.RENDERBUFFER_ALPHA_SIZE`       | GLint  | R | resolution (bits) of alpha component |
 | `GL.RENDERBUFFER_DEPTH_SIZE`       | GLint  | R | resolution (bits) of depth component |
 | `GL.RENDERBUFFER_STENCIL_SIZE`     | GLint  | R | resolution (bits) of stencil component |
-| `GL.RENDERBUFFER_SAMPLES` (WebGL2) | GLint  | R | |
+| `GL.RENDERBUFFER_SAMPLES` (WebGL 2) | GLint  | R | |
 
 ## Limits
 
-| Limit                      |                               | WebGL2   | WebGL1 |
+| Limit                      |                               | WebGL 2   | WebGL 1 |
 | ---                        |---                            | ---      | ---    |
 | `GL.MAX_RENDERBUFFER_SIZE` | Max renderbuffer width/height | `>=2048` | `>=1`  |
 | `GL.MAX_SAMPLES`           | Max samples for multisampling | `>=4`    | `0`    |
@@ -187,4 +187,4 @@ When using a WebGL 2 context, the following values are available additionally:
 
 * The only way to work with a renderbuffer, besides creating it, is to attach it to a [`Framebuffer`](/docs/api-reference/webgl/framebuffer.md).
 * A `Renderbuffer` cannot be accessed by a shader in any way.
-* Multisampling is only available in WebGL2
+* Multisampling is only available in WebGL 2
