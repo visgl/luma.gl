@@ -72,7 +72,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       feedbackMap: {
         position: 'vPosition'
       },
-      elementCount: 3,
+      elementCount: 3
     });
 
     const model = new Model(gl, {
@@ -82,7 +82,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         position: transform.getBuffer('vPosition'),
         color: colorBuffer
       },
-      vertexCount: 3,
+      vertexCount: 3
     });
 
     return {transform, model};
@@ -92,9 +92,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     transform.run();
 
     clear(gl, {color: [0, 0, 0, 1]});
-    model
-    .setAttributes({position: transform.getBuffer('vPosition')})
-    .draw();
+    model.setAttributes({position: transform.getBuffer('vPosition')}).draw();
 
     transform.swap();
   }
