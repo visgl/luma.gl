@@ -4,8 +4,8 @@ A `Query` object provides single unified API for using WebGL asynchronus queries
 
 See also:
 
-* WebGL1 timer extension: [`EXT_disjoint_timer_query`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query/)
-* WebGL2 timer extension: [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/)
+* WebGL 1 timer extension: [`EXT_disjoint_timer_query`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query/)
+* WebGL 2 timer extension: [`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/)
 
 
 ## Usage
@@ -79,17 +79,17 @@ Destroys the WebGL object. Rejects any pending query.
 
 ### beginTimeElapsedQuery()
 
-Shortcut for timer query (dependent on extension in both WebGL1 and 2)
+Shortcut for timer query (dependent on extension in both WebGL 1 and 2)
 
 
 ### Query.beginOcclusionQuery({conservative = false})
 
-Shortcut for occlusion query (dependent on WebGL2)
+Shortcut for occlusion query (dependent on WebGL 2)
 
 
 ### beginTransformFeedbackQuery()
 
-Shortcut for transform feedback query (dependent on WebGL2)
+Shortcut for transform feedback query (dependent on WebGL 2)
 
 
 ### Query.begin(target)

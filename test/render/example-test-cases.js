@@ -6,13 +6,16 @@ const examples = {
   helloTriangle: require('../../examples/getting-started/hello-triangle/app').default,
   helloInstancingHigh: require('../../examples/getting-started/hello-instancing-high/app').default,
   helloInstancingMid: require('../../examples/getting-started/hello-instancing-mid/app').default,
+  shaderModules: require('../../examples/getting-started/shader-modules/app').default,
+  shaderHooks: require('../../examples/getting-started/shader-hooks/app').default,
+  shaderModulesLow: require('../../examples/getting-started/shader-modules-low/app').default,
+  transformFeedback: require('../../examples/getting-started/transform-feedback/app').default,
   instancing: require('../../examples/showcase/instancing/app').default,
   persistence: require('../../examples/showcase/persistence/app').default,
-  transform: require('../../examples/showcase/transform/app').default,
+  wandering: require('../../examples/showcase/wandering/app').default,
   animation: require('../../examples/api/animation/app').default,
   programManagement: require('../../examples/api/program-management/app').default,
-  texture3d: require('../../examples/api/texture-3d/app').default,
-  transformFeedback: require('../../examples/api/transform-feedback/app').default
+  texture3d: require('../../examples/api/texture-3d/app').default
 };
 
 export default Object.keys(examples).map(name => {

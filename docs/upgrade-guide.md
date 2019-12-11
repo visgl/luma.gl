@@ -320,7 +320,7 @@ luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-le
 
 ### GL Constants Import Path
 
-The biggest change for many apps will probably be that the static `GL` symbol (that contains all WebGL2 constants) must now be separately imported GL from 'luma.gl/constants'.
+The biggest change for many apps will probably be that the static `GL` symbol (that contains all WebGL 2 constants) must now be separately imported GL from 'luma.gl/constants'.
 
 
 ### Experimental Exports: New Naming Convention
@@ -533,7 +533,7 @@ Following features were deprecated in v3 and v4 are now removed in v5.
 |`withParameters({frameBuffer})`| `withParameters({framebuffer})`| State management |
 | `MONOLITHIC_SHADERS` | `MODULAR_SHADERS` | default shaders |
 | `isWebGLContext` | `isWebGL` | WebGL context validation |
-| `isWebGL2Context` | `isWebGL2` | WebGL2 context validation |
+| `isWebGL2Context` | `isWebGL2` | WebGL 2 context validation |
 | `Camera`, `PerspectiveCamera`, `OrthoCamera` | `None` | |
 | `Scene` | `None` | |
 

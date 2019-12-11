@@ -69,8 +69,8 @@ Creates a new program using the supplied vertex and fragment shaders. The shader
 * `id` (`string`, optional) - string id (to help indentify the program during debugging).
 * `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 * `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-* `varyings` WebGL2 (`String[]`) - a list of names of varyings.
-* `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL2 (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
+* `varyings` WebGL 2 (`String[]`) - a list of names of varyings.
+* `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL 2 (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
 
 | `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | Description |
 | ---                                 | --- |
@@ -146,10 +146,10 @@ Potentially autodeduced parameters
 * `isInstanced`=`false` - Set to enable instanced rendering.
 * `instanceCount`=`0` - Number of instances
 
-Parameters for drawing a limited range (WebGL2 only)
+Parameters for drawing a limited range (WebGL 2 only)
 
-* `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
-* `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL2)
+* `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
+* `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
 
 Returns: `true` if successful, `false` if draw call is blocked due to missing resources.
 
@@ -165,10 +165,10 @@ The following WebGL APIs are called in this function:
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram),
 [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements),
-[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL2),
+[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL 2),
 [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays),
-[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL2),
-[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL2),
+[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL 2),
+[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL 2),
 [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
 [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
 [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
@@ -186,7 +186,7 @@ The following WebGL APIs are called in this function:
 | `GL.MAX_VERTEX_ATTRIBS`             | >= 8 (GLint)   | |
 | `GL.MAX_VERTEX_UNIFORM_VECTORS`     | >= 128 (GLint) | |
 | `GL.MAX_FRAGMENT_UNIFORM_VECTORS`   | >= 16 (GLint)  | |
-| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL2)  | - | - |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL 2)  | - | - |
 
 
 ### Parameters
@@ -201,6 +201,6 @@ Use with `Program.getParameter(parameter)`
 | `GL.ATTACHED_SHADERS`  | GLint     | Number of attached shaders (`0`, `1` or `2`) |
 | `GL.ACTIVE_ATTRIBUTES` | GLint     | Number of active attribute variables to a program |
 | `GL.ACTIVE_UNIFORMS`   | GLint     | Number of active attribute variables to a program |
-| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE`  | GLenum |  (WebGL2) Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS` |
-| `GL.TRANSFORM_FEEDBACK_VARYINGS`     | GLint  | (WebGL2) Number of varying variables to capture in transform feedback mode. |
-| `GL.ACTIVE_UNIFORM_BLOCKS`           | GLint  | (WebGL2) Number of uniform blocks containing active uniforms. |
+| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE`  | GLenum |  (WebGL 2) Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS` |
+| `GL.TRANSFORM_FEEDBACK_VARYINGS`     | GLint  | (WebGL 2) Number of varying variables to capture in transform feedback mode. |
+| `GL.ACTIVE_UNIFORM_BLOCKS`           | GLint  | (WebGL 2) Number of uniform blocks containing active uniforms. |

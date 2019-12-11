@@ -21,7 +21,7 @@ Accessors can be resolved (merged) into a new Accessor. This is useful since whi
 | `size`      | data type   | Vertex Shader  | `1`        | Components per element (`1`-`4`) |
 | `divisor`   | instancing  | Attribute name | `0`        | Enables/disables instancing |
 | `normalize` | data access | N/A            | `false`    | Normalize integers to [-1,1], or [0,1] if unsigned |
-| `integer`   | data access | N/A            | `false`    | Disable conversion of integer values to floats **WebGL2** |
+| `integer`   | data access | N/A            | `false`    | Disable conversion of integer values to floats **WebGL 2** |
 
 Notes:
 
@@ -53,7 +53,7 @@ Enables/disables instancing.
 
 If `true` normalizes integer values (`GL.BYTE`, ...). Signed values are normalized to [-1,1] and unsigned values are normalized to [0,1].
 
-### `integer` **WebGL2**
+### `integer` **WebGL 2**
 
 Disable conversion of integer values to floats.
 

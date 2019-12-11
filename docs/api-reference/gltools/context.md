@@ -7,10 +7,10 @@
 Create a WebGL context, autocreating a canvas
 ```js
 import {createGLContext} from '@luma.gl/gltools';
-const gl = createGLContext(); // Prefers WebGL2 but falls back to WebGL1
+const gl = createGLContext(); // Prefers WebGL 2 but falls back to WebGL 1
 ```
 
-Create a WebGL2 context.
+Create a WebGL 2 context.
 ```js
 import {createGLContext} from '@luma.gl/gltools';
 const gl = createGLContext({
@@ -18,7 +18,7 @@ const gl = createGLContext({
   throwOnError: false
 });
 if (!gl) {
-  console.error('WebGL2 not supported');
+  console.error('WebGL 2 not supported');
 }
 ```
 
@@ -60,8 +60,8 @@ const gl = createGLContext(options);
 
 | Parameter               | Default | Description |
 | ---                     | ---     | ---         |
-| `webgl2`                | `true`  | If `true`, will attempt to create a WebGL2 context. Will silently fall back to WebGL1 contexts unless `webgl1` is set to `false`. |
-| `webgl1`                | `true`  | If `true`, will attempt to create a WebGL1 context. The `webgl2` flag has higher priority. |
+| `webgl2`                | `true`  | If `true`, will attempt to create a WebGL 2 context. Will silently fall back to WebGL 1 contexts unless `webgl1` is set to `false`. |
+| `webgl1`                | `true`  | If `true`, will attempt to create a WebGL 1 context. The `webgl2` flag has higher priority. |
 | `throwOnError`          | `true`  | Normally the context will throw an error on failure. If `false`, it will log to console instead. |
 | `break`          | `[]`  | Insert a break point (`debugger`) if one of the listed gl functions is called. |
 | `manageState`           | `true`  | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to. |

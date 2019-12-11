@@ -43,7 +43,7 @@ const buffer = new Buffer(gl, {byteLength: 200})
 buffer.subData(new Float32Array(...));
 ```
 
-Copying data between buffers (WebGL2)
+Copying data between buffers (WebGL 2)
 ```js
 const sourceBuffer = ...
 const destinationBuffer = ...
@@ -61,7 +61,7 @@ destinationBuffer.copyData({
 });
 ```
 
-Getting data from a buffer (WebGL2)
+Getting data from a buffer (WebGL 2)
 ```js
 const buffer = ...;
 
@@ -136,8 +136,8 @@ const buffer = new Buffer(gl, byteLength);
 
 The newly constructed buffer will either be a an "element" buffer used for storing vertex indices, or a "generic" buffer that can be used to store other things. To create an element buffer, specify `target: GL.ELEMENT_ARRAY_BUFFER`. If target is not specified, it will be a generic buffer that can be used in a variety of situations.
 
-* In WebGL1, the default target is `GL.ARRAY_BUFFER` which will work as a "generic" (i.e. non-element) buffer.
-* In WebGL2, the default target is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used with (bound to) a specific target. From that point on, WebGL will consider it either as an element buffer or a generic buffer.
+* In WebGL 1, the default target is `GL.ARRAY_BUFFER` which will work as a "generic" (i.e. non-element) buffer.
+* In WebGL 2, the default target is `GL.COPY_READ_BUFFER` which means the buffer can work either as a generic buffer and an element buffer. This will be determined when it is first used with (bound to) a specific target. From that point on, WebGL will consider it either as an element buffer or a generic buffer.
 
 
 ## Methods
@@ -181,11 +181,11 @@ Updates part or all of a buffer's allocated memory.
 
 * `data` (`ArrayBufferView`) - length is inferred unless provided
 * `offset`=`0` - Offset into buffer
-* `srcOffset`=`0` -  WebGL2: Offset into srcData
-* `length` - WebGL2: Number of bytes to be copied
+* `srcOffset`=`0` -  WebGL 2: Offset into srcData
+* `length` - WebGL 2: Number of bytes to be copied
 
 
-### copyData(options : Object) : Buffer (WebGL2)
+### copyData(options : Object) : Buffer (WebGL 2)
 
 Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
 
@@ -204,7 +204,7 @@ Note:
 * If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
 
 
-### getData() : TypedArray (WebGL2)
+### getData() : TypedArray (WebGL 2)
 
 Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 
@@ -234,7 +234,7 @@ For details on accessor props, see the documentation for the [`Accessor`]() clas
 
 ### Usage
 
-| Usage             | WebGL2 | WebGL1 | Description |
+| Usage             | WebGL 2 | WebGL 1 | Description |
 | ---               | ---    | ---    | ---         |
 | `GL.STATIC_DRAW`  | Yes    | Yes    | Buffer will be used often and not change often. Contents are written to the buffer, but not read. |
 | `GL.DYNAMIC_DRAW` | Yes    | Yes    | Buffer will be used often and change often. Contents are written to the buffer, but not read. |
@@ -266,7 +266,7 @@ buffer.bind({target: GL.ARRAY_BUFFER});
 ...
 buffer.unbind({target: GL.ARRAY_BUFFER});
 ```
-WebGL2 examples
+WebGL 2 examples
 ```js
 buffer.bind({target: GL.PIXEL_PACK_BUFFER});
 buffer.bind({target: GL.PIXEL_UNPACK_BUFFER});
@@ -285,4 +285,4 @@ Note that in WebGL, there are two types of buffers:
 * "element" buffers. These can only store vertex attributes with indices (a.k.a "elements") and can only be used by binding them to the `GL.ELEMENT_ARRAY_BUFFER` before draw calls.
 * "generic" buffers. These can be used interchangeably to store different types of data, including (non-index) vertex attributes.
 
-For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [this page](https://www.khronos.org/registry/webgl/specs/1.0/#webgl_gl_differences) for WebGL1 and [this page](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) for WebGL2.
+For more on the `GL.ELEMENT_ARRAY_BUFFER` restrictions in WebGL, see [this page](https://www.khronos.org/registry/webgl/specs/1.0/#webgl_gl_differences) for WebGL 1 and [this page](https://www.khronos.org/registry/webgl/specs/2.0/#webgl_gl_differences) for WebGL 2.

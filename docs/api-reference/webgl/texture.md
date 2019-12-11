@@ -5,7 +5,7 @@ A `Texture` is a WebGL object that contains one or more images that all have the
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
 * [`Texture2D`](/docs/api-reference/webgl/texture-2d.md) - Contains a "normal" image texture
 * [`TextureCube`](/docs/api-reference/webgl/texture-cube.md) - Holds 6 textures representing sides of a cube.
-* [`Texture3D`](/docs/api-reference/webgl/texture-3d.md) (WebGL2) - Holds a "stack" of textures which enables 3D interpolation.
+* [`Texture3D`](/docs/api-reference/webgl/texture-3d.md) (WebGL 2) - Holds a "stack" of textures which enables 3D interpolation.
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
@@ -52,7 +52,7 @@ A number of read only accessors are available:
 
 * `type` - type used to create face textures
 * `dataFormat` - data format used to create face textures.
-* `offset` - offset used to create face textures. Always 0, unless specified using WebGL2 buffer constructor.
+* `offset` - offset used to create face textures. Always 0, unless specified using WebGL 2 buffer constructor.
 
 * `handle` - The underlying WebGL object.
 * `id` - An identifying string that is intended to help debugging.
@@ -203,7 +203,7 @@ WebGL allows textures to be created from a number of different data sources.
 | ---------------------------------- | -----------  |
 | `null`                             | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
 | `typed array`                      | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
-| `Buffer` or `WebGLBuffer` (`WebGL2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
+| `Buffer` or `WebGLBuffer` (`WebGL 2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
 | `Image` (`HTMLImageElement`)       | image will be used to fill the texture. width and height will be deduced. |
 | `Video` (`HTMLVideoElement`)       | video will be played, continously updating the texture. width and height will be deduced. |
 | `Canvas` (`HTMLCanvasElement`)     | canvas will be used to fill the texture. width and height will be deduced. |
@@ -217,7 +217,7 @@ WebGL allows textures to be created from a number of different data sources.
 
 If an application wants to store the texture at a certain resolution or in a certain format, it can request the resolution and format with `internalFormat`. WebGL will choose an internal representation with least the internal component sizes, and exactly the component types shown for that format, although it may not match exactly.
 
-WebGL2 adds sized internal formats which enables the application to request
+WebGL 2 adds sized internal formats which enables the application to request
 specific components sizes and types (float and integer formats). While sized formats offer more control, unsized formats do give the GPU freedom to select the most performant internal representation.
 
 
@@ -228,41 +228,41 @@ specific components sizes and types (float and integer formats). While sized for
 | `GL.LUMINANCE`          | 1          | Each color contains a single luminance value. When sampled, rgb are all set to this luminance, alpha is 1.0. |
 | `GL.LUMINANCE_ALPHA`    | 2          | Each component is a luminance/alpha double. When sampled, rgb are all set to luminance, alpha from component. |
 | `GL.ALPHA`              | 1          | Discards the red, green and blue components and reads the alpha component. |
-| `GL.DEPTH_COMPONENT`    | 1          | WebGL2 or `WEBGL_depth_texture` |
-| `GL.DEPTH_STENCIL`      | 2          | WebGL2 or `WEBGL_depth_texture` |
+| `GL.DEPTH_COMPONENT`    | 1          | WebGL 2 or `WEBGL_depth_texture` |
+| `GL.DEPTH_STENCIL`      | 2          | WebGL 2 or `WEBGL_depth_texture` |
 
 | Sized Internal Format   | Comp. |   Size   | Description   |
 | ----------------------- | ----- | -------- | ------------- |
-| `GL.R8` (WebGL2)        | 1     | 8 bits   | red component |
-| `GL.R16F` (WebGL2)      | 1     | 16 bits  | half float red component |
-| `GL.R32F` (WebGL2)      | 1     | 32 bits | float red component |
-| `GL.R8UI` (WebGL2)      | 1     | 8 bits | unsigned int red component, `usampler`, no filtering |
-| `GL.RG8` (WebGL2)       | 1     | 16 bits | red and green components |
-| `GL.RG16F` (WebGL2)     | 2     | 32 bits | red and green components, half float |
-| `GL.RG32F` (WebGL2)     | 2     | 64 bits | red and green components, float |
-| `GL.RGUI` (WebGL2)      | 2     | 16 bits | red and green components, `usampler`, no filtering |
-| `GL.RGB8` (WebGL2)      | 3     | 24 bits | red, green and blue components |
-| `GL.SRGB8` (WebGL2, EXT_sRGB) |3| 24 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
-| `GL.RGB565` (WebGL2)    | 3     | 16 bits | 5 bit red, 6 bit green, 5 bit blue |
-| `GL.R11F_G11F_B10F` (WebGL2) | 3| 32 bits | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats) |
-| `GL.RGB9_E5` (WebGL2)   | 3     | 32 bits | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
-| `GL.RGB16F` (WebGL2)    | 3     | 48 bits | half float RGB |
-| `GL.RGB32F` (WebGL2)    | 3     | 96 bits | float RBG |
-| `GL.RGB8UI` (WebGL2)    | 3     | 24 bits | unsigned integer 8 bit RGB: use `usampler`, no filtering |
-| `GL.RGBA8` (WebGL2)     | 4     | 32 bits | 8 bit RGBA, typically what `GL.RGBA` "resolves" to |
-| `GL.SRGB_APLHA8` (WebGL2, EXT_sRGB) | 4 | 32 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
-| `GL.RGB5_A1` (WebGL2)   | 4     | 16 bits | 5 bit RGB, 1 bit alpha |
-| `GL.RGBA4444` (WebGL2)  | 4     | 16 bits | 4 bit RGBA |
-| `GL.RGBA16F` (WebGL2)   | 4     | 64 bits | half float RGBA |
-| `GL.RGBA32F` (WebGL2)   | 4     | 128 bits | float RGA |
-| `GL.RGBA8UI` (WebGL2)   | 4     | 32 bits | unsigned integer 8 bit RGBA, `usampler`, no filtering |
+| `GL.R8` (WebGL 2)        | 1     | 8 bits   | red component |
+| `GL.R16F` (WebGL 2)      | 1     | 16 bits  | half float red component |
+| `GL.R32F` (WebGL 2)      | 1     | 32 bits | float red component |
+| `GL.R8UI` (WebGL 2)      | 1     | 8 bits | unsigned int red component, `usampler`, no filtering |
+| `GL.RG8` (WebGL 2)       | 1     | 16 bits | red and green components |
+| `GL.RG16F` (WebGL 2)     | 2     | 32 bits | red and green components, half float |
+| `GL.RG32F` (WebGL 2)     | 2     | 64 bits | red and green components, float |
+| `GL.RGUI` (WebGL 2)      | 2     | 16 bits | red and green components, `usampler`, no filtering |
+| `GL.RGB8` (WebGL 2)      | 3     | 24 bits | red, green and blue components |
+| `GL.SRGB8` (WebGL 2, EXT_sRGB) |3| 24 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
+| `GL.RGB565` (WebGL 2)    | 3     | 16 bits | 5 bit red, 6 bit green, 5 bit blue |
+| `GL.R11F_G11F_B10F` (WebGL 2) | 3| 32 bits | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB9_E5` (WebGL 2)   | 3     | 32 bits | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB16F` (WebGL 2)    | 3     | 48 bits | half float RGB |
+| `GL.RGB32F` (WebGL 2)    | 3     | 96 bits | float RBG |
+| `GL.RGB8UI` (WebGL 2)    | 3     | 24 bits | unsigned integer 8 bit RGB: use `usampler`, no filtering |
+| `GL.RGBA8` (WebGL 2)     | 4     | 32 bits | 8 bit RGBA, typically what `GL.RGBA` "resolves" to |
+| `GL.SRGB_APLHA8` (WebGL 2, EXT_sRGB) | 4 | 32 bits | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer |
+| `GL.RGB5_A1` (WebGL 2)   | 4     | 16 bits | 5 bit RGB, 1 bit alpha |
+| `GL.RGBA4444` (WebGL 2)  | 4     | 16 bits | 4 bit RGBA |
+| `GL.RGBA16F` (WebGL 2)   | 4     | 64 bits | half float RGBA |
+| `GL.RGBA32F` (WebGL 2)   | 4     | 128 bits | float RGA |
+| `GL.RGBA8UI` (WebGL 2)   | 4     | 32 bits | unsigned integer 8 bit RGBA, `usampler`, no filtering |
 
 
 ### Texture Component Type
 
 Describes the layout of each color component in memory.
 
-| Value                         | WebGL2 | WebGL1 | Description |
+| Value                         | WebGL 2 | WebGL 1 | Description |
 | ---                           | ---    | ---    | --- |
 | `GL.UNSIGNED_BYTE`            | Yes    | Yes    | GLbyte 8 bits per channel for `GL.RGBA` |
 | `GL.UNSIGNED_SHORT_5_6_5`     | Yes    | Yes    | 5 red bits, 6 green bits, 5 blue bits |
@@ -288,7 +288,7 @@ This a simplified table illustrating what combinations of internal formats
 work with what data formats and types. Note that luma.gl deduces `dataFormat` and `type` from `format` by taking the first value from the data format and data type entries in this table.
 
 For more details, see tables in:
-* [WebGL2 spec](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
+* [WebGL 2 spec](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
 * [OpenGL ES spec](https://www.khronos.org/opengles/sdk/docs/man3/html/glTexImage2D.xhtml)
 
 | Internal Format          | Data Format       | Data Type          |
@@ -337,9 +337,9 @@ For more details, see tables in:
 | `GL.LINEAR_*` sampling of floating point textures           | `TEXTURE_FILTER_LINEAR_FLOAT` |
 | `GL.LINEAR_*` sampling of half-floating point textures      | `TEXTURE_FILTER_LINEAR_HALF_FLOAT` |
 
-## NPOT Textures (WebGL1)
+## NPOT Textures (WebGL 1)
 
-* Any texture with a `non power of two` dimension (width or height) is referred as `NPOT` texture, under WebGL1 NPOT textures have following limitations.
+* Any texture with a `non power of two` dimension (width or height) is referred as `NPOT` texture, under WebGL 1 NPOT textures have following limitations.
 
 | State              | Limitation |
 | ---                | --- |
@@ -348,13 +348,13 @@ For more details, see tables in:
 | `GL.TEXTURE_WRAP_S`     | Must be `GL.CLAMP_TO_EDGE` |
 | `GL.TEXTURE_WRAP_T`     | Must be `GL.CLAMP_TO_EDGE` |
 
-* 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL1, and a warning log will be printed every time a setting is overwritten.
+* 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL 1, and a warning log will be printed every time a setting is overwritten.
 
 
 ## Remarks
 
 * Textures can be supplied as uniforms to shaders that can sample them using texture coordinates and color pixels accordingly.
 * Parameters that affect texture sampling can be set on textures or sampler objects.
-* Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL2).
+* Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL 2).
 * The WebGL Context has global "pixel store" parameters that control how pixel data is laid out, including Y direction, color space etc.
 * Textures are read from supplied data and written to the specified format/type parameters and pixel store parameters.

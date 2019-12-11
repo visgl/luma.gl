@@ -22,7 +22,7 @@ Reads data from a `Framebuffer` or `Texture` object into a TypedArray object and
   * `options.sourceType` - (*GLenum*, default: type of `pixelArray` or `UNSIGNED_BYTE`) The type of the data.
 
 Notes:
-  * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
+  * Reading from floating point textures is dependent on an extension both in WebGL 1 and WebGL 2.
   * When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
   * When color attachment is a float texture with format less than 4 channels, i.e, `GL.R32F`, or  `GL.RG32F`, `readPixels` should still be called with a 4 component `format`(`GL.RGBA`), and default value (R:0, G:0, B: 0 and A: 1) will be returned for un-used channel.
 
@@ -30,7 +30,7 @@ This function makes calls to the following WebGL APIs:
 
 [`gl.readPixels`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/readPixels), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 
-### readPixelsToBuffer(source : Framebuffer|Texture, options: Object) : Buffer (WebGL2)
+### readPixelsToBuffer(source : Framebuffer|Texture, options: Object) : Buffer (WebGL 2)
 
 Reads data from a `Framebuffer` or `Texture` object into A `Buffer` object and returns it. A new `Buffer` object is created when not provided. This method avoids a sync between CPU and GPU as pixel values are copied from GPU texture memory to GPU Buffer memory. This method returns right away without any delays.
 
@@ -49,7 +49,7 @@ A CPU and GPU sync will be triggered when the returned buffer data is read using
   * `options.sourceType` - (*GLenum*, default: type of `target` or `UNSIGNED_BYTE`) The type of the data.
 
 Notes:
-  * Reading from floating point textures is dependent on an extension both in WebGL1 and WebGL2.
+  * Reading from floating point textures is dependent on an extension both in WebGL 1 and WebGL 2.
   * When supported, the `{format: GL.RGBA, type: GL.FLOAT, ...}` combination becomes valid for reading from a floating-point color buffer.
 
 This function makes calls to the following WebGL APIs:
@@ -103,7 +103,7 @@ Copies pixels from a `Framebuffer` or `Texture` object into the specified area o
   * `options.sourceY` (`GLint`, optional, default: 0) - y coordinate of the lower left corner where to start copying.
   * `options.targetX` (`GLint`, optional) - X offset with in target texture.
   * `options.targetY` (`GLint`, optional) - Y offset with in target texture.
-  * `options.targetZ` (`GLint`, optional, WebGL2) - Z offset with in target texture, when using copying into 2D Array of 3D texture.
+  * `options.targetZ` (`GLint`, optional, WebGL 2) - Z offset with in target texture, when using copying into 2D Array of 3D texture.
   * `options.width` (`GLint`, optional, default: texture.width) - Width of the pixel rectangle to be copied.
   * `options.height` (`GLint`, optional, default: texture.height) - Height of the pixel rectangle to be copied.
 
@@ -117,7 +117,7 @@ This function makes calls to the following WebGL APIs:
 
 ## Blit Functions
 
-### blit(options: Object) : (WebGL2)
+### blit(options: Object) : (WebGL 2)
 
 Copies a rectangle of pixels from a `Texture` or `Framebuffer` object into a `Texture` or `Framebuffer` object.
 

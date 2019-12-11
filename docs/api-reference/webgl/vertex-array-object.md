@@ -2,7 +2,7 @@
 
 The WebGL `VertexArrayObject` object holds a map of "buffers" that will be made available as input data to shaders during a draw call, similar to how a `TransformFeedback` object holds a set of `Buffer` instances that will receive output data from shaders.For `Buffer` objects, the `VertexArrayObject` also stores some additional information about how that data in the buffer should be accessed, such as offsets, strides, etc.
 
-However, the use of `VertexArrayObject` is problematic in WebGL1. While it is crucial for the operation of a program, its presence under WebGL1 is dependent on an [extension](https://webglstats.com/webgl/extension/OES_vertex_array_object) that is fairly common, but not universally available. In particular it is not available in headless gl which is essential for running tests under Node.js.
+However, the use of `VertexArrayObject` is problematic in WebGL 1. While it is crucial for the operation of a program, its presence under WebGL 1 is dependent on an [extension](https://webglstats.com/webgl/extension/OES_vertex_array_object) that is fairly common, but not universally available. In particular it is not available in headless gl which is essential for running tests under Node.js.
 
 Therefore, in basic WebGL environments where the `VertexArrayObject` is not supported, luma.gl ensures that one ("fake") instance of the `VertexArrayObject` class can still be obtained, emulating the default (`null` handle) `VertexArrayObject`. This instance has the `isDefaultArray` flag set, and applications can adapt their behavior accordingly, while still using the same API to manage vertex attributes, albeit with a small performance loss. Since there is a considerable amount of work required to handle both cases, luma.gl also provides a higher level `VertexArray` class that works around these issues and provided additional conveniences.
 
@@ -148,23 +148,23 @@ When setting `Buffer` attributes, additional data can be provided to specify how
 * `size` (*GLuint*)  - number of values (components) per element (1-4)
 * `type` (*GLuint*)  - type of values (e.g. gl.FLOAT)
 * `normalized` (*boolean*, false) - normalize integers to [-1,1] or [0,1]
-* `integer` (*boolean*, false) - `WebGL2` disable int-to-float conversion
+* `integer` (*boolean*, false) - `WebGL 2` disable int-to-float conversion
 * `stride` (*GLuint*, 0) - supports strided arrays
 * `offset` (*GLuint*, 0) - supports strided arrays
 * `layout.normalized`=`false` (GLbool) - normalize integers to [-1,1], [0,1]
-* `layout.integer`=`false` (GLuint) - WebGL2 only, disable int-to-float conv.
+* `layout.integer`=`false` (GLuint) - WebGL 2 only, disable int-to-float conv.
 
 * `divisor` - Sets the frequency divisor used for instanced rendering (instances that pass between updates of attribute). Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
 
 Notes:
 
 * The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
-* **WebGL2** The application can disable integer to float conversion when running under WebGL2, by setting the `integer` flag to `true`.
+* **WebGL 2** The application can disable integer to float conversion when running under WebGL 2, by setting the `integer` flag to `true`.
 * [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
 Notes about Instanced Rendering
 
-* About setting `divisor` in attributes: Instanced attributes requires WebGL2 or a (widely supported) WebGL1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though the extension is so ubiquitously supported that many apps just make the assumption: [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays).
+* About setting `divisor` in attributes: Instanced attributes requires WebGL 2 or a (widely supported) WebGL 1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though the extension is so ubiquitously supported that many apps just make the assumption: [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays).
 * An attribute is referred to as **instanced** if its divisor value is non-zero.
 * The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
 * If divisor is zero, the attribute at slot index advances once per vertex.
