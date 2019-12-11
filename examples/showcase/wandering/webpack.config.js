@@ -9,7 +9,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [new HtmlWebpackPlugin({title: 'Transform Feedback'})]
+  plugins: [new HtmlWebpackPlugin({title: 'Wandering'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module

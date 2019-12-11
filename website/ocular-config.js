@@ -115,10 +115,10 @@ module.exports = {
       image: 'images/example-persistence.jpg'
     },
     {
-      title: 'Transform',
-      componentUrl: resolve(__dirname, './templates/showcase/example-transform.jsx'),
-      path: 'examples/showcase/transform/',
-      image: 'images/example-transform.png'
+      title: 'Wandering',
+      componentUrl: resolve(__dirname, './templates/showcase/example-wandering.jsx'),
+      path: 'examples/showcase/wandering/',
+      image: 'images/example-wandering.png'
     },
     {
       title: 'DOF',
@@ -179,13 +179,19 @@ module.exports = {
     },
     {
       title: 'Shader Modules - Low-level',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-shader-modules-low.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-shader-modules-low.jsx'
+      ),
       path: 'examples/getting-started/shader-modules-low',
       image: 'images/example-shader-hooks.jpg'
     },
     {
       title: 'Transform Feedback',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-transform-feedback.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-transform-feedback.jsx'
+      ),
       path: 'examples/getting-started/transform-feedback',
       image: 'images/example-transform-feedback.jpg'
     },
