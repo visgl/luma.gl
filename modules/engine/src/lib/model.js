@@ -143,7 +143,8 @@ export default class Model {
   }
 
   setProgram(props) {
-    this.programProps = Object.assign({}, props);
+    const {program, vs, fs, modules, defines, inject, varyings, bufferMode} = props;
+    this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
     this._programDirty = true;
   }
 

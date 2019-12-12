@@ -257,23 +257,9 @@ export default class Program extends Resource {
 
     this._texturesRenderable = true;
 
-    for (const uniformName in this.uniforms) {
-      const uniformSetter = this._uniformSetters[uniformName];
-
-      if (uniformSetter && uniformSetter.textureIndex !== undefined) {
-        let uniform = this.uniforms[uniformName];
-
-        if (uniform instanceof Framebuffer) {
-          const framebuffer = uniform;
-          uniform = framebuffer.texture;
-        }
-
-        if (uniform instanceof Texture) {
-          const texture = uniform;
-          // Check that texture is loaded
-          this._texturesRenderable = this._texturesRenderable && texture.loaded;
-        }
-      }
+    for (const uniformName in this._textureUniforms) {
+      const texture = this._textureUniforms[uniformName];
+      this._texturesRenderable = this._texturesRenderable && texture.loaded;
     }
 
     return this._texturesRenderable;
