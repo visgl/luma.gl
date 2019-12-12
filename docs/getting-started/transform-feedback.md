@@ -61,7 +61,11 @@ Internally, we'll be using two separate programs, one for transform feedback and
 In `onInitialize`, we create our `Transform` instance:
 ```js
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    const positionBuffer = new Buffer(gl, new Float32Array([
+      -0.5, -0.5,
+      0.5, -0.5,
+      0.0, 0.5
+    ]));
 
     const transform = new Transform(gl, {
       vs: transformVs,
@@ -87,14 +91,11 @@ Finally, we create a model instance to perform the rendering:
   onInitialize({gl}) {
     // Transform setup...
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([
-        1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0
-      ])
-    );
+    const colorBuffer = new Buffer(gl, new Float32Array([
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0
+    ]));
 
     const model = new Model(gl, {
       vs: renderVs,
@@ -178,7 +179,11 @@ void main() {
 
 const loop = new AnimationLoop({
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    const positionBuffer = new Buffer(gl, new Float32Array([
+      -0.5, -0.5,
+      0.5, -0.5,
+      0.0, 0.5
+    ]));
 
     const transform = new Transform(gl, {
       vs: transformVs,
@@ -191,10 +196,11 @@ const loop = new AnimationLoop({
       elementCount: 3
     });
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-    );
+    const colorBuffer = new Buffer(gl, new Float32Array([
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0
+    ]));
 
     const model = new Model(gl, {
       vs: renderVs,

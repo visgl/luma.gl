@@ -89,7 +89,11 @@ The shader hook definition is the function signature with a prefix indicating wh
     const programManager = new ProgramManager(gl);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+    const positionBuffer = new Buffer(gl, new Float32Array([
+      -0.3, -0.5,
+      0.3, -0.5,
+      0.0, 0.5
+    ]));
 
     const model1 = new Model(gl, {
       vs,
@@ -168,7 +172,11 @@ const loop = new AnimationLoop({
     const programManager = new ProgramManager(gl);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+    const positionBuffer = new Buffer(gl, new Float32Array([
+      -0.3, -0.5,
+      0.3, -0.5,
+      0.0, 0.5
+    ]));
 
     const model1 = new Model(gl, {
       vs,
