@@ -197,10 +197,7 @@ module.exports = {
     },
     {
       title: 'External Context',
-      componentUrl: resolve(
-        __dirname,
-        './templates/getting-started/example-external-context.jsx'
-      ),
+      componentUrl: resolve(__dirname, './templates/getting-started/example-external-context.jsx'),
       path: 'examples/getting-started/external-context',
       image: 'images/example-hello-triangle.png'
     },
