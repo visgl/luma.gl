@@ -196,6 +196,15 @@ module.exports = {
       image: 'images/example-transform-feedback.jpg'
     },
     {
+      title: 'External Context',
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-external-context.jsx'
+      ),
+      path: 'examples/getting-started/external-context',
+      image: 'images/example-hello-triangle.png'
+    },
+    {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
       path: 'examples/api/animation/',
