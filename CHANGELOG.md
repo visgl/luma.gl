@@ -1,3 +1,8 @@
+## v8.0.0-beta.3
+
+- Small optimizations to texture checks and program updates (#1317)
+- Bump loaders.gl to 2.0-beta (#1318)
+
 ## v8.0.0-beta.2
 
 - Export fp64-arithmetic shader module (#1309)

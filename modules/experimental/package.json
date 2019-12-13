@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "8.0.0-beta.2",
+  "version": "8.0.0-beta.3",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -31,15 +31,15 @@
   },
   "dependencies": {
     "@loaders.gl/images": "^2.0.0-beta",
-    "@luma.gl/constants": "8.0.0-beta.2",
+    "@luma.gl/constants": "8.0.0-beta.3",
     "math.gl": "^3.0.0"
   },
   "peerDependencies": {
+    "@loaders.gl/gltf": "^2.0.0-beta",
     "@luma.gl/engine": "^7.1.0",
     "@luma.gl/gltools": "^7.1.0",
     "@luma.gl/shadertools": "^7.1.0",
-    "@luma.gl/webgl": "^7.1.0",
-    "@loaders.gl/gltf": "^2.0.0-beta"
+    "@luma.gl/webgl": "^7.1.0"
   },
   "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }
