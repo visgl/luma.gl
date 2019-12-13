@@ -1,23 +1,20 @@
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
+import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
-import {GLTFScenegraphLoader, createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
+import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
 test('gltf#loading', t => {
   const {gl} = fixture;
 
-  load('test/data/box.glb', GLTFScenegraphLoader, {gl})
-    .then(result => {
-      t.ok(result.hasOwnProperty('gltf'), 'Should contain gltf property');
+  load('test/data/box.glb', GLTFLoader, {gl})
+    .then(gltf => {
+      const result = createGLTFObjects(gl, gltf);
+
       t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
       t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
-
-      const objects = createGLTFObjects(gl, result.gltf);
-
-      t.ok(objects.hasOwnProperty('scenes'), 'Should contain scenes property');
-      t.ok(objects.hasOwnProperty('animator'), 'Should contain animator property');
 
       t.end();
     })
