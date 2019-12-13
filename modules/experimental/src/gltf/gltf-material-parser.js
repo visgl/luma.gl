@@ -72,7 +72,7 @@ export default class GLTFMaterialParser {
         [this.gl.UNPACK_FLIP_Y_WEBGL]: false
       },
       // Texture2D accepts a promise that returns an image as data (Async Textures)
-      data: gltfTexture.texture.source.getImageAsync()
+      data: gltfTexture.texture.source.image
     });
     this.uniforms[name] = texture;
     this.defineIfPresent(define, define);
