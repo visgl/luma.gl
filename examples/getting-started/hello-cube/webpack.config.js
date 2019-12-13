@@ -9,7 +9,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [new HtmlWebpackPlugin({title: 'Cubemap'})]
+  plugins: [new HtmlWebpackPlugin({title: 'Hello Cube'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module

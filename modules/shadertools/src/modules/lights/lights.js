@@ -29,7 +29,11 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
   pointLights.forEach((pointLight, index) => {
     lightSourceUniforms[`lighting_uPointLight[${index}].color`] = convertColor(pointLight);
     lightSourceUniforms[`lighting_uPointLight[${index}].position`] = pointLight.position;
-    lightSourceUniforms[`lighting_uPointLight[${index}].attenuation`] = pointLight.attenuation || [1, 0, 0];
+    lightSourceUniforms[`lighting_uPointLight[${index}].attenuation`] = pointLight.attenuation || [
+      1,
+      0,
+      0
+    ];
   });
   lightSourceUniforms.lighting_uPointLightCount = pointLights.length;
 

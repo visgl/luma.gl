@@ -202,6 +202,12 @@ module.exports = {
       image: 'images/example-hello-triangle.png'
     },
     {
+      title: 'Hello Cube',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-hello-cube.jsx'),
+      path: 'examples/getting-started/hello-cube/',
+      image: 'images/example-hello-cube.jpg'
+    },
+    {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
       path: 'examples/api/animation/',
