@@ -2,18 +2,14 @@
 /* global document, window */
 import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
+import {GLTFLoader} from '@loaders.gl/gltf';
 import {DracoLoader} from '@loaders.gl/draco';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Timeline} from '@luma.gl/engine';
 import {clear, log, lumaStats} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {
-  GLTFScenegraphLoader,
-  createGLTFObjects,
-  GLTFEnvironment,
-  VRDisplay
-} from '@luma.gl/experimental';
+import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import {Matrix4, radians} from 'math.gl';
 
 const CUBE_FACE_TO_DIRECTION = {
@@ -165,11 +161,12 @@ const DEFAULT_OPTIONS = {
 
 async function loadGLTF(urlOrPromise, gl, options) {
   const data = typeof urlOrPromise === 'string' ? window.fetch(urlOrPromise) : urlOrPromise;
-  const {gltf, scenes, animator} = await parse(data, GLTFScenegraphLoader, {
+  const gltf = await parse(data, GLTFLoader, {
     ...options,
     gl,
     DracoLoader
   });
+  const {scenes, animator} = createGLTFObjects(gl, gltf);
 
   scenes[0].traverse((node, {worldMatrix}) => log.info(4, 'Using model: ', node)());
   return {scenes, animator, gltf};
