@@ -24,18 +24,17 @@ module.exports = {
     // tests are run with aliases set up in node and webpack.
     // This means lint will not find the imported files and generate false warnings
     {
-      files: ['**/test/**/*.js'],
+      // scripts use devDependencies
+      files: ['**/test/**/*.js', 'scripts/**/*.js'],
       rules: {
         'import/no-unresolved': 0,
         'import/no-extraneous-dependencies': 0
       }
     },
-    // scripts use devDependencies
     {
-      files: ['**/scripts/**/*.js'],
+      files: ['examples/**/*.js'],
       rules: {
-        'import/no-unresolved': 0,
-        'import/no-extraneous-dependencies': 0
+        'import/no-unresolved': 0
       }
     }
   ]
