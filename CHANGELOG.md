@@ -1,3 +1,7 @@
+## v8.0.0-beta.4
+
+- Bump math.gl and probe.gl to the latest production versions (#1320)
+
 ## v8.0.0-beta.3
 
 - Small optimizations to texture checks and program updates (#1317)
