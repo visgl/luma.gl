@@ -86,13 +86,13 @@ withParameters(gl, {framebuffer: framebuffer1}, () => {
 
 ### Reading, copying or blitting data from a Framebuffer attachment.
 
-For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/copy-and-blit.md)
+For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/moving-data)
 
-For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/copy-and-blit.md)
+For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/moving-data)
 
-For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/copy-and-blit.md)
+For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/moving-data)
 
-For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/copy-and-blit.md)
+For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/moving-data)
 
 
 ### Using Multiple Render Targets

@@ -4,19 +4,16 @@ A `Group` is a subclass of `ScenegraphNode` that holds a reference to a mesh wit
 
 A `Model` holds all the data necessary to draw an object, e.g.:
 
-* **shaders** (via a [`Program`](/docs/api-reference/webgl/program.md) instance)
+* **shaders** (via a [`Program`](/docs/api-reference/webgl/program) instance)
 * **uniforms** these can also reference textures.
-* **vertex attributes** (holds a [`Mesh`] or a [`Geometry`](/docs/api-reference/core/geometry.md) instance, plus any additional attributes for instanced rendering)
+* **vertex attributes** (holds a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
 The `Model` class also provides the following features:
 
-* Shader Module integration: [see `Shader Modules`](/docs/developer-guide/shadertools/README.md)
+* Shader Module integration: [see `Shader Assembly`](/docs/api-reference/shadertools/assemble-shaders)
 * Automatic creation of GPU `Buffer`s from typed array attributes
 * Detailed debug logging of draw calls
 * Exposes the functionality provided by the managed WebGL resources
-* Animation of uniforms
-* Detailed stats including timing of draw calls
-
 
 ## Usage
 
@@ -323,7 +320,7 @@ Use a `Geometry` instance to define attribute buffers
 
 ### setAttributes(attributes : Object) : Model
 
-Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array.md))
+Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array))
 
 
 ## Remarks

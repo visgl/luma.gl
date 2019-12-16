@@ -1,6 +1,6 @@
 # Hello Triangle
 
-This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs. It is assumed you've set up your development environment as described in [Getting Started](./README.md). Your `index.js` file should look like the following:
+This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs. It is assumed you've set up your development environment as described in [Getting Started](/docs/getting-started). Your `index.js` file should look like the following:
 
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
@@ -105,7 +105,7 @@ Our `onRender` method is comparitavely much simpler:
     model.draw();
   }
 ```
-This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background. See the live demo [here](/examples/getting-started/hello-triangle).
+This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background. See the live demo [here](../../../examples/getting-started/hello-triangle).
 
 The entire application should look like the following:
 ```js

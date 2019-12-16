@@ -99,7 +99,7 @@ Reset timeline time to `0`.
 
 ### attachAnimation(animation: Object, [channelHandle : Number]) : Number
 
-Attach an animation object (can be any object with a `setTime` method, e.g. [KeyFrames](./key-frames.md), `GLTFAnimator`) to the timeline, optionally attached to a specific channel referenced by `channelHandle`.
+Attach an animation object (can be any object with a `setTime` method, e.g. [KeyFrames](/docs/api-reference/engine/animation/key-frames), `GLTFAnimator`) to the timeline, optionally attached to a specific channel referenced by `channelHandle`.
 The animation object's time will be updated whenever the timeline updates. Returns a handle that can be used to reference the animation attachement.
 
 ### detachAnimation(handle : Number)

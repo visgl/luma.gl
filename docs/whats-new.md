@@ -6,7 +6,7 @@ Date: September 19, 2019
 
 ### Program Management
 
-luma.gl introduces the [ProgramManager](/docs/api-reference/core/resource-management/program-manager.md) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
+luma.gl introduces the [ProgramManager](/docs/api-reference/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
 - Redundant shader compilation and linking is avoided.
 - Redundant program switching (among the [most expensive](https://computergraphics.stackexchange.com/a/46) GPU state changes) while rendering is avoided.
 

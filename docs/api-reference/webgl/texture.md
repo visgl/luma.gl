@@ -3,9 +3,9 @@
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
-* [`Texture2D`](/docs/api-reference/webgl/texture-2d.md) - Contains a "normal" image texture
-* [`TextureCube`](/docs/api-reference/webgl/texture-cube.md) - Holds 6 textures representing sides of a cube.
-* [`Texture3D`](/docs/api-reference/webgl/texture-3d.md) (WebGL 2) - Holds a "stack" of textures which enables 3D interpolation.
+* [`Texture2D`](/docs/api-reference/webgl/texture-2d) - Contains a "normal" image texture
+* [`TextureCube`](/docs/api-reference/webgl/texture-cube) - Holds 6 textures representing sides of a cube.
+* [`Texture3D`](/docs/api-reference/webgl/texture-3d) (WebGL 2) - Holds a "stack" of textures which enables 3D interpolation.
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
@@ -14,7 +14,7 @@ Note that textures have a lot of optional capabilities made available by extensi
 
 ## Usage
 
-* For additional usage examples, `Texture` inherits from [`Resource`](/docs/api-reference/webgl/resource.md).
+* For additional usage examples, `Texture` inherits from [`Resource`](/docs/api-reference/webgl/resource).
 
 Configuring a Texture
 ```js
@@ -67,13 +67,13 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 ### constructor(gl : WebGLRenderingContext, props : Object)
 
 The texture class cannot be constructed directly. It is a base class that provides common methods the the concrete texture classes.
-* [`Texture2D`](/docs/api-reference/webgl/texture-2d.md),
-* [`TextureCube`](/docs/api-reference/webgl/texture-cube.md) and
-* [`Texture3D`](/docs/api-reference/webgl/texture-3d.md).
+* [`Texture2D`](/docs/api-reference/webgl/texture-2d),
+* [`TextureCube`](/docs/api-reference/webgl/texture-cube) and
+* [`Texture3D`](/docs/api-reference/webgl/texture-3d).
 
 The constructors for these classes should be used to create textures. They constructors all take common parameters, many of which are specified in this document.
 
-* Pixel store parameters are described in [`State Management`](/docs/api-reference/webgl/context/get-parameters.md).
+* Pixel store parameters are described in [`State Management`](/docs/api-reference/gltools/parameter-setting).
 
 ### resize(options : Object) : Texture2D
 

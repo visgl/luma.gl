@@ -1,6 +1,6 @@
 # Shader Modules
 
-This tutorial will demonstrate how to use luma.gl shader modules to make reusable bits of functionality and dynamically insert them into your shaders. Most of this will be fairly similar to the [Hello Triangle](/docs/get-started/hello-triangle.md) app.
+This tutorial will demonstrate how to use luma.gl shader modules to make reusable bits of functionality and dynamically insert them into your shaders. Most of this will be fairly similar to the [Hello Triangle](/docs/getting-started/hello-triangle) app.
 
 We'll start by setting up our imports and defining our base vertex and fragment shaders:
 ```js

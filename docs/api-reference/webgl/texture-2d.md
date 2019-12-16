@@ -2,7 +2,7 @@
 
 2D textures hold basic "single image" textures (although technically they can contain multiple mipmap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
 
-Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 ## Usage
@@ -110,4 +110,4 @@ const texture1 = new Texture2D(gl, {data: loadImage(url)});
 Notes:
 * setting `mipmaps` to true when `format` set to `RGB32F` will fail, even though `RGB32F` is supported texture format (with EXT_color_buffer_float), it is not supported as renderable format.
 
-Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture.md). Pixel store parameters are specified in [State Management](/docs/api-reference/webgl/context/get-parameters.md)
+Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture). Pixel store parameters are specified in [State Management](/docs/api-reference/gltools/parameter-setting)

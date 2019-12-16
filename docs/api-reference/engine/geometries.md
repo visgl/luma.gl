@@ -1,6 +1,6 @@
 # Built-in Geometries
 
-**@luma.gl/engine** provides several built in geometry primitives (subclasses of [Geometry](/docs/api-reference/engine/geometry.md)). The generated geometry instances will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
+**@luma.gl/engine** provides several built in geometry primitives (subclasses of [Geometry](/docs/api-reference/engine/geometry)). The generated geometry instances will have `indices` and `POSITION`, `NORMAL` and `TEXCOORD_0` attributes.
 
 ## ConeGeometry
 

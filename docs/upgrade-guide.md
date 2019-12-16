@@ -2,7 +2,7 @@
 
 ## Upgrading from v7.3 to v8.0
 
-The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new.md)) for details).
+The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new)) for details).
 
 ### Module Restructure
 

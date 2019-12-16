@@ -2,7 +2,7 @@
 
 3D textures hold basic volumetric textures and can be thought of 3-dimentional arrays with a width, height and depth. They hold image memory of a certain format and size, determined at initialization time. They can be sampled in shaders using the `texture` function with a 3D texture coordinate.
 
-Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture.md) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
+Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
 
 ## Usage
@@ -27,7 +27,7 @@ if (Texture3D.isSupported()) {
 
 ## Methods
 
-`Texture3D` is a subclass of the [Texture](texture.md) and [Resource](resource.md) classes and inherit all methods and members of those classes. Note that `setSubImageData` is not currently supported for 3D textures.
+`Texture3D` is a subclass of the [Texture](/docs/api-reference/webgl/texture) and [Resource](/docs/api-reference/webgl/resource) classes and inherit all methods and members of those classes. Note that `setSubImageData` is not currently supported for 3D textures.
 
 
 ### Texture3D.isSupported(gl)
@@ -51,7 +51,7 @@ const texture = new Texture3D(gl, {
 ```
 
 * `gl` (WebGLRenderingContext) - gl context
-* `data`=`null` (*) - See below.
+* `data`=`null` (\*) - See below.
 * `width`=`0` (*Number*) - The width of the texture.
 * `height`=`0` (*Number*) - The height of the texture.
 * `depth`=`0` (*Number*) - The depth of the texture.
