@@ -144,7 +144,7 @@ const ARRAY_UNIFORM_SIZE = {
 const WEBGL1_GOOD_UNIFORMS_ARRAY = {
   f: new Float32Array([1.1, 2.4, 6.5, -10.4, 25]),
   i: new Int32Array([40, -103, 34, 87, 26]),
-  b: new Int32Array([false, false, true, true, false])
+  b: [false, false, true, true, false]
 };
 test('WebGL#Uniforms pre verify uniforms', t => {
   t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS, 'Uniform values are well formed'));
@@ -186,6 +186,8 @@ const getExpectedUniformValues = () => {
       for (let i = 0; i < arrayLen; i++) {
         result[`${uniformName}[${i}]`] = value.slice(uniformSize * i, uniformSize * (i + 1));
       }
+    } else if (uniformName.startsWith('bv')) {
+      result[uniformName] = Array.from(value).map(Boolean);
     } else {
       result[uniformName] = value;
     }
