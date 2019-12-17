@@ -1,5 +1,45 @@
 # What's New
 
+## Version 8.0
+
+Date: December 16, 2019
+
+### Performance
+
+The key focus of luma.gl v8.0 was optimizing performance. Compared to v7.3, the latest release shows a **2x** improvement in render time on the luma.gl stress test (1 million textured cubes), as detailed below:
+
+|        |  7.3  |8.0   |Improvement|
+|--------|-------|------|-----------|
+|CPU Time| 30ms  | 16ms | 14ms (47%)|
+|GPU Time| 26ms  | 21ms | 5ms  (19%)|
+
+luma.gl's optimizations also contributed significantly to deck.gl's performance gains in v8.0, leading to a **3x** improvement over its prior release on the deck.gl stress test (rendering 100,000 `ScatterplotLayer` instances):
+
+|        |  7.3  |8.0   |Improvement|
+|--------|-------|------|-----------|
+|CPU Time| 76ms  | 26ms | 50ms (66%)|
+|GPU Time| 17ms  | 10ms | 7ms  (41%)|
+
+Stress tests were run on a Macbook Pro 2018, OSX, 2.6 GHz Intel Core i7, Radeon Pro 560X 4 GB.
+
+### Streamlined API
+
+luma.gl v8.0 also brings with it a major simplification of the API and streamlining of architecture. The number of modules as been reduced from 14 to 9, each with a clearly defined purpose and relationship to other modules:
+
+- Low-level
+  - **constants**: WebGL 1 and 2 enums.
+  - **gltools**: Tools for polyfilling, intrumenting and tracking state for WebGL contexts.
+  - **shadertools**: Tools for creating and composing re-usable GLSL shader modules.
+- Mid-level
+  - **webgl**: WebGL 1 and 2 wrapper classes.
+- High-level
+  - **engine**: Higher-level 3D graphics abstractions and resource management.
+- Utilities
+  - **debug**: Debug instrumentation for WebGL contexts and luma.gl classes.
+  - **test-utils**: Testing utilities.
+  - **core**: Selected re-exports from other modules.
+  - **experimental**: Unfinished and unsupported features.
+
 ## Version 7.3
 
 Date: September 19, 2019
