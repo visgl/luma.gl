@@ -1,6 +1,6 @@
 # Hello Instancing (Mid-level)
 
-In this tutorial, we'll work through how to do instanced drawing with luma.gl's mid-level APIs. This will involve using luma.gl's WebGL wrappers to do the drawing instead of the higher-level `Model`. We'll start from the [high-level app](./hello-instancing-high.md) we created. First we need to install the `shadertools` module so we can compose shaders without the `Model` class:
+In this tutorial, we'll work through how to do instanced drawing with luma.gl's mid-level APIs. This will involve using luma.gl's WebGL wrappers to do the drawing instead of the higher-level `Model`. We'll start from the [high-level app](/docs/getting-started/hello-instancing-high) we created. First we need to install the `shadertools` module so we can compose shaders without the `Model` class:
 ```bash
 npm i @luma.gl/shadertools
 ```

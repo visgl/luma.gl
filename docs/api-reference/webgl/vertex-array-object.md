@@ -6,7 +6,7 @@ However, the use of `VertexArrayObject` is problematic in WebGL 1. While it is c
 
 Therefore, in basic WebGL environments where the `VertexArrayObject` is not supported, luma.gl ensures that one ("fake") instance of the `VertexArrayObject` class can still be obtained, emulating the default (`null` handle) `VertexArrayObject`. This instance has the `isDefaultArray` flag set, and applications can adapt their behavior accordingly, while still using the same API to manage vertex attributes, albeit with a small performance loss. Since there is a considerable amount of work required to handle both cases, luma.gl also provides a higher level `VertexArray` class that works around these issues and provided additional conveniences.
 
-> It is usually not necessary to create neither `VertexArrayObject` nor `VertexArray` instances in luma.gl applications. It is often simpler to just provides attributes directly to the [`Model`](/docs/api-reference/core/model.md) class. Still, it can be useful to review this documentation to understand how attributes are handled by WebGL.
+> It is usually not necessary to create neither `VertexArrayObject` nor `VertexArray` instances in luma.gl applications. It is often simpler to just provides attributes directly to the [`Model`](/docs/api-reference/engine/model) class. Still, it can be useful to review this documentation to understand how attributes are handled by WebGL.
 
 For more information on WebGL `VertexArrayObject`s, see the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
 

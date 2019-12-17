@@ -137,7 +137,7 @@ Note: `uniforms` is ignored if `getUniforms` is provided.
 
 ## inject
 
-A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md) documentation for more information on shader hooks.
+A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders) documentation for more information on shader hooks.
 
 For example:
 

@@ -1,6 +1,6 @@
 # Hello Instancing (High-level)
 
-In this tutorial, we'll work through how to do instanced drawing with luma.gl's high-level APIs. We'll also take this opportunity to introduce luma.gl shader modules. We'll begin with our [hello triangle](./hello-triangle.md) app and make some modifications. First let's create a shader module:
+In this tutorial, we'll work through how to do instanced drawing with luma.gl's high-level APIs. We'll also take this opportunity to introduce luma.gl shader modules. We'll begin with our [hello triangle](/docs/getting-started/hello-triangle) app and make some modifications. First let's create a shader module:
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';

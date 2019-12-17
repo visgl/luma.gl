@@ -1,12 +1,12 @@
 # Accessors
 
-"Buffer accessor objects" (or "accessor objects", or just "accessors" for short) are used to describe the structure of data contained in WebGL buffers (for more information see [`Buffers`](developers-guide/buffers.md)).
+"Buffer accessor objects" (or "accessor objects", or just "accessors" for short) are used to describe the structure of data contained in WebGL buffers (for more information see [`Buffers`](/docs/api-reference/webgl/buffer)).
 
 When using `Buffer`s as input to shader programs, applications must tell WebGL how the data in the buffer is formatted, so that the GPU knows how to access buffers' memory. To enable applications to specify how the buffer memory should be accessed, luma.gl APIs that set attribute buffers accept buffer "accessor objects".
 
 ## Accessor Object Fields
 
-This is an overview of the object accessor fields that are available to applications to define format descriptions. These objects can contain the following fields, this is an excerpt from [`Accessor`](api-reference/webgl/accessor.md).
+This is an overview of the object accessor fields that are available to applications to define format descriptions. These objects can contain the following fields, this is an excerpt from [`Accessor`](/docs/api-reference/webgl/accessor).
 
 | Property    | Auto Deduced | Default    | Comment |
 | ---         | ---          | ---        | ---        | ---     |
@@ -34,7 +34,7 @@ All three methods have their uses: the first option gives the applications full 
 
 ## Accessor Class vs Accessor Objects
 
-luma.gl provides the [`Accessor`](api-reference/webgl/accessor.md) helper class to help you work with accessor objects. For instance, the `Accessor` class supports merging of partial accessor objects, see below.
+luma.gl provides the [`Accessor`](/docs/api-reference/webgl/accessor) helper class to help you work with accessor objects. For instance, the `Accessor` class supports merging of partial accessor objects, see below.
 
 Note that it is not necessary to use the `Accessor` class, as plain old JavaScript objects with the appropriate fields are also accepted by the various APIs that accept accessors. Use the style that works best for your application.
 

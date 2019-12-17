@@ -2,7 +2,7 @@
 
 Many modern devices support retina or UHD displays can render 2 or 4 times the number of pixels indicated by the CSS dimensions. By rendering to a drawing surface that matches the device and then down sampling it to the smaller (CSS) area, sharper images can be produced but at the cost of rendering more pixels.
 
-The [resizeGLContext](/docs/api-reference/gltools/context.md) function takes a `useDevicePixels` option that can resize the drawing buffer without resizing the the canvas as displayed on the screen. The following functions are provided to simplify calculations between the display size and device size of the drawing buffer:
+The [resizeGLContext](/docs/api-reference/gltools/context) function takes a `useDevicePixels` option that can resize the drawing buffer without resizing the the canvas as displayed on the screen. The following functions are provided to simplify calculations between the display size and device size of the drawing buffer:
 
 ### cssToDeviceRatio(gl): Number
 

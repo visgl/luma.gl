@@ -65,7 +65,7 @@ const gl = createGLContext(options);
 | `throwOnError`          | `true`  | Normally the context will throw an error on failure. If `false`, it will log to console instead. |
 | `break`          | `[]`  | Insert a break point (`debugger`) if one of the listed gl functions is called. |
 | `manageState`           | `true`  | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to. |
-| `debug`                 | `false` | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug.md). |
+| `debug`                 | `false` | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
 | `canvas`                | `null`  | A *string* containing the `id` of an existing HTML element or a *DOMElement* instance. If `null` or not provided, a new canvas will be created. |
 | `alpha`                 | `true`  | Default render target has an alpha buffer. |
 | `depth`                 | `true`  | Default render target has a depth buffer of at least 16 bits. |

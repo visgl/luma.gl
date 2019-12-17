@@ -1,6 +1,6 @@
 # Program
 
-A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader.md) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
+A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
 ## Usage
 
