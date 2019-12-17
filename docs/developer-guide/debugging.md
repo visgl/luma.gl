@@ -33,7 +33,7 @@ Buffers will also have their first values checked to ensure that they are not Na
 
 ## Debug Module
 
-Importing `@luma.gl/debug` will enable creation of debug contexts for several **luma.gl** functions. See [@luma.gl/debug](/docs/api-reference/debug.md) for more information.
+Importing `@luma.gl/debug` will enable creation of debug contexts for several **luma.gl** functions. See [@luma.gl/debug](/docs/api-reference/debug) for more information.
 
 ```js
 import {createGLContext} from '@luma.gl/gltools';

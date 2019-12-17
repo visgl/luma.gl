@@ -47,12 +47,12 @@ Add one or more `ScenegraphNode` objects to the `GroupNode`.
 
 `group.add(model);`
 
-A variable argument list of [ScenegraphNode]() instances.
+A variable argument list of [ScenegraphNode](/docs/api-reference/experimental/scenegraph/scenegraph-node) instances.
 
 
 ### remove(node: Node)
 
-Removes an [ScenegraphNode](object-3d.html) object from the GroupNode.
+Removes an [ScenegraphNode](/docs/api-reference/experimental/scenegraph/scenegraph-node) object from the GroupNode.
 
     group.remove(model);
 
