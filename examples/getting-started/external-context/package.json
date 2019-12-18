@@ -7,7 +7,8 @@
   "dependencies": {
     "@luma.gl/gltools": "^8.0.0-alpha.9",
     "@luma.gl/webgl": "^8.0.0-alpha.9",
-    "@luma.gl/engine": "^8.0.0-alpha.9"
+    "@luma.gl/engine": "^8.0.0-alpha.9",
+    "core-js": "^3.5.0"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",
