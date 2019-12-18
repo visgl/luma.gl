@@ -1,5 +1,6 @@
 import {AnimationLoop, Transform, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Animation via transform feedback.
@@ -50,6 +51,7 @@ void main() {
 export default class AppAnimationLoop extends AnimationLoop {
   constructor() {
     super({debug: true});
+    this.isDemoSupported = true;
   }
 
   static getInfo() {
@@ -57,6 +59,11 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
+    this.isDemoSupported = isWebGL2(gl);
+    if (!this.isDemoSupported) {
+      return {};
+    }
+
     const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
     const transform = new Transform(gl, {
@@ -89,6 +96,10 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender({gl, transform, model}) {
+    if (!this.isDemoSupported) {
+      return;
+    }
+
     transform.run();
 
     clear(gl, {color: [0, 0, 0, 1]});
@@ -98,8 +109,12 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onFinalize({transform, model}) {
-    transform.delete();
-    model.delete();
+    if (transform) {
+      transform.delete();
+    }
+    if (model) {
+      model.delete();
+    }
   }
 }
 

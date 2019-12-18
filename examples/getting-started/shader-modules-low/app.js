@@ -44,6 +44,11 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   start(props) {
     const canvas = this._getCanvas(props);
 
+    this.isDemoSupported = Boolean(canvas.getContext('webgl'));
+    if (!this.isDemoSupported) {
+      return;
+    }
+
     const gl = canvas.getContext('webgl');
     gl.clearColor(0, 0, 0, 1);
 
@@ -139,10 +144,18 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 
   stop() {
+    if (!this.isDemoSupported) {
+      return;
+    }
+
     cancelAnimationFrame(this.resources.rafHandle);
   }
 
   delete() {
+    if (!this.isDemoSupported) {
+      return;
+    }
+
     const {gl, positionBuffer, program1, program2} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);
