@@ -1,4 +1,5 @@
 /* global window, requestAnimationFrame, cancelAnimationFrame */
+import 'core-js';
 import {Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 import {instrumentGLContext} from '@luma.gl/gltools';
@@ -15,8 +16,9 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
 
   start(props) {
     const canvas = this._getCanvas(props);
-
-    const gl = instrumentGLContext(canvas.getContext('webgl'));
+    const gl = instrumentGLContext(
+      canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    );
     gl.clearColor(0, 0, 0, 1);
 
     const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));

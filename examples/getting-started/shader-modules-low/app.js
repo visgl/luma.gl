@@ -1,4 +1,5 @@
 /* global window, requestAnimationFrame, cancelAnimationFrame */
+import 'core-js';
 import {assembleShaders} from '@luma.gl/shadertools';
 import {MiniAnimationLoop} from '../../utils';
 
@@ -43,8 +44,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
 
   start(props) {
     const canvas = this._getCanvas(props);
-
-    const gl = canvas.getContext('webgl');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     gl.clearColor(0, 0, 0, 1);
 
     // Program 1

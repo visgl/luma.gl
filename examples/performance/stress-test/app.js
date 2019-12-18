@@ -226,8 +226,12 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onFinalize({opaqueCubes, transparentCubes}) {
-    opaqueCubes.forEach(c => c.delete());
-    transparentCubes.forEach(c => c.delete());
+    if (opaqueCubes) {
+      opaqueCubes.forEach(c => c.delete());
+    }
+    if (transparentCubes) {
+      transparentCubes.forEach(c => c.delete());
+    }
   }
 }
 
