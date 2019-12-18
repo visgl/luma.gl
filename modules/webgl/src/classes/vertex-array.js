@@ -305,7 +305,8 @@ export default class VertexArray {
     }
 
     // Resolve the partial accessors into a final accessor
-    const accessor = Accessor.resolve(accessInfo.accessor, valueAccessor, appAccessor);
+    const currentAccessor = this.accessors[location] || {};
+    const accessor = Accessor.resolve(accessInfo.accessor, currentAccessor, valueAccessor, appAccessor);
 
     const {size, type} = accessor;
     assert(Number.isFinite(size) && Number.isFinite(type));

@@ -37,10 +37,23 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   module: {
     rules: [
       {
-        // Unfortunately, webpack doesn't import library sourcemaps on its own...
         test: /\.js$/,
-        use: ['source-map-loader'],
+        loader: 'source-map-loader',
         enforce: 'pre'
+      },
+      {
+        // Compile ES2015 using babel
+        test: /\.js$/,
+        loader: 'babel-loader',
+        exclude: /node_modules/,
+        options: {
+          presets: [['@babel/preset-env', {forceAllTransforms: true, corejs: 3}]],
+          // all of the helpers will reference the module @babel/runtime to avoid duplication
+          // across the compiled output.
+          plugins: [
+            '@babel/transform-runtime'
+          ]
+        }
       }
     ]
   }

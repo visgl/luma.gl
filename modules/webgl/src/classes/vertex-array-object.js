@@ -13,6 +13,7 @@ const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArrayObject extends Resource {
   static isSupported(gl, options = {}) {
+    return false;
     // Attribute 0 can not be disable on most desktop OpenGL based browsers
     // and on iOS Safari browser.
     if (options.constantAttributeZero) {
