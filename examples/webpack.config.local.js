@@ -50,9 +50,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
           presets: [['@babel/preset-env', {forceAllTransforms: true, corejs: 3}]],
           // all of the helpers will reference the module @babel/runtime to avoid duplication
           // across the compiled output.
-          plugins: [
-            '@babel/transform-runtime'
-          ]
+          plugins: ['@babel/transform-runtime']
         }
       }
     ]
