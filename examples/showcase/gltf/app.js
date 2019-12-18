@@ -166,7 +166,7 @@ async function loadGLTF(urlOrPromise, gl, options) {
     gl,
     DracoLoader
   });
-  const {scenes, animator} = createGLTFObjects(gl, gltf);
+  const {scenes, animator} = createGLTFObjects(gl, gltf, options);
 
   scenes[0].traverse((node, {worldMatrix}) => log.info(4, 'Using model: ', node)());
   return {scenes, animator, gltf};
