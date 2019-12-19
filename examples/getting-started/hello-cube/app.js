@@ -77,7 +77,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(gl, {color: [0, 0, 0, 1], depth: true});
 
     model.setUniforms({uMVP: mvpMatrix}).draw();
   }

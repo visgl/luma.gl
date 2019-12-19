@@ -114,7 +114,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       .multiplyRight(viewMatrix)
       .multiplyRight(modelMatrix);
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(gl, {color: [0, 0, 0, 1], depth: true});
 
     model.setUniforms({uMVP: mvpMatrix, uModel: modelMatrix}).draw();
   }
