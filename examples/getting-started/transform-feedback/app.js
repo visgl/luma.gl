@@ -6,6 +6,8 @@ const INFO_HTML = `
 Animation via transform feedback.
 `;
 
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+
 const transformVs = `\
 #version 300 es
 #define SIN2 0.03489949
@@ -51,7 +53,6 @@ void main() {
 export default class AppAnimationLoop extends AnimationLoop {
   constructor() {
     super({debug: true});
-    this.isDemoSupported = true;
   }
 
   static getInfo() {
@@ -59,8 +60,8 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
-    this.isDemoSupported = isWebGL2(gl);
-    if (!this.isDemoSupported) {
+    this.demoNotSupported = !isWebGL2(gl);
+    if (this.demoNotSupported) {
       return {};
     }
 
@@ -96,7 +97,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender({gl, transform, model}) {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
 
@@ -115,6 +116,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (model) {
       model.delete();
     }
+  }
+
+  getAltText() {
+    return ALT_TEXT;
   }
 }
 

@@ -3,7 +3,7 @@ import GL from '@luma.gl/constants';
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear, Texture2D, Buffer} from '@luma.gl/webgl';
 import {dirlight} from '@luma.gl/shadertools';
-import {withParameters} from '@luma.gl/gltools';
+import {withParameters, isWebGL2} from '@luma.gl/gltools';
 import {Matrix4, radians} from 'math.gl';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {getRandom} from '../../utils';
@@ -13,6 +13,8 @@ const INFO_HTML = `
   <div id="info-stats"></div>
 <p>
 `;
+
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const NUM_DRAWCALLS = 5000;
 const CUBES_PER_DRAWCALL = 200;
@@ -95,12 +97,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  constructor(props = {}) {
-    super(props);
-    this.isDemoSupported = true;
-  }
-
   onInitialize({gl, framebuffer}) {
+    this.demoNotSupported = !isWebGL2(gl);
+    if (this.demoNotSupported) {
+      return {};
+    }
+
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
@@ -155,6 +157,10 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender(props) {
+    if (this.demoNotSupported) {
+      return;
+    }
+
     rotationAngle += 0.01;
 
     const {
@@ -232,6 +238,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (transparentCubes) {
       transparentCubes.forEach(c => c.delete());
     }
+  }
+
+  getAltText() {
+    return ALT_TEXT;
   }
 }
 
