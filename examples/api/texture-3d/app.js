@@ -167,10 +167,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     }
   }
 
-  isSupported() {
-    return this.demoNotSupported;
-  }
-
   getAltText() {
     return ALT_TEXT;
   }
