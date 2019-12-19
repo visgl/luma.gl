@@ -54,9 +54,16 @@ export default class AnimationLoopExamplePage extends Component {
     super(props);
     const {AnimationLoop} = this.props;
     this.animationLoop = new AnimationLoop();
+    this.state = {
+      supported: true
+    };
   }
 
   componentDidMount() {
+    if (!this.state.supported) {
+      return;
+    }
+
     const {showStats} = this.props;
 
     this.animationLoop._setDisplay(new VRDisplay());
@@ -72,6 +79,12 @@ export default class AnimationLoopExamplePage extends Component {
     // Start the actual example
     this.animationLoop.start(this.props);
 
+    this.animationLoop.waitForRender().then(() => {
+      if (this.animationLoop.demoNotSupported) {
+        this.setState({supported: false});
+      }
+    });
+
     // animationLoop.stats.reset();
 
     if (showStats) {
@@ -80,6 +93,10 @@ export default class AnimationLoopExamplePage extends Component {
   }
 
   componentWillUnmount() {
+    if (!this.state.supported) {
+      return;
+    }
+
     this.animationLoop.stop(this.props);
     this.animationLoop.delete();
     this.animationLoop = null;
@@ -141,9 +158,7 @@ export default class AnimationLoopExamplePage extends Component {
   render() {
     const {exampleConfig: {title, path} = {}, panel = true, stats} = this.props;
 
-    const notSupported = this.animationLoop.isSupported && !this.animationLoop.isSupported();
-
-    if (notSupported) {
+    if (!this.state.supported) {
       const altText = this.animationLoop.getAltText ? this.animationLoop.getAltText() : DEFAULT_ALT_TEXT;
       return (
         <div style={STYLES.EXAMPLE_NOT_SUPPPORTED}>

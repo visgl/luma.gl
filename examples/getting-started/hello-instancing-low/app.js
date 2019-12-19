@@ -7,6 +7,8 @@ const INFO_HTML = `
 Instanced triangles using luma.gl's low-level API
 `;
 
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER DOESN'T SUPPORT IT";
+
 export default class AppAnimationLoop extends MiniAnimationLoop {
   static getInfo() {
     return INFO_HTML;
@@ -15,8 +17,8 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   start(props) {
     const canvas = this._getCanvas(props);
 
-    this.isDemoSupported = Boolean(canvas.getContext('webgl'));
-    if (!this.isDemoSupported) {
+    this.demoNotSupported = !canvas.getContext('webgl');
+    if (this.demoNotSupported) {
       return;
     }
 
@@ -126,14 +128,14 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 
   stop() {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
     cancelAnimationFrame(this.resources.rafHandle);
   }
 
   delete() {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
 
@@ -143,6 +145,10 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
     gl.deleteBuffer(offsetBuffer);
     gl.deleteProgram(program);
     gl.deleteVertexArray(vertexArray);
+  }
+
+  getAltText() {
+    return ALT_TEXT;
   }
 }
 

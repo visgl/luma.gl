@@ -21,7 +21,7 @@ const INFO_HTML = `
 /* eslint-enable max-len */
 
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const EMIT_VS = `\
 #version 300 es
@@ -148,15 +148,10 @@ export default class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  constructor(props = {}) {
-    super(Object.assign(props));
-    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
-    this.isDemoSupported = true;
-  }
   /* eslint-disable max-statements */
   onInitialize({canvas, gl, width, height}) {
-    this.isDemoSupported = isWebGL2(gl);
-    if (!this.isDemoSupported) {
+    this.demoNotSupported = !isWebGL2(gl);
+    if (this.demoNotSupported) {
       log.error(ALT_TEXT)();
       return {};
     }
@@ -253,7 +248,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     time,
     pickingFramebuffer
   }) {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
     transform.run({
@@ -304,10 +299,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     if (transform) {
       transform.delete();
     }
-  }
-
-  isSupported() {
-    return this.isDemoSupported;
   }
 
   getAltText() {
