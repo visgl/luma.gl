@@ -13,11 +13,11 @@
     "@loaders.gl/draco": "^2.0.0-beta",
     "@loaders.gl/gltf": "^2.0.0-beta",
     "@loaders.gl/polyfills": "^2.0.0-beta",
-    "@luma.gl/experimental": "^8.0.0-alpha.9",
-    "@luma.gl/constants": "^8.0.0-alpha.9",
-    "@luma.gl/webgl": "^8.0.0-alpha.9",
-    "@luma.gl/gltools": "^8.0.0-alpha.9",
-    "@luma.gl/engine": "^8.0.0-alpha.9",
+    "@luma.gl/experimental": "^8.0.0",
+    "@luma.gl/constants": "^8.0.0",
+    "@luma.gl/webgl": "^8.0.0",
+    "@luma.gl/gltools": "^8.0.0",
+    "@luma.gl/engine": "^8.0.0",
     "math.gl": "^3.0.0"
   },
   "devDependencies": {
