@@ -38,7 +38,7 @@ post-processing effect.
 
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBLG2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const QUAD_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line
 const NUM_ROWS = 5;
@@ -240,15 +240,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  constructor(props = {}) {
-    super(props);
-    // Default value is true, so GL context is always created to verify wheter it is WebGL2 or not.
-    this.isDemoSupported = true;
-  }
-
-  onInitialize({gl, _animationLoop}) {
-    this.isDemoSupported = isWebGL2(gl);
-    if (!this.isDemoSupported) {
+  onInitialize({gl}) {
+    this.demoNotSupported = !isWebGL2(gl);
+    if (this.demoNotSupported) {
       return {};
     }
 
@@ -445,7 +439,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     dofUniforms,
     dofUniformsLayout
   }) {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
 
@@ -549,10 +543,6 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
 
     dofUniforms.unbind();
-  }
-
-  isSupported() {
-    return this.isDemoSupported;
   }
 
   getAltText() {

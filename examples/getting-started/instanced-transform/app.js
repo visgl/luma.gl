@@ -11,6 +11,8 @@ Transform feedback on an instanced cube
 </p>
 `;
 
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+
 const PI2 = Math.PI * 2;
 
 const random = getRandom();
@@ -95,8 +97,8 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
-    this.isDemoSupported = isWebGL2(gl);
-    if (!this.isDemoSupported) {
+    this.demoNotSupported = !isWebGL2(gl);
+    if (this.demoNotSupported) {
       return {};
     }
 
@@ -188,7 +190,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender({gl, aspect, model, transform, projectionMatrix}) {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
 
@@ -206,11 +208,15 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onFinalize({model, transform}) {
-    if (!this.isDemoSupported) {
+    if (this.demoNotSupported) {
       return;
     }
     transform.delete();
     model.delete();
+  }
+
+  getAltText() {
+    return ALT_TEXT;
   }
 }
 

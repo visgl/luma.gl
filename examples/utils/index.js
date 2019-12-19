@@ -15,6 +15,10 @@ export class MiniAnimationLoop {
 
   onFinalize() {}
 
+  waitForRender() {
+    return Promise.resolve();
+  }
+
   _setDisplay() {}
 
   _getCanvas(props = {}) {
