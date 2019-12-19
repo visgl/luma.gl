@@ -215,7 +215,10 @@ module.exports = {
     },
     {
       title: 'Instanced Transform',
-      componentUrl: resolve(__dirname, './templates/getting-started/example-instanced-transform.jsx'),
+      componentUrl: resolve(
+        __dirname,
+        './templates/getting-started/example-instanced-transform.jsx'
+      ),
       path: 'examples/getting-started/instanced-transform/',
       image: 'images/example-instanced-transform.jpg'
     },

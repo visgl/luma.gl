@@ -24,6 +24,7 @@
         { "entry": "docs/getting-started/transform-feedback" },
         { "entry": "docs/getting-started/external-context" },
         { "entry": "docs/getting-started/hello-cube" },
+        { "entry": "docs/getting-started/lighting" },
         { "entry": "docs/getting-started/whats-next" }
       ]
     },
