@@ -208,6 +208,18 @@ module.exports = {
       image: 'images/example-hello-cube.jpg'
     },
     {
+      title: 'Lighting',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-lighting.jsx'),
+      path: 'examples/getting-started/lighting/',
+      image: 'images/example-lighting.jpg'
+    },
+    {
+      title: 'Instanced Transform',
+      componentUrl: resolve(__dirname, './templates/getting-started/example-instanced-transform.jsx'),
+      path: 'examples/getting-started/instanced-transform/',
+      image: 'images/example-instanced-transform.jpg'
+    },
+    {
       title: 'Animation',
       componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
       path: 'examples/api/animation/',

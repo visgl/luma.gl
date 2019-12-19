@@ -1,6 +1,6 @@
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
 import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from 'math.gl';
 import {getRandom} from '../../utils';
@@ -95,6 +95,11 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onInitialize({gl}) {
+    this.isDemoSupported = isWebGL2(gl);
+    if (!this.isDemoSupported) {
+      return {};
+    }
+
     setParameters(gl, {
       depthTest: true,
       depthFunc: gl.LEQUAL
@@ -183,6 +188,10 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 
   onRender({gl, aspect, tick, model, transform, projectionMatrix}) {
+    if (!this.isDemoSupported) {
+      return;
+    }
+
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     transform.run();
@@ -194,6 +203,14 @@ export default class AppAnimationLoop extends AnimationLoop {
       .draw();
 
     transform.swap();
+  }
+
+  onFinalize({model, transform}) {
+    if (!this.isDemoSupported) {
+      return;
+    }
+    transform.delete();
+    model.delete();
   }
 }
 

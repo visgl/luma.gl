@@ -118,6 +118,10 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     model.setUniforms({uMVP: mvpMatrix, uModel: modelMatrix}).draw();
   }
+
+  onFinalize({model}) {
+    model.delete();
+  }
 }
 
 /* global window */
