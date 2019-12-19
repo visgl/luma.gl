@@ -187,7 +187,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     };
   }
 
-  onRender({gl, aspect, tick, model, transform, projectionMatrix}) {
+  onRender({gl, aspect, model, transform, projectionMatrix}) {
     if (!this.isDemoSupported) {
       return;
     }
