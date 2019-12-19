@@ -78,16 +78,12 @@ module.exports = {
       url: 'https://deck.gl'
     },
     {
-      title: 'luma.gl',
-      url: 'https://luma.gl'
+      title: 'kepler.gl',
+      url: 'https://kepler.gl'
     },
     {
-      title: 'react-map-gl',
-      url: 'https://uber.github.io/react-map-gl'
-    },
-    {
-      title: 'react-vis',
-      url: 'https://uber.github.io/react-vis'
+      title: 'avs.auto',
+      url: 'https://avs.auto/'
     }
   ],
 

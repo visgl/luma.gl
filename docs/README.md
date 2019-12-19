@@ -6,10 +6,13 @@ luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.g
 ## Versions
 
 These docs are for
-<a href="https://github.com/uber/luma.gl/blob/7.3-release/docs">
-  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v7.3-brightgreen.svg?style=flat-square" />
+<a href="https://github.com/uber/luma.gl/blob/8.0-release/docs">
+  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v8.0-brightgreen.svg?style=flat-square" />
 </a> Looking for an older version?
 
+<a href="https://github.com/uber/luma.gl/blob/7.3-release/docs">
+  <img src="https://img.shields.io/badge/v-7.3-green.svg?style=flat-square" />
+</a>
 <a href="https://github.com/uber/luma.gl/blob/7.2-release/docs">
   <img src="https://img.shields.io/badge/v-7.2-green.svg?style=flat-square" />
 </a>
