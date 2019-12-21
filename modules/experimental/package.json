@@ -30,12 +30,12 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@loaders.gl/images": "^2.0.0-beta",
+    "@loaders.gl/images": "^2.0.0",
     "@luma.gl/constants": "8.0.0-beta.4",
-    "math.gl": "^3.1.1"
+    "math.gl": "^3.1.2"
   },
   "peerDependencies": {
-    "@loaders.gl/gltf": "^2.0.0-beta",
+    "@loaders.gl/gltf": "^2.0.0",
     "@luma.gl/engine": "^7.1.0",
     "@luma.gl/gltools": "^7.1.0",
     "@luma.gl/shadertools": "^7.1.0",
