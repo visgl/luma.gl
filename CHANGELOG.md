@@ -1,3 +1,8 @@
+## v8.0.0
+
+- math.gl, loaders.gl to latest (#1329)
+- Fixes for IE/Edge (#1323)
+
 ## v8.0.0-beta.4
 
 - Bump math.gl and probe.gl to the latest production versions (#1320)
