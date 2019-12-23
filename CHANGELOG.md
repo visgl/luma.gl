@@ -1,3 +1,7 @@
+## v8.0.1
+
+- Update peerDependencies (#1331)
+
 ## v8.0.0
 
 - math.gl, loaders.gl to latest (#1329)
