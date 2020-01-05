@@ -31,10 +31,10 @@
     "probe.gl": "^3.2.0"
   },
   "peerDependencies": {
-    "@luma.gl/core": "8.0.0",
-    "@luma.gl/debug": "8.0.0",
-    "@luma.gl/gltools": "8.0.0",
-    "@luma.gl/webgl": "8.0.0",
+    "@luma.gl/core": "^8.0.0",
+    "@luma.gl/debug": "^8.0.0",
+    "@luma.gl/gltools": "^8.0.0",
+    "@luma.gl/webgl": "^8.0.0",
     "@probe.gl/test-utils": "^3.2.0"
   },
   "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
