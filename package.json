@@ -74,7 +74,9 @@
     "raw-loader": "^0.5.1",
     "reify": "^0.18.1",
     "source-map-support": "^0.4.2",
-    "tape-promise": "^1.1.0"
+    "tape-promise": "^1.1.0",
+    "@turf/boolean-within": "^6.0.1",
+    "@turf/helpers": "^6.1.4"
   },
   "pre-commit": [
     "test-fast"
