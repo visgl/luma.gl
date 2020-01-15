@@ -17,7 +17,7 @@ export default class VertexArrayObject extends Resource {
     }
 
     // Whether additional objects can be created
-    return isWebGL2(gl) || gl.getExtension('OES_vertex_array_object');
+    return true;
   }
 
   // Returns the global (null) vertex array object. Exists even when no extension available
@@ -303,41 +303,4 @@ export default class VertexArrayObject extends Resource {
       }
     });
   }
-
-  // DEPRECATED
-
-  /*
-  setDivisor(location, divisor) {
-    location = Number(location);
-    this.bind(() => this.gl.vertexAttribDivisor(location, divisor));
-    return this;
-  }
-
-  // match assumed WebGL defaults
-  static resetConstants(gl) {
-    const MAX_ATTRIBUTES = VertexArrayObject.getMaxAttributes(gl);
-    for (let i = 0; i < MAX_ATTRIBUTES; i++) {
-      VertexArrayObject.setConstant(gl, i, [0, 0, 0, 1]);
-    }
-  }
-
-  // Resets all attributes (to default valued constants)
-  resetAttributes() {
-    // WebGL offers disabling, but no clear way to set a VertexArray buffer to `null`
-    // But Chrome does not like buffers that are bound to several binding points.
-    // So we just bind all the attributes to the dummy "attribute zero" buffer
-    this.buffer = this.buffer || new Buffer(this.gl, {size: 4});
-
-    for (const location in this.values) {
-      if (this.values[location] instanceof Buffer) {
-        this.gl.disableVertexAttribArray(location);
-        this.gl.bindBuffer(GL.ARRAY_BUFFER, this.buffer.handle);
-        this.gl.vertexAttribPointer(location, 1, GL.FLOAT, false, 0, 0);
-      }
-    }
-
-    this.setElementBuffer(null);
-    return this;
-  }
-  */
 }
