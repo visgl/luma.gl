@@ -5,9 +5,11 @@ import {VertexArray, VertexArrayObject, Buffer, Program} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
-
+/* eslint-disable */
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
+
+  console.log(typeof WebGLRenderingContext);
 
   t.throws(() => new VertexArray(), 'VertexArray throws on missing gl context');
 
@@ -118,42 +120,6 @@ test('WebGL#VertexArray#constant multi-column attribute', t => {
   t.equal(vertexArray.accessors[location + 1].size, 4, 'Column 1 of correct size');
   t.equal(vertexArray.accessors[location + 2].size, 4, 'Column 2 of correct size');
   t.equal(vertexArray.accessors[location + 3].size, 4, 'Column 3 of correct size');
-
-  t.end();
-});
-
-test('WebGL#VertexArray#default VAO unbinding', t => {
-  const {gl} = fixture;
-
-  const oldIsSupported = VertexArrayObject.isSupported;
-  VertexArrayObject.isSupported = () => false;
-
-  const vertexArray = new VertexArray(gl, {
-    attributes: {
-      positions: new Buffer(gl, {
-        target: GL.ARRAY_BUFFER,
-        data: new Float32Array([0, 1, 2]),
-        accessor: {size: 3}
-      }),
-      elements: new Buffer(gl, {
-        target: GL.ELEMENT_ARRAY_BUFFER,
-        data: new Float32Array([0, 1, 2]),
-        accessor: {size: 3}
-      })
-    }
-  });
-  t.ok(
-    vertexArray.vertexArrayObject === VertexArrayObject.getDefaultArray(gl),
-    'Using default VertexArrayObject'
-  );
-  t.ok(vertexArray.elements, 'VertexArray has elements');
-
-  vertexArray.bindBuffers();
-  vertexArray.unbindBuffers();
-
-  t.ok(vertexArray.elements, 'VertexArray has elements after binding and unbinding');
-
-  VertexArrayObject.isSupported = oldIsSupported;
 
   t.end();
 });

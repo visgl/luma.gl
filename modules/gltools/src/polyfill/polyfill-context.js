@@ -8,7 +8,7 @@
 // easy to reuse or repurpose in other projects.
 
 /* eslint-disable camelcase, brace-style */
-import './OESVertexArrayObject-polyfill';
+import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
 import {assert} from '../utils';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
@@ -17,8 +17,9 @@ import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-tab
 // TODO - remove use of name `luma`.
 export default function polyfillContext(gl) {
   gl.luma = gl.luma || {};
-  initializeExtensions(gl);
   if (!gl.luma.polyfilled) {
+    polyfillVertexArrayObject(gl);
+    initializeExtensions(gl);
     installPolyfills(gl, WEBGL2_CONTEXT_POLYFILLS);
     installOverrides(gl, {target: gl.luma, target2: gl});
     gl.luma.polyfilled = true;

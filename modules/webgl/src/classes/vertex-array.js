@@ -45,9 +45,7 @@ export default class VertexArray {
 
     this.attributes = {};
 
-    this.vertexArrayObject = VertexArrayObject.isSupported(gl)
-      ? new VertexArrayObject(gl)
-      : VertexArrayObject.getDefaultArray(gl);
+    this.vertexArrayObject = new VertexArrayObject(gl);
 
     // Issue errors when using removed methods
     stubRemovedMethods(this, 'VertexArray', 'v6.0', DEPRECATIONS_V6);

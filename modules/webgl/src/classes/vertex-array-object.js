@@ -6,9 +6,6 @@ import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
 import {getBrowser} from 'probe.gl';
 
-/* eslint-disable camelcase */
-const OES_vertex_array_object = 'OES_vertex_array_object';
-
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArrayObject extends Resource {
@@ -20,10 +17,11 @@ export default class VertexArrayObject extends Resource {
     }
 
     // Whether additional objects can be created
-    return true;
+    return isWebGL2(gl) || gl.getExtension('OES_vertex_array_object');
   }
 
   // Returns the global (null) vertex array object. Exists even when no extension available
+  // TODO(Tarek): VAOs are now polyfilled. Deprecate this in 9.0
   static getDefaultArray(gl) {
     gl.luma = gl.luma || {};
     if (!gl.luma.defaultVertexArray) {
@@ -65,7 +63,6 @@ export default class VertexArrayObject extends Resource {
     const id = opts.id || (opts.program && opts.program.id);
     super(gl, Object.assign({}, opts, {id}));
 
-    this.hasVertexArrays = VertexArrayObject.isSupported(gl);
     this.buffer = null;
     this.bufferValue = null;
     // this.isDefaultArray = opts.isDefaultArray || false;
@@ -281,25 +278,17 @@ export default class VertexArrayObject extends Resource {
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
-    this.hasVertexArrays = VertexArrayObject.isSupported(this.gl);
-    if (this.hasVertexArrays) {
-      return this.gl.createVertexArray();
-    }
-    return null;
+    return this.gl.createVertexArray();
   }
 
   _deleteHandle(handle) {
-    if (this.hasVertexArrays) {
-      this.gl.deleteVertexArray(handle);
-    }
+    this.gl.deleteVertexArray(handle);
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }
 
   _bindHandle(handle) {
-    if (this.hasVertexArrays) {
-      this.gl.bindVertexArray(handle);
-    }
+    this.gl.bindVertexArray(handle);
   }
 
   // Generic getter for information about a vertex attribute at a given position
