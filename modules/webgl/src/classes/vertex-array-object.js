@@ -65,7 +65,7 @@ export default class VertexArrayObject extends Resource {
 
     this.buffer = null;
     this.bufferValue = null;
-    // this.isDefaultArray = opts.isDefaultArray || false;
+    this.isDefaultArray = opts.isDefaultArray || false;
 
     this.initialize(opts);
 
