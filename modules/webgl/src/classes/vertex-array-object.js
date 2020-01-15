@@ -20,7 +20,7 @@ export default class VertexArrayObject extends Resource {
     }
 
     // Whether additional objects can be created
-    return isWebGL2(gl) || gl.getExtension(OES_vertex_array_object);
+    return true;
   }
 
   // Returns the global (null) vertex array object. Exists even when no extension available
