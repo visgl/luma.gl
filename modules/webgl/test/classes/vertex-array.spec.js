@@ -5,11 +5,9 @@ import {VertexArray, VertexArrayObject, Buffer, Program} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
-/* eslint-disable */
+
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
-
-  console.log(typeof WebGLRenderingContext);
 
   t.throws(() => new VertexArray(), 'VertexArray throws on missing gl context');
 
