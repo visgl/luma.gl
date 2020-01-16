@@ -45,9 +45,7 @@ export default class VertexArray {
 
     this.attributes = {};
 
-    this.vertexArrayObject = VertexArrayObject.isSupported(gl)
-      ? new VertexArrayObject(gl)
-      : VertexArrayObject.getDefaultArray(gl);
+    this.vertexArrayObject = new VertexArrayObject(gl);
 
     // Issue errors when using removed methods
     stubRemovedMethods(this, 'VertexArray', 'v6.0', DEPRECATIONS_V6);
@@ -144,11 +142,8 @@ export default class VertexArray {
     this.elements = elementBuffer; // Save value for debugging
     this.elementsAccessor = accessor;
     this.clearDrawParams();
+    this.vertexArrayObject.setElementBuffer(elementBuffer, accessor);
 
-    // Update vertexArray immediately if we have our own array
-    if (!this.vertexArrayObject.isDefaultArray) {
-      this.vertexArrayObject.setElementBuffer(elementBuffer, accessor);
-    }
     return this;
   }
 
@@ -170,11 +165,7 @@ export default class VertexArray {
       this.values[location] = buffer;
       this.accessors[location] = accessor;
       this.clearDrawParams();
-
-      // Update vertexArray immediately if we have our own array
-      if (!this.vertexArrayObject.isDefaultArray) {
-        this.vertexArrayObject.setBuffer(location, buffer, accessor);
-      }
+      this.vertexArrayObject.setBuffer(location, buffer, accessor);
     }
 
     return this;
@@ -197,14 +188,11 @@ export default class VertexArray {
       this.accessors[location] = accessor;
       this.clearDrawParams();
 
-      // Update vertexArray immediately if we have our own array
       // NOTE: We set the actual constant value later on bind. We can't set the value now since
       // constants are global and affect all other VertexArrays that have disabled attributes
       // in the same location.
       // We do disable the attribute which makes it use the global constant value at that location
-      if (!this.vertexArrayObject.isDefaultArray) {
-        this.vertexArrayObject.enable(location, false);
-      }
+      this.vertexArrayObject.enable(location, false);
     }
 
     return this;
@@ -215,10 +203,7 @@ export default class VertexArray {
   unbindBuffers() {
     this.vertexArrayObject.bind(() => {
       if (this.elements) {
-        // Update vertexArray immediately if we have our own array
-        if (!this.vertexArrayObject.isDefaultArray) {
-          this.vertexArrayObject.setElementBuffer(null);
-        }
+        this.vertexArrayObject.setElementBuffer(null);
       }
 
       // Chrome does not like buffers that are bound to several binding points,
@@ -268,15 +253,7 @@ export default class VertexArray {
       // Also handles attribute 0
       this._setConstantAttributes(vertexCount, instanceCount);
 
-      if (!this.vertexArrayObject.hasVertexArrays) {
-        this.bindBuffers();
-      }
-
       value = func();
-
-      if (!this.vertexArrayObject.hasVertexArrays) {
-        this.unbindBuffers();
-      }
     });
 
     return value;
@@ -401,11 +378,6 @@ export default class VertexArray {
 
   _setConstantAttribute(location, constant) {
     VertexArrayObject.setConstant(this.gl, location, constant);
-
-    // If we are using the global VertexArrayObject, we need to disable the attribute now
-    if (this.vertexArrayObject.isDefaultArray) {
-      this.vertexArrayObject.enable(location, false);
-    }
   }
 
   // Walks the buffers and updates draw parameters
