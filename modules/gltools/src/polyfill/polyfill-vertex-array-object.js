@@ -20,6 +20,10 @@
 ** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 */
+
+// Modified to use ES6 and polyfill a provided context rather than
+// the global class.
+
 import {global} from 'probe.gl/env';
 
 const glErrorShadow = {};
@@ -348,7 +352,6 @@ export function polyfillVertexArrayObject(gl) {
     }
 
     if (!gl.__OESVertexArrayObject) {
-      global.console.log('Setup OES_vertex_array_object polyfill');
       this.__OESVertexArrayObject = new OESVertexArrayObject(this);
     }
     return this.__OESVertexArrayObject;
