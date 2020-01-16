@@ -323,6 +323,11 @@ OESVertexArrayObject.prototype.bindVertexArrayOES = function bindVertexArrayOES(
 };
 
 export function polyfillVertexArrayObject(gl) {
+  if (typeof gl.createVertexArray === 'function') {
+    // VAOs directly supported on object (i.e. WebGL 2 context)
+    return;
+  }
+
   const original_getSupportedExtensions = gl.getSupportedExtensions;
   gl.getSupportedExtensions = function getSupportedExtensions() {
     const list = original_getSupportedExtensions.call(this) || [];
