@@ -295,7 +295,7 @@ export default class AnimationLoop {
               resolve(document);
               return;
             }
-            window.addEventListener("load", () => {
+            window.addEventListener('load', () => {
               resolve(document);
             });
           })
