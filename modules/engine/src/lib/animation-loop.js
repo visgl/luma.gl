@@ -295,9 +295,9 @@ export default class AnimationLoop {
               resolve(document);
               return;
             }
-            window.onload = () => {
+            window.addEventListener("load", () => {
               resolve(document);
-            };
+            });
           })
         : Promise.resolve({});
     }
