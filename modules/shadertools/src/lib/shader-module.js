@@ -1,4 +1,3 @@
-import transpileShader from './transpile-shader';
 import {assert} from '../utils';
 import {parsePropTypes} from './filters/prop-types';
 
@@ -40,10 +39,10 @@ export default class ShaderModule {
     let moduleSource;
     switch (type) {
       case VERTEX_SHADER:
-        moduleSource = transpileShader(this.vs || '', targetGLSLVersion, true);
+        moduleSource = this.vs || '';
         break;
       case FRAGMENT_SHADER:
-        moduleSource = transpileShader(this.fs || '', targetGLSLVersion, false);
+        moduleSource = this.fs || '';
         break;
       default:
         assert(false);

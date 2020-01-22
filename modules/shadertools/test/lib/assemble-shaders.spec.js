@@ -230,3 +230,20 @@ test('assembleShaders#shaderhooks', t => {
 
   t.end();
 });
+/* eslint-disable */
+test('assembleShaders#transpilation', t => {
+  const assembleResult = assembleShaders(fixture.gl, {
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    modules: [picking],
+    transpile: true
+  });
+
+  t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
+  t.ok(!assembleResult.vs.match(/\bin vec4\b/), '"in" keyword removed');
+
+  t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
+  t.ok(!assembleResult.fs.match(/\bout vec4\b/), '"out" keyword removed');
+
+  t.end();
+});
