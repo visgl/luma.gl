@@ -28,6 +28,40 @@ void main(void) {
 }
 `;
 
+const VS_GLSL_300_2 = `\
+#version 300 es
+
+in vec4 positions;
+in vec2 uvs;
+in vec3 normals;
+
+out vec2 vUV;
+out vec3 vNormal;
+
+void main(void) {
+  vUV = uvs;
+  vNormal = normals;
+  gl_Position = positions;
+}
+`;
+
+const FS_GLSL_300_2 = `\
+#version 300 es
+
+precision highp float;
+
+uniform sampler2D tex;
+
+in vec2 vUV;
+in vec3 vNormal;
+
+out vec4 fragmentColor;
+
+void main(void) {
+  fragmentColor = texture(tex, vUV) * vec4(vNormal, 1.0);
+}
+`;
+
 test('assembleShaders#import', t => {
   t.ok(assembleShaders !== undefined, 'assembleShaders import successful');
   t.end();
@@ -230,9 +264,10 @@ test('assembleShaders#shaderhooks', t => {
 
   t.end();
 });
-/* eslint-disable */
+
 test('assembleShaders#transpilation', t => {
-  const assembleResult = assembleShaders(fixture.gl, {
+  const {gl} = fixture;
+  let assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking],
@@ -244,6 +279,53 @@ test('assembleShaders#transpilation', t => {
 
   t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
   t.ok(!assembleResult.fs.match(/\bout vec4\b/), '"out" keyword removed');
+
+  let vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+
+  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+
+  let program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+
+  gl.linkProgram(program);
+
+  t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
+
+  gl.deleteShader(vShader);
+  gl.deleteShader(fShader);
+  gl.deleteProgram(program);
+
+  assembleResult = assembleShaders(gl, {
+    vs: VS_GLSL_300_2,
+    fs: FS_GLSL_300_2,
+    modules: [picking],
+    transpile: true
+  });
+
+  vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+
+  fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+
+  program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+
+  gl.linkProgram(program);
+
+  t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
+
+  gl.deleteShader(vShader);
+  gl.deleteShader(fShader);
+  gl.deleteProgram(program);
 
   t.end();
 });
