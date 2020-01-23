@@ -16,7 +16,7 @@ const FS_OUTPUT_REGEX = /\bout\s+vec4\s+(\w+)\s*;/;
 
 function convertVertexShaderTo300(source) {
   return source
-    .replace(/^(#version\s+(100|300)\s+es)?[ \t]*\n/, '#version 300 es\n')
+    .replace(/^(#version\s+(100|300\s+es))?[ \t]*\n/, '#version 300 es\n')
     .replace(/attribute\s+/g, 'in ')
     .replace(/varying\s+/g, 'out ')
     .replace(/texture2D\(/g, 'texture(')
@@ -27,7 +27,7 @@ function convertVertexShaderTo300(source) {
 
 function convertFragmentShaderTo300(source) {
   return source
-    .replace(/^(#version\s+(100|300)\s+es)?[ \t]*\n/, '#version 300 es\n')
+    .replace(/^(#version\s+(100|300\s+es))?[ \t]*\n/, '#version 300 es\n')
     .replace(/\bvarying\s+/g, 'in ')
     .replace(/\btexture2D\(/g, 'texture(')
     .replace(/\btextureCube\(/g, 'texture(')
@@ -41,7 +41,7 @@ function convertFragmentShaderTo300(source) {
 function convertVertexShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   return source
-    .replace(/^#version\s+300\s+es/, '#version 100 es')
+    .replace(/^#version\s+300\s+es/, '#version 100')
     .replace(/^[ \t]*in[ \t]+/gm, 'attribute ')
     .replace(/^[ \t]*out[ \t]+/gm, 'varying ')
     .replace(/\btexture\(/g, 'texture2D(');
@@ -50,7 +50,7 @@ function convertVertexShaderTo100(source) {
 function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   source = source
-    .replace(/^#version\s+300\s+es/, '#version 100 es')
+    .replace(/^#version\s+300\s+es/, '#version 100')
     .replace(/^[ \t]*in[ \t]+/gm, 'varying ')
     .replace(/\btexture\(/g, 'texture2D(');
 
