@@ -144,7 +144,7 @@ Fragment Shaders
 | 3.00 ES         | 1.00 ES        | Comment |
 | ---             | ---            | ---     |
 | `in`            | `varying`      |         |
-| `out vec4 <varName>` | `gl_FragColor` | `<varName>` declaration is removed and uses in the code are replace with `gl_FragColor`|
+| `out vec4 <varName>` | `gl_FragColor` | `<varName>` declaration is removed and usage in the code are replaced with `gl_FragColor`|
 | `texture`       | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below. |
 | `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
 

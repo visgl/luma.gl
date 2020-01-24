@@ -78,6 +78,7 @@ Get a program that fits the parameters provided. If one is already cached, retur
 * `defines`: Object indicating `#define` constants to include in the shaders.
 * `modules`: Array of module objects to include in the shaders.
 * `inject`: Object of hook injections to include in the shaders.
+* `transpileShaders`: Transpile shaders to GLSL 1.0.
 
 ### `addDefaultModule(module: Object)`
 
