@@ -4,7 +4,6 @@ import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from './transpile-shader';
 import {assert} from '../utils';
-/* eslint-disable max-depth, complexity */
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 

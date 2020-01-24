@@ -4,7 +4,8 @@ import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {
-  gl: createTestContext()
+  gl: createTestContext(),
+  gl1: createTestContext({webgl2: false})
 };
 
 const VS_GLSL_300 = `\
@@ -59,6 +60,83 @@ out vec4 fragmentColor;
 
 void main(void) {
   fragmentColor = texture(tex, vUV) * vec4(vNormal, 1.0);
+}
+`;
+
+// deck.gl mesh layer shaders
+const VS_GLSL_300_DECK = `#version 300 es
+#define SHADER_NAME simple-mesh-layer-vs
+
+// Scale the model
+uniform float sizeScale;
+uniform bool composeModelMatrix;
+
+// Primitive attributes
+in vec3 positions;
+in vec3 normals;
+in vec2 texCoords;
+
+// Instance attributes
+in vec3 instancePositions;
+in vec3 instancePositions64Low;
+in vec4 instanceColors;
+in vec3 instancePickingColors;
+in mat3 instanceModelMatrix;
+in vec3 instanceTranslation;
+
+// Outputs to fragment shader
+out vec2 vTexCoord;
+out vec3 cameraPosition;
+out vec3 normals_commonspace;
+out vec4 position_commonspace;
+out vec4 vColor;
+
+void main(void) {
+  vTexCoord = texCoords;
+  cameraPosition = vec3(1.0);
+  normals_commonspace = vec3(1.0);
+  vColor = instanceColors;
+
+  vec3 pos = (instanceModelMatrix * positions) * sizeScale + instanceTranslation;
+
+  if (composeModelMatrix) {
+    gl_Position = vec4(1.0);
+  }
+  else {
+    gl_Position = vec4(1.0);
+  }
+}
+`;
+
+const FS_GLSL_300_DECK = `#version 300 es
+#define SHADER_NAME simple-mesh-layer-fs
+
+precision highp float;
+
+uniform bool hasTexture;
+uniform sampler2D sampler;
+uniform bool flatShading;
+uniform float opacity;
+
+in vec2 vTexCoord;
+in vec3 cameraPosition;
+in vec3 normals_commonspace;
+in vec4 position_commonspace;
+in vec4 vColor;
+
+out vec4 fragColor;
+
+void main(void) {
+  vec3 normal;
+  if (flatShading) {
+    normal = normalize(cross(dFdx(position_commonspace.xyz), dFdy(position_commonspace.xyz)));
+  } else {
+    normal = normals_commonspace;
+  }
+
+  vec4 color = hasTexture ? texture(sampler, vTexCoord) : vColor;
+  vec3 lightColor = vec3(1.0);
+  fragColor = vec4(lightColor, color.a * opacity);
 }
 `;
 
@@ -266,7 +344,7 @@ test('assembleShaders#shaderhooks', t => {
 });
 
 test('assembleShaders#transpilation', t => {
-  const {gl} = fixture;
+  const gl = fixture.gl1;
   let assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -291,7 +369,6 @@ test('assembleShaders#transpilation', t => {
   let program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
-
   gl.linkProgram(program);
 
   t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
@@ -318,7 +395,6 @@ test('assembleShaders#transpilation', t => {
   program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
-
   gl.linkProgram(program);
 
   t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
@@ -326,6 +402,32 @@ test('assembleShaders#transpilation', t => {
   gl.deleteShader(vShader);
   gl.deleteShader(fShader);
   gl.deleteProgram(program);
+
+  assembleResult = assembleShaders(gl, {
+    vs: VS_GLSL_300_DECK,
+    fs: FS_GLSL_300_DECK,
+    transpile: true
+  });
+
+  if (gl.getExtension('OES_standard_derivatives')) {
+    vShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vShader, assembleResult.vs);
+    gl.compileShader(vShader);
+
+    fShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fShader, assembleResult.fs);
+    gl.compileShader(fShader);
+
+    program = gl.createProgram();
+    gl.attachShader(program, vShader);
+    gl.attachShader(program, fShader);
+    gl.linkProgram(program);
+
+    t.ok(
+      gl.getProgramParameter(program, gl.LINK_STATUS),
+      'Deck shaders transpile 300 to 100 valid program'
+    );
+  }
 
   t.end();
 });
