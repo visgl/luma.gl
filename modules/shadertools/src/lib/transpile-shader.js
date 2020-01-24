@@ -44,7 +44,7 @@ function convertVertexShaderTo100(source) {
     .replace(/\btexture\(/g, 'texture2D(')
     .replace(/\btextureLod\(/g, 'texture2DLodEXT(');
 }
-/* eslint-disable */
+
 function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   source = source

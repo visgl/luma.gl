@@ -201,7 +201,6 @@ test('transpileShader#versions', t => {
   t.end();
 });
 
-/* eslint-disable */
 test('transpileShader#compilation', t => {
   const {gl, gl2} = fixture;
 
@@ -223,8 +222,6 @@ test('transpileShader#compilation', t => {
   gl.attachShader(program, fShader);
 
   gl.linkProgram(program);
-
-  console.log(gl.getProgramInfoLog(program));
 
   t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
 
