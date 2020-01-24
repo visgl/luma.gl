@@ -147,10 +147,15 @@ export default class Program extends Resource {
 
     this.gl.useProgram(this.handle);
 
-    // Note: async textures set as uniforms might still be loading.
-    // Now that all uniforms have been updated, check if any texture
-    // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable()) {
+    if (
+      // Note: async textures set as uniforms might still be loading.
+      // Now that all uniforms have been updated, check if any texture
+      // in the uniforms is not yet initialized, then we don't draw
+      !this._areTexturesRenderable() ||
+      // Avoid WebGL draw call when not rendering any data
+      vertexCount === 0 ||
+      (isInstanced && instanceCount === 0)
+    ) {
       return false;
     }
 

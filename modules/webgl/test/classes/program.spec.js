@@ -61,8 +61,15 @@ test('WebGL#Program draw', t => {
   program.draw({vertexArray, vertexCount: 3});
   t.ok(program instanceof Program, 'Program draw successful');
 
-  program.draw({vertexArray, vertexCount: 3, parameters: {blend: true}});
+  let didDraw = program.draw({vertexArray, vertexCount: 3, parameters: {blend: true}});
   t.ok(program instanceof Program, 'Program draw with parameters is successful');
+  t.ok(didDraw, 'Program draw successful');
+
+  didDraw = program.draw({vertexArray, vertexCount: 0});
+  t.notOk(didDraw, 'Program draw succesfully skipped');
+
+  didDraw = program.draw({vertexArray, vertexCount: 3, instanceCount: 0, isInstanced: true});
+  t.notOk(didDraw, 'Instanced Program draw succesfully skipped');
 
   t.end();
 });
