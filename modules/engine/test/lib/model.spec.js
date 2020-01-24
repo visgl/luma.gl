@@ -21,6 +21,32 @@ const DUMMY_FS = `
   void main() { gl_FragColor = vec4(1.0); }
 `;
 
+const VS_300 = `#version 300 es
+
+  in vec4 positions;
+  in vec2 uvs;
+
+  out vec2 vUV;
+
+  void main() {
+    vUV = uvs;
+    gl_Position = positions;
+  }
+`;
+
+const FS_300 = `#version 300 es
+  precision highp float;
+
+  in vec2 vUV;
+
+  uniform sampler2D tex;
+
+  out vec4 fragColor;
+  void main() {
+    fragColor = texture(tex, vUV);
+  }
+`;
+
 test('Model#construct/destruct', t => {
   const {gl} = fixture;
 
@@ -244,7 +270,7 @@ test('Model#program management - getModuleUniforms', t => {
   t.end();
 });
 
-test('getBuffersFromGeometry', t => {
+test('Model#getBuffersFromGeometry', t => {
   const {gl} = fixture;
 
   let buffers = getBuffersFromGeometry(gl, {
@@ -301,5 +327,29 @@ test('getBuffersFromGeometry', t => {
     'invalid size'
   );
 
+  t.end();
+});
+
+test('Model#transpileShaders', t => {
+  const {gl} = fixture;
+
+  let model;
+
+  t.throws(() => {
+    model = new Model(gl, {
+      vs: VS_300,
+      fs: FS_300
+    });
+  }, "Can't compile 300 shader with WebGL 1");
+
+  t.doesNotThrow(() => {
+    model = new Model(gl, {
+      vs: VS_300,
+      fs: FS_300,
+      transpileShaders: true
+    });
+  }, 'Can compile transpiled 300 shader with WebGL 1');
+
+  t.ok(model.program, 'Created a program');
   t.end();
 });

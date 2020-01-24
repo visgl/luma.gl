@@ -12,7 +12,7 @@ export default function transpileShader(source, targetGLSLVersion, isVertex) {
   }
 }
 
-const FS_OUTPUT_REGEX = /\bout\s+vec4\s+(\w+)\s*;/;
+const FS_OUTPUT_REGEX = /^[ \t]*out\s+vec4\s+(\w+)\s*;/m;
 
 function convertVertexShaderTo300(source) {
   return source

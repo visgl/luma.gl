@@ -19,6 +19,32 @@ void main(void) {
 }
 `;
 
+const VS_300 = `#version 300 es
+
+  in vec4 positions;
+  in vec2 uvs;
+
+  out vec2 vUV;
+
+  void main() {
+    vUV = uvs;
+    gl_Position = positions;
+  }
+`;
+
+const FS_300 = `#version 300 es
+  precision highp float;
+
+  in vec2 vUV;
+
+  uniform sampler2D tex;
+
+  out vec4 fragColor;
+  void main() {
+    fragColor = texture(tex, vUV);
+  }
+`;
+
 test('ProgramManager#import', t => {
   t.ok(ProgramManager !== undefined, 'ProgramManager import successful');
   t.end();
@@ -306,6 +332,40 @@ test('ProgramManager#release', t => {
   pm.release(program2);
 
   t.ok(program2.handle === null, 'Program deleted when all references released.');
+
+  t.end();
+});
+
+test('ProgramManager#transpileShaders', t => {
+  const {gl} = fixture;
+
+  const pm = new ProgramManager(gl);
+
+  t.throws(() => {
+    pm.get({
+      vs: VS_300,
+      fs: FS_300
+    });
+  }, "Can't compile 300 shader with WebGL 1");
+
+  t.doesNotThrow(() => {
+    pm.get({
+      vs: VS_300,
+      fs: FS_300,
+      transpileShaders: true
+    });
+  }, 'Can compile transpiled 300 shader with WebGL 1');
+
+  const programTranspiled = pm.get({vs, fs, transpileShaders: true});
+  const programUntranspiled = pm.get({vs, fs});
+  const programTranspiled2 = pm.get({vs, fs, transpileShaders: true});
+
+  t.equals(programTranspiled, programTranspiled2, 'Transpiled programs match');
+  t.notEquals(
+    programTranspiled,
+    programUntranspiled,
+    'Transpiled program does not match untranspiled program'
+  );
 
   t.end();
 });
