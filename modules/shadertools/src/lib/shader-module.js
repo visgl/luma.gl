@@ -35,7 +35,7 @@ export default class ShaderModule {
   }
 
   // Extracts the source code chunk for the specified shader type from the named shader module
-  getModuleSource(type, targetGLSLVersion) {
+  getModuleSource(type) {
     let moduleSource;
     switch (type) {
       case VERTEX_SHADER:
