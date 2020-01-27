@@ -49,9 +49,29 @@ export default class Model {
     this._programManagerState = -1;
     this._managedProgram = false;
 
-    const {program = null, vs, fs, modules, defines, inject, varyings, bufferMode} = props;
+    const {
+      program = null,
+      vs,
+      fs,
+      modules,
+      defines,
+      inject,
+      varyings,
+      bufferMode,
+      transpileShaders
+    } = props;
 
-    this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
+    this.programProps = {
+      program,
+      vs,
+      fs,
+      modules,
+      defines,
+      inject,
+      varyings,
+      bufferMode,
+      transpileShaders
+    };
     this.program = null;
     this.vertexArray = null;
     this._programDirty = true;
@@ -143,8 +163,28 @@ export default class Model {
   }
 
   setProgram(props) {
-    const {program, vs, fs, modules, defines, inject, varyings, bufferMode} = props;
-    this.programProps = {program, vs, fs, modules, defines, inject, varyings, bufferMode};
+    const {
+      program,
+      vs,
+      fs,
+      modules,
+      defines,
+      inject,
+      varyings,
+      bufferMode,
+      transpileShaders
+    } = props;
+    this.programProps = {
+      program,
+      vs,
+      fs,
+      modules,
+      defines,
+      inject,
+      varyings,
+      bufferMode,
+      transpileShaders
+    };
     this._programDirty = true;
   }
 
@@ -376,8 +416,26 @@ export default class Model {
     if (program) {
       this._managedProgram = false;
     } else {
-      const {vs, fs, modules, inject, defines, varyings, bufferMode} = this.programProps;
-      program = this.programManager.get({vs, fs, modules, inject, defines, varyings, bufferMode});
+      const {
+        vs,
+        fs,
+        modules,
+        inject,
+        defines,
+        varyings,
+        bufferMode,
+        transpileShaders
+      } = this.programProps;
+      program = this.programManager.get({
+        vs,
+        fs,
+        modules,
+        inject,
+        defines,
+        varyings,
+        bufferMode,
+        transpileShaders
+      });
       if (this.program && this._managedProgram) {
         this.programManager.release(this.program);
       }

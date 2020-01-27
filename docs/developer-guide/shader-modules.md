@@ -154,38 +154,7 @@ For example:
 }
 ```
 
-## GLSL Syntax Conversion Reference
+## GLSL Versions
 
-Where possible, the shader assembler replaces keywords based on the version of the shader into which a module is inserted. While not all GLSL ES 3.0 features can be emulated, this allows many modules to be used across versions.
+Shader modules will undergo some basic text transformations in order to match the GLSL version of the shaders they are injected into. These transformations are generally limited to the naming of input variables, output variables and texture sampling functions. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders) documentation for more information.
 
-Syntax replacement tables are provided below:
-
-Vertex Shaders
-
-| 3.00 ES         | 1.00 ES     | Comment         |
-| ---             | ---         | ---             |
-| `in`            | `attribute` |                 |
-| `out`           | `varying`   |                 |
-
-Fragment Shaders
-
-| 3.00 ES         | 1.00 ES        | Comment |
-| ---             | ---            | ---     |
-| `in`            | `varying`      |         |
-| `out`           | `gl_FragColor` |         |
-| `out`           | `gl_FragData`  |         |
-| `texture`       | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below. |
-| `textureCube` * | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
-| `gl_FragDepth`  | `gl_FragDepthEXT` | WebGL 1: **EXT_frag_depth** |
-
-
-| 3.00 ES             | 1.00 ES                | Comment |
-| ---                 | ---                    | --- |
-| `texture2DLod`      | `texture2DLodEXT`      | WebGL 1: **EXT_shader_texture_lod** |
-| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL 1: **EXT_shader_texture_lod** |
-| `texture2DProjLod`  | `texture2DProjLodEXT`  | WebGL 1: **EXT_shader_texture_lod** |
-| `textureCubeLod`    | `textureCubeLodEXT`    | WebGL 1: **EXT_shader_texture_lod** |
-| `texture2DGrad`     | `texture2DGradEXT`     | WebGL 1: **EXT_shader_texture_lod** |
-| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL 1: **EXT_shader_texture_lod** |
-| `texture2DProjGrad` | `texture2DProjGradEXT` | WebGL 1: **EXT_shader_texture_lod** |
-| `textureCubeGrad`   | `textureCubeGradEXT`   | WebGL 1: **EXT_shader_texture_lod** |

@@ -175,15 +175,14 @@ when not provided will be deduced from `geometry` object.
 
 The constructor for the Model class. Use this to create a new Model.
 
-The following props can only be specified on construction:
-
 * `vs` - (VertexShader|*string*) - A vertex shader object, or source as a string.
 * `fs` - (FragmentShader|*string*) - A fragment shader object, or source as a string.
 * `varyings` (WebGL 2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
 * `bufferMode` (WebGL 2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
 * `modules` - shader modules to be applied.
 * `program` - pre created program to use, when provided, vs, ps and modules are not used.
-* `shaderCache` - (ShaderCache) - Compiled shader (Vertex and Fragment) are cached in this object very first time they got compiled and then retrieved when same shader is used. When using multiple Model objects with duplicate shaders, use the same shaderCache object for better performance.
+* `programManager` - `ProgramManager` to use for program creation and caching.
+* `transpileShaders` - Transpile vertex and fragment shaders to GLSL 1.0.
 
 
 ### delete() : Model

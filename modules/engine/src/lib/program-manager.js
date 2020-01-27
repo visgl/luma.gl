@@ -49,7 +49,15 @@ export default class ProgramManager {
   }
 
   get(props = {}) {
-    const {vs = '', fs = '', defines = {}, inject = {}, varyings = [], bufferMode = 0x8c8d} = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
+    const {
+      vs = '',
+      fs = '',
+      defines = {},
+      inject = {},
+      varyings = [],
+      bufferMode = 0x8c8d,
+      transpileShaders = false
+    } = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
 
     const modules = this._getModuleList(props.modules); // Combine with default modules
 
@@ -75,7 +83,9 @@ export default class ProgramManager {
 
     const hash = `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
       '/'
-    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${this.stateHash}B${bufferMode}`;
+    )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${this.stateHash}B${bufferMode}${
+      transpileShaders ? 'T' : ''
+    }`;
 
     if (!this._programCache[hash]) {
       const assembled = assembleShaders(this.gl, {
@@ -84,7 +94,8 @@ export default class ProgramManager {
         modules,
         inject,
         defines,
-        hookFunctions: this._hookFunctions
+        hookFunctions: this._hookFunctions,
+        transpile: transpileShaders
       });
 
       this._programCache[hash] = new Program(this.gl, {

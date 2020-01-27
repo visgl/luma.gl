@@ -2,8 +2,8 @@ import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
+import transpileShader from './transpile-shader';
 import {assert} from '../utils';
-/* eslint-disable max-depth, complexity */
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
@@ -35,7 +35,18 @@ export function assembleShaders(gl, opts) {
 // adding prologues, requested module chunks, and any final injections.
 function assembleShader(
   gl,
-  {id, source, type, modules, defines = {}, hookFunctions = [], inject = {}, prologue = true, log}
+  {
+    id,
+    source,
+    type,
+    modules,
+    defines = {},
+    hookFunctions = [],
+    inject = {},
+    transpile = false,
+    prologue = true,
+    log
+  }
 ) {
   assert(typeof source === 'string', 'shader source must be a string');
 
@@ -129,6 +140,8 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, type, mainInjections);
+
+  assembledSource = transpileShader(assembledSource, transpile ? 100 : glslVersion, isVertex);
 
   return assembledSource;
 }
