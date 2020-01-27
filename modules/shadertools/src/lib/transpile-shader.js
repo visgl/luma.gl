@@ -12,13 +12,13 @@ export default function transpileShader(source, targetGLSLVersion, isVertex) {
   }
 }
 
-const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;/m;
+const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
 
 function convertVertexShaderTo300(source) {
   return source
     .replace(/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n')
-    .replace(/\battribute[ \t]+/g, 'in ')
-    .replace(/\bvarying[ \t]+/g, 'out ')
+    .replace(/^[ \t]*attribute[ \t]+(.+;)/gm, 'in $1')
+    .replace(/^[ \t]*varying[ \t]+(.+;)/gm, 'out $1')
     .replace(/\btexture2D\(/g, 'texture(')
     .replace(/\btextureCube\(+/g, 'texture(')
     .replace(/\btexture2DLodEXT\(/g, 'textureLod(')
@@ -28,7 +28,7 @@ function convertVertexShaderTo300(source) {
 function convertFragmentShaderTo300(source) {
   return source
     .replace(/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n')
-    .replace(/\bvarying[ \t]*/g, 'in ')
+    .replace(/^[ \t]*varying[ \t]+(.+;)/gm, 'in $1')
     .replace(/\btexture2D\(/g, 'texture(')
     .replace(/\btextureCube\(/g, 'texture(')
     .replace(/\btexture2DLodEXT\(/g, 'textureLod(')
@@ -39,8 +39,8 @@ function convertVertexShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   return source
     .replace(/^#version[ \t]+300[ \t]+es/, '#version 100')
-    .replace(/^[ \t]*in[ \t]+/gm, 'attribute ')
-    .replace(/^[ \t]*out[ \t]+/gm, 'varying ')
+    .replace(/^[ \t]*in[ \t]+(.+;)/gm, 'attribute $1')
+    .replace(/^[ \t]*out[ \t]+(.+;)/gm, 'varying $1')
     .replace(/\btexture\(/g, 'texture2D(')
     .replace(/\btextureLod\(/g, 'texture2DLodEXT(');
 }

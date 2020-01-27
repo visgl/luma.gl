@@ -255,5 +255,5 @@ test('transpileShader#compilation', t => {
 });
 
 function stripSpaces(text) {
-  return text.replace(/\s+/g, '');
+  return text; // .replace(/\s+/g, '');
 }

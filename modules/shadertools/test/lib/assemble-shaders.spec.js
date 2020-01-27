@@ -39,10 +39,24 @@ in vec3 normals;
 out vec2 vUV;
 out vec3 vNormal;
 
+// Make sure in and out args don't get transpiled
+void setPosition1(in vec4 inPosition, out vec4 outPosition) {
+  outPosition = inPosition;
+}
+
+void setPosition2(
+  in vec4 inPosition,
+  out vec4 outPosition
+) {
+  outPosition = inPosition;
+}
+
 void main(void) {
   vUV = uvs;
   vNormal = normals;
-  gl_Position = positions;
+
+  setPosition1(positions, gl_Position);
+  setPosition2(positions, gl_Position);
 }
 `;
 
