@@ -12,13 +12,13 @@ export default function transpileShader(source, targetGLSLVersion, isVertex) {
   }
 }
 
-const FS_OUTPUT_REGEX = /^[ \t]*out\s+vec4\s+(\w+)\s*;/m;
+const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;/m;
 
 function convertVertexShaderTo300(source) {
   return source
-    .replace(/^(#version\s+(100|300\s+es))?[ \t]*\n/, '#version 300 es\n')
-    .replace(/\battribute\s+/g, 'in ')
-    .replace(/\bvarying\s+/g, 'out ')
+    .replace(/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n')
+    .replace(/\battribute[ \t]+/g, 'in ')
+    .replace(/\bvarying[ \t]+/g, 'out ')
     .replace(/\btexture2D\(/g, 'texture(')
     .replace(/\btextureCube\(+/g, 'texture(')
     .replace(/\btexture2DLodEXT\(/g, 'textureLod(')
@@ -27,8 +27,8 @@ function convertVertexShaderTo300(source) {
 
 function convertFragmentShaderTo300(source) {
   return source
-    .replace(/^(#version\s+(100|300\s+es))?[ \t]*\n/, '#version 300 es\n')
-    .replace(/\bvarying\s+/g, 'in ')
+    .replace(/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n')
+    .replace(/\bvarying[ \t]*/g, 'in ')
     .replace(/\btexture2D\(/g, 'texture(')
     .replace(/\btextureCube\(/g, 'texture(')
     .replace(/\btexture2DLodEXT\(/g, 'textureLod(')
@@ -38,7 +38,7 @@ function convertFragmentShaderTo300(source) {
 function convertVertexShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   return source
-    .replace(/^#version\s+300\s+es/, '#version 100')
+    .replace(/^#version[ \t]+300[ \t]+es/, '#version 100')
     .replace(/^[ \t]*in[ \t]+/gm, 'attribute ')
     .replace(/^[ \t]*out[ \t]+/gm, 'varying ')
     .replace(/\btexture\(/g, 'texture2D(')
@@ -48,7 +48,7 @@ function convertVertexShaderTo100(source) {
 function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   source = source
-    .replace(/^#version\s+300\s+es/, '#version 100')
+    .replace(/^#version[ \t]+300[ \t]+es/, '#version 100')
     .replace(/^[ \t]*in[ \t]+/gm, 'varying ')
     .replace(/\btexture\(/g, 'texture2D(')
     .replace(/\btextureLod\(/g, 'texture2DLodEXT(');

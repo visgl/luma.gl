@@ -1,11 +1,11 @@
 /* eslint-disable camelcase */
 import {createTestContext} from '@luma.gl/test-utils';
-import {assembleShaders, picking, fp64} from '@luma.gl/shadertools';
+import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
 import test from 'tape-catch';
 
 const fixture = {
-  gl: createTestContext(),
-  gl1: createTestContext({webgl2: false})
+  gl1: createTestContext({webgl2: false, webgl1: true}),
+  gl2: createTestContext({webgl2: true, webgl1: false})
 };
 
 const VS_GLSL_300 = `\
@@ -140,13 +140,70 @@ void main(void) {
 }
 `;
 
+const VS_GLSL_300_GLTF = `#version 300 es
+
+#if (__VERSION__ < 300)
+  #define _attr attribute
+#else
+  #define _attr in
+#endif
+
+  _attr vec4 POSITION;
+
+  #ifdef HAS_NORMALS
+    _attr vec4 NORMAL;
+  #endif
+
+  #ifdef HAS_TANGENTS
+    _attr vec4 TANGENT;
+  #endif
+
+  #ifdef HAS_UV
+    _attr vec2 TEXCOORD_0;
+  #endif
+
+  void main(void) {
+    vec4 _NORMAL = vec4(0.);
+    vec4 _TANGENT = vec4(0.);
+    vec2 _TEXCOORD_0 = vec2(0.);
+
+    #ifdef HAS_NORMALS
+      _NORMAL = NORMAL;
+    #endif
+
+    #ifdef HAS_TANGENTS
+      _TANGENT = TANGENT;
+    #endif
+
+    #ifdef HAS_UV
+      _TEXCOORD_0 = TEXCOORD_0;
+    #endif
+
+    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = u_MVPMatrix * POSITION;
+  }
+`;
+
+const FS_GLSL_300_GLTF = `#version 300 es
+
+#if (__VERSION__ < 300)
+  #define fragmentColor gl_FragColor
+#else
+  out vec4 fragmentColor;
+#endif
+
+  void main(void) {
+    fragmentColor = pbr_filterColor(vec4(0));
+  }
+`;
+
 test('assembleShaders#import', t => {
   t.ok(assembleShaders !== undefined, 'assembleShaders import successful');
   t.end();
 });
 
 test('assembleShaders#version_directive', t => {
-  const assembleResult = assembleShaders(fixture.gl, {
+  const assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking]
@@ -173,7 +230,7 @@ test('assembleShaders#getUniforms', t => {
   let assembleResult;
 
   // Without shader modules
-  assembleResult = assembleShaders(fixture.gl, {
+  assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300
   });
@@ -193,7 +250,7 @@ test('assembleShaders#getUniforms', t => {
     dependencies: [picking]
   };
 
-  assembleResult = assembleShaders(fixture.gl, {
+  assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking, testModule, fp64]
@@ -206,7 +263,7 @@ test('assembleShaders#getUniforms', t => {
 });
 
 test('assembleShaders#defines', t => {
-  const assembleResult = assembleShaders(fixture.gl, {
+  const assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     defines: {IS_TEST: true}
@@ -242,7 +299,7 @@ test('assembleShaders#shaderhooks', t => {
     picking
   );
 
-  let assembleResult = assembleShaders(fixture.gl, {
+  let assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     hookFunctions
@@ -274,7 +331,7 @@ test('assembleShaders#shaderhooks', t => {
     'regex injection code not included in fragment shader without module'
   );
 
-  assembleResult = assembleShaders(fixture.gl, {
+  assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [pickingInject],
@@ -307,7 +364,7 @@ test('assembleShaders#shaderhooks', t => {
     'regex injection code included in fragment shader with module'
   );
 
-  assembleResult = assembleShaders(fixture.gl, {
+  assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     inject: {
@@ -326,7 +383,7 @@ test('assembleShaders#shaderhooks', t => {
     'argument injection code included in shader hook'
   );
 
-  assembleResult = assembleShaders(fixture.gl, {
+  assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     inject: {
@@ -403,13 +460,13 @@ test('assembleShaders#transpilation', t => {
   gl.deleteShader(fShader);
   gl.deleteProgram(program);
 
-  assembleResult = assembleShaders(gl, {
-    vs: VS_GLSL_300_DECK,
-    fs: FS_GLSL_300_DECK,
-    transpile: true
-  });
-
   if (gl.getExtension('OES_standard_derivatives')) {
+    assembleResult = assembleShaders(gl, {
+      vs: VS_GLSL_300_DECK,
+      fs: FS_GLSL_300_DECK,
+      transpile: true
+    });
+
     vShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vShader, assembleResult.vs);
     gl.compileShader(vShader);
@@ -426,6 +483,60 @@ test('assembleShaders#transpilation', t => {
     t.ok(
       gl.getProgramParameter(program, gl.LINK_STATUS),
       'Deck shaders transpile 300 to 100 valid program'
+    );
+  }
+
+  assembleResult = assembleShaders(gl, {
+    vs: VS_GLSL_300_GLTF,
+    fs: FS_GLSL_300_GLTF,
+    modules: [pbr],
+    transpile: true
+  });
+
+  vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+
+  fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+
+  program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+  gl.linkProgram(program);
+
+  t.ok(
+    gl.getProgramParameter(program, gl.LINK_STATUS),
+    'GLTF shaders transpile 300 to 100 valid program'
+  );
+
+  if (fixture.gl2) {
+    const gl2 = fixture.gl2;
+
+    assembleResult = assembleShaders(gl2, {
+      vs: VS_GLSL_300_GLTF,
+      fs: FS_GLSL_300_GLTF,
+      modules: [pbr],
+      transpile: false
+    });
+
+    vShader = gl2.createShader(gl2.VERTEX_SHADER);
+    gl2.shaderSource(vShader, assembleResult.vs);
+    gl2.compileShader(vShader);
+
+    fShader = gl2.createShader(gl2.FRAGMENT_SHADER);
+    gl2.shaderSource(fShader, assembleResult.fs);
+    gl2.compileShader(fShader);
+
+    program = gl2.createProgram();
+    gl2.attachShader(program, vShader);
+    gl2.attachShader(program, fShader);
+    gl2.linkProgram(program);
+
+    t.ok(
+      gl2.getProgramParameter(program, gl2.LINK_STATUS),
+      'GLTF shaders transpile 300 to 300 valid program'
     );
   }
 
