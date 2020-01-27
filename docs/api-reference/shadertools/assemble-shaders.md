@@ -14,7 +14,7 @@ Takes the source code of a vertex shader and a fragment shader, and a list of mo
 * `modules`=`[]` (Array) - list of shader modules (either objects defining the module, or names of previously registered modules)
 * `inject`=`{}` (Object) - map of substituions,
 * `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function. For example:
-* `transpile`: force transpilation to GLSL ES 1.0 (see below)
+* `transpileToGLSL100`: force transpilation to GLSL ES 1.0 (see below)
 
 ```js
 [
@@ -125,7 +125,7 @@ new Model(gl, {
 
 ## Transpilation
 
-If the `transpile` option is used, `assembleShaders` will attempt to transpile shaders to GLSL ES 1.0. This is a limited text replacement and requires that certain conventions be followed:
+If the `transpileToGLSL100` option is used, `assembleShaders` will attempt to transpile shaders to GLSL ES 1.0. This is a limited text replacement and requires that certain conventions be followed:
 - Statements are written one per line.
 - Only one fragment shader output is supported.
 - GLSL 3.0-only features, such as 3D textures are not supported.

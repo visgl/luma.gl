@@ -336,7 +336,7 @@ test('ProgramManager#release', t => {
   t.end();
 });
 
-test('ProgramManager#transpileShaders', t => {
+test('ProgramManager#transpileToGLSL100', t => {
   const {gl} = fixture;
 
   const pm = new ProgramManager(gl);
@@ -352,13 +352,13 @@ test('ProgramManager#transpileShaders', t => {
     pm.get({
       vs: VS_300,
       fs: FS_300,
-      transpileShaders: true
+      transpileToGLSL100: true
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
-  const programTranspiled = pm.get({vs, fs, transpileShaders: true});
+  const programTranspiled = pm.get({vs, fs, transpileToGLSL100: true});
   const programUntranspiled = pm.get({vs, fs});
-  const programTranspiled2 = pm.get({vs, fs, transpileShaders: true});
+  const programTranspiled2 = pm.get({vs, fs, transpileToGLSL100: true});
 
   t.equals(programTranspiled, programTranspiled2, 'Transpiled programs match');
   t.notEquals(

@@ -182,7 +182,7 @@ The constructor for the Model class. Use this to create a new Model.
 * `modules` - shader modules to be applied.
 * `program` - pre created program to use, when provided, vs, ps and modules are not used.
 * `programManager` - `ProgramManager` to use for program creation and caching.
-* `transpileShaders` - Transpile vertex and fragment shaders to GLSL 1.0.
+* `transpileToGLSL100` - Transpile vertex and fragment shaders to GLSL 1.0.
 
 
 ### delete() : Model

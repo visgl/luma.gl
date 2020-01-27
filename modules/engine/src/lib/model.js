@@ -58,7 +58,7 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileShaders
+      transpileToGLSL100
     } = props;
 
     this.programProps = {
@@ -70,7 +70,7 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileShaders
+      transpileToGLSL100
     };
     this.program = null;
     this.vertexArray = null;
@@ -172,7 +172,7 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileShaders
+      transpileToGLSL100
     } = props;
     this.programProps = {
       program,
@@ -183,7 +183,7 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileShaders
+      transpileToGLSL100
     };
     this._programDirty = true;
   }
@@ -424,7 +424,7 @@ export default class Model {
         defines,
         varyings,
         bufferMode,
-        transpileShaders
+        transpileToGLSL100
       } = this.programProps;
       program = this.programManager.get({
         vs,
@@ -434,7 +434,7 @@ export default class Model {
         defines,
         varyings,
         bufferMode,
-        transpileShaders
+        transpileToGLSL100
       });
       if (this.program && this._managedProgram) {
         this.programManager.release(this.program);

@@ -43,7 +43,7 @@ function assembleShader(
     defines = {},
     hookFunctions = [],
     inject = {},
-    transpile = false,
+    transpileToGLSL100 = false,
     prologue = true,
     log
   }
@@ -141,7 +141,11 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, type, mainInjections);
 
-  assembledSource = transpileShader(assembledSource, transpile ? 100 : glslVersion, isVertex);
+  assembledSource = transpileShader(
+    assembledSource,
+    transpileToGLSL100 ? 100 : glslVersion,
+    isVertex
+  );
 
   return assembledSource;
 }

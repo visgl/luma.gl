@@ -406,7 +406,7 @@ test('assembleShaders#transpilation', t => {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking],
-    transpile: true
+    transpileToGLSL100: true
   });
 
   t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
@@ -438,7 +438,7 @@ test('assembleShaders#transpilation', t => {
     vs: VS_GLSL_300_2,
     fs: FS_GLSL_300_2,
     modules: [picking],
-    transpile: true
+    transpileToGLSL100: true
   });
 
   vShader = gl.createShader(gl.VERTEX_SHADER);
@@ -464,7 +464,7 @@ test('assembleShaders#transpilation', t => {
     assembleResult = assembleShaders(gl, {
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK,
-      transpile: true
+      transpileToGLSL100: true
     });
 
     vShader = gl.createShader(gl.VERTEX_SHADER);
@@ -490,7 +490,7 @@ test('assembleShaders#transpilation', t => {
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
     modules: [pbr],
-    transpile: true
+    transpileToGLSL100: true
   });
 
   vShader = gl.createShader(gl.VERTEX_SHADER);
@@ -518,7 +518,7 @@ test('assembleShaders#transpilation', t => {
       vs: VS_GLSL_300_GLTF,
       fs: FS_GLSL_300_GLTF,
       modules: [pbr],
-      transpile: false
+      transpileToGLSL100: false
     });
 
     vShader = gl2.createShader(gl2.VERTEX_SHADER);
