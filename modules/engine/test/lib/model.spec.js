@@ -330,7 +330,7 @@ test('Model#getBuffersFromGeometry', t => {
   t.end();
 });
 
-test('Model#transpileShaders', t => {
+test('Model#transpileToGLSL100', t => {
   const {gl} = fixture;
 
   let model;
@@ -346,7 +346,7 @@ test('Model#transpileShaders', t => {
     model = new Model(gl, {
       vs: VS_300,
       fs: FS_300,
-      transpileShaders: true
+      transpileToGLSL100: true
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
