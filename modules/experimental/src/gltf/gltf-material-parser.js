@@ -8,12 +8,14 @@ export default class GLTFMaterialParser {
     this.gl = gl;
 
     this.defines = {
-      USE_TEX_LOD: Number(hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)),
-
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
       MANUAL_SRGB: 1,
       SRGB_FAST_APPROXIMATION: 1
     };
+
+    if (hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)) {
+      this.defines.USE_TEX_LOD = 1;
+    }
 
     this.uniforms = {
       // TODO: find better values?
