@@ -1,4 +1,4 @@
-import {Texture2D, log} from '@luma.gl/webgl';
+import {Texture2D, hasFeature, FEATURES, log} from '@luma.gl/webgl';
 
 export default class GLTFMaterialParser {
   constructor(
@@ -8,7 +8,7 @@ export default class GLTFMaterialParser {
     this.gl = gl;
 
     this.defines = {
-      USE_TEX_LOD: 1,
+      USE_TEX_LOD: Number(hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)),
 
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
       MANUAL_SRGB: 1,
