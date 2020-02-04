@@ -19,7 +19,8 @@ for (const dependency in DEPENDENCIES) {
 module.exports = {
   logLevel: 1, // Adjusts amount of debug information from ocular-gatsby
 
-  DOC_FOLDER: `${__dirname}/../docs/`,
+  DOC_FOLDERS: [`${__dirname}/../docs/`],
+  SOURCE: [`${__dirname}/static`, `${__dirname}/src`],
   ROOT_FOLDER: `${__dirname}/../`,
   DIR_NAME: `${__dirname}`,
 
@@ -30,6 +31,7 @@ module.exports = {
 
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'uber',
+  PROJECT_ORG_LOGO: 'images/uber-logo.png',
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'High-performance Toolkit for WebGL-based Data Visualization',
 
@@ -39,7 +41,7 @@ module.exports = {
 
   GA_TRACKING: null,
 
-  LINK_TO_GET_STARTED: '/docs',
+  LINK_TO_GET_STARTED: '/docs/getting-started',
 
   // For showing star counts and contributors.
   // Should be like btoa('YourUsername:YourKey') and should be readonly.
@@ -47,47 +49,22 @@ module.exports = {
 
   HOME_PATH: '/',
 
-  HOME_HEADING: 'High-performance toolkit for WebGL-based data visualization.',
-
-  HOME_RIGHT: null,
-
-  HOME_BULLETS: [
-    {
-      text: 'Flexibility',
-      desc:
-        'luma.gl can provide high-level drawing classes or simply enhance programming directly with the WebGL API.',
-      img: 'images/icon-high-precision.svg'
-    },
-    {
-      text: 'Consistency',
-      desc:
-        'luma.gl polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.',
-      img: 'images/icon-high-precision.svg'
-    },
-    {
-      text: 'Performance',
-      desc:
-        'luma.gl simplifies usage of high-performance APIs for data visualization like instanced rendering and transform feedback.',
-      img: 'images/icon-high-precision.svg'
-    }
-  ],
-
   PROJECTS: [
     {
-      title: 'deck.gl',
+      name: 'deck.gl',
       url: 'https://deck.gl'
     },
     {
-      title: 'kepler.gl',
+      name: 'kepler.gl',
       url: 'https://kepler.gl'
     },
     {
-      title: 'avs.auto',
+      name: 'avs.auto',
       url: 'https://avs.auto/'
     }
   ],
 
-  ADDITIONAL_LINKS: [],
+  ADDITIONAL_LINKS: [{name: 'Blog', href: 'http://medium.com/vis-gl'}],
 
   INDEX_PAGE_URL: resolve(__dirname, './templates/index.jsx'),
 

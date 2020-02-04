@@ -2,8 +2,14 @@ const ocularConfig = require('./ocular-config');
 
 const GATSBY_CONFIG = {
   plugins: [
-    {resolve: `gatsby-theme-ocular`, options: ocularConfig}
-  ],
+    {resolve: `gatsby-theme-ocular`, options: ocularConfig},
+    {
+      resolve: 'gatsby-plugin-env-variables',
+      options: {
+        whitelist: ['MapboxAccessToken']
+      }
+    }
+  ]
 };
 
 // NOTE: uncomment to debug config

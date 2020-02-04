@@ -4,8 +4,7 @@ import {lumaStats} from '@luma.gl/core';
 import {setPathPrefix} from '@luma.gl/webgl';
 import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
-
-import InfoPanel from './info-panel';
+import {InfoPanel} from 'gatsby-theme-ocular/components';
 
 const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/8.0-release';
 
@@ -172,7 +171,7 @@ export default class AnimationLoopExamplePage extends Component {
       (this.animationLoop.getInfo && this.animationLoop.getInfo());
 
     return (
-      <div className="fg" style={{width: '100%', height: '100%', padding: 0, border: 0}}>
+      <div style={{width: '100%', height: '100%', position: 'relative'}}>
         {
           stats ?
           <div ref="stats" className="stats" style={STAT_STYLES}>
@@ -182,9 +181,13 @@ export default class AnimationLoopExamplePage extends Component {
         }
         <canvas
           id={this.props.canvas}
-          style={{width: '100%', height: '100%', padding: 0, border: 0}}
+          style={{width: '100%', height: '100%'}}
         />
-        {panel ? <InfoPanel name={title} controls={controls} sourceLink={`${GITHUB_TREE}/${path}`} /> : null}
+        {panel && (
+          <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`}>
+            <div dangerouslySetInnerHTML={{__html: controls}} />
+          </InfoPanel>
+        )}
       </div>
     );
   }
