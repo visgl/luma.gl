@@ -1,4 +1,4 @@
-import {AnimationLoop, Model, Geometry, IcoSphereGeometry} from '@luma.gl/engine';
+import {AnimationLoop, Model, Geometry, SphereGeometry} from '@luma.gl/engine';
 import {clear, Framebuffer, Program} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {Matrix4, Vector3, radians} from 'math.gl';
@@ -142,8 +142,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     sphere = new Model(gl, {
       id: 'electron',
-      geometry: new IcoSphereGeometry({
-        iterations: 4
+      geometry: new SphereGeometry({
+        nlat: 20,
+        nlong: 30  // To test that sphere generation is working properly.
       }),
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
     });

@@ -76,10 +76,10 @@ function tesselateSphere(props) {
   }
 
   // Create indices
-  const numVertsAround = nlat + 1;
-  for (let x = 0; x < nlat; x++) {
-    for (let y = 0; y < nlong; y++) {
-      const index = (x * nlong + y) * 6;
+  const numVertsAround = nlong + 1;
+  for (let x = 0; x < nlong; x++) {
+    for (let y = 0; y < nlat; y++) {
+      const index = (x * nlat + y) * 6;
 
       indices[index + 0] = y * numVertsAround + x;
       indices[index + 1] = y * numVertsAround + x + 1;
