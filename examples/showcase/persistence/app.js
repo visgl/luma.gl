@@ -144,7 +144,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       id: 'electron',
       geometry: new SphereGeometry({
         nlat: 20,
-        nlong: 30  // To test that sphere generation is working properly.
+        nlong: 30 // To test that sphere generation is working properly.
       }),
       program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
     });
