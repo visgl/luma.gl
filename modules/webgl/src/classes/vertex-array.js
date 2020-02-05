@@ -58,6 +58,8 @@ export default class VertexArray {
     if (this.buffer) {
       this.buffer.delete();
     }
+
+    this.vertexArrayObject.delete();
   }
 
   initialize(props = {}) {
