@@ -6,7 +6,7 @@
 
 ## Overview
 
-Finding weather a point resides inside a polygon or not (in 2D space) has complexity Of `(N * M)`,  where `N` is the number of points and `M` is number of polygon edges. When performing this on large number of points takes a long time. This RFC proposes a GPU accelerated approach that can be implemented within `WebGL` limitation.
+Finding whether a point resides inside a polygon or not (in 2D space) has complexity Of `(N * M)`,  where `N` is the number of points and `M` is number of polygon edges. When performing this on large number of points takes a long time. This RFC proposes a GPU accelerated approach that can be implemented within `WebGL` limitation.
 
 ### Existing Research Work
 
@@ -28,7 +28,7 @@ All of above work uses more advanced Graphics APIs (such as OpenGL Compute Shade
 
 ## Proposed Approach
 
-A texture based filtering can be implemented to perform PIP test on GPU. The idea is, user provided polygon(s) is triangulated and rendered to an offline frame buffer. And then, given points are run through transform feedback loop, each point is translated into the texture space and above texture is sampled, result of this sample determines if the point is inside or outside the polygon.
+A texture based filtering can be implemented to perform PIP test on GPU. User provided polygon(s) is triangulated and rendered to an offline frame buffer. Given points are run through transform feedback loop, each point is translated into the texture space and above texture is sampled, result of this sample determines if the point is inside or outside the polygon.
 
 
 ## Proposed New Components
@@ -72,14 +72,13 @@ Constructor has following arguments, it constructs required objects such as `Tex
 
 `opts` object is same as `opts` argument of constructor. Once object is constructed, polygons can be updated.
 
-##### run(opts)
+##### filter(opts)
 
 * `opts.positionBuffer` (Buffer) : `Buffer` object containing position data of input points, must contain X and Y values.
 * `opts.count` (Integer) : Count of number of points to be processed.
-* `opts.resultBuffer` (Buffer): `Buffer` object where results will be stored. It should hold at least 3 elements (vec3) for each input point. Once this method is completed this buffer will contain a vec3 [`flag`, `id`, `index`]. Each element (vec3) of this buffer contains the result of corresponding point (vec2) from the `positionBuffer`.
- - `flag` : 0 if the point is outside the polygon, 1 if inside any polygon.
- - `id` : if the `flag` is `1`, this corresponds to the `id` of the polygon in which the point is inside.
- - `index` : this is the index of the point, which is same of the element id. Its usage is discussed in `Future Work` section.
+* `opts.resultBuffer` (Buffer): `Buffer` object where results will be stored. It should hold at least 2 elements (vec2) for each input point. Once this method is completed this buffer's each element will contain [`id`, `index`] corresponding to each input point (vec2) from the `positionBuffer`.
+ - `id` : if the point lies outside the region defined by polygon(s), `id` will be `-1`, otherwise it will be the `id` of the polygon.
+ - `index` : this is the index of the point to which the result belongs, which will be same as the index of this element in `resultBuffer`, its usage is discussed in `Future Work` section below.
 
 ##### delete()
 
@@ -106,7 +105,7 @@ const positionBuffer = new Buffer(gl, new Float32Array([0.5, 0.5,  0, 0.5, 0, 3,
 // holds 4 vec3 elements
 const resultBuffer = new Buffer(gl, new Float32Array(4 * 4 * 3));
 
-polygonFilter.run({positionBuffer, count, resultBuffer});
+polygonFilter.filter({positionBuffer, count, resultBuffer});
 
 // resultBuffer.getData() will return following array
 // [
@@ -121,7 +120,7 @@ polygonFilter.run({positionBuffer, count, resultBuffer});
 
 ## WebGL1 Support
 
-Praposed above new class `GPUPolygonFilter` is WebGL2 only. For WebGL1 applications, above shader module `textureFilter` can be used to and PIP test can be performed with in the application vertex shader. Based on the result vertices can be either discarded (in fragment shader) or any of the attribute (such as color) can be changed as per required visual effect.
+Proposed new class `GPUPolygonFilter` is WebGL2 only. For WebGL1 applications, above shader module `textureFilter` can be used to perform PIP test with in the application vertex shader. Based on the result vertices can be either discarded (in fragment shader) or any of the attribute (such as color) can be changed as per required visual effect.
 
 
 ## Precision
@@ -135,12 +134,6 @@ Result of the PIP test returned by `GPUPolygonFilter` class resides in a `WebGLB
 
 
 ## Performance
-
-CPU filtering is expensive as it performs filtering of each individual object in a serial fashion and it's complexity is O(N*E), where `N` is number of objects and `E` is number of polygon edges.
-
-Above proposed GPU Filtering runs in parallel and the number polygons or polygon edges has no impact on time as everything is combined to same texture.
-
-Texture sampling is not cheap and it comes with some overhead. But when number of points to be clipped and there are multiple polygons, the overhead could much smaller than the gains.
 
 Here are the performance numbers for clipping randomly generated points (same set of points are used for both CPU and GPU) to a 10 side convex polygon. For CPU clipping, I used [@turf/boolean-within](https://www.npmjs.com/package/@turf/boolean-within)
 
