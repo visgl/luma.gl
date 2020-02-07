@@ -23,7 +23,7 @@ test('Buffer#constructor/delete', t => {
   t.end();
 });
 
-test('Buffer#constructor offset', t => {
+test('Buffer#constructor offset and size', t => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
