@@ -93,7 +93,7 @@ export default class Buffer extends Resource {
 
     // Set data: (re)initializes the buffer
     if (props.data) {
-      this._setData(props.data, props.offset, props.size);
+      this._setData(props.data, props.offset, props.byteLength);
     } else {
       this._setByteLength(props.byteLength || 0);
     }
@@ -294,21 +294,21 @@ export default class Buffer extends Resource {
   // PRIVATE METHODS
 
   // Allocate a new buffer and initialize to contents of typed array
-  _setData(data, offset = 0, size = data.byteLength + offset) {
+  _setData(data, offset = 0, byteLength = data.byteLength + offset) {
     assert(ArrayBuffer.isView(data));
 
     this._trackDeallocatedMemory();
 
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, size, this.usage);
+    this.gl.bufferData(target, byteLength, this.usage);
     this.gl.bufferSubData(target, offset, data);
     this.gl.bindBuffer(target, null);
 
     this.debugData = data.slice(0, DEBUG_DATA_LENGTH);
-    this.bytesUsed = size;
+    this.bytesUsed = byteLength;
 
-    this._trackAllocatedMemory(size);
+    this._trackAllocatedMemory(byteLength);
 
     // infer GL type from supplied typed array
     const type = getGLTypeFromTypedArray(data);

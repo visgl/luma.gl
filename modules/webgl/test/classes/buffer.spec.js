@@ -41,18 +41,18 @@ test('Buffer#constructor offset and size', t => {
   t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
   t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
 
-  buffer = new Buffer(gl2, {data, size: data.byteLength + 12});
+  buffer = new Buffer(gl2, {data, byteLength: data.byteLength + 12});
   receivedData = buffer.getData();
   expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
-  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer size');
+  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer byteLength');
 
   t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
   t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
 
-  buffer = new Buffer(gl2, {data, offset: 8, size: data.byteLength + 12});
+  buffer = new Buffer(gl2, {data, offset: 8, byteLength: data.byteLength + 12});
   receivedData = buffer.getData();
   expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
-  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer size and offsets data');
+  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer byteLength and offsets data');
 
   t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
   t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
