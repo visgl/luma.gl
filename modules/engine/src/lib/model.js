@@ -291,7 +291,7 @@ export default class Model {
 
     let logPriority;
 
-    if (log.priority >= 2) {
+    if (log.priority >= LOG_DRAW_PRIORITY) {
       logPriority = this._logDrawCallStart(2);
     }
 
@@ -335,7 +335,7 @@ export default class Model {
 
     onAfterRender();
 
-    if (log.priority >= 2) {
+    if (log.priority >= LOG_DRAW_PRIORITY) {
       this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
     }
 
