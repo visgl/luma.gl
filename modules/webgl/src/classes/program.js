@@ -54,10 +54,9 @@ export default class Program extends Resource {
   }
 
   initialize(props = {}) {
-    const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS, debug = false} = props;
+    const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
 
     this.hash = hash || ''; // Used by ProgramManager
-    this.debug = debug;
 
     // Create shaders if needed
     this.vs =
@@ -132,7 +131,7 @@ export default class Program extends Resource {
       this.setUniforms(uniforms || {});
     }
 
-    if (this.debug && logPriority !== undefined) {
+    if (log.priority >= 2 && logPriority !== undefined) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
         `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
@@ -195,7 +194,7 @@ export default class Program extends Resource {
   }
 
   setUniforms(uniforms = {}) {
-    if (this.debug) {
+    if (log.priority >= 2) {
       checkUniformValues(uniforms, this.id, this._uniformSetters);
     }
 
