@@ -292,7 +292,7 @@ export default class Model {
     let logPriority;
 
     if (log.priority >= LOG_DRAW_PRIORITY) {
-      logPriority = this._logDrawCallStart(2);
+      logPriority = this._logDrawCallStart(LOG_DRAW_PRIORITY);
     }
 
     const drawParams = this.vertexArray.getDrawParams();
