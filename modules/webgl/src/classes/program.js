@@ -131,7 +131,7 @@ export default class Program extends Resource {
       this.setUniforms(uniforms || {});
     }
 
-    if (log.priority >= 2 && logPriority !== undefined) {
+    if (log.priority >= logPriority) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
         `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +
