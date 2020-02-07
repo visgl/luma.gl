@@ -23,6 +23,43 @@ test('Buffer#constructor/delete', t => {
   t.end();
 });
 
+test('Buffer#constructor offset', t => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  const data = new Float32Array([1, 2, 3]);
+
+  let buffer = new Buffer(gl2, {data, offset: 8});
+  let receivedData = buffer.getData();
+  let expectedData = new Float32Array([0, 0, 1, 2, 3]);
+  t.deepEqual(receivedData, expectedData, 'Buffer constructor offsets data');
+
+  t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
+  t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
+
+  buffer = new Buffer(gl2, {data, size: data.byteLength + 12});
+  receivedData = buffer.getData();
+  expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
+  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer size');
+
+  t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
+  t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
+
+  buffer = new Buffer(gl2, {data, offset: 8, size: data.byteLength + 12});
+  receivedData = buffer.getData();
+  expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
+  t.deepEqual(receivedData, expectedData, 'Buffer constructor sets buffer size and offsets data');
+
+  t.equal(buffer.byteLength, expectedData.byteLength, 'Buffer byteLength set properly');
+  t.equal(buffer.bytesUsed, expectedData.byteLength, 'Buffer byteLength set properly');
+
+  t.end();
+});
+
 test('Buffer#bind/unbind', t => {
   const {gl} = fixture;
 
