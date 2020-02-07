@@ -37,7 +37,6 @@ export default class Model {
     this.id = id;
     this.gl = gl;
     this.id = props.id || uid('Model');
-    this.debug = props.debug || false;
     this.lastLogTime = 0; // TODO - move to probe.gl
     this.initialize(props);
   }
@@ -252,8 +251,8 @@ export default class Model {
 
     let logPriority;
 
-    if (this.debug) {
-      logPriority = this._logDrawCallStart(2);
+    if (log.priority >= LOG_DRAW_PRIORITY) {
+      logPriority = this._logDrawCallStart(LOG_DRAW_PRIORITY);
     }
 
     const drawParams = this.vertexArray.getDrawParams();
@@ -296,7 +295,7 @@ export default class Model {
 
     onAfterRender();
 
-    if (this.debug) {
+    if (log.priority >= LOG_DRAW_PRIORITY) {
       this._logDrawCallEnd(logPriority, vertexArray, framebuffer);
     }
 
@@ -451,7 +450,7 @@ export default class Model {
 
   _logDrawCallStart(logLevel) {
     const logDrawTimeout = logLevel > 3 ? 0 : LOG_DRAW_TIMEOUT;
-    if (log.level < logLevel || Date.now() - this.lastLogTime < logDrawTimeout) {
+    if (Date.now() - this.lastLogTime < logDrawTimeout) {
       return undefined;
     }
 
