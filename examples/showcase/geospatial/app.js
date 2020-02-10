@@ -6,8 +6,8 @@ import {Model} from '@luma.gl/engine';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `
-A triangle connecting Times Square, Rockafeller Center, and Columbus Circle in Manhattan, NYC on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the
-<a class="external-link" href="https://docs.mapbox.com/mapbox-gl-js/example/custom-style-layer/">Mapbox GL JS custom layer API</a>.
+<p>A triangle connecting Times Square, Rockafeller Center, and Columbus Circle in Manhattan, NYC on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the
+<a class="external-link" href="https://docs.mapbox.com/mapbox-gl-js/example/custom-style-layer/">Mapbox GL JS custom layer API</a>.</p>
 `;
 
 mapboxgl.accessToken = process.env.MapboxAccessToken; // eslint-disable-line

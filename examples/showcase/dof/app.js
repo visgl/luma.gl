@@ -27,13 +27,13 @@ Several instanced luma.gl <code>Cubes</code> rendered with a Depth of Field
 post-processing effect.
 
 <div>
-  Focal Length: <input type="range" id="focal-length" min="0.1" max="10.0" step="0.1">
+  <label>Focal Length</label><input type="range" id="focal-length" min="0.1" max="10.0" step="0.1">
 </div>
 <div>
-  Focus Distance: <input type="range" id="focus-distance" min="0.1" max="10.0" step="0.1">
+  <label>Focus Distance</label><input type="range" id="focus-distance" min="0.1" max="10.0" step="0.1">
 </div>
 <div>
-  F-Stop: <input type="range" id="f-stop" min="0.1" max="10.0" step="0.1">
+  <label>F-Stop</label><input type="range" id="f-stop" min="0.1" max="10.0" step="0.1">
 </div>
 
 `;
