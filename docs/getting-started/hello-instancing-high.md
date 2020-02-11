@@ -116,7 +116,7 @@ const model = new Model(gl, {
 ```
 Note the new syntax used for the attributes. The second element in each array is an `accessor` that describes how the buffer should be traversed during a draw. luma.gl will try to infer these parameters from the data or the shader when possible, but when it can't (or when we want to override the inferred values), we have to provide an explicit accessor. We also provide the model with the number of instances we want to draw.
 
-If all went well, running the app now should draw four triangles, each a different color. See the live demo [here](/examples/getting-started/hello-instancing-mid).
+If all went well, running the app now should draw four triangles, each a different color. See the live demo [here](/examples/getting-started/hello-instancing-high).
 
 For reference the complete code is provided below:
 ```js
