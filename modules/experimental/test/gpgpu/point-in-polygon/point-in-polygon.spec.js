@@ -156,6 +156,11 @@ const TEST_CASES = [
 
 /* eslint-disable max-nested-callbacks */
 test('gpgpu#GPUPointInPolygon CPU vs GPU', t => {
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
   const gpuPointInPolygon = new GPUPointInPolygon(gl2, {textureSize: 512});
 
   TEST_CASES.forEach(tc => {

@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {Buffer, Texture2D} from '@luma.gl/webgl';
+import {Buffer, Texture2D, assert} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
@@ -9,6 +10,8 @@ import * as Polygon from './polygon';
 export default class GPUPointInPolygon {
   constructor(gl, opts = {}) {
     this.gl = gl;
+    // WebGL2 only
+    assert(isWebGL2(gl));
 
     this.textureSize = opts.textureSize || TEXTURE_SIZE;
     this._setupResources();
