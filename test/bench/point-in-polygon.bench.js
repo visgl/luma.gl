@@ -27,7 +27,7 @@ const gl = createTestContext();
 const random = getRandom();
 
 const Count10K = 10000;
-const Count1M =  1000000;
+const Count1M = 1000000;
 const Count10M = 10000000;
 const polygon5 = getRandomPolygon(4);
 const polygon10 = getRandomPolygon(10);
@@ -42,7 +42,6 @@ const filterValueIndexBuffer1M = new Buffer(gl, Count1M * 2 * 4);
 const positionBuffer10M = new Buffer(gl, points10M.flatArray);
 const filterValueIndexBuffer10M = new Buffer(gl, Count10M * 2 * 4);
 
-
 const gpuPolygonClip = new GPUPointInPolygon(gl, {textureSize: 512});
 
 export default function pointInPolygonBench(suite) {
@@ -55,31 +54,46 @@ export default function pointInPolygonBench(suite) {
     })
     .add('GPU: 10K points, 5 polygon edges', () => {
       gpuPolygonClip.update({polygons: [polygon5]});
-      gpuPolygonClip.filter({positionBuffer: positionBuffer10K, filterValueIndexBuffer: filterValueIndexBuffer10K, count: Count10K});
+      gpuPolygonClip.filter({
+        positionBuffer: positionBuffer10K,
+        filterValueIndexBuffer: filterValueIndexBuffer10K,
+        count: Count10K
+      });
     })
     .add('CPU: 10K points, 10 polygon edges', () => {
       cpuPointInPolygon({polygons: [polygon10], points: points10K.pointsArray});
     })
     .add('GPU: 10K points, 10 polygon edges', () => {
       gpuPolygonClip.update({polygons: [polygon10]});
-      gpuPolygonClip.filter({positionBuffer: positionBuffer10K, filterValueIndexBuffer: filterValueIndexBuffer10K, count: Count10K});
+      gpuPolygonClip.filter({
+        positionBuffer: positionBuffer10K,
+        filterValueIndexBuffer: filterValueIndexBuffer10K,
+        count: Count10K
+      });
     })
     .add('CPU: 1M points, 10 polygon edges', () => {
       cpuPointInPolygon({polygons: [polygon10], points: points1M.pointsArray});
     })
     .add('GPU: 1M points, 10 polygon edges', () => {
       gpuPolygonClip.update({polygons: [polygon10]});
-      gpuPolygonClip.filter({positionBuffer: positionBuffer1M, filterValueIndexBuffer: filterValueIndexBuffer1M, count: Count1M});
+      gpuPolygonClip.filter({
+        positionBuffer: positionBuffer1M,
+        filterValueIndexBuffer: filterValueIndexBuffer1M,
+        count: Count1M
+      });
     })
     .add('CPU: 10M points, 10 polygon edges', () => {
       cpuPointInPolygon({polygons: [polygon10], points: points10M.pointsArray});
     })
     .add('GPU: 10M points, 10 polygon edges', () => {
       gpuPolygonClip.update({polygons: [polygon10]});
-      gpuPolygonClip.filter({positionBuffer: positionBuffer10M, filterValueIndexBuffer: filterValueIndexBuffer10M, count: Count10M});
-    })
+      gpuPolygonClip.filter({
+        positionBuffer: positionBuffer10M,
+        filterValueIndexBuffer: filterValueIndexBuffer10M,
+        count: Count10M
+      });
+    });
 }
-
 
 function getRandomPoints(count) {
   const flatArray = new Float32Array(count * 2);
@@ -93,30 +107,25 @@ function getRandomPoints(count) {
 }
 
 export function getRandomPolygon(size) {
-
   size = size || Math.floor(random() * 50);
   size = Math.max(size, 4);
-  const angleStep = 360 / size ;
+  const angleStep = 360 / size;
   let angle = 0;
   const radiusStep = 0.25;
   let radius = 0;
   const polygon = [];
-  const xOffset = (random() - 0.5)/4;
-  const yOffset = (random() - 0.5)/4;
-  for (let i=0; i<size; i++) {
-    radius = 0.25 + radiusStep*random(); // random value between 0.25 to 0.5
-    angle = (angleStep * i) + angleStep*random();
-    const cos =  Math.cos(angle * Math.PI / 180);
-    const sin =  Math.sin(angle * Math.PI / 180);
-    polygon.push([
-      radius * sin + xOffset,
-      radius * cos + yOffset
-    ]);
+  const xOffset = (random() - 0.5) / 4;
+  const yOffset = (random() - 0.5) / 4;
+  for (let i = 0; i < size; i++) {
+    radius = 0.25 + radiusStep * random(); // random value between 0.25 to 0.5
+    angle = angleStep * i + angleStep * random();
+    const cos = Math.cos((angle * Math.PI) / 180);
+    const sin = Math.sin((angle * Math.PI) / 180);
+    polygon.push([radius * sin + xOffset, radius * cos + yOffset]);
   }
   polygon.push([...polygon[0]]);
   return polygon;
 }
-
 
 function getRandom() {
   let s = 1;

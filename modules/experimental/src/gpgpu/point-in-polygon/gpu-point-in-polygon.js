@@ -1,7 +1,6 @@
-
 import GL from '@luma.gl/constants';
-import {Buffer, Texture2D, assert} from '@luma.gl/webgl';
-import {Model, Transform} from '@luma.gl/engine';
+import {Buffer, Texture2D} from '@luma.gl/webgl';
+import {Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
 const TEXTURE_SIZE = 512;
@@ -18,7 +17,6 @@ export default class GPUPointInPolygon {
   }
 
   update({polygons, textureSize} = {}) {
-
     if (textureSize) {
       this.textureSize = textureSize;
     }
@@ -40,8 +38,7 @@ export default class GPUPointInPolygon {
       },
       elementCount: count
     });
-    const {polygonTexture, boundingBox, bbSize} = this;
-    const [xMin, yMin, xMax, yMax] = boundingBox;
+    const {polygonTexture, boundingBox} = this;
 
     this.filterTransform.run({
       moduleSettings: {boundingBox, texture: polygonTexture}
@@ -69,7 +66,10 @@ export default class GPUPointInPolygon {
     });
     this.positionBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
     this.idBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 1}});
-    this.indexBuffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER, accessor: {type: GL.UNSIGNED_SHORT}});
+    this.indexBuffer = new Buffer(gl, {
+      target: GL.ELEMENT_ARRAY_BUFFER,
+      accessor: {type: GL.UNSIGNED_SHORT}
+    });
 
     // transform to generate polygon texture
     this.polyTextureTransform = new Transform(gl, {
@@ -99,10 +99,9 @@ export default class GPUPointInPolygon {
   }
 
   _updateResources(vertices, indices, ids, vertexCount) {
-
     const boundingBox = getBoundingBox(vertices, vertexCount);
 
-    const width  = boundingBox[2] - boundingBox[0];
+    const width = boundingBox[2] - boundingBox[0];
     const height = boundingBox[3] - boundingBox[1];
 
     const whRatio = width / height;
@@ -139,7 +138,6 @@ export default class GPUPointInPolygon {
 // Helper methods
 
 function getBoundingBox(positions, vertexCount) {
-
   let yMin = Infinity;
   let yMax = -Infinity;
   let xMin = Infinity;
@@ -162,18 +160,22 @@ function getBoundingBox(positions, vertexCount) {
 function triangulatePolygons(polygons) {
   const SIZE = 2;
   const vertices = [];
-  const indices= [];
+  const indices = [];
   const ids = [];
   let count = 0;
   let polygonId = 0;
-  for (let i=0; i<polygons.length; i++) {
+  for (let i = 0; i < polygons.length; i++) {
     const normalized = Polygon.normalize(polygons[i], SIZE);
     const curVertices = normalized.positions || normalized;
-    const curIds = new Float32Array(curVertices.length/SIZE).fill(polygonId);
+    const curIds = new Float32Array(curVertices.length / SIZE).fill(polygonId);
     vertices.push(...curVertices);
     ids.push(...curIds);
-    const curIndices = Polygon.getSurfaceIndices(normalized, SIZE).map(x => x + count);
-    count += curVertices.length/SIZE;
+    const curIndices = Polygon.getSurfaceIndices(normalized, SIZE);
+    const indexCount = curIndices.length;
+    for (let j = 0; j < indexCount; j++) {
+      curIndices[j] += count;
+    }
+    count += curVertices.length / SIZE;
     indices.push(...curIndices);
     polygonId++;
   }

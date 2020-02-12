@@ -47,7 +47,9 @@ export default class TextureTransform {
   }
 
   getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[this.currentIndex];
+    const {sourceTextures, framebuffer, targetTexture, sourceBuffers} = this.bindings[
+      this.currentIndex
+    ];
 
     const attributes = Object.assign({}, sourceBuffers, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);

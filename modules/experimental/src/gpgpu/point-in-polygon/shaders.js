@@ -1,4 +1,3 @@
-
 export const POLY_TEX_VS = `\
 uniform vec4 boundingBoxOriginSize; //[xMin, yMin, xSize, ySize]
 attribute vec2 a_position;
