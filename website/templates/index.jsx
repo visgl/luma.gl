@@ -24,13 +24,13 @@ export default class IndexPage extends React.Component {
         <h2>High-performance toolkit for WebGL-based data visualization.</h2>
         <ul>
           <Bullet>
-            luma.gl can provide high-level drawing classes or simply enhance programming directly with the WebGL API.
+            The core 3D rendering technology behind Uber's suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
           </Bullet>
           <Bullet>
-            luma.gl polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.
+            Provides simplified abstractions for high-performance data visualizaton APIs like instanced rendering and transform feedback.
           </Bullet>
           <Bullet>
-            luma.gl simplifies usage of high-performance APIs for data visualization like instanced rendering and transform feedback.
+            Polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.
           </Bullet>
         </ul>
       </Home>
