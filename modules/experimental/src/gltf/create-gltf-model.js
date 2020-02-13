@@ -87,18 +87,18 @@ export default function createGLTFModel(gl, options) {
         id,
         drawMode,
         vertexCount,
-        modules: [pbr],
+        modules: materialParser.vs || materialParser.fs ? [] : [pbr],
         defines: materialParser.defines,
         parameters: materialParser.parameters,
-        vs: addVersionToShader(gl, vs),
-        fs: addVersionToShader(gl, fs),
+        vs: materialParser.vs || addVersionToShader(gl, vs),
+        fs: materialParser.fs || addVersionToShader(gl, fs),
         managedResources
       },
       modelOptions
     )
   );
 
-  model.setProps({attributes});
+  model.setProps({attributes: materialParser.attributes});
   model.setUniforms(materialParser.uniforms);
 
   return model;

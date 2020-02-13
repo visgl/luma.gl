@@ -463,6 +463,11 @@ export default class AppAnimationLoop extends AnimationLoop {
             u_ModelMatrix: worldMatrix,
             u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
 
+            // used by KHR_techniques_webgl
+            u_Projection: uProjection,
+            u_ModelView: new Matrix4(uView).multiplyRight(worldMatrix),
+            //
+
             u_ScaleDiffBaseMR: this.u_ScaleDiffBaseMR,
             u_ScaleFGDSpec: this.u_ScaleFGDSpec
           },

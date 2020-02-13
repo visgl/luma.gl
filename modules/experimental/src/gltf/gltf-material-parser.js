@@ -6,6 +6,14 @@ export default class GLTFMaterialParser {
     {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents}
   ) {
     this.gl = gl;
+    this.attributes = attributes;
+    this.parameters = {};
+    this.generatedTextures = [];
+
+    if (material && material.technique) {
+      this.parseTechnique(material.technique);
+      return;
+    }
 
     this.defines = {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
@@ -23,9 +31,6 @@ export default class GLTFMaterialParser {
 
       u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
     };
-
-    this.parameters = {};
-    this.generatedTextures = [];
 
     if (imageBasedLightingEnvironment) {
       this.uniforms.u_DiffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
@@ -138,6 +143,63 @@ export default class GLTFMaterialParser {
           this.gl.ONE_MINUS_SRC_ALPHA
         ]
       });
+    }
+  }
+
+  renameShaderVariable(oldName, newValue) {
+    const code = `#define ${oldName} ${newValue}\n`;
+    this.vs = code + this.vs;
+    this.fs = code + this.fs;
+  }
+
+  resolveSemanticUniform(name, {semantic}, value) {
+    // handle texture
+    if (value && value.texture) {
+      if (value.texCoord) {
+        log.warn('Multi tex-coord not supported')();
+      }
+
+      this.parseTexture(value, name);
+    } else if (semantic === 'CESIUM_RTC_MODELVIEW' || semantic === 'MODELVIEW') {
+      this.renameShaderVariable(name, 'u_ModelView');
+    } else if (semantic === 'PROJECTION') {
+      this.renameShaderVariable(name, 'u_Projection');
+    } else {
+      log.warn('Cannot resolve uniform in glTF custom technique')();
+    }
+  }
+
+  parseTechnique(technique) {
+    const {program = {}, attributes = {}, uniforms = {}, values = {}} = technique;
+
+    if (program.vertexShader && program.fragmentShader) {
+      this.vs = program.vertexShader.code;
+      this.fs = program.fragmentShader.code;
+
+      // custom shader will not use defines
+      this.defines = {};
+
+      this.uniforms = {};
+      Object.keys(uniforms).forEach(uniform => {
+        this.resolveSemanticUniform(uniform, uniforms[uniform], values[uniform]);
+      });
+
+      const originalAttributes = this.attributes;
+      this.attributes = {};
+
+      Object.keys(attributes).forEach(attribute => {
+        if (originalAttributes[attributes[attribute].semantic]) {
+          this.attributes[attribute] = originalAttributes[attributes[attribute].semantic];
+        } else {
+          log.warn('Cannot resolve attribute in glTF custom technique')();
+        }
+      });
+
+      if (originalAttributes.indices) {
+        this.attributes.indices = originalAttributes.indices;
+      }
+    } else {
+      throw new Error('Missing shader');
     }
   }
 }
