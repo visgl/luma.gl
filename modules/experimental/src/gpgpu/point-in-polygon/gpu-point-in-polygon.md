@@ -41,20 +41,21 @@ const results = filterValueIndexBuffer.getData();
 
 ### GPUPointInPolygon(gl: WebGL2RenderingContext, props: Object)
 
-Creates a new `gpuPointInPolygon` object.
+Creates a new `GPUPointInPolygon` object.
 
 * `gl` - (WebGL2RenderingContext) - WebGL2 context.
 * `opts.polygons` (`Array`, Optional) - Array of polygons, where each polygon is in following format:
   * `Simple polygon` : [[x1, y1], [x2, y2], ...]
   * `Polygon with holes` : [
-      [[x1, y1], [x2, y2], ...] // outer ring
-      [[a1, b1], [a2, b2], ...] // hole - 1
-      [[s1, t1], [s2, t2], ...] // hole - 2
+      [[x1, y1], [x2, y2], ...], // outer ring
+      [[a1, b1], [a2, b2], ...], // hole - 1
+      [[s1, t1], [s2, t2], ...], // hole - 2
+      ...
     ]
-* `opts.textureSize` (`Number`, Optional) - Size of the texture to be used to create a polygon texture, that is used internally. Default value is 512.
+* `opts.textureSize` (`Number`, Optional) - Size of the texture to be used to create a polygon texture. Default value is 512.
+
 
 ## Methods
-
 
 ### update(opts)
 
