@@ -68,7 +68,7 @@ const TEST_CASES = [
   },
   {
     // randomly generated data
-    name: 'random',
+    name: 'multiple polygons',
     polygons: [
       [
         [0.8473027063236651, -86.3501734165155],

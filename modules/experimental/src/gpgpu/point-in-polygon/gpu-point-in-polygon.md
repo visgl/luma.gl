@@ -13,11 +13,11 @@ const polygons =
 // XY locations of 6 points
 const points = [
   0, 0,
-  -0.25, -0.25,
+  5.0, -0.25,
   0.25, -0.25,
-  0.25, 0.25,
+  0.25, 8.25,
   -0.25, 0.25,
-  -0.45, 0.45
+  -3.45, 0.45
 ];
 
 const positionBuffer = new Buffer(gl2, new Float32Array(points));

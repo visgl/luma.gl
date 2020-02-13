@@ -10,12 +10,9 @@ import * as Polygon from './polygon';
 export default class GPUPointInPolygon {
   constructor(gl, opts = {}) {
     this.gl = gl;
-    // WebGL2 only
-    assert(isWebGL2(gl));
-
-    this.textureSize = opts.textureSize || TEXTURE_SIZE;
+    assert(isWebGL2(gl)); // supports WebGL2 only
+    this.textureSize = TEXTURE_SIZE;
     this._setupResources();
-
     this.update(opts);
   }
 
@@ -83,11 +80,10 @@ export default class GPUPointInPolygon {
       vs: POLY_TEX_VS,
       drawMode: GL.TRIANGLES,
       isIndexed: true,
-      debug: true,
       sourceBuffers: {
         a_position: this.positionBuffer,
         a_polygonID: this.idBuffer,
-        indices: this.indexBuffer // key doesn't matter
+        indices: this.indexBuffer
       }
     });
 
@@ -96,23 +92,21 @@ export default class GPUPointInPolygon {
       id: 'filter transform',
       vs: FILTER_VS,
       modules: [textureFilterModule],
-      varyings: ['filterValueIndex'],
-      debug: true
+      varyings: ['filterValueIndex']
     });
   }
 
   _updateResources(vertices, indices, ids, vertexCount) {
     const boundingBox = getBoundingBox(vertices, vertexCount);
-
-    const width = boundingBox[2] - boundingBox[0];
-    const height = boundingBox[3] - boundingBox[1];
-
+    const [xMin, yMin, xMax, yMax] = boundingBox;
+    const width = xMax - xMin;
+    const height = yMax - yMin;
     const whRatio = width / height;
     const {textureSize} = this;
 
+    // calculate max texture size with same aspect ratio
     let texWidth = textureSize;
     let texHeight = textureSize;
-
     if (whRatio > 1) {
       texHeight = texWidth / whRatio;
     } else {
@@ -129,10 +123,9 @@ export default class GPUPointInPolygon {
       _targetTexture: this.polygonTexture
     });
 
-    const [xMin, yMin, xMax, yMax] = boundingBox;
     this.polyTextureTransform.run({
       uniforms: {
-        boundingBoxOriginSize: [xMin, yMin, xMax - xMin, yMax - yMin]
+        boundingBoxOriginSize: [xMin, yMin, width, height]
       }
     });
   }
@@ -170,7 +163,8 @@ function triangulatePolygons(polygons) {
   for (let i = 0; i < polygons.length; i++) {
     const normalized = Polygon.normalize(polygons[i], SIZE);
     const curVertices = normalized.positions || normalized;
-    const curIds = new Float32Array(curVertices.length / SIZE).fill(polygonId);
+    const curCount = curVertices.length / SIZE;
+    const curIds = new Float32Array(curCount).fill(polygonId);
     vertices.push(...curVertices);
     ids.push(...curIds);
     const curIndices = Polygon.getSurfaceIndices(normalized, SIZE);
@@ -178,7 +172,7 @@ function triangulatePolygons(polygons) {
     for (let j = 0; j < indexCount; j++) {
       curIndices[j] += count;
     }
-    count += curVertices.length / SIZE;
+    count += curCount;
     indices.push(...curIndices);
     polygonId++;
   }
