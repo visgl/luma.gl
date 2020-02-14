@@ -68,6 +68,8 @@ Creates a new `GPUPointInPolygon` object.
     ]
 * `opts.textureSize` (`Number`, Optional) - Size of the texture to be used to create a polygon texture, that is used internally. Default value is 512.
 
+NOTE: Index of a polygon in `opts.polygons` array is its id, and it is used to identify which polygon a point lies in the result buffer (check `filterValueIndexBuffer below`). A maximum of 256 values are supported for polygon id, i.e its valid range is [0, 255], if `opts.polygons` size is more than 256, polygon id will be clamped to 255.
+
 ### filter(opts)
 
 * `opts.positionBuffer` (`Buffer`) - Buffer object containing X, Y position of input points.

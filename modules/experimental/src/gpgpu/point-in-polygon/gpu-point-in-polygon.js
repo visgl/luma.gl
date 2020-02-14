@@ -164,7 +164,7 @@ function triangulatePolygons(polygons) {
     const normalized = Polygon.normalize(polygons[i], SIZE);
     const curVertices = normalized.positions || normalized;
     const curCount = curVertices.length / SIZE;
-    const curIds = new Float32Array(curCount).fill(polygonId);
+    const curIds = new Array(curCount).fill(polygonId);
     vertices.push(...curVertices);
     ids.push(...curIds);
     const curIndices = Polygon.getSurfaceIndices(normalized, SIZE);
@@ -176,6 +176,9 @@ function triangulatePolygons(polygons) {
     indices.push(...curIndices);
     polygonId++;
   }
+
+  // UInt16 (UNSIGNED_SHORT) buffer is used for indices
+  assert(count < 65536); // 0xFFFF
 
   const vertexCount = Polygon.getVertexCount(vertices, SIZE);
 
