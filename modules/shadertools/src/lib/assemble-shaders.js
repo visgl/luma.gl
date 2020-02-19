@@ -5,7 +5,7 @@ import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from './transpile-shader';
 import {assert} from '../utils';
 
-const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/;
+const REGEX_FIRST_FUNCTION = /[ \t]*\w+[ \t]+\w+\s*\([^)]*\)\s*\{\n?/;
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
@@ -67,9 +67,14 @@ function assembleShader(
     versionLine = `#version ${glslVersion}`;
   }
 
-  const mainIndex = sourceLines.findIndex(l => l.match(REGEX_START_OF_MAIN));
-  const corePreamble = sourceLines.slice(0, mainIndex).join('\n');
-  const coreMain = sourceLines.slice(mainIndex).join('\n');
+  let functionIndex = sourceLines.findIndex(l => l.match(REGEX_FIRST_FUNCTION));
+
+  if (functionIndex === -1) {
+    functionIndex = 0;
+  }
+
+  const corePreamble = sourceLines.slice(0, functionIndex).join('\n');
+  const coreMain = sourceLines.slice(functionIndex).join('\n');
 
   // Combine Module and Application Defines
   const allDefines = {};

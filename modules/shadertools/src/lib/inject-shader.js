@@ -10,7 +10,7 @@ const MODULE_INJECTORS = {
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__'; // Uniform/attribute declarations
 
-const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
+const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
 const fragments = [];
 
