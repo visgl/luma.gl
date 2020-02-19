@@ -5,6 +5,7 @@ import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from './transpile-shader';
 import {assert} from '../utils';
 
+const REGEX_START_OF_MAIN = /void main\s*\([^)]*\)\s*\{\n?/;
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
@@ -52,19 +53,23 @@ function assembleShader(
 
   const isVertex = type === VERTEX_SHADER;
 
-  const sourceLines = source.split('\n');
+  let sourceLines = source.split('\n');
   let glslVersion = 100;
   let versionLine = '';
-  let coreSource = source;
+
   // Extract any version directive string from source.
   // TODO : keep all pre-processor statements at the begining of the shader.
   if (sourceLines[0].indexOf('#version ') === 0) {
     glslVersion = 300; // TODO - regexp that matches atual version number
     versionLine = sourceLines[0];
-    coreSource = sourceLines.slice(1).join('\n');
+    sourceLines = sourceLines.slice(1);
   } else {
     versionLine = `#version ${glslVersion}`;
   }
+
+  const mainIndex = sourceLines.findIndex(l => l.match(REGEX_START_OF_MAIN));
+  const corePreamble = sourceLines.slice(0, mainIndex).join('\n');
+  const coreMain = sourceLines.slice(mainIndex).join('\n');
 
   // Combine Module and Application Defines
   const allDefines = {};
@@ -85,8 +90,10 @@ ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(allDefines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
+${corePreamble}
 `
     : `${versionLine}
+${corePreamble}
 `;
 
   hookFunctions = normalizeHookFunctions(hookFunctions);
@@ -112,7 +119,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   for (const module of modules) {
     if (log) {
-      module.checkDeprecations(coreSource, log);
+      module.checkDeprecations(source, log);
     }
     const moduleSource = module.getModuleSource(type, glslVersion);
     // Add the module source, and a #define that declares it presence
@@ -136,7 +143,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   assembledSource += getHookFunctions(hookFunctions[type], hookInjections);
 
   // Add the version directive and actual source of this shader
-  assembledSource += coreSource;
+  assembledSource += coreMain;
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, type, mainInjections);
