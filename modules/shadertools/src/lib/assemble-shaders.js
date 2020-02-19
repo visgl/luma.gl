@@ -5,7 +5,7 @@ import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from './transpile-shader';
 import {assert} from '../utils';
 
-const REGEX_FIRST_FUNCTION = /[ \t]*\w+[ \t]+\w+\s*\([^)]*\)\s*\{\n?/;
+const REGEX_FIRST_FUNCTION = /^[ \t]*\w+[ \t]+\w+\s*\([^)]*\)/;
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
