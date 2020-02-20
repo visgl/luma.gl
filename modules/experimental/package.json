@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "8.1.0-alpha.2",
+  "version": "8.1.0-alpha.3",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -31,9 +31,9 @@
   },
   "dependencies": {
     "@loaders.gl/images": "^2.0.0",
-    "@luma.gl/constants": "8.1.0-alpha.2",
-    "math.gl": "^3.1.2",
-    "earcut": "^2.0.6"
+    "@luma.gl/constants": "8.1.0-alpha.3",
+    "earcut": "^2.0.6",
+    "math.gl": "^3.1.2"
   },
   "peerDependencies": {
     "@loaders.gl/gltf": "^2.0.0",
