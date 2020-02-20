@@ -211,6 +211,54 @@ const FS_GLSL_300_GLTF = `#version 300 es
   }
 `;
 
+const TEST_MODULE = {
+  name: 'TEST_MODULE',
+  // Module function has access to shader attributes
+  vs: `
+    float getFloat() {
+      return 1.0 + floatAttribute;
+    }
+  `,
+  // Module function has access to shader varyings
+  fs: `
+    vec4 getVec4() {
+      return vec4(floatVarying);
+    }
+  `,
+  inject: {
+    // Hook function has access to shader attributes and module functions
+    'vs:HOOK_FUNCTION': 'value = getFloat() + floatAttribute;',
+
+    // Hook function has access to shader varyings and module functions
+    'fs:HOOK_FUNCTION': 'value = getVec4() + floatVarying;'
+  }
+};
+
+const VS_GLSL_300_MODULES = `\
+#version 300 es
+
+in float floatAttribute;
+
+out float floatVarying;
+
+void main(void) {
+  HOOK_FUNCTION(floatVarying);
+}
+`;
+
+const FS_GLSL_300_MODULES = `\
+#version 300 es
+precision highp float;
+
+in float floatVarying;
+
+out vec4 fragmentColor;
+
+void main(void) {
+  HOOK_FUNCTION(fragmentColor);
+}
+`;
+
 test('assembleShaders#import', t => {
   t.ok(assembleShaders !== undefined, 'assembleShaders import successful');
   t.end();
@@ -409,6 +457,38 @@ test('assembleShaders#shaderhooks', t => {
   t.ok(
     assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
     'regex injection code included in shader hook'
+  );
+
+  t.end();
+});
+
+test('assembleShaders#injection order', t => {
+  const gl = fixture.gl1;
+
+  const assembleResult = assembleShaders(gl, {
+    vs: VS_GLSL_300_MODULES,
+    fs: FS_GLSL_300_MODULES,
+    modules: [TEST_MODULE],
+    transpileToGLSL100: true,
+    hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
+  });
+
+  const vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+
+  const fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+
+  const program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+  gl.linkProgram(program);
+
+  t.ok(
+    gl.getProgramParameter(program, gl.LINK_STATUS),
+    'Modules and injections have access to variables and functions'
   );
 
   t.end();
