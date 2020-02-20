@@ -47,9 +47,11 @@ export default class TextureTransform {
   }
 
   getDrawOptions(opts = {}) {
-    const {sourceTextures, framebuffer, targetTexture} = this.bindings[this.currentIndex];
+    const {sourceBuffers, sourceTextures, framebuffer, targetTexture} = this.bindings[
+      this.currentIndex
+    ];
 
-    const attributes = Object.assign({}, opts.attributes);
+    const attributes = Object.assign({}, sourceBuffers, opts.attributes);
     const uniforms = Object.assign({}, opts.uniforms);
     const parameters = Object.assign({}, opts.parameters);
     let discard = opts.discard;
@@ -165,14 +167,14 @@ export default class TextureTransform {
   }
 
   _setupTextures(props = {}) {
-    const {_sourceTextures = {}, _targetTexture} = props;
+    const {sourceBuffers, _sourceTextures = {}, _targetTexture} = props;
     const targetTexture = this._createTargetTexture({
       sourceTextures: _sourceTextures,
       textureOrReference: _targetTexture
     });
     this.hasSourceTextures =
       this.hasSourceTextures || (_sourceTextures && Object.keys(_sourceTextures).length > 0);
-    this._updateBindings({sourceTextures: _sourceTextures, targetTexture});
+    this._updateBindings({sourceBuffers, sourceTextures: _sourceTextures, targetTexture});
     if ('elementCount' in props) {
       this._updateElementIDBuffer(props.elementCount);
     }
@@ -211,14 +213,16 @@ export default class TextureTransform {
   }
 
   _updateBinding(binding, opts) {
-    const {sourceTextures, targetTexture} = opts;
+    const {sourceBuffers, sourceTextures, targetTexture} = opts;
     if (!binding) {
       binding = {
+        sourceBuffers: {},
         sourceTextures: {},
         targetTexture: null
       };
     }
     Object.assign(binding.sourceTextures, sourceTextures);
+    Object.assign(binding.sourceBuffers, sourceBuffers);
     if (targetTexture) {
       binding.targetTexture = targetTexture;
 

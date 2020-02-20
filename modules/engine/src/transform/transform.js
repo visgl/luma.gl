@@ -153,8 +153,8 @@ export default class Transform {
 
 function canCreateBufferTransform(props) {
   if (
-    !isObjectEmpty(props.sourceBuffers) ||
     !isObjectEmpty(props.feedbackBuffers) ||
+    !isObjectEmpty(props.feedbackMap) ||
     (props.varyings && props.varyings.length > 0)
   ) {
     return true;
