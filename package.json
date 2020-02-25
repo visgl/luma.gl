@@ -49,12 +49,12 @@
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
-    "@loaders.gl/core": "^2.0.0",
-    "@loaders.gl/gltf": "^2.0.0",
-    "@loaders.gl/polyfills": "^2.0.0",
-    "@probe.gl/bench": "^3.2.0",
-    "@probe.gl/stats-widget": "^3.2.0",
-    "@probe.gl/test-utils": "^3.2.0",
+    "@loaders.gl/core": "^2.1.0-alpha.4",
+    "@loaders.gl/gltf": "^2.1.0-alpha.4",
+    "@loaders.gl/polyfills": "^2.1.0-alpha.4",
+    "@probe.gl/bench": "^3.3.0-alpha.4",
+    "@probe.gl/stats-widget": "^3.3.0-alpha.4",
+    "@probe.gl/test-utils": "^3.3.0-alpha.4",
     "babel-loader": "^8.0.0",
     "babel-plugin-inline-webgl-constants": "^1.0.0",
     "babel-plugin-remove-glsl-comments": "^1.0.0",
