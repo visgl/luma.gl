@@ -11,7 +11,7 @@
     "build-lib": "mkdir -p dist && (cd ../../modules/script && yarn build-dev && cp dist/lumagl.js ../../examples/pbr/dist)"
   },
   "dependencies": {
-    "luma.gl": "^7.3.0-alpha"
+    "luma.gl": "^8.1.0-beta.1"
   },
   "devDependencies": {
     "babel-loader": "^8.0.0-beta",

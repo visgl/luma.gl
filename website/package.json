@@ -17,9 +17,9 @@
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
   },
   "dependencies": {
-    "@loaders.gl/draco": "^2.0.0",
-    "@loaders.gl/polyfills": "^2.0.0",
-    "@probe.gl/stats-widget": "^3.1.1",
+    "@loaders.gl/draco": "^2.1.0-alpha.4",
+    "@loaders.gl/polyfills": "^2.1.0-alpha.4",
+    "@probe.gl/stats-widget": "^3.3.0-alpha.4",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
     "mapbox-gl": "^1.2.1"

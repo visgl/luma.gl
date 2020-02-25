@@ -4,8 +4,8 @@ import {isWebGL2} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
-const TEXTURE_SIZE = 512;
 import * as Polygon from './polygon';
+const TEXTURE_SIZE = 512;
 
 export default class GPUPointInPolygon {
   constructor(gl, opts = {}) {

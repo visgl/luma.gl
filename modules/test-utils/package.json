@@ -28,14 +28,14 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
-    "probe.gl": "^3.2.0"
+    "probe.gl": "^3.3.0-alpha.4"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^8.0.0",
-    "@luma.gl/debug": "^8.0.0",
-    "@luma.gl/gltools": "^8.0.0",
-    "@luma.gl/webgl": "^8.0.0",
-    "@probe.gl/test-utils": "^3.2.0"
+    "@luma.gl/core": "^8.1.0-beta.1",
+    "@luma.gl/debug": "^8.1.0-beta.1",
+    "@luma.gl/gltools": "^8.1.0-beta.1",
+    "@luma.gl/webgl": "^8.1.0-beta.1",
+    "@probe.gl/test-utils": "^3.3.0-alpha.4"
   },
   "gitHead": "8deca643b658ddf6d8fb279df6417b8901a6fc93"
 }
