@@ -4,13 +4,25 @@
 
 Date: March 2, 2020
 
+### GPU-accelerated point-in-polygon tests
+
+The experimental `GPUPointInPolygon` class performs GPU-accerated point-in-polygon tests, which showed a massive improvement in performance over a CPU implementation of the algorithm:
+
+|Points| CPU | GPU | Improvement |
+|-|-|-|-|
+|10k|411|6900| 16x |
+|1M|4|4200| 1000x |
+|10M|0.378|3120| 8000x |
+
+Numbers shown are iterations/second.
+
 ### Improved vertex array object support in WebGL 1
 
 Handling of platforms that do not support vertex array objects has been significantly improved, providing a more stable experience in IE 11 and headless-gl.
 
 ### GLSL 3.0 to 1.0 transpilation
 
-`assembleShaders` now optionally attempts to transpile shaders from GLSL 3.0 to 1.0 potentially simplifying shader management in systems where both WebGL 1 and 2 are used. Refer to [the documentation](https://tsherif.github.io/luma.gl/docs/api-reference/shadertools/assemble-shaders#transpilation) for more information.
+`assembleShaders` now optionally attempts to transpile shaders from GLSL 3.0 to 1.0, potentially simplifying shader management in systems where both WebGL 1 and 2 are used. Refer to [the documentation](https://tsherif.github.io/luma.gl/docs/api-reference/shadertools/assemble-shaders#transpilation) for more information.
 
 ## Version 8.0
 
