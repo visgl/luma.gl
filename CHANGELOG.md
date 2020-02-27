@@ -1,3 +1,25 @@
+## v8.1.0-beta.1
+- Assemble shader variables to top of source (#1363)
+- GPU Accelerated Point In Polygon Test (#1360)
+- RFC: GPU Accelerated Polygon Clipping (#1350)
+- Update ocular-gatsby and tweak website (#1357)
+- Upgrade website to the latest gatsby-theme-ocular (#1351)
+- Fix model and program logging (#1355)
+- Allow size and offset to be set when constructing buffer (#1354)
+
+## v8.1.0-alpha.2
+- Delete VAO when vertex array is deleted (#1353)
+- Fix SphereGeometry indices (#1352)
+- Fix broken link (#1346)
+
+## v8.1.0-alpha.1
+- Only use texture LOD in GLTF if supported. (#1347)
+- Fix transpilation (#1344)
+- Full shader transpilation (#1342)
+- [Chore]: Skip draw when when rendering 0 primitives (#1340)
+- Fix overwriting of page load promise (#1338)
+- VAO polyfill (#1334)
+
 ## v8.0.0-beta.4
 
 - Bump math.gl and probe.gl to the latest production versions (#1320)
