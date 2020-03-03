@@ -39,7 +39,7 @@ function tesselateSphere(props) {
   const normals = new Float32Array(numVertices * 3);
   const texCoords = new Float32Array(numVertices * 2);
 
-  const IndexType = numVertices > 0xFFFF ? Uint32Array : Uint16Array;
+  const IndexType = numVertices > 0xffff ? Uint32Array : Uint16Array;
   const indices = new IndexType(nlat * nlong * 6);
 
   // Create positions, normals and texCoords
