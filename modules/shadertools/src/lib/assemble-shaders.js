@@ -5,7 +5,6 @@ import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from './transpile-shader';
 import {assert} from '../utils';
 
-const REGEX_FIRST_FUNCTION = /^[ \t]*\w+[ \t]+\w+\s*\(/;
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
@@ -53,28 +52,19 @@ function assembleShader(
 
   const isVertex = type === VERTEX_SHADER;
 
-  let sourceLines = source.split('\n');
+  const sourceLines = source.split('\n');
   let glslVersion = 100;
   let versionLine = '';
-
+  let coreSource = source;
   // Extract any version directive string from source.
   // TODO : keep all pre-processor statements at the begining of the shader.
   if (sourceLines[0].indexOf('#version ') === 0) {
     glslVersion = 300; // TODO - regexp that matches atual version number
     versionLine = sourceLines[0];
-    sourceLines = sourceLines.slice(1);
+    coreSource = sourceLines.slice(1).join('\n');
   } else {
     versionLine = `#version ${glslVersion}`;
   }
-
-  let functionIndex = sourceLines.findIndex(l => l.match(REGEX_FIRST_FUNCTION));
-
-  if (functionIndex === -1) {
-    functionIndex = 0;
-  }
-
-  const corePreamble = sourceLines.slice(0, functionIndex).join('\n');
-  const coreMain = sourceLines.slice(functionIndex).join('\n');
 
   // Combine Module and Application Defines
   const allDefines = {};
@@ -95,24 +85,30 @@ ${getPlatformShaderDefines(gl)}
 ${getVersionDefines(gl, glslVersion, !isVertex)}
 ${getApplicationDefines(allDefines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
-${corePreamble}
 `
     : `${versionLine}
-${corePreamble}
 `;
 
   hookFunctions = normalizeHookFunctions(hookFunctions);
 
   // Add source of dependent modules in resolved order
   const hookInjections = {};
+  const declInjections = {};
   const mainInjections = {};
 
   for (const key in inject) {
     const injection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
-    if (key.match(/^(v|f)s:/)) {
-      if (key[3] === '#') {
-        mainInjections[key] = [injection];
+    const match = key.match(/^(v|f)s:(#)?([\w-]+)$/);
+    if (match) {
+      const hash = match[2];
+      const name = match[3];
+      if (hash) {
+        if (name === 'decl') {
+          declInjections[key] = [injection];
+        } else {
+          mainInjections[key] = [injection];
+        }
       } else {
         hookInjections[key] = [injection];
       }
@@ -124,7 +120,7 @@ ${corePreamble}
 
   for (const module of modules) {
     if (log) {
-      module.checkDeprecations(source, log);
+      module.checkDeprecations(coreSource, log);
     }
     const moduleSource = module.getModuleSource(type, glslVersion);
     // Add the module source, and a #define that declares it presence
@@ -132,9 +128,12 @@ ${corePreamble}
 
     const injections = module.injections[type];
     for (const key in injections) {
-      if (key.match(/^(v|f)s:#/)) {
-        mainInjections[key] = mainInjections[key] || [];
-        mainInjections[key].push(injections[key]);
+      const match = key.match(/^(v|f)s:#([\w-]+)$/);
+      if (match) {
+        const name = match[2];
+        const injectionType = name === 'decl' ? declInjections : mainInjections;
+        injectionType[key] = injectionType[key] || [];
+        injectionType[key].push(injections[key]);
       } else {
         hookInjections[key] = hookInjections[key] || [];
         hookInjections[key].push(injections[key]);
@@ -145,10 +144,12 @@ ${corePreamble}
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
+  assembledSource = injectShader(assembledSource, type, declInjections);
+
   assembledSource += getHookFunctions(hookFunctions[type], hookInjections);
 
   // Add the version directive and actual source of this shader
-  assembledSource += coreMain;
+  assembledSource += coreSource;
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, type, mainInjections);

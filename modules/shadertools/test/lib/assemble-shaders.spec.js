@@ -213,24 +213,14 @@ const FS_GLSL_300_GLTF = `#version 300 es
 
 const TEST_MODULE = {
   name: 'TEST_MODULE',
-  // Module function has access to shader attributes
-  vs: `
-    float getFloat() {
-      return 1.0 + floatAttribute;
-    }
-  `,
-  // Module function has access to shader varyings
-  fs: `
-    vec4 getVec4() {
-      return vec4(floatVarying);
-    }
-  `,
   inject: {
-    // Hook function has access to shader attributes and module functions
-    'vs:HOOK_FUNCTION': 'value = getFloat() + floatAttribute;',
+    'vs:#decl': `uniform float vsFloat;`,
+    // Hook function has access to injected variable
+    'vs:HOOK_FUNCTION': 'value = vsFloat;',
 
-    // Hook function has access to shader varyings and module functions
-    'fs:HOOK_FUNCTION': 'value = getVec4() + floatVarying;'
+    'fs:#decl': `uniform vec4 fsVec4;`,
+    // Hook function has access to injected variable
+    'fs:HOOK_FUNCTION': 'value = fsVec4;'
   }
 };
 
@@ -465,7 +455,41 @@ test('assembleShaders#shaderhooks', t => {
 test('assembleShaders#injection order', t => {
   const gl = fixture.gl1;
 
-  const assembleResult = assembleShaders(gl, {
+  let assembleResult = assembleShaders(gl, {
+    vs: VS_GLSL_300_MODULES,
+    fs: FS_GLSL_300_MODULES,
+    inject: {
+      'vs:#decl': `uniform float vsFloat;`,
+      // Hook function has access to injected variable
+      'vs:HOOK_FUNCTION': 'value = vsFloat;',
+
+      'fs:#decl': `uniform vec4 fsVec4;`,
+      // Hook function has access to injected variable
+      'fs:HOOK_FUNCTION': 'value = fsVec4;'
+    },
+    transpileToGLSL100: true,
+    hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
+  });
+
+  let vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+
+  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+
+  let program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+  gl.linkProgram(program);
+
+  t.ok(
+    gl.getProgramParameter(program, gl.LINK_STATUS),
+    'Hook functions have access to injected variables.'
+  );
+
+  assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
     modules: [TEST_MODULE],
@@ -473,22 +497,26 @@ test('assembleShaders#injection order', t => {
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
-  const vShader = gl.createShader(gl.VERTEX_SHADER);
+  vShader = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(vShader, assembleResult.vs);
   gl.compileShader(vShader);
 
-  const fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  fShader = gl.createShader(gl.FRAGMENT_SHADER);
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
 
-  const program = gl.createProgram();
+  /* eslint-disable */
+  console.log(assembleResult.fs);
+  console.log(gl.getShaderParameter(fShader, gl.COMPILE_STATUS));
+
+  program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);
 
   t.ok(
     gl.getProgramParameter(program, gl.LINK_STATUS),
-    'Modules and injections have access to variables and functions'
+    'Hook functions have access to injected variables through modules.'
   );
 
   t.end();
