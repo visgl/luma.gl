@@ -13,6 +13,9 @@ These docs are for
 <a href="https://github.com/uber/luma.gl/blob/8.0-release/docs">
   <img src="https://img.shields.io/badge/v-8.0-green.svg?style=flat-square" />
 </a>
+<a href="https://github.com/uber/luma.gl/blob/7.0-release/docs">
+  <img src="https://img.shields.io/badge/v-7.0-green.svg?style=flat-square" />
+</a>
 <a href="https://github.com/uber/luma.gl/blob/6.0-release/docs">
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
