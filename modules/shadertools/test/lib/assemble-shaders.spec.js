@@ -505,10 +505,6 @@ test('assembleShaders#injection order', t => {
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
 
-  /* eslint-disable */
-  console.log(assembleResult.fs);
-  console.log(gl.getShaderParameter(fShader, gl.COMPILE_STATUS));
-
   program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);

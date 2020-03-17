@@ -6,21 +6,12 @@ luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.g
 ## Versions
 
 These docs are for
-<a href="https://github.com/uber/luma.gl/blob/8.0-release/docs">
-  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v8.0-brightgreen.svg?style=flat-square" />
+<a href="https://github.com/uber/luma.gl/blob/8.1-release/docs">
+  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v8.1-brightgreen.svg?style=flat-square" />
 </a> Looking for an older version?
 
-<a href="https://github.com/uber/luma.gl/blob/7.3-release/docs">
-  <img src="https://img.shields.io/badge/v-7.3-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/7.2-release/docs">
-  <img src="https://img.shields.io/badge/v-7.2-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/7.1-release/docs">
-  <img src="https://img.shields.io/badge/v-7.1-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/uber/luma.gl/blob/7.0-release/docs">
-  <img src="https://img.shields.io/badge/v-7.0-green.svg?style=flat-square" />
+<a href="https://github.com/uber/luma.gl/blob/8.0-release/docs">
+  <img src="https://img.shields.io/badge/v-8.0-green.svg?style=flat-square" />
 </a>
 <a href="https://github.com/uber/luma.gl/blob/6.0-release/docs">
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />

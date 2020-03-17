@@ -6,7 +6,7 @@ import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';
 
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/8.0-release';
+const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/-release';
 
 // WORKAROUND FOR luma.gl VRDisplay
 if (typeof global !== 'undefined' && !global.navigator) {
@@ -71,7 +71,7 @@ export default class AnimationLoopExamplePage extends Component {
     // TODO - ideally gatsby-theme-ocular should extract images from example source?
     const {exampleConfig} = this.props;
     if (exampleConfig && exampleConfig.path) {
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/8.0-release';
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/-release';
       setPathPrefix(`${RAW_GITHUB}/${exampleConfig.path}`);
     }
 
