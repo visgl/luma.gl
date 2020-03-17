@@ -5,8 +5,8 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/webgl": "^.0",
-    "@luma.gl/engine": "^.0"
+    "@luma.gl/webgl": "^8.1.0",
+    "@luma.gl/engine": "^8.1.0"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",
