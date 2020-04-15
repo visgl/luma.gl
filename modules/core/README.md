@@ -1,6 +1,6 @@
 # luma.gl
 
-<h1 align="center">luma.gl | <a href="https://uber.github.io/luma.gl">Docs</a></h1>
+<h1 align="center">luma.gl | <a href="https://luma.gl">Docs</a></h1>
 
 <h5 align="center">luma.gl: WebGL2 Components for  Visualization</h5>
 
@@ -11,10 +11,10 @@ luma.gl is a set of WebGL2 components for high-performance GPU-based rendering a
 
 It is the engine that powers applications and frameworks like
 
-* [kepler.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
-* [deck.gl](https://github.com/uber/deck.gl) WebGL based visualization overlays
+* [kepler.gl](https://github.com/keplergl/kepler.gl) WebGL based visualization overlays
+* [deck.gl](https://github.com/visgl/deck.gl) WebGL based visualization overlays
 
 
 # Installation, Running Examples etc
 
-For details, please refer to the extensive [online website](https://uber.github.io/luma.gl).
+For details, please refer to the extensive [online website](https://luma.gl).

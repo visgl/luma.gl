@@ -5,7 +5,7 @@
 * **Status**: **Implemented**
 
 Notes:
-* Please add comments as reviews to the [PR](https://github.com/uber/luma.gl/pull/398)
+* Please add comments as reviews to the [PR](https://github.com/visgl/luma.gl/pull/398)
 
 
 ## Overview

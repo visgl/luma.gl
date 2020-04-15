@@ -6,7 +6,7 @@ import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';
 
-const GITHUB_TREE = 'https://github.com/uber/luma.gl/tree/8.1-release';
+const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.1-release';
 
 // WORKAROUND FOR luma.gl VRDisplay
 if (typeof global !== 'undefined' && !global.navigator) {

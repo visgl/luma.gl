@@ -6,8 +6,8 @@
 
 References:
 
-* See luma.gl issue [#234](https://github.com/uber/luma.gl/issues/234)
-* Most ideas in [deck.gl size reduction RFC](https://github.com/uber/deck.gl/blob/master/dev-docs/RFCs/v6.0/reduce-distribution-size-rfc.md) apply here.
+* See luma.gl issue [#234](https://github.com/visgl/luma.gl/issues/234)
+* Most ideas in [deck.gl size reduction RFC](https://github.com/visgl/deck.gl/blob/master/dev-docs/RFCs/v6.0/reduce-distribution-size-rfc.md) apply here.
 
 
 ## Summary

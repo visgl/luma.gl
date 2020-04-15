@@ -6,8 +6,8 @@
 
 Notes:
 
-* Initial implementation of OffscreenAnimationLoop [#453](https://github.com/uber/luma.gl/pull/453)
-* Example usage of OffscreenAnimationLoop [#454](https://github.com/uber/luma.gl/pull/454)
+* Initial implementation of OffscreenAnimationLoop [#453](https://github.com/visgl/luma.gl/pull/453)
+* Example usage of OffscreenAnimationLoop [#454](https://github.com/visgl/luma.gl/pull/454)
 
 
 ## Motivation

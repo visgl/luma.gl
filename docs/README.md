@@ -6,26 +6,26 @@ luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.g
 ## Versions
 
 These docs are for
-<a href="https://github.com/uber/luma.gl/blob/8.1-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/8.1-release/docs">
   <img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v8.1-brightgreen.svg?style=flat-square" />
 </a> Looking for an older version?
 
-<a href="https://github.com/uber/luma.gl/blob/8.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/8.0-release/docs">
   <img src="https://img.shields.io/badge/v-8.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/blob/7.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/7.0-release/docs">
   <img src="https://img.shields.io/badge/v-7.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/blob/6.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/6.0-release/docs">
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/blob/5.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/5.0-release/docs">
   <img src="https://img.shields.io/badge/v-5.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/blob/4.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/blob/4.0-release/docs">
   <img src="https://img.shields.io/badge/v-4.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/uber/luma.gl/tree/3.0-release/docs">
+<a href="https://github.com/visgl/luma.gl/tree/3.0-release/docs">
   <img src="https://img.shields.io/badge/v-3.0-green.svg?style=flat-square" />
 </a>
 
@@ -46,7 +46,7 @@ For some powerful examples of what can be achieved with luma.gl, take a look at 
 
 We share information about the direction of luma.gl in the following ways:
 
-* **[RFCs](https://github.com/uber/luma.gl/tree/7.3-release/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
+* **[RFCs](https://github.com/visgl/luma.gl/tree/7.3-release/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
 * **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
 * **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
-* **[Github Issues](https://github.com/uber/luma.gl/issues)** - The traditional way to start or join a discussion.
+* **[Github Issues](https://github.com/visgl/luma.gl/issues)** - The traditional way to start or join a discussion.
