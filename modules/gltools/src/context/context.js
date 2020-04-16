@@ -19,7 +19,7 @@ const CONTEXT_DEFAULTS = {
   // Attempt to allocate WebGL2 context
   webgl2: true, // Attempt to create a WebGL2 context (false to force webgl1)
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  throwOnError: false,
+  throwOnError: true,
   manageState: true,
   // BROWSER CONTEXT PARAMETERS
   canvas: null, // A canvas element or a canvas string id
@@ -49,8 +49,11 @@ export function createGLContext(options = {}) {
     if (options.throwOnError) {
       throw new Error(message);
     }
+    // eslint-disable-next-line
+    console.error(message);
     return null;
   }
+  options.onError = onError;
 
   let gl;
   // Get or create a canvas
@@ -170,7 +173,7 @@ export function resizeGLContext(gl, options = {}) {
  */
 
 function createBrowserContext(canvas, options) {
-  const {onError = message => null} = options;
+  const {onError} = options;
 
   // Try to extract any extra information about why context creation failed
   const onCreateError = error => onError(`WebGL context: ${error.statusMessage || 'error'}`);
@@ -197,7 +200,7 @@ function createBrowserContext(canvas, options) {
   return gl;
 }
 
-function getCanvas({canvas, width = 800, height = 600, onError = () => {}}) {
+function getCanvas({canvas, width = 800, height = 600, onError}) {
   let targetCanvas;
   if (typeof canvas === 'string') {
     const isPageLoaded = isPage && document.readyState === 'complete';
