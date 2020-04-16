@@ -50,7 +50,8 @@ export function createGLContext(options = {}) {
       throw new Error(message);
     }
     // eslint-disable-next-line
-    return console.error(message);
+    console.error(message);
+    return null;
   }
   options.onError = onError;
 
