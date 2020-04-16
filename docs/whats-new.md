@@ -139,11 +139,11 @@ Date: April 19, 2019
   <tbody>
     <tr>
       <td>
-        <img height=200 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/gltf-city.gif" />
+        <img height=200 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-city.gif" />
         <p><i>glTF Support</i></p>
       </td>
       <td>
-        <img height=200 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/gltf-pbr.gif" />
+        <img height=200 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-pbr.gif" />
         <p><i>PBR (Physically Based Rendering)</i></p>
       </td>
     </tr>
@@ -153,9 +153,9 @@ Date: April 19, 2019
 
 ### glTF Support
 
-<img height=100 src="https://raw.github.com/uber-common/deck.gl-data/master/images/gltf.png" />
+<img height=100 src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
 
-luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/uber-web/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
+luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
 - **Physically-based Material Support**: Ensures that PBR models display as intended.
 - **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects.
@@ -256,7 +256,7 @@ Uniforms are now cached at `Program` object, which improves performance by elimi
 
 ### Offscreen Rendering (Experimental)
 
-A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/uber/luma.gl/tree/7.3-release/test/apps/wip/worker).
+A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/visgl/luma.gl/tree/7.3-release/test/apps/wip/worker).
 
 
 ## Version 6.2
@@ -267,11 +267,11 @@ Date: September 12, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/render-pass.gif" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/render-pass.gif" />
         <p><i>glfx port using ShaderModulePass</i></p>
       </td>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/transform-texture.gif" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/transform-texture.gif" />
         <p><i>Transform: edge detection</i></p>
       </td>
     </tr>
@@ -295,11 +295,11 @@ Date: Target August 31, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/luma61-ssao-pass-thumb.gif" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-ssao-pass-thumb.gif" />
         <p><i>Ambient Occlusion Render Pass</i></p>
       </td>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/luma61-edge-pass-thumb.gif" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-edge-pass-thumb.gif" />
         <p><i>Edge Detection Render Pass</i></p>
       </td>
     </tr>
@@ -342,7 +342,7 @@ Date: July 18, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
         <p><i>WebGL Improvements</i></p>
       </td>
     </tr>
@@ -485,10 +485,10 @@ A smaller release with several new examples and some under the hood changes to i
 
 Additional examples have been ported to the luma.gl v5 API.
 
-* [Lesson 10](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-10-3d-world)
-* [Lesson 11](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-11-sphere)
-* [Lesson 12](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-12-point-lighting)
-* [Lesson 13](http://uber.github.io/luma.gl/#/examples/webgl-lessons/lesson-13-per-fragment-lighting)
+* Lesson 10
+* Lesson 11
+* Lesson 12
+* Lesson 13
 
 
 ### Model Class
@@ -522,7 +522,7 @@ Release date: July 27th, 2017
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/uber-common/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
         <p><i>WebGL 2</i></p>
       </td>
     </tr>

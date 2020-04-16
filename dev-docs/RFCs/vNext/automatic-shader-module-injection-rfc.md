@@ -7,7 +7,7 @@
 
 References
 
-* A related system is described here [Shader Fragment Injection](https://github.com/uber/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-fragment-injection-rfc.md)
+* A related system is described here [Shader Fragment Injection](https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-fragment-injection-rfc.md)
 
 
 ## Overview

@@ -30,7 +30,7 @@ Size of the target should be such that it has one pixel per each expected output
 
 #### Option#1 Framebuffer
 
-We can create a texture and use it as color attachment to a `Framebuffer` object. There might be limitation on some of the browsers using FLOAT texture as render target, for example Safari doesn't support `WEBGL_color_buffer_float` hence a float texture can't be used as color attachment. We might be able to overcome this issue using recently added [pack](https://github.com/uber/luma.gl/blob/7.0-release/modules/effects/src/modules/pack.md) shader module of luma.gl.
+We can create a texture and use it as color attachment to a `Framebuffer` object. There might be limitation on some of the browsers using FLOAT texture as render target, for example Safari doesn't support `WEBGL_color_buffer_float` hence a float texture can't be used as color attachment. We might be able to overcome this issue using recently added [pack](https://github.com/visgl/luma.gl/blob/7.0-release/modules/effects/src/modules/pack.md) shader module of luma.gl.
 
 #### Option#2 System color buffer
 

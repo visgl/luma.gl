@@ -7,7 +7,7 @@
 
 ## Note
 
-loaders.gl was moved from a luma.gl submodule to a separate repository [loaders.gl](https://github.com/uber-web/loaders.gl). This RFC was ultimately moved there.
+loaders.gl was moved from a luma.gl submodule to a separate repository [loaders.gl](https://github.com/visgl/loaders.gl). This RFC was ultimately moved there.
 
 
 ## Proposal
