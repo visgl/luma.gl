@@ -6,7 +6,7 @@
   "author": "Ib Green",
   "repository": {
     "type": "git",
-    "url": "https://github.com/uber/luma.gl"
+    "url": "https://github.com/visgl/luma.gl"
   },
   "keywords": [
     "babel-plugin",

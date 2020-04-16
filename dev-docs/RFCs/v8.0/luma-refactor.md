@@ -54,16 +54,16 @@ The actual refactor of luma.gl would occur in three phases:
 ### Clean Out Unused Code
 
 This will warrant some discussion. The following are systems I believe should be considered for removal or consolidation:
-- [BaseModel](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js) and [Model](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/model.js) - can be consolidated for simplicity as there are no other subclasses of `BaseModel`
-- [CameraNode](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/camera-node.js) - Appears unused
-- [Uniform animations](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L280-L333) - Complex, unused, and the `_extractAnimatedUniforms` method appears as 12th most costly function in the [deck.gl stress test](https://github.com/uber/deck.gl/tree/master/test/apps/stress-tests) CPU profile without there being any animated uniforms in the test scene.
-- [ShaderCache](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/shader-cache.js) - Superseded by `ProgramManager`
-- [core/lighting](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lighting/light-source.js), [core/materials](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/materials) - currently empty or simple data classes
-- [core/multipass](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/multipass) - Appears unused (has it been superseded by deck effects?)
-- [seer integration](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/debug/seer-integration.js) - Complex and will interfere with other parts of the system if enabled (e.g. [GPU timing](https://github.com/uber/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L337-L376)). The `getOverrides` function appears as 6th most costly function in the [deck.gl stress test](https://github.com/uber/deck.gl/tree/master/test/apps/stress-tests) CPU profile without seer being active.
-- [debug/parameter-definitions](https://github.com/uber/luma.gl/blob/7.2-release/modules/debug/src/webgl-api-tracing/parameter-definitions.js) - Appears unused
-- [main module](https://github.com/uber/luma.gl/tree/7.2-release/modules/main) - Appears unused
-- [core/geometry](https://github.com/uber/luma.gl/tree/7.2-release/modules/core/src/geometries) - Move to math.gl
+- [BaseModel](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js) and [Model](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lib/model.js) - can be consolidated for simplicity as there are no other subclasses of `BaseModel`
+- [CameraNode](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/scenegraph/nodes/camera-node.js) - Appears unused
+- [Uniform animations](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L280-L333) - Complex, unused, and the `_extractAnimatedUniforms` method appears as 12th most costly function in the [deck.gl stress test](https://github.com/visgl/deck.gl/tree/master/test/apps/stress-tests) CPU profile without there being any animated uniforms in the test scene.
+- [ShaderCache](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lib/shader-cache.js) - Superseded by `ProgramManager`
+- [core/lighting](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lighting/light-source.js), [core/materials](https://github.com/visgl/luma.gl/tree/7.2-release/modules/core/src/materials) - currently empty or simple data classes
+- [core/multipass](https://github.com/visgl/luma.gl/tree/7.2-release/modules/core/src/multipass) - Appears unused (has it been superseded by deck effects?)
+- [seer integration](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/debug/seer-integration.js) - Complex and will interfere with other parts of the system if enabled (e.g. [GPU timing](https://github.com/visgl/luma.gl/blob/7.2-release/modules/core/src/lib/base-model.js#L337-L376)). The `getOverrides` function appears as 6th most costly function in the [deck.gl stress test](https://github.com/visgl/deck.gl/tree/master/test/apps/stress-tests) CPU profile without seer being active.
+- [debug/parameter-definitions](https://github.com/visgl/luma.gl/blob/7.2-release/modules/debug/src/webgl-api-tracing/parameter-definitions.js) - Appears unused
+- [main module](https://github.com/visgl/luma.gl/tree/7.2-release/modules/main) - Appears unused
+- [core/geometry](https://github.com/visgl/luma.gl/tree/7.2-release/modules/core/src/geometries) - Move to math.gl
 
 ### Structure Modules Around Meaningful Themes
 
