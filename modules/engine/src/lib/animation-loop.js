@@ -33,6 +33,7 @@ export default class AnimationLoop {
       onInitialize = () => {},
       onRender = () => {},
       onFinalize = () => {},
+      onError,
 
       gl = null,
       glOptions = {},
@@ -59,6 +60,7 @@ export default class AnimationLoop {
       onInitialize,
       onRender,
       onFinalize,
+      onError,
 
       gl,
       glOptions,
@@ -131,7 +133,7 @@ export default class AnimationLoop {
     this._running = true;
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
-    this._getPageLoadPromise()
+    const startPromise = this._getPageLoadPromise()
       .then(() => {
         if (!this._running || this._initialized) {
           return null;
@@ -165,6 +167,11 @@ export default class AnimationLoop {
           }
         }
       });
+
+    if (this.props.onError) {
+      startPromise.catch(this.props.onError);
+    }
+
     return this;
   }
 
