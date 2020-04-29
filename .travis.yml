@@ -12,7 +12,7 @@ addons:
     - libosmesa6
     - libxi-dev
 node_js:
-  - 10.16.0
+  - 12.12.0
 install:
   - yarn bootstrap
 before_script:
