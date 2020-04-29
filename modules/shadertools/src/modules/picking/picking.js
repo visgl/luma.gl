@@ -20,7 +20,11 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
     }
   }
   if (opts.pickingHighlightColor) {
-    uniforms.picking_uHighlightColor = opts.pickingHighlightColor.map(x => x / 255);
+    const color = Array.from(opts.pickingHighlightColor, x => x / 255);
+    if (!Number.isFinite(color[3])) {
+      color[3] = 1;
+    }
+    uniforms.picking_uHighlightColor = color;
   }
   if (opts.pickingActive !== undefined) {
     uniforms.picking_uActive = Boolean(opts.pickingActive);

@@ -74,6 +74,38 @@ const TEST_CASES = [
   }
 ];
 
+test('picking#getUniforms', t => {
+  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
+
+  t.deepEqual(
+    picking.getUniforms({
+      pickingActive: true,
+      pickingSelectedColor: null,
+      pickingHighlightColor: [255, 0, 0]
+    }),
+    {
+      picking_uSelectedColorValid: 0,
+      picking_uHighlightColor: [1, 0, 0, 1],
+      picking_uActive: true,
+      picking_uAttribute: false
+    }
+  );
+
+  t.deepEqual(
+    picking.getUniforms({
+      pickingSelectedColor: [0, 0, 1],
+      pickingHighlightColor: [255, 0, 0, 51]
+    }),
+    {
+      picking_uSelectedColorValid: 1,
+      picking_uSelectedColor: [0, 0, 1],
+      picking_uHighlightColor: [1, 0, 0, 0.2]
+    }
+  );
+
+  t.end();
+});
+
 test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
