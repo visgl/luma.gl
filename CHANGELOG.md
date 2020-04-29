@@ -1,3 +1,20 @@
+## v8.1.2
+- Picking module: normalize highlight color (#1379)
+- Add onError prop to AnimationLoop (#1377)
+
+## v8.1.1
+- Fix error handling in createGLContext (#1375)
+
+## v8.1.0
+- Bump deps (#1372)
+
+## v8.1.0-beta.3
+- Limit shader variable hoisting to injected declararions (#1371)
+
+## v8.1.0-beta.2
+- Use 32-bit indices in SphereGeometry if there are enough vertices (#1369)
+- Bump deps (#1365)
+
 ## v8.1.0-beta.1
 - Assemble shader variables to top of source (#1363)
 - GPU Accelerated Point In Polygon Test (#1360)
