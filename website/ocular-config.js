@@ -30,7 +30,7 @@ module.exports = {
   PROJECT_TYPE: 'github',
 
   PROJECT_NAME: 'luma.gl',
-  PROJECT_ORG: 'uber',
+  PROJECT_ORG: 'visgl',
   PROJECT_ORG_LOGO: 'images/uber-logo.png',
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'High-performance Toolkit for WebGL-based Data Visualization',
