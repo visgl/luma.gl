@@ -42,6 +42,7 @@
             { "entry": "docs/api-reference/engine/transform" },
             { "entry": "docs/api-reference/engine/geometry" },
             { "entry": "docs/api-reference/engine/geometries" },
+            { "entry": "docs/api-reference/engine/program-manager" },
             { "entry": "docs/api-reference/engine/animation/timeline" },
             { "entry": "docs/api-reference/engine/animation/key-frames" }
           ]
