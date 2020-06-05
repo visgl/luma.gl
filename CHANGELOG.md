@@ -1,3 +1,7 @@
+## v8.1.3
+
+- Fix peerDependencies (#1384)
+
 ## v8.1.2
 - Picking module: normalize highlight color (#1379)
 - Add onError prop to AnimationLoop (#1377)
