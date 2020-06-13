@@ -3,7 +3,6 @@
 import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {DracoLoader} from '@loaders.gl/draco';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Timeline} from '@luma.gl/engine';
@@ -163,8 +162,7 @@ async function loadGLTF(urlOrPromise, gl, options) {
   const data = typeof urlOrPromise === 'string' ? window.fetch(urlOrPromise) : urlOrPromise;
   const gltf = await parse(data, GLTFLoader, {
     ...options,
-    gl,
-    DracoLoader
+    gl
   });
   const {scenes, animator} = createGLTFObjects(gl, gltf, options);
 
