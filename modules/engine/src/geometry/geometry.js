@@ -35,16 +35,6 @@ export default class Geometry {
     this._setAttributes(attributes, indices);
 
     this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
-
-    // stubRemovedMethods(this, [
-    //   'setNeedsRedraw', 'needsRedraw', 'setAttributes'
-    // ], 'Immutable');
-
-    // stubRemovedMethods(this, [
-    //   'hasAttribute', 'getAttribute', 'getArray'
-    // ], 'Use geometry.attributes and geometry.indices');
-
-    // deprecateMethods(this, ['getAttributes'])
   }
 
   get mode() {

@@ -20,3 +20,4 @@ export {KeyFrames} from './animation/key-frames';
 
 // Utils
 export {default as ClipSpace} from './utils/clip-space';
+export {calculateTangents} from './utils/tangent';
