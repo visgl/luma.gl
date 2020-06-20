@@ -19,7 +19,8 @@ export function calculateTangents(positions, texCoords, indices) {
   const length = indices ? indices.length : positions.length / 3;
 
   for (let i = 0; i < length; i += 3) {
-    const [v0, v1, v2] = indices ? [indices[i], indices[i + 1], indices[i + 2]] : [i, i + 1, i + 2];
+    const locations = indices ? [indices[i], indices[i + 1], indices[i + 2]] : [i, i + 1, i + 2];
+    const [v0, v1, v2] = locations;
     scratchPos0.set(positions[v0 * 3], positions[v0 * 3 + 1], positions[v0 * 3 + 2]);
     scratchUV0.set(texCoords[v0 * 2], texCoords[v0 * 2 + 1]);
 
@@ -47,8 +48,8 @@ export function calculateTangents(positions, texCoords, indices) {
     const b2 = scratchB2.set(deltaPos1.x, deltaPos1.y, deltaPos1.z).multiplyScalar(deltaUV2.x);
     const bitangent = b1.subtract(b2).multiplyScalar(r);
 
-    for (let v = 0; v < 3; v++) {
-      const index = indices[i + v] * 3;
+    for (const v of locations) {
+      const index = v * 3;
       tangents[index] += tangent.x;
       tangents[index + 1] += tangent.y;
       tangents[index + 2] += tangent.z;
