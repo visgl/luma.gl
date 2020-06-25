@@ -72,6 +72,37 @@ test('Model#construct/destruct', t => {
   t.end();
 });
 
+test('Model#multiple delete', t => {
+  const {gl} = fixture;
+
+  // Avoid re-using program from ProgramManager
+  const vs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_Position = vec4(0.0);}';
+  const fs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_FragColor = vec4(0.0);}';
+
+  const model1 = new Model(gl, {
+    drawMode: GL.POINTS,
+    vertexCount: 0,
+    vs,
+    fs
+  });
+
+  const model2 = new Model(gl, {
+    drawMode: GL.POINTS,
+    vertexCount: 0,
+    vs,
+    fs
+  });
+
+  model1.delete();
+  t.ok(model2.program.handle, 'program still in use');
+  model1.delete();
+  t.ok(model2.program.handle, 'program still in use');
+  model2.delete();
+  t.notOk(model2.program.handle, 'program is released');
+
+  t.end();
+});
+
 test('Model#setAttribute', t => {
   const {gl} = fixture;
 
