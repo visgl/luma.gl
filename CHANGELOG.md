@@ -1,3 +1,6 @@
+## v8.2.0
+- Fix bug when a model is deleted multiple times (#1390)
+
 ## v8.2.0-beta.1
 - gltf: Remove DracoLoader import (#1386)
 - bump math.gl and loaders.gl (#1388)
