@@ -1,6 +1,6 @@
 # What's Next?
 
-That concludes our **luma.gl** tutorial series. If you went through the full set of tutorials, you've taken a deep dive into some of **luma.gl**'s more powerful features, including polyfilling the WebGL context, shader modules and composition, instanced drawing, and transform feedback. To dig deeper into **luma.gl**'s API, we recommend playing around with the examples in the [examples directory](https://github.com/visgl/luma.gl/tree/8.1-release/examples/core) of the repository, which demonstrate various parts of the API in more detail. They can also be browsed on the [website](https://luma.gl/examples).
+That concludes our **luma.gl** tutorial series. If you went through the full set of tutorials, you've taken a deep dive into some of **luma.gl**'s more powerful features, including polyfilling the WebGL context, shader modules and composition, instanced drawing, and transform feedback. To dig deeper into **luma.gl**'s API, we recommend playing around with the examples in the [examples directory](https://github.com/visgl/luma.gl/tree/master/examples/core) of the repository, which demonstrate various parts of the API in more detail. They can also be browsed on the [website](https://luma.gl/examples).
 
 To explore the examples, clone the **luma.gl** repo and run the following in a given example's directory:
 

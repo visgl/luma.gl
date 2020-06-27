@@ -19,15 +19,6 @@ These docs are for
 <a href="https://github.com/visgl/luma.gl/blob/6.0-release/docs">
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/visgl/luma.gl/blob/5.0-release/docs">
-  <img src="https://img.shields.io/badge/v-5.0-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/visgl/luma.gl/blob/4.0-release/docs">
-  <img src="https://img.shields.io/badge/v-4.0-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/visgl/luma.gl/tree/3.0-release/docs">
-  <img src="https://img.shields.io/badge/v-3.0-green.svg?style=flat-square" />
-</a>
 
 <BR>
 <BR>
@@ -46,7 +37,7 @@ For some powerful examples of what can be achieved with luma.gl, take a look at 
 
 We share information about the direction of luma.gl in the following ways:
 
-* **[RFCs](https://github.com/visgl/luma.gl/tree/7.3-release/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
+* **[RFCs](https://github.com/visgl/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
 * **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
 * **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
 * **[Github Issues](https://github.com/visgl/luma.gl/issues)** - The traditional way to start or join a discussion.

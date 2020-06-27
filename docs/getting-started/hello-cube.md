@@ -77,7 +77,7 @@ The set up to render in 3D involves a few extra steps compared to the triangles 
 ```
 Some of the new techniques we're leveraging here are:
 - Using `setParameters` to set up depth testing and ensure surfaces occlude each other properly. Compared to setting these parameters directly, the `setParameters` function has the advantage of tracking state and preventing redundant WebGL calls.
-- Creating a texture using the `Texture2D` class. For our purposes, this is as simple as passing a URL to the image location (the image used in this tutorial is available [here](https://github.com/visgl/luma.gl/tree/8.1-release/examples/api/cubemap/vis-logo.png), but any JPEG or PNG image will do).
+- Creating a texture using the `Texture2D` class. For our purposes, this is as simple as passing a URL to the image location (the image used in this tutorial is available [here](https://github.com/visgl/luma.gl/tree/master/examples/api/cubemap/vis-logo.png), but any JPEG or PNG image will do).
 - Creating view and MVP matrices using **math.gl**'s `Matrix4` class to store the matrices we'll pass to our shaders to perform the animation and perspective projection.
 - Generating attribute data using the `CubeGeometry` class and passing it to our `Model` using the `geometry` property. The geometry will automatically feed vertex position data into the `positions` attribute and texture coordinates (or UV coordinates) into the `texCoords` attribute.
 
