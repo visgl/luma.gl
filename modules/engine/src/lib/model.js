@@ -132,6 +132,7 @@ export default class Model {
 
     if (this._managedProgram) {
       this.programManager.release(this.program);
+      this._managedProgram = false;
     }
 
     this.vertexArray.delete();
