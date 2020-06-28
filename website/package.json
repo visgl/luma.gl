@@ -11,7 +11,8 @@
     "start": "yarn clean-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",
     "develop": "gatsby develop --port=8001",
-    "build": "yarn clean-examples && yarn clean && gatsby build --prefix-paths",
+    "build": "yarn clean-examples && yarn clean && gatsby build",
+    "build-staging": "yarn clean-examples && yarn clean && gatsby build --prefix-paths",
     "serve": "gatsby serve",
     "deploy": "gh-pages -d public",
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
@@ -25,8 +26,9 @@
     "mapbox-gl": "^1.2.1"
   },
   "devDependencies": {
-    "gatsby": "~2.18.0",
-    "gatsby-theme-ocular": "^1.2.0-beta.7",
-    "sharp": "^0.23.0"
+    "gatsby": "^2.20.0",
+    "gatsby-theme-ocular": "^1.2.1",
+    "gatsby-plugin-no-sourcemaps": "^2.1.2",
+    "gh-pages": "^2.2.0"
   }
 }
