@@ -8,7 +8,8 @@ const GATSBY_CONFIG = {
       options: {
         whitelist: ['MapboxAccessToken']
       }
-    }
+    },
+    `gatsby-plugin-no-sourcemaps`
   ]
 };
 

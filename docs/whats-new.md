@@ -139,11 +139,11 @@ Date: April 19, 2019
   <tbody>
     <tr>
       <td>
-        <img height=200 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-city.gif" />
+        <img height="200" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-city.gif" />
         <p><i>glTF Support</i></p>
       </td>
       <td>
-        <img height=200 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-pbr.gif" />
+        <img height="200" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/gltf-pbr.gif" />
         <p><i>PBR (Physically Based Rendering)</i></p>
       </td>
     </tr>
@@ -153,7 +153,7 @@ Date: April 19, 2019
 
 ### glTF Support
 
-<img height=100 src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
+<img height="100" src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
 
 luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
@@ -267,11 +267,11 @@ Date: September 12, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/render-pass.gif" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/render-pass.gif" />
         <p><i>glfx port using ShaderModulePass</i></p>
       </td>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/transform-texture.gif" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/transform-texture.gif" />
         <p><i>Transform: edge detection</i></p>
       </td>
     </tr>
@@ -295,11 +295,11 @@ Date: Target August 31, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-ssao-pass-thumb.gif" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-ssao-pass-thumb.gif" />
         <p><i>Ambient Occlusion Render Pass</i></p>
       </td>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-edge-pass-thumb.gif" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/luma61-edge-pass-thumb.gif" />
         <p><i>Edge Detection Render Pass</i></p>
       </td>
     </tr>
@@ -342,7 +342,7 @@ Date: July 18, 2018
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
         <p><i>WebGL Improvements</i></p>
       </td>
     </tr>
@@ -522,7 +522,7 @@ Release date: July 27th, 2017
   <tbody>
     <tr>
       <td>
-        <img height=150 src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+        <img height="150" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
         <p><i>WebGL 2</i></p>
       </td>
     </tr>

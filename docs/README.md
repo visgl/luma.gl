@@ -20,8 +20,6 @@ These docs are for
   <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
 
-<BR>
-<BR>
 
 luma.gl aims to provide tools for WebGL developers wether they wish to do high or low-level GPU programming. Polyfilling and shader composition utilities, for example, can be used while programming directly with the WebGL API, while resource management utilities provide higher-level 3D engine functionality.
 
@@ -37,7 +35,7 @@ For some powerful examples of what can be achieved with luma.gl, take a look at 
 
 We share information about the direction of luma.gl in the following ways:
 
-* **[RFCs](https://github.com/visgl/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
-* **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
-* **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
-* **[Github Issues](https://github.com/visgl/luma.gl/issues)** - The traditional way to start or join a discussion.
+- **[RFCs](https://github.com/visgl/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
+- **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
+- **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
+- **[Github Issues](https://github.com/visgl/luma.gl/issues)** - The traditional way to start or join a discussion.

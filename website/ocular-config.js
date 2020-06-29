@@ -1,10 +1,12 @@
-const resolve = require('path').resolve;
+const {resolve} = require('path');
+
+const ROOT_DIR = resolve('..');
 
 const DOCS = require('../docs/table-of-contents.json');
 const DEPENDENCIES = require('./package.json').dependencies;
 // eslint-disable-next-line import/no-extraneous-dependencies
 const ALIASES = require('ocular-dev-tools/config/ocular.config')({
-  root: resolve(__dirname, '..')
+  root: ROOT_DIR
 }).aliases;
 
 // When duplicating example dependencies in website, autogenerate
@@ -19,10 +21,16 @@ for (const dependency in DEPENDENCIES) {
 module.exports = {
   logLevel: 1, // Adjusts amount of debug information from ocular-gatsby
 
-  DOC_FOLDERS: [`${__dirname}/../docs/`],
-  SOURCE: [`${__dirname}/static`, `${__dirname}/src`],
-  ROOT_FOLDER: `${__dirname}/../`,
-  DIR_NAME: `${__dirname}`,
+  DOC_FOLDERS: [
+    resolve(ROOT_DIR, 'docs'),
+    resolve(ROOT_DIR, 'modules')
+  ],
+  SOURCE: [
+    resolve('./static'),
+    resolve('./src')
+  ],
+  ROOT_FOLDER: ROOT_DIR,
+  DIR_NAME: __dirname,
 
   DOCS,
 
@@ -31,17 +39,16 @@ module.exports = {
 
   PROJECT_NAME: 'luma.gl',
   PROJECT_ORG: 'visgl',
-  PROJECT_ORG_LOGO: 'images/uber-logo.png',
+  PROJECT_ORG_LOGO: 'images/visgl-logo.png',
   PROJECT_URL: `https://luma.gl`,
   PROJECT_DESC: 'High-performance Toolkit for WebGL-based Data Visualization',
+  PROJECT_IMAGE: 'images/hero.png',
 
-  PATH_PREFIX: '/',
-
-  FOOTER_LOGO: '',
-
-  GA_TRACKING: null,
+  PATH_PREFIX: '/luma.gl',
 
   LINK_TO_GET_STARTED: '/docs/getting-started',
+
+  GA_TRACKING_ID: 'UA-74374017-2',
 
   // For showing star counts and contributors.
   // Should be like btoa('YourUsername:YourKey') and should be readonly.
@@ -50,21 +57,17 @@ module.exports = {
   HOME_PATH: '/',
 
   PROJECTS: [
-    {
-      name: 'deck.gl',
-      url: 'https://deck.gl'
-    },
-    {
-      name: 'kepler.gl',
-      url: 'https://kepler.gl'
-    },
-    {
-      name: 'avs.auto',
-      url: 'https://avs.auto/'
-    }
+    {name: 'deck.gl', url: 'https://deck.gl'},
+    {name: 'luma.gl', url: 'https://luma.gl'},
+    {name: 'loaders.gl', url: 'https://loaders.gl'},
+    {name: 'react-map-gl', url: 'https://visgl.github.io/react-map-gl'}
   ],
 
-  ADDITIONAL_LINKS: [{name: 'Blog', href: 'http://medium.com/vis-gl'}],
+  THEME_OVERRIDES: require('./templates/theme.json'),
+
+  STYLESHEETS: ['/style.css'],
+
+  ADDITIONAL_LINKS: [{name: 'Blog', href: 'http://medium.com/vis-gl', index: 4}],
 
   INDEX_PAGE_URL: resolve(__dirname, './templates/index.jsx'),
 
@@ -232,13 +235,6 @@ module.exports = {
   webpack: {
     resolve: {
       alias: Object.assign({}, ALIASES, dependencyAliases, {
-        // '@luma.gl/addons': `${__dirname}/node_modules/@luma.gl/addons/src`,
-        // '@luma.gl/core': `${__dirname}/node_modules/@luma.gl/core/src`,
-        // '@luma.gl/constants': `${__dirname}/node_modules/@luma.gl/constants/src`,
-        // '@luma.gl/webgl': `${__dirname}/node_modules/@luma.gl/webgl/src`,
-        // '@deck.gl/core': `${__dirname}/node_modules/@deck.gl/core/src`,
-        // '@deck.gl/layers': `${__dirname}/node_modules/@deck.gl/layers/src`,
-        // '@deck.gl/react': `${__dirname}/node_modules/@deck.gl/react/src`
       })
     }
   }

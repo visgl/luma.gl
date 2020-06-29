@@ -25,7 +25,7 @@ Import brightnessContrast shader module
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/mountain.jpg" />
         <p><i>Original Image</i></p>
       </td>
     </tr>
@@ -44,7 +44,7 @@ Provides additive brightness and multiplicative contrast control.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/brightness.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/brightness.jpg" />
         <p><i>Brightness / Contrast Effect</i></p>
       </td>
     </tr>
@@ -66,7 +66,7 @@ Saturation is implemented by scaling all color channel values either toward or a
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hue.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hue.jpg" />
         <p><i>Hue / Saturation Effect</i></p>
       </td>
     </tr>
@@ -84,7 +84,7 @@ Adds black and white noise to the image.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/noise.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/noise.jpg" />
         <p><i>Noise Effect</i></p>
       </td>
     </tr>
@@ -103,7 +103,7 @@ Gives the image a reddish-brown monochrome tint that imitates an old photograph.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/sepia.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/sepia.jpg" />
         <p><i>Sepia Effect</i></p>
       </td>
     </tr>
@@ -121,7 +121,7 @@ Modifies the saturation of desaturated colors, leaving saturated colors unmodifi
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vibrance.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vibrance.jpg" />
         <p><i>Vibrance Effect</i></p>
       </td>
     </tr>
@@ -140,7 +140,7 @@ Adds a simulated lens edge darkening effect.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vignette.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/vignette.jpg" />
         <p><i>Vignette Effect</i></p>
       </td>
     </tr>
@@ -161,7 +161,7 @@ Simulates the shallow depth of field normally encountered in close-up photograph
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/tilt_shift.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/tilt_shift.jpg" />
         <p><i>Tilt Shift Effect</i></p>
       </td>
     </tr>
@@ -179,7 +179,7 @@ This is the most basic blur filter, which convolves the image with a pyramid fil
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/triangle_blur.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/triangle_blur.jpg" />
         <p><i>Triangle Blur Effect</i></p>
       </td>
     </tr>
@@ -198,7 +198,7 @@ Blurs the image away from a certain point, which looks like radial motion blur.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/zoom_blur.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/zoom_blur.jpg" />
         <p><i>Zoom Blur Effect</i></p>
       </td>
     </tr>
@@ -218,7 +218,7 @@ Blurs the image away from a certain point, which looks like radial motion blur.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/color_halftone.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/color_halftone.jpg" />
         <p><i>Color Halftone Effect</i></p>
       </td>
     </tr>
@@ -238,7 +238,7 @@ Simulates a black and white halftone rendering of the image by multiplying pixel
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/dot_screen.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/dot_screen.jpg" />
         <p><i>Dot Screen Effect</i></p>
       </td>
     </tr>
@@ -256,7 +256,7 @@ Picks out different frequencies in the image by subtracting two copies of the im
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/edge_work.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/edge_work.jpg" />
         <p><i>Edge Work Effect</i></p>
       </td>
     </tr>
@@ -275,7 +275,7 @@ Renders the image using a pattern of hexagonal tiles. Tile colors are nearest-ne
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hexagon.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/hexagon.jpg" />
         <p><i>Hexagonal Pixelate Effect</i></p>
       </td>
     </tr>
@@ -293,7 +293,7 @@ Simulates outlining the image in ink by darkening edges stronger than a certain 
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/ink.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/ink.jpg" />
         <p><i>Ink Effect</i></p>
       </td>
     </tr>
@@ -313,7 +313,7 @@ Bulges or pinches the image in a circle.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/bulge_pinch.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/bulge_pinch.jpg" />
         <p><i>Bulge Pinch Effect</i></p>
       </td>
     </tr>
@@ -333,7 +333,7 @@ Warps a circular region of the image in a swirl.
   <tbody>
     <tr>
       <td align="center">
-        <img height=340 src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/swirl.jpg" />
+        <img height="340" src="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/images/samples/glfx/results/swirl.jpg" />
         <p><i>Swirl Effect</i></p>
       </td>
     </tr>
