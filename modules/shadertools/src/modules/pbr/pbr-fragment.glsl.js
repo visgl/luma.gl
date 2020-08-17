@@ -341,7 +341,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
   vec3 color = vec3(0, 0, 0);
 
 #ifdef USE_LIGHTS
-  if (u_Unlit) {
+  if (!u_Unlit) {
     // Apply ambient light
     PBRInfo_setAmbientLight(pbrInputs);
     color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
