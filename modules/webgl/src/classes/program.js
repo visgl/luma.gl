@@ -338,10 +338,15 @@ export default class Program extends Resource {
 
     // Avoid checking program linking error in production
     if (gl.debug || log.level > 0) {
-      gl.validateProgram(this.handle);
       const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
       if (!linked) {
         throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
+      }
+
+      gl.validateProgram(this.handle);
+      const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
+      if (!validated) {
+        throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
       }
     }
   }
