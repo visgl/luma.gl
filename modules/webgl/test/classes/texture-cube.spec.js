@@ -8,6 +8,7 @@ test('WebGL#TextureCube construct/delete', t => {
   const {gl} = fixture;
 
   t.throws(
+    // @ts-ignore
     () => new TextureCube(),
     /.*WebGLRenderingContext.*/,
     'TextureCube throws on missing gl context'

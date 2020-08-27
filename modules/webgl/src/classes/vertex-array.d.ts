@@ -1,0 +1,25 @@
+import ProgramConfiguration from "./program-configuration";
+import VertexArrayObject from "./vertex-array-object";
+
+export default class VertexArray {
+  constructor(gl: WebGLRenderingContext, opts?: {});
+  delete(): void;
+  initialize(props?: {}): this;
+  reset(): this;
+  setProps(props: any): this;
+  clearDrawParams(): void;
+  getDrawParams(): any;
+  setAttributes(attributes: any): this;
+  setElementBuffer(elementBuffer?: any, accessor?: {}): this;
+  setBuffer(locationOrName: any, buffer: any, appAccessor?: {}): this;
+  setConstant(locationOrName: any, arrayValue: any, appAccessor?: {}): this;
+  unbindBuffers(): this;
+  bindBuffers(): this;
+  bindForDraw(vertexCount: any, instanceCount: any, func: any): any;
+  setElements(elementBuffer?: any, accessor?: {}): this;
+
+  // FOR TESTING
+  readonly configuration: ProgramConfiguration | null;
+  readonly accessors: {size?: number}[];
+  readonly vertexArrayObject: VertexArrayObject;
+}

@@ -6,7 +6,7 @@
 
 /* eslint-disable key-spacing, max-len, no-inline-comments, camelcase */
 // eslint-disable-next-line
-module.exports = {
+export default {
   // Clearing buffers
   // Constants passed to clear() to clear buffer masks.
 

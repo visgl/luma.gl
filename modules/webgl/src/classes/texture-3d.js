@@ -39,6 +39,7 @@ export default class Texture3D extends Texture {
 
     withParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
+        // @ts-ignore
         this.gl.texImage3D(
           this.target,
           level,
@@ -55,6 +56,7 @@ export default class Texture3D extends Texture {
 
       if (data instanceof Buffer) {
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
+        // @ts-ignore
         this.gl.texImage3D(
           this.target,
           level,
@@ -74,7 +76,9 @@ export default class Texture3D extends Texture {
       this._trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
       // NOTE(Tarek): Default to RGBA bytes
+      // @ts-ignore
       const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
+      // @ts-ignore
       const channelSize = TYPE_SIZES[this.type] || 1;
 
       this._trackAllocatedMemory(

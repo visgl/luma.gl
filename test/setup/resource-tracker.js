@@ -1,5 +1,6 @@
+/* global luma */
 export function getResourceCounts() {
-  /* global luma */
+  // @ts-ignore
   const resourceStats = luma.stats.get('Resource Counts');
   return {
     Texture2D: resourceStats.get('Texture2Ds Active').count,

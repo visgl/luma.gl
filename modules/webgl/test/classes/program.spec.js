@@ -27,6 +27,7 @@ test('WebGL#Program construct/delete', t => {
   const {gl} = fixture;
 
   t.throws(
+    // @ts-ignore
     () => new Program(),
     /.*WebGLRenderingContext.*/,
     'Program throws on missing gl context'
@@ -79,12 +80,16 @@ test('WebGL#Program caching', t => {
 
   const program = new Program(gl, {fs, vs});
 
+  // @ts-ignore
   program._isCached = true;
   program.delete();
+  // @ts-ignore
   t.ok(program._handle, 'Program should not be deleted');
 
+  // @ts-ignore
   program._isCached = false;
   program.delete();
+  // @ts-ignore
   t.ok(!program._handle, 'Program should be deleted');
 
   t.end();
@@ -95,8 +100,11 @@ test('WebGL#Program uniform array', t => {
 
   const program = new Program(gl, {vs, fs});
 
+  // @ts-ignore
   t.ok(program._uniformSetters.uMVMatrix, 'uniform array is ok');
+  // @ts-ignore
   t.ok(program._uniformSetters[`uMVMatrix[0]`], 'uniform array is ok');
+  // @ts-ignore
   t.ok(program._uniformSetters[`uMVMatrix[1]`], 'uniform array is ok');
 
   program.delete();

@@ -24,12 +24,11 @@ function testQueryConstructDelete(gl, t) {
     t.comment('Query is not supported, testing graceful fallback');
   }
 
+  // @ts-ignore
   t.throws(() => new Query(), /.*WebGLRenderingContext.*/, 'Query throws on missing gl context');
 
-  let timerQuery;
-  t.doesNotThrow(() => {
-    timerQuery = new Query(gl);
-  }, 'Query construction successful');
+  const timerQuery = new Query(gl);
+  t.ok(timerQuery, 'Query construction successful');
 
   timerQuery.delete();
   t.ok(timerQuery instanceof Query, 'Query delete successful');

@@ -1,7 +1,13 @@
 module.exports = {
   parserOptions: {
-    ecmaVersion: 2018
+    ecmaVersion: 2020
   },
+  globals: {
+    globalThis: 'readonly'
+  },
+  // env: {
+  //   'shared-node-browser': true
+  // },
   extends: ['uber-es2015', 'prettier', 'plugin:import/errors'],
   plugins: ['tree-shaking', 'luma-gl-custom-rules', 'import'],
   rules: {

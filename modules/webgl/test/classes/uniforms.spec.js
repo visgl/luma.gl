@@ -126,8 +126,11 @@ const WEBGL1_GOOD_UNIFORMS = {
   iv4: new Int32Array([1, 2, 3, 4]), // INT_VEC4  0x8B55
 
   b: true, // BOOL  0x8B56
+  // @ts-ignore
   bv2: new Int32Array([false, true]), // BOOL_VEC2 0x8B57
+  // @ts-ignore
   bv3: new Int32Array([false, true, false]), // BOOL_VEC3 0x8B58
+  // @ts-ignore
   bv4: new Int32Array([false, true, false, true]), // BOOL_VEC4 0x8B59
 
   m2: new Float32Array(MATRIX_2), // FLOAT_MAT2  0x8B5A
@@ -161,6 +164,7 @@ test('WebGL#Uniforms Program uniform locations', t => {
   });
 
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
+    // @ts-ignore
     t.ok(program._uniformSetters[uniformName], `Program found uniform setter ${uniformName}`);
   }
 
@@ -228,6 +232,7 @@ const setUniformAndCheck = (program, input, expected, t) => {
     let value = getUniformValue(program, uniformName);
 
     if (expectedValue instanceof Texture2D) {
+      // @ts-ignore
       expectedValue = expectedValue.textureUnit;
     } else if (expectedValue.length) {
       expectedValue = Array.from(expectedValue);
@@ -251,6 +256,7 @@ const testSetUniform = (gl, t) => {
   t.comment('Test setting typed arrays');
   setUniformAndCheck(program, uniforms, expectedValues, t);
 
+  // @ts-ignore
   uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];
@@ -263,6 +269,7 @@ const testSetUniform = (gl, t) => {
   t.comment('Test setting plain arrays');
   setUniformAndCheck(program, uniforms, expectedValues, t);
 
+  // @ts-ignore
   uniforms = {};
   for (const uniformName in WEBGL1_GOOD_UNIFORMS) {
     const value = WEBGL1_GOOD_UNIFORMS[uniformName];

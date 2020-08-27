@@ -1,0 +1,9 @@
+export default class Accessor {
+  static getBytesPerElement(accessor: any): number;
+  static getBytesPerVertex(accessor: any): number;
+  static resolve(...accessors: any[]): Accessor;
+  constructor(...accessors: any[]);
+  toString(): string;
+  get BYTES_PER_ELEMENT(): number;
+  get BYTES_PER_VERTEX(): number;
+}
