@@ -215,7 +215,7 @@ const loop = new AnimationLoop({
     return {transform, model};
   },
 
-  onRender({gl, model}) {
+  onRender({gl, transform, model}) {
     transform.run();
 
     clear(gl, {color: [0, 0, 0, 1]});
