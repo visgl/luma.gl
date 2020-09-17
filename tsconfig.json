@@ -1,0 +1,68 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "jsx": "react",
+    "allowJs": true,
+    "checkJs": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@luma.gl/constants/*": ["modules/constants/src/*"],
+      "@luma.gl/constants/test/*": ["modules/constants/test/*"],
+      "@luma.gl/core/*": ["modules/core/src/*"],
+      "@luma.gl/core/test/*": ["modules/core/test/*"],
+      "@luma.gl/debug/*": ["modules/debug/src/*"],
+      "@luma.gl/debug/test/*": ["modules/debug/test/*"],
+      "@luma.gl/engine/*": ["modules/engine/src/*"],
+      "@luma.gl/engine/test/*": ["modules/engine/test/*"],
+      "@luma.gl/experimental/*": ["modules/experimental/src/*"],
+      "@luma.gl/experimental/test/*": ["modules/experimental/test/*"],
+      "@luma.gl/gltools/*": ["modules/gltools/src/*"],
+      "@luma.gl/gltools/test/*": ["modules/gltools/test/*"],
+      "@luma.gl/shadertools/*": ["modules/shadertools/src/*"],
+      "@luma.gl/shadertools/test/*": ["modules/shadertools/test/*"],
+      "@luma.gl/test-utils/*": ["modules/test-utils/src/*"],
+      "@luma.gl/test-utils/test/*": ["modules/test-utils/test/*"],
+      "@luma.gl/webgl/*": ["modules/webgl/src/*"],
+      "@luma.gl/webgl/test/*": ["modules/webgl/test/*"],
+      "test/*": ["test/*"]
+    }
+  },
+  // Note: an "include": [] section dramatically limits coverage.
+  // Better to explicitly exclude things.
+  // Points will be awarded every time an exception is removed!
+  "exclude":[
+    "modules/constants/src/**/*",
+    "modules/core/src/**/*",
+    "modules/core/test/**/*",
+    "modules/debug/src/**/*",
+    "modules/debug/test/**/*",
+    "modules/engine/src/**/*",
+    "modules/engine/test/**/*",
+    "modules/experimental/src/**/*",
+    "modules/experimental/test/**/*",
+    "modules/gltools/src/**/*",
+    "modules/gltools/test/**/*",
+    "modules/shadertools/src/**/*",
+    "modules/shadertools/test/**/*",
+    "modules/test-utils/src/**/*",
+    "modules/test-utils/test/**/*",
+    "modules/webgl/src/classes/**/*",
+    "modules/webgl/src/debug/**/*",
+    "modules/webgl/src/features/**/*",
+    "modules/webgl/src/glsl-utils/**/*",
+    "modules/webgl/src/utils/**/*",
+    "modules/webgl/src/webgl-utils/**/*",
+    "modules/webgl/src/*",
+
+    "examples/**/*",
+    "website/**/*",
+    "test/apps/**/*",
+    "test/**/*",
+    "node_modules",
+    "**/dist/**/*"
+  ]
+}

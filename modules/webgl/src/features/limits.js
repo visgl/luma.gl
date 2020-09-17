@@ -24,6 +24,7 @@ export function getContextLimits(gl) {
       // Check if we can query for this limit
       const limitNotAvailable =
         ('gl2' in limit && !isWebgl2) ||
+        // @ts-ignore
         ('extension' in limit && !gl.getExtension(limit.extension));
 
       const value = limitNotAvailable ? minLimit : gl.getParameter(parameter);

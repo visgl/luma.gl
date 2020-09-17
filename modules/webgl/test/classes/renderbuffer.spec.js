@@ -32,8 +32,8 @@ test('WebGL#Renderbuffer construct/delete', t => {
 test('WebGL#Renderbuffer format creation', t => {
   const {gl} = fixture;
 
-  for (let format in RENDERBUFFER_FORMATS) {
-    format = Number(format);
+  for (const formatName in RENDERBUFFER_FORMATS) {
+    const format = Number(formatName);
     if (Renderbuffer.isSupported(gl, {format})) {
       const renderbuffer = new Renderbuffer(gl, {format});
       t.equals(

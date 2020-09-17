@@ -86,11 +86,11 @@ export const SAMPLER_PARAMETERS_WEBGL2 = {
 
 // Shared with texture*.spec.js
 export function testSamplerParameters({t, texture, parameters}) {
-  for (let parameter in parameters) {
-    parameter = Number(parameter);
-    const values = parameters[parameter];
-    for (let value in values) {
-      value = Number(value);
+  for (const parameterName in parameters) {
+    const values = parameters[parameterName];
+    const parameter = Number(parameterName);
+    for (const valueName in values) {
+      const value = Number(valueName);
       texture.setParameters({
         [parameter]: value
       });

@@ -7,6 +7,7 @@ test('WebGL#Texture2D construct/delete', t => {
   const {gl} = fixture;
 
   t.throws(
+    // @ts-ignore
     () => new Texture2D(),
     /.*WebGLRenderingContext.*/,
     'Texture2D throws on missing gl context'
@@ -31,6 +32,7 @@ test('WebGL#Texture2D async constructor', t => {
 
   let texture = new Texture2D(gl);
   t.ok(texture instanceof Texture2D, 'Synchronous Texture2D construction successful');
+  // @ts-ignore
   t.equal(texture.loaded, true, 'Sync Texture2D marked as loaded');
   texture.delete();
 
@@ -40,13 +42,16 @@ test('WebGL#Texture2D async constructor', t => {
   });
   texture = new Texture2D(gl, loadPromise);
   t.ok(texture instanceof Texture2D, 'Asynchronous Texture2D construction successful');
+  // @ts-ignore
   t.equal(texture.loaded, false, 'Async Texture2D initially marked as not loaded');
 
   loadPromise.then(() => {
+    // @ts-ignore
     t.equal(texture.loaded, true, 'Async Texture2D marked as loaded on promise completion');
     t.end();
   });
 
+  // @ts-ignore
   loadCompleted(null);
 });
 

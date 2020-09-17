@@ -273,10 +273,12 @@ export function copyUniform(uniforms, key, value) {
   if (Array.isArray(value) || ArrayBuffer.isView(value)) {
     if (uniforms[key]) {
       const dest = uniforms[key];
+      // @ts-ignore
       for (let i = 0, len = value.length; i < len; ++i) {
         dest[i] = value[i];
       }
     } else {
+      // @ts-ignore
       uniforms[key] = value.slice();
     }
   } else {

@@ -9,6 +9,7 @@ const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 test('WebGL#VertexArray construct/delete', t => {
   const {gl} = fixture;
 
+  // @ts-ignore
   t.throws(() => new VertexArray(), 'VertexArray throws on missing gl context');
 
   const vao = new VertexArray(gl);
@@ -67,14 +68,17 @@ test('WebGL#VertexArray#_getAttributeIndex', t => {
     }
   });
 
+  // @ts-ignore
   const matrix = vertexArray._getAttributeIndex('matrix');
   t.equal(matrix.location, 1, 'Bad location');
   t.equal(matrix.name, 'matrix', 'Bad name');
 
+  // @ts-ignore
   const matrix0 = vertexArray._getAttributeIndex('matrix__LOCATION_0');
   t.equal(matrix0.location, 1, 'Bad location');
   t.equal(matrix0.name, 'matrix', 'Bad name');
 
+  // @ts-ignore
   const matrix1 = vertexArray._getAttributeIndex('matrix__LOCATION_1');
   t.equal(matrix1.location, 2, 'Bad location');
   t.equal(matrix1.name, 'matrix', 'Bad name');

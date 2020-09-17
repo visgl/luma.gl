@@ -40,6 +40,7 @@ test('WebGL#TransformFeedback constructor/delete', t => {
   }
 
   t.throws(
+    // @ts-ignore
     () => new TransformFeedback(),
     /.*Requires WebGL2.*/,
     'Buffer throws on missing gl context'
@@ -98,7 +99,7 @@ test('WebGL#TransformFeedback bindBuffers', t => {
   t.end();
 });
 
-function testDataCapture({t, gl2, byteOffset}) {
+function testDataCapture({t, gl2, byteOffset = 0}) {
   const inData = new Float32Array([10, 20, 31, 0, -57]);
   const vertexCount = inData.length;
   const inBuffer = new Buffer(gl2, {data: inData});
@@ -111,7 +112,7 @@ function testDataCapture({t, gl2, byteOffset}) {
     drawMode: GL.POINTS,
     vertexCount: 5
   });
-  const offset = byteOffset ? byteOffset / 4 : 0;
+  const offset = byteOffset / 4;
   const tf = new TransformFeedback(gl2, {
     buffers: {outValue: {buffer: outBuffer, byteOffset}},
     configuration: model.program.configuration

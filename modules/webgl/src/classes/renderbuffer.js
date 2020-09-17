@@ -18,7 +18,7 @@ function isFormatSupported(gl, format, formats) {
 }
 
 export default class Renderbuffer extends Resource {
-  static isSupported(gl, {format} = {}) {
+  static isSupported(gl, {format} = {format: null}) {
     return !format || isFormatSupported(gl, format, RENDERBUFFER_FORMATS);
   }
 
@@ -30,6 +30,7 @@ export default class Renderbuffer extends Resource {
   constructor(gl, opts = {}) {
     super(gl, opts);
 
+    // @ts-ignore
     this.initialize(opts);
 
     Object.seal(this);
@@ -44,6 +45,7 @@ export default class Renderbuffer extends Resource {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
     if (samples !== 0 && isWebGL2(this.gl)) {
+      // @ts-ignore
       this.gl.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, format, width, height);
     } else {
       this.gl.renderbufferStorage(GL.RENDERBUFFER, format, width, height);

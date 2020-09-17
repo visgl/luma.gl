@@ -47,6 +47,7 @@ test('WebGL2#ProgramConfiguration#varyings', t => {
 
   let program = new Program(gl2, {fs, vs, varyings: ['vPosition', 'gl_Position']});
 
+  // @ts-ignore
   let varyingMap = program.configuration.varyingInfosByName;
   t.equals(varyingMap.vPosition.location, 0);
   t.equals(varyingMap.gl_Position.location, 1);
@@ -57,6 +58,7 @@ test('WebGL2#ProgramConfiguration#varyings', t => {
     varyings: ['vPosition', 'gl_Position'],
     bufferMode: GL.INTERLEAVED_ATTRIBS
   });
+  // @ts-ignore
   varyingMap = program.configuration.varyingInfosByName;
   t.equals(varyingMap.vPosition.location, 0);
   t.equals(varyingMap.gl_Position.location, 1);
