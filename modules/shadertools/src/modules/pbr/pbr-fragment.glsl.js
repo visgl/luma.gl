@@ -21,6 +21,8 @@ export default `\
 
 precision highp float;
 
+uniform bool pbr_uUnlit;
+
 #ifdef USE_IBL
 uniform samplerCube u_DiffuseEnvSampler;
 uniform samplerCube u_SpecularEnvSampler;
@@ -263,24 +265,6 @@ vec3 calculateFinalColor(PBRInfo pbrInputs, vec3 lightColor) {
 
 vec4 pbr_filterColor(vec4 colorUnused)
 {
-  // Metallic and Roughness material properties are packed together
-  // In glTF, these factors can be specified by fixed scalar values
-  // or from a metallic-roughness map
-  float perceptualRoughness = u_MetallicRoughnessValues.y;
-  float metallic = u_MetallicRoughnessValues.x;
-#ifdef HAS_METALROUGHNESSMAP
-  // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
-  // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-  vec4 mrSample = texture2D(u_MetallicRoughnessSampler, pbr_vUV);
-  perceptualRoughness = mrSample.g * perceptualRoughness;
-  metallic = mrSample.b * metallic;
-#endif
-  perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
-  metallic = clamp(metallic, 0.0, 1.0);
-  // Roughness is authored as perceptual roughness; as is convention,
-  // convert to material roughness by squaring the perceptual roughness [2].
-  float alphaRoughness = perceptualRoughness * perceptualRoughness;
-
   // The albedo may be defined from a base texture or a flat color
 #ifdef HAS_BASECOLORMAP
   vec4 baseColor = SRGBtoLINEAR(texture2D(u_BaseColorSampler, pbr_vUV)) * u_BaseColorFactor;
@@ -294,101 +278,125 @@ vec4 pbr_filterColor(vec4 colorUnused)
   }
 #endif
 
-  vec3 f0 = vec3(0.04);
-  vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
-  diffuseColor *= 1.0 - metallic;
-  vec3 specularColor = mix(f0, baseColor.rgb, metallic);
-
-  // Compute reflectance.
-  float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
-
-  // For typical incident reflectance range (between 4% to 100%) set the grazing
-  // reflectance to 100% for typical fresnel effect.
-  // For very low reflectance range on highly diffuse objects (below 4%),
-  // incrementally reduce grazing reflecance to 0%.
-  float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
-  vec3 specularEnvironmentR0 = specularColor.rgb;
-  vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
-
-  vec3 n = getNormal();                          // normal at surface point
-  vec3 v = normalize(u_Camera - pbr_vPosition);  // Vector from surface point to camera
-
-  float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
-  vec3 reflection = -normalize(reflect(v, n));
-
-  PBRInfo pbrInputs = PBRInfo(
-    0.0, // NdotL
-    NdotV,
-    0.0, // NdotH
-    0.0, // LdotH
-    0.0, // VdotH
-    perceptualRoughness,
-    metallic,
-    specularEnvironmentR0,
-    specularEnvironmentR90,
-    alphaRoughness,
-    diffuseColor,
-    specularColor,
-    n,
-    v
-  );
-
   vec3 color = vec3(0, 0, 0);
 
+  if(pbr_uUnlit){
+    color.rgb = baseColor.rgb;
+  }
+  else{
+    // Metallic and Roughness material properties are packed together
+    // In glTF, these factors can be specified by fixed scalar values
+    // or from a metallic-roughness map
+    float perceptualRoughness = u_MetallicRoughnessValues.y;
+    float metallic = u_MetallicRoughnessValues.x;
+#ifdef HAS_METALROUGHNESSMAP
+    // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
+    // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
+    vec4 mrSample = texture2D(u_MetallicRoughnessSampler, pbr_vUV);
+    perceptualRoughness = mrSample.g * perceptualRoughness;
+    metallic = mrSample.b * metallic;
+#endif
+    perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
+    metallic = clamp(metallic, 0.0, 1.0);
+    // Roughness is authored as perceptual roughness; as is convention,
+    // convert to material roughness by squaring the perceptual roughness [2].
+    float alphaRoughness = perceptualRoughness * perceptualRoughness;
+
+    vec3 f0 = vec3(0.04);
+    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
+    diffuseColor *= 1.0 - metallic;
+    vec3 specularColor = mix(f0, baseColor.rgb, metallic);
+
+    // Compute reflectance.
+    float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
+
+    // For typical incident reflectance range (between 4% to 100%) set the grazing
+    // reflectance to 100% for typical fresnel effect.
+    // For very low reflectance range on highly diffuse objects (below 4%),
+    // incrementally reduce grazing reflecance to 0%.
+    float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
+    vec3 specularEnvironmentR0 = specularColor.rgb;
+    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
+
+    vec3 n = getNormal();                          // normal at surface point
+    vec3 v = normalize(u_Camera - pbr_vPosition);  // Vector from surface point to camera
+
+    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
+    vec3 reflection = -normalize(reflect(v, n));
+
+    PBRInfo pbrInputs = PBRInfo(
+      0.0, // NdotL
+      NdotV,
+      0.0, // NdotH
+      0.0, // LdotH
+      0.0, // VdotH
+      perceptualRoughness,
+      metallic,
+      specularEnvironmentR0,
+      specularEnvironmentR90,
+      alphaRoughness,
+      diffuseColor,
+      specularColor,
+      n,
+      v
+    );
+
 #ifdef USE_LIGHTS
-  // Apply ambient light
-  PBRInfo_setAmbientLight(pbrInputs);
-  color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
+    // Apply ambient light
+    PBRInfo_setAmbientLight(pbrInputs);
+    color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
 
-  // Apply directional light
-  SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uDirectionalLightCount, i++) {
-    if (i < lighting_uDirectionalLightCount) {
-      PBRInfo_setDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
-      color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
+    // Apply directional light
+    SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uDirectionalLightCount, i++) {
+      if (i < lighting_uDirectionalLightCount) {
+        PBRInfo_setDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
+        color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
+      }
     }
-  }
 
-  // Apply point light
-  SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uPointLightCount, i++) {
-    if (i < lighting_uPointLightCount) {
-      PBRInfo_setPointLight(pbrInputs, lighting_uPointLight[i]);
-      float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
-      color += calculateFinalColor(pbrInputs, lighting_uPointLight[i].color / attenuation);
+    // Apply point light
+    SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uPointLightCount, i++) {
+      if (i < lighting_uPointLightCount) {
+        PBRInfo_setPointLight(pbrInputs, lighting_uPointLight[i]);
+        float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
+        color += calculateFinalColor(pbrInputs, lighting_uPointLight[i].color / attenuation);
+      }
     }
-  }
 #endif
 
-  // Calculate lighting contribution from image based lighting source (IBL)
+    // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
-  color += getIBLContribution(pbrInputs, n, reflection);
+    color += getIBLContribution(pbrInputs, n, reflection);
 #endif
 
-  // Apply optional PBR terms for additional (optional) shading
+    // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP
-  float ao = texture2D(u_OcclusionSampler, pbr_vUV).r;
-  color = mix(color, color * ao, u_OcclusionStrength);
+    float ao = texture2D(u_OcclusionSampler, pbr_vUV).r;
+    color = mix(color, color * ao, u_OcclusionStrength);
 #endif
 
 #ifdef HAS_EMISSIVEMAP
-  vec3 emissive = SRGBtoLINEAR(texture2D(u_EmissiveSampler, pbr_vUV)).rgb * u_EmissiveFactor;
-  color += emissive;
+    vec3 emissive = SRGBtoLINEAR(texture2D(u_EmissiveSampler, pbr_vUV)).rgb * u_EmissiveFactor;
+    color += emissive;
 #endif
 
-  // This section uses mix to override final color for reference app visualization
-  // of various parameters in the lighting equation.
+    // This section uses mix to override final color for reference app visualization
+    // of various parameters in the lighting equation.
 #ifdef PBR_DEBUG
-  // TODO: Figure out how to debug multiple lights
+    // TODO: Figure out how to debug multiple lights
 
-  // color = mix(color, F, u_ScaleFGDSpec.x);
-  // color = mix(color, vec3(G), u_ScaleFGDSpec.y);
-  // color = mix(color, vec3(D), u_ScaleFGDSpec.z);
-  // color = mix(color, specContrib, u_ScaleFGDSpec.w);
+    // color = mix(color, F, u_ScaleFGDSpec.x);
+    // color = mix(color, vec3(G), u_ScaleFGDSpec.y);
+    // color = mix(color, vec3(D), u_ScaleFGDSpec.z);
+    // color = mix(color, specContrib, u_ScaleFGDSpec.w);
 
-  // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);
-  color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);
-  color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);
-  color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);
+    // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);
+    color = mix(color, baseColor.rgb, u_ScaleDiffBaseMR.y);
+    color = mix(color, vec3(metallic), u_ScaleDiffBaseMR.z);
+    color = mix(color, vec3(perceptualRoughness), u_ScaleDiffBaseMR.w);
 #endif
+
+  }
 
   return vec4(pow(color,vec3(1.0/2.2)), baseColor.a);
 }

@@ -103,6 +103,8 @@ export default class GLTFMaterialParser {
   }
 
   parseMaterial(material) {
+    this.uniforms.pbr_uUnlit = Boolean(material.unlit);
+
     if (material.pbrMetallicRoughness) {
       this.parsePbrMetallicRoughness(material.pbrMetallicRoughness);
     }
