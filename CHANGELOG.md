@@ -1,3 +1,7 @@
+## v8.3.1
+
+- Fix constants package.json (#1410)
+
 ## v8.3.0
 
 ## v8.3.0-beta.1
