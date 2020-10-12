@@ -1,3 +1,8 @@
+## v8.3.0-beta.1
+
+- Support for PBR material.unlit (#1405)
+- webgl: Add typescript types (#1403)
+
 ## v8.2.0
 - Fix bug when a model is deleted multiple times (#1390)
 
