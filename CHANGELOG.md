@@ -1,3 +1,5 @@
+## v8.3.0
+
 ## v8.3.0-beta.1
 
 - Support for PBR material.unlit (#1405)
