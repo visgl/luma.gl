@@ -1,5 +1,17 @@
 # What's New
 
+## Version 8.3
+
+Date: Oct 12, 2020
+
+### TypeScript
+
+TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
+
+### glTF
+
+Support for PBR material.unlit
+
 ## Version 8.1
 
 Date: March 2, 2020
