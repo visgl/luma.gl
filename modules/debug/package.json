@@ -32,7 +32,7 @@
   "dependencies": {
     "@luma.gl/constants": "8.2.0",
     "glsl-transpiler": "^1.8.5",
-    "math.gl": "^3.2.1",
+    "math.gl": "^3.3.0",
     "probe.gl": "^3.2.1",
     "webgl-debug": "^2.0.1"
   },
