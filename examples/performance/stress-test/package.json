@@ -9,11 +9,11 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/constants": "^8.2.0",
-    "@luma.gl/engine": "^8.2.0",
-    "@luma.gl/webgl": "^8.2.0",
-    "@luma.gl/gltools": "^8.2.0",
-    "@luma.gl/shadertools": "^8.2.0",
+    "@luma.gl/constants": "^8.3.0",
+    "@luma.gl/engine": "^8.3.0",
+    "@luma.gl/webgl": "^8.3.0",
+    "@luma.gl/gltools": "^8.3.0",
+    "@luma.gl/shadertools": "^8.3.0",
     "@probe.gl/stats-widget": "^3.2.1",
     "math.gl": "^3.1.3"
   },
