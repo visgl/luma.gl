@@ -17,9 +17,9 @@
     "3d"
   ],
   "types": "src/index.d.ts",
-  "main": "src/index.js",
-  "module": "src/index.js",
-  "esnext": "src/index.js",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
+  "esnext": "dist/es6/index.js",
   "files": [
     "src",
     "dist",
