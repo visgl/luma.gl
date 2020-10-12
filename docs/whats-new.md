@@ -6,7 +6,7 @@ Date: Oct 12, 2020
 
 ### TypeScript
 
-TypeScript definitions are available for WebGL classes (Buffer, Texture, etc.)
+TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
 
 ### glTF
 
