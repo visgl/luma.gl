@@ -403,7 +403,7 @@ export default class Model {
     }
   }
 
-  _checkProgram(shaderCache = null) {
+  _checkProgram() {
     const needsUpdate =
       this._programDirty || this.programManager.stateHash !== this._programManagerState;
 
@@ -483,7 +483,7 @@ export default class Model {
   _setAnimationProps(animationProps) {
     if (this.animated) {
       assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
-      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
+      const animatedUniforms = this._evaluateAnimateUniforms(animationProps); // TODO: where is this function implemented?
       Object.assign(this.uniforms, animatedUniforms);
     }
   }
