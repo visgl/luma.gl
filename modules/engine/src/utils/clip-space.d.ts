@@ -1,5 +1,5 @@
-import Model from '../lib/model';
+import Model, {ModelProps} from '../lib/model';
 
 export default class ClipSpace extends Model {
-  constructor(gl: WebGLRenderingContext, opts: any);
+  constructor(gl: WebGLRenderingContext, opts?: ModelProps);
 }

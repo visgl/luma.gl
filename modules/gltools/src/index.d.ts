@@ -27,6 +27,7 @@ export {
 } from './state-tracker/track-context-state';
 
 export {
+  CreateGLContextOptions,
   createGLContext,
   resizeGLContext,
   instrumentGLContext,

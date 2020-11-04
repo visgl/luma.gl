@@ -1,3 +1,14 @@
+interface AccessorObject {
+  buffer?: Buffer
+  offset?: number
+  stride?: number
+  type?: number
+  size?: number
+  divisor?: number
+  normalize?: boolean
+  integer?: boolean
+}
+
 export default class Accessor {
   static getBytesPerElement(accessor: any): number;
   static getBytesPerVertex(accessor: any): number;

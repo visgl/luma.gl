@@ -1,9 +1,19 @@
-export class KeyFrames {
-  constructor(keyFrames: any);
-  setKeyFrames(keyFrames: any): void;
-  setTime(time: any): void;
-  getStartTime(): any;
-  getEndTime(): any;
-  getStartData(): any;
-  getEndData(): any;
+type KeyFrame<T> = [number, T]
+
+export class KeyFrames<T> {
+  _lastTime: number
+  startIndex: number
+  endIndex: number
+  factor: number
+  times: Array<number>
+  values: Array<T>
+
+  constructor(keyFrames: Array<KeyFrame<T>>);
+  setKeyFrames(keyFrames: Array<KeyFrame<T>>): void;
+  setTime(time: number): void;
+  getStartTime(): number;
+  getEndTime(): number;
+  getStartData(): T;
+  getEndData(): T;
+  _calculateKeys(time: number): void;
 }

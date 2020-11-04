@@ -1,6 +1,6 @@
 export class StatsManager {
   constructor();
-  get(name: any): any;
+  get(name: any): any; // TODO: Isn't this get(name: string): Stats;
 }
 
 export const lumaStats: StatsManager;

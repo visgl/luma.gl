@@ -1,3 +1,5 @@
+/** @type {import('@luma.gl/engine').KeyFrames} */
+
 export class KeyFrames {
   constructor(keyFrames) {
     this._lastTime = -1;

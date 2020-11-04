@@ -118,11 +118,11 @@ model.draw({
 
 `Model` extends the `BaseModel` class and inherits all properties from that class.
 
-### moduleSettings : Object
+### moduleSettings: object
 
 any uniforms needed by shader modules.
 
-### uniforms : Object
+### uniforms: object
 
 uniform values to be used for drawing.
 
@@ -134,9 +134,6 @@ function to be called before every time this model is drawn.
 
 function to be called after every time this model is drawn.
 
-### mesh
-
-`Mesh` instance.
 
 ## Deprecated Properties in v7
 
@@ -144,21 +141,21 @@ function to be called after every time this model is drawn.
 
 `Geometry` object, from which attributes, vertex count and drawing mode are deduced.
 
-### isInstanced : Boolean
+### isInstanced: boolean
 
 default value is false.
 
-### instanceCount : Number
+### instanceCount: Number
 
 default value is 0.
 
-### vertexCount : Number
+### vertexCount: Number
 
 when not provided will be deduced from `geometry` object.
 
 ## Constructor
 
-### Model(gl: WebGLRenderingContext, props: Object)
+### Model(gl: WebGLRenderingContext, props: object)
 
 The constructor for the Model class. Use this to create a new Model.
 
@@ -171,35 +168,35 @@ The constructor for the Model class. Use this to create a new Model.
 - `programManager` - `ProgramManager` to use for program creation and caching.
 - `transpileToGLSL100` - Transpile vertex and fragment shaders to GLSL 1.0.
 
-### delete() : Model
+### delete()
 
 Free WebGL resources associated with this model
 
 ## Methods
 
-### setProps(props : Object) : Model
+### setProps(props: object); this
 
 Updates properties
 
-### isAnimated() : Boolean
+### isAnimated(): boolean
 
 Returns `true` if the model is animated (i.e. needs to be redrawn every frame).
 
-### getProgram() : Program
+### getProgram(): Program
 
 Get model's `Program` instance
 
-### getUniforms() : Object
+### getUniforms(): object
 
 Returns map of currently stored uniforms
 
-### setUniforms(uniforms : Object) : Model
+### setUniforms(uniforms: object); this
 
 Stores named uniforms {key, value}
 
-### updateModuleSettings(moduleSettings : Object) : Model
+### updateModuleSettings(moduleSettings: object); this
 
-### draw(options : Object) : Model
+### draw(options: object): boolean
 
 Renders the model with provided uniforms, attributes and samplers
 
@@ -233,7 +230,7 @@ The remaining draw options are passed directly to `Program.draw()`:
 - `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 - `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
-### transform(options : Object) : Model
+### transform(options: object); this
 
 Renders the model with provided uniforms, and samplers. Calls `Program.draw()` with rasterization turned off.
 
@@ -244,49 +241,55 @@ Renders the model with provided uniforms, and samplers. Calls `Program.draw()` w
 
 ```js
 model.transform({
-  discard:
+  discard: false
 });
 ```
 
+### clear(options: object); this
+
 ## Deprecated Methods in v7
 
-### getDrawMode() : Enum
+### render(options: object): boolean
+
+Use Model.setUniforms() and Model.draw()
+
+### getDrawMode(): Enum
 
 Gets the WebGL drawMode
 
-### getVertexCount() : GLInt
+### getVertexCount(): GLInt
 
 Gets vertex count
 
 Note: might be autocalculated from `Geometry`
 
-### getInstanceCount() : GLInt
+### getInstanceCount(): GLInt
 
 Defaults to 0
 
-### getAttributes() : Object
+### getAttributes(): object
 
 Get a map of named attributes
 
-### setDrawMode() : Model
+### setDrawMode(); this
 
 Sets the WebGL `drawMode`.
 
 `GL.POINTS` etc.
 
-### setVertexCount() : Model
+### setVertexCount(); this
 
 Sets the number of vertices
 
-### setInstanceCount() : Model
+### setInstanceCount(); this
 
 How many instances will be rendered
 
-### setGeometry() : Model
+### setGeometry(); this
 
 Use a `Geometry` instance to define attribute buffers
 
-### setAttributes(attributes : Object) : Model
+### setAttributes(attributes: object); this
 
 Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array))
 

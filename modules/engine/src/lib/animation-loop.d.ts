@@ -1,42 +1,150 @@
-type AnimationLoopProps = {
-  onCreateContext?: (opts: object) => WebGLRenderingContext;
-  onAddHTML?: () => void;
-  onInitialize?: () => void;
-  onRender?: () => void;
-  onFinalize?: () => void;
-  onError?: () => void;
+// TODO - remove dependency on framebuffer (bundle size impact)
+import {Query, Framebuffer} from '@luma.gl/webgl';
+import { Stats } from 'probe.gl'
+import { Timeline } from '../animation/timeline'
 
-  gl?: WebGL2RenderingContext;
-  glOptions?: object;
-  debug?: boolean;
+import {CreateGLContextOptions} from '@luma.gl/gltools'
+import {StatsManager} from '@luma.gl/webgl/src/init';
 
-  createFramebuffer?: boolean;
+interface AnimationProps {
+  gl: WebGLRenderingContext
 
+  stop: () => AnimationLoop
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  framebuffer: Framebuffer
+  // Initial values
+  useDevicePixels: number | boolean
+  needsRedraw?: string
+  // Animation props
+  startTime: number
+  engineTime: number
+  tick: number
+  tock: number
+
+  // Timeline time for back compatibility
+  time: number
+
+  width: number
+  height: number
+  aspect: number
+
+  // Experimental
+  _timeline: Timeline
+  _loop: AnimationLoop
+  _animationLoop: AnimationLoop
+  _mousePosition?: [number, number] // [offsetX, offsetY]
+  _offScreen: boolean
+}
+
+interface AnimationLoopViewProps {
   // view parameters
-  autoResizeViewport?: boolean;
-  autoResizeDrawingBuffer?: boolean;
-  stats: any; // TODO - use probe.gl Stat type
-};
+  autoResizeViewport?: boolean
+  autoResizeDrawingBuffer?: boolean
+  useDevicePixels?: number | boolean
+}
+
+// constructor parameters
+interface AnimationLoopProps extends AnimationLoopViewProps{
+  onCreateContext?: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
+  onAddHTML?: (div: HTMLDivElement) => string // innerHTML
+  onInitialize?: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
+  onRender?: (animationProps: AnimationProps) => void
+  onFinalize?: (animationProps: AnimationProps) => void
+  onError?: (reason: any) => PromiseLike<never>
+  gl?: WebGLRenderingContext
+  glOptions?: CreateGLContextOptions // createGLContext options
+  debug?: boolean
+  createFramebuffer?: boolean
+  stats?: Stats
+}
+
+// instance of parameters after construction
+interface AnimationLoopPropsInternal {
+  onCreateContext: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
+  onAddHTML?: (div: HTMLDivElement) => string // innerHTML
+  onInitialize: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
+  onRender: (animationProps: AnimationProps) => void
+  onFinalize: (animationProps: AnimationProps) => void
+  onError: (reason: any) => PromiseLike<never>
+  gl?: WebGLRenderingContext
+  glOptions: CreateGLContextOptions // createGLContext options
+  debug: boolean
+  createFramebuffer: boolean
+}
 
 export default class AnimationLoop {
-  readonly gl: WebGLRenderingContext;
-  readonly canvas: any; // HTMLCanvasElement | OffscreenCanvas;
+  animationProps: AnimationProps
+  props: AnimationLoopPropsInternal
+  gl: WebGLRenderingContext
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  framebuffer: Framebuffer
+  timeline: Timeline
+  stats: StatsManager
+  cpuTime: Stats
+  gpuTime: Stats
+  frameRate: Stats
+  offScreen: boolean
+
+  display: any
+
+  useDevicePixels: number | boolean
+  autoResizeDrawingBuffer: boolean
+  autoResizeViewport: boolean
+
+  _initialized: boolean
+  _running: boolean
+  _animationFrameId?: number
+  _nextFramePromise?: Promise<void>
+  _resolveNextFrame?: (value: AnimationLoop) => void
+  _cpuStartTime: number
+  _gpuTimeQuery?: Query
+  _pageLoadPromise?: Promise<Document>
 
   constructor(props?: AnimationLoopProps);
   delete(): void;
-  setNeedsRedraw(reason: any): this;
-  setProps(props: any): this;
-  start(opts?: {}): this;
-  redraw(): this;
-  stop(): this;
-  attachTimeline(timeline: any): any;
+  setNeedsRedraw(reason: string): AnimationLoop;
+  setProps(props: AnimationLoopViewProps): AnimationLoop;
+  start(opts?: CreateGLContextOptions): AnimationLoop;
+  redraw(): AnimationLoop;
+  stop(): AnimationLoop;
+  attachTimeline(timeline: Timeline): Timeline;
   detachTimeline(): void;
-  waitForRender(): any;
-  toDataURL(): Promise<any>;
-  onCreateContext(...args: any[]): any;
-  onInitialize(...args: any[]): any;
-  onRender(...args: any[]): any;
-  onFinalize(...args: any[]): any;
-  getHTMLControlValue(id: any, defaultValue?: number): number;
-  setViewParameters(): this;
+  waitForRender(): Promise<void>;
+  toDataURL(): Promise<string>;
+  onCreateContext(opts: CreateGLContextOptions): WebGLRenderingContext;
+  onInitialize(animationProps: AnimationProps): AnimationProps | Promise<AnimationProps>;
+  onRender(animationProps: AnimationProps): void;
+  onFinalize(animationProps: AnimationProps): void;
+  getHTMLControlValue(id: string, defaultValue?: number): number;
+  setViewParameters(): AnimationLoop;
+
+  /*
+  _startLoop(): void;
+  _getPageLoadPromise(): Promise<Document>;
+  _setDisplay(display?: any): void;
+  _requestAnimationFrame(renderFrameCallback: () => void): void;
+  _renderFrame(animationProps: AnimationProps): void;
+  _clearNeedsRedraw(): void;
+  _setupFrame(): void;
+  _initializeCallbackData(): void;
+  _updateCallbackData(): void;
+  _finalizeCallbackData(): void;
+  _addCallbackData(appContext: AnimationProps): void;
+  _createWebGLContext(opts: CreateGLContextOptions): void;
+  _createInfoDiv(): void;
+  _getSizeAndAspect(): {
+      width: number;
+      height: number;
+      aspect: number;
+  };
+  _resizeViewport(): void;
+  _resizeCanvasDrawingBuffer(): void;
+  _createFramebuffer(): void;
+  _resizeFramebuffer(): void;
+  _beginTimers(): void;
+  _endTimers(): void;
+  _startEventHandling(): void;
+  _onMousemove(e: MouseEvent): void;
+  _onMouseleave(e: MouseEvent): void;
+  */
 }
