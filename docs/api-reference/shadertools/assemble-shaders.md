@@ -13,8 +13,8 @@ Takes the source code of a vertex shader and a fragment shader, and a list of mo
 * `defines`=`{}` (Object) - a map of key/value pairs representing custom `#define`s to be injected into the shader source
 * `modules`=`[]` (Array) - list of shader modules (either objects defining the module, or names of previously registered modules)
 * `inject`=`{}` (Object) - map of substituions,
-* `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function. For example:
 * `transpileToGLSL100`: force transpilation to GLSL ES 1.0 (see below)
+* `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function. For example:
 
 ```js
 [

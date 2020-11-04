@@ -139,11 +139,6 @@ function to be called before every time this model is drawn.
 function to be called after every time this model is drawn.
 
 
-### mesh
-
-`Mesh` instance.
-
-
 ## Deprecated Properties in v7
 
 
@@ -185,7 +180,7 @@ The constructor for the Model class. Use this to create a new Model.
 * `transpileToGLSL100` - Transpile vertex and fragment shaders to GLSL 1.0.
 
 
-### delete() : Model
+### delete()
 
 Free WebGL resources associated with this model
 
@@ -219,7 +214,7 @@ Stores named uniforms {key, value}
 ### updateModuleSettings(moduleSettings : Object) : Model
 
 
-### draw(options : Object) : Model
+### draw(options : Object) : Boolean
 
 Renders the model with provided uniforms, attributes and samplers
 
@@ -265,13 +260,17 @@ Renders the model with provided uniforms, and samplers. Calls `Program.draw()` w
 
 ```js
 model.transform({
-  discard:
+  discard: false
 });
 ```
 
-
+### clear(options : Object) : Model
 
 ## Deprecated Methods in v7
+
+### render(options : Object) : Boolean
+
+Use Model.setUniforms() and Model.draw()
 
 ### getDrawMode() : Enum
 
