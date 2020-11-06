@@ -22,9 +22,14 @@ import {
 } from '@luma.gl/webgl/src/classes/uniforms'
 
 import {
+  ShaderModule,
   ShaderModuleObject,
   InjectionMap
 } from '@luma.gl/shadertools/src/lib/shader-module'
+
+import {
+  DefineMap
+} from '@luma.gl/shadertools/src/lib/assemble-shaders'
 
 type Attribute = Buffer | AccessorObject | Accessor |
   [Buffer, Accessor] | [Buffer, AccessorObject]
@@ -38,10 +43,6 @@ interface Parameters {
   [settingName: string]: boolean
 }
 
-interface DefineMap {
-  [define: string]: boolean | number
-}
-
 interface FeedbackBuffers {
   [name: string]: string | Buffer
 }
@@ -50,7 +51,7 @@ interface ProgramProps {
   program: Program
   vs: VertexShader | string
   fs: FragmentShader | string
-  modules: Array<ShaderModuleObject | string>
+  modules: Array<ShaderModule | ShaderModuleObject | string>
   defines: DefineMap
   inject: InjectionMap
   varyings: Array<string>

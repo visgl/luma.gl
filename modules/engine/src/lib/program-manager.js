@@ -14,7 +14,7 @@ export default class ProgramManager {
 
     this._programCache = {};
     this._getUniforms = {};
-    this._registeredModules = {};
+    this._registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
     this._hookFunctions = [];
     this._defaultModules = [];
 
