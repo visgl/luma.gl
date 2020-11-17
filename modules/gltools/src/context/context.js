@@ -38,7 +38,7 @@ const CONTEXT_DEFAULTS = {
 export function createGLContext(options = {}) {
   assert(
     isBrowser,
-    "createGLContext on available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
+    "createGLContext only available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
   );
 
   options = Object.assign({}, CONTEXT_DEFAULTS, options);
