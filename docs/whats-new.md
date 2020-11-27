@@ -1,5 +1,13 @@
 # What's New
 
+## Version 8.4
+
+Date: TBD
+
+### Texture
+
+Supports continuous update from HTMLVideoElement
+
 ## Version 8.3
 
 Date: Oct 12, 2020

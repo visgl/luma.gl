@@ -213,6 +213,7 @@ export default class Program extends Resource {
         }
         if (value instanceof Texture) {
           textureUpdate = this.uniforms[uniformName] !== uniform;
+          value.update();
 
           if (textureUpdate) {
             // eslint-disable-next-line max-depth
