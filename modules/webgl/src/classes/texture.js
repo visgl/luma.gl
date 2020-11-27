@@ -199,7 +199,9 @@ export default class Texture extends Resource {
         data: video,
         parameters
       });
-      this.generateMipmap();
+      if (this.mipmaps) {
+        this.generateMipmap();
+      }
       this._video.lastTime = video.currentTime;
     }
   }
