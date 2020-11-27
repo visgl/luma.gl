@@ -176,6 +176,11 @@ Note: does not allocate storage
 See also [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/compressedTexSubImage2D), [gl.texSubImage2D](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texSubImage2D), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture), [gl.bindBuffer](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindBuffer)
 
 
+### update()
+
+Update this texture if `HTMLVideoElement` is used as the data source. This method is automatically called before every draw call if this texture is bound to a uniform.
+
+
 ### getActiveUnit()
 
 Returns number of active textures.
@@ -205,7 +210,7 @@ WebGL allows textures to be created from a number of different data sources.
 | `typed array`                      | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
 | `Buffer` or `WebGLBuffer` (`WebGL 2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
 | `Image` (`HTMLImageElement`)       | image will be used to fill the texture. width and height will be deduced. |
-| `Video` (`HTMLVideoElement`)       | video will be played, continously updating the texture. width and height will be deduced. |
+| `Video` (`HTMLVideoElement`)       | video will be used to continously update the texture. width and height will be deduced. |
 | `Canvas` (`HTMLCanvasElement`)     | canvas will be used to fill the texture. width and height will be deduced. |
 | `ImageData`                        | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced. |
 

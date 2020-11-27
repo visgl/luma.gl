@@ -70,7 +70,6 @@ export default class Program extends Resource {
     this.uniforms = {};
 
     this._textureUniforms = {};
-    this._texturesRenderable = true;
 
     // Setup varyings if supplied
     if (varyings && varyings.length > 0) {
@@ -213,7 +212,6 @@ export default class Program extends Resource {
         }
         if (value instanceof Texture) {
           textureUpdate = this.uniforms[uniformName] !== uniform;
-          value.update();
 
           if (textureUpdate) {
             // eslint-disable-next-line max-depth
@@ -227,10 +225,6 @@ export default class Program extends Resource {
 
             texture.bind(textureIndex);
             value = textureIndex;
-
-            if (!texture.loaded) {
-              this._texturesRenderable = false;
-            }
 
             this._textureUniforms[uniformName] = texture;
           } else {
@@ -254,20 +248,18 @@ export default class Program extends Resource {
   // PRIVATE METHODS
 
   // Checks if all texture-values uniforms are renderable (i.e. loaded)
+  // Update a texture if needed (e.g. from video)
   // Note: This is currently done before every draw call
   _areTexturesRenderable() {
-    if (this._texturesRenderable) {
-      return true;
-    }
-
-    this._texturesRenderable = true;
+    let texturesRenderable = true;
 
     for (const uniformName in this._textureUniforms) {
       const texture = this._textureUniforms[uniformName];
-      this._texturesRenderable = this._texturesRenderable && texture.loaded;
+      texture.update();
+      texturesRenderable = texturesRenderable && texture.loaded;
     }
 
-    return this._texturesRenderable;
+    return texturesRenderable;
   }
 
   // Binds textures
