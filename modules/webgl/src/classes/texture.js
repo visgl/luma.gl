@@ -90,6 +90,11 @@ export default class Texture extends Resource {
       );
       return this;
     }
+    const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
+    if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
+      data.addEventListener('loadedmetadata', () => this.initialize(props));
+      return this;
+    }
 
     const {
       pixels = null,
@@ -173,8 +178,32 @@ export default class Texture extends Resource {
     if (recreate) {
       this.data = data;
     }
+    if (isVideo) {
+      this._video = {
+        video: data,
+        parameters,
+        lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
+      };
+    }
 
     return this;
+  }
+
+  update() {
+    if (this._video) {
+      const {video, parameters, lastTime} = this._video;
+      if (lastTime === video.currentTime || video.readyState < HTMLVideoElement.HAVE_CURRENT_DATA) {
+        return;
+      }
+      this.setSubImageData({
+        data: video,
+        parameters
+      });
+      if (this.mipmaps) {
+        this.generateMipmap();
+      }
+      this._video.lastTime = video.currentTime;
+    }
   }
 
   // If size has changed, reinitializes with current format
