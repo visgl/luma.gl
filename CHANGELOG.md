@@ -1,3 +1,7 @@
+## v8.4.0-beta.1
+
+- Texture supports continuous update from HTMLVideoElement (#1418)
+
 ## v8.3.0
 
 ## v8.3.0-beta.1
