@@ -1,3 +1,8 @@
+## v8.3.2
+
+- Fix typo (#1416)
+-  Make sure animationLoop's onError catches context creation errors (#1419)
+
 ## v8.3.1
 
 - Fix constants package.json (#1410)
