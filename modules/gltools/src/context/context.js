@@ -176,7 +176,8 @@ function createBrowserContext(canvas, options) {
   const {onError} = options;
 
   // Try to extract any extra information about why context creation failed
-  const onCreateError = error => onError(`WebGL context: ${error.statusMessage || 'error'}`);
+  let errorMessage = null;
+  const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
   canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
   const {webgl1 = true, webgl2 = true} = options;
@@ -194,7 +195,10 @@ function createBrowserContext(canvas, options) {
   canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
 
   if (!gl) {
-    return onError(`Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context`);
+    return onError(
+      `Failed to create ${webgl2 && !webgl1 ? 'WebGL2' : 'WebGL'} context: ${errorMessage ||
+        'Unknown error'}`
+    );
   }
 
   return gl;
