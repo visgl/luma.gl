@@ -18,16 +18,16 @@
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
   },
   "dependencies": {
-    "@loaders.gl/draco": "^2.1.1",
-    "@loaders.gl/polyfills": "^2.1.1",
-    "@probe.gl/stats-widget": "^3.2.1",
+    "@loaders.gl/draco": "^2.3.1",
+    "@loaders.gl/polyfills": "^2.3.1",
+    "@probe.gl/stats-widget": "^3.3.0",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
     "mapbox-gl": "^1.2.1"
   },
   "devDependencies": {
-    "gatsby": "^2.20.0",
-    "gatsby-theme-ocular": "^1.2.1",
+    "gatsby": "^2.29.3",
+    "gatsby-theme-ocular": "^1.2.4",
     "gatsby-plugin-no-sourcemaps": "^2.1.2",
     "gh-pages": "^2.2.0"
   }
