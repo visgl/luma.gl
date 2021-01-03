@@ -1,12 +1,12 @@
 # What's New
 
-## Version 8.4
+## Version 8.4 alpha
 
-Date: TBD
+Date: TBD (Still in development, alpha releases are available)
 
 ### Texture
 
-Supports continuous update from HTMLVideoElement
+- Supports continuous update from `HTMLVideoElement`.
 
 ## Version 8.3
 
@@ -14,11 +14,11 @@ Date: Oct 12, 2020
 
 ### TypeScript
 
-TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
+- TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
 
 ### glTF
 
-Support for PBR material.unlit
+- Support for PBR material.unlit
 
 ## Version 8.1
 
