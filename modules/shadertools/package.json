@@ -39,5 +39,8 @@
     "@babel/runtime": "^7.0.0",
     "math.gl": "^3.3.0"
   },
+  "devDependencies": {
+    "@luma.gl/webgl": "8.4.0-alpha.1"
+  },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }
