@@ -54,6 +54,7 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 # define FEATURE_GLSL_FRAG_DEPTH
 # define FEATURE_GLSL_TEXTURE_LOD
 
+// DEPRECATED FLAGS, remove in v9
 # define FRAG_DEPTH
 # define DERIVATIVES
 # define DRAW_BUFFERS

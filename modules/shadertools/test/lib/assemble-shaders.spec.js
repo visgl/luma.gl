@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import {createTestContext} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
-import {Shader} from '@luma.gl/webgl';
 
 import test from 'tape-catch';
 
@@ -80,6 +79,8 @@ void main(void) {
 `;
 
 // deck.gl mesh layer shaders
+// TODO - broken tests
+/*
 const VS_GLSL_300_DECK = `#version 300 es
 #define SHADER_NAME simple-mesh-layer-vs
 
@@ -155,6 +156,7 @@ void main(void) {
   fragColor = vec4(lightColor, color.a * opacity);
 }
 `;
+*/
 
 const VS_GLSL_300_GLTF = `#version 300 es
 
@@ -580,7 +582,7 @@ test('assembleShaders#transpilation', t => {
   gl.deleteShader(fShader);
   gl.deleteProgram(program);
 
-  /*
+  /* TODO - broken test, common_space varying broken
   if (gl.getExtension('OES_standard_derivatives')) {
     assembleResult = assembleShaders(gl, {
       vs: VS_GLSL_300_DECK,
@@ -595,8 +597,6 @@ test('assembleShaders#transpilation', t => {
     if (!compileStatus) {
       const infoLog = gl.getShaderInfoLog(vShader);
       t.comment(`VS INFOLOG: ${infoLog}`);
-      // t.comment(assembleResult.vs);
-      // t.fail();
     }
 
     fShader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -606,8 +606,6 @@ test('assembleShaders#transpilation', t => {
     if (!compileStatus) {
       const infoLog = gl.getShaderInfoLog(fShader);
       t.comment(`FS INFOLOG: ${infoLog}`);
-      // t.comment(assembleResult.fs);
-      // t.fail();
     }
 
     program = gl.createProgram();
