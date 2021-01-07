@@ -1,3 +1,5 @@
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
 const fp32shader = `\
 #ifdef LUMA_FP32_TAN_PRECISION_WORKAROUND
 
@@ -151,7 +153,7 @@ float tan_fp32(float a) {
 }
 `;
 
-export default {
+export const fp32 = {
   name: 'fp32',
   vs: fp32shader,
   fs: null

@@ -1,16 +1,10 @@
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
 import lightingShader from './lights.glsl';
 
-export default {
-  name: 'lights',
-  vs: lightingShader,
-  fs: lightingShader,
-  getUniforms,
-  defines: {
-    MAX_LIGHTS: 3
-  }
+const INITIAL_MODULE_OPTIONS = {
+  lightSources: {}
 };
-
-const INITIAL_MODULE_OPTIONS = {};
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
 function convertColor({color = [0, 0, 0], intensity = 1.0} = {}) {
@@ -75,6 +69,7 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   // Support for array of lights. Type of light is detected by type field
   if ('lights' in opts) {
     const lightSources = {pointLights: [], directionalLights: []};
+    // @ts-ignore
     for (const light of opts.lights || []) {
       switch (light.type) {
         case 'ambient':
@@ -100,3 +95,14 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
 
   return {};
 }
+
+/** @type {ShaderModule} */
+export const lights = {
+  name: 'lights',
+  vs: lightingShader,
+  fs: lightingShader,
+  getUniforms,
+  defines: {
+    MAX_LIGHTS: 3
+  }
+};

@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 import {fp64} from '@luma.gl/shadertools';
-import {_Pose as Pose} from 'math.gl';
+import {_Pose as Pose} from '@math.gl/core';
 
 test('fp64#fp64LowPart', t => {
   const x = Math.PI;

@@ -1,4 +1,5 @@
-// Quick random generator for fragment shaders
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
 const fs = `\
 float random(vec3 scale, float seed) {
   /* use the fragment position for a different seed per-pixel */
@@ -6,7 +7,7 @@ float random(vec3 scale, float seed) {
 }
 `;
 
-export default {
+export const random = {
   name: 'random',
   fs
 };

@@ -1,3 +1,5 @@
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 const DEFAULT_MODULE_OPTIONS = {
@@ -137,7 +139,8 @@ vec4 picking_filterColor(vec4 color) {
 
 `;
 
-export default {
+/** @type {ShaderModule} */
+export const picking = {
   name: 'picking',
   vs,
   fs,

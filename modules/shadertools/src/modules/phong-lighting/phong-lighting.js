@@ -1,25 +1,7 @@
-import lights from '../lights/lights';
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
+import {lights} from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
-
-const gouraudLighting = {
-  name: 'gouraud-lighting',
-  dependencies: [lights],
-  vs: lightingShader,
-  defines: {
-    LIGHTING_VERTEX: 1
-  },
-  getUniforms
-};
-
-const phongLighting = {
-  name: 'phong-lighting',
-  dependencies: [lights],
-  fs: lightingShader,
-  defines: {
-    LIGHTING_FRAGMENT: 1
-  },
-  getUniforms
-};
 
 const INITIAL_MODULE_OPTIONS = {};
 
@@ -48,4 +30,24 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   return getMaterialUniforms(material);
 }
 
-export {gouraudLighting, phongLighting};
+/** @type {ShaderModule} */
+export const gouraudLighting = {
+  name: 'gouraud-lighting',
+  dependencies: [lights],
+  vs: lightingShader,
+  defines: {
+    LIGHTING_VERTEX: 1
+  },
+  getUniforms
+};
+
+/** @type {ShaderModule} */
+export const phongLighting = {
+  name: 'phong-lighting',
+  dependencies: [lights],
+  fs: lightingShader,
+  defines: {
+    LIGHTING_FRAGMENT: 1
+  },
+  getUniforms
+};

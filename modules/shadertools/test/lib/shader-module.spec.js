@@ -4,8 +4,8 @@ import ShaderModule, {normalizeShaderModule} from '@luma.gl/shadertools/lib/shad
 test('ShaderModule', t => {
   let shaderModule = new ShaderModule({name: 'empty-shader-module'});
 
-  t.ok(shaderModule.getModuleSource('vs', 300), 'returns vs shader');
-  t.ok(shaderModule.getModuleSource('fs', 300), 'returns fs shader');
+  t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
+  t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
 
   shaderModule = new ShaderModule({
     name: 'test-shader-module',
@@ -19,9 +19,9 @@ varying float vClipped;
 `
   });
 
-  t.ok(shaderModule.getModuleSource('vs', 300), 'returns vs shader');
-  t.ok(shaderModule.getModuleSource('fs', 300), 'returns fs shader');
-  t.throws(() => shaderModule.getModuleSource('', 300), 'unknown shader type');
+  t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
+  t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
+  t.throws(() => shaderModule.getModuleSource(''), 'unknown shader type');
 
   t.end();
 });

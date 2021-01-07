@@ -22,7 +22,8 @@ export function getQualifierDetails(line, qualifiers) {
 
 // Given the shader version, input and output variable names,
 // builds and return a pass through fragment shader.
-export function getPassthroughFS({version = 100, input, inputType, output} = {}) {
+export function getPassthroughFS(options = {}) {
+  const {version = 100, input, inputType, output} = options;
   if (!input) {
     if (version === 300) {
       // Fast-path for WebGL 2.0
