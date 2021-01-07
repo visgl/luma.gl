@@ -21,7 +21,7 @@ const points = [
 ];
 
 const positionBuffer = new Buffer(gl2, new Float32Array(points));
-const count = points.length;
+const count = points.length / 2;
 // Allocate result buffer with enough space (2 floats for each point)
 const filterValueIndexBuffer = new Buffer(gl2, count * 2 * 4);
 
