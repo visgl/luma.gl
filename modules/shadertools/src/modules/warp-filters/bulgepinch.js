@@ -1,11 +1,3 @@
-/**
- * @filter         Bulge / Pinch
- * @description    Bulges or pinches the image in a circle.
- * @param centerX  The x coordinate of the center of the circle of effect.
- * @param centerY  The y coordinate of the center of the circle of effect.
- * @param radius   The radius of the circle of effect.
- * @param strength -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge)
- */
 import warp from './warp';
 
 const fs = `\
@@ -42,7 +34,7 @@ const uniforms = {
   strength: {value: 0.5, min: -1, max: 1}
 };
 
-export default {
+export const bulgePinch = {
   name: 'bulgePinch',
   fs,
   uniforms,

@@ -1,12 +1,3 @@
-/**
- * @filter        Dot Screen
- * @description   Simulates a black and white halftone rendering of the image by multiplying
- *                pixel values with a rotated 2D sine wave pattern.
- * @param centerX The x coordinate of the pattern origin.
- * @param centerY The y coordinate of the pattern origin.
- * @param angle   The rotation of the pattern in radians.
- * @param size    The diameter of a dot in pixels.
- */
 const fs = `\
 uniform vec2 center;
 uniform float angle;
@@ -36,7 +27,7 @@ const uniforms = {
   size: {value: 3, min: 1, softMin: 3, softMax: 20}
 };
 
-export default {
+export const dotScreen = {
   name: 'dotScreen',
   uniforms,
   fs,

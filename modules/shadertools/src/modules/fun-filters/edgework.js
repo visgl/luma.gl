@@ -1,9 +1,3 @@
-/**
- * @filter       Edge Work
- * @description  Picks out different frequencies in the image by subtracting two
- *               copies of the image blurred with different radii.
- * @param radius The radius of the effect in pixels.
- */
 import random from '../utils/random';
 
 const fs = `\
@@ -66,7 +60,7 @@ const uniforms = {
   delta: {value: [1, 0], private: true}
 };
 
-export default {
+export const edgeWork = {
   name: 'edgeWork',
   uniforms,
   fs,

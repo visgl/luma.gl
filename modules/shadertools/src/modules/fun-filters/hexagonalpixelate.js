@@ -1,11 +1,3 @@
-/**
- * @filter        Hexagonal Pixelate
- * @description   Renders the image using a pattern of hexagonal tiles. Tile colors
- *                are nearest-neighbor sampled from the centers of the tiles.
- * @param centerX The x coordinate of the pattern center.
- * @param centerY The y coordinate of the pattern center.
- * @param scale   The width of an individual tile, in pixels.
- */
 const fs = `\
 uniform vec2 center;
 uniform float scale;
@@ -54,7 +46,7 @@ const uniforms = {
   scale: {value: 10, min: 1, softMin: 5, softMax: 50}
 };
 
-export default {
+export const hexagonalPixelate = {
   name: 'hexagonalPixelate',
   uniforms,
   fs,
