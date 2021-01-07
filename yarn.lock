@@ -678,6 +678,13 @@
   dependencies:
     regenerator-runtime "^0.13.2"
 
+"@babel/runtime@^7.12.0":
+  version "7.12.5"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.12.5.tgz#410e7e487441e1b360c29be715d870d9b985882e"
+  integrity sha512-plcc+hbExy3McchJCEQG3knOsuh3HH+Prx1P6cLIkET/0dLuQDEnrT+s27Axgc9bqfsmNUNHfscgMUdBpC9xfg==
+  dependencies:
+    regenerator-runtime "^0.13.4"
+
 "@babel/template@^7.1.0", "@babel/template@^7.4.0", "@babel/template@^7.4.4":
   version "7.4.4"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.4.4.tgz#f4b88d1225689a08f5bc3a17483545be9e4ed237"
@@ -1607,6 +1614,14 @@
   integrity sha512-3ghPZ3YRX+72wNoUEs8npwUcP3kOvaTZrLHxL+tDydvULkLLcOfwPisylNm3yFwRfyn9YownBbxlqa/PsbWPNg==
   dependencies:
     "@babel/runtime" "^7.0.0"
+    gl-matrix "^3.0.0"
+
+"@math.gl/core@^3.3.0":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@math.gl/core/-/core-3.4.1.tgz#d9be1c0fcb43e834a739d97c9de8b952167caef0"
+  integrity sha512-miAZL/WPU0B5hKrcg1K2nPU2GnOK6X84bwLoD0eTt2n7qT46ffh51Xu21V9kQp/cisE3l1ypukqSV/VHeaNxhQ==
+  dependencies:
+    "@babel/runtime" "^7.12.0"
     gl-matrix "^3.0.0"
 
 "@mrmlnc/readdir-enhanced@^2.2.1":
@@ -8401,6 +8416,11 @@ regenerator-runtime@^0.13.2:
   version "0.13.2"
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.2.tgz#32e59c9a6fb9b1a4aff09b4930ca2d4477343447"
   integrity sha512-S/TQAZJO+D3m9xeN1WTI8dLKBBiRgXBlTJvbWjCThHWZj9EvHK70Ff50/tYj2J/fvBY6JtFVwRuazHN2E7M9BA==
+
+regenerator-runtime@^0.13.4:
+  version "0.13.7"
+  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.7.tgz#cac2dacc8a1ea675feaabaeb8ae833898ae46f55"
+  integrity sha512-a54FxoJDIr27pgf7IgeQGxmqUNYrcV338lf/6gH456HZ/PhX+5BcwHXG9ajESmwe6WRO0tAzRUrRmNONWgkrew==
 
 regenerator-transform@^0.14.0:
   version "0.14.0"
