@@ -49,6 +49,12 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
   let versionDefines = `\
 #if (__VERSION__ > 120)
 
+# define FEATURE_GLSL_DERIVATIVES
+# define FEATURE_GLSL_DRAW_BUFFERS
+# define FEATURE_GLSL_FRAG_DEPTH
+# define FEATURE_GLSL_TEXTURE_LOD
+
+// DEPRECATED FLAGS, remove in v9
 # define FRAG_DEPTH
 # define DERIVATIVES
 # define DRAW_BUFFERS
@@ -59,9 +65,11 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 
   if (hasFeatures(gl, FEATURES.GLSL_FRAG_DEPTH)) {
     versionDefines += `\
+
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
 #extension GL_EXT_frag_depth : enable
+# define FEATURE_GLSL_FRAG_DEPTH
 # define FRAG_DEPTH
 # define gl_FragDepth gl_FragDepthEXT
 #endif
@@ -72,9 +80,11 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
     canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES)
   ) {
     versionDefines += `\
+
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #ifdef GL_OES_standard_derivatives
 #extension GL_OES_standard_derivatives : enable
+# define FEATURE_GLSL_DERIVATIVES
 # define DERIVATIVES
 #endif
 `;
@@ -84,9 +94,11 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
     canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA, {behavior: 'require'})
   ) {
     versionDefines += `\
+
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
 #extension GL_EXT_draw_buffers : require
+#define FEATURE_GLSL_DRAW_BUFFERS
 #define DRAW_BUFFERS
 #endif
 `;
@@ -96,7 +108,10 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
 #extension GL_EXT_shader_texture_lod : enable
+
+# define FEATURE_GLSL_TEXTURE_LOD
 # define TEXTURE_LOD
+
 #define texture2DLod texture2DLodEXT
 #define texture2DProjLod texture2DProjLodEXT
 #define texture2DProjLod texture2DProjLodEXT

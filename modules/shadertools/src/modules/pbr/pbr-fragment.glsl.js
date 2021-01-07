@@ -4,10 +4,14 @@
 // Attribution:
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
+// TODO - better do the checks outside of shader
 export default `\
-#if (__VERSION__ < 300)
-#extension GL_EXT_shader_texture_lod: enable
-#extension GL_OES_standard_derivatives : enable
+#if defined(USE_TEX_LOD) && !defined(FEATURE_GLSL_TEXTURE_LOD)
+# error PBR fragment shader: Texture LOD is not available
+#endif
+
+#if !defined(HAS_TANGENTS) && !defined(FEATURE_GLSL_DERIVATIVES)
+# error PBR fragment shader: Derivatives are not available
 #endif
 
 // WebGL 1.0 does not support non-constant in for loops
@@ -165,7 +169,7 @@ vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
   vec3 diffuseLight = SRGBtoLINEAR(textureCube(u_DiffuseEnvSampler, n)).rgb;
 
 #ifdef USE_TEX_LOD
-  vec3 specularLight = SRGBtoLINEAR(textureCubeLodEXT(u_SpecularEnvSampler, reflection, lod)).rgb;
+  vec3 specularLight = SRGBtoLINEAR(textureCubeLod(u_SpecularEnvSampler, reflection, lod)).rgb;
 #else
   vec3 specularLight = SRGBtoLINEAR(textureCube(u_SpecularEnvSampler, reflection)).rgb;
 #endif

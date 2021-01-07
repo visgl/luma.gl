@@ -65,7 +65,7 @@
     "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.7.3",
-    "gl": "^4.2.2",
+    "gl": "^4.9.0",
     "mapbox-gl": "^1.2.1",
     "mjolnir.js": "^2.1.2",
     "mkdirp": "^0.5.1",

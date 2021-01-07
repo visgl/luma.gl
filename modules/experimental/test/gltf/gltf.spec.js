@@ -6,19 +6,20 @@ import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
 
-test('gltf#loading', t => {
+test('gltf#loading', async t => {
   const {gl} = fixture;
 
-  load('test/data/box.glb', GLTFLoader, {gl})
-    .then(gltf => {
-      const result = createGLTFObjects(gl, gltf);
+  try {
+    const gltf = await load('test/data/box.glb', GLTFLoader, {gl});
+    const result = createGLTFObjects(gl, gltf);
 
-      t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
-      t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+    t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
+    t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  } catch (e) {
+    t.fail(e);
+  }
 
-      t.end();
-    })
-    .catch(e => t.fail(e));
+  t.end();
 });
 
 test('gltf#environment', t => {
