@@ -7,22 +7,26 @@
 // This is intended to be a stand-alone file with minimal dependencies,
 // easy to reuse or repurpose in other projects.
 
-/* eslint-disable camelcase, brace-style */
+/** @typedef {import('./polyfill-context')} types */
+
 import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
 
-// Registers extensions, polyfills or mock functions for extensions in the polyfills list
-// TODO - remove use of name `luma`.
+/** @type {types['polyfillContext']} */
 export default function polyfillContext(gl) {
+  // @ts-ignore
   gl.luma = gl.luma || {};
-  if (!gl.luma.polyfilled) {
+  // @ts-ignore
+  const {luma} = gl;
+
+  if (!luma.polyfilled) {
     polyfillVertexArrayObject(gl);
     initializeExtensions(gl);
     installPolyfills(gl, WEBGL2_CONTEXT_POLYFILLS);
-    installOverrides(gl, {target: gl.luma, target2: gl});
-    gl.luma.polyfilled = true;
+    installOverrides(gl, {target: luma, target2: gl});
+    luma.polyfilled = true;
   }
   return gl;
 }
@@ -30,6 +34,7 @@ export default function polyfillContext(gl) {
 // TODO - is this still required?
 /* global window, global */
 const global_ = typeof global !== 'undefined' ? global : window;
+// @ts-ignore
 global_.polyfillContext = polyfillContext;
 
 function initializeExtensions(gl) {

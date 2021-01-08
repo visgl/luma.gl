@@ -44,8 +44,6 @@
     "modules/engine/test/**/*",
     "modules/experimental/src/**/*",
     "modules/experimental/test/**/*",
-    "modules/gltools/src/**/*",
-    "modules/gltools/test/**/*",
     "modules/test-utils/src/**/*",
     "modules/test-utils/test/**/*",
     "modules/webgl/src/classes/**/*",

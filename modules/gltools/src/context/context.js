@@ -1,11 +1,17 @@
+// WebGLRenderingContext related methods
+
+/** @typedef {import('./context')} types */
+
 /* eslint-disable quotes */
 /* global document, WebGL2RenderingContext */
-// WebGLRenderingContext related methods
 import GL from '@luma.gl/constants';
 import {global, isBrowser as getIsBrowser} from 'probe.gl/env';
-import trackContextState from '../state-tracker/track-context-state';
+import {trackContextState} from '../state-tracker/track-context-state';
 
-import {log, assert, getDevicePixelRatio, isWebGL2} from '../utils';
+import {log} from '../utils/log';
+import {assert} from '../utils/assert';
+import {getDevicePixelRatio} from '../utils/device-pixels';
+import {isWebGL2} from '../utils/webgl-checks';
 
 export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
@@ -31,8 +37,9 @@ const CONTEXT_DEFAULTS = {
   // Remaining options are passed through to context creator
 };
 
-/*
+/**
  * Creates a context giving access to the WebGL API
+ * @type {types['createGLContext']}
  */
 /* eslint-disable complexity, max-statements */
 export function createGLContext(options = {}) {
@@ -75,16 +82,24 @@ export function createGLContext(options = {}) {
   return gl;
 }
 
+/**
+ * Creates a context giving access to the WebGL API
+ * @type {types['instrumentGLContext']}
+ */
 export function instrumentGLContext(gl, options = {}) {
   // Avoid multiple instrumentations
+  // @ts-ignore
   if (!gl || gl._instrumented) {
     return gl;
   }
 
+  // @ts-ignore
   gl._version = gl._version || getVersion(gl);
 
   // Cache canvas size information to avoid setting it on every frame.
+  // @ts-ignore
   gl.luma = gl.luma || {};
+  // @ts-ignore
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
   options = Object.assign({}, CONTEXT_DEFAULTS, options);
@@ -100,15 +115,18 @@ export function instrumentGLContext(gl, options = {}) {
 
   // Add debug instrumentation to the context
   if (isBrowser && debug) {
+    // @ts-ignore
     if (!global.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
+      // @ts-ignore
       gl = global.makeDebugContext(gl, options);
       // Debug forces log level to at least 1
       log.level = Math.max(log.level, 1);
     }
   }
 
+  // @ts-ignore
   gl._instrumented = true;
 
   return gl;
@@ -116,9 +134,7 @@ export function instrumentGLContext(gl, options = {}) {
 
 /**
  * Provides strings identifying the GPU vendor and driver.
- * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
- * @param {WebGLRenderingContext} gl - context
- * @return {Object} - 'vendor' and 'renderer' string fields.
+ * @type {types['getContextDebugInfo']}
  */
 export function getContextDebugInfo(gl) {
   const vendorMasked = gl.getParameter(GL.VENDOR);
@@ -138,17 +154,7 @@ export function getContextDebugInfo(gl) {
 
 /**
  * Resize the canvas' drawing buffer.
- *
- * Can match the canvas CSS size, and optionally also consider devicePixelRatio
- * Can be called every frame
- *
- * Regardless of size, the drawing buffer will always be scaled to the viewport, but
- * for best visual results, usually set to either:
- *  canvas CSS width x canvas CSS height
- *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
- * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
- *
- * resizeGLContext(gl, {width, height, useDevicePixels})
+ * @type {types['resizeGLContext']}
  */
 export function resizeGLContext(gl, options = {}) {
   // Resize browser context
