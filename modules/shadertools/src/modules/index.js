@@ -14,9 +14,9 @@ export {gouraudLighting, phongLighting} from './phong-lighting/phong-lighting';
 export {pbr} from './pbr/pbr';
 
 // glfx BLUR shader modules
-export {tiltShift} from './blur-filters/tiltshift';
-export {triangleBlur} from './blur-filters/triangleblur';
-export {zoomBlur} from './blur-filters/zoomblur';
+export {tiltShift} from './image-blur-filters/tiltshift';
+export {triangleBlur} from './image-blur-filters/triangleblur';
+export {zoomBlur} from './image-blur-filters/zoomblur';
 
 // glfx image adjustment shader modules
 export {brightnessContrast} from './image-adjust-filters/brightnesscontrast';
