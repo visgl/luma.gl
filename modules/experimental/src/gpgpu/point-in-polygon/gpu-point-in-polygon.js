@@ -1,3 +1,5 @@
+// @ts-nocheck TODO remove
+
 import GL from '@luma.gl/constants';
 import {Buffer, Texture2D, assert} from '@luma.gl/webgl';
 import {isWebGL2} from '@luma.gl/gltools';

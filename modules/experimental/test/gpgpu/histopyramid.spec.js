@@ -570,7 +570,7 @@ test('histopyramid#getHistoPyramid)', t => {
 
   HISTOPYRAMID_TEST_CASES.forEach(testCase => {
     const {width, height, name, expectedBaseLevelData, expectedTopLevelData} = testCase;
-    const sourceData = new Float32Array(width * height * 4).fill().map((_, index) => index);
+    const sourceData = new Float32Array(width * height * 4).fill(0).map((_, index) => index);
 
     const sourceTexture = new Texture2D(
       gl2,
@@ -784,7 +784,7 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
       [GL.UNPACK_FLIP_Y_WEBGL]: false
     }
   };
-  const sourceData = new Float32Array(4 * 4 * 4).fill().map((_, index) => index);
+  const sourceData = new Float32Array(4 * 4 * 4).fill(0).map((_, index) => index);
 
   const sourceTexture = new Texture2D(
     gl,

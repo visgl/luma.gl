@@ -83,7 +83,8 @@ export default class ScenegraphNode {
     return this;
   }
 
-  update({position, rotation, scale} = {}) {
+  update(options = {}) {
+    const {position, rotation, scale} = options;
     if (position) {
       this.setPosition(position);
     }

@@ -34,6 +34,7 @@ test('ScenegraphNode#constructor', t => {
   const sgNode = new ScenegraphNode(PROPS);
   t.ok(sgNode instanceof ScenegraphNode, 'should construct the object');
   for (const key in PROPS) {
+    // @ts-ignore props is not documented
     t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
     t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
   }
@@ -51,6 +52,7 @@ test('ScenegraphNode#setProps', t => {
   const sgNode = new ScenegraphNode();
   sgNode.setProps(PROPS);
   for (const key in PROPS) {
+    // @ts-ignore props is not documented
     t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
     t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
   }
@@ -124,6 +126,7 @@ test('ScenegraphNode#update', t => {
 test('ScenegraphNode#getCoordinateUniforms', t => {
   const sgNode = new ScenegraphNode();
 
+  // @ts-ignore
   t.throws(() => sgNode.getCoordinateUniforms(), 'should throw on missing viewMatrix');
 
   const uniforms = sgNode.getCoordinateUniforms(new Matrix4());

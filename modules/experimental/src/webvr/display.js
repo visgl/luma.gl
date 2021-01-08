@@ -1,6 +1,11 @@
 import {withParameters} from '@luma.gl/gltools';
 
 export default class Display {
+  constructor() {
+    // TODO
+    this.animationLoop = null;
+  }
+
   getViews(options) {
     const {width, height} = options;
     return [
