@@ -5,7 +5,7 @@ import './picking/picking.spec';
 import './phong-lighting/phong-lighting.spec';
 
 import './utils';
-import './blur-filters';
+import './image-blur-filters';
 import './image-adjust-filters';
 import './image-fun-filters';
 import './image-warp-filters';

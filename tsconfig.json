@@ -46,8 +46,6 @@
     "modules/experimental/test/**/*",
     "modules/gltools/src/**/*",
     "modules/gltools/test/**/*",
-    "modules/shadertools/src/**/*",
-    "modules/shadertools/test/**/*",
     "modules/test-utils/src/**/*",
     "modules/test-utils/test/**/*",
     "modules/webgl/src/classes/**/*",
