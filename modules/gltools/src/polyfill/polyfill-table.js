@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {assert, isWebGL2} from '../utils';
+import {assert} from '../utils/assert';
+import {isWebGL2} from '../utils/webgl-checks';
 
 import {getParameterPolyfill} from './get-parameter-polyfill';
 
@@ -73,10 +74,12 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
     },
     endQuery: () => {},
     getQuery(handle, pname) {
+      // @ts-ignore
       return this.getQueryObject(handle, pname);
     },
     // The WebGL1 extension uses getQueryObject rather then getQueryParameter
     getQueryParameter(handle, pname) {
+      // @ts-ignore
       return this.getQueryObject(handle, pname);
     },
     getQueryObject: () => {}

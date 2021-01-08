@@ -182,6 +182,7 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
   if (gl2) {
     resetParameters(gl2);
 
+    // @ts-ignore
     let fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     // t.equal(fbHandle, null, 'Initial read-frambuffer binding should be null');
     const framebuffer = new Framebuffer(gl2);
@@ -189,6 +190,7 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
     setParameters(gl2, {
       [GL.READ_FRAMEBUFFER_BINDING]: framebuffer.handle
     });
+    // @ts-ignore
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(fbHandle, framebuffer.handle, 'setParameters should set read-framebuffer binding');
 
@@ -196,6 +198,7 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
     setParameters(gl2, {
       [GL.READ_FRAMEBUFFER_BINDING]: null
     });
+    // @ts-ignore
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(fbHandle, null, 'setParameters should set read-framebuffer binding');
   } else {

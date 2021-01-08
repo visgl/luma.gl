@@ -24,6 +24,8 @@
 // Modified to use ES6 and polyfill a provided context rather than
 // the global class.
 
+// @ts-nocheck external code
+
 import {global} from 'probe.gl/env';
 
 const glErrorShadow = {};

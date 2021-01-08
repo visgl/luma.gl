@@ -1,9 +1,11 @@
 // Support for listening to context state changes and intercepting state queries
-//
 // NOTE: this system does not handle buffer bindings
+/** @typedef {import('./track-context-state')} types */
+
 import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS} from './webgl-parameter-tables';
 import {setParameters, getParameters} from './unified-parameter-api';
-import {assert, deepArrayEqual} from '../utils';
+import {assert} from '../utils/assert';
+import {deepArrayEqual} from '../utils/utils';
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
@@ -112,7 +114,7 @@ class GLState {
     assert(this.stateStack.length > 0);
     // Use the saved values in the state stack to restore parameters
     const oldValues = this.stateStack[this.stateStack.length - 1];
-    setParameters(this.gl, oldValues, this.cache);
+    setParameters(this.gl, oldValues);
     // Don't pop until we have reset parameters (to make sure other "stack frames" are not affected)
     this.stateStack.pop();
   }
@@ -154,23 +156,27 @@ class GLState {
 
 /**
  * Initialize WebGL state caching on a context
- * can be called multiple times to enable/disable
- * @param {WebGLRenderingContext} - context
+ * @type {types['trackContextState']}
  */
 // After calling this function, context state will be cached
 // gl.state.push() and gl.state.pop() will be available for saving,
 // temporarily modifying, and then restoring state.
-export default function trackContextState(gl, {enable = true, copyState} = {}) {
+export function trackContextState(gl, options = {}) {
+  const {enable = true, copyState} = options;
   assert(copyState !== undefined);
+  // @ts-ignore
   if (!gl.state) {
     /* global window, global */
     const global_ = typeof global !== 'undefined' ? global : window;
-    if (global_.polyfillContext) {
-      global_.polyfillContext(gl);
+    // @ts-ignore
+    const {polyfillContext} = global_;
+    if (polyfillContext) {
+      polyfillContext(gl);
     }
 
     // Create a state cache
-    gl.state = new GLState(gl, {copyState, enable});
+    // @ts-ignore
+    gl.state = new GLState(gl, {copyState});
 
     installProgramSpy(gl);
 
@@ -185,19 +191,32 @@ export default function trackContextState(gl, {enable = true, copyState} = {}) {
     installGetterOverride(gl, 'isEnabled');
   }
 
+  // @ts-ignore
   gl.state.enable = enable;
 
   return gl;
 }
 
+/**
+ * Initialize WebGL state caching on a context
+ * @type {types['pushContextState']}
+ */
 export function pushContextState(gl) {
+  // @ts-ignore
   if (!gl.state) {
     trackContextState(gl, {copyState: false});
   }
+  // @ts-ignore
   gl.state.push();
 }
 
+/**
+ * Initialize WebGL state caching on a context
+ * @type {types['popContextState']}
+ */
 export function popContextState(gl) {
+  // @ts-ignore
   assert(gl.state);
+  // @ts-ignore
   gl.state.pop();
 }

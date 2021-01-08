@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../utils';
+import {isWebGL2} from '../utils/webgl-checks';
 
 const OES_element_index = 'OES_element_index';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';
@@ -111,6 +111,7 @@ export function getParameterPolyfill(gl, originalGetParameter, pname) {
   // Return mock limits (usually 0) for WebGL2 constants to ensure these
   // can be queries without error
   const limit = WEBGL_PARAMETERS[pname];
+  // @ts-ignore TODO pname parameter not declared
   const value = typeof limit === 'function' ? limit(gl, originalGetParameter, pname) : limit;
   const result = value !== undefined ? value : originalGetParameter(pname);
   return result;

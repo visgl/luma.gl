@@ -178,7 +178,7 @@ test('WebGLState#intercept gl calls', t => {
 
   pushContextState(gl);
 
-  gl.blendEquation(gl.FUNC_SUBTRACT, gl.FUNC_SUBTRACT);
+  gl.blendEquation(gl.FUNC_SUBTRACT);
   t.is(getParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
 
   gl.blendFunc(gl.ONE, gl.ONE);

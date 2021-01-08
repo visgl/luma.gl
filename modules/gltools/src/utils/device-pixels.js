@@ -1,18 +1,28 @@
 /* global window */
+/** @typedef {import('./device-pixels')} types */
 
-// multiplier need to convert CSS size to Device size
+/**
+ * Returns multiplier need to convert CSS size to Device size
+ * @type {types['cssToDeviceRatio']}
+ */
 export function cssToDeviceRatio(gl) {
-  if (gl.canvas && gl.luma) {
+  // @ts-ignore
+  const {luma} = gl;
+
+  if (gl.canvas && luma) {
     // For headless gl we might have used custom width and height
     // hence use cached clientWidth
-    const {clientWidth} = gl.luma.canvasSizeInfo;
+    const {clientWidth} = luma.canvasSizeInfo;
     return clientWidth ? gl.drawingBufferWidth / clientWidth : 1;
   }
   // use default device pixel ratio
   return 1;
 }
 
-// Maps CSS pixel position to device pixel position
+/**
+ * Maps CSS pixel position to device pixel position
+ * @type {types['cssToDevicePixels']}
+ */
 export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
   const ratio = cssToDeviceRatio(gl);
   const width = gl.drawingBufferWidth;
@@ -20,17 +30,16 @@ export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
   return scalePixels(cssPixel, ratio, width, height, yInvert);
 }
 
-// HELPER METHODS
+// HELPER METHOD
 
 /**
  * Calulates device pixel ratio, used during context creation
- *
- * @param {boolean or Number} useDevicePixels - boolean or a Number
- * @return {Number} - device pixel ratio
+ * @type {types['getDevicePixelRatio']}
  */
 export function getDevicePixelRatio(useDevicePixels) {
   const windowRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   if (Number.isFinite(useDevicePixels)) {
+    // @ts-ignore Can no longer be boolean after previous line
     return useDevicePixels <= 0 ? 1 : useDevicePixels;
   }
   return useDevicePixels ? windowRatio : 1;
