@@ -1,3 +1,5 @@
+/** @typedef {import('../../types').ShaderPass} ShaderPass */
+
 /**
  * ORIGINAL LICENCE
  * @license
@@ -673,7 +675,8 @@ vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-export default {
+/** @type {ShaderPass} */
+export const fxaa = {
   name: 'fxaa',
   uniforms: {},
   fs,

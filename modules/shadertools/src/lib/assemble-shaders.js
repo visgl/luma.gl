@@ -89,7 +89,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
     : `${versionLine}
 `;
 
-  hookFunctions = normalizeHookFunctions(hookFunctions);
+  const hookFunctionMap = normalizeHookFunctions(hookFunctions);
 
   // Add source of dependent modules in resolved order
   const hookInjections = {};
@@ -146,7 +146,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
   assembledSource = injectShader(assembledSource, type, declInjections);
 
-  assembledSource += getHookFunctions(hookFunctions[type], hookInjections);
+  assembledSource += getHookFunctions(hookFunctionMap[type], hookInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
@@ -243,6 +243,7 @@ function getHookFunctions(hookFunctions, hookInjections) {
 
   return result;
 }
+
 function normalizeHookFunctions(hookFunctions) {
   const result = {
     vs: {},

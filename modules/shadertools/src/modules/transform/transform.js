@@ -1,4 +1,4 @@
-// Private shader module used by `Transform`
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
 
 const vs = `\
 attribute float transform_elementID;
@@ -41,7 +41,8 @@ vec4 transform_getInput(sampler2D texSampler, vec2 size) {
 }
 `;
 
-export default {
+/** @type {ShaderModule} */
+export const transform = {
   name: 'transform',
   vs,
   fs: null

@@ -2,7 +2,7 @@
 
 An implementation of PBR (Physically-Based Rendering) based on the [Khronos Reference Implementation](https://github.com/KhronosGroup/glTF-WebGL-PBR).
 
-A reference implementation for Physically Based Shading of a microfacet surface material defined by a glTF model.
+A reference implementation for Physically Based Shading of a microfacet surface defined by a glTF material.
 
 References:
 

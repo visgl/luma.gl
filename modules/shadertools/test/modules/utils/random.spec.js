@@ -1,4 +1,4 @@
-import {default as random} from '@luma.gl/shadertools/modules/utils/random';
+import {random} from '@luma.gl/shadertools';
 
 import {normalizeShaderModule} from '@luma.gl/shadertools';
 import test from 'tape-catch';

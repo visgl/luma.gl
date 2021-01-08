@@ -25,7 +25,7 @@
 import {Buffer} from '@luma.gl/webgl';
 import {Transform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
-import {equals, config} from 'math.gl';
+import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
 
 function getBinaryShader(operation) {
@@ -93,7 +93,7 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op, testCase
   return {a, b, expected, a_fp64, b_fp64, expected_fp64, transform};
 }
 
-export function runTests(gl, {glslFunc, binary, op, limit = 256, testCases, t}) {
+export function runTests(gl, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not supported, skipping tests');
     t.end();

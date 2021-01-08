@@ -1,55 +1,46 @@
-export type ShaderModule = {
-  vs?: string;
-  fs?: string;
-  getUniforms()
-}
+// utils
+export {random} from './utils/random';
 
-export type ShaderPass = {
-  vs?: string;
-  fs?: string;
-  getUniforms()
-}
+// math libraries
+export {fp32} from './fp32/fp32';
+export {fp64, fp64arithmetic} from './fp64/fp64';
 
-// Shader Modules
-export const fp32: ShaderModule;
-export const fp64: ShaderModule;
-export const fp64arithmetic: ShaderModule;
-export const project: ShaderModule;
-export const lights: ShaderModule;
-export const dirlight: ShaderModule;
-export const picking: ShaderModule;
-export const gouraudLighting: ShaderModule;
-export const phongLighting: ShaderModule;
-export const pbr: ShaderModule;
-
-// Shader Passes
-
-export const brightnessContrast: ShaderPass;
-export const denoise: ShaderPass;
-export const hueSaturation: ShaderPass;
-export const noise: ShaderPass;
-export const sepia: ShaderPass;
-export const vibrance: ShaderPass;
-export const vignette: ShaderPass;
+// projection and lighting
+export {project} from './project/project';
+export {lights} from './lights/lights';
+export {dirlight} from './dirlight/dirlight';
+export {picking} from './picking/picking';
+export {gouraudLighting, phongLighting} from './phong-lighting/phong-lighting';
+export {pbr} from './pbr/pbr';
 
 // glfx BLUR shader modules
-export const tiltShift: ShaderPass;
-export const triangleBlur: ShaderPass;
-export const zoomBlur: ShaderPass;
+export {tiltShift} from './blur-filters/tiltshift';
+export {triangleBlur} from './blur-filters/triangleblur';
+export {zoomBlur} from './blur-filters/zoomblur';
+
+// glfx image adjustment shader modules
+export {brightnessContrast} from './image-adjust-filters/brightnesscontrast';
+export {denoise} from './image-adjust-filters/denoise';
+export {hueSaturation} from './image-adjust-filters/huesaturation';
+export {noise} from './image-adjust-filters/noise';
+export {sepia} from './image-adjust-filters/sepia';
+export {vibrance} from './image-adjust-filters/vibrance';
+export {vignette} from './image-adjust-filters/vignette';
 
 // glfx FUN shader modules
-export const colorHalftone: ShaderPass;
-export const dotScreen: ShaderPass;
-export const edgeWork: ShaderPass;
-export const hexagonalPixelate: ShaderPass;
-export const ink: ShaderPass;
+export {colorHalftone} from './image-fun-filters/colorhalftone';
+export {dotScreen} from './image-fun-filters/dotscreen';
+export {edgeWork} from './image-fun-filters/edgework';
+export {hexagonalPixelate} from './image-fun-filters/hexagonalpixelate';
+export {ink} from './image-fun-filters/ink';
 
 // glfx WARP shader modules
-export const bulgePinch: ShaderPass;
-export const swirl: ShaderPass;
+export {bulgePinch} from './image-warp-filters/bulgepinch';
+export {swirl} from './image-warp-filters/swirl';
 
 // Postprocessing
-export const fxaa: ShaderPass;
+export {fxaa} from './fxaa/fxaa';
 
 // experimental
-export const _transform: ShaderPass;
+export {warp as _warp} from './image-warp-filters/warp';
+export {transform as _transform} from './transform/transform';

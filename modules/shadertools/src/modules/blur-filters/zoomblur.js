@@ -1,12 +1,5 @@
-/**
- * @filter         Zoom Blur
- * @description    Blurs the image away from a certain point, which looks like radial motion blur.
- * @param centerX  The x coordinate of the blur origin.
- * @param centerY  The y coordinate of the blur origin.
- * @param strength The strength of the blur. Values in the range 0 to 1 are usually sufficient,
- *                 where 0 doesn't change the image and 1 creates a highly blurred image.
- */
-import random from '../utils/random';
+/** @typedef {import('../../types').ShaderPass} ShaderPass */
+import {random} from '../utils/random';
 
 const fs = `
 uniform vec2 center;
@@ -46,11 +39,11 @@ const uniforms = {
   strength: {value: 0.3, min: 0, softMax: 1}
 };
 
-export default {
+/** @type {ShaderPass} */
+export const zoomBlur = {
   name: 'zoomBlur',
   uniforms,
   fs,
   dependencies: [random],
-
   passes: [{sampler: true}]
 };

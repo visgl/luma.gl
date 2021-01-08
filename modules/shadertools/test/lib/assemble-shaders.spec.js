@@ -18,6 +18,7 @@ void main(void) {
   gl_Position = positions;
 }
 `;
+
 const FS_GLSL_300 = `\
 #version 300 es
 

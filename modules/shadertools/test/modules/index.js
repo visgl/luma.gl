@@ -4,11 +4,11 @@ import './lights/lights.spec';
 import './picking/picking.spec';
 import './phong-lighting/phong-lighting.spec';
 
-import './adjust-filters';
-import './blur-filters';
-import './fun-filters';
 import './utils';
-import './warp-filters';
+import './blur-filters';
+import './image-adjust-filters';
+import './image-fun-filters';
+import './image-warp-filters';
 
 import * as shaderModules from '@luma.gl/shadertools/modules';
 import ShaderModule from '@luma.gl/shadertools/lib/shader-module';

@@ -33,9 +33,12 @@ function getShaderDependencies(modules) {
  * Recursively checks module dpendencies to calculate dependency
  * level of each module.
  *
- * @param {String[]} modules - Array of modules
- * @param {Number} level - Current level
- * @return {result} - Map of module name to its level
+ * @param {object} options
+ * @param {object[]} options.modules - Array of modules
+ * @param {number} options.level - Current level
+ * @param {object} options.moduleMap -
+ * @param {object} options.moduleDepth - Current level
+ * @return {object} - Map of module name to its level
  */
 // Adds another level of dependencies to the result map
 function getDependencyGraph({modules, level, moduleMap, moduleDepth}) {

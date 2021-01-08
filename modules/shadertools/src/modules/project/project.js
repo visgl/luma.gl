@@ -1,4 +1,6 @@
-import {Matrix4} from 'math.gl';
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
+import {Matrix4} from '@math.gl/core';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -111,7 +113,8 @@ const fs = `
 ${common}\
 `;
 
-export default {
+/** @type {ShaderModule} */
+export const project = {
   name: 'project',
   getUniforms,
   vs,

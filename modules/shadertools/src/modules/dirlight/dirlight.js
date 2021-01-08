@@ -1,6 +1,8 @@
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
+
 // Cheap lighting - single directional light, single dot product, one uniform
 
-import project from '../project/project';
+import {project} from '../project/project';
 
 /* eslint-disable camelcase */
 const DEFAULT_LIGHT_DIRECTION = new Float32Array([1, 1, 2]);
@@ -33,7 +35,7 @@ vec4 dirlight_filterColor(vec4 color) {
 }
 `;
 
-export default {
+export const dirlight = {
   name: 'dirlight',
   vs,
   fs,

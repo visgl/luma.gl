@@ -1,4 +1,4 @@
-// Cheap lighting - single directional light, single dot product, one uniform
+/** @typedef {import('../../types').ShaderModule} ShaderModule */
 
 // TODO - reuse normal from geometry module
 const vs = `\
@@ -31,7 +31,8 @@ vec3 geometry_getNormal() {
 }
 `;
 
-export default {
+/** @type {ShaderModule} */
+export const geometry = {
   name: 'geometry',
   vs,
   fs
