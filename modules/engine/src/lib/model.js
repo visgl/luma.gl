@@ -38,6 +38,7 @@ export default class Model {
     this.gl = gl;
     this.id = props.id || uid('Model');
     this.lastLogTime = 0; // TODO - move to probe.gl
+    this.animated = false;
     this.initialize(props);
   }
 
@@ -454,6 +455,7 @@ export default class Model {
     this.program = program;
 
     if (this.vertexArray) {
+      // @ts-ignore TODO
       this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
     } else {
       this.vertexArray = new VertexArray(this.gl, {program: this.program});
@@ -483,8 +485,8 @@ export default class Model {
   _setAnimationProps(animationProps) {
     if (this.animated) {
       assert(animationProps, 'Model.draw(): animated uniforms but no animationProps');
-      const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
-      Object.assign(this.uniforms, animatedUniforms);
+      // const animatedUniforms = this._evaluateAnimateUniforms(animationProps);
+      // Object.assign(this.uniforms, animatedUniforms);
     }
   }
 
@@ -529,6 +531,7 @@ export default class Model {
     const attributeTable = getDebugTableForVertexArray({
       vertexArray,
       header: `${this.id} attributes`,
+      // @ts-ignore
       attributes: this._attributes
     });
 

@@ -61,7 +61,8 @@ export default class BufferTransform {
     return bufferOrParams instanceof Buffer ? bufferOrParams : bufferOrParams.buffer;
   }
 
-  getData({varyingName} = {}) {
+  getData(options = {}) {
+    const {varyingName} = options;
     const buffer = this.getBuffer(varyingName);
     if (buffer) {
       return buffer.getData();

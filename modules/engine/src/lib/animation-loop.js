@@ -6,6 +6,7 @@ import {
   resizeGLContext,
   resetParameters
 } from '@luma.gl/gltools';
+
 import {
   requestAnimationFrame,
   cancelAnimationFrame,
@@ -16,6 +17,7 @@ import {
   log,
   assert
 } from '@luma.gl/webgl';
+
 import {isBrowser} from 'probe.gl/env';
 
 const isPage = isBrowser() && typeof document !== 'undefined';
@@ -51,6 +53,7 @@ export default class AnimationLoop {
 
     if ('useDevicePixelRatio' in props) {
       log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
+      // @ts-ignore
       useDevicePixels = props.useDevicePixelRatio;
     }
 
@@ -98,6 +101,7 @@ export default class AnimationLoop {
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
+    this._onSetupFrame = animationProps => {};
   }
 
   delete() {
@@ -267,6 +271,7 @@ export default class AnimationLoop {
 
   getHTMLControlValue(id, defaultValue = 1) {
     const element = document.getElementById(id);
+    // @ts-ignore Not all html elements have value
     return element ? Number(element.value) : defaultValue;
   }
 
