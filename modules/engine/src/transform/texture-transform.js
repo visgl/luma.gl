@@ -1,4 +1,6 @@
+/** @typedef {import('./transform').TransformProps} TransformProps */
 import GL from '@luma.gl/constants';
+
 import {
   cloneTextureFrom,
   readPixelsToArray,
@@ -7,12 +9,14 @@ import {
   Texture2D,
   Framebuffer
 } from '@luma.gl/webgl';
+
 import {
   _transform as transformModule,
   getPassthroughFS,
   typeToChannelCount,
   combineInjects
 } from '@luma.gl/shadertools';
+
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 // TODO: move these constants to transform-shader-utils
@@ -28,7 +32,7 @@ const FS_OUTPUT_VARIABLE = 'transform_output';
 export default class TextureTransform {
   constructor(gl, props = {}) {
     this.gl = gl;
-    this.currentIndex = 0;
+    this.id = this.currentIndex = 0;
     this._swapTexture = null;
     this.targetTextureVarying = null;
     this.targetTextureType = null;
@@ -111,6 +115,7 @@ export default class TextureTransform {
     // readPixels returns 4 elements for each pixel, pack the elements when requested
     const ArrayType = pixels.constructor;
     const channelCount = typeToChannelCount(this.targetTextureType);
+    // @ts-ignore
     const packedPixels = new ArrayType((pixels.length * channelCount) / 4);
     let packCount = 0;
     for (let i = 0; i < pixels.length; i += 4) {
@@ -166,6 +171,7 @@ export default class TextureTransform {
     return this._createNewTexture(refTexture);
   }
 
+  /** @param {TransformProps} props */
   _setupTextures(props = {}) {
     const {sourceBuffers, _sourceTextures = {}, _targetTexture} = props;
     const targetTexture = this._createTargetTexture({
@@ -238,7 +244,7 @@ export default class TextureTransform {
         framebuffer.resize({width, height});
       } else {
         binding.framebuffer = new Framebuffer(this.gl, {
-          id: `${this.id || 'transform'}-framebuffer`,
+          id: `transform-framebuffer`,
           width,
           height,
           attachments: {
@@ -301,6 +307,7 @@ export default class TextureTransform {
   // build and return shader releated parameters
   _processVertexShader(props = {}) {
     const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
+    // @ts-ignore TODO - uniforms is not present
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
       vs: props.vs,
       sourceTextureMap: sourceTextures,

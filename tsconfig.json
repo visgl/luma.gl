@@ -35,25 +35,9 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "exclude":[
-    "modules/constants/src/**/*",
-    "modules/core/src/**/*",
-    "modules/core/test/**/*",
-    "modules/debug/src/**/*",
-    "modules/debug/test/**/*",
-    "modules/engine/src/**/*",
     "modules/engine/test/**/*",
-    "modules/experimental/src/gltf/gltf-environment.js",
-    "modules/experimental/src/webvr/vr-display.js",
-    "modules/experimental/src/scenegraph/model-node.js",
-    "modules/test-utils/src/**/*",
-    "modules/test-utils/test/**/*",
     "modules/webgl/src/classes/**/*",
     "modules/webgl/src/debug/**/*",
-    "modules/webgl/src/features/**/*",
-    "modules/webgl/src/glsl-utils/**/*",
-    "modules/webgl/src/utils/**/*",
-    "modules/webgl/src/webgl-utils/**/*",
-    "modules/webgl/src/*",
 
     "examples/**/*",
     "website/**/*",

@@ -171,11 +171,15 @@ test('webgl#caps#canCompileGLGSExtension', t => {
 test('webgl#caps#cache', t => {
   const {gl} = fixture;
   const cap = FEATURES.WEBGL2;
+  // @ts-ignore
   gl.luma = gl.luma || {};
-  const originalCaps = gl.luma.caps;
-  gl.luma.caps = {};
+  // @ts-ignore
+  const {luma} = gl;
+
+  const originalCaps = luma.caps;
+  luma.caps = {};
   hasFeature(gl, cap);
-  t.ok(gl.luma.caps[cap] !== undefined, 'Feature should cache after query');
-  gl.luma.caps = originalCaps;
+  t.ok(luma.caps[cap] !== undefined, 'Feature should cache after query');
+  luma.caps = originalCaps;
   t.end();
 });

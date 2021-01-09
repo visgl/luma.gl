@@ -30,9 +30,11 @@ export default class TestRunner {
   constructor(props = {}) {
     this.props = props;
     this.isRunning = false;
+    this._animationProps = {};
     this._testCases = [];
     this._testCaseData = null;
 
+    // @ts-ignore
     this.isHeadless = Boolean(window.browserTestDriver_isHeadless);
 
     this.testOptions = Object.assign({}, DEFAULT_TEST_OPTIONS);
@@ -59,6 +61,7 @@ export default class TestRunner {
 
     return new Promise(resolve => {
       this._animationLoop = new AnimationLoop(
+        // @ts-ignore TODO
         Object.assign({}, this.props, {
           onRender: this._onRender.bind(this),
           onFinalize: () => {
@@ -103,10 +106,12 @@ export default class TestRunner {
   /* Utilities */
 
   _pass(result) {
+    // @ts-ignore
     this.testOptions.onTestPass(this._currentTestCase, result);
   }
 
   _fail(result) {
+    // @ts-ignore
     this.testOptions.onTestFail(this._currentTestCase, result);
   }
 

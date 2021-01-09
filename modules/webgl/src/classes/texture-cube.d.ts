@@ -1,6 +1,8 @@
 
 import Texture from "@luma.gl/webgl/classes/texture";
 export default class TextureCube extends Texture {
+  static readonly FACES: number[];
+  
   constructor(gl: WebGLRenderingContext, props?: {});
   initialize(props?: {}): void;
   subImage(options: {
