@@ -1,7 +1,6 @@
 import GL from '@luma.gl/constants';
-import {log} from '@luma.gl/gltools';
+import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {parseGLSLCompilerError, getShaderName} from '../glsl-utils';
-import {assertWebGLContext} from '../webgl-utils';
 import {uid, assert} from '../utils';
 import Resource from './resource';
 

@@ -1,7 +1,16 @@
+// TODO - This file checks correctly locally but fails on CI...
 const test = require('tape-catch');
 const {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('@luma.gl/gltools');
 const {createTestContext} = require('@luma.gl/test-utils');
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts();
+
+const glContext = {
+  canvas: {clientWidth: 10, clientHeight: 20}
+};
+
+/** @type {WebGLRenderingContext} */
+// @ts-ignore
+const glMock = glContext;
 
 test('WebGL#headless context creation', t => {
   t.ok(isWebGL(gl), 'Context creation ok');
@@ -46,16 +55,12 @@ test('WebGL#isWebGL2', t => {
 });
 
 test('WebGL#resizeGLContext', t => {
-  const glContext = {
-    canvas: {clientWidth: 10, clientHeight: 20}
-  };
-
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = glContext.canvas.clientWidth;
   glContext.drawingBufferHeight = glContext.canvas.clientHeight;
-  // @ts-ignore
-  resizeGLContext(glContext);
+
+  resizeGLContext(glMock);
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
@@ -67,8 +72,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: DPR});
+  resizeGLContext(glMock, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
@@ -76,8 +80,7 @@ test('WebGL#resizeGLContext', t => {
   );
 
   // trigger again without any changes
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: 12.5});
+  resizeGLContext(glMock, {useDevicePixels: 12.5});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
@@ -89,8 +92,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: DPR});
+  resizeGLContext(glMock, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
@@ -102,8 +104,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: DPR});
+  resizeGLContext(glMock, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {clientWidth: 5, clientHeight: 2, devicePixelRatio: DPR},
@@ -116,8 +117,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.width); // DPR is 1
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.height); // DPR is 1
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: DPR});
+  resizeGLContext(glMock, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {
@@ -129,8 +129,7 @@ test('WebGL#resizeGLContext', t => {
   );
 
   // trigger resize again
-  // @ts-ignore
-  resizeGLContext(glContext, {useDevicePixels: DPR});
+  resizeGLContext(glMock, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
     {

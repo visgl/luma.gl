@@ -1,5 +1,8 @@
+/** @typedef {import('./uniforms')} types */
+
 import GL from '@luma.gl/constants';
 import {log} from '@luma.gl/gltools';
+
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';
@@ -107,6 +110,9 @@ const UNIFORM_SETTERS = {
     setMatrixUniform
   ),
 
+  [GL.SAMPLER_2D]: getSamplerSetter,
+  [GL.SAMPLER_CUBE]: getSamplerSetter,
+
   [GL.SAMPLER_3D]: getSamplerSetter,
   [GL.SAMPLER_2D_SHADOW]: getSamplerSetter,
   [GL.SAMPLER_2D_ARRAY]: getSamplerSetter,
@@ -171,8 +177,22 @@ function toIntArray(value, uniformLength) {
 
 function toUIntArray(value, uniformLength) {
   return toTypedArray(value, uniformLength, Uint32Array, UINT_ARRAY);
+} // Returns a Magic Uniform Setter
+
+// PUBLIC API
+
+/** @type {types['getUniformSetter']} */ export function getUniformSetter(gl, location, info) {
+  const setter = UNIFORM_SETTERS[info.type];
+  if (!setter) {
+    throw new Error(`Unknown GLSL uniform type ${info.type}`);
+  }
+
+  // NOTE(Tarek): This construction is the ensure
+  // separate caches for all setters.
+  return setter().bind(null, gl, location);
 }
 
+/** @type {types['parseUniformName']} */
 export function parseUniformName(name) {
   // Shortcut to avoid redundant or bad matches
   if (name[name.length - 1] !== ']') {
@@ -195,23 +215,11 @@ export function parseUniformName(name) {
     length: matches[2] || 1,
     isArray: Boolean(matches[2])
   };
-}
-
-// Returns a Magic Uniform Setter
-/* eslint-disable complexity */
-export function getUniformSetter(gl, location, info) {
-  const setter = UNIFORM_SETTERS[info.type];
-  if (!setter) {
-    throw new Error(`Unknown GLSL uniform type ${info.type}`);
-  }
-
-  // NOTE(Tarek): This construction is the ensure
-  // separate caches for all setters.
-  return setter().bind(null, gl, location);
-}
+} // To facilitate early detection of e.g. undefined values in JavaScript
 
 // Basic checks of uniform values (with or without knowledge of program)
-// To facilitate early detection of e.g. undefined values in JavaScript
+
+/** @type {types['checkUniformValues']} */
 export function checkUniformValues(uniforms, source, uniformMap) {
   for (const uniformName in uniforms) {
     const value = uniforms[uniformName];
@@ -249,6 +257,26 @@ function checkUniformValue(value) {
   return false;
 }
 
+/** @type {types['copyUniform']} */
+export function copyUniform(uniforms, key, value) {
+  if (Array.isArray(value) || ArrayBuffer.isView(value)) {
+    if (uniforms[key]) {
+      const dest = uniforms[key];
+      // @ts-ignore
+      for (let i = 0, len = value.length; i < len; ++i) {
+        dest[i] = value[i];
+      }
+    } else {
+      // @ts-ignore
+      uniforms[key] = value.slice();
+    }
+  } else {
+    uniforms[key] = value;
+  }
+}
+
+// HELPERS
+
 function checkUniformArray(value) {
   // Check that every element in array is a number, and at least 1 element
   if (value.length === 0) {
@@ -266,25 +294,6 @@ function checkUniformArray(value) {
   return true;
 }
 
-/**
- * Creates a copy of the uniform
- */
-export function copyUniform(uniforms, key, value) {
-  if (Array.isArray(value) || ArrayBuffer.isView(value)) {
-    if (uniforms[key]) {
-      const dest = uniforms[key];
-      // @ts-ignore
-      for (let i = 0, len = value.length; i < len; ++i) {
-        dest[i] = value[i];
-      }
-    } else {
-      // @ts-ignore
-      uniforms[key] = value.slice();
-    }
-  } else {
-    uniforms[key] = value;
-  }
-}
 // NOTE(Tarek): Setters maintain a cache
 // of the previously set value, and
 // avoid resetting it if it's the same.

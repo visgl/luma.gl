@@ -62,5 +62,5 @@ export function getContextDebugInfo(gl: WebGLRenderingContext): {
 export function resizeGLContext(gl: WebGLRenderingContext, options?: {
   width?: number;
   height?: number;
-  useDevicePixels?: boolean;
+  useDevicePixels?: boolean | number;
 });

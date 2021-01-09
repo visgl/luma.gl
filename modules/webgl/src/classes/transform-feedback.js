@@ -1,8 +1,7 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2, log} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context, log} from '@luma.gl/gltools';
 import Resource from './resource';
 import Buffer from './buffer';
-import {assertWebGL2Context} from '../webgl-utils';
 import {isObjectEmpty} from '../utils';
 
 // NOTE: The `bindOnUse` flag is a major workaround:

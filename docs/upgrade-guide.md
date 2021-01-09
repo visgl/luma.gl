@@ -138,11 +138,11 @@ npm install @luma.gl/debug
 And replace
 
 ```js
-import "luma.gl/debug";
+import 'luma.gl/debug';
 ````
 with
 ```js
-import "@luma.gl/debug";
+import '@luma.gl/debug';
 ```
 
 ### Model

@@ -2,7 +2,7 @@
 
 import {assert} from './assert';
 
-export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
+const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
 export const ERR_WEBGL2 = 'Requires WebGL2';
 
@@ -22,10 +22,16 @@ export function isWebGL2(gl) {
   return Boolean(gl && gl._version === 2);
 }
 
+export function getWebGL2Context(gl) {
+  return isWebGL2(gl) ? gl : null;
+}
+
 export function assertWebGLContext(gl) {
   assert(isWebGL(gl), ERR_CONTEXT);
+  return gl;
 }
 
 export function assertWebGL2Context(gl) {
   assert(isWebGL2(gl), ERR_WEBGL2);
+  return gl;
 }

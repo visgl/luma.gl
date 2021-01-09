@@ -1,5 +1,4 @@
-import {withParameters} from '@luma.gl/gltools';
-import {assertWebGL2Context} from '../webgl-utils';
+import {assertWebGL2Context, withParameters} from '@luma.gl/gltools';
 import {assert} from '../utils';
 
 // Should collapse during minification
