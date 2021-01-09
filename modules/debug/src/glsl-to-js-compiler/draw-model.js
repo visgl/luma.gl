@@ -1,5 +1,5 @@
 import {compileVertexShader, compileFragmentShader} from './compile-shader';
-import {clamp, lerp} from 'math.gl';
+import {clamp, lerp} from '@math.gl/core';
 
 const shaderCache = {};
 

@@ -20,7 +20,7 @@
 
 import test from 'tape-catch';
 import {GroupNode, ScenegraphNode} from '@luma.gl/experimental';
-import {Matrix4} from 'math.gl';
+import {Matrix4} from '@math.gl/core';
 
 test('GroupNode#construction', t => {
   const grandChild = new ScenegraphNode();

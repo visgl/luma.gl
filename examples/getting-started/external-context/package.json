@@ -5,9 +5,9 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/gltools": "^8.2.0",
-    "@luma.gl/webgl": "^8.2.0",
-    "@luma.gl/engine": "^8.2.0",
+    "@luma.gl/gltools": "^8.3.0",
+    "@luma.gl/webgl": "^8.3.0",
+    "@luma.gl/engine": "^8.3.0",
     "core-js": "^3.5.0"
   },
   "devDependencies": {

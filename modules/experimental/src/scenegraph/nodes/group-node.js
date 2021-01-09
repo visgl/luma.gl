@@ -1,4 +1,4 @@
-import {Matrix4} from 'math.gl';
+import {Matrix4} from '@math.gl/core';
 import {log} from '@luma.gl/webgl';
 import ScenegraphNode from './scenegraph-node';
 

@@ -9,7 +9,7 @@ import {AnimationLoop, Timeline} from '@luma.gl/engine';
 import {clear, log, lumaStats} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from '@math.gl/core';
 
 const CUBE_FACE_TO_DIRECTION = {
   [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: 'right',

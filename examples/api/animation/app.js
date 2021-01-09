@@ -3,7 +3,7 @@
 import {AnimationLoop, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/engine';
 import {setParameters} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from '@math.gl/core';
 import {getRandom} from '../../utils';
 
 const random = getRandom();
