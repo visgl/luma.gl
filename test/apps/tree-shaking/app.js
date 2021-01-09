@@ -2,7 +2,7 @@
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Cube} from '@luma.gl/core';
 import {createTestContext} from '@luma.gl/test-utils';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from '@math.gl/core';
 
 const SIDE = 256;
 

@@ -2,7 +2,7 @@ import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
 import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
 import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
-import {Matrix4} from 'math.gl';
+import {Matrix4} from '@math.gl/core';
 import {getRandom} from '../../utils';
 
 const INFO_HTML = `

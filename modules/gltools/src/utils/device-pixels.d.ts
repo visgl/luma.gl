@@ -8,7 +8,7 @@ export function cssToDeviceRatio(gl: WebGLRenderingContext): number;
  */
 export function cssToDevicePixels(
   gl: WebGLRenderingContext,
-  cssPixel: number,
+  cssPixel: number[],
   yInvert?: boolean
 ): {
   x: number;

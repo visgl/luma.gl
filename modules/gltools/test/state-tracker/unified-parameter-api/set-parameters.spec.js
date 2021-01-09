@@ -39,6 +39,7 @@ test('WebGL#set and get', t => {
   value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   t.is(value, -1, `got expected value ${stringifyTypedArray(value)}`);
 
+  // @ts-ignore
   t.throws(() => setParameters({}), 'throws with non WebGL context');
 
   t.end();
@@ -65,7 +66,7 @@ test('WebGL#composite setter', t => {
   }
 
   // Update only two states out of three.
-  setParameters(gl, partialCompositeStateValues, GL_PARAMETER_DEFAULTS);
+  setParameters(gl, partialCompositeStateValues);
 
   let value = getParameters(gl, [GL.STENCIL_FUNC])[GL.STENCIL_FUNC];
   t.deepEqual(
@@ -95,7 +96,7 @@ test('WebGLState#get all parameters', t => {
   resetParameters(gl);
 
   // Set custom values.
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE, {});
+  setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameters(gl, [key])[key];
     t.deepEqual(

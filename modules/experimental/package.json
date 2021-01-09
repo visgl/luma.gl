@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "@luma.gl/constants": "8.4.0-alpha.1",
-    "earcut": "^2.0.6",
-    "math.gl": "^3.3.0"
+    "@math.gl/core": "^3.4.1",
+    "earcut": "^2.0.6"
   },
   "peerDependencies": {
     "@loaders.gl/gltf": "^2.3.0",

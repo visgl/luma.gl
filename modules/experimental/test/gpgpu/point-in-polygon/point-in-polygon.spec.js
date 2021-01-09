@@ -1,6 +1,6 @@
 import test from 'tape-catch';
 import {fixture} from 'test/setup';
-import {equals} from 'math.gl';
+import {equals} from '@math.gl/core';
 import {Buffer} from '@luma.gl/webgl';
 import {GPUPointInPolygon} from '@luma.gl/experimental';
 import {cpuPointInPolygon} from './cpu-point-in-polygon';

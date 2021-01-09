@@ -1,4 +1,4 @@
-import {Vector3} from 'math.gl';
+import {Vector3} from '@math.gl/core';
 import Geometry from '../geometry/geometry';
 import {uid} from '@luma.gl/webgl';
 

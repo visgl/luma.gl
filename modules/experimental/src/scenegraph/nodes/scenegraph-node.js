@@ -1,4 +1,4 @@
-import {Vector3, Matrix4} from 'math.gl';
+import {Vector3, Matrix4} from '@math.gl/core';
 import {assert, uid} from '@luma.gl/webgl';
 
 export default class ScenegraphNode {

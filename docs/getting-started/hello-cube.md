@@ -8,7 +8,7 @@ As always, we'll start with our imports:
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {Texture2D, clear} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {Matrix4} from 'math.gl';
+import {Matrix4} from '@math.gl/core';
 ```
 
 Our shaders are somewhat more involved that we've seen before:
@@ -105,7 +105,7 @@ If all went well, you should see a rotating cube with the Uber Visualization log
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {Texture2D, clear} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {Matrix4} from 'math.gl';
+import {Matrix4} from '@math.gl/core';
 
 const vs = `\
   attribute vec3 positions;

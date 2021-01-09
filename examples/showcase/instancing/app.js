@@ -2,7 +2,7 @@ import {AnimationLoop, CubeGeometry, Timeline, Model, ProgramManager} from '@lum
 import {readPixelsToArray, Buffer} from '@luma.gl/webgl';
 import {cssToDevicePixels, setParameters} from '@luma.gl/gltools';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from '@math.gl/core';
 import {getRandom} from '../../utils';
 
 const INFO_HTML = `

@@ -4,7 +4,7 @@ import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear, Texture2D, Buffer} from '@luma.gl/webgl';
 import {dirlight} from '@luma.gl/shadertools';
 import {withParameters, isWebGL2} from '@luma.gl/gltools';
-import {Matrix4, radians} from 'math.gl';
+import {Matrix4, radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {getRandom} from '../../utils';
 
