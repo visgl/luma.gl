@@ -2,7 +2,7 @@
 import test from 'tape-catch';
 import {Program, Texture2D} from '@luma.gl/webgl';
 import {isBrowser} from 'probe.gl/env';
-import {equals} from 'math.gl';
+import {equals} from '@math.gl/core';
 import {
   checkUniformValues,
   parseUniformName,

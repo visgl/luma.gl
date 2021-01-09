@@ -344,7 +344,7 @@ This change will enable tree-shaking bundlers to remove unused experimental expo
 Math functions were moved from luma.gl to the separate math.gl module in v4.1. As of v6.0, they are no longer forwarded by luma.gl and now need to be imported directly from math.gl:
 
 ```js
-import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from 'math.gl';
+import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from '@math.gl/core';
 ```
 
 luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.

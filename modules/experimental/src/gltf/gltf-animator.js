@@ -1,5 +1,5 @@
 import {assert, log} from '@luma.gl/webgl';
-import {Matrix4, Quaternion} from 'math.gl';
+import {Matrix4, Quaternion} from '@math.gl/core';
 
 // TODO: import from loaders.gl?
 export const ATTRIBUTE_TYPE_TO_COMPONENTS = {

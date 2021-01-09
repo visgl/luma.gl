@@ -54,6 +54,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = glContext.canvas.clientWidth;
   glContext.drawingBufferHeight = glContext.canvas.clientHeight;
+  // @ts-ignore
   resizeGLContext(glContext);
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -66,6 +67,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -74,6 +76,7 @@ test('WebGL#resizeGLContext', t => {
   );
 
   // trigger again without any changes
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: 12.5});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -86,6 +89,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -98,6 +102,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -111,6 +116,7 @@ test('WebGL#resizeGLContext', t => {
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.width); // DPR is 1
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.height); // DPR is 1
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,
@@ -123,6 +129,7 @@ test('WebGL#resizeGLContext', t => {
   );
 
   // trigger resize again
+  // @ts-ignore
   resizeGLContext(glContext, {useDevicePixels: DPR});
   t.deepEqual(
     glContext.luma.canvasSizeInfo,

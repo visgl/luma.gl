@@ -1,7 +1,7 @@
 import {AnimationLoop, Model, Geometry, SphereGeometry} from '@luma.gl/engine';
 import {clear, Framebuffer, Program} from '@luma.gl/webgl';
 import {setParameters} from '@luma.gl/gltools';
-import {Matrix4, Vector3, radians} from 'math.gl';
+import {Matrix4, Vector3, radians} from '@math.gl/core';
 import {getRandom} from '../../utils';
 
 const INFO_HTML = `

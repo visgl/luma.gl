@@ -3,7 +3,7 @@ export {log} from './utils/log';
 export {isWebGL, isWebGL2} from './utils/webgl-checks';
 
 // Polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
-export {default as polyfillContext} from './polyfill/polyfill-context';
+export {polyfillContext} from './polyfill/polyfill-context';
 
 // unified parameter APIs
 export {
