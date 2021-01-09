@@ -615,6 +615,7 @@ test('WebGL2#Texture2D setSubImageData', t => {
 test('WebGL2#Texture2D resize', t => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
+    // @ts-ignore
     data: null,
     width: 2,
     height: 2,
@@ -640,6 +641,7 @@ test('WebGL2#Texture2D resize', t => {
   t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing to NPOT.');
 
   texture = new Texture2D(gl, {
+    // @ts-ignore
     data: null,
     width: 2,
     height: 2,
@@ -660,6 +662,7 @@ test('WebGL2#Texture2D resize', t => {
 test('WebGL2#Texture2D generateMipmap', t => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
+    // @ts-ignore
     data: null,
     width: 3,
     height: 3,
@@ -671,6 +674,7 @@ test('WebGL2#Texture2D generateMipmap', t => {
   t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
 
   texture = new Texture2D(gl, {
+    // @ts-ignore
     data: null,
     width: 2,
     height: 2,

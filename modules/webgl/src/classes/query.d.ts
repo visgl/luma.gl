@@ -1,6 +1,11 @@
-import Resource from '@luma.gl/webgl/classes/resource';
+import Resource from './resource';
 
+/**
+ * Asynchronous queries for different kinds of information
+ */
 export default class Query extends Resource {
+  readonly handle: WebGLQuery;
+
   static isSupported(gl: WebGLRenderingContext, opts?: any[]): boolean;
   constructor(gl: WebGLRenderingContext, opts?: {});
   beginTimeElapsedQuery(): this;

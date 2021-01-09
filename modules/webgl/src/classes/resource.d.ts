@@ -1,16 +1,25 @@
+export type ResourceProps = {
+  id?: string;
+  handle?: any
+}
+
+/**
+ * Base class for WebGL object wrappers
+ */
 export default class Resource {
   readonly id: string;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;
   readonly _handle: any;
 
-  get handle(): any;
+  readonly handle: any;
 
-  constructor(gl: WebGLRenderingContext, opts?: {});
+  constructor(gl: WebGLRenderingContext, props?: ResourceProps);
   toString(): string;
   delete({ deleteChildren }?: { deleteChildren?: boolean }): this;
   bind(funcOrHandle?: any): any;
   unbind(): void;
+
   /**
    * Query a Resource parameter
    *

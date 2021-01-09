@@ -1,6 +1,14 @@
 import Resource from './resource';
 
+/**
+ * Holds a block of unformatted memory allocated on the GPU via an underlying 
+ * WebGLBuffer.
+ * These can be used to store vertex data, pixel data retrieved from 
+ * images or the framebuffer, and a variety of other things. 
+ */
 export default class Buffer extends Resource {
+
+  readonly handle: WebGLBuffer;
   readonly byteLength: number;
   readonly bytesUsed: number;
   readonly usage: number;
