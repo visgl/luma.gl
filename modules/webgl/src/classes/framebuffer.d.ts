@@ -1,8 +1,17 @@
 import Resource from '@luma.gl/webgl/classes/resource';
 export default class Framebuffer extends Resource {
+  static readonly STATUS: number[];
+
   readonly width: number;
   readonly height: number;
+  readonly attachments: any[];
 
+  /**
+   * Support
+   * @param gl
+   * @param options.colorBufferFloat  Whether floating point textures can be rendered and read
+   * @param options.colorBufferHalfFloat Whether half float textures can be rendered and read
+   */
   static isSupported(
     gl: WebGLRenderingContext,
     options?: {
@@ -26,9 +35,9 @@ export default class Framebuffer extends Resource {
     depth?: boolean;
     stencil?: boolean;
     check?: boolean;
-    readBuffer: any;
-    drawBuffers: any;
-  }): void;
+    readBuffer?: any;
+    drawBuffers?: any;
+  }): this;
   // @ts-ignore
   delete(): void;
   update(options?: {

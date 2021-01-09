@@ -1,10 +1,19 @@
 export default class Resource {
+  readonly id: string;
   readonly gl: WebGLRenderingContext;
+  readonly gl2: WebGL2RenderingContext;
+  readonly _handle: any;
+
+  get handle(): any;
 
   constructor(gl: WebGLRenderingContext, opts?: {});
   toString(): string;
+<<<<<<< HEAD
   get handle(): any;
   delete({deleteChildren}?: {deleteChildren?: boolean}): this;
+=======
+  delete({ deleteChildren }?: { deleteChildren?: boolean }): this;
+>>>>>>> feat(webgl): typescript typings
   bind(funcOrHandle?: any): any;
   unbind(): void;
   /**

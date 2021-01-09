@@ -12,5 +12,8 @@ export default class VertexArrayObject extends Resource {
   setElementBuffer(elementBuffer?: any, opts?: {}): this;
   setBuffer(location: any, buffer: any, accessor: any): this;
   enable(location: any, enable?: boolean): this;
-  getConstantBuffer(elementCount: any, value: any, accessor: any): any;
+  getConstantBuffer(elementCount: any, value: any): any;
+
+  // PRIVATE
+  _normalizeConstantArrayValue(arrayValue);
 }

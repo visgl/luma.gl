@@ -16,6 +16,8 @@ export default class Resource {
 
     const {id, userData = {}} = opts;
     this.gl = gl;
+    // @ts-ignore
+    this.gl2 = gl;
     // this.ext = polyfillContext(gl);
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
@@ -58,6 +60,7 @@ export default class Resource {
 
   delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
+    // @ts-ignore
     const children = this._handle && this._deleteHandle(this._handle);
     if (this._handle) {
       this._removeStats();
@@ -65,10 +68,10 @@ export default class Resource {
     this._handle = null;
 
     // Optionally, recursively delete the children
+    // @ts-ignore
     if (children && deleteChildren) {
-      children.filter(Boolean).forEach(child => {
-        child.delete();
-      });
+      // @ts-ignore
+      children.filter(Boolean).forEach(child => child.delete());
     }
 
     return this;
@@ -111,6 +114,7 @@ export default class Resource {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
+    // @ts-ignore
     const parameters = this.constructor.PARAMETERS || {};
 
     // Use parameter definitions to handle unsupported parameters
@@ -139,10 +143,11 @@ export default class Resource {
   // Many resources support a getParameter call -
   // getParameters will get all parameters - slow but useful for debugging
   // eslint-disable-next-line complexity
-  getParameters(opts = {}) {
-    const {parameters, keys} = {};
+  getParameters(options = {}) {
+    const {parameters, keys} = options;
 
     // Get parameter definitions for this Resource
+    // @ts-ignore
     const PARAMETERS = this.constructor.PARAMETERS || {};
 
     const isWebgl2 = isWebGL2(this.gl);
@@ -164,7 +169,7 @@ export default class Resource {
 
       if (parameterAvailable) {
         const key = keys ? getKey(this.gl, pname) : pname;
-        values[key] = this.getParameter(pname, opts);
+        values[key] = this.getParameter(pname, options);
         if (keys && parameter.type === 'GLenum') {
           values[key] = getKey(this.gl, values[key]);
         }
@@ -179,7 +184,7 @@ export default class Resource {
    *
    * @todo - cache parameter to avoid issuing WebGL calls?
    *
-   * @param {GLenum} pname - parameter (GL constant, value or key)
+   * @param {string} pname - parameter (GL constant, value or key)
    * @param {GLint|GLfloat|GLenum} value
    * @return {Resource} returns self to enable chaining
    */
@@ -187,6 +192,7 @@ export default class Resource {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
+    // @ts-ignore
     const parameters = this.constructor.PARAMETERS || {};
 
     const parameter = parameters[pname];
@@ -242,7 +248,7 @@ export default class Resource {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  _bindHandle() {
+  _bindHandle(handle) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
@@ -250,15 +256,11 @@ export default class Resource {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
+  /** @returns {number} */
   _getParameter(pname, opts) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  /**
-   * @param {GLenum} pname
-   * @param {GLint|GLfloat|GLenum} param
-   * @return {Sampler} returns self to enable chaining
-   */
   _setParameter(pname, value) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }

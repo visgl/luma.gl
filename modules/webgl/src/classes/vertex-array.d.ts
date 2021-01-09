@@ -1,7 +1,9 @@
-import ProgramConfiguration from './program-configuration';
-import VertexArrayObject from './vertex-array-object';
+import ProgramConfiguration from "./program-configuration";
+import VertexArrayObject from "./vertex-array-object";
+import Accessor from './accessor';
 
 export default class VertexArray {
+  readonly attributes: object;
   constructor(gl: WebGLRenderingContext, opts?: {});
   delete(): void;
   initialize(props?: {}): this;
@@ -20,6 +22,6 @@ export default class VertexArray {
 
   // FOR TESTING
   readonly configuration: ProgramConfiguration | null;
-  readonly accessors: {size?: number}[];
+  readonly accessors: Accessor[];
   readonly vertexArrayObject: VertexArrayObject;
 }

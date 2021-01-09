@@ -82,15 +82,19 @@ export default class TransformFeedback extends Resource {
   }
 
   begin(primitiveMode = GL.POINTS) {
+    // @ts-ignore
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this._bindBuffers();
+    // @ts-ignore
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
   }
 
   end() {
+    // @ts-ignore
     this.gl.endTransformFeedback();
     this._unbindBuffers();
+    // @ts-ignore
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     return this;
   }
@@ -150,8 +154,10 @@ export default class TransformFeedback extends Resource {
   _bindBuffer(index, buffer, byteOffset = 0, byteSize) {
     const handle = buffer && buffer.handle;
     if (!handle || byteSize === undefined) {
+      // @ts-ignore
       this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
+      // @ts-ignore
       this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteSize);
     }
     return this;
@@ -160,14 +166,17 @@ export default class TransformFeedback extends Resource {
   // RESOURCE METHODS
 
   _createHandle() {
+    // @ts-ignore
     return this.gl.createTransformFeedback();
   }
 
   _deleteHandle() {
+    // @ts-ignore
     this.gl.deleteTransformFeedback(this.handle);
   }
 
   _bindHandle(handle) {
+    // @ts-ignore
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
   }
 }

@@ -3,6 +3,7 @@ export default class TextureCube extends Texture {
   static readonly FACES: number[];
 
   constructor(gl: WebGLRenderingContext, props?: {});
+
   initialize(props?: {}): void;
   subImage(options: {face: any; data: any; x?: number; y?: number; mipmapLevel?: number}): any;
   setCubeMapImageData(options: {
