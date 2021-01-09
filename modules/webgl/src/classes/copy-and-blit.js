@@ -2,8 +2,8 @@ import GL from '@luma.gl/constants';
 import Buffer from './buffer';
 import Framebuffer from './framebuffer';
 import Texture from './texture';
-import {withParameters, log} from '@luma.gl/gltools';
-import {assertWebGL2Context, flipRows, scalePixels} from '../webgl-utils';
+import {assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
+import {flipRows, scalePixels} from '../webgl-utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
@@ -14,20 +14,17 @@ import {assert} from '../utils';
 // App can provide targetPixelArray or have it auto allocated by this method
 // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
 //  newly allocated by this method unless provided by app.
-export function readPixelsToArray(
-  source,
-  {
-    sourceX = 0,
-    sourceY = 0,
-    sourceFormat = GL.RGBA,
+export function readPixelsToArray(source, options = {}) {
+  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA} = options;
+  let {
     sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
     target = null,
     // following parameters are auto deduced if not provided
     sourceWidth,
     sourceHeight,
     sourceType
-  } = {}
-) {
+  } = options;
+
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   const {gl, handle, attachments} = framebuffer;
@@ -52,6 +49,7 @@ export function readPixelsToArray(
 
   const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   gl.readPixels(sourceX, sourceY, sourceWidth, sourceHeight, sourceFormat, sourceType, target);
+  // @ts-ignore
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (deleteFramebuffer) {
     framebuffer.delete();
@@ -77,12 +75,11 @@ export function readPixelsToBuffer(
 ) {
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const {gl} = framebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
   // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  assertWebGL2Context(gl);
+  const gl2 = assertWebGL2Context(framebuffer.gl);
 
   // deduce type if not available.
   sourceType = sourceType || (target ? target.type : GL.UNSIGNED_BYTE);
@@ -92,12 +89,12 @@ export function readPixelsToBuffer(
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    target = new Buffer(gl, {byteLength, accessor: {type: sourceType, size: components}});
+    target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
   target.bind({target: GL.PIXEL_PACK_BUFFER});
-  withParameters(gl, {framebuffer}, () => {
-    gl.readPixels(
+  withParameters(gl2, {framebuffer}, () => {
+    gl2.readPixels(
       sourceX,
       sourceY,
       sourceWidth,
@@ -165,24 +162,22 @@ export function copyToImage(
 
 // Copy a rectangle from a Framebuffer or Texture object into a texture (at an offset)
 // eslint-disable-next-line complexity, max-statements
-export function copyToTexture(
-  source,
-  target,
-  {
+export function copyToTexture(source, target, options = {}) {
+  const {
     sourceX = 0,
     sourceY = 0,
     // attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-
+    targetMipmaplevel = 0,
+    targetInternalFormat = GL.RGBA
+  } = options;
+  let {
     targetX,
     targetY,
     targetZ,
-    targetMipmaplevel = 0,
-    targetInternalFormat = GL.RGBA,
-
     width, // defaults to target width
     height // defaults to target height
-  } = {}
-) {
+  } = options;
+
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   const {gl, handle} = framebuffer;
@@ -234,7 +229,8 @@ export function copyToTexture(
         break;
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        gl.copyTexSubImage3D(
+        const gl2 = assertWebGL2Context(gl);
+        gl2.copyTexSubImage3D(
           target,
           targetMipmaplevel,
           targetX,
@@ -252,6 +248,7 @@ export function copyToTexture(
   if (texture) {
     texture.unbind();
   }
+  // @ts-ignore
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (deleteFramebuffer) {
     framebuffer.delete();
@@ -262,26 +259,27 @@ export function copyToTexture(
 // NOTE: WEBLG2 only
 // Copies a rectangle of pixels between Framebuffer or Texture objects
 // eslint-disable-next-line max-statements, complexity
-export function blit(
-  source,
-  target,
-  {
-    sourceAttachment = GL.COLOR_ATTACHMENT0,
+export function blit(source, target, options = {}) {
+  const {
     sourceX0 = 0,
     sourceY0 = 0,
-    sourceX1,
-    sourceY1,
     targetX0 = 0,
     targetY0 = 0,
-    targetX1,
-    targetY1,
     color = true,
     depth = false,
     stencil = false,
-    mask = 0,
     filter = GL.NEAREST
-  } = {}
-) {
+  } = options;
+
+  let {
+    sourceX1,
+    sourceY1,
+    targetX1,
+    targetY1,
+    sourceAttachment = GL.COLOR_ATTACHMENT0,
+    mask = 0
+  } = options;
+
   const {framebuffer: srcFramebuffer, deleteFramebuffer: deleteSrcFramebuffer} = getFramebuffer(
     source
   );
@@ -291,8 +289,9 @@ export function blit(
 
   assert(srcFramebuffer);
   assert(dstFramebuffer);
+  // @ts-ignore
   const {gl, handle, width, height, readBuffer} = dstFramebuffer;
-  assertWebGL2Context(gl);
+  const gl2 = assertWebGL2Context(gl);
 
   if (!srcFramebuffer.handle && sourceAttachment === GL.COLOR_ATTACHMENT0) {
     sourceAttachment = GL.FRONT;
@@ -325,8 +324,8 @@ export function blit(
 
   const prevDrawHandle = gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, handle);
   const prevReadHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, srcFramebuffer.handle);
-  gl.readBuffer(sourceAttachment);
-  gl.blitFramebuffer(
+  gl2.readBuffer(sourceAttachment);
+  gl2.blitFramebuffer(
     sourceX0,
     sourceY0,
     sourceX1,
@@ -338,9 +337,11 @@ export function blit(
     mask,
     filter
   );
-  gl.readBuffer(readBuffer);
-  gl.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
-  gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
+  gl2.readBuffer(readBuffer);
+  // @ts-ignore
+  gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
+  // @ts-ignore
+  gl2.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
   if (deleteSrcFramebuffer) {
     srcFramebuffer.delete();
   }

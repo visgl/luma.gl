@@ -150,7 +150,8 @@ const WEBGL1_GOOD_UNIFORMS_ARRAY = {
   b: [false, false, true, true, false]
 };
 test('WebGL#Uniforms pre verify uniforms', t => {
-  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS, 'Uniform values are well formed'));
+  // @ts-ignore
+  t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS), 'Uniform values are well formed');
 
   t.end();
 });

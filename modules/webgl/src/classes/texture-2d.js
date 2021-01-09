@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
+import {assertWebGLContext} from '@luma.gl/gltools';
 import Texture from './texture';
-import {assertWebGLContext} from '../webgl-utils';
 import {loadImage} from '../utils/load-file';
 
 export default class Texture2D extends Texture {

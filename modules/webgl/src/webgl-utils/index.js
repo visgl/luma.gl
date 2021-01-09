@@ -1,5 +1,3 @@
-export {assertWebGLContext, assertWebGL2Context} from './webgl-checks';
-
 export {requestAnimationFrame, cancelAnimationFrame} from './request-animation-frame';
 
 export {

@@ -4,8 +4,8 @@ const uidCounters = {};
 
 /**
  * Returns a UID.
- * @param {String} id= - Identifier base name
- * @return {number} uid
+ * @param {string} id= - Identifier base name
+ * @return {string} uid
  **/
 export function uid(id = 'id') {
   uidCounters[id] = uidCounters[id] || 1;
@@ -16,7 +16,7 @@ export function uid(id = 'id') {
 /**
  * Verifies if a given number is power of two or not.
  * @param {object} n - The number to check.
- * @return {Array} Returns true if the given number is power of 2, false otherwise.
+ * @return {boolean} Returns true if the given number is power of 2, false otherwise.
  **/
 export function isPowerOfTwo(n) {
   assert(typeof n === 'number', 'Input must be a number');

@@ -19,7 +19,7 @@ export function flipRows(options: {
   width: any;
   height: any;
   bytesPerPixel?: number;
-  temp: any;
+  temp?: any;
 }): void;
 
 export function scalePixels(options: {

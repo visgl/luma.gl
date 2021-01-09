@@ -6,4 +6,12 @@ export default class Accessor {
   toString(): string;
   get BYTES_PER_ELEMENT(): number;
   get BYTES_PER_VERTEX(): number;
+
+  readonly offset: number;
+  readonly stride: number;
+  readonly type: number;
+  readonly size: number;
+  readonly divisor: number;
+  readonly normalized: boolean;
+  readonly integer: boolean;
 }

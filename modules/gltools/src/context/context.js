@@ -13,10 +13,6 @@ import {assert} from '../utils/assert';
 import {getDevicePixelRatio} from '../utils/device-pixels';
 import {isWebGL2} from '../utils/webgl-checks';
 
-export const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
-export const ERR_WEBGL = ERR_CONTEXT;
-export const ERR_WEBGL2 = 'Requires WebGL2';
-
 const isBrowser = getIsBrowser();
 const isPage = isBrowser && typeof document !== 'undefined';
 

@@ -1,6 +1,6 @@
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGLContext} from '@luma.gl/gltools';
 import {lumaStats} from '../init';
-import {assertWebGLContext, getKey, getKeyValue} from '../webgl-utils';
+import {getKey, getKeyValue} from '../webgl-utils';
 import {uid, assert, stubRemovedMethods} from '../utils';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';

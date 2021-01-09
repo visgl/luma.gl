@@ -28,6 +28,10 @@ export function polyfillContext(gl) {
     installOverrides(gl, {target: luma, target2: gl});
     luma.polyfilled = true;
   }
+
+  // TODO - only supporting a few members
+  /** @type {WebGL2RenderingContext} */
+  // @ts-ignore
   return gl;
 }
 
