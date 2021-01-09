@@ -167,6 +167,7 @@ class GLTFAnimation {
     this.startTime = 0;
     this.playing = true;
     this.speed = 1;
+    this.channels = [];
 
     Object.assign(this, props);
   }

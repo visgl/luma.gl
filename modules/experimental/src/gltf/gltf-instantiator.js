@@ -1,6 +1,6 @@
 import {Matrix4} from '@math.gl/core';
 import {Buffer, Accessor, log} from '@luma.gl/webgl';
-import {GroupNode} from '../scenegraph/';
+import GroupNode from '../scenegraph/group-node';
 
 import GLTFAnimator from './gltf-animator';
 import createGLTFModel from './create-gltf-model';

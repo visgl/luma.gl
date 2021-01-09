@@ -1,7 +1,7 @@
-// TODO - This file checks correctly locally but fails on CI...
-const test = require('tape-catch');
-const {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} = require('@luma.gl/gltools');
-const {createTestContext} = require('@luma.gl/test-utils');
+import test from 'tape-catch';
+import {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} from '@luma.gl/gltools';
+import {createTestContext} from '@luma.gl/test-utils';
+
 const {gl, glDebug, gl2, gl2Debug} = getWebGLContexts();
 
 const glContext = {
@@ -67,9 +67,9 @@ test('WebGL#resizeGLContext', t => {
     'Canvas size info should be cached'
   );
 
+  // update drawing buffer size to simulate gl context
   // Using custom device pixel ratio
   let DPR = 12.5;
-  // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = Math.floor(glContext.canvas.clientWidth * DPR);
   glContext.drawingBufferHeight = Math.floor(glContext.canvas.clientHeight * DPR);
   resizeGLContext(glMock, {useDevicePixels: DPR});
