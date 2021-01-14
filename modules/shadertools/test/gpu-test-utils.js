@@ -1,5 +1,4 @@
 /* eslint-disable max-len, prefer-template, camelcase */
-/* global console */
 /* eslint-disable no-console */
 import {setParameters} from '@luma.gl/core';
 import {createTestContext} from '@luma.gl/test-utils';

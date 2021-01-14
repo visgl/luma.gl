@@ -8,17 +8,17 @@ NOTE: In following sections 'buffer transform' is used to refer to 'reading from
 
 ### Transform(gl : WebGL2RenderingContext, props: Object)
 
-* `gl` (`WebGLRenderingContext`) gl - context
-* `props` (`Object`, Optional) - contains following data.
-  * `sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-  * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
-    * `buffer`=(Buffer) - Buffer object to be bound.
-    * `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-    * `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-  * `varyings` (`Array`, Optional) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackBuffers`.
+- `gl` (`WebGLRenderingContext`) gl - context
+- `props` (`Object`, Optional) - contains following data.
+
+  - `sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
+  - `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
+    - `buffer`=(Buffer) - Buffer object to be bound.
+    - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+    - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+  - `varyings` (`Array`, Optional) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackBuffers`.
 
   NOTE: If only reading from `Buffer` objects, above optional props doesn't have to be supplied during construction, but can be supplied using `update` method. If writing to `Buffer` objects, either `varyings` or `feedbackBuffers` must be supplied.
-
 
 ## Methods (Model props)
 
@@ -26,7 +26,7 @@ NOTE: In following sections 'buffer transform' is used to refer to 'reading from
 
 Returns resources required when performing `Model.draw()` options.
 
-* `opts` (`Object`) - Any existing `opts.attributes` will be merged with new attributes.
+- `opts` (`Object`) - Any existing `opts.attributes` will be merged with new attributes.
 
 Returns an Object : {attributes, transformFeedback}.
 
@@ -34,7 +34,7 @@ Returns an Object : {attributes, transformFeedback}.
 
 Updates input `props` object with data required for buffer transform.
 
-  * `opts` (`Object`) - If writing to `Buffer` objects, `opts.varying` will be updated.
+- `opts` (`Object`) - If writing to `Buffer` objects, `opts.varying` will be updated.
 
 Returns updated object.
 
@@ -44,8 +44,8 @@ Returns updated object.
 
 Sets up internal resources needed writing to buffers.
 
-  * `opts` (`Object`) - contains following data.
-    * `model` (`Model`, Optional) - `Model` object that is used to perform draw operations.
+- `opts` (`Object`) - contains following data.
+  - `model` (`Model`, Optional) - `Model` object that is used to perform draw operations.
 
 ### swap()
 
@@ -55,13 +55,12 @@ If `feedbackMap` is provided during construction, performs source and feedback b
 
 Updates buffer bindings for one or more source or feedback buffers.
 
-  * `props` (`Object`) - contains following data.
-    * `sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-    * `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
-      * `buffer`=(Buffer) - Buffer object to be bound.
-      * `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-      * `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-
+- `props` (`Object`) - contains following data.
+  - `sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
+  - `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
+    - `buffer`=(Buffer) - Buffer object to be bound.
+    - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
+    - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
 
 ## Methods (Accessors)
 
@@ -69,10 +68,10 @@ Updates buffer bindings for one or more source or feedback buffers.
 
 Returns current feedback buffer corresponding to given varying name.
 
-  * `varyingName` (`String`) - varying name.
+- `varyingName` (`String`) - varying name.
 
 ### getData([options : Object]) : ArrayBufferView
 
 Reads and returns data from current feedback buffer corresponding to the given varying name.
 
-  * `options.varyingName` (`String`, Optional) - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.
+- `options.varyingName` (`String`, Optional) - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.

@@ -1,5 +1,3 @@
-/* global window */
-
 // opts allows user agent to be overridden for testing
 export default function isOldIE(opts = {}) {
   const navigator = (typeof window !== 'undefined' && window.navigator) || {};

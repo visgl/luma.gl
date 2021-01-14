@@ -8,12 +8,11 @@ Buffers can be read back to the CPU, but this has a high performance penaltyh. I
 
 To run a single transform feedback operation:
 
-* Create a `Program` or a `Model` with varyings (`out` variables) declared in the vertex shader's GLSL code, and provide the names of these varyings to the `Program` constructor.
-* Use `Program.draw()` or `Model.draw()` with a `transformFeedback` parameter.
-* `Model.transform()` is equivalent to `Model.draw()` but automatically turns off the fragment shader stage.
+- Create a `Program` or a `Model` with varyings (`out` variables) declared in the vertex shader's GLSL code, and provide the names of these varyings to the `Program` constructor.
+- Use `Program.draw()` or `Model.draw()` with a `transformFeedback` parameter.
+- `Model.transform()` is equivalent to `Model.draw()` but automatically turns off the fragment shader stage.
 
 Alternatively, the more powerful `Transform` class is preferable if you don't want to deal with setting up `Program` and `TransformFeedback` instances, or if intend to run a repeating, double buffered transform feedback loop.
-
 
 ## Usage
 
@@ -75,14 +74,13 @@ const transform = new Transform(gl2, {
   varyings: ['outValue'],
   elementCount: 5
 });
-
 ```
+
 ### Use case : Multiple iterations using swap().
 
 When `feedbackMap` is specified buffers can be swapped using a single call to `swap()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
 ```js
-
 // Setup Transform with `souceDestinationMap` as above
 
 transform.run();

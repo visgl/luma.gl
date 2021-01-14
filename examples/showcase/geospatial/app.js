@@ -1,4 +1,3 @@
-/* global window */
 import mapboxgl from 'mapbox-gl';
 import {instrumentGLContext} from '@luma.gl/gltools';
 import {Buffer} from '@luma.gl/webgl';

@@ -1,4 +1,3 @@
-/* global window, navigator */
 import {log} from '@luma.gl/webgl';
 import Display from './display';
 import {createEnterVRButton} from './vr-button';

@@ -4,20 +4,19 @@ The `VertexArray` class (like its lower level counterpart, the `VertexArrayObjec
 
 The `VertexArray` class provides the following features on top of the lower level `VertexArrayObject` class:
 
-* Reads a "program configuration", enabling attributes to be set using names instead of locations
-* Avoids duplicating information already specified in shaders, such as size and type of attributes.
-* Automatic deduction of draw parameters from currently set attributes
-* Handles the "constant attribute 0" complication that is common on desktop WebGL browsers.
-* Can generated debug output of attribute bank
+- Reads a "program configuration", enabling attributes to be set using names instead of locations
+- Avoids duplicating information already specified in shaders, such as size and type of attributes.
+- Automatic deduction of draw parameters from currently set attributes
+- Handles the "constant attribute 0" complication that is common on desktop WebGL browsers.
+- Can generated debug output of attribute bank
 
-* Can fall back to sharing single `VertexArrayObject` across all `VertexArray` objects.
+- Can fall back to sharing single `VertexArrayObject` across all `VertexArray` objects.
 
 > The `VertexArray` is a wrapper class around the `VertexArrayObject` class which encapsulates the underlying WebGL object. The `VertexArrayObject` class has a number of complications that the `VertexArray` takes care of.
 
 > It is usually not necessary to create `VertexArray` instances in luma.gl applications. The application can just supply a map of `attributes` to the [`Model`](/docs/api-reference/core/model.md) class, and rely on that class to automatically manage the vertex attributes array and supply it to any draw calls (e.g. when rendering, picking etc). Still, it can be useful to review this documentation to better understand how attributes are handled.
 
 For more information on the WebGL `VertexArrayObject`, see the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
-
 
 ## Usage
 
@@ -51,7 +50,7 @@ vertexArray2.setBuffers({
 
 Adding attributes to a VertexArray: adding a program configuration enables setting attributes by name
 
-```js
+````js
 // Register attribute info extracted from program shaders
 const program = new Program(gl, ...);
 const vertexArray = new VertexArray(gl, {program});
@@ -77,7 +76,7 @@ Setting a constant vertex attribute
 import {VertexArray} from '@luma.gl/webgl';
 const vao = new VertexArray(gl);
 vao.setConstant(0, [0, 0, 0]);
-```
+````
 
 ## Constructor
 
@@ -85,8 +84,7 @@ vao.setConstant(0, [0, 0, 0]);
 
 Creates a new VertexArray
 
-* `props` (Object) - passed through to `Resource` superclass constructor and to `initialize` it.
-
+- `props` (Object) - passed through to `Resource` superclass constructor and to `initialize` it.
 
 ## Methods
 
@@ -94,106 +92,101 @@ Creates a new VertexArray
 
 Reinitializes a `VertexArray`.
 
-* `attributes`=`{}` (`Object`) - map of attributes, can be keyed by index or names, can be constants (small arrays), `Buffer`, arrays or typed arrays of numbers, or attribute descriptors.
-* `elements`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
-* `program` - Transfers information on vertex attribute locations and types to this vertex array.
-
+- `attributes`=`{}` (`Object`) - map of attributes, can be keyed by index or names, can be constants (small arrays), `Buffer`, arrays or typed arrays of numbers, or attribute descriptors.
+- `elements`=`null` (`Buffer`) - optional buffer representing elements array (i.e. indices)
+- `program` - Transfers information on vertex attribute locations and types to this vertex array.
 
 ### setAttributes(attributes : Object) : VertexArray
 
 Sets named uniforms from a map.
 
 ```js
-program.setAttributes(attributes : Object);
+program.setAttributes((attributes: Object));
 ```
 
-* `attributes` - (*object*) An object with key value pairs matching a buffer name and its value respectively.
+- `attributes` - (_object_) An object with key value pairs matching a buffer name and its value respectively.
 
 Attributes is an object with key-value pairs: `{nameOrLocation: value, ....}`.
 
-* `nameOrLocation` - (*string|number*) The name of the attribute as declared in the shader, or the location specified by a layout qualifier in the shader. The name can contain an offset to the actual location in the format of `name__LOCATION_0`. This is useful for setting *mat* type attributes. See the section at the bottom for more details.
-* `value` - (*Buffer|Array|typed array*) An attribute value must be a `Buffer` or a typed array.
+- `nameOrLocation` - (_string|number_) The name of the attribute as declared in the shader, or the location specified by a layout qualifier in the shader. The name can contain an offset to the actual location in the format of `name__LOCATION_0`. This is useful for setting _mat_ type attributes. See the section at the bottom for more details.
+- `value` - (_Buffer|Array|typed array_) An attribute value must be a `Buffer` or a typed array.
 
 Each value can be an a `Buffer`, an `Array` starting with a `Buffer` or a typed array.
 
-* Typed Array - Sets a constant value as if `.setConstant(value)`  was called.
-* `Buffer` - Binds the atttribute to a buffer, using buffer's accessor data as if `.setBuffer(value)` was called.
-* `Array` - Binds the atttribute to a buffer, with extra accessor data overrides. Expects a two element array with `[buffer : Buffer, accessor : Object]`. Binds the attribute to the buffer as if ` .setBuffer(buffer, accessor)` was called.
+- Typed Array - Sets a constant value as if `.setConstant(value)` was called.
+- `Buffer` - Binds the atttribute to a buffer, using buffer's accessor data as if `.setBuffer(value)` was called.
+- `Array` - Binds the atttribute to a buffer, with extra accessor data overrides. Expects a two element array with `[buffer : Buffer, accessor : Object]`. Binds the attribute to the buffer as if `.setBuffer(buffer, accessor)` was called.
 
-
-### setConstant(value : Array  [, accessor : Object]) : VertexArray
+### setConstant(value : Array [, accessor : Object]) : VertexArray
 
 Sets a constant value for a vertex attribute. When this `VertexArray` is used in a `Program.draw()` call, all Vertex Shader invocations will get the same value.
 
 `VertexArray.setConstant(location, array);`
 
-* `gl` (`WebGLRenderingContext`) - gl context
-* `location` (*GLuint*) - index of the attribute
+- `gl` (`WebGLRenderingContext`) - gl context
+- `location` (_GLuint_) - index of the attribute
 
 WebGL APIs:
 [vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
-
 
 ### setBuffer(nameOrLocation, buffer : Buffer [, accessor : Object]) : VertexArray
 
 Binds the specified attribute in this vertex array to the supplied buffer
 
-* Set a location in vertex attributes array to a buffer, specifying
-* its data layout and integer to float conversion and normalization flags
+- Set a location in vertex attributes array to a buffer, specifying
+- its data layout and integer to float conversion and normalization flags
 
 `setBuffer(location, buffer);`
 `setBuffer(location, buffer, {offset = 0, stride = 0, normalized = false, integer = false});`
 
-* `location` (*GLuint* | *String*) - index/ordinal number of the attribute
-* `buffer` (*WebGLBuffer*|*Buffer*) - WebGL buffer to set as value
+- `location` (_GLuint_ | _String_) - index/ordinal number of the attribute
+- `buffer` (_WebGLBuffer_|_Buffer_) - WebGL buffer to set as value
 
 [gl.vertexAttrib{I}Pointer](), [gl.vertexAttribDivisor](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribDivisor)
-
 
 ### setElementBuffer(buffer : Buffer [, accessor : Object]) : VertexArray
 
 Binds the supplied buffer as index buffer (`GL.ELEMENT_ARRAY_BUFFER`).
 
-
 ## Attribute Accessors
 
 When setting `Buffer` attributes, additional data can be provided to specify how the buffer should be accessed. This data can be stored directly on the `Buffer` accessor or supplied to `.setBuffer`.
 
-* `target`=`buffer.target` (*GLuint*, ) - which target to bind to
-* `size` (*GLuint*)  - number of values (components) per element (1-4)
-* `type` (*GLuint*)  - type of values (e.g. gl.FLOAT)
-* `normalized` (*boolean*, false) - normalize integers to [-1,1] or [0,1]
-* `integer` (*boolean*, false) - `WebGL 2` disable int-to-float conversion
-* `stride` (*GLuint*, 0) - supports strided arrays
-* `offset` (*GLuint*, 0) - supports strided arrays
-* `layout.normalized`=`false` (GLbool) - normalize integers to [-1,1], [0,1]
-* `layout.integer`=`false` (GLuint) - WebGL 2 only, disable int-to-float conv.
+- `target`=`buffer.target` (_GLuint_, ) - which target to bind to
+- `size` (_GLuint_) - number of values (components) per element (1-4)
+- `type` (_GLuint_) - type of values (e.g. gl.FLOAT)
+- `normalized` (_boolean_, false) - normalize integers to [-1,1] or [0,1]
+- `integer` (_boolean_, false) - `WebGL 2` disable int-to-float conversion
+- `stride` (_GLuint_, 0) - supports strided arrays
+- `offset` (_GLuint_, 0) - supports strided arrays
+- `layout.normalized`=`false` (GLbool) - normalize integers to [-1,1], [0,1]
+- `layout.integer`=`false` (GLuint) - WebGL 2 only, disable int-to-float conv.
 
-* `divisor` - Sets the frequency divisor used for instanced rendering (instances that pass between updates of attribute). Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
-
+- `divisor` - Sets the frequency divisor used for instanced rendering (instances that pass between updates of attribute). Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
 
 ## Notes about Integer Attributes
 
-* The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
-* **WebGL 2** The application can disable integer to float conversion when running under WebGL 2, by setting the `integer` flag to `true`.
-* [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies *integer* data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
-
+- The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
+- **WebGL 2** The application can disable integer to float conversion when running under WebGL 2, by setting the `integer` flag to `true`.
+- [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies _integer_ data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
 ## Notes about Instanced Rendering
 
-* About setting `divisor` in attributes: Instanced attributes requires WebGL 2 or a (widely supported) WebGL 1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though the extension is so ubiquitously supported that many apps just make the assumption: [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays).
-* An attribute is referred to as **instanced** if its divisor value is non-zero.
-* The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
-* If divisor is zero, the attribute at slot index advances once per vertex.
-* If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
+- About setting `divisor` in attributes: Instanced attributes requires WebGL 2 or a (widely supported) WebGL 1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though the extension is so ubiquitously supported that many apps just make the assumption: [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays).
+- An attribute is referred to as **instanced** if its divisor value is non-zero.
+- The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
+- If divisor is zero, the attribute at slot index advances once per vertex.
+- If divisor is non-zero, the attribute advances once per divisor instances of the set(s) of vertices being rendered.
 
-## Notes about setting *mat* type attributes
+## Notes about setting _mat_ type attributes
 
-* Setting a **mat** type in the shader requires to manually add an *offset* to the location.
-* This can be done by using special name format `name__LOCATION_0`. This will add 0 to the *LOCATION* resulting in no change. `name__LOCATION_1` will add **1**.
-* For example:
-  * if we have the following declaration in the shader:
+- Setting a **mat** type in the shader requires to manually add an _offset_ to the location.
+- This can be done by using special name format `name__LOCATION_0`. This will add 0 to the _LOCATION_ resulting in no change. `name__LOCATION_1` will add **1**.
+- For example:
+  - if we have the following declaration in the shader:
+
 ```
 attribute mat4 matrix;
 ```
-  * We should specify `matrix__LOCATION_0`, `matrix__LOCATION_1`, `matrix__LOCATION_2` **and** `matrix__LOCATION_3` as *vec4*.
+
+- We should specify `matrix__LOCATION_0`, `matrix__LOCATION_1`, `matrix__LOCATION_2` **and** `matrix__LOCATION_3` as _vec4_.

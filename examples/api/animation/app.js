@@ -1,5 +1,3 @@
-/* global document */
-
 import {AnimationLoop, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/engine';
 import {setParameters} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
@@ -206,7 +204,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-/* global window */
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

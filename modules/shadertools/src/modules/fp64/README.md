@@ -2,19 +2,18 @@
 
 Provides basic 64-bit math support in GPU shaders:
 
-| Function                        | Description           |
-| ------------------------------- | --------------------- |
-| vec2 `add_fp64`(vec2 a, vec2 b) | |
-| vec2 `sub_fp64`(vec2 a, vec2 b) | |
-| vec2 `mul_fp64`(vec2 a, vec2 b) | |
-| vec2 `div_fp64`(vec2 a, vec2 b) | |
-| vec2 `sqrt_fp64`(vec2 a)        | |
-| vec2 `exp_fp64`(vec2 a)         | |
-| vec2 `log_fp64`(vec2 a)         | |
-| vec2 `sin_fp64`(vec2 a)         | |
-| vec2 `cos_fp64`(vec2 a)         | |
-| vec2 `tan_fp64`(vec2 a)         | |
-
+| Function                        | Description |
+| ------------------------------- | ----------- |
+| vec2 `add_fp64`(vec2 a, vec2 b) |             |
+| vec2 `sub_fp64`(vec2 a, vec2 b) |             |
+| vec2 `mul_fp64`(vec2 a, vec2 b) |             |
+| vec2 `div_fp64`(vec2 a, vec2 b) |             |
+| vec2 `sqrt_fp64`(vec2 a)        |             |
+| vec2 `exp_fp64`(vec2 a)         |             |
+| vec2 `log_fp64`(vec2 a)         |             |
+| vec2 `sin_fp64`(vec2 a)         |             |
+| vec2 `cos_fp64`(vec2 a)         |             |
+| vec2 `tan_fp64`(vec2 a)         |             |
 
 ## Precision
 
@@ -39,6 +38,7 @@ Exponential: ~2.6 ulps
 Logarithm: ~11.6 ulps (depends on the accuracy of native log() function)
 Trigonometry: ~5 ulps
 ```
+
 Note: `ulp` = [unit of least precision](https://en.wikipedia.org/wiki/Unit_in_the_last_place)
 
 ## Performance Implications

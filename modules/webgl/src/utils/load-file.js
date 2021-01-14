@@ -1,4 +1,3 @@
-/* global fetch, Image */
 import {assert} from '../utils';
 
 let pathPrefix = '';

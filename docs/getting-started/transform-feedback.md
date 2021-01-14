@@ -12,6 +12,7 @@ import {Buffer, clear} from '@luma.gl/webgl';
 ```
 
 Then we'll define our shaders, which we'll write in GLSL ES 3.0 since we're using WebGL 2:
+
 ```js
 const transformVs = `\
 #version 300 es
@@ -55,10 +56,11 @@ void main() {
 }
 `;
 ```
+
 Internally, we'll be using two separate programs, one for transform feedback and the other for rendering, so we define shaders for both. By default, the `Transform` class will skip rasterization and doesn't require a fragment shader since transform feedback is an operation on vertex data. We define a vertex shader for a transform feedback pass that simply rotates each vertex by 2 degrees in the xy-plane. The rendering vertex and fragment shaders are identical to the ones used in the [Hello Triangle](/docs/getting-started/hello-triangle) tutorial aside from being written in GLSL ES 3.0.
 
-
 In `onInitialize`, we create our `Transform` instance:
+
 ```js
   onInitialize({gl}) {
     const positionBuffer = new Buffer(gl, new Float32Array([
@@ -110,9 +112,11 @@ Finally, we create a model instance to perform the rendering:
     return {transform, model};
   }
 ```
+
 We set up the `Model` similarly to how we've done in other tutorials, with the exception that the `position` attribute is backed by the `vPosition` output buffer created by the `Transform`.
 
 Our `onRender` involves a few additional steps compared to what we've seen before:
+
 ```js
   onRender({gl, transform, model}) {
     transform.run();
@@ -127,7 +131,8 @@ Our `onRender` involves a few additional steps compared to what we've seen befor
     transform.swap();
   }
 ```
-First, we run the transform feedback to write the rotated positions to the `vPosition` output buffer. We then  bind the `Model`'s `position` attribute to the `vPosition` output buffer from the last transform pass and draw. Finally, we swap the input and output buffers in the transform so that the newly rotated positions will be used as input for the next pass, allowing the animation to continue.
+
+First, we run the transform feedback to write the rotated positions to the `vPosition` output buffer. We then bind the `Model`'s `position` attribute to the `vPosition` output buffer from the last transform pass and draw. Finally, we swap the input and output buffers in the transform so that the newly rotated positions will be used as input for the next pass, allowing the animation to continue.
 
 If all went well, you should see a tri-color triangle rotating on the screen. A live demo is available [here](/examples/getting-started/transform-feedback), and the complete application is listed below for reference:
 
@@ -179,11 +184,7 @@ void main() {
 
 const loop = new AnimationLoop({
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([
-      -0.5, -0.5,
-      0.5, -0.5,
-      0.0, 0.5
-    ]));
+    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
     const transform = new Transform(gl, {
       vs: transformVs,
@@ -196,11 +197,10 @@ const loop = new AnimationLoop({
       elementCount: 3
     });
 
-    const colorBuffer = new Buffer(gl, new Float32Array([
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      0.0, 0.0, 1.0
-    ]));
+    const colorBuffer = new Buffer(
+      gl,
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+    );
 
     const model = new Model(gl, {
       vs: renderVs,
@@ -227,4 +227,3 @@ const loop = new AnimationLoop({
 
 loop.start();
 ```
-

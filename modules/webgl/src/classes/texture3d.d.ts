@@ -1,4 +1,4 @@
-import Texture from "@luma.gl/webgl/classes/texture";
+import Texture from '@luma.gl/webgl/classes/texture';
 
 export default class Texture3D extends Texture {
   static isSupported(gl: WebGLRenderingContext): boolean;

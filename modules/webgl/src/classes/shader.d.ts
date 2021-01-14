@@ -1,11 +1,9 @@
-import Resource from "@luma.gl/webgl/classes/resource";
+import Resource from '@luma.gl/webgl/classes/resource';
 
 export class Shader extends Resource {
-  static getTypeName(
-    shaderType: any
-  ): "vertex-shader" | "fragment-shader" | "unknown";
+  static getTypeName(shaderType: any): 'vertex-shader' | 'fragment-shader' | 'unknown';
   constructor(gl: WebGLRenderingContext, props: object);
-  initialize(options: { source: string }): void;
+  initialize(options: {source: string}): void;
   getParameter(pname: any): any;
   toString(): string;
   getName(): any;

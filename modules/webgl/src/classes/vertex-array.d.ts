@@ -1,5 +1,5 @@
-import ProgramConfiguration from "./program-configuration";
-import VertexArrayObject from "./vertex-array-object";
+import ProgramConfiguration from './program-configuration';
+import VertexArrayObject from './vertex-array-object';
 
 export default class VertexArray {
   constructor(gl: WebGLRenderingContext, opts?: {});

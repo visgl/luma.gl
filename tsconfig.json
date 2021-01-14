@@ -35,15 +35,15 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "exclude":[
-    "modules/engine/test/**/*",
-    "modules/webgl/src/classes/**/*",
-    "modules/webgl/src/debug/**/*",
+    "modules/engine/test",
+    "modules/webgl/src/classes",
 
-    "examples/**/*",
-    "website/**/*",
-    "test/apps/**/*",
+    "**/modules/*/dist",
+
+    "examples",
+    "website",
+    "test/apps",
     "test/**/*",
-    "node_modules",
-    "**/dist/**/*"
+    "**/node_modules"
   ]
 }

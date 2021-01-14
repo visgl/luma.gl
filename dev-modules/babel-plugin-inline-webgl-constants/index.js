@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-/* global console */
 // const GL = require('luma.gl/constants');
 const GL = require('@luma.gl/constants');
 

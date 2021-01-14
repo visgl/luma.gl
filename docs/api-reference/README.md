@@ -10,9 +10,9 @@
 
 **luma.gl** also exposes a `core` module that simply re-exports key parts of the other modules. This can be helpful to just get started without worrying too much about fine-grained control of dependencies. The `core` module re-exports the following functions and classes from other modules:
 
-|Module|Exports|
-|------|-------|
-|engine|AnimationLoop, Model, Transform, ProgramManager, Timeline, Geometry, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry|
-|webgl|lumaStats, FEATURES, hasFeature, hasFeatures, Buffer, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, readPixelsToArray, readPixelsToBuffer, cloneTextureFrom, copyToTexture, Texture3D, TransformFeedback|
-|gltools|createGLContext, instrumentGLContext, isWebGL, isWebGL2, getParameters, setParameters, withParameters, resetParameters, cssToDeviceRatio, cssToDevicePixels|
-|shadertools|normalizeShaderModule, fp32, fp64, project, dirlight, picking, gouraudLighting, phongLighting, pbr|
+| Module      | Exports                                                                                                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| engine      | AnimationLoop, Model, Transform, ProgramManager, Timeline, Geometry, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry                         |
+| webgl       | lumaStats, FEATURES, hasFeature, hasFeatures, Buffer, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, readPixelsToArray, readPixelsToBuffer, cloneTextureFrom, copyToTexture, Texture3D, TransformFeedback |
+| gltools     | createGLContext, instrumentGLContext, isWebGL, isWebGL2, getParameters, setParameters, withParameters, resetParameters, cssToDeviceRatio, cssToDevicePixels                                                                   |
+| shadertools | normalizeShaderModule, fp32, fp64, project, dirlight, picking, gouraudLighting, phongLighting, pbr                                                                                                                            |

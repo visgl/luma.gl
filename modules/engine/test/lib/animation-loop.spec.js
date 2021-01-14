@@ -1,4 +1,3 @@
-/* global setTimeout */
 import {AnimationLoop} from '@luma.gl/core';
 import test from 'tape-catch';
 import {fixture} from 'test/setup';

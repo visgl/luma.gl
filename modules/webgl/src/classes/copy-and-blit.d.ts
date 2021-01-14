@@ -10,15 +10,15 @@ import Texture from './texture';
 export function readPixelsToArray(
   source: Framebuffer | Texture,
   options?: {
-    sourceX?: number,
-    sourceY?: number,
-    sourceFormat?: number,
-    sourceAttachment?: number,
-    target?: Uint8Array | Uint16Array | Float32Array,
+    sourceX?: number;
+    sourceY?: number;
+    sourceFormat?: number;
+    sourceAttachment?: number;
+    target?: Uint8Array | Uint16Array | Float32Array;
     // following parameters are auto deduced if not provided
-    sourceWidth?: number,
-    sourceHeight?: number,
-    sourceType?: number
+    sourceWidth?: number;
+    sourceHeight?: number;
+    sourceType?: number;
   }
 ): Uint8Array | Uint16Array | Float32Array;
 
@@ -27,15 +27,15 @@ export function readPixelsToArray(
 export function readPixelsToBuffer(
   source: Framebuffer | Texture,
   options?: {
-    sourceX?: number,
-    sourceY?: number,
-    sourceFormat?: number,
-    target?: Buffer, // A new Buffer object is created when not provided.
-    targetByteOffset?: number, // byte offset in buffer object
+    sourceX?: number;
+    sourceY?: number;
+    sourceFormat?: number;
+    target?: Buffer; // A new Buffer object is created when not provided.
+    targetByteOffset?: number; // byte offset in buffer object
     // following parameters are auto deduced if not provided
-    sourceWidth?: number,
-    sourceHeight?: number,
-    sourceType?: number
+    sourceWidth?: number;
+    sourceHeight?: number;
+    sourceType?: number;
   }
 ): Buffer;
 
@@ -43,17 +43,17 @@ export function readPixelsToBuffer(
 export function copyToDataUrl(
   source,
   options?: {
-    sourceAttachment?: number, // TODO - support gl.readBuffer
-    targetMaxHeight?: number
-  } 
+    sourceAttachment?: number; // TODO - support gl.readBuffer
+    targetMaxHeight?: number;
+  }
 ): string;
 
 // Reads pixels from a Framebuffer or Texture object into an HTML Image
 export function copyToImage(
   source: Framebuffer | Texture,
   options?: {
-    sourceAttachment?: number, // TODO - support gl.readBuffer
-    targetImage?: typeof Image
+    sourceAttachment?: number; // TODO - support gl.readBuffer
+    targetImage?: typeof Image;
   }
 ): typeof Image;
 
@@ -62,17 +62,17 @@ export function copyToTexture(
   source: Framebuffer | Texture,
   target: Texture,
   options?: {
-    sourceX?: number,
-    sourceY?: number,
+    sourceX?: number;
+    sourceY?: number;
 
-    targetX?: number,
-    targetY?: number,
-    targetZ?: number,
-    targetMipmaplevel?: number,
-    targetInternalFormat?: number,
+    targetX?: number;
+    targetY?: number;
+    targetZ?: number;
+    targetMipmaplevel?: number;
+    targetInternalFormat?: number;
 
-    width?: number, // defaults to target width
-    height?: number // defaults to target height
+    width?: number; // defaults to target width
+    height?: number; // defaults to target height
   }
 ): Texture;
 
@@ -83,19 +83,19 @@ export function blit(
   source,
   target,
   options: {
-    sourceAttachment?: number,
-    sourceX0?: number,
-    sourceY0?: number,
-    sourceX1?: number,
-    sourceY1?: number,
-    targetX0?: number,
-    targetY0?: number,
-    targetX1?: number,
-    targetY1?: number,
-    color?: boolean,
-    depth?: boolean,
-    stencil?: boolean,
-    mask?: number,
-    filter?: number
+    sourceAttachment?: number;
+    sourceX0?: number;
+    sourceY0?: number;
+    sourceX1?: number;
+    sourceY1?: number;
+    targetX0?: number;
+    targetY0?: number;
+    targetX1?: number;
+    targetY1?: number;
+    color?: boolean;
+    depth?: boolean;
+    stencil?: boolean;
+    mask?: number;
+    filter?: number;
   }
 ): void;

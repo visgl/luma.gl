@@ -12,9 +12,8 @@ export type TestRunnerOptions = {
   onTestFail?: any;
 
   // milliseconds to wait for each test case before aborting
-  timeout?: number
+  timeout?: number;
 };
-
 
 export default class TestRunner {
   readonly testOptions: object;

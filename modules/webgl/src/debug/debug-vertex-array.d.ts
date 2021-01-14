@@ -1,5 +1,1 @@
-export function getDebugTableForVertexArray(options?: {
-  vertexArray: any;
-  header?: string;
-}): {};
-
+export function getDebugTableForVertexArray(options?: {vertexArray: any; header?: string}): {};

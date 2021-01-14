@@ -89,7 +89,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-/* global window */
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

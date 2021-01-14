@@ -45,11 +45,10 @@ main() {
 
 `getUniforms({pickingActive, ...})`
 
-* `pickingActive`=`false` (*boolean*) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
-* `pickingSelectedColor`=`null` (*array|null*) - The picking color of the selected (highlighted) object.
-* `pickingHighlightColor`= `[0, 255, 255, 255]` (*array*) - Color used to highlight the currently selected object.
-* `pickingAttribute`=`false` (*boolean*) - Renders a color that encodes an attribute value. Normally only used with an off-screen framebuffer during picking.
-
+- `pickingActive`=`false` (_boolean_) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
+- `pickingSelectedColor`=`null` (_array|null_) - The picking color of the selected (highlighted) object.
+- `pickingHighlightColor`= `[0, 255, 255, 255]` (_array_) - Color used to highlight the currently selected object.
+- `pickingAttribute`=`false` (_boolean_) - Renders a color that encodes an attribute value. Normally only used with an off-screen framebuffer during picking.
 
 ### Vertex Shader Functions
 
@@ -83,4 +82,4 @@ Returns picking highlight color if the pixel belongs to currently selected model
 
 ### Remarks
 
-* It is strongly recommended that `picking_filterPickingColor` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
+- It is strongly recommended that `picking_filterPickingColor` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.

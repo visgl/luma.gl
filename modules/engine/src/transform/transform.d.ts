@@ -19,7 +19,7 @@ export default class Transform {
   swap(): void;
   getBuffer(varyingName?: any): any;
   // TODO - mix of options for buffers and textures
-  getData(opts?: {packed?: boolean, varyingName?: string}): any;
+  getData(opts?: {packed?: boolean; varyingName?: string}): any;
   getFramebuffer(): any;
   update(opts?: TransformProps): void;
 }

@@ -24,8 +24,8 @@ export function processAttributeDefinition(
 ): {
   updatedLine: string;
   inject: {
-    "vs:#decl": string;
-    "vs:#main-start": string;
+    'vs:#decl': string;
+    'vs:#main-start': string;
   };
   samplerTextureMap: {};
 };

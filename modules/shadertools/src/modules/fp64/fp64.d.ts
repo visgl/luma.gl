@@ -5,9 +5,9 @@ import {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 
 /** */
 export type FP64ShaderModule = ShaderModule & {
-  fp64ify: typeof fp64ify,
-  fp64LowPart: typeof fp64LowPart,
-  fp64ifyMatrix4: typeof fp64ifyMatrix4
+  fp64ify: typeof fp64ify;
+  fp64LowPart: typeof fp64LowPart;
+  fp64ifyMatrix4: typeof fp64ifyMatrix4;
 };
 
 // JavaScript utilities

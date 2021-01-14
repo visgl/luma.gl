@@ -20,23 +20,16 @@ document.body.appendChild(canvas);
 
 const gl = instrumentGLContext(canvas.getContext('webgl'));
 ```
+
 This performs some polyfilling (done by `polyfillContext`, which we saw in the [Hello Instancing Low-level tutorial](/docs/getting-started/hello-instancing-low)) and tracks some additional metadata on the context, ensuring it will work properly with the rest of luma.gl. With that done, we simply create our luma.gl objects and draw as we did in the original example, with the sole difference being we create our own render loop using `requestAnimationFrame` rather than using the `AnimationLoop` callbacks.
 
 ```js
 const gl = instrumentGLContext(canvas.getContext('webgl'));
 gl.clearColor(0, 0, 0, 1);
 
-const positionBuffer = new Buffer(gl, new Float32Array([
-  -0.5, -0.5,
-  0.5, -0.5,
-  0.0, 0.5
-]));
+const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-const colorBuffer = new Buffer(gl, new Float32Array([
-  1.0, 0.0, 0.0,
-  0.0, 1.0, 0.0,
-  0.0, 0.0, 1.0
-]));
+const colorBuffer = new Buffer(gl, new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
 // ...
 
@@ -73,17 +66,9 @@ document.body.appendChild(canvas);
 const gl = instrumentGLContext(canvas.getContext('webgl'));
 gl.clearColor(0, 0, 0, 1);
 
-const positionBuffer = new Buffer(gl, new Float32Array([
-  -0.5, -0.5,
-  0.5, -0.5,
-  0.0, 0.5
-]));
+const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-const colorBuffer = new Buffer(gl, new Float32Array([
-  1.0, 0.0, 0.0,
-  0.0, 1.0, 0.0,
-  0.0, 0.0, 1.0
-]));
+const colorBuffer = new Buffer(gl, new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
 const vs = `
  attribute vec2 position;

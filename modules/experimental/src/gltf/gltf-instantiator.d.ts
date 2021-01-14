@@ -1,6 +1,6 @@
-import GroupNode from "../scenegraph/group-node";
-import ModelNode from "../scenegraph/model-node";
-import GLTFAnimator from "./gltf-animator";
+import GroupNode from '../scenegraph/group-node';
+import ModelNode from '../scenegraph/model-node';
+import GLTFAnimator from './gltf-animator';
 
 export default class GLTFInstantiator {
   constructor(gl: WebGLRenderingContext, options?: {});

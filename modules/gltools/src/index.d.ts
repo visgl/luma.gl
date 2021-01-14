@@ -1,6 +1,12 @@
 // Utils
 export {log} from './utils/log';
-export {isWebGL, isWebGL2, getWebGL2Context, assertWebGLContext, assertWebGL2Context} from './utils/webgl-checks';
+export {
+  isWebGL,
+  isWebGL2,
+  getWebGL2Context,
+  assertWebGLContext,
+  assertWebGL2Context
+} from './utils/webgl-checks';
 
 // Polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
 export {polyfillContext} from './polyfill/polyfill-context';

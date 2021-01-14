@@ -1,5 +1,3 @@
-/* global document */
-
 export function createEnterVRButton({canvas, title}) {
   const {top, left, width, height} = canvas.getBoundingClientRect();
 

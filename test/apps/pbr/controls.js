@@ -1,5 +1,3 @@
-/* global document */
-
 // ***** Mouse Controls ***** //
 // eslint-disable-next-line
 class Controls {

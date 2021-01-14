@@ -5,7 +5,7 @@ export type GLTFMaterialParserProps = {
   imageBasedLightingEnvironment: any;
   lights: any;
   useTangents: any;
-}
+};
 
 export default class GLTFMaterialParser {
   readonly defines: object;

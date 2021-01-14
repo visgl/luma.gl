@@ -1,4 +1,4 @@
-import ScenegraphNode from "./scenegraph-node";
+import ScenegraphNode from './scenegraph-node';
 
 export default class GroupNode extends ScenegraphNode {
   readonly children: ScenegraphNode[];

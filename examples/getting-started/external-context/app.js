@@ -1,4 +1,3 @@
-/* global window, requestAnimationFrame, cancelAnimationFrame */
 import 'core-js';
 import {Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';

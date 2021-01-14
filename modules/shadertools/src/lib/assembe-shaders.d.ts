@@ -16,7 +16,10 @@ export type AssembleShaderOptions = {
   log: any;
 };
 
-export function assembleShaders(gl: WebGLRenderingContext, opts: AssembleShaderOptions): {
+export function assembleShaders(
+  gl: WebGLRenderingContext,
+  opts: AssembleShaderOptions
+): {
   gl: WebGLRenderingContext;
   vs: string;
   fs: string;

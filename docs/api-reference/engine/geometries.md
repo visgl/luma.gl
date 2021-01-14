@@ -5,6 +5,7 @@
 ## ConeGeometry
 
 Create a `ConeGeometry` of base radius 2 and height 3.
+
 ```js
 import {ConeGeometry} from '@luma.gl/engine';
 const cone = new ConeGeometry({
@@ -16,11 +17,10 @@ const cone = new ConeGeometry({
 
 ### constructor(props : Object)
 
-- `props.radius` (*number*): The radius of the base of the cone.
-- `props.cap`=`false` (*boolean*, optional): Whether to put the cap on the base of the cone.
-- `props.nradial`=`10` (*number*): Number of vertices used to create the disk for a given height.
-- `props.nvertical`=`10` (*number*): Number of vertices for the height.
-
+- `props.radius` (_number_): The radius of the base of the cone.
+- `props.cap`=`false` (_boolean_, optional): Whether to put the cap on the base of the cone.
+- `props.nradial`=`10` (_number_): Number of vertices used to create the disk for a given height.
+- `props.nvertical`=`10` (_number_): Number of vertices for the height.
 
 ## CubeGeometry
 
@@ -28,7 +28,6 @@ const cone = new ConeGeometry({
 import {CubeGeometry} from '@luma.gl/engine';
 const cube = new CubeGeometry();
 ```
-
 
 ## CylinderGeometry
 
@@ -44,15 +43,14 @@ const cylinder = new CylinderGeometry({
 
 ### constructor(props : Object)
 
-* `props.height`= - (*number*) The height of the cylinder.
-* `props.radius`= - (*number*) The radius of the cylinder.
-* `props.nradial`=`10` - (*number*) The number of vertices for the disk.
-* `props.nvertical`=`10` - (*number*) The number of vertices for the height.
-* `props.verticalAxis`=`y` - (*string*) The axis along which the height is measured. One of `x`, `y`, `z`.
-* `props.topCap`=`false` - (*boolean*) Whether to put the cap on the top of the cylinder.
-* `props.bottomCap`=`false` - (*boolean*) Whether to put the cap on the bottom
+- `props.height`= - (_number_) The height of the cylinder.
+- `props.radius`= - (_number_) The radius of the cylinder.
+- `props.nradial`=`10` - (_number_) The number of vertices for the disk.
+- `props.nvertical`=`10` - (_number_) The number of vertices for the height.
+- `props.verticalAxis`=`y` - (_string_) The axis along which the height is measured. One of `x`, `y`, `z`.
+- `props.topCap`=`false` - (_boolean_) Whether to put the cap on the top of the cylinder.
+- `props.bottomCap`=`false` - (_boolean_) Whether to put the cap on the bottom
   part of the cylinder.
-
 
 ## IcoSphereGeometry
 
@@ -67,12 +65,12 @@ const sphere = new IcoSphereGeometry({
 
 ### constructor(props : Object)
 
-* `props.iterations`=`0` - (*number*) The number of iterations used to subdivide the Icosahedron.
-
+- `props.iterations`=`0` - (_number_) The number of iterations used to subdivide the Icosahedron.
 
 ## PlaneGeometry
 
 Create a XZ plane.
+
 ```js
 import {PlaneGeometry} from '@luma.gl/engine';
 const plane = new PlaneGeometry({
@@ -87,14 +85,14 @@ const plane = new PlaneGeometry({
 
 ### constructor(props : Object)
 
-* `props.type` - (*string*) Whether is a XY, YZ or XZ plane. Possible values are `x,y`, `x,z`, `y,z`.
-* `props.xlen` - (*number*) The length along the x-axis. Only used in `x,z` or `x,y` planes.
-* `props.ylen` - (*number*) The length along the y-axis. Only used in `y,z` or `x,y` planes.
-* `props.zlen` - (*number*) The length along the z-axis. Only used in `x,z` or `y,z` planes.
-* `props.nx` - (*number*) The number of subdivisions along the x-axis. Only used in `x,z` or `x,y` planes.
-* `props.ny` - (*number*) The number of subdivisions along the y-axis. Only used in `y,z` or `x,y` planes.
-* `props.nz` - (*number*) The number of subdivisions along the z-axis. Only used in `x,z` or `y,z` planes.
-* `props.offset` - (*number*) For XZ planes, the offset along the y-axis. For XY planes, the offset along the z-axis. For YZ planes, the offset along the x-axis.
+- `props.type` - (_string_) Whether is a XY, YZ or XZ plane. Possible values are `x,y`, `x,z`, `y,z`.
+- `props.xlen` - (_number_) The length along the x-axis. Only used in `x,z` or `x,y` planes.
+- `props.ylen` - (_number_) The length along the y-axis. Only used in `y,z` or `x,y` planes.
+- `props.zlen` - (_number_) The length along the z-axis. Only used in `x,z` or `y,z` planes.
+- `props.nx` - (_number_) The number of subdivisions along the x-axis. Only used in `x,z` or `x,y` planes.
+- `props.ny` - (_number_) The number of subdivisions along the y-axis. Only used in `y,z` or `x,y` planes.
+- `props.nz` - (_number_) The number of subdivisions along the z-axis. Only used in `x,z` or `y,z` planes.
+- `props.offset` - (_number_) For XZ planes, the offset along the y-axis. For XY planes, the offset along the z-axis. For YZ planes, the offset along the x-axis.
 
 ## SphereGeometry
 
@@ -107,6 +105,6 @@ const sphere = new SphereGeometry({
 
 ### constructor(props : Object)
 
-* `props.nlat`=`10` - (*number*, optional) The number of vertices for latitude.
-* `props.nlong`=`10` - (*number*, optional) The number of vertices for longitude.
-* `props.radius`=`1` - (*number*, optional) The radius of the sphere.
+- `props.nlat`=`10` - (_number_, optional) The number of vertices for latitude.
+- `props.nlong`=`10` - (_number_, optional) The number of vertices for longitude.
+- `props.radius`=`1` - (_number_, optional) The radius of the sphere.

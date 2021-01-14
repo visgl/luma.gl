@@ -3,7 +3,6 @@
 /** @typedef {import('./context')} types */
 
 /* eslint-disable quotes */
-/* global document, WebGL2RenderingContext */
 import GL from '@luma.gl/constants';
 import {global, isBrowser as getIsBrowser} from 'probe.gl/env';
 import {trackContextState} from '../state-tracker/track-context-state';

@@ -14,7 +14,7 @@ export function getPassthroughFS(options: {
   output?: any;
 }): string;
 
-export function typeToChannelSuffix(type: any): "x" | "xy" | "xyz" | "xyzw";
+export function typeToChannelSuffix(type: any): 'x' | 'xy' | 'xyz' | 'xyzw';
 
 export function typeToChannelCount(type: any): 2 | 1 | 3 | 4;
 

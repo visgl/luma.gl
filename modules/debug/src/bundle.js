@@ -1,4 +1,3 @@
-/* global window, global */
 const moduleExports = require('./index');
 
 const _global = typeof window === 'undefined' ? global : window;

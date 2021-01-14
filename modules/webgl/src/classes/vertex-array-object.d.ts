@@ -1,5 +1,4 @@
-import Resource from "./resource";
-
+import Resource from './resource';
 export default class VertexArrayObject extends Resource {
   static isSupported(gl: WebGLRenderingContext, options?: {}): boolean;
   static getDefaultArray(gl: WebGLRenderingContext): any;

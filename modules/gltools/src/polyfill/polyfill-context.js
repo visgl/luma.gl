@@ -36,7 +36,6 @@ export function polyfillContext(gl) {
 }
 
 // TODO - is this still required?
-/* global window, global */
 const global_ = typeof global !== 'undefined' ? global : window;
 // @ts-ignore
 global_.polyfillContext = polyfillContext;

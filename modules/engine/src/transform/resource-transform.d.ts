@@ -7,7 +7,6 @@ export type TransformDrawOptions = {
   transformFeedback?: any;
 };
 
-
 export type TransformModelProps = {
   vs: any;
   fs: any;

@@ -1,4 +1,3 @@
-/* global document */
 /* eslint-disable max-len */
 import test from 'tape-catch';
 

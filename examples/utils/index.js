@@ -1,5 +1,3 @@
-/* global window, document */
-
 // Light class implementing the AnimationLoop interface
 // use by examples w/o creating a gl context
 export class MiniAnimationLoop {

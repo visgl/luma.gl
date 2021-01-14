@@ -1,4 +1,3 @@
-/* global window */
 import TestRunner from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 

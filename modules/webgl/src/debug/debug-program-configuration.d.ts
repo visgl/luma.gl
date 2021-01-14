@@ -1,3 +1,1 @@
-export function getDebugTableForProgramConfiguration(
-  config: any
-): {};
+export function getDebugTableForProgramConfiguration(config: any): {};
