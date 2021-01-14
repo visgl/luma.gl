@@ -1,3 +1,6 @@
+## v8.3.3
+- webgl: texture - support compressed textures (#1434)
+
 ## v8.3.2
 
 - Fix typo (#1416)
