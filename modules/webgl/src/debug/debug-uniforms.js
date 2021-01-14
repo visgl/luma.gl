@@ -7,7 +7,7 @@ export function getDebugTableForUniforms({
   program,
   uniforms,
   undefinedOnly = false
-} = {}) {
+}) {
   assert(program);
 
   const SHADER_MODULE_UNIFORM_REGEXP = '.*_.*';

@@ -4,7 +4,7 @@ export default class Resource {
   constructor(gl: WebGLRenderingContext, opts?: {});
   toString(): string;
   get handle(): any;
-  delete({ deleteChildren }?: { deleteChildren?: boolean }): this;
+  delete({deleteChildren}?: {deleteChildren?: boolean}): this;
   bind(funcOrHandle?: any): any;
   unbind(): void;
   /**
@@ -29,6 +29,6 @@ export default class Resource {
   stubRemovedMethods(className: any, version: any, methodNames: any): void;
   initialize(opts: any): void;
 
-  _trackAllocatedMemory(bytes: number, name?: string): void
-  _trackDeallocatedMemory(name?: string): void
+  _trackAllocatedMemory(bytes: number, name?: string): void;
+  _trackDeallocatedMemory(name?: string): void;
 }

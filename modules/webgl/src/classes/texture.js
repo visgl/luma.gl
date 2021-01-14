@@ -647,7 +647,6 @@ export default class Texture extends Resource {
     return {dataFormat, type, compressed, width, height, format, data};
   }
 
-  /* global ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement, ImageBitmap */
   // eslint-disable-next-line complexity
   _deduceImageSize(data, width, height) {
     let size;

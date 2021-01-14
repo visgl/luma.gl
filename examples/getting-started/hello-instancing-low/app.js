@@ -1,4 +1,3 @@
-/* global window, requestAnimationFrame, cancelAnimationFrame */
 import 'core-js';
 import {polyfillContext} from '@luma.gl/gltools';
 import {MiniAnimationLoop} from '../../utils';

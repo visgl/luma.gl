@@ -10,7 +10,7 @@ export function setParameters(gl: WebGLRenderingContext, values: object): void;
  * considered a very slow operation, to be used only if/when a context already manipulated
  * by external code needs to be synchronized for the first time
  * @returns - a newly created map, with values keyed by GL parameters
-*/
+ */
 export function getParameters(gl: WebGLRenderingContext, parameters?: object): object;
 export function getParameters(gl: WebGLRenderingContext, parameters: number): any;
 
@@ -31,8 +31,4 @@ export function resetParameters(gl: WebGLRenderingContext): void;
  * - Restores parameters
  * - Returns the return value of the supplied function
  */
-export function withParameters(
-  gl: WebGLRenderingContext,
-  parameters: object,
-  func: any
-): any;
+export function withParameters(gl: WebGLRenderingContext, parameters: object, func: any): any;

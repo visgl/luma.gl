@@ -8,6 +8,6 @@ export default class BufferTransform {
   swap(): boolean;
   update(opts?: {}): void;
   getBuffer(varyingName: any): any;
-  getData(options?: { varyingName: string }): any;
+  getData(options?: {varyingName: string}): any;
   delete(): void;
 }

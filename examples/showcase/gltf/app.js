@@ -1,5 +1,4 @@
 /* eslint-disable camelcase */
-/* global document, window */
 import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {GLTFLoader} from '@loaders.gl/gltf';

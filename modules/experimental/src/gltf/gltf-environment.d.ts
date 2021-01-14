@@ -7,11 +7,7 @@ export default class GLTFEnvironment {
       specularMipLevels?: number;
     }
   );
-  makeCube(options: {
-    id: any;
-    getTextureForFace: any;
-    parameters: any;
-  }): any;
+  makeCube(options: {id: any; getTextureForFace: any; parameters: any}): any;
   getDiffuseEnvSampler(): any;
   getSpecularEnvSampler(): any;
   getBrdfTexture(): any;

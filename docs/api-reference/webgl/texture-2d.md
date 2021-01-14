@@ -4,10 +4,10 @@
 
 Most texture related functionality is implemented by and documented on the [Texture](/docs/api-reference/webgl/texture) base class. For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
-
 ## Usage
 
 Construct a new texture from an image
+
 ```js
 const texture = new Texture2D(gl, {
   data: image,
@@ -16,19 +16,20 @@ const texture = new Texture2D(gl, {
     [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
   },
   pixelStore: {
-    [GL.UNPACK_FLIP_Y_WEBGL]: true,
+    [GL.UNPACK_FLIP_Y_WEBGL]: true
   },
   mipmaps: true
 });
 ```
 
 Construct a texture initialized with a data array
+
 ```js
 const texture = new Texture2D(gl, {
   width: 2,
   height: 1,
   format: GL.RGB,
-  data: new Uint8Array([255, 0, 0,  0, 0, 255]),
+  data: new Uint8Array([255, 0, 0, 0, 0, 255]),
   parameters: {
     [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
     [GL.TEXTURE_MIN_FILTER]: GL.NEAREST
@@ -41,21 +42,25 @@ const texture = new Texture2D(gl, {
 ```
 
 Construct an empty 1x1 texture
+
 ```js
 const texture = new Texture2D(gl);
 ```
 
 Resize it (this clears the texture).
+
 ```js
 texture.resize({width: 10, height: 10});
 ```
 
 Write a sub image into the texture
+
 ```js
 texture.setSubImageData({pixels, x, y, width, height, level, type, dataFormat});
 ```
 
 Accessing elements
+
 ```js
 console.log(
   texture2D.width,
@@ -93,21 +98,21 @@ import {loadImage} from '@loaders.gl/core';
 const texture1 = new Texture2D(gl, loadImage(url));
 // equivalent to
 const texture1 = new Texture2D(gl, {data: loadImage(url)});
-
 ```
 
-* `gl` (WebGLRenderingContext) - gl context
-* `data`=null (*) - If not provided (null), a solid color texture will be allocated of the specified size.
-* `width`=`0` (*Number*) - The width of the texture.
-* `height`=`0` (*Number*) - The height of the texture.
-* `mipmaps`= - (*Boolean*) - Generates mipmaps when true.
-* `format`=`GL.RGBA` (*GLenum* ) - internal format that WebGL should use.
-* `type`= (*enum*) - type of pixel data (`GL.UNSIGNED_BYTE`, `GL.FLOAT` etc). Default is autodeduced from `format`.
-* `dataFormat`= (*GLenum*) - internal format that WebGL should use. Default is autodeduced from `format`.
-* `parameters`=`{}` (*object*) - map of texture sampler parameters.
-* `pixelStore`=`{}` (*object*) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
+- `gl` (WebGLRenderingContext) - gl context
+- `data`=null (\*) - If not provided (null), a solid color texture will be allocated of the specified size.
+- `width`=`0` (_Number_) - The width of the texture.
+- `height`=`0` (_Number_) - The height of the texture.
+- `mipmaps`= - (_Boolean_) - Generates mipmaps when true.
+- `format`=`GL.RGBA` (_GLenum_ ) - internal format that WebGL should use.
+- `type`= (_enum_) - type of pixel data (`GL.UNSIGNED_BYTE`, `GL.FLOAT` etc). Default is autodeduced from `format`.
+- `dataFormat`= (_GLenum_) - internal format that WebGL should use. Default is autodeduced from `format`.
+- `parameters`=`{}` (_object_) - map of texture sampler parameters.
+- `pixelStore`=`{}` (_object_) - map of pixel store parameters (controls how `data` is interpreted when Textures are initialized from memory)
 
 Notes:
-* setting `mipmaps` to true when `format` set to `RGB32F` will fail, even though `RGB32F` is supported texture format (with EXT_color_buffer_float), it is not supported as renderable format.
+
+- setting `mipmaps` to true when `format` set to `RGB32F` will fail, even though `RGB32F` is supported texture format (with EXT_color_buffer_float), it is not supported as renderable format.
 
 Note that since many of the constructor parameters are common to all the `Texture` classes they are detailed in [`Texture`](/docs/api-reference/webgl/texture). Pixel store parameters are specified in [State Management](/docs/api-reference/gltools/parameter-setting)

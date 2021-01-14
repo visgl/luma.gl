@@ -1,7 +1,7 @@
 import {ShaderPass} from '../../types';
 
 /**
- * Color Halftone - 
+ * Color Halftone -
  * Simulates a CMYK halftone rendering of the image by multiplying pixel values
  * with a four rotated 2D sine wave patterns, one each for cyan, magenta, yellow,
  * and black.

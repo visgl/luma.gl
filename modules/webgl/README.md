@@ -2,14 +2,11 @@
 
 This module contains a set of JavaScript class wrappers for the WebGL2 API.
 
-
-
 # webgl-utils
 
 This luma.gl sub-module contains a number of completely generic WebGL helper functions that luma.gl relies on. They are independent of the luma.gl API and of each other, and could possibly be of generic interest for other webgl programs or frameworks that don't want to use luma.gl itself.
 
 Since all luma.gl code is MIT licensed you are of course welcome to copy these into your projects should you find them helpful.
-
 
 ## Canvas Management
 
@@ -27,17 +24,16 @@ Programatically creates a canvas element with a certain size and id, and inserts
 
 Gives a controlled interface to create a WebGL1 or WebGL2 context from a canvas.
 
-
 ## GLSL Error Parser
 
 ### formatGLSLError
 
 A formatter for parsing errors and warnings from the GLSL compiler. see `parseGLSLError`.
 
-* `errLog` (String) - error log (from `gl.getShaderInfoLog`)
-* `src` (String) - original shader source code
-* `shaderType` (Number) - shader type (GL constant)
-Return (String) - Formatted string, has the error marked inline with src.
+- `errLog` (String) - error log (from `gl.getShaderInfoLog`)
+- `src` (String) - original shader source code
+- `shaderType` (Number) - shader type (GL constant)
+  Return (String) - Formatted string, has the error marked inline with src.
 
 ### parseGLSLError
 
@@ -45,11 +41,10 @@ A parse for GLSL compiler error logs. Note that the format of the error logs gen
 
 This function formats each GLSL shader compiler error or warning and generates text showing the source code around the error with marks pointing out where the issue was encountered.
 
-* `errLog` (String) - error log (from `gl.getShaderInfoLog`)
-* `src` (String) - original shader source code
-* `shaderType` (Number) - shader type (GL constant)
-Return (object) - with `shaderName`, `errors` and `warnings` fields (all strings).
-
+- `errLog` (String) - error log (from `gl.getShaderInfoLog`)
+- `src` (String) - original shader source code
+- `shaderType` (Number) - shader type (GL constant)
+  Return (object) - with `shaderName`, `errors` and `warnings` fields (all strings).
 
 ## WebGL Constants
 
@@ -57,19 +52,19 @@ Return (object) - with `shaderName`, `errors` and `warnings` fields (all strings
 
 All WebGL2 and extension constants exported as a single namespace `GL`. Allows constants to be referenced without tracking which version of WebGL or what extensions are available.
 
-
 ### getKeyValue
 
 Resolves a WebGL enumeration `name` (returns itself if already a number)
 
 `getKeyValue(gl, name)`
-* `gl` (WebGLRenderingContext) - gl context
-* `name` (String)
 
+- `gl` (WebGLRenderingContext) - gl context
+- `name` (String)
 
 ### getKeyValue
 
 Returns a key that matches the number.
 
 `getKey(gl, value)`
-* `gl` (WebGLRenderingContext) - gl context
+
+- `gl` (WebGLRenderingContext) - gl context

@@ -1,5 +1,5 @@
 type TypedArrayConstructor =
-  Float32ArrayConstructor
+  | Float32ArrayConstructor
   | Uint16ArrayConstructor
   | Uint32ArrayConstructor
   | Uint8ArrayConstructor
@@ -10,9 +10,12 @@ type TypedArrayConstructor =
 
 export function getGLTypeFromTypedArray(arrayOrType: any): any;
 
-export function getTypedArrayFromGLType(glType: any, options?: {
-  clamped?: boolean;
-}): TypedArrayConstructor;
+export function getTypedArrayFromGLType(
+  glType: any,
+  options?: {
+    clamped?: boolean;
+  }
+): TypedArrayConstructor;
 
 export function flipRows(options: {
   data: any;

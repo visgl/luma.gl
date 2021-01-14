@@ -1,4 +1,4 @@
-import Resource from "./resource";
+import Resource from './resource';
 import ProgramConfiguration from './program-configuration';
 
 export default class Program extends Resource {

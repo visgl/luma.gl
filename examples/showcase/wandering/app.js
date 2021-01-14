@@ -1,4 +1,3 @@
-/* global window */
 import {Buffer, readPixelsToArray, Framebuffer} from '@luma.gl/webgl';
 import {picking} from '@luma.gl/shadertools';
 import {AnimationLoop, Model, Transform} from '@luma.gl/engine';

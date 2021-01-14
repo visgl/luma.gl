@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import drawModel from './draw-model';
-/* global document */
 
 /* Draws WebGL style wireframe in a 2d canvas */
 export default class DebugContext {
@@ -8,7 +7,6 @@ export default class DebugContext {
     this.sourceCanvas = sourceCanvas;
 
     const container = sourceCanvas.offsetParent;
-    /* global window */
     const containerStyle = window.getComputedStyle(container);
     if (containerStyle.position === 'static') {
       container.style.position = 'relative';

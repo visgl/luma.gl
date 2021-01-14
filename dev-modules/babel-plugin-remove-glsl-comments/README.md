@@ -2,7 +2,6 @@
 
 Remove comments in glsl shader source.
 
-
 ## Example
 
 #### in
@@ -30,7 +29,8 @@ main() {
 
 ```js
 // vertex.glsl.js
-const vs = '\nuniform mat4 viewMatrix;\nuniform mat4 projectionMatrix;\nuniform mat3 modelMatrix;\n\nattribute vec3 positions;\nattribute vec3 instancePositions;\n\nmain() {\n  vec4 worldPosition = vec4(instancePositions + modelMatrix * positions, 1.);\n  gl_Position = projectionMatrix * viewMatrix * worldPosition;\n}\n';
+const vs =
+  '\nuniform mat4 viewMatrix;\nuniform mat4 projectionMatrix;\nuniform mat3 modelMatrix;\n\nattribute vec3 positions;\nattribute vec3 instancePositions;\n\nmain() {\n  vec4 worldPosition = vec4(instancePositions + modelMatrix * positions, 1.);\n  gl_Position = projectionMatrix * viewMatrix * worldPosition;\n}\n';
 ```
 
 Note: for safety, this plugin does not remove dynamically generated comments, e.g.
@@ -42,7 +42,6 @@ const vs = `/* MODULE ${name} STARTS */`;
 ```js
 const vs = `// END OF ${name}`;
 ```
-
 
 ## Installation
 
@@ -66,9 +65,14 @@ With options:
 
 ```json
 {
-  "plugins": [["remove-glsl-comments", {
-    "patterns": ["*.glsl.js"]
-  }]]
+  "plugins": [
+    [
+      "remove-glsl-comments",
+      {
+        "patterns": ["*.glsl.js"]
+      }
+    ]
+  ]
 }
 ```
 
@@ -81,8 +85,8 @@ $ babel --plugins remove-glsl-comments script.js
 ### Via Node API
 
 ```js
-require("babel-core").transform("code", {
-  plugins: ["remove-glsl-comments"]
+require('babel-core').transform('code', {
+  plugins: ['remove-glsl-comments']
 });
 ```
 

@@ -5,6 +5,7 @@ In this final tutorial, we'll pull together almost everything we've learned in p
 We'll be drawing 4 instanced cubes, textured and lit in the same way as in the lighting tutorial, but with the animations updated by transform feedback.
 
 The `Transform` class is the only addition we need for our imports:
+
 ```js
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
 import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
@@ -12,6 +13,7 @@ import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 ```
+
 The vertex shader for our transform feedback is quite simple. It just increments a scalar rotation value on each run:
 
 ```js
@@ -74,9 +76,11 @@ const vs = `\
     gl_Position = uProjection * uView * vec4(vPosition, 1.0);
   }
 ```
+
 We also pass an `offsets` instanced attribute to position each cube.
 
 Our fragment shader doesn't change at all:
+
 ```js
 const fs = `\
   precision highp float;
@@ -98,90 +102,92 @@ const fs = `\
 ```
 
 Our `onInitialize` method will need several updates. First we create buffers for our instanced data:
+
 ```js
-  const offsetBuffer = new Buffer(gl, new Float32Array([
-    3, 3,
-    -3, 3,
-    3, -3,
-    -3, -3
-  ]));
+const offsetBuffer = new Buffer(gl, new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
-  const axisBufferData = new Float32Array(12);
-  for (let i = 0; i < 4; ++i) {
-    const vi = i * 3;
-    const x = Math.random();
-    const y = Math.random();
-    const z = Math.random();
-    const l = Math.sqrt(x * x + y * y + z * z);
+const axisBufferData = new Float32Array(12);
+for (let i = 0; i < 4; ++i) {
+  const vi = i * 3;
+  const x = Math.random();
+  const y = Math.random();
+  const z = Math.random();
+  const l = Math.sqrt(x * x + y * y + z * z);
 
-    axisBufferData[vi] = x / l;
-    axisBufferData[vi + 1] = y / l;
-    axisBufferData[vi + 2] = z / l;
-  }
-  const axisBuffer = new Buffer(gl, axisBufferData);
+  axisBufferData[vi] = x / l;
+  axisBufferData[vi + 1] = y / l;
+  axisBufferData[vi + 2] = z / l;
+}
+const axisBuffer = new Buffer(gl, axisBufferData);
 
-  const rotationBuffer = new Buffer(gl, new Float32Array([
+const rotationBuffer = new Buffer(
+  gl,
+  new Float32Array([
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2
-  ]));
+  ])
+);
 ```
+
 The `offsetBuffer` sets positions so the cubes will be in a square formation. The `axisBuffer` looks more complicated, but its simply a set of 4 normalized vectors about which we'll rotate our cubes. Finally, the `rotationBuffer` simply starts with 4 random angles between 0 and 2&pi;.
 
 The `Transform` is straightforward to set up, simply taking the `rotationBuffer` and our vertex shader as input:
+
 ```js
-  const transform = new Transform(gl, {
-    vs: transformVs,
-    sourceBuffers: {
-      rotations: rotationBuffer
-    },
-    feedbackMap: {
-      rotations: 'vRotation'
-    },
-    elementCount: 4
-  });
+const transform = new Transform(gl, {
+  vs: transformVs,
+  sourceBuffers: {
+    rotations: rotationBuffer
+  },
+  feedbackMap: {
+    rotations: 'vRotation'
+  },
+  elementCount: 4
+});
 ```
 
 And the `Model` needs to be updated to take the instanced attributes and `instanceCount`:
 
 ```js
-  const model = new Model(gl, {
-    vs,
-    fs,
-    geometry: new CubeGeometry(),
-    attributes: {
-      offsets: [offsetBuffer, {divisor: 1}],
-      axes: [axisBuffer, {divisor: 1}],
-      rotations: [rotationBuffer, {divisor: 1}]
+const model = new Model(gl, {
+  vs,
+  fs,
+  geometry: new CubeGeometry(),
+  attributes: {
+    offsets: [offsetBuffer, {divisor: 1}],
+    axes: [axisBuffer, {divisor: 1}],
+    rotations: [rotationBuffer, {divisor: 1}]
+  },
+  uniforms: {
+    uTexture: texture,
+    uEyePosition: eyePosition,
+    uView: viewMatrix
+  },
+  modules: [phongLighting],
+  moduleSettings: {
+    material: {
+      specularColor: [255, 255, 255]
     },
-    uniforms: {
-      uTexture: texture,
-      uEyePosition: eyePosition,
-      uView: viewMatrix
-    },
-    modules: [phongLighting],
-    moduleSettings: {
-      material: {
-        specularColor: [255, 255, 255]
+    lights: [
+      {
+        type: 'ambient',
+        color: [255, 255, 255]
       },
-      lights: [
-        {
-          type: 'ambient',
-          color: [255, 255, 255]
-        },
-        {
-          type: 'point',
-          color: [255, 255, 255],
-          position: [4, 8, 4]
-        }
-      ]
-    },
-    instanceCount: 4
-  });
+      {
+        type: 'point',
+        color: [255, 255, 255],
+        position: [4, 8, 4]
+      }
+    ]
+  },
+  instanceCount: 4
+});
 ```
 
 Our `onRender` needs an update to perform the transform feedback and pass the transformed rotation buffer to the `Model`:
+
 ```js
   onRender({gl, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
@@ -288,12 +294,7 @@ const loop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    const offsetBuffer = new Buffer(gl, new Float32Array([
-      3, 3,
-      -3, 3,
-      3, -3,
-      -3, -3
-    ]));
+    const offsetBuffer = new Buffer(gl, new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
     const axisBufferData = new Float32Array(12);
     for (let i = 0; i < 4; ++i) {
@@ -309,12 +310,15 @@ const loop = new AnimationLoop({
     }
     const axisBuffer = new Buffer(gl, axisBufferData);
 
-    const rotationBuffer = new Buffer(gl, new Float32Array([
-      Math.random() * Math.PI * 2,
-      Math.random() * Math.PI * 2,
-      Math.random() * Math.PI * 2,
-      Math.random() * Math.PI * 2
-    ]));
+    const rotationBuffer = new Buffer(
+      gl,
+      new Float32Array([
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      ])
+    );
 
     const texture = new Texture2D(gl, {
       data: 'vis-logo.png'
@@ -393,4 +397,3 @@ const loop = new AnimationLoop({
 
 loop.start();
 ```
-

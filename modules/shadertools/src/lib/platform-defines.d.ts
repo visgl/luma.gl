@@ -1,6 +1,4 @@
-export function getPlatformShaderDefines(
-  gl: WebGLRenderingContext
-): string;
+export function getPlatformShaderDefines(gl: WebGLRenderingContext): string;
 
 export function getVersionDefines(
   gl: WebGLRenderingContext,

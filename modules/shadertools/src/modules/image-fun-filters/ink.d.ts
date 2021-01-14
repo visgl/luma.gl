@@ -1,7 +1,7 @@
 import {ShaderPass} from '../../types';
 
 /**
- * Ink - 
+ * Ink -
  * Simulates outlining the image in ink by darkening edges stronger than a
  * certain threshold. The edge detection value is the difference of two
  * copies of the image, each blurred using a blur of a different radius.

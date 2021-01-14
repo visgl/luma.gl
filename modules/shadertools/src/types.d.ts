@@ -4,7 +4,7 @@
  * TypeScript type covering all typed arrays
  */
 export type TypedArray =
-  Int8Array
+  | Int8Array
   | Uint8Array
   | Int16Array
   | Uint16Array
@@ -14,9 +14,7 @@ export type TypedArray =
   | Float32Array
   | Float64Array;
 
-export type BigIntTypedArray =
-  BigInt64Array
-  | BigUint64Array;
+export type BigIntTypedArray = BigInt64Array | BigUint64Array;
 
 /**
  * TypeScript type covering all typed arrays and classic arrays consisting of numbers
@@ -54,4 +52,4 @@ export type ShaderModule = {
 
 export type ShaderPass = ShaderModule & {
   passes?: object[];
-}
+};

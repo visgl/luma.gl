@@ -1,4 +1,4 @@
-import Resource from "./resource";
+import Resource from './resource';
 
 export default class Buffer extends Resource {
   readonly byteLength: number;
@@ -34,13 +34,8 @@ export default class Buffer extends Resource {
    *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
    *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
    */
-  bind(options?: {
-    target?: any;
-    index?: any;
-    offset?: number;
-    size: any;
-  }): this;
-  unbind(options?: { target?: any; index?: any }): this;
+  bind(options?: {target?: any; index?: any; offset?: number; size: any}): this;
+  unbind(options?: {target?: any; index?: any}): this;
   getDebugData(): {
     data: any;
     changed: boolean;

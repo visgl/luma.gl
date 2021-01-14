@@ -1,4 +1,3 @@
-/* global window */
 /** @typedef {import('./device-pixels')} types */
 
 /**

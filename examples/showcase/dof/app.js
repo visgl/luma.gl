@@ -12,7 +12,6 @@ import {
 import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 /* eslint-disable spaced-comment */
-/* global document */
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
@@ -550,7 +549,6 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
-/* global window */
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

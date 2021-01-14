@@ -1,4 +1,4 @@
-import GLTFAnimator from "./gltf-animator";
+import GLTFAnimator from './gltf-animator';
 
 export default function createGLTFObjects(
   gl: WebGLRenderingContext,

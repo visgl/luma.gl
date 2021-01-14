@@ -3,6 +3,7 @@
 This tutorial will demonstrate how to use luma.gl shader modules to make reusable bits of functionality and dynamically insert them into your shaders. Most of this will be fairly similar to the [Hello Triangle](/docs/getting-started/hello-triangle) app.
 
 We'll start by setting up our imports and defining our base vertex and fragment shaders:
+
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
@@ -40,9 +41,10 @@ const fs2 = `
 `;
 ```
 
-We have two vertex and fragment shader pairs: one will move vertices to the left, the other moves vertices to the right. Both fragment shaders take an [HSV color](https://en.wikipedia.org/wiki/HSL_and_HSV) as input  call a `color_hsv2rgb` to convert it to RGB. But `color_hsv2rgb` isn't defined anywhere, so these shaders will not compile as-is.
+We have two vertex and fragment shader pairs: one will move vertices to the left, the other moves vertices to the right. Both fragment shaders take an [HSV color](https://en.wikipedia.org/wiki/HSL_and_HSV) as input call a `color_hsv2rgb` to convert it to RGB. But `color_hsv2rgb` isn't defined anywhere, so these shaders will not compile as-is.
 
 We define `color_hsv2rgb` in a shader module:
+
 ```js
 // Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
 const colorModule = {
@@ -109,11 +111,13 @@ In `onRender`, we simply draw both models:
     model2.draw();
   }
 ```
+
 If all went well, a blue trangle and a red triangle should be drawn side-by-side on the canvas. See the live demo [here](/examples/getting-started/shader-modules).
 
 Shader modules allowed us to define our HSL to RGB conversion function once and use it across multiple programs.
 
 The entire application should look like the following:
+
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
@@ -160,11 +164,7 @@ const colorModule = {
 
 const loop = new AnimationLoop({
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([
-      -0.3, -0.5,
-      0.3, -0.5,
-      0.0, 0.5
-    ]));
+    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     const model1 = new Model(gl, {
       vs: vs1,
@@ -198,4 +198,3 @@ const loop = new AnimationLoop({
 
 loop.start();
 ```
-

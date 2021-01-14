@@ -1,4 +1,4 @@
-export const DECLARATION_INJECT_MARKER = "__LUMA_INJECT_DECLARATIONS__";
+export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
 export default function injectShader(
   source: any,

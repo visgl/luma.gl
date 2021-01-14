@@ -1,4 +1,3 @@
-
 export class StatsManager {
   constructor();
   get(name: any): any;

@@ -95,7 +95,6 @@ void main(void) {
 
 export default animationFrame;
 
-/* global window */
 if (typeof window !== 'undefined') {
   window.app = animationFrame;
 }

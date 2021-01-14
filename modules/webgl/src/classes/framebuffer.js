@@ -416,7 +416,6 @@ export default class Framebuffer extends Resource {
 
   // Note: Will only work when called in an event handler
   show() {
-    /* global window */
     if (typeof window !== 'undefined') {
       window.open(copyToDataUrl(this), 'luma-debug-texture');
     }

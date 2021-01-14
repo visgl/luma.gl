@@ -1,17 +1,21 @@
 # Hello Instancing (Mid-level)
 
 In this tutorial, we'll work through how to do instanced drawing with luma.gl's mid-level APIs. This will involve using luma.gl's WebGL wrappers to do the drawing instead of the higher-level `Model`. We'll start from the [high-level app](/docs/getting-started/hello-instancing-high) we created. First we need to install the `shadertools` module so we can compose shaders without the `Model` class:
+
 ```bash
 npm i @luma.gl/shadertools
 ```
 
 Now we can update the imports:
+
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';
 import {assembleShaders} from '@luma.gl/shadertools';
 ```
+
 Most of the initialization is similar, but we'll replace the creation of `Model` with its individual parts: shader composition, a vertex array, and a program. Shader composition is handled by `assembleShaders`
+
 ```js
 const assembled = assembleShaders(gl, {
   vs,
@@ -21,11 +25,13 @@ const assembled = assembleShaders(gl, {
 ```
 
 We can then use the assembled shaders to create a `Program`:
+
 ```js
 const program = new Program(gl, assembled);
 ```
 
 The attributes for the draw are managed by a `VertexArray`:
+
 ```js
 const vertexArray = new VertexArray(gl, {
   program,
@@ -36,9 +42,11 @@ const vertexArray = new VertexArray(gl, {
   }
 });
 ```
+
 The `VertexArray` takes the `program` as an argument to infer attribute parameters.
 
 The `vertexArray` and `program` are required for drawing, so we'll return them from `onInitialize`, and then use them in `onRender`:
+
 ```js
 onInitialize({gl}) {
   // Setup...
@@ -59,6 +67,7 @@ onRender({gl, program, vertexArray}) {
 The scene should be identical to the one draw with the high-level API. See the live demo [here](/examples/getting-started/hello-instancing-mid).
 
 The complete app is as follows:
+
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {Program, VertexArray, Buffer, clear} from '@luma.gl/webgl';
@@ -84,25 +93,17 @@ const colorShaderModule = {
 
 const loop = new AnimationLoop({
   onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([
-      -0.2, -0.2,
-      0.2, -0.2,
-      0.0, 0.2
-    ]));
+    const positionBuffer = new Buffer(gl, new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
 
-    const colorBuffer = new Buffer(gl, new Float32Array([
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      0.0, 0.0, 1.0,
-      1.0, 1.0, 0.0
-    ]));
+    const colorBuffer = new Buffer(
+      gl,
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
+    );
 
-    const offsetBuffer = new Buffer(gl, new Float32Array([
-      0.5, 0.5,
-      -0.5, 0.5,
-      0.5,  -0.5,
-      -0.5, -0.5
-    ]));
+    const offsetBuffer = new Buffer(
+      gl,
+      new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5])
+    );
 
     const vs = `
       attribute vec2 position;
@@ -151,5 +152,4 @@ const loop = new AnimationLoop({
 });
 
 loop.start();
-
 ```

@@ -1,4 +1,3 @@
-/* global window, OffscreenCanvas */
 import {
   isWebGL,
   createGLContext,
@@ -470,7 +469,6 @@ export default class AnimationLoop {
 
   _createInfoDiv() {
     if (this.gl.canvas && this.props.onAddHTML) {
-      /* global document */
       const wrapperDiv = document.createElement('div');
       document.body.appendChild(wrapperDiv);
       wrapperDiv.style.position = 'relative';

@@ -11,12 +11,12 @@ export type CreateGLContextOptions = {
   onError?: any;
 
   // Browser-only
-  canvas?: HTMLCanvasElement | string | null, // A canvas element or a canvas string id
-  debug?: boolean, // Instrument context (at the expense of performance)
+  canvas?: HTMLCanvasElement | string | null; // A canvas element or a canvas string id
+  debug?: boolean; // Instrument context (at the expense of performance)
 
   // Headless-only
-  width?: number; /** width are height are only used by headless gl */
-  height?: number; /** width are height are only used by headless gl */
+  width?: number /** width are height are only used by headless gl */;
+  height?: number /** width are height are only used by headless gl */;
 
   // Remaining options are passed through to context creator
   // Requires @ts-ignore statements
@@ -36,7 +36,9 @@ export function instrumentGLContext(
  * Provides strings identifying the GPU vendor and driver.
  * https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
  */
-export function getContextDebugInfo(gl: WebGLRenderingContext): {
+export function getContextDebugInfo(
+  gl: WebGLRenderingContext
+): {
   vendor: string;
   renderer: string;
   vendorMasked: string;
@@ -59,8 +61,11 @@ export function getContextDebugInfo(gl: WebGLRenderingContext): {
  *
  * resizeGLContext(gl, {width, height, useDevicePixels})
  */
-export function resizeGLContext(gl: WebGLRenderingContext, options?: {
-  width?: number;
-  height?: number;
-  useDevicePixels?: boolean | number;
-});
+export function resizeGLContext(
+  gl: WebGLRenderingContext,
+  options?: {
+    width?: number;
+    height?: number;
+    useDevicePixels?: boolean | number;
+  }
+);

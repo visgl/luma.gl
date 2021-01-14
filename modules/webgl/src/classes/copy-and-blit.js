@@ -131,7 +131,6 @@ export function copyToDataUrl(
   // Flip to top down coordinate system
   flipRows({data, width, height});
 
-  /* global document */
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -153,7 +152,6 @@ export function copyToImage(
     targetImage = null
   } = {}
 ) {
-  /* global Image */
   const dataUrl = copyToDataUrl(source, {sourceAttachment});
   targetImage = targetImage || new Image();
   targetImage.src = dataUrl;

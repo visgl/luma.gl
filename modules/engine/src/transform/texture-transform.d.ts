@@ -10,7 +10,7 @@ export default class TextureTransform {
   swap(): boolean;
   update(opts?: {}): void;
   getTargetTexture(): any;
-  getData(opts: { packed?: boolean }): any;
+  getData(opts: {packed?: boolean}): any;
   getFramebuffer(): any;
   delete(): void;
 }

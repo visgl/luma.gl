@@ -4,7 +4,6 @@ Replaces `gl.<constant>` or `GL.<constant>` references with the corresponding Op
 
 When used on luma.gl applications, also removes any import of the `GL` namespace.
 
-
 ## Example
 
 #### in
@@ -18,7 +17,6 @@ const max = gl.MAX_VERTEX_ATTRIBS;
 ```js
 const max = 34921;
 ```
-
 
 #### in
 
@@ -34,8 +32,6 @@ const max = GL.MAX_VERTEX_ATTRIBS;
 ...
 const max = 34921;
 ```
-
-
 
 ## Installation
 
@@ -64,7 +60,7 @@ $ babel --plugins inline-webgl-constants script.js
 ### Via Node API
 
 ```js
-require("babel-core").transform("code", {
-  plugins: ["inline-webgl-constants"]
+require('babel-core').transform('code', {
+  plugins: ['inline-webgl-constants']
 });
 ```

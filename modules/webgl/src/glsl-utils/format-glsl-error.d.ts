@@ -1,8 +1,4 @@
-export default function formatGLSLCompilerError(
-  errLog: any,
-  src: any,
-  shaderType: any
-): string;
+export default function formatGLSLCompilerError(errLog: any, src: any, shaderType: any): string;
 
 /**
  * Parse a GLSL compiler error log into a string showing the source code around each error.

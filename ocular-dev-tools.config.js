@@ -2,7 +2,7 @@ const {resolve} = require('path');
 
 module.exports = {
   lint: {
-    paths: ['modules', 'dev-modules', 'test', 'examples'],
+    paths: ['modules', 'dev-modules', 'docs', 'test', 'examples'],
     extensions: ['js']
   },
 

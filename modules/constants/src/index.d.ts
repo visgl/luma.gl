@@ -613,7 +613,7 @@ type GL_CONSTANTS = {
   TIME_ELAPSED_EXT: number;
   TIMESTAMP_EXT: number;
   GPU_DISJOINT_EXT: number;
-}
+};
 
 export const GL: GL_CONSTANTS;
 

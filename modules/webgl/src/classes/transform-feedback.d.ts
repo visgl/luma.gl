@@ -1,4 +1,4 @@
-import Resource from "@luma.gl/webgl/classes/resource";
+import Resource from '@luma.gl/webgl/classes/resource';
 
 export default class TransformFeedback extends Resource {
   static isSupported(gl: WebGLRenderingContext): boolean;

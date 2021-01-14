@@ -1,4 +1,4 @@
-/* global Mesh, controls, document, luma, Matrix4 */
+/* global Mesh, controls, luma, Matrix4 */
 
 const {loadImage, Texture2D} = luma;
 

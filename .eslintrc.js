@@ -2,13 +2,15 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2020
   },
+  env: {
+    browser: true,
+    node: true
+  },
   globals: {
     globalThis: 'readonly'
   },
-  // env: {
-  //   'shared-node-browser': true
-  // },
   extends: ['uber-es2015', 'prettier', 'plugin:import/errors'],
+  parser: '@typescript-eslint/parser',
   plugins: ['tree-shaking', 'luma-gl-custom-rules', 'import'],
   rules: {
     'guard-for-in': 0,

@@ -1,5 +1,4 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-/* global requestAnimationFrame */
 import Resource from './resource';
 import {FEATURES, hasFeatures} from '../features';
 import {isWebGL2} from '@luma.gl/gltools';

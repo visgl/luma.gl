@@ -16,20 +16,19 @@ const vs = `
 `;
 ```
 
-
 Shader modules can then inject code into the hook via their `inject` property:
 
 ```js
 const myModule = {
   name: 'myModule',
   inject: 'position.x -= 0.1;'
-}
+};
 ```
 
 We'll use these features to create a modified version of the previous tutorial, using shader hooks and modules to modify the behavior of a single set of vertex and fragment shaders.
 
-
 We'll start by setting up our imports and defining our base vertex and fragment shaders:
+
 ```js
 import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
@@ -53,6 +52,7 @@ const fs = `
 ```
 
 Here we have a shader hook function, `OFFSET_POSITION`, called in our vertex shader. Next we'll create two shader modules that insert code into the shader hook:
+
 ```js
 const offsetLeftModule = {
   name: 'offsetLeft',
@@ -132,6 +132,7 @@ The `onRender` method is the same as before. If all went well, a blue trangle an
 Shader hooks allowed us to define our vertex and fragment shaders once and modify their behavior based on the shader module included.
 
 The entire application should look like the following:
+
 ```js
 import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
@@ -172,11 +173,7 @@ const loop = new AnimationLoop({
     const programManager = new ProgramManager(gl);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-    const positionBuffer = new Buffer(gl, new Float32Array([
-      -0.3, -0.5,
-      0.3, -0.5,
-      0.0, 0.5
-    ]));
+    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     const model1 = new Model(gl, {
       vs,
@@ -218,4 +215,3 @@ const loop = new AnimationLoop({
 
 loop.start();
 ```
-

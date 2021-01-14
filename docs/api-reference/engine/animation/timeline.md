@@ -5,13 +5,15 @@ Manages an animation timeline, with multiple channels that can be running at dif
 ## Parallel Times
 
 The key concept at work in the `Timeline` is running multiple time frames in parallel:
-* Global Time: The "system time" as determined by the application. Used by `Timeline` to determine the rate at which to play.
-* Timeline Time: The "parent" time of all channels on the timeline. Can be played at the same rate as "Global Time" or manipulated manually.
-* Channel Time: Will update in lock step with "Timeline Time", but may move at different rates, loop, etc. depending on channel parameters.
+
+- Global Time: The "system time" as determined by the application. Used by `Timeline` to determine the rate at which to play.
+- Timeline Time: The "parent" time of all channels on the timeline. Can be played at the same rate as "Global Time" or manipulated manually.
+- Channel Time: Will update in lock step with "Timeline Time", but may move at different rates, loop, etc. depending on channel parameters.
 
 ## Usage
 
 Automatic update usage (assume `update` method is being called once per frame):
+
 ```js
 animationLoop.attachTimeline(new Timeline());
 const timeline = animationLoop.timeline;
@@ -37,6 +39,7 @@ model.setUniforms({
 ```
 
 Manual usage:
+
 ```js
 const timeline = new Timeline();
 const channel1 = timeline.addChannel({
@@ -58,16 +61,16 @@ model.setUniforms({
 });
 ```
 
-
 ## Methods
 
 ### addChannel([props: Object]) : Number
 
 Add a new channel to the timeline. Returns a handle to the channel that can be use for subsequent interactions. Valid propeties are:
-* `rate` the speed of the channel's time relative to timeline time.
-* `delay` offset into timeline time at which channel time starts elapsing, in timeline time units.
-* `duration` the length of the channel time frame, in timeline time units.
-* `repeat` how many time to repeat channel time's timeline. Only meaningful if `duration` is finite.
+
+- `rate` the speed of the channel's time relative to timeline time.
+- `delay` offset into timeline time at which channel time starts elapsing, in timeline time units.
+- `duration` the length of the channel time frame, in timeline time units.
+- `repeat` how many time to repeat channel time's timeline. Only meaningful if `duration` is finite.
 
 ### removeChannel(handle : Number)
 

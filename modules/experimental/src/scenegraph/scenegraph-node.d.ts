@@ -1,9 +1,6 @@
-
 import {Matrix4} from '@math.gl/core';
 
-export type ScenegraphNodeProps = {
-
-};
+export type ScenegraphNodeProps = {};
 
 export default class ScenegraphNode {
   readonly id: string;
@@ -24,11 +21,7 @@ export default class ScenegraphNode {
     update?: boolean;
   }): this;
   updateMatrix(): this;
-  update(options?: {
-    position: any;
-    rotation: any;
-    scale: any;
-  }): this;
+  update(options?: {position: any; rotation: any; scale: any}): this;
   getCoordinateUniforms(
     viewMatrix: any,
     modelMatrix?: any

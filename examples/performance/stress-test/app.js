@@ -1,4 +1,3 @@
-/* global document, window */
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear, Texture2D, Buffer} from '@luma.gl/webgl';

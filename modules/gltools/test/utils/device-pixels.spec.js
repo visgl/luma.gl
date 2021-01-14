@@ -1,4 +1,3 @@
-/* global window */
 import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/gltools';
 import {getDevicePixelRatio} from '@luma.gl/gltools/utils/device-pixels';
 

@@ -1,4 +1,4 @@
-import Geometry from "../geometry/geometry";
+import Geometry from '../geometry/geometry';
 
 export default class IcoSphereGeometry extends Geometry {
   constructor(props?: {});

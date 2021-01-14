@@ -18,6 +18,6 @@ If the debug tools haven't been imported, both funcitons will print a warning an
 
 Debug contexts perform the following:
 
-* **Detects WebGL Errors** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, taking care to extract helpful information into the error message.
+- **Detects WebGL Errors** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, taking care to extract helpful information into the error message.
 
-* **Checks WebGL Parameters** - Ensure that WebGL parameters are set to valid values.
+- **Checks WebGL Parameters** - Ensure that WebGL parameters are set to valid values.

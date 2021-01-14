@@ -1,5 +1,4 @@
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
-/* global window, setTimeout, clearTimeout */
 
 export function requestAnimationFrame(callback) {
   return typeof window !== 'undefined' && window.requestAnimationFrame

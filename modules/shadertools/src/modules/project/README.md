@@ -5,15 +5,13 @@ A basic projection module.
 Makes it easy to ensure a set of shaders all use the same uniforms when
 calculating positions.
 
-
 ## Parameters
 
 `getUniforms` take the following parameters when the `picking` module is
 included.
 
-* `projection` (Array[16], false) -
-* `view` (Array[16], identity) -
-
+- `projection` (Array[16], false) -
+- `view` (Array[16], identity) -
 
 ## Vertex Shader Functions
 
@@ -21,9 +19,10 @@ included.
 
 The most frequently used project operation.
 
-* `point` (`vec3`) - Projects a point to clipspace
+- `point` (`vec3`) - Projects a point to clipspace
 
 Example:
+
 ```
 // A "minimal" vertex shader
 void main(void) {

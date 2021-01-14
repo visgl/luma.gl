@@ -1,7 +1,5 @@
 // Returns a Magic Uniform Setter
-export function getUniformSetter(
-  gl: WebGLRenderingContext, location: number, info: object
-): any;
+export function getUniformSetter(gl: WebGLRenderingContext, location: number, info: object): any;
 
 export function parseUniformName(name: string): object;
 

@@ -19,7 +19,6 @@ To demonstrate how this works, we'll re-implement the [shader hook tutorial](/do
 import {assembleShaders} from '@luma.gl/shadertools';
 ```
 
-
 Our shaders and modules will be the same as before:
 
 ```js
@@ -56,6 +55,7 @@ const offsetRightModule = {
 ```
 
 We then create two programs by first assembling our base shaders with the desired modules and shader hooks, and then using them to create WebGL program objects:
+
 ```js
 //////////////
 // Program 1
@@ -117,7 +117,6 @@ gl.uniform3fv(colorLocation2, new Float32Array([0.0, 0.0, 1.0]));
 ```
 
 With our final programs created, we can draw as we would in any other WebGL application. The complete port of the shader hook demo is listed below and the live version is available [here](/examples/getting-started/shader-modules-low).
-
 
 ```js
 import {assembleShaders} from '@luma.gl/shadertools';
@@ -211,11 +210,7 @@ gl.uniform3fv(colorLocation2, new Float32Array([0.0, 0.0, 1.0]));
 
 const positionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-  -0.3, -0.5,
-  0.3, -0.5,
-  0.0, 0.5
-]), gl.STATIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]), gl.STATIC_DRAW);
 
 const positionLocation1 = gl.getAttribLocation(program1, 'position');
 gl.vertexAttribPointer(positionLocation1, 2, gl.FLOAT, false, 0, 0);

@@ -1,5 +1,3 @@
-/* global WebGLRenderingContext, WebGL2RenderingContext */
-
 import {assert} from './assert';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
