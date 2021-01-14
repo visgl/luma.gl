@@ -101,8 +101,6 @@ export default class Texture extends Resource {
       textureUnit = undefined
     } = props;
 
-    let {mipmaps = true} = props;
-
     // pixels variable is for API compatibility purpose
     if (!data) {
       // TODO - This looks backwards? Commenting out for now until we decide
@@ -111,15 +109,15 @@ export default class Texture extends Resource {
       data = pixels;
     }
 
-    let {width, height, dataFormat, type} = props;
+    let {width, height, dataFormat, type, compressed = false, mipmaps = true} = props;
     const {depth = 0} = props;
 
     // Deduce width and height
-    ({width, height, dataFormat, type} = this._deduceParameters({
+    ({width, height, compressed, dataFormat, type} = this._deduceParameters({
       format,
       type,
       dataFormat,
-      compressed: false,
+      compressed,
       data,
       width,
       height
@@ -159,7 +157,8 @@ export default class Texture extends Resource {
       dataFormat,
       border,
       mipmaps,
-      parameters: pixelStore
+      parameters: pixelStore,
+      compressed
     });
 
     if (mipmaps) {
@@ -312,7 +311,18 @@ export default class Texture extends Resource {
           }
           break;
         case 'compressed':
-          gl.compressedTexImage2D(target, level, format, width, height, border, data);
+          for (const [levelIndex, levelData] of data.entries()) {
+            gl.compressedTexImage2D(
+              target,
+              levelIndex,
+              levelData.format,
+              levelData.width,
+              levelData.height,
+              border,
+              levelData.data
+            );
+          }
+
           break;
         default:
           assert(false, 'Unknown image data type');
