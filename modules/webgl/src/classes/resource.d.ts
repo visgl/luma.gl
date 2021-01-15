@@ -8,12 +8,7 @@ export default class Resource {
 
   constructor(gl: WebGLRenderingContext, opts?: {});
   toString(): string;
-<<<<<<< HEAD
-  get handle(): any;
-  delete({deleteChildren}?: {deleteChildren?: boolean}): this;
-=======
   delete({ deleteChildren }?: { deleteChildren?: boolean }): this;
->>>>>>> feat(webgl): typescript typings
   bind(funcOrHandle?: any): any;
   unbind(): void;
   /**
