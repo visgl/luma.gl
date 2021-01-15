@@ -367,6 +367,7 @@ test('WebGL#Uniforms caching', t => {
   });
 
   CACHING_TEST_CASES.forEach(testCase => {
+    // @ts-ignore
     const setter = getUniformSetter(glStub, null, {type: testCase.glType});
 
     checkCalled(true, () => setter(testCase.data1));

@@ -1,14 +1,39 @@
+interface ChannelProps {
+  delay?: number
+  duration?: number
+  rate?: number
+  repeat?: number
+}
+
+interface Channel {
+  time: number
+  delay: number
+  duration: number
+  rate: number
+  repeat: number
+}
+
+interface Animation {
+  setTime: (time: number) => void
+}
+
 export class Timeline {
+  time: number
+  channels: Map<number, Channel>
+  animations: Map<number, Animation>
+  playing: boolean
+  lastEngineTime: number
   constructor();
-  addChannel(props: any): number;
-  removeChannel(handle: any): void;
-  isFinished(handle: any): boolean;
-  getTime(handle: any): any;
-  setTime(time: any): void;
+  addChannel(props: ChannelProps): number;
+  removeChannel(handle: number): void;
+  isFinished(handle: number): boolean;
+  getTime(handle: number): any;
+  setTime(time: number): void;
   play(): void;
   pause(): void;
   reset(): void;
-  attachAnimation(animation: any, channelHandle: any): number;
-  detachAnimation(handle: any): void;
-  update(engineTime: any): void;
+  attachAnimation(animation: Animation, channelHandle: any): number;
+  detachAnimation(handle: number): void;
+  update(engineTime: number): void;
+  _setChannelTime(channel: Channel, time: number): void;
 }

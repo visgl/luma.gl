@@ -404,7 +404,7 @@ export default class Model {
     }
   }
 
-  _checkProgram(shaderCache = null) {
+  _checkProgram() {
     const needsUpdate =
       this._programDirty || this.programManager.stateHash !== this._programManagerState;
 

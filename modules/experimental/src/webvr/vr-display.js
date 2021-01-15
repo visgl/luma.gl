@@ -134,6 +134,7 @@ export default class VRDisplay extends Display {
   }
 
   _startDisplay() {
+    // @ts-ignore
     this.vrDisplay.requestPresent([
       {
         source: this._getCanvas()
