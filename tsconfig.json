@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "noEmit": true,
     "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "@luma.gl/constants/*": ["modules/constants/src/*"],
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],

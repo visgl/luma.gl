@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, log} from '@luma.gl/gltools';
-
+import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
 import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
@@ -8,21 +7,17 @@ import {clear, clearBuffer} from './clear';
 import {copyToDataUrl} from './copy-and-blit.js';
 
 import {getFeatures} from '../features';
-
 import {getKey} from '../webgl-utils';
-
 import {assert} from '../utils';
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
 export default class Framebuffer extends Resource {
-  static isSupported(
-    gl,
-    {
+  static isSupported(gl, options = {}) {
+    const {
       colorBufferFloat, // Whether floating point textures can be rendered and read
       colorBufferHalfFloat // Whether half float textures can be rendered and read
-    } = {}
-  ) {
+    } = options;
     let supported = true;
 
     if (colorBufferFloat) {
@@ -65,11 +60,13 @@ export default class Framebuffer extends Resource {
   }
 
   get MAX_COLOR_ATTACHMENTS() {
-    return this.gl.getParameter(this.gl.MAX_COLOR_ATTACHMENTS);
+    const gl2 = assertWebGL2Context(this.gl);
+    return gl2.getParameter(gl2.MAX_COLOR_ATTACHMENTS);
   }
 
   get MAX_DRAW_BUFFERS() {
-    return this.gl.getParameter(this.gl.MAX_DRAW_BUFFERS);
+    const gl2 = assertWebGL2Context(this.gl);
+    return gl2.getParameter(gl2.MAX_DRAW_BUFFERS);
   }
 
   constructor(gl, opts = {}) {
@@ -117,8 +114,8 @@ export default class Framebuffer extends Resource {
     depth = true,
     stencil = false,
     check = true,
-    readBuffer,
-    drawBuffers
+    readBuffer = undefined,
+    drawBuffers = undefined
   }) {
     assert(width >= 0 && height >= 0, 'Width and height need to be integers');
 
@@ -152,7 +149,9 @@ export default class Framebuffer extends Resource {
       resource.delete();
     }
     super.delete();
+    return this;
   }
+
   update({
     attachments = {},
     readBuffer,
@@ -171,13 +170,15 @@ export default class Framebuffer extends Resource {
     if (drawBuffers) {
       this._setDrawBuffers(drawBuffers);
     }
+    // @ts-ignore
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     return this;
   }
 
   // Attachment resize is expected to be a noop if size is same
-  resize({width, height} = {}) {
+  resize(options = {}) {
+    let {width, height} = options;
     // for default framebuffer, just update the stored size
     if (this.handle === null) {
       assert(width === undefined && height === undefined);
@@ -247,6 +248,7 @@ export default class Framebuffer extends Resource {
       }
     }
 
+    // @ts-ignore
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     // Assign to attachments and remove any nulls to get a clean attachment map
@@ -271,11 +273,14 @@ export default class Framebuffer extends Resource {
     const {gl} = this;
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
     const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+    // @ts-ignore
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
     return status;
   }
 
-  clear({color, depth, stencil, drawBuffers = []} = {}) {
+  clear(options = {}) {
+    const {color, depth, stencil, drawBuffers = []} = options;
+
     // Bind framebuffer and delegate to global clear functions
     const prevHandle = this.gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
 
@@ -287,6 +292,7 @@ export default class Framebuffer extends Resource {
       clearBuffer({drawBuffer, value});
     });
 
+    // @ts-ignore
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     return this;
@@ -357,16 +363,18 @@ export default class Framebuffer extends Resource {
 
   // signals to the GL that it need not preserve all pixels of a specified region of the framebuffer
   invalidate({attachments = [], x = 0, y = 0, width, height}) {
-    const {gl} = this;
-    assertWebGL2Context(gl);
-    const prevHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, this.handle);
+    const gl2 = assertWebGL2Context(this.gl);
+    const prevHandle = gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, this.handle);
     const invalidateAll = x === 0 && y === 0 && width === undefined && height === undefined;
     if (invalidateAll) {
-      gl.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments);
+      gl2.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments);
     } else {
-      gl.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments, x, y, width, height);
+      // TODO - why does type checking fail on this line
+      // @ts-ignore
+      gl2.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments, x, y, width, height);
     }
-    gl.bindFramebuffer(GL.READ_FRAMEBUFFER, prevHandle);
+    // @ts-ignore
+    gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, prevHandle);
     return this;
   }
 
@@ -380,6 +388,7 @@ export default class Framebuffer extends Resource {
       this.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     }
     if (keys && value > 1000) {
+      // @ts-ignore
       value = getKey(this.gl, value);
     }
     return value;
@@ -388,6 +397,7 @@ export default class Framebuffer extends Resource {
   getAttachmentParameters(
     attachment = GL.COLOR_ATTACHMENT0,
     keys,
+    // @ts-ignore
     parameters = this.constructor.ATTACHMENT_PARAMETERS || []
   ) {
     const values = {};
@@ -427,7 +437,7 @@ export default class Framebuffer extends Resource {
       return this;
     }
     message = message || `Framebuffer ${this.id}`;
-    const image = copyToDataUrl(this, {maxHeight: 100});
+    const image = copyToDataUrl(this, {targetMaxHeight: 100});
     log.image({logLevel, message, image}, message)();
     return this;
   }
@@ -551,7 +561,8 @@ export default class Framebuffer extends Resource {
     switch (texture.target) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        const gl2 = assertWebGL2Context(gl);
+        gl2.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:
@@ -574,9 +585,9 @@ export default class Framebuffer extends Resource {
 
   // Expects framebuffer to be bound
   _setReadBuffer(readBuffer) {
-    const {gl} = this;
-    if (isWebGL2(gl)) {
-      gl.readBuffer(readBuffer);
+    const gl2 = getWebGL2Context(this.gl);
+    if (gl2) {
+      gl2.readBuffer(readBuffer);
     } else {
       // Setting to color attachment 0 is a noop, so allow it in WebGL1
       assert(
@@ -590,10 +601,12 @@ export default class Framebuffer extends Resource {
   // Expects framebuffer to be bound
   _setDrawBuffers(drawBuffers) {
     const {gl} = this;
-    if (isWebGL2(gl)) {
-      gl.drawBuffers(drawBuffers);
+    const gl2 = assertWebGL2Context(gl);
+    if (gl2) {
+      gl2.drawBuffers(drawBuffers);
     } else {
-      const ext = gl.getExtension('WEBGL.draw_buffers');
+      // TODO - is this not handled by polyfills?
+      const ext = gl.getExtension('WEBGL_draw_buffers');
       if (ext) {
         ext.drawBuffersWEBGL(drawBuffers);
       } else {
@@ -663,6 +676,7 @@ function mapIndexToCubeMapFace(layer) {
 // Get a string describing the framebuffer error if installed
 function _getFrameBufferStatus(status) {
   // Use error mapping if installed
+  // @ts-ignore
   const STATUS = Framebuffer.STATUS || {};
   return STATUS[status] || `Framebuffer error ${status}`;
 }

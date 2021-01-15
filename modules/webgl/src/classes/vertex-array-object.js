@@ -32,8 +32,11 @@ export default class VertexArrayObject extends Resource {
 
   static getMaxAttributes(gl) {
     // TODO - should be cached per context
+    // @ts-ignore
     VertexArrayObject.MAX_ATTRIBUTES =
+      // @ts-ignore
       VertexArrayObject.MAX_ATTRIBUTES || gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+    // @ts-ignore
     return VertexArrayObject.MAX_ATTRIBUTES;
   }
 
@@ -67,6 +70,9 @@ export default class VertexArrayObject extends Resource {
     this.bufferValue = null;
     this.isDefaultArray = opts.isDefaultArray || false;
 
+    /** @type {WebGL2RenderingContext} */
+    this.gl2 = gl;
+
     this.initialize(opts);
 
     Object.seal(this);
@@ -77,6 +83,7 @@ export default class VertexArrayObject extends Resource {
     if (this.buffer) {
       this.buffer.delete();
     }
+    return this;
   }
 
   get MAX_ATTRIBUTES() {
@@ -114,7 +121,7 @@ export default class VertexArrayObject extends Resource {
 
     const {size, type, stride, offset, normalized, integer, divisor} = accessor;
 
-    const {gl} = this;
+    const {gl, gl2} = this;
     location = Number(location);
 
     this.bind(() => {
@@ -124,13 +131,13 @@ export default class VertexArrayObject extends Resource {
       // WebGL2 supports *integer* data formats, i.e. GPU will see integer values
       if (integer) {
         assert(isWebGL2(gl));
-        gl.vertexAttribIPointer(location, size, type, stride, offset);
+        gl2.vertexAttribIPointer(location, size, type, stride, offset);
       } else {
         // Attaches ARRAY_BUFFER with specified buffer format to location
         gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
       }
       gl.enableVertexAttribArray(location);
-      gl.vertexAttribDivisor(location, divisor || 0);
+      gl2.vertexAttribDivisor(location, divisor || 0);
 
       // NOTE We don't unbind buffer here, typically another buffer will be bound just after
     });
@@ -165,10 +172,10 @@ export default class VertexArrayObject extends Resource {
   // NOTE: Desktop OpenGL cannot disable attribute 0.
   // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
   // this-has-significant-performance-penalt
-  getConstantBuffer(elementCount, value, accessor) {
+  getConstantBuffer(elementCount, value) {
     // Create buffer only when needed, and reuse it (avoids inflating buffer creation statistics)
 
-    const constantValue = this._normalizeConstantArrayValue(value, accessor);
+    const constantValue = this._normalizeConstantArrayValue(value);
 
     const byteLength = constantValue.byteLength * elementCount;
     const length = constantValue.length * elementCount;
@@ -197,7 +204,7 @@ export default class VertexArrayObject extends Resource {
 
   // TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
   // TODO - handle single values for size 1 attributes?
-  _normalizeConstantArrayValue(arrayValue, accessor) {
+  _normalizeConstantArrayValue(arrayValue) {
     if (Array.isArray(arrayValue)) {
       return new Float32Array(arrayValue);
     }
@@ -278,17 +285,21 @@ export default class VertexArrayObject extends Resource {
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
-    return this.gl.createVertexArray();
+    /** @type {WebGL2RenderingContext} */
+    // @ts-ignore
+    const gl2 = this.gl;
+    return gl2.createVertexArray();
   }
 
   _deleteHandle(handle) {
-    this.gl.deleteVertexArray(handle);
+    this.gl2.deleteVertexArray(handle);
+    // @ts-ignore
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }
 
   _bindHandle(handle) {
-    this.gl.bindVertexArray(handle);
+    this.gl2.bindVertexArray(handle);
   }
 
   // Generic getter for information about a vertex attribute at a given position

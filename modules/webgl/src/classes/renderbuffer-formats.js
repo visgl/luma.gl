@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 
 // Define local extension strings to optimize minification
 // const SRGB = 'EXT_sRGB';
-// const EXT_FLOAT_WEBGL1 = 'WEBGL.color_buffer_float';
+// const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_WEBGL2 = 'EXT_color_buffer_float';
 // const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
@@ -57,7 +57,7 @@ export default {
   [GL.RGBA16F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 8},
   [GL.R32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 4},
   [GL.RG32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 8},
-  // TODO - can't get WEBGL.color_buffer_float to work on renderbuffers
+  // TODO - can't get WEBGL_color_buffer_float to work on renderbuffers
   [GL.RGBA32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 16},
   // [GL.RGBA32F]: {gl2: EXT_FLOAT_WEBGL2, gl1: EXT_FLOAT_WEBGL1},
   [GL.R11F_G11F_B10F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 4}

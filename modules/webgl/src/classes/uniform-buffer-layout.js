@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /* eslint-disable camelcase */
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 import {assert} from '../utils';

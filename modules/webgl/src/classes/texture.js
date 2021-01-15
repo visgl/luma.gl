@@ -1,4 +1,6 @@
 import GL from '@luma.gl/constants';
+import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
+import {global} from 'probe.gl/env';
 
 import Resource from './resource';
 import Buffer from './buffer';
@@ -9,9 +11,6 @@ import {
   isFormatSupported,
   isLinearFilteringSupported
 } from './texture-formats';
-
-import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
-import {global} from 'probe.gl/env';
 import {uid, isPowerOfTwo, assert} from '../utils';
 
 // Supported min filters for NPOT texture.
@@ -22,7 +21,8 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
 
 export default class Texture extends Resource {
-  static isSupported(gl, {format, linearFiltering} = {}) {
+  static isSupported(gl, opts = {}) {
+    const {format, linearFiltering} = opts;
     let supported = true;
     if (format) {
       supported = supported && isFormatSupported(gl, format);
@@ -90,6 +90,7 @@ export default class Texture extends Resource {
       return this;
     }
     const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
+    // @ts-ignore
     if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
       data.addEventListener('loadedmetadata', () => this.initialize(props));
       return this;
@@ -180,6 +181,7 @@ export default class Texture extends Resource {
       this._video = {
         video: data,
         parameters,
+        // @ts-ignore
         lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
       };
     }
@@ -190,6 +192,7 @@ export default class Texture extends Resource {
   update() {
     if (this._video) {
       const {video, parameters, lastTime} = this._video;
+      // @ts-ignore
       if (lastTime === video.currentTime || video.readyState < HTMLVideoElement.HAVE_CURRENT_DATA) {
         return;
       }
@@ -303,6 +306,8 @@ export default class Texture extends Resource {
     let dataType = null;
     ({data, dataType} = this._getDataType({data, compressed}));
 
+    let gl2;
+
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
@@ -311,6 +316,7 @@ export default class Texture extends Resource {
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
           // assert((offset === 0 || isWebGL2(gl)), 'offset supported in WebGL2 only');
+          // @ts-ignore
           gl.texImage2D(
             target,
             level,
@@ -321,15 +327,16 @@ export default class Texture extends Resource {
             dataFormat,
             type,
             data,
+            // @ts-ignore
             offset
           );
           break;
         case 'buffer':
           // WebGL2 enables creating textures directly from a WebGL buffer
-          assertWebGL2Context(gl);
-          gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-          gl.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
-          gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+          gl2 = assertWebGL2Context(gl);
+          gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
+          gl2.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
+          gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
           break;
         case 'browser-object':
           if (isWebGL2(gl)) {
@@ -457,17 +464,20 @@ export default class Texture extends Resource {
       } else if (data === null) {
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
+        // const gl2 = assertWebGL2Context(this.gl);
+        // @ts-ignore last offset parameter is ignored under WebGL1
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data, offset);
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
-        assertWebGL2Context(this.gl);
+        const gl2 = assertWebGL2Context(this.gl);
         // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER
-        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
-        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, offset);
-        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+        gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
+        gl2.texSubImage2D(target, level, x, y, width, height, dataFormat, type, offset);
+        gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       } else if (isWebGL2(this.gl)) {
         // Assume data is a browser supported object (ImageData, Canvas, ...)
-        this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data);
+        const gl2 = assertWebGL2Context(this.gl);
+        gl2.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data);
       } else {
         this.gl.texSubImage2D(target, level, x, y, dataFormat, type, data);
       }

@@ -184,7 +184,7 @@ export default class VertexArray {
     );
 
     if (location >= 0) {
-      arrayValue = this.vertexArrayObject._normalizeConstantArrayValue(arrayValue, accessor);
+      arrayValue = this.vertexArrayObject._normalizeConstantArrayValue(arrayValue);
 
       this.values[location] = arrayValue;
       this.accessors[location] = accessor;
@@ -265,11 +265,16 @@ export default class VertexArray {
 
   // Resolve locations and accessors
   _resolveLocationAndAccessor(locationOrName, value, valueAccessor, appAccessor) {
+    const INVALID_RESULT = {
+      location: -1,
+      accessor: null
+    };
+
     const {location, name} = this._getAttributeIndex(locationOrName);
     if (!Number.isFinite(location) || location < 0) {
       this.unused[locationOrName] = value;
       log.once(3, () => `unused value ${locationOrName} in ${this.id}`)();
-      return this;
+      return INVALID_RESULT;
     }
 
     const accessInfo = this._getAttributeInfo(name || location);
@@ -277,10 +282,7 @@ export default class VertexArray {
     // Attribute location wasn't directly found.
     // Likely due to multi-location attributes (e.g. matrix)
     if (!accessInfo) {
-      return {
-        location: -1,
-        accessor: null
-      };
+      return INVALID_RESULT;
     }
 
     // Resolve the partial accessors into a final accessor
