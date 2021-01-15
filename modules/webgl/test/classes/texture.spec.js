@@ -164,7 +164,7 @@ function testFormatDeduction(t, glContext) {
       const texture = new Texture2D(glContext, options);
       const msg = `Texture2D({format: ${getKey(GL, format)}}) created`;
       // @ts-ignore
-      t.equals(texture.format, format, msg);
+      t.equals(texture.format, Number(format), msg);
       // @ts-ignore
       t.equals(texture.type, expectedType, msg);
       // @ts-ignore
