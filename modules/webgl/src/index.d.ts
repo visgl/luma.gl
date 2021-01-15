@@ -22,13 +22,20 @@ export {default as canCompileGLGSExtension} from './features/check-glsl-extensio
 export {default as Accessor} from './classes/accessor';
 
 // WebGL1 classes
-export {default as Buffer} from './classes/buffer';
-export {Shader, VertexShader, FragmentShader} from './classes/shader';
-export {default as Program} from './classes/program';
+export {default as Buffer, BufferProps} from './classes/buffer';
 export {default as Framebuffer} from './classes/framebuffer';
 export {default as Renderbuffer} from './classes/renderbuffer';
-export {default as Texture2D} from './classes/texture-2d';
-export {default as TextureCube} from './classes/texture-cube';
+export {default as Query} from './classes/query';
+export {Shader, VertexShader, FragmentShader, ShaderProps} from './classes/shader';
+export {default as Program, ProgramProps} from './classes/program';
+export {default as Texture2D, Texture2DProps} from './classes/texture-2d';
+export {default as TextureCube, TextureCubeProps} from './classes/texture-cube';
+export {default as Texture3D, Texture3DProps} from './classes/texture-3d';
+export {default as TransformFeedback, TransformFeedbackProps} from './classes/transform-feedback';
+export {default as VertexArrayObject, VertexArrayObjectProps} from './classes/vertex-array-object';
+export {default as VertexArray, VertexArrayProps} from './classes/vertex-array';
+
+export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 export {clear, clearBuffer} from './classes/clear';
 
@@ -43,12 +50,6 @@ export {
 } from './classes/copy-and-blit';
 
 // WebGL2 classes & Extensions
-export {default as Query} from './classes/query';
-export {default as Texture3D} from './classes/texture-3d';
-export {default as TransformFeedback} from './classes/transform-feedback';
-export {default as VertexArrayObject} from './classes/vertex-array-object';
-export {default as VertexArray} from './classes/vertex-array';
-export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 // experimental WebGL exports
 

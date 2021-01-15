@@ -156,7 +156,7 @@ function testFormatDeduction(t, glContext) {
     const expectedType = formatInfo.types[0];
     const expectedDataFormat = formatInfo.dataFormat;
     const options = {
-      format,
+      format: Number(format),
       height: 1,
       width: 1
     };
@@ -440,7 +440,7 @@ test('WebGL1#Texture2D setImageData', t => {
   const {gl} = fixture;
 
   // data: null
-  const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
+  const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmaps: false});
   t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
@@ -487,7 +487,7 @@ test('WebGL2#Texture2D setImageData', t => {
     height: 1,
     format: GL.RGBA32F,
     type: GL.FLOAT,
-    mipmap: false
+    mipmaps: false
   });
   t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
@@ -524,7 +524,7 @@ test('WebGL1#Texture2D setSubImageData', t => {
   const {gl} = fixture;
 
   // data: null
-  const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmap: false});
+  const texture = new Texture2D(gl, {data: null, width: 2, height: 1, mipmaps: false});
   t.deepEquals(readPixelsToArray(texture), new Uint8Array(8), 'Pixels are empty');
 
   // data: typed array
@@ -571,7 +571,7 @@ test('WebGL2#Texture2D setSubImageData', t => {
     height: 1,
     format: GL.RGBA32F,
     type: GL.FLOAT,
-    mipmap: false
+    mipmaps: false
   });
   t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
@@ -615,7 +615,6 @@ test('WebGL2#Texture2D setSubImageData', t => {
 test('WebGL2#Texture2D resize', t => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
-    // @ts-ignore
     data: null,
     width: 2,
     height: 2,
@@ -641,7 +640,6 @@ test('WebGL2#Texture2D resize', t => {
   t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing to NPOT.');
 
   texture = new Texture2D(gl, {
-    // @ts-ignore
     data: null,
     width: 2,
     height: 2,
@@ -662,7 +660,6 @@ test('WebGL2#Texture2D resize', t => {
 test('WebGL2#Texture2D generateMipmap', t => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
-    // @ts-ignore
     data: null,
     width: 3,
     height: 3,
@@ -674,7 +671,6 @@ test('WebGL2#Texture2D generateMipmap', t => {
   t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
 
   texture = new Texture2D(gl, {
-    // @ts-ignore
     data: null,
     width: 2,
     height: 2,

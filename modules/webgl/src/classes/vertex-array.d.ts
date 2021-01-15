@@ -1,9 +1,19 @@
-import ProgramConfiguration from "./program-configuration";
-import VertexArrayObject from "./vertex-array-object";
+import Program from './program'; 
+import ProgramConfiguration from './program-configuration';
+import VertexArrayObject from './vertex-array-object';
 import Accessor from './accessor';
+
+export type VertexArrayProps = {
+  program?: Program;
+  configuration?: ProgramConfiguration;
+  attributes?: any[];
+  elements?: any;
+  bindOnUse?: boolean;
+};
 
 export default class VertexArray {
   readonly attributes: object;
+
   constructor(gl: WebGLRenderingContext, opts?: {});
   delete(): void;
   initialize(props?: {}): this;

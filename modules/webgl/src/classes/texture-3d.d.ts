@@ -10,7 +10,7 @@ export type Texture3DProps = TextureProps & {
 export default class Texture3D extends Texture {
   static isSupported(gl: WebGLRenderingContext): boolean;
 
-  constructor(gl, props: Texture3DProps);
+  constructor(gl: WebGL2RenderingContext, props: Texture3DProps);
 
   /** Image 3D copies from Typed Array or WebGLBuffer */
   setImageData(options: {

@@ -13,6 +13,7 @@ test('WebGL#Texture3D construct/delete', t => {
     return;
   }
 
+  // @ts-ignore
   t.throws(() => new Texture3D(), /.*Requires WebGL2.*/, 'Texture3D throws on missing gl context');
 
   // TODO(Tarek): generating mipmaps on an empty 3D texture seems to trigger an INVALID_OPERATION

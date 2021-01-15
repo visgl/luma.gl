@@ -1,7 +1,16 @@
-import Resource from './resource';
+import Resource, {ResourceProps} from './resource';
 import ProgramConfiguration from './program-configuration';
 
+export type ProgramProps = ResourceProps & {
+
+}
+
+/**
+ * A Program holds fully processed executable code,
+ * for one or more Shader stages. 
+ */
 export default class Program extends Resource {
+
   readonly handle: WebGLProgram;  
   readonly configuration: ProgramConfiguration;
 

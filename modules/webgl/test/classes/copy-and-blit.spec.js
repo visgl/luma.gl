@@ -144,13 +144,13 @@ function testCopyToBuffer(t, bufferCreation) {
     let source;
 
     const colorTexture = new Texture2D(gl, {
+      data: sourceIsFramebuffer ? null : new Float32Array(clearColor),
+      width: 1,
+      height: 1,
       format: GL.RGBA32F,
       type: GL.FLOAT,
       dataFormat: GL.RGBA,
-      mipmap: false,
-      width: 1,
-      height: 1,
-      data: sourceIsFramebuffer ? null : new Float32Array(clearColor)
+      mipmaps: false
     });
     const pbo = new Buffer(gl, {byteLength, accessor: {type: GL.FLOAT}});
     if (sourceIsFramebuffer) {
@@ -215,7 +215,7 @@ test('WebGL#CopyAndBlit readPixelsToBuffer (buffer creation)', t => {
 
 const DEFAULT_TEXTURE_OPTIONS = {
   format: GL.RGBA,
-  mipmap: false,
+  mipmaps: false,
   width: 1,
   height: 1,
   data: null

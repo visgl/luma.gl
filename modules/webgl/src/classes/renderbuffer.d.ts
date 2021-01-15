@@ -21,6 +21,10 @@ export default class Renderbuffer extends Resource {
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean;
   static getSamplesForFormat(gl: WebGLRenderingContext, options: {format: number}): number;
 
+  readonly width: number;
+  readonly height: number;
+  readonly format: number;
+
   constructor(gl: WebGLRenderingContext, props: RenderbufferProps);
 
   /** Creates and initializes a renderbuffer object's data store */
