@@ -1,12 +1,18 @@
-import Resource from './resource';
+import Resource, {ResourceProps} from './resource';
+
+export type VertexArrayObjectProps = ResourceProps & object;
+
 export default class VertexArrayObject extends Resource {
-  static isSupported(gl: WebGLRenderingContext, options?: {}): boolean;
+  static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean;
   static getDefaultArray(gl: WebGLRenderingContext): any;
   static getMaxAttributes(gl: WebGLRenderingContext): any;
   static setConstant(gl: WebGLRenderingContext, location: any, array: any): void;
-  constructor(gl: WebGLRenderingContext, opts?: {});
-  delete(): this;
+
   get MAX_ATTRIBUTES(): any;
+
+  constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps);
+  delete(): this;
+
   initialize(props?: {}): this;
   setProps(props: any): this;
   setElementBuffer(elementBuffer?: any, opts?: {}): this;
@@ -15,5 +21,5 @@ export default class VertexArrayObject extends Resource {
   getConstantBuffer(elementCount: any, value: any): any;
 
   // PRIVATE
-  _normalizeConstantArrayValue(arrayValue);
+  // _normalizeConstantArrayValue(arrayValue);
 }

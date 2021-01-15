@@ -1,11 +1,26 @@
-import Resource from '@luma.gl/webgl/classes/resource';
+import Resource, {ResourceProps} from './resource';
 
+export type TextureProps = ResourceProps & {
+  data?: any;
+  width?: number; 
+  height?: number; 
+  depth?: number;
+
+  pixels?: any;
+  format?: number;
+  dataFormat?: number;
+  border?: number;
+  recreate?: boolean;
+  type?: number; 
+  compressed?: boolean; 
+  mipmaps?: boolean;
+
+  parameters?: object;
+  pixelStore?: object;
+  textureUnit?: number;
+}
+  
 export default class Texture extends Resource {
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
-  readonly target: any;
-
   static isSupported(
     gl: WebGLRenderingContext,
     options?: {
@@ -13,6 +28,13 @@ export default class Texture extends Resource {
       linearFiltering: any;
     }
   ): boolean;
+
+  readonly width: number;
+  readonly height: number;
+  readonly depth: number;
+  readonly target: any;
+
+  readonly MAX_ATTRIBUTES: number;
 
   constructor(gl: WebGLRenderingContext, props: any);
   toString(): string;

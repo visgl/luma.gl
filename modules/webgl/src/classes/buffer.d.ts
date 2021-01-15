@@ -1,32 +1,69 @@
-import Resource from './resource';
+import {AccessorObject} from '../types';
+import Resource, {ResourceProps} from './resource';
 
+export type BufferProps = ResourceProps & {
+  data?: any; // ArrayBufferView;
+  byteLength?: number;
+  target?: number;
+  usage?: number;
+  accessor?: AccessorObject;
+
+  /** @deprecated */
+  index?: number;
+  /** @deprecated */
+  offset?: number;
+  /** @deprecated */
+  size?: number;
+  /** @deprecated */
+  type?: number
+}
+
+/**
+ * Holds a block of unformatted memory allocated on the GPU via an underlying 
+ * WebGLBuffer. These can be used to store vertex data, pixel data retrieved
+ * from images or the framebuffer, and a variety of other things. 
+ */
 export default class Buffer extends Resource {
+
+  readonly handle: WebGLBuffer;
   readonly byteLength: number;
   readonly bytesUsed: number;
   readonly usage: number;
   readonly accessor: object;
 
-  constructor(gl: WebGLRenderingContext, props?: {});
+  readonly type: any;
+  readonly bytes: any;
+
+  constructor(gl: WebGLRenderingContext, props?: BufferProps);
+  constructor(gl: WebGLRenderingContext, data: ArrayBufferView);
+  constructor(gl: WebGLRenderingContext, byteLength: number);
+
+  initialize(props?: BufferProps): this;
+  setProps(props: BufferProps): this;
+
   getElementCount(accessor?: any): number;
   getVertexCount(accessor?: any): number;
-  initialize(props?: {}): this;
-  setProps(props: any): this;
+
   setAccessor(accessor: any): this;
   reallocate(byteLength: any): boolean;
+
   setData(props: any): this;
   subData(props: any): this;
+
   copyData(options: {
     sourceBuffer: any;
     readOffset?: number;
     writeOffset?: number;
     size: any;
   }): this;
+
   getData(options?: {
     dstData?: any;
     srcByteOffset?: number;
     dstOffset?: number;
     length?: number;
   }): any;
+
   /**
    * Binds a buffer to a given binding point (target).
    *   GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER take an index, and optionally a range.
@@ -36,13 +73,12 @@ export default class Buffer extends Resource {
    */
   bind(options?: {target?: any; index?: any; offset?: number; size: any}): this;
   unbind(options?: {target?: any; index?: any}): this;
+
   getDebugData(): {
     data: any;
     changed: boolean;
   };
   invalidateDebugData(): void;
-  get type(): any;
-  get bytes(): any;
   setByteLength(byteLength: any): boolean;
   updateAccessor(opts: any): this;
 }

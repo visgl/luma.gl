@@ -1,7 +1,26 @@
-import Resource from '@luma.gl/webgl/classes/resource';
+import Resource, {ResourceProps} from './resource';
+
+export type FramebufferProps = ResourceProps & {
+  width?: number;
+  height?: number;
+  attachments?: any;
+  color?: boolean;
+  depth?: boolean;
+  stencil?: boolean;
+  check?: boolean;
+  readBuffer?: any;
+  drawBuffers?: any;
+}
+
+/**
+ * Framebuffers hold a collection of Texture and Renderbuffer attachments.
+ * Framebuffers allow rendering to non-Default Framebuffer locations
+ * without disturbing the main screen.
+*/
 export default class Framebuffer extends Resource {
   static readonly STATUS: number[];
 
+  readonly handle: WebGLFramebuffer;
   readonly width: number;
   readonly height: number;
   readonly attachments: any[];
@@ -19,27 +38,26 @@ export default class Framebuffer extends Resource {
       colorBufferHalfFloat: any;
     }
   ): boolean;
-  static getDefaultFramebuffer(gl: WebGLRenderingContext): any;
+
+  /** returns the default Framebuffer */
+  static getDefaultFramebuffer(gl: WebGLRenderingContext): Framebuffer;
+
   get MAX_COLOR_ATTACHMENTS(): any;
   get MAX_DRAW_BUFFERS(): any;
-  constructor(gl: WebGLRenderingContext, opts?: {});
   get color(): any;
   get texture(): any;
   get depth(): any;
   get stencil(): any;
-  initialize(options?: {
-    width?: number;
-    height?: number;
-    attachments?: any;
-    color?: boolean;
-    depth?: boolean;
-    stencil?: boolean;
-    check?: boolean;
-    readBuffer?: any;
-    drawBuffers?: any;
-  }): this;
+
+  constructor(gl: WebGLRenderingContext, props?: FramebufferProps);
+
+  initialize(options?: FramebufferProps): this;
+
   // @ts-ignore
   delete(): void;
+
+  resize(size?: {width: any; height: any}): this;
+
   update(options?: {
     attachments?: {};
     readBuffer: any;
@@ -47,14 +65,15 @@ export default class Framebuffer extends Resource {
     clearAttachments?: boolean;
     resizeAttachments?: boolean;
   }): this;
-  resize(options?: {width: any; height: any}): this;
+
   attach(
     attachments: any,
     options?: {
       clearAttachments?: boolean;
       resizeAttachments?: boolean;
     }
-  ): void;
+  ): this;
+
   checkStatus(): this;
   getStatus(): any;
   clear(options?: {color?: any; depth?: any; stencil?: any; drawBuffers?: any[]}): this;

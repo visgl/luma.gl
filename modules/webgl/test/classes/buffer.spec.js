@@ -252,7 +252,7 @@ test('Buffer#getElementCount', t => {
   vertexCount = buffer1.getElementCount();
   t.equal(vertexCount, 3, 'Vertex count should match');
 
-  let buffer2 = new Buffer(gl, {data: new Int32Array([1, 2, 3, 4]), acessor: {divisor: 1}});
+  let buffer2 = new Buffer(gl, {data: new Int32Array([1, 2, 3, 4]), accessor: {divisor: 1}});
   vertexCount = buffer2.getElementCount();
   t.equal(vertexCount, 4, 'Vertex count should match');
 
