@@ -235,18 +235,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
   /* eslint-enable max-statements */
 
-  onRender({
-    gl,
-    width,
-    height,
-    renderModel,
-    positionBuffer,
-    colorBuffer,
-    transform,
-    useDevicePixels,
-    time,
-    pickingFramebuffer
-  }) {
+  onRender({gl, width, height, renderModel, transform, time, pickingFramebuffer}) {
     if (this.demoNotSupported) {
       return;
     }
@@ -334,6 +323,8 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
   }
 }
 
+// @ts-ignore
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

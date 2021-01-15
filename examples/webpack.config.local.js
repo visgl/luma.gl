@@ -31,7 +31,7 @@ const LOCAL_DEVELOPMENT_CONFIG = {
     alias: ALIASES
     // For bundle size testing
     // 'luma.gl': resolve(LIB_DIR, './dist/es6'),
-    // 'math.gl': resolve(LIB_DIR, './node_modules/math.gl')
+    // '@math.gl/core': resolve(LIB_DIR, './node_modules/math.gl')
   },
 
   module: {
@@ -57,7 +57,9 @@ const LOCAL_DEVELOPMENT_CONFIG = {
   }
 };
 
-function addLocalDevSettings(config, {libAlias}) {
+function addLocalDevSettings(config, options) {
+  const {libAlias} = options;
+
   config = Object.assign({}, LOCAL_DEVELOPMENT_CONFIG, config);
   config.resolve = config.resolve || {};
   config.resolve.alias = config.resolve.alias || {};

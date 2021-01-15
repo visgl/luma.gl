@@ -70,7 +70,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       },
       vertexCount: 3,
       instanceCount: 4,
-      instanced: true
+      isInstanced: true
     });
 
     return {model, positionBuffer, colorBuffer, offsetBuffer};
@@ -89,6 +89,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

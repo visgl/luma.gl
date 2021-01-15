@@ -1,3 +1,5 @@
+import Model from '../lib/model';
+
 export type TransformProps = {
   vs?: string;
   elementCount?: number;
@@ -9,9 +11,15 @@ export type TransformProps = {
   _sourceTextures?: any;
   _targetTexture?: any;
   _targetTextureVarying?: string;
+  _swapTexture?: string;
+  _fs?: string;
+  inject?: any;
+  drawMode?: number;
 };
 
 export default class Transform {
+  readonly model: Model;
+
   static isSupported(gl: WebGLRenderingContext): any;
   constructor(gl: WebGLRenderingContext, props?: TransformProps);
   delete(): void;

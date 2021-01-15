@@ -36,7 +36,7 @@ interface AnimationProps {
   _offScreen: boolean
 }
 
-interface AnimationLoopViewProps {
+type AnimationLoopViewProps = {
   // view parameters
   autoResizeViewport?: boolean
   autoResizeDrawingBuffer?: boolean
@@ -44,7 +44,7 @@ interface AnimationLoopViewProps {
 }
 
 // constructor parameters
-interface AnimationLoopProps extends AnimationLoopViewProps{
+type AnimationLoopProps = AnimationLoopViewProps & {
   onCreateContext?: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string // innerHTML
   onInitialize?: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
@@ -59,7 +59,7 @@ interface AnimationLoopProps extends AnimationLoopViewProps{
 }
 
 // instance of parameters after construction
-interface AnimationLoopPropsInternal {
+type AnimationLoopPropsInternal = {
   onCreateContext: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string // innerHTML
   onInitialize: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
@@ -73,32 +73,23 @@ interface AnimationLoopPropsInternal {
 }
 
 export default class AnimationLoop {
-  animationProps: AnimationProps
-  props: AnimationLoopPropsInternal
-  gl: WebGLRenderingContext
-  canvas: HTMLCanvasElement | OffscreenCanvas
-  framebuffer: Framebuffer
-  timeline: Timeline
-  stats: StatsManager
-  cpuTime: Stats
-  gpuTime: Stats
-  frameRate: Stats
-  offScreen: boolean
+  readonly animationProps: AnimationProps
+  readonly props: AnimationLoopPropsInternal
+  readonly gl: WebGLRenderingContext
+  readonly canvas: HTMLCanvasElement | OffscreenCanvas
+  readonly framebuffer: Framebuffer
+  readonly timeline: Timeline
+  readonly stats: StatsManager
+  readonly cpuTime: Stats
+  readonly gpuTime: Stats
+  readonly frameRate: Stats
+  readonly offScreen: boolean
 
-  display: any
+  readonly display: any
 
-  useDevicePixels: number | boolean
-  autoResizeDrawingBuffer: boolean
-  autoResizeViewport: boolean
-
-  _initialized: boolean
-  _running: boolean
-  _animationFrameId?: number
-  _nextFramePromise?: Promise<void>
-  _resolveNextFrame?: (value: AnimationLoop) => void
-  _cpuStartTime: number
-  _gpuTimeQuery?: Query
-  _pageLoadPromise?: Promise<Document>
+  readonly useDevicePixels: number | boolean
+  readonly autoResizeDrawingBuffer: boolean
+  readonly autoResizeViewport: boolean
 
   constructor(props?: AnimationLoopProps);
   delete(): void;
@@ -111,12 +102,18 @@ export default class AnimationLoop {
   detachTimeline(): void;
   waitForRender(): Promise<void>;
   toDataURL(): Promise<string>;
-  onCreateContext(opts: CreateGLContextOptions): WebGLRenderingContext;
-  onInitialize(animationProps: AnimationProps): AnimationProps | Promise<AnimationProps>;
-  onRender(animationProps: AnimationProps): void;
-  onFinalize(animationProps: AnimationProps): void;
-  getHTMLControlValue(id: string, defaultValue?: number): number;
   setViewParameters(): AnimationLoop;
+  getHTMLControlValue(id: string, defaultValue?: number): number;
+
+  // Callbacks
+  onCreateContext(opts: CreateGLContextOptions): WebGLRenderingContext;
+  onInitialize(animationProps: object): object | Promise<object> | void;
+  onRender(animationProps: object): void;
+  onFinalize(animationProps: object): void;
+  // TODO
+  // onInitialize(animationProps: AnimationProps): AnimationProps | Promise<AnimationProps>;
+  // onRender(animationProps: AnimationProps): void;
+  // onFinalize(animationProps: AnimationProps): void;
 
   /*
   _startLoop(): void;
@@ -146,5 +143,15 @@ export default class AnimationLoop {
   _startEventHandling(): void;
   _onMousemove(e: MouseEvent): void;
   _onMouseleave(e: MouseEvent): void;
+
+  _initialized: boolean
+  _running: boolean
+  _animationFrameId?: number
+  _nextFramePromise?: Promise<void>
+  _resolveNextFrame?: (value: AnimationLoop) => void
+  _cpuStartTime: number
+  _gpuTimeQuery?: Query
+  _pageLoadPromise?: Promise<Document>
+
   */
 }

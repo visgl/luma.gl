@@ -1,6 +1,6 @@
-import Resource from './resource';
+import Resource, {ResourceProps} from './resource';
 
-export type RenderbufferProps = {
+export type RenderbufferProps = ResourceProps & {
   format: number;
   width?: number;
   height?: number;

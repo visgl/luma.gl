@@ -17,15 +17,13 @@ export class MiniAnimationLoop {
     return Promise.resolve();
   }
 
-  onInitialize() {}
-
-  onRender() {}
-
   _setDisplay() {}
 
   _getCanvas(props = {}) {
+    /** @type {HTMLCanvasElement} */
     let canvas;
     if (props.canvas) {
+      // @ts-ignore
       canvas = document.getElementById(props.canvas);
       const dpr = window.devicePixelRatio || 1;
       canvas.height = canvas.clientHeight * dpr;

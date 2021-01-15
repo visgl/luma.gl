@@ -27,7 +27,7 @@ export class Timeline {
   addChannel(props: ChannelProps): number;
   removeChannel(handle: number): void;
   isFinished(handle: number): boolean;
-  getTime(handle: number): any;
+  getTime(handle?: number): any;
   setTime(time: number): void;
   play(): void;
   pause(): void;

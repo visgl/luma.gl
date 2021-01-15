@@ -212,6 +212,10 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     this.onInitialize = this.onInitialize.bind(this);
     this.onRender = this.onRender.bind(this);
+
+    this.gltf = null;
+
+    // @ts-ignore
     this._setDisplay(new VRDisplay());
   }
 
@@ -344,6 +348,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     const showSelector = document.getElementById('showSelector');
     if (showSelector) {
       showSelector.onchange = event => {
+        // @ts-ignore
         const value = showSelector.value.split(' ').map(x => parseFloat(x));
         this.u_ScaleDiffBaseMR = value.slice(0, 4);
         this.u_ScaleFGDSpec = value.slice(4);
@@ -353,6 +358,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     const lightSelector = document.getElementById('lightSelector');
     if (lightSelector) {
       lightSelector.onchange = event => {
+        // @ts-ignore
         this.light = lightSelector.value;
       };
     }
@@ -360,6 +366,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     const iblSelector = document.getElementById('iblSelector');
     if (iblSelector) {
       iblSelector.onchange = event => {
+        // @ts-ignore
         this._updateLightSettings(iblSelector.value);
         this._rebuildModel();
       };
@@ -471,6 +478,7 @@ export default class AppAnimationLoop extends AnimationLoop {
   }
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

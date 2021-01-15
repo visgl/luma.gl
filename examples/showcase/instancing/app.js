@@ -43,26 +43,6 @@ const SIDE = 256;
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
   constructor(gl, props) {
-    let offsets = [];
-    for (let i = 0; i < SIDE; i++) {
-      const x = ((-SIDE + 1) * 3) / 2 + i * 3;
-      for (let j = 0; j < SIDE; j++) {
-        const y = ((-SIDE + 1) * 3) / 2 + j * 3;
-        offsets.push(x, y);
-      }
-    }
-    offsets = new Float32Array(offsets);
-
-    const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
-    for (let i = 0; i < SIDE; i++) {
-      for (let j = 0; j < SIDE; j++) {
-        pickingColors[(i * SIDE + j) * 2 + 0] = i;
-        pickingColors[(i * SIDE + j) * 2 + 1] = j;
-      }
-    }
-
-    const colors = new Float32Array(SIDE * SIDE * 3).map((n, i) => random() * 0.75 + 0.25);
-
     const vs = `\
 attribute float instanceSizes;
 attribute vec3 positions;
@@ -103,8 +83,28 @@ void main(void) {
   MY_SHADER_HOOK_fragmentColor(gl_FragColor);
 }
 `;
+    const offsets = [];
+    for (let i = 0; i < SIDE; i++) {
+      const x = ((-SIDE + 1) * 3) / 2 + i * 3;
+      for (let j = 0; j < SIDE; j++) {
+        const y = ((-SIDE + 1) * 3) / 2 + j * 3;
+        offsets.push(x, y);
+      }
+    }
 
-    const offsetsBuffer = new Buffer(gl, offsets);
+    const offsets32 = new Float32Array(offsets);
+
+    const pickingColors = new Uint8ClampedArray(SIDE * SIDE * 2);
+    for (let i = 0; i < SIDE; i++) {
+      for (let j = 0; j < SIDE; j++) {
+        pickingColors[(i * SIDE + j) * 2 + 0] = i;
+        pickingColors[(i * SIDE + j) * 2 + 1] = j;
+      }
+    }
+
+    const colors = new Float32Array(SIDE * SIDE * 3).map((n, i) => random() * 0.75 + 0.25);
+
+    const offsetsBuffer = new Buffer(gl, offsets32);
     const colorsBuffer = new Buffer(gl, colors);
     const pickingColorsBuffer = new Buffer(gl, pickingColors);
 
@@ -245,6 +245,7 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
   }
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

@@ -15,6 +15,6 @@
   ],
   "main": "index.js",
   "dependencies": {
-    "@luma.gl/constants": "^8.3.0"
+   "@luma.gl/constants": "8.4.0-alpha.1"
   }
 }

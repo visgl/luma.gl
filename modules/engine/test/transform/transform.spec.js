@@ -42,6 +42,7 @@ void main()
 
 function getResourceCounts() {
   /* global luma */
+  // @ts-ignore
   const resourceStats = luma.stats.get('Resource Counts');
   return {
     Texture2D: resourceStats.get('Texture2Ds Active').count,
@@ -82,6 +83,7 @@ test('WebGL#Transform construction', t => {
 test('WebGL#Transform constructor/delete', t => {
   const {gl, gl2} = fixture;
 
+  // @ts-ignore
   t.throws(() => new Transform(), 'Transform throws on missing gl context');
 
   t.throws(() => new Transform(gl), 'Transform throws on missing gl context');

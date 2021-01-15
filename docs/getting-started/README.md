@@ -44,7 +44,7 @@ The full contents of the `package.json` should be the following (dependency vers
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@luma.gl/core": "^8.3.0"
+   "@luma.gl/core": "8.4.0-alpha.1"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

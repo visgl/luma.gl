@@ -176,6 +176,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     statsWidget.update();
 
     if (tick % 600 === 0) {
+      // @ts-ignore TODO - fix probe.gl types
       this.stats.reset();
     }
 
@@ -262,6 +263,7 @@ function createDrawcall(gl, offsets, texture, alpha) {
   });
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   document.body.style.overflow = 'hidden';
   document.body.style.margin = '0';
