@@ -8,8 +8,8 @@ export class KeyFrames<T> {
   times: Array<number>
   values: Array<T>
 
-  constructor(keyFrames: Array<KeyFrame<T>>);
-  setKeyFrames(keyFrames: Array<KeyFrame<T>>): void;
+  constructor(keyFrames: Array<KeyFrame<T>> | number[][]);
+  setKeyFrames(keyFrames: Array<KeyFrame<T>> | number[][]): void;
   setTime(time: number): void;
   getStartTime(): number;
   getEndTime(): number;

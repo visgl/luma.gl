@@ -154,6 +154,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

@@ -35,7 +35,7 @@ export default class Buffer extends Resource {
   readonly bytes: any;
 
   constructor(gl: WebGLRenderingContext, props?: BufferProps);
-  constructor(gl: WebGLRenderingContext, data: ArrayBufferView);
+  constructor(gl: WebGLRenderingContext, data: ArrayBufferView | number[]);
   constructor(gl: WebGLRenderingContext, byteLength: number);
 
   initialize(props?: BufferProps): this;

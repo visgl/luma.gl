@@ -1,10 +1,47 @@
 import ProgramManager from './program-manager';
 import {Program, Shader} from '@luma.gl/webgl';
 
+type DefineMap = object;
+type InjectionMap = object;
+
+type ProgramProps = {
+  program?: Program
+  vs?: Shader | string
+  fs?: Shader | string
+  modules?: (object | string)[]; // Array<ShaderModule | ShaderModuleObject | string>
+  defines?: DefineMap
+  inject?: InjectionMap
+  varyings?: string[]
+  bufferMode?: number
+  transpileToGLSL100?: boolean
+}
+
+type ModelProps = ProgramProps & {
+  id?: string
+  moduleSettings?: object; // UniformsOptions
+  attributes?: object,
+  uniforms?: object; // Uniforms
+  geometry?: object; // Geometry
+  vertexCount?: number
+  drawMode?: number
+  isInstanced?: boolean
+  instanceCount?: number
+  programManager?: ProgramManager
+  onBeforeRender?: () => void
+  onAfterRender?: () => void
+  _feedbackBuffers?: object; // FeedbackBuffers
+}
+
+/*
 export type ModelProps = {
+  id?: string;
   program?: Program;
   vs?: Shader | string;
   fs?: Shader | string;
+  geometry?: object;
+  drawMode?: number;
+  vertexCount?: number;
+  isInstanced?: boolean;
   modules?: object;
   defines?: object;
   inject?: object;
@@ -12,12 +49,14 @@ export type ModelProps = {
   bufferMode?: number;
   transpileToGLSL100?: boolean;
 };
+*/
 
 export default class Model {
   readonly id: string;
   readonly gl: WebGLRenderingContext;
   readonly animated: boolean;
   readonly programManager: ProgramManager;
+  readonly vertexCount: number;
 
   constructor(gl: WebGLRenderingContext, props?: ModelProps);
   initialize(props: any): void;

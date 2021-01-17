@@ -38,10 +38,10 @@
   "peerDependencies": {
     "@loaders.gl/gltf": "^2.3.0",
     "@loaders.gl/images": "^2.3.0",
-    "@luma.gl/engine": "^8.1.0",
-    "@luma.gl/gltools": "^8.1.0",
-    "@luma.gl/shadertools": "^8.1.0",
-    "@luma.gl/webgl": "^8.1.0"
+   "@luma.gl/engine": "8.4.0-alpha.1",
+   "@luma.gl/gltools": "8.4.0-alpha.1",
+   "@luma.gl/shadertools": "8.4.0-alpha.1",
+   "@luma.gl/webgl": "8.4.0-alpha.1"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }

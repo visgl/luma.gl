@@ -43,6 +43,8 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
 
   start(props) {
     const canvas = this._getCanvas(props);
+    /** @type {WebGLRenderingContext} */
+    // @ts-ignore
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     gl.clearColor(0, 0, 0, 1);
 
@@ -149,6 +151,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   }
 }
 
+// @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
   const animationLoop = new AppAnimationLoop();
   animationLoop.start();

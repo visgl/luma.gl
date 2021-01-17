@@ -2,16 +2,17 @@ export const ERR_CONTEXT: string;
 export const ERR_WEBGL: string;
 export const ERR_WEBGL2: string;
 
-export interface CreateContextOptions {
+/** Options for createGLContext */
+export type CreateGLContextOptions = {
   // COMMON CONTEXT PARAMETERS
-  // Attempt to allocate WebGL2 context
-  webgl2?: boolean // Attempt to create a WebGL2 context (false to force webgl1)
-  webgl1?: boolean // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  throwOnError?: boolean
+  webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
+  webgl1?: boolean; // set to false to not create a WebGL1 context (fail if webgl2 not available)
+  throwOnError?: boolean; // If set to false, return `null` if context creation fails.
+  manageState?: boolean; // Set to false to disable WebGL state management instrumentation
   break?: Array<any> // TODO: types
-  manageState?: boolean
+  onError?: any;
   // BROWSER CONTEXT PARAMETERS
-  canvas?: HTMLCanvasElement | string | OffscreenCanvas // A canvas element or a canvas string id
+  canvas?: HTMLCanvasElement | string | OffscreenCanvas | null // A canvas element or a canvas string id
   debug?: boolean // Instrument context (at the expense of performance)
   alpha?: boolean // Default render target has an alpha buffer.
   depth?: boolean // Default render target has a depth buffer of at least 16 bits.
@@ -21,31 +22,11 @@ export interface CreateContextOptions {
   preserveDrawingBuffer?: boolean // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
   failIfMajorPerformanceCaveat?: boolean // Do not create if the system performance is low.
   // HEADLESS CONTEXT PARAMETERS
-  width?: number // width are height are only used by headless gl
-  height?: number
+  width?: number /** width are height are only used by headless gl */;
+  height?: number /** width are height are only used by headless gl */;
   // WEBGL/HEADLESS CONTEXT PARAMETERS
   // Remaining options are passed through to context creator
 }
-
-/** Options for createGLContext */
-export type CreateGLContextOptions = {
-  webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
-  webgl1?: boolean; // set to false to not create a WebGL1 context (fail if webgl2 not available)
-  throwOnError?: boolean; // If set to false, return `null` if context creation fails.
-  manageState?: true; // Set to false to disable WebGL state management instrumentation
-  onError?: any;
-
-  // Browser-only
-  canvas?: HTMLCanvasElement | string | null; // A canvas element or a canvas string id
-  debug?: boolean; // Instrument context (at the expense of performance)
-
-  // Headless-only
-  width?: number /** width are height are only used by headless gl */;
-  height?: number /** width are height are only used by headless gl */;
-
-  // Remaining options are passed through to context creator
-  // Requires @ts-ignore statements
-};
 
 /*
  * Creates a context giving access to the WebGL API

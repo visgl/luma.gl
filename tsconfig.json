@@ -37,11 +37,13 @@
   // Points will be awarded every time an exception is removed!
   "exclude":[
     "modules/engine/test",
-    "modules/webgl/src/classes",
+    "modules/webgl/src/classes/program.js",
+    "modules/webgl/src/classes/buffer.js",
+    "modules/webgl/src/classes/uniforms.js",
+    "modules/webgl/src/classes/vertex-array.js",
 
     "**/modules/*/dist",
 
-    "examples",
     "website",
     "test/apps",
     "test/**/*",
