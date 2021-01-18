@@ -22,6 +22,10 @@ Date: Feb 1, 2021
 
 - TypeScript definitions are available for all modules
 
+### TypeScript
+
+TypeScript definitions are now included in all luma.gl modules. There should no longer be a need to install external type packages.
+
 ### Texture
 
 - Supports continuous update from `HTMLVideoElement`.
@@ -36,7 +40,7 @@ Date: Oct 12, 2020
 
 ### TypeScript
 
-- TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
+- TypeScript definitions are available for `@luma.gl/webgl` module classes (Buffer, Texture, etc.)
 
 ### glTF
 
