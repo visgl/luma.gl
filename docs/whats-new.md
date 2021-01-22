@@ -8,6 +8,10 @@ Date: TBD (Still in development, alpha releases are available)
 
 - Supports continuous update from `HTMLVideoElement`.
 
+### Context
+
+- Added onContextLost, onContextRestored optional callbacks as arguments to createGLContext().
+
 ## Version 8.3
 
 Date: Oct 12, 2020
