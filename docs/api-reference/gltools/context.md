@@ -62,22 +62,24 @@ const gl = createGLContext(options);
 
 - `options` (_Object_) - key/value pairs containing context creation options
 
-| Parameter                      | Default | Description                                                                                                                                                                   |
-| ------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `webgl2`                       | `true`  | If `true`, will attempt to create a WebGL 2 context. Will silently fall back to WebGL 1 contexts unless `webgl1` is set to `false`.                                           |
-| `webgl1`                       | `true`  | If `true`, will attempt to create a WebGL 1 context. The `webgl2` flag has higher priority.                                                                                   |
-| `throwOnError`                 | `true`  | Normally the context will throw an error on failure. If `false`, it will log to console instead.                                                                              |
-| `break`                        | `[]`    | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                                                                |
-| `manageState`                  | `true`  | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to.                                                    |
-| `debug`                        | `false` | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
-| `canvas`                       | `null`  | A _string_ containing the `id` of an existing HTML element or a _DOMElement_ instance. If `null` or not provided, a new canvas will be created.                               |
-| `alpha`                        | `true`  | Default render target has an alpha buffer.                                                                                                                                    |
-| `depth`                        | `true`  | Default render target has a depth buffer of at least 16 bits.                                                                                                                 |
-| `stencil`                      | `false` | Default render target has a stencil buffer of at least 8 bits.                                                                                                                |
-| `antialias`                    | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                                                                                               |
-| `premultipliedAlpha`           | `true`  | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.                                                     |
-| `preserveDrawingBuffer`        | `false` | Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten                                                   |
-| `failIfMajorPerformanceCaveat` | `false` | Do not create if the system performance is low.                                                                                                                               |
+| Parameter                      | Default     | Description                                                                                                                                                                   |
+| ------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webgl2`                       | `true`      | If `true`, will attempt to create a WebGL 2 context. Will silently fall back to WebGL 1 contexts unless `webgl1` is set to `false`.                                           |
+| `webgl1`                       | `true`      | If `true`, will attempt to create a WebGL 1 context. The `webgl2` flag has higher priority.                                                                                   |
+| `throwOnError`                 | `true`      | Normally the context will throw an error on failure. If `false`, it will log to console instead.                                                                              |
+| `break`                        | `[]`        | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                                                                |
+| `manageState`                  | `true`      | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to.                                                    |
+| `debug`                        | `false`     | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
+| `onContextLost`                | `undefined` | A handler for webglcontextlost event that is fired if the user agent detects that the drawing buffer associated with a WebGLRenderingContext object has been lost.            |
+| `onContextRestored`            | `undefined` | A handler for webglcontextrestored event that is fired if the user agent restores the drawing buffer for a WebGLRenderingContext object.                                      |
+| `canvas`                       | `null`      | A _string_ containing the `id` of an existing HTML element or a _DOMElement_ instance. If `null` or not provided, a new canvas will be created.                               |
+| `alpha`                        | `true`      | Default render target has an alpha buffer.                                                                                                                                    |
+| `depth`                        | `true`      | Default render target has a depth buffer of at least 16 bits.                                                                                                                 |
+| `stencil`                      | `false`     | Default render target has a stencil buffer of at least 8 bits.                                                                                                                |
+| `antialias`                    | `true`      | Boolean that indicates whether or not to perform anti-aliasing.                                                                                                               |
+| `premultipliedAlpha`           | `true`      | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.                                                     |
+| `preserveDrawingBuffer`        | `false`     | Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten                                                   |
+| `failIfMajorPerformanceCaveat` | `false`     | Do not create if the system performance is low.                                                                                                                               |
 
 ### instrumentGLContext
 

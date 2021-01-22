@@ -202,6 +202,14 @@ function createBrowserContext(canvas, options) {
     );
   }
 
+  if (options.onContextLost) {
+    canvas.addEventListener('webglcontextlost', options.onContextLost, false);
+  }
+
+  if (options.onContextRestored) {
+    canvas.addEventListener('webglcontextrestored', options.onContextRestored, false);
+  }
+
   return gl;
 }
 
