@@ -20,6 +20,10 @@ Date: Oct 12, 2020
 
 - Support for PBR material.unlit
 
+### gltools
+
+- Context: onContextLost, onContextRestored optional callbacks as arguments to createGLContext().
+
 ## Version 8.1
 
 Date: March 2, 2020
