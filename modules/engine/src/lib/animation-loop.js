@@ -100,7 +100,6 @@ export default class AnimationLoop {
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
-    this._onSetupFrame = animationProps => {};
   }
 
   delete() {
@@ -357,15 +356,9 @@ export default class AnimationLoop {
   }
 
   _setupFrame() {
-    if (this._onSetupFrame) {
-      // call callback
-      this._onSetupFrame(this.animationProps);
-      // end callback
-    } else {
-      this._resizeCanvasDrawingBuffer();
-      this._resizeViewport();
-      this._resizeFramebuffer();
-    }
+    this._resizeCanvasDrawingBuffer();
+    this._resizeViewport();
+    this._resizeFramebuffer();
   }
 
   // Initialize the  object that will be passed to app callbacks
