@@ -1,4 +1,26 @@
+## v8.4.0-beta.2
+
+- Callbacks for onContextLost / onContextRestored events (#1441)
+- Fix AnimationLoop drawing buffer resize (#1442)
+
 ## v8.4.0-beta.1
+
+- Improved engine typings (#1438)
+- chore(webgl): typescript typing improvements (#1437)
+- feat(webgl): typings (#1436)
+- webgl: texture - support compressed textures (#1434)
+- feature(engine): typescript typings (#1433)
+- feat(experimental): typescript typings (#1429)
+- chore: Supporting updates for typescript (#1430)
+- chore: Use `@math.gl/core` instead of `math.gl` (#1432)
+- feat(gltools): typescript typings (#1428)
+- chore(shadertools): Remove duplicates (#1427)
+- Docs: Make clear that count is derived from the length of points array (#1424)
+- feat(shadertools): typescript typings (#1426)
+- Fix shader compilation test failures (#1423)
+- Make sure animationLoop's onError catches context creation errors (#1419)
+
+## v8.4.0-alpha.1
 
 - Texture supports continuous update from HTMLVideoElement (#1418)
 

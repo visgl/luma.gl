@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "8.4.0-beta.1",
+  "version": "8.4.0-beta.2",
   "description": "WebGL2 Classes",
   "license": "MIT",
   "publishConfig": {
@@ -36,8 +36,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "8.4.0-beta.1",
-    "@luma.gl/gltools": "8.4.0-beta.1",
+    "@luma.gl/constants": "8.4.0-beta.2",
+    "@luma.gl/gltools": "8.4.0-beta.2",
     "probe.gl": "^3.2.1"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
