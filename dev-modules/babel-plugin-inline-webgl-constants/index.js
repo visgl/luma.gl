@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // const GL = require('luma.gl/constants');
-const GL = require('@luma.gl/constants');
+const GL = require('@luma.gl/constants').default;
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
