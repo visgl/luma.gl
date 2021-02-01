@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "8.4.0-beta.2",
+  "version": "8.4.0",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "publishConfig": {
@@ -31,11 +31,11 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "8.4.0-beta.2",
-    "@luma.gl/engine": "8.4.0-beta.2",
-    "@luma.gl/gltools": "8.4.0-beta.2",
-    "@luma.gl/shadertools": "8.4.0-beta.2",
-    "@luma.gl/webgl": "8.4.0-beta.2"
+    "@luma.gl/constants": "8.4.0",
+    "@luma.gl/engine": "8.4.0",
+    "@luma.gl/gltools": "8.4.0",
+    "@luma.gl/shadertools": "8.4.0",
+    "@luma.gl/webgl": "8.4.0"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }

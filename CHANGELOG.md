@@ -1,3 +1,8 @@
+## v8.4.0
+
+- Fix video texture error when video is still loading (#1443)
+- do not set Texture data until the first frame of a video is loaded (#1445)
+
 ## v8.4.0-beta.2
 
 - Callbacks for onContextLost / onContextRestored events (#1441)
