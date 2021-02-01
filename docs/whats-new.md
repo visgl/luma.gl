@@ -1,12 +1,20 @@
 # What's New
 
-## Version 8.4 alpha
+## Version 8.4
 
-Date: TBD (Still in development, alpha releases are available)
+Date: Feb 1, 2021
+
+### TypeScript
+
+- TypeScript definitions are available for all modules
 
 ### Texture
 
 - Supports continuous update from `HTMLVideoElement`.
+
+### gltools
+
+- `createGLContext`: adds optional callbacks `onContextLost`, `onContextRestored`.
 
 ## Version 8.3
 
@@ -19,10 +27,6 @@ Date: Oct 12, 2020
 ### glTF
 
 - Support for PBR material.unlit
-
-### gltools
-
-- Context: onContextLost, onContextRestored optional callbacks as arguments to createGLContext().
 
 ## Version 8.1
 
