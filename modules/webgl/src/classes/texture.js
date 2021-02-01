@@ -92,6 +92,7 @@ export default class Texture extends Resource {
     const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
     // @ts-ignore
     if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
+      this._video = null; // Declare member before the object is sealed
       data.addEventListener('loadedmetadata', () => this.initialize(props));
       return this;
     }
