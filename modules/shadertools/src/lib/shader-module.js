@@ -144,6 +144,7 @@ function normalizeInjections(injections) {
 
     if (typeof injection === 'string') {
       injection = {
+        order: 0,
         injection
       };
     }
