@@ -1,3 +1,8 @@
+## v8.4.1
+
+- Fix peerDependencies of packages (#1447)
+- Fix shader module injection order (#1449)
+
 ## v8.4.0
 
 - Fix video texture error when video is still loading (#1443)
