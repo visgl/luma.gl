@@ -60,6 +60,8 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 # define DRAW_BUFFERS
 # define TEXTURE_LOD
 
+#define textureCubeLod textureLod
+
 #endif // __VERSION
 `;
 

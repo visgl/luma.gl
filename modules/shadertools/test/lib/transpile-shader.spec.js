@@ -25,6 +25,8 @@ void main(void) {
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
   vec4 texLod = texture2DLodEXT(sampler, texCoord, 1.0);
   vec4 texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
+  vec4 texLod = texture2DLod(sampler, texCoord, 1.0);
+  vec4 texCubeLod = textureCubeLod(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
@@ -46,6 +48,8 @@ void main(void) {
   vec4 texCubeColor = texture(sCube, cubeCoord);
   vec4 texLod = textureLod(sampler, texCoord, 1.0);
   vec4 texCubeLod = textureLod(sCube, cubeCoord, 1.0);
+  texLod = textureLod(sampler, texCoord, 1.0);
+  texCubeLod = textureLod(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
