@@ -5,8 +5,8 @@ const ES300_REPLACEMENTS = [
   // Fix poorly formatted version directive
   [/^(#version[ \t]+(100|300[ \t]+es))?[ \t]*\n/, '#version 300 es\n'],
   // The individual `texture...()` functions were replaced with `texture()` overloads
-  [/\btexture(2D|2DProj|Cube)(EXT)?\(/g, 'texture('],
-  [/\btexture(2D,2DProj,Cube)Lod(EXT)?\(/g, 'textureLod(']
+  [/\btexture(2D|2DProj|Cube)Lod(EXT)?\(/g, 'textureLod('],
+  [/\btexture(2D|2DProj|Cube)(EXT)?\(/g, 'texture(']
 ];
 
 const ES300_VERTEX_REPLACEMENTS = [
@@ -26,6 +26,12 @@ const ES300_FRAGMENT_REPLACEMENTS = [
 
 const ES100_REPLACEMENTS = [
   [/^#version[ \t]+300[ \t]+es/, '#version 100'],
+
+  // In GLSL 1.00 ES these functions are provided by an extension
+  [/\btexture(2D|2DProj|Cube)Lod\(/g, 'texture$1LodEXT('],
+
+  // Overloads in GLSL 3.00 map to individual functions. Note that we cannot
+  // differentiate 2D,2DProj,Cube without type analysis so we choose the most common variant.
   [/\btexture\(/g, 'texture2D('],
   [/\btextureLod\(/g, 'texture2DLodEXT(']
 ];
@@ -37,7 +43,7 @@ const ES100_VERTEX_REPLACEMENTS = [
 ];
 
 const ES100_FRAGMENT_REPLACEMENTS = [
-  ...ES100_REPLACEMENTS, 
+  ...ES100_REPLACEMENTS,
   // Replace `in` with `varying`
   [/^[ \t]*in[ \t]+/gm, 'varying ']
 ];
