@@ -36,7 +36,11 @@ const ES100_VERTEX_REPLACEMENTS = [
   [/^[ \t]*out[ \t]+(.+;)/gm, 'varying $1']
 ];
 
-const ES100_FRAGMENT_REPLACEMENTS = [...ES100_REPLACEMENTS, [/^[ \t]*in[ \t]+/gm, 'varying ']];
+const ES100_FRAGMENT_REPLACEMENTS = [
+  ...ES100_REPLACEMENTS, 
+  // Replace `in` with `varying`
+  [/^[ \t]*in[ \t]+/gm, 'varying ']
+];
 
 const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
 
