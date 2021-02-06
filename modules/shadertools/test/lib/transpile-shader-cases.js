@@ -29,7 +29,7 @@ void main(void) {
 }
 `,
 
-   // transpiled 300 version should have correct `texure()` syntax
+    // transpiled 300 version should have correct `texure()` syntax
     GLSL_300_transpiled: `\
 #version 300 es
 
@@ -171,7 +171,7 @@ void main(void) {
 }
 `,
 
-  FS_300_VALID: `\
+    FS_300_VALID: `\
 #version 300 es
 
 precision highp float;

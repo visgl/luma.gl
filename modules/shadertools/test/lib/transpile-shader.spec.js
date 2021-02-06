@@ -4,7 +4,6 @@ import transpileShader from '@luma.gl/shadertools/lib/transpile-shader';
 import test from 'tape-catch';
 
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
-import {compileFragmentShader} from '@luma.gl/debug/';
 
 const VERTEX = true;
 const FRAGMENT = false;
@@ -25,7 +24,11 @@ test('transpileShader', t => {
   for (const tc of TRANSPILATION_TEST_CASES) {
     const {title, isVertex, GLSL_300, GLSL_100, GLSL_300_transpiled} = tc;
 
-    t.throws(() => transpileShader(GLSL_300, 400, isVertex), /version/, `${title} unknown glsl version`);
+    t.throws(
+      () => transpileShader(GLSL_300, 400, isVertex),
+      /version/,
+      `${title} unknown glsl version`
+    );
 
     assembleResult = transpileShader(GLSL_300, 100, isVertex);
     t.equal(assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
@@ -35,10 +38,10 @@ test('transpileShader', t => {
 
     if (isVertex) {
       // TODO - investigate missing frag color out statement
+      // test case was left out in 8.3
       assembleResult = transpileShader(GLSL_100, 300, isVertex);
       t.equal(assembleResult, GLSL_300_transpiled, `1.00 => 3.00: ${title}`);
     }
-
   }
 
   t.end();
@@ -56,12 +59,14 @@ test('transpileShader#compilation', t => {
     const vs300_300 = transpileShader(VS_300_VALID, 300, VERTEX);
     const fs300_300 = transpileShader(FS_300_VALID, 300, FRAGMENT);
 
+    // WebGL1 transpile to GLSL 100 and compile
     let status = compileAndLink(gl1, vs300_100, fs300_100);
-    t.ok(status, 'Transpile 3.00 to 1.00 valid program');
+    t.ok(status, `Compile: 3.00 => 1.00: ${title}`);
 
+    // WebGL2 transpile to GLSL 300 and compile
     if (gl2) {
       status = compileAndLink(gl2, vs300_300, fs300_300);
-      t.ok(status, 'Transpile 3.00 to 3.00 valid program');
+      t.ok(status, `Compile: 3.00 => 3.00: ${title}`);
     }
   }
 
@@ -79,7 +84,7 @@ function compileAndLink(gl, vertexSource, fragmentSource) {
   gl.shaderSource(fShader, fragmentSource);
   gl.compileShader(fShader);
 
-  let program = gl.createProgram();
+  const program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
 
