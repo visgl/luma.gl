@@ -1,3 +1,7 @@
+## v8.4.2
+
+- feat(shadertools): GLSL transpilation improvements (#1451)
+
 ## v8.4.1
 
 - Fix peerDependencies of packages (#1447)
