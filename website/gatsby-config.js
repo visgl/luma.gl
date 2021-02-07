@@ -65,7 +65,7 @@ module.exports = {
           }
         ],
       
-        LINK_TO_GET_STARTED: '/docs/developer-guide/get-started',
+        LINK_TO_GET_STARTED: '/docs/getting-started',
 
         ADDITIONAL_LINKS: [{
           name: 'Blog',
