@@ -112,14 +112,6 @@ export function getVersionDefines(gl, glslVersion, isFragment) {
 # define FEATURE_GLSL_TEXTURE_LOD
 # define TEXTURE_LOD
 
-#define texture2DLod texture2DLodEXT
-#define texture2DProjLod texture2DProjLodEXT
-#define texture2DProjLod texture2DProjLodEXT
-#define textureCubeLod textureCubeLodEXT
-#define texture2DGrad texture2DGradEXT
-#define texture2DProjGrad texture2DProjGradEXT
-#define texture2DProjGrad texture2DProjGradEXT
-#define textureCubeGrad textureCubeGradEXT
 #endif
 `;
   }
