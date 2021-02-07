@@ -9,8 +9,6 @@ const INFO_HTML = `
 <a class="external-link" href="https://docs.mapbox.com/mapbox-gl-js/example/custom-style-layer/">Mapbox GL JS custom layer API</a>.</p>
 `;
 
-mapboxgl.accessToken = process.env.MapboxAccessToken; // eslint-disable-line
-
 const coordinates = [
   [-73.9819, 40.7681], // Columbus Circle
   [-73.98513, 40.758896], // Times Square
@@ -110,7 +108,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
 
     this.map = new mapboxgl.Map({
       container: this._getContainer(props),
-      style: 'mapbox://styles/mapbox/streets-v9',
+      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
       center: [-73.98213, 40.762896],
       zoom: 14,
       pitch,
