@@ -1,4 +1,3 @@
-const webpack = require('webpack');
 const {resolve} = require('path');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -10,10 +9,7 @@ const CONFIG = {
     app: resolve('./app.js')
   },
 
-  plugins: [
-    new HtmlWebpackPlugin({title: 'Geospatial'}),
-    new webpack.EnvironmentPlugin(['MapboxAccessToken'])
-  ]
+  plugins: [new HtmlWebpackPlugin({title: 'Geospatial'})]
 };
 
 // This line enables bundling against src in this repo rather than installed module
