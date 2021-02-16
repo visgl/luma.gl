@@ -135,6 +135,10 @@ Returns returns a `Promise` that resolves to the data URL of the canvas once dra
 
 `animationLoop.toDataURL()`
 
+### isContextLost()
+
+Returns the current state of the WebGL context used by the animation loop.
+
 ## Callback Parameters
 
 The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters:

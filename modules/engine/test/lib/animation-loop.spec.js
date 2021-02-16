@@ -25,6 +25,8 @@ test('core#AnimationLoop start,stop', t => {
     onRender: () => {
       renderCalled++;
 
+      t.is(animationLoop.isContextLost(), false, 'isContextLost returns false');
+
       animationLoop.stop();
 
       t.is(initializeCalled, 1, 'onInitialize called');
