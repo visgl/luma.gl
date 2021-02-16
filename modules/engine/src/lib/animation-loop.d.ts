@@ -104,6 +104,7 @@ export default class AnimationLoop {
   toDataURL(): Promise<string>;
   setViewParameters(): AnimationLoop;
   getHTMLControlValue(id: string, defaultValue?: number): number;
+  isContextLost(): boolean;
 
   // Callbacks
   onCreateContext(opts: CreateGLContextOptions): WebGLRenderingContext;

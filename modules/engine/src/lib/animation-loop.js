@@ -179,6 +179,10 @@ export default class AnimationLoop {
 
   // Redraw now
   redraw() {
+    if (this.isContextLost()) {
+      return this;
+    }
+
     this._beginTimers();
 
     this._setupFrame();
@@ -247,6 +251,10 @@ export default class AnimationLoop {
     await this.waitForRender();
 
     return this.gl.canvas.toDataURL();
+  }
+
+  isContextLost() {
+    return this.gl.isContextLost();
   }
 
   onCreateContext(...args) {
