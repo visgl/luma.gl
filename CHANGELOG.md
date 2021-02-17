@@ -1,3 +1,7 @@
+## v8.4.3
+
+- exposed webgl context state from animation loop (#1453)
+
 ## v8.4.2
 
 - feat(shadertools): GLSL transpilation improvements (#1451)

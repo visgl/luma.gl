@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-texture-3d",
-  "version": "8.4.2",
+  "version": "8.4.3",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
@@ -8,9 +8,9 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.4.2",
-    "@luma.gl/gltools": "8.4.2",
-    "@luma.gl/webgl": "8.4.2",
+    "@luma.gl/engine": "8.4.3",
+    "@luma.gl/gltools": "8.4.3",
+    "@luma.gl/webgl": "8.4.3",
     "@math.gl/core": "^3.4.2"
   },
   "devDependencies": {
