@@ -1,15 +1,15 @@
 <p align="right">
-  <a href="https://npmjs.org/package/luma.gl">
-    <img src="https://img.shields.io/npm/v/luma.gl.svg?style=flat-square" alt="version" />
+  <a href="https://npmjs.org/package/@luma.gl/core">
+    <img src="https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square" alt="version" />
   </a>
-  <a href="https://travis-ci.com/uber/luma.gl">
-    <img src="https://api.travis-ci.com/uber/luma.gl.svg?branch=master" alt="build" />
+  <a href="https://github.com/visgl/deck.gl/actions?query=workflow%3Atest+branch%3Amaster">
+    <img src="https://github.com/visgl/deck.gl/workflows/test/badge.svg?branch=master" alt="build" />
   </a>
-  <a href="https://npmjs.org/package/luma.gl">
-    <img src="https://img.shields.io/npm/dm/luma.gl.svg?style=flat-square" alt="downloads" />
+  <a href="https://npmjs.org/package/@luma.gl.core">
+    <img src="https://img.shields.io/npm/dm/@luma.gl/core.svg?style=flat-square" alt="downloads" />
   </a>
-  <a href='https://coveralls.io/github/uber/luma.gl?branch=master'>
-    <img src='https://img.shields.io/coveralls/uber/luma.gl.svg?style=flat-square' alt='Coverage Status' />
+  <a href='https://coveralls.io/github/visgl/luma.gl?branch=master'>
+    <img src='https://img.shields.io/coveralls/visgl/luma.gl.svg?style=flat-square' alt='Coverage Status' />
   </a>
 </p>
 
