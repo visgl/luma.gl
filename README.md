@@ -2,8 +2,8 @@
   <a href="https://npmjs.org/package/@luma.gl/core">
     <img src="https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square" alt="version" />
   </a>
-  <a href="https://github.com/visgl/deck.gl/actions?query=workflow%3Atest+branch%3Amaster">
-    <img src="https://github.com/visgl/deck.gl/workflows/test/badge.svg?branch=master" alt="build" />
+  <a href="https://github.com/visgl/luma.gl/actions?query=workflow%3Atest+branch%3Amaster">
+    <img src="https://github.com/visgl/luma.gl/workflows/test/badge.svg?branch=master" alt="build" />
   </a>
   <a href="https://npmjs.org/package/@luma.gl.core">
     <img src="https://img.shields.io/npm/dm/@luma.gl/core.svg?style=flat-square" alt="downloads" />
