@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+
+## Upgrading from v8.4 to v8.5
+
+### Transpilation
+
+The module entry point is now only lightly transpiled for the most commonly used evergreen browsers. This change offers significant savings on bundle size. If your application needs to support older browsers such as IE 11, make sure to include `node_modules` in your babel config.
+
+
 ## Upgrading from v7.3 to v8.0
 
 The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new)) for details).
