@@ -1,3 +1,7 @@
+## v8.4.4
+
+- Fix isWebGL check on non-instrumented context (#1454)
+
 ## v8.4.3
 
 - exposed webgl context state from animation loop (#1453)
