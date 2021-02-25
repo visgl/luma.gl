@@ -1,3 +1,30 @@
+## v8.5.0-alpha.1
+
+- Change build targets (#1455)
+- Bump loaders dependency to 3.0.0-alpha (#1456)
+
+## v8.4.4
+
+- Fix isWebGL check on non-instrumented context (#1454)
+
+## v8.4.3
+
+- exposed webgl context state from animation loop (#1453)
+
+## v8.4.2
+
+- feat(shadertools): GLSL transpilation improvements (#1451)
+
+## v8.4.1
+
+- Fix peerDependencies of packages (#1447)
+- Fix shader module injection order (#1449)
+
+## v8.4.0
+
+- Fix video texture error when video is still loading (#1443)
+- do not set Texture data until the first frame of a video is loaded (#1445)
+
 ## v8.4.0-beta.2
 
 - Callbacks for onContextLost / onContextRestored events (#1441)

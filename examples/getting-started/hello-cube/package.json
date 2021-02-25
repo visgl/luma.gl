@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-cube",
-  "version": "8.4.0-beta.2",
+  "version": "8.5.0-alpha.1",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open",
@@ -8,10 +8,10 @@
     "build": "webpack --env.analyze"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.4.0-beta.2",
-    "@luma.gl/gltools": "8.4.0-beta.2",
-    "@luma.gl/shadertools": "8.4.0-beta.2",
-    "@luma.gl/webgl": "8.4.0-beta.2",
+    "@luma.gl/engine": "8.5.0-alpha.1",
+    "@luma.gl/gltools": "8.5.0-alpha.1",
+    "@luma.gl/shadertools": "8.5.0-alpha.1",
+    "@luma.gl/webgl": "8.5.0-alpha.1",
     "@math.gl/core": "^3.4.2"
   },
   "devDependencies": {
