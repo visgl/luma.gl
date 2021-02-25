@@ -1805,52 +1805,55 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@loaders.gl/core@2.3.8", "@loaders.gl/core@^2.2.0-alpha.3", "@loaders.gl/core@^2.3.0":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-2.3.8.tgz#7ead918d20627988ecc29c6d8847716748799dba"
-  integrity sha512-7LjLzo5h4DxQos7GzyZ7HB9I7k2LaM3riem4xSuUwaYvshyeynVj6dC6LzNja1WWgC+H20rYRiokyzNT01bAcw==
+"@loaders.gl/core@3.0.0-alpha.6", "@loaders.gl/core@^3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/core/-/core-3.0.0-alpha.6.tgz#36c12f2e12449abeba53b69f70f8a68b8f3cda83"
+  integrity sha512-Q8QnJZR7fWyWWX2+JKcYeAPIGZcoU5GUVU89f5KnaPf9jyOenIjaov0ZYxJBUz5gfaGYS34+cBds4nuqJuXApg==
   dependencies:
     "@babel/runtime" "^7.3.1"
-    "@loaders.gl/loader-utils" "2.3.8"
+    "@loaders.gl/loader-utils" "3.0.0-alpha.6"
+    "@loaders.gl/worker-utils" "3.0.0-alpha.6"
 
-"@loaders.gl/draco@2.3.8":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/draco/-/draco-2.3.8.tgz#2f059d3305f57c81ec9a86f185178b08189c0f12"
-  integrity sha512-Okz+Lde8AdzNTQD+4N11xbycW8StEX/NF+8e+RmJUhw+mrs+NgAlT34sAnnRXU228bYEfOlb42Qbj6ymQNBxvw==
+"@loaders.gl/draco@3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/draco/-/draco-3.0.0-alpha.6.tgz#962409ab9598e719e723d234973dedae7e483aac"
+  integrity sha512-pSSfUaHuYi2jI9XP39YOv/1N+kIm1jj6lsw7dzIRGrde1gEJ5HaFxrjP/7nB0HG7GX5KEFuSsZFdMDlR9s1KUQ==
   dependencies:
     "@babel/runtime" "^7.3.1"
-    "@loaders.gl/loader-utils" "2.3.8"
-    draco3d "^1.3.6"
+    "@loaders.gl/loader-utils" "3.0.0-alpha.6"
+    "@loaders.gl/worker-utils" "3.0.0-alpha.6"
+    draco3d "1.4.1"
 
-"@loaders.gl/gltf@^2.2.0-alpha.3", "@loaders.gl/gltf@^2.3.0":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-2.3.8.tgz#e4532ae55e81fa92ad838db15cde46362a868f35"
-  integrity sha512-aaFgRnhJwpK5AWDdvAb1RE5tT7xtRSHi/ujSKuCK5ckdZHRksGCM6EjkmGBwhd6l3+InOzzIS2I+STG0PQD/Kg==
+"@loaders.gl/gltf@^3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/gltf/-/gltf-3.0.0-alpha.6.tgz#c1171e291e9a4f6c1b1fd063e5e1bb06224344ed"
+  integrity sha512-XfTAcbVpqQg4h2uaFO41UA58HGTOYY4GNRSIUdrnRmZ8VIDXLJ33QkkPye1nuN9XfZmq8/ZSegsL5A1Ytzl6DA==
   dependencies:
-    "@loaders.gl/core" "2.3.8"
-    "@loaders.gl/draco" "2.3.8"
-    "@loaders.gl/images" "2.3.8"
-    "@loaders.gl/loader-utils" "2.3.8"
+    "@loaders.gl/core" "3.0.0-alpha.6"
+    "@loaders.gl/draco" "3.0.0-alpha.6"
+    "@loaders.gl/images" "3.0.0-alpha.6"
+    "@loaders.gl/loader-utils" "3.0.0-alpha.6"
 
-"@loaders.gl/images@2.3.8":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-2.3.8.tgz#95ccc9fd78783c8785d3d8b611b160e44fd50191"
-  integrity sha512-i1HeVaCGmOWVYYUdNCsKutVP4jzJFsYufgVS90g2HCBqI0j+mqRfQx7EDid7FeOCS3koIL0zgxugzfnVYKGmTQ==
+"@loaders.gl/images@3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/images/-/images-3.0.0-alpha.6.tgz#b7cca5d547ee7b7a6fc69eef0f81cea6267e388b"
+  integrity sha512-FBLKgLXeqKLBtsSv0kbSh+C5YtW/AOQ9ysfSu1kyam3ZRDF/Mwkc5tJVFcn04tiTdm2G3JDPfJsqYCHGAhwPrQ==
   dependencies:
-    "@loaders.gl/loader-utils" "2.3.8"
+    "@loaders.gl/loader-utils" "3.0.0-alpha.6"
 
-"@loaders.gl/loader-utils@2.3.8":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-2.3.8.tgz#8ef748e15f8ad0594dec00a3a6c2d885ea2a0783"
-  integrity sha512-NqFt5lmdEFA6lJRFYDyeK2/wIxbfJHlwCTIG2qBhUwnC+FkmHVAWXj0/w9Ta8HtZo0TeFKKXCjhHZDyBanstgg==
+"@loaders.gl/loader-utils@3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/loader-utils/-/loader-utils-3.0.0-alpha.6.tgz#33beb401b21eb3726f5a3f52e7b73cc38dae25c8"
+  integrity sha512-hdWRzTdCIGdt8FsYqMBrefyAmtqSlb+llx57fUeRSv0ESUhfPEVES+SOh6jM/ORAtrKtAoywVuPJI4kEq+dHuQ==
   dependencies:
     "@babel/runtime" "^7.3.1"
+    "@loaders.gl/worker-utils" "3.0.0-alpha.6"
     "@probe.gl/stats" "^3.3.0"
 
-"@loaders.gl/polyfills@^2.2.0-alpha.3", "@loaders.gl/polyfills@^2.3.0":
-  version "2.3.8"
-  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-2.3.8.tgz#2372a1fe5a4727b2e07feca4a3fdb49dca26bc69"
-  integrity sha512-7yEvzGedMycS9/8TqdncftqSnF7PkRDiPefbCmhFdNc9Ul2frxNj4qy2XYYOHbMFvO61dlSkCB/oz8IikkNMzA==
+"@loaders.gl/polyfills@^3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/polyfills/-/polyfills-3.0.0-alpha.6.tgz#004f7939f721f9212233e292d94d1c2e9ea1205d"
+  integrity sha512-qev8s6G9Kr6yAk1nnfUjXEydHQXm8Rq27x5q9ATxdb2X8S0BmwUayy2SmqPI9iDhmjFVy+ts9KTYTjRt4sPaxw==
   dependencies:
     "@babel/runtime" "^7.3.1"
     get-pixels "^3.3.2"
@@ -1859,6 +1862,14 @@
     stream-to-async-iterator "^0.2.0"
     through "^2.3.8"
     web-streams-polyfill "^3.0.0"
+    xmldom "^0.4.0"
+
+"@loaders.gl/worker-utils@3.0.0-alpha.6":
+  version "3.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@loaders.gl/worker-utils/-/worker-utils-3.0.0-alpha.6.tgz#2617769211b9d8b0966a6ec33e06700cc45ae33f"
+  integrity sha512-d59hVnJ0J63YH2nDBpyQb3Y60roxTgQ0JFTKdKiXcLPIRdJoFzKTv8KYcXs/L7qDS543leXzc+DZnyMsMvqZdg==
+  dependencies:
+    "@babel/runtime" "^7.3.1"
 
 "@luma.gl/constants@^7.3.0-alpha.1":
   version "7.3.2"
@@ -4399,7 +4410,7 @@ dotignore@~0.1.2:
   dependencies:
     minimatch "^3.0.4"
 
-draco3d@^1.3.6:
+draco3d@1.4.1:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/draco3d/-/draco3d-1.4.1.tgz#2abdcf7b59caaac50f7e189aec454176c57146b2"
   integrity sha512-9Rxonc70xiovBC+Bq1h57SNZIHzWTibU1VfIGp5z3Xx8dPtv4yT5uGhiH7P5uvJRR2jkrvHafRxR7bTANkvfpg==
@@ -11287,6 +11298,11 @@ ws@^7.2.3:
   version "7.4.3"
   resolved "https://registry.yarnpkg.com/ws/-/ws-7.4.3.tgz#1f9643de34a543b8edb124bdcbc457ae55a6e5cd"
   integrity sha512-hr6vCR76GsossIRsr8OLR9acVVm1jyfEWvhbNjtgPOrfvAlKzvyeg/P6r8RuDjRyrcQoPQT7K0DGEPc7Ae6jzA==
+
+xmldom@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/xmldom/-/xmldom-0.4.0.tgz#8771e482a333af44587e30ce026f0998c23f3830"
+  integrity sha512-2E93k08T30Ugs+34HBSTQLVtpi6mCddaY8uO+pMNk1pqSjV5vElzn4mmh6KLxN3hki8rNcHSYzILoh3TEWORvA==
 
 "xtend@>=4.0.0 <4.1.0-0", xtend@^4.0.0, xtend@^4.0.1, xtend@~4.0.1:
   version "4.0.2"
