@@ -8,6 +8,9 @@ export function isWebGL(gl) {
   if (typeof WebGLRenderingContext !== 'undefined' && gl instanceof WebGLRenderingContext) {
     return true;
   }
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    return true;
+  }
   // Look for debug contexts, headless gl etc
   return Boolean(gl && Number.isFinite(gl._version));
 }
