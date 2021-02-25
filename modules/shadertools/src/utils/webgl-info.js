@@ -30,6 +30,9 @@ Object.keys(WEBGL_FEATURES).forEach(key => {
 export {FEATURES};
 
 function isWebGL2(gl) {
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    return true;
+  }
   return Boolean(gl && gl._version === 2);
 }
 
