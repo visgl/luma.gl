@@ -81,7 +81,7 @@ const compiledGlslExtensions = {};
 *  gl : WebGL context
 *  cap : Key of WEBGL_FEATURES object identifying the extension
 *  opts :
-*   behavior : behavor of extension to be tested, by defualt `enable` is used
+*   behavior : behavior of extension to be tested, by defualt `enable` is used
 * Returns : true, if shader is compiled successfully, false otherwise
 */
 export function canCompileGLGSExtension(gl, cap, opts = {}) {

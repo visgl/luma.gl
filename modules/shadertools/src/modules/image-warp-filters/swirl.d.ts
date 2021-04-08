@@ -1,4 +1,4 @@
-import {ShaderModule} from '../../types';
+import {ShaderPass} from '../../types';
 
 /**
  * Warps a circular region of the image in a swirl.
@@ -7,4 +7,4 @@ import {ShaderModule} from '../../types';
  * @param angle   The angle in radians that the pixels in the center of
  *                the circular region will be rotated by.
  */
-export const swirl: ShaderModule;
+export const swirl: ShaderPass;

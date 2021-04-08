@@ -1,4 +1,3 @@
-import {ShaderModule} from '../../types';
 import {ShaderPass} from '../../types';
 
 /**

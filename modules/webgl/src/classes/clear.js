@@ -15,6 +15,7 @@ const GL_DEPTH_STENCIL = 0x84f9;
 const ERR_ARGUMENTS = 'clear: bad arguments';
 
 // Optionally clears depth, color and stencil buffers
+/** @type {import('./clear').clear} */
 export function clear(gl, {framebuffer = null, color = null, depth = null, stencil = null} = {}) {
   const parameters = {};
 
@@ -54,6 +55,7 @@ export function clear(gl, {framebuffer = null, color = null, depth = null, stenc
 }
 
 // WebGL2 - clear a specific drawing buffer
+/** @type {import('./clear').clearBuffer} */
 export function clearBuffer(
   gl,
   {framebuffer = null, buffer = GL_COLOR, drawBuffer = 0, value = [0, 0, 0, 0]} = {}
