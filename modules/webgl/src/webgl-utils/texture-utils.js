@@ -7,6 +7,7 @@ import GL from '@luma.gl/constants';
 import {assert} from '../utils';
 
 // Clone a new texture object from a reference texture object.
+/** @type {import('./texture-utils').cloneTextureFrom} */
 export function cloneTextureFrom(refTexture, overrides) {
   assert(
     refTexture instanceof Texture2D ||
@@ -37,6 +38,7 @@ export function cloneTextureFrom(refTexture, overrides) {
 
 // Wraps a given texture into a framebuffer object, that can be further used
 // to read data from the texture object.
+/** @type {import('./texture-utils').toFramebuffer} */
 export function toFramebuffer(texture, opts) {
   const {gl, width, height, id} = texture;
   const framebuffer = new Framebuffer(

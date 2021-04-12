@@ -59,7 +59,7 @@ function assembleShader(
   // Extract any version directive string from source.
   // TODO : keep all pre-processor statements at the begining of the shader.
   if (sourceLines[0].indexOf('#version ') === 0) {
-    glslVersion = 300; // TODO - regexp that matches atual version number
+    glslVersion = 300; // TODO - regexp that matches actual version number
     versionLine = sourceLines[0];
     coreSource = sourceLines.slice(1).join('\n');
   } else {

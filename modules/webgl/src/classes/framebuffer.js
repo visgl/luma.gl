@@ -289,7 +289,7 @@ export default class Framebuffer extends Resource {
     }
 
     drawBuffers.forEach((value, drawBuffer) => {
-      clearBuffer({drawBuffer, value});
+      clearBuffer(this.gl, {drawBuffer, value});
     });
 
     // @ts-ignore

@@ -51,7 +51,7 @@ main() {
 
 ### getUniforms
 
-`getUniforms` takes an object takes a set of key/value pairs, returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
+`getUniforms` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
 
 `getUniforms(opts)`
 opts can contain following keys:
