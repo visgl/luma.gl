@@ -4,11 +4,8 @@ import Texture3D from '../classes/texture-3d';
 import Texture from '../classes/texture';
 import Framebuffer, {FramebufferProps} from '../classes/framebuffer';
 
-type TextureToCloneType = Texture2D | TextureCube | Texture3D;
+type TextureType = Texture2D | TextureCube | Texture3D;
 
-export function cloneTextureFrom<TextureType extends TextureToCloneType>(
-  refTexture: TextureType,
-  overrides?: any
-): TextureType;
+export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides?: any): T;
 
 export function toFramebuffer(texture: Texture, opts?: FramebufferProps): Framebuffer;

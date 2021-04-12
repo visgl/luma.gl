@@ -35,7 +35,7 @@ export default function injectShader(source, type, inject, injectStandardStubs =
           source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
-      // inject code at the begining of the main function
+      // inject code at the beginning of the main function
       case 'vs:#main-start':
         if (isVertex) {
           source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
@@ -53,7 +53,7 @@ export default function injectShader(source, type, inject, injectStandardStubs =
           source = source.replace(DECLARATION_INJECT_MARKER, fragmentString);
         }
         break;
-      // inject code at the begining of the main function
+      // inject code at the beginning of the main function
       case 'fs:#main-start':
         if (!isVertex) {
           source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
