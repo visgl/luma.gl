@@ -5,6 +5,7 @@ export {default as VRDisplay} from './webvr/vr-display';
 // glTF Scenegraph Instantiator
 export {default as GLTFEnvironment} from './gltf/gltf-environment';
 export {default as createGLTFObjects} from './gltf/create-gltf-objects';
+export {default as GLTFMaterialParser} from './gltf/gltf-material-parser';
 
 // Core nodes
 export {default as ScenegraphNode} from './scenegraph/scenegraph-node';
