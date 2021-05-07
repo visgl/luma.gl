@@ -33,6 +33,7 @@ export {dotScreen} from './image-fun-filters/dotscreen';
 export {edgeWork} from './image-fun-filters/edgework';
 export {hexagonalPixelate} from './image-fun-filters/hexagonalpixelate';
 export {ink} from './image-fun-filters/ink';
+export {magnify} from './image-fun-filters/magnify';
 
 // glfx WARP shader modules
 export {bulgePinch} from './image-warp-filters/bulgepinch';
