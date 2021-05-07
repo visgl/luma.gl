@@ -331,6 +331,17 @@ Apply magnify effect to the surrounding area of a given position.
 - `borderWidthPixels`: border width of the effect circle, will not show border if value <= 0.0. Default value is `0`.
 - `borderColor`: border color of the effect circle. Default value is `[255, 255, 255, 255]`.
 
+<table style="border: 0;" align="center">
+  <tbody>
+    <tr>
+      <td align="center">
+        <img height="340" src="https://raw.githubusercontent.com/visgl/deck.gl-data/master/luma.gl/examples/effects/magnify.png" />
+        <p><i>Swirl Effect</i></p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 ## Remarks
 
 - Coordinate is based on the original image. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner.
