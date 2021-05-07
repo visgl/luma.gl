@@ -1,3 +1,10 @@
+## v8.5.0-alpha.2
+
+- Shadertools: add magnify effect (#1464)
+- gltf: support compressed textures (#1461)
+- gltf: export GLTFMaterialParser (#1462)
+- chore(typescript): minor typescript changes (#1459)
+
 ## v8.5.0-alpha.1
 
 - Change build targets (#1455)
