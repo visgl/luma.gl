@@ -12,7 +12,7 @@ vec4 magnify_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
     return texture2D(texture, (texCoord - pos) / zoom + pos);
   }
 
-  if (borderWidthPixels > 0.0 && dist <= radiusPixels + borderWidthPixels) {
+  if (dist <= radiusPixels + borderWidthPixels) {
     return borderColor;
   }
   return texture2D(texture, texCoord);
