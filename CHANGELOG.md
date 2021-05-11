@@ -1,3 +1,7 @@
+## v8.4.5
+
+- Fix constants bundle namespace
+
 ## v8.4.4
 
 - Fix isWebGL check on non-instrumented context (#1454)
