@@ -84,13 +84,13 @@ void main(void) {
 
 precision highp float;
 
-out vec4 fragmentColor;
 uniform sampler2D sampler;
 uniform samplerCube sCube;
 in vec4 vColor;
 
 void f(out float a, in float b) {}
 
+out vec4 fragmentColor;
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
@@ -108,13 +108,13 @@ void main(void) {
 
 precision highp float;
 
-out vec4 fragmentColor;
 uniform sampler2D sampler;
 uniform samplerCube sCube;
 in vec4 vColor;
 
 void f(out float a, in float b) {}
 
+out vec4 fragmentColor;
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = texture(sCube, cubeCoord);

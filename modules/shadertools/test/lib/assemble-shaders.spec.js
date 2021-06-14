@@ -205,11 +205,7 @@ const VS_GLSL_300_GLTF = `#version 300 es
 
 const FS_GLSL_300_GLTF = `#version 300 es
 
-#if (__VERSION__ < 300)
-  #define fragmentColor gl_FragColor
-#else
   out vec4 fragmentColor;
-#endif
 
   void main(void) {
     fragmentColor = pbr_filterColor(vec4(0));
@@ -391,7 +387,7 @@ test('assembleShaders#shaderhooks', t => {
   );
 
   t.ok(
-    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') === -1,
+    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1,
     'regex injection code not included in fragment shader without module'
   );
 
@@ -424,7 +420,7 @@ test('assembleShaders#shaderhooks', t => {
     'hook footer injected after injection code'
   );
   t.ok(
-    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') > -1,
+    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1,
     'regex injection code included in fragment shader with module'
   );
 
