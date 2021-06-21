@@ -36,12 +36,11 @@ test('transpileShader', t => {
     assembleResult = transpileShader(GLSL_300, 300, isVertex);
     t.equal(assembleResult, GLSL_300_transpiled, `3.00 => 3.00: ${title}`);
 
-    if (isVertex) {
-      // TODO - investigate missing frag color out statement
-      // test case was left out in 8.3
-      assembleResult = transpileShader(GLSL_100, 300, isVertex);
-      t.equal(assembleResult, GLSL_300_transpiled, `1.00 => 3.00: ${title}`);
-    }
+    assembleResult = transpileShader(GLSL_100, 100, isVertex);
+    t.equal(assembleResult, GLSL_100, `1.00 => 1.00: ${title}`);
+
+    assembleResult = transpileShader(GLSL_100, 300, isVertex);
+    t.equal(assembleResult, GLSL_300_transpiled, `1.00 => 3.00: ${title}`);
   }
 
   t.end();

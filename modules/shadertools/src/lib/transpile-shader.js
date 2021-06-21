@@ -48,7 +48,10 @@ const ES100_FRAGMENT_REPLACEMENTS = [
   [/^[ \t]*in[ \t]+/gm, 'varying ']
 ];
 
-const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
+const ES100_FRAGMENT_OUTPUT_NAME = 'gl_FragColor';
+const ES300_FRAGMENT_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
+
+const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 
 // Transpiles shader source code to target GLSL version
 // Note: We always run transpiler even if same version e.g. 3.00 => 3.00
@@ -56,10 +59,9 @@ const FS_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
 export default function transpileShader(source, targetGLSLVersion, isVertex) {
   switch (targetGLSLVersion) {
     case 300:
-      return convertShader(
-        source,
-        isVertex ? ES300_VERTEX_REPLACEMENTS : ES300_FRAGMENT_REPLACEMENTS
-      );
+      return isVertex
+        ? convertShader(source, ES300_VERTEX_REPLACEMENTS)
+        : convertFragmentShaderTo300(source);
     case 100:
       return isVertex
         ? convertShader(source, ES100_VERTEX_REPLACEMENTS)
@@ -76,16 +78,34 @@ function convertShader(source, replacements) {
   return source;
 }
 
+function convertFragmentShaderTo300(source) {
+  // /gm - treats each line as a string, so that ^ matches after newlines
+  source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
+
+  const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
+  if (outputMatch) {
+    const outputName = outputMatch[1];
+    source = source.replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
+  } else {
+    const outputName = 'fragmentColor';
+    source = source
+      .replace(REGEX_START_OF_MAIN, match => `out vec4 ${outputName};\n${match}`)
+      .replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
+  }
+
+  return source;
+}
+
 function convertFragmentShaderTo100(source) {
   // /gm - treats each line as a string, so that ^ matches after newlines
   source = convertShader(source, ES100_FRAGMENT_REPLACEMENTS);
 
-  const outputMatch = source.match(FS_OUTPUT_REGEX);
+  const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
   if (outputMatch) {
     const outputName = outputMatch[1];
     source = source
-      .replace(FS_OUTPUT_REGEX, '')
-      .replace(new RegExp(`\\b${outputName}\\b`, 'g'), 'gl_FragColor');
+      .replace(ES300_FRAGMENT_OUTPUT_REGEX, '')
+      .replace(new RegExp(`\\b${outputName}\\b`, 'g'), ES100_FRAGMENT_OUTPUT_NAME);
   }
 
   return source;
