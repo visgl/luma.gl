@@ -75,13 +75,18 @@ export default class AppAnimationLoop extends AnimationLoop {
         this.timeline.pause();
       });
 
-      timeSlider.addEventListener('input', event => {
+      timeSlider.addEventListener('input', (event) => {
         // @ts-ignore
         this.timeline.setTime(parseFloat(event.target.value));
       });
     }
 
-    const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
+    const translations = [
+      [2, -2, 0],
+      [2, 2, 0],
+      [-2, 2, 0],
+      [-2, -2, 0]
+    ];
 
     const rotations = [
       [random(), random(), random()],
@@ -90,7 +95,12 @@ export default class AppAnimationLoop extends AnimationLoop {
       [random(), random(), random()]
     ];
 
-    const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];
+    const colors = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 0]
+    ];
 
     this.attachTimeline(new Timeline());
     this.timeline.play();

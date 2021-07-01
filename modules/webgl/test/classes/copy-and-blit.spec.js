@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
@@ -46,7 +46,7 @@ const FB_READPIXELS_TEST_CASES = [
 ];
 
 function testCopyToArray(t, gl) {
-  [true, false].forEach(sourceIsFramebuffer => {
+  [true, false].forEach((sourceIsFramebuffer) => {
     for (const testCase of FB_READPIXELS_TEST_CASES) {
       const format = testCase.format;
       if (Texture2D.isSupported(gl, {format})) {
@@ -113,13 +113,13 @@ function testCopyToArray(t, gl) {
   });
 }
 
-test('WebGL1#CopyAndBlit readPixelsToArray', t => {
+test('WebGL1#CopyAndBlit readPixelsToArray', (t) => {
   const {gl} = fixture;
   testCopyToArray(t, gl);
   t.end();
 });
 
-test('WebGL2#CopyAndBlit readPixels', t => {
+test('WebGL2#CopyAndBlit readPixels', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     testCopyToArray(t, gl2);
@@ -137,7 +137,7 @@ function testCopyToBuffer(t, bufferCreation) {
     return;
   }
 
-  [true, false].forEach(sourceIsFramebuffer => {
+  [true, false].forEach((sourceIsFramebuffer) => {
     const gl = gl2;
     const byteLength = 6 * 4; // 6 floats
     const clearColor = [0.25, -0.35, 12340.25, 0.005];
@@ -205,11 +205,11 @@ function testCopyToBuffer(t, bufferCreation) {
   t.end();
 }
 
-test('WebGL#CopyAndBlit readPixelsToBuffer', t => {
+test('WebGL#CopyAndBlit readPixelsToBuffer', (t) => {
   testCopyToBuffer(t, false);
 });
 
-test('WebGL#CopyAndBlit readPixelsToBuffer (buffer creation)', t => {
+test('WebGL#CopyAndBlit readPixelsToBuffer (buffer creation)', (t) => {
   testCopyToBuffer(t, true);
 });
 
@@ -226,8 +226,8 @@ function createTexture(gl, opts) {
 }
 
 function testCopyToTexture(t, gl) {
-  [true, false].forEach(isSubCopy => {
-    [true, false].forEach(sourceIsFramebuffer => {
+  [true, false].forEach((isSubCopy) => {
+    [true, false].forEach((sourceIsFramebuffer) => {
       // const byteLength = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
       const clearColor = [1, 0.5, 0.25, 0.125];
@@ -301,12 +301,12 @@ function testCopyToTexture(t, gl) {
   t.end();
 }
 
-test('WebGL#copyToTexture', t => {
+test('WebGL#copyToTexture', (t) => {
   const {gl} = fixture;
   testCopyToTexture(t, gl);
 });
 
-test('WebGL2#copyToTexture', t => {
+test('WebGL2#copyToTexture', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     testCopyToTexture(t, gl2);
@@ -318,8 +318,8 @@ test('WebGL2#copyToTexture', t => {
 
 /* eslint-disable max-statements */
 function testBlit(t, gl) {
-  [true, false].forEach(destinationIsFramebuffer => {
-    [true, false].forEach(sourceIsFramebuffer => {
+  [true, false].forEach((destinationIsFramebuffer) => {
+    [true, false].forEach((sourceIsFramebuffer) => {
       // const byteLength = 6 * 4; // 6 floats
       const sourceColor = [255, 128, 64, 32];
       const clearColor = [1, 0.5, 0.25, 0.125];
@@ -399,7 +399,7 @@ function testBlit(t, gl) {
 }
 /* eslint-disable max-statements */
 
-test('WebGL2#CopyAndBlit blit no-crash', t => {
+test('WebGL2#CopyAndBlit blit no-crash', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     t.doesNotThrow(() => {
@@ -425,7 +425,7 @@ test('WebGL2#CopyAndBlit blit no-crash', t => {
   t.end();
 });
 
-test('WebGL2#blit', t => {
+test('WebGL2#blit', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     testBlit(t, gl2);

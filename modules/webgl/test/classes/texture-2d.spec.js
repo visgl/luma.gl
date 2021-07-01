@@ -1,9 +1,9 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Texture2D} from '@luma.gl/webgl';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#Texture2D construct/delete', t => {
+test('WebGL#Texture2D construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -27,7 +27,7 @@ test('WebGL#Texture2D construct/delete', t => {
   t.end();
 });
 
-test('WebGL#Texture2D async constructor', t => {
+test('WebGL#Texture2D async constructor', (t) => {
   const {gl} = fixture;
 
   let texture = new Texture2D(gl);
@@ -37,7 +37,7 @@ test('WebGL#Texture2D async constructor', t => {
   texture.delete();
 
   let loadCompleted;
-  const loadPromise = new Promise(resolve => {
+  const loadPromise = new Promise((resolve) => {
     loadCompleted = resolve; // eslint-disable-line
   });
   texture = new Texture2D(gl, loadPromise);
@@ -55,7 +55,7 @@ test('WebGL#Texture2D async constructor', t => {
   loadCompleted(null);
 });
 
-test('WebGL#Texture2D buffer update', t => {
+test('WebGL#Texture2D buffer update', (t) => {
   const {gl} = fixture;
 
   let texture = new Texture2D(gl);

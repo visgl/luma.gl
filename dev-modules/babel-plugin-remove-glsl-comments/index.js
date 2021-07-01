@@ -10,7 +10,7 @@ module.exports = function _(opts) {
     visitor: {
       TemplateLiteral(path, state) {
         if (filterFile(state)) {
-          path.node.quasis.forEach(node => {
+          path.node.quasis.forEach((node) => {
             node.value = {
               raw: handleString(node.value.raw),
               cooked: handleString(node.value.cooked)
@@ -31,7 +31,7 @@ function filterFile(state) {
   const {filename} = state;
   const patterns = state.opts.patterns || DEFAULT_PATTERNS;
 
-  return patterns.some(p => {
+  return patterns.some((p) => {
     return minimatch(filename, p);
   });
 }

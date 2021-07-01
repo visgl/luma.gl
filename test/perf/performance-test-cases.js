@@ -10,7 +10,7 @@ export default examples.map(({name, animationLoop, targetFPS}) => {
   return {
     name,
     onInitialize: animationLoop.onInitialize.bind(animationLoop),
-    onRender: params => {
+    onRender: (params) => {
       // disable picking in the example
       params._mousePosition = 0;
       animationLoop.onRender(params);

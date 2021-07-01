@@ -79,7 +79,7 @@ export default class Texture extends Resource {
     let data = props.data;
 
     if (data instanceof Promise) {
-      data.then(resolvedImageData =>
+      data.then((resolvedImageData) =>
         this.initialize(
           Object.assign({}, props, {
             pixels: resolvedImageData,

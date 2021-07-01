@@ -16,15 +16,15 @@ const GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84ff;
 const GL_UNMASKED_VENDOR_WEBGL = 0x9245; // vendor string of the graphics driver.
 const GL_UNMASKED_RENDERER_WEBGL = 0x9246; // renderer string of the graphics driver.
 
-const getWebGL2ValueOrZero = gl => (!isWebGL2(gl) ? 0 : undefined);
+const getWebGL2ValueOrZero = (gl) => (!isWebGL2(gl) ? 0 : undefined);
 
 // if a function returns undefined in this table,
 // the original getParameter will be called, defeating the override
 const WEBGL_PARAMETERS = {
-  [GL.READ_BUFFER]: gl => (!isWebGL2(gl) ? GL.COLOR_ATTACHMENT0 : undefined),
+  [GL.READ_BUFFER]: (gl) => (!isWebGL2(gl) ? GL.COLOR_ATTACHMENT0 : undefined),
 
   // WebGL2 context parameters
-  [GL_FRAGMENT_SHADER_DERIVATIVE_HINT]: gl => (!isWebGL2(gl) ? GL_DONT_CARE : undefined),
+  [GL_FRAGMENT_SHADER_DERIVATIVE_HINT]: (gl) => (!isWebGL2(gl) ? GL_DONT_CARE : undefined),
 
   [GL.RASTERIZER_DISCARD]: getWebGL2ValueOrZero,
 
@@ -69,7 +69,7 @@ const WEBGL_PARAMETERS = {
   [GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
   [GL.MAX_COMBINED_UNIFORM_BLOCKS]: getWebGL2ValueOrZero,
   [GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,
-  [GL.MAX_DRAW_BUFFERS]: gl => {
+  [GL.MAX_DRAW_BUFFERS]: (gl) => {
     if (!isWebGL2(gl)) {
       const ext = gl.getExtension(WEBGL_draw_buffers);
       return ext ? ext.MAX_DRAW_BUFFERS_WEBGL : 0;
@@ -78,13 +78,13 @@ const WEBGL_PARAMETERS = {
   },
   [GL.MAX_ELEMENT_INDEX]:
     // Guess: per webglstats.com 99.6% of webgl2 supports 2147483647
-    gl => (gl.getExtension(OES_element_index) ? 2147483647 : 65535),
+    (gl) => (gl.getExtension(OES_element_index) ? 2147483647 : 65535),
   [GL.MAX_ELEMENTS_INDICES]:
     // Guess: "Reasonably safe" per webglstats.com - could be higher/lower (on some mobile devices)
-    gl => (gl.getExtension(OES_element_index) ? 16777216 : 65535),
+    (gl) => (gl.getExtension(OES_element_index) ? 16777216 : 65535),
   [GL.MAX_ELEMENTS_VERTICES]:
     // Guess: "Reasonably safe" per webglstats.com - could be higher/lower (on some mobile devices)
-    gl => 16777216,
+    (gl) => 16777216,
   [GL.MAX_FRAGMENT_INPUT_COMPONENTS]: getWebGL2ValueOrZero,
   [GL.MAX_FRAGMENT_UNIFORM_BLOCKS]: getWebGL2ValueOrZero,
   [GL.MAX_FRAGMENT_UNIFORM_COMPONENTS]: getWebGL2ValueOrZero,

@@ -17,8 +17,8 @@
     "testing"
   ],
   "types": "src/index.d.ts",
-  "main": "dist/es5/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "files": [
     "src",
     "dist",

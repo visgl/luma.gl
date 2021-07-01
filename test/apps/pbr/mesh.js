@@ -496,7 +496,7 @@ class Mesh {
 
     var reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       var arrayBuffer = reader.result;
       var start = bufferView.byteOffset ? bufferView.byteOffset : 0;
       var end = start + bufferView.byteLength;
@@ -552,7 +552,7 @@ class Mesh {
       var oReq = new XMLHttpRequest();
       oReq.open('GET', assetUrl, true);
       oReq.responseType = 'blob';
-      oReq.onload = function(e) {
+      oReq.onload = function (e) {
         deferred.resolve(oReq.response);
       };
       oReq.crossOrigin = 'anonymous';
@@ -560,7 +560,7 @@ class Mesh {
     }
 
     // This will fire when the promise is resolved, or immediately if the promise has previously resolved.
-    promise.then(function(blob) {
+    promise.then(function (blob) {
       reader.readAsArrayBuffer(blob);
     });
   }
@@ -570,7 +570,7 @@ class Mesh {
     var localState = this.localState;
     gl.useProgram(program);
 
-    var applyUniform = function(u, uniformName) {
+    var applyUniform = function (u, uniformName) {
       if (!localState.uniformLocations[uniformName]) {
         localState.uniformLocations[uniformName] = gl.getUniformLocation(program, uniformName);
       }

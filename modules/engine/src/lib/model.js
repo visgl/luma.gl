@@ -164,17 +164,8 @@ export default class Model {
   }
 
   setProgram(props) {
-    const {
-      program,
-      vs,
-      fs,
-      modules,
-      defines,
-      inject,
-      varyings,
-      bufferMode,
-      transpileToGLSL100
-    } = props;
+    const {program, vs, fs, modules, defines, inject, varyings, bufferMode, transpileToGLSL100} =
+      props;
     this.programProps = {
       program,
       vs,
@@ -358,11 +349,11 @@ export default class Model {
       parameters = Object.assign({}, parameters, {[GL.RASTERIZER_DISCARD]: discard});
     }
 
-    unbindModels.forEach(model => model.vertexArray.unbindBuffers());
+    unbindModels.forEach((model) => model.vertexArray.unbindBuffers());
     try {
       this.draw(Object.assign({}, opts, {parameters}));
     } finally {
-      unbindModels.forEach(model => model.vertexArray.bindBuffers());
+      unbindModels.forEach((model) => model.vertexArray.bindBuffers());
     }
 
     return this;
@@ -417,16 +408,8 @@ export default class Model {
     if (program) {
       this._managedProgram = false;
     } else {
-      const {
-        vs,
-        fs,
-        modules,
-        inject,
-        defines,
-        varyings,
-        bufferMode,
-        transpileToGLSL100
-      } = this.programProps;
+      const {vs, fs, modules, inject, defines, varyings, bufferMode, transpileToGLSL100} =
+        this.programProps;
       program = this.programManager.get({
         vs,
         fs,
@@ -535,7 +518,11 @@ export default class Model {
       attributes: this._attributes
     });
 
-    const {table: uniformTable, unusedTable, unusedCount} = getDebugTableForUniforms({
+    const {
+      table: uniformTable,
+      unusedTable,
+      unusedCount
+    } = getDebugTableForUniforms({
       header: `${this.id} uniforms`,
       program: this.program,
       uniforms: Object.assign({}, this.program.uniforms, uniforms)

@@ -12,7 +12,7 @@ export default class GLTFEnvironment {
 
   makeCube({id, getTextureForFace, parameters}) {
     const pixels = {};
-    TextureCube.FACES.forEach(face => {
+    TextureCube.FACES.forEach((face) => {
       pixels[face] = getTextureForFace(face);
     });
     return new TextureCube(this.gl, {
@@ -27,7 +27,7 @@ export default class GLTFEnvironment {
     if (!this._DiffuseEnvSampler) {
       this._DiffuseEnvSampler = this.makeCube({
         id: 'DiffuseEnvSampler',
-        getTextureForFace: dir => loadImage(this.getTexUrl('diffuse', dir, 0)),
+        getTextureForFace: (dir) => loadImage(this.getTexUrl('diffuse', dir, 0)),
         parameters: {
           [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
           [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE,
@@ -44,7 +44,7 @@ export default class GLTFEnvironment {
     if (!this._SpecularEnvSampler) {
       this._SpecularEnvSampler = this.makeCube({
         id: 'SpecularEnvSampler',
-        getTextureForFace: dir => {
+        getTextureForFace: (dir) => {
           const imageArray = [];
           for (let lod = 0; lod <= this.specularMipLevels - 1; lod++) {
             imageArray.push(loadImage(this.getTexUrl('specular', dir, lod)));

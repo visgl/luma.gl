@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Program} from '@luma.gl/webgl';
 import ProgramConfiguration from '@luma.gl/webgl/classes/program-configuration';
@@ -22,7 +22,7 @@ void main(void) {
 }
 `;
 
-test('WebGL2#ProgramConfiguration', t => {
+test('WebGL2#ProgramConfiguration', (t) => {
   const {gl} = fixture;
 
   t.ok(ProgramConfiguration, 'ProgramConfiguration import successful');
@@ -37,7 +37,7 @@ test('WebGL2#ProgramConfiguration', t => {
   t.end();
 });
 
-test('WebGL2#ProgramConfiguration#varyings', t => {
+test('WebGL2#ProgramConfiguration#varyings', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

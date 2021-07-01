@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/gltools';
@@ -14,7 +14,7 @@ import {
 
 import {fixture} from 'test/setup';
 
-test('WebGL#Texture2D construct/delete', t => {
+test('WebGL#Texture2D construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -46,14 +46,14 @@ function isFormatSupported(format, glContext) {
   }
   return true;
 }
-test('WebGL#Texture2D check formats', t => {
+test('WebGL#Texture2D check formats', (t) => {
   const {gl, gl2} = fixture;
 
   const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
   const WEBGL2_FORMATS = [GL.R32F, GL.RG32F, GL.RGB32F, GL.RGBA32F];
 
   let unSupportedFormats = [];
-  WEBGL1_FORMATS.forEach(format => {
+  WEBGL1_FORMATS.forEach((format) => {
     if (!isFormatSupported(format, gl)) {
       unSupportedFormats.push(format);
     }
@@ -64,7 +64,7 @@ test('WebGL#Texture2D check formats', t => {
   if (gl2) {
     const gl2Formats = WEBGL1_FORMATS.concat(WEBGL2_FORMATS);
     unSupportedFormats = [];
-    gl2Formats.forEach(format => {
+    gl2Formats.forEach((format) => {
       if (!isFormatSupported(format, gl2)) {
         unSupportedFormats.push(format);
       }
@@ -78,25 +78,7 @@ test('WebGL#Texture2D check formats', t => {
 });
 
 const DEFAULT_TEXTURE_DATA = new Uint8Array([
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 const DATA = [1, 0.5, 0.25, 0.125];
 const UINT8_DATA = new Uint8Array(DATA);
@@ -174,7 +156,7 @@ function testFormatDeduction(t, glContext) {
   }
 }
 
-test('WebGL#Texture2D format deduction', t => {
+test('WebGL#Texture2D format deduction', (t) => {
   const {gl, gl2} = fixture;
   testFormatDeduction(t, gl);
   if (gl2) {
@@ -185,7 +167,7 @@ test('WebGL#Texture2D format deduction', t => {
   t.end();
 });
 
-test('WebGL#Texture2D format creation', t => {
+test('WebGL#Texture2D format creation', (t) => {
   const {gl, gl2} = fixture;
   testFormatCreation(t, gl);
   if (gl2) {
@@ -196,7 +178,7 @@ test('WebGL#Texture2D format creation', t => {
   t.end();
 });
 
-test('WebGL#Texture2D format creation with data', t => {
+test('WebGL#Texture2D format creation with data', (t) => {
   const {gl, gl2} = fixture;
   testFormatCreation(t, gl, true);
   if (gl2) {
@@ -240,7 +222,7 @@ test('WebGL#Texture2D WebGL2 format creation', t => {
 });
 */
 
-test('WebGL#Texture2D setParameters', t => {
+test('WebGL#Texture2D setParameters', (t) => {
   const {gl} = fixture;
 
   let texture = new Texture2D(gl, {});
@@ -266,7 +248,7 @@ test('WebGL#Texture2D setParameters', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D setParameters', t => {
+test('WebGL2#Texture2D setParameters', (t) => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -286,7 +268,7 @@ test('WebGL2#Texture2D setParameters', t => {
   t.end();
 });
 
-test('WebGL#Texture2D NPOT Workaround: texture creation', t => {
+test('WebGL#Texture2D NPOT Workaround: texture creation', (t) => {
   const {gl} = fixture;
 
   // Create NPOT texture with no parameters
@@ -327,7 +309,7 @@ test('WebGL#Texture2D NPOT Workaround: texture creation', t => {
   t.end();
 });
 
-test('WebGL#Texture2D NPOT Workaround: setParameters', t => {
+test('WebGL#Texture2D NPOT Workaround: setParameters', (t) => {
   const {gl} = fixture;
 
   // Create NPOT texture
@@ -352,7 +334,7 @@ test('WebGL#Texture2D NPOT Workaround: setParameters', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D NPOT Workaround: texture creation', t => {
+test('WebGL2#Texture2D NPOT Workaround: texture creation', (t) => {
   // WebGL2 supports NPOT texture hence, texture parameters should not be changed.
   const {gl2} = fixture;
   if (!gl2) {
@@ -402,7 +384,7 @@ test('WebGL2#Texture2D NPOT Workaround: texture creation', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
+test('WebGL2#Texture2D NPOT Workaround: setParameters', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -436,7 +418,7 @@ test('WebGL2#Texture2D NPOT Workaround: setParameters', t => {
   t.end();
 });
 
-test('WebGL1#Texture2D setImageData', t => {
+test('WebGL1#Texture2D setImageData', (t) => {
   const {gl} = fixture;
 
   // data: null
@@ -470,7 +452,7 @@ test('WebGL1#Texture2D setImageData', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D setImageData', t => {
+test('WebGL2#Texture2D setImageData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -520,7 +502,7 @@ test('WebGL2#Texture2D setImageData', t => {
   t.end();
 });
 
-test('WebGL1#Texture2D setSubImageData', t => {
+test('WebGL1#Texture2D setSubImageData', (t) => {
   const {gl} = fixture;
 
   // data: null
@@ -554,7 +536,7 @@ test('WebGL1#Texture2D setSubImageData', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D setSubImageData', t => {
+test('WebGL2#Texture2D setSubImageData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -612,7 +594,7 @@ test('WebGL2#Texture2D setSubImageData', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D resize', t => {
+test('WebGL2#Texture2D resize', (t) => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
     data: null,
@@ -657,7 +639,7 @@ test('WebGL2#Texture2D resize', t => {
   t.end();
 });
 
-test('WebGL2#Texture2D generateMipmap', t => {
+test('WebGL2#Texture2D generateMipmap', (t) => {
   const {gl} = fixture;
   let texture = new Texture2D(gl, {
     data: null,

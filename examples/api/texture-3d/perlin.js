@@ -41,11 +41,11 @@ export function shuffle(array, random) {
   return array;
 }
 
-var fade = function(x) {
+var fade = function (x) {
   return x * x * x * (x * (x * 6 - 15) + 10);
 };
 
-var grad = function(hash, x, y, z) {
+var grad = function (hash, x, y, z) {
   var h = hash & 15;
   var u = h < 8 ? x : y;
   var v = h < 4 ? y : h == 12 || h == 14 ? x : z;
@@ -64,7 +64,7 @@ export function perlin(params) {
 
   for (var i = 0; i < 256; i++) p[256 + i] = p[i];
 
-  return function(x, y, z) {
+  return function (x, y, z) {
     var fx = Math.floor(x);
     var fy = Math.floor(y);
     var fz = Math.floor(z);

@@ -1,6 +1,6 @@
 import {getParameterPolyfill} from '@luma.gl/gltools/polyfill/get-parameter-polyfill';
 import GL from '@luma.gl/constants';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
 
@@ -51,12 +51,12 @@ const WEBGL_PARAMETER_KEYS = [
   GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT
 ];
 
-test('getParameterPolyfill#import', t => {
+test('getParameterPolyfill#import', (t) => {
   t.ok(typeof getParameterPolyfill === 'function', 'getParameterPolyfill imported OK');
   t.end();
 });
 
-test('getParameterPolyfill#WebGL1', t => {
+test('getParameterPolyfill#WebGL1', (t) => {
   const {gl} = fixture;
   const originalGetParameterFunc = gl.getParameter.bind(gl);
   for (const pname of WEBGL_PARAMETER_KEYS) {
@@ -66,7 +66,7 @@ test('getParameterPolyfill#WebGL1', t => {
   t.end();
 });
 
-test('getParameterPolyfill#WebGL2', t => {
+test('getParameterPolyfill#WebGL2', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

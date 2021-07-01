@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
@@ -7,17 +7,17 @@ import {fixture} from 'test/setup';
 const TEST_CASES = [
   {
     title: 'Default attachments',
-    getOpts: gl => ({}),
+    getOpts: (gl) => ({}),
     pass: true
   },
   {
     title: 'No attachments',
-    getOpts: gl => ({attachments: {}}),
+    getOpts: (gl) => ({attachments: {}}),
     pass: false
   },
   {
     title: 'Simple Depth Renderbuffer + Color Texture',
-    getOpts: gl => ({
+    getOpts: (gl) => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_COMPONENT16})
@@ -27,7 +27,7 @@ const TEST_CASES = [
   },
   {
     title: 'Simple Stencil Renderbuffer + Color Texture',
-    getOpts: gl => ({
+    getOpts: (gl) => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.STENCIL_INDEX8})
@@ -37,7 +37,7 @@ const TEST_CASES = [
   },
   {
     title: 'Combined Depth/Stencil Renderbuffer + Color Texture',
-    getOpts: gl => ({
+    getOpts: (gl) => ({
       attachments: {
         [GL.COLOR_ATTACHMENT0]: new Texture2D(gl),
         [GL.DEPTH_STENCIL_ATTACHMENT]: new Renderbuffer(gl, {format: GL.DEPTH_STENCIL})
@@ -69,7 +69,7 @@ const TEST_CASES = [
   // }
 ];
 
-test('WebGL#Framebuffer construct/delete', t => {
+test('WebGL#Framebuffer construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -91,7 +91,7 @@ test('WebGL#Framebuffer construct/delete', t => {
   t.end();
 });
 
-test('Framebuffer#getDefaultFramebuffer', t => {
+test('Framebuffer#getDefaultFramebuffer', (t) => {
   const {gl} = fixture;
 
   const framebuffer = Framebuffer.getDefaultFramebuffer(gl);
@@ -144,13 +144,13 @@ function testFramebuffer(t, gl) {
   }
 }
 
-test('WebGL1#Framebuffer attachments', t => {
+test('WebGL1#Framebuffer attachments', (t) => {
   const {gl} = fixture;
   testFramebuffer(t, gl);
   t.end();
 });
 
-test('WebGL2#Framebuffer attachments', t => {
+test('WebGL2#Framebuffer attachments', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     testFramebuffer(t, gl2);
@@ -181,7 +181,7 @@ function testFramebufferResize(t, gl) {
   framebuffer.checkStatus();
 }
 
-test('WebGL1#Framebuffer resize', t => {
+test('WebGL1#Framebuffer resize', (t) => {
   const {gl} = fixture;
   testFramebufferResize(t, gl);
   t.end();

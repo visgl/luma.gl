@@ -5,9 +5,9 @@ import {
   typeToChannelCount,
   convertToVec4
 } from '@luma.gl/shadertools/utils/shader-utils';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('shader-utils#getQualifierDetails', t => {
+test('shader-utils#getQualifierDetails', (t) => {
   const QUALIFIER_TEST_CASES = [
     {
       line: 'uniform vec2 size;',
@@ -39,7 +39,7 @@ test('shader-utils#getQualifierDetails', t => {
     }
   ];
 
-  QUALIFIER_TEST_CASES.forEach(testCase => {
+  QUALIFIER_TEST_CASES.forEach((testCase) => {
     const {line, qualifiers, expected} = testCase;
     const result = getQualifierDetails(line, qualifiers);
     t.deepEqual(
@@ -51,7 +51,7 @@ test('shader-utils#getQualifierDetails', t => {
   t.end();
 });
 
-test('shader-utils#getPassthroughFS', t => {
+test('shader-utils#getPassthroughFS', (t) => {
   const PASSTHROUGH_TEST_CASES = [
     {
       version: 100,
@@ -78,7 +78,7 @@ void main() {
     }
   ];
 
-  PASSTHROUGH_TEST_CASES.forEach(testCase => {
+  PASSTHROUGH_TEST_CASES.forEach((testCase) => {
     const {version, input, inputType, output, expected} = testCase;
     const result = getPassthroughFS({version, input, inputType, output});
     t.equal(
@@ -90,7 +90,7 @@ void main() {
   t.end();
 });
 
-test('shader-utils#typeToChannelSuffix', t => {
+test('shader-utils#typeToChannelSuffix', (t) => {
   t.equal(typeToChannelSuffix('float'), 'x', 'typeToChannelSuffix should return x for float');
   t.equal(typeToChannelSuffix('vec2'), 'xy', 'typeToChannelSuffix should return xy for vec2');
   t.equal(typeToChannelSuffix('vec3'), 'xyz', 'typeToChannelSuffix should return xyz for vec3');
@@ -98,7 +98,7 @@ test('shader-utils#typeToChannelSuffix', t => {
   t.end();
 });
 
-test('shader-utils#typeToChannelCount', t => {
+test('shader-utils#typeToChannelCount', (t) => {
   t.equal(typeToChannelCount('float'), 1, 'typeToChannelCount should return 1 for float');
   t.equal(typeToChannelCount('vec2'), 2, 'typeToChannelCount should return 2 for vec2');
   t.equal(typeToChannelCount('vec3'), 3, 'typeToChannelCount should return 3 for vec3');
@@ -106,7 +106,7 @@ test('shader-utils#typeToChannelCount', t => {
   t.end();
 });
 
-test('shader-utils#convertToVec4', t => {
+test('shader-utils#convertToVec4', (t) => {
   t.equal(
     convertToVec4('one', 'float'),
     'vec4(one, 0.0, 0.0, 1.0)',

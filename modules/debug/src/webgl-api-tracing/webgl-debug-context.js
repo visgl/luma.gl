@@ -91,7 +91,7 @@ function onValidateGLFunc(opts, functionName, functionArgs) {
   if (opts.break) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
     const isBreakpoint =
-      opts.break && opts.break.every(breakOn => functionString.indexOf(breakOn) !== -1);
+      opts.break && opts.break.every((breakOn) => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }

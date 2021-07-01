@@ -1,10 +1,10 @@
 import {getKey, getContextInfo} from '@luma.gl/webgl';
 import WEBGL_LIMITS from '@luma.gl/webgl/features/webgl-limits-table';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#getContextInfo', t => {
+test('WebGL#getContextInfo', (t) => {
   const {gl} = fixture;
 
   t.ok(getContextInfo, 'getContextInfo defined');
@@ -17,7 +17,7 @@ test('WebGL#getContextInfo', t => {
   t.end();
 });
 
-test('WebGL1#getContextInfo#limits', t => {
+test('WebGL1#getContextInfo#limits', (t) => {
   const {gl} = fixture;
 
   const info = getContextInfo(gl);
@@ -44,7 +44,7 @@ test('WebGL1#getContextInfo#limits', t => {
   t.end();
 });
 
-test('WebGL2#getContextInfo#limits', t => {
+test('WebGL2#getContextInfo#limits', (t) => {
   const {gl2} = fixture;
 
   if (gl2) {

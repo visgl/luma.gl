@@ -1,7 +1,7 @@
 import {hueSaturation, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('hueSaturation#build/uniform', t => {
+test('hueSaturation#build/uniform', (t) => {
   normalizeShaderModule(hueSaturation);
   const uniforms = hueSaturation.getUniforms();
 

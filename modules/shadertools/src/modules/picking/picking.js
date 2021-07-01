@@ -9,7 +9,6 @@ const DEFAULT_MODULE_OPTIONS = {
   pickingAttribute: false // Set to true when picking an attribute value instead of object index
 };
 
-/* eslint-disable camelcase */
 function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   const uniforms = {};
   if (opts.pickingSelectedColor !== undefined) {
@@ -22,7 +21,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
     }
   }
   if (opts.pickingHighlightColor) {
-    const color = Array.from(opts.pickingHighlightColor, x => x / 255);
+    const color = Array.from(opts.pickingHighlightColor, (x) => x / 255);
     if (!Number.isFinite(color[3])) {
       color[3] = 1;
     }

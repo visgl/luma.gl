@@ -5,7 +5,7 @@ import {
   getFeatures,
   FEATURES
 } from '@luma.gl/webgl';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {makeSpy} from '@probe.gl/test-utils';
 
 import {fixture} from 'test/setup';
@@ -37,14 +37,14 @@ const WEBGL_FEATURES = {
   GLSL_TEXTURE_LOD: true
 };
 
-test('webgl#caps#imports', t => {
+test('webgl#caps#imports', (t) => {
   t.ok(typeof hasFeature === 'function', 'hasFeature defined');
   t.ok(typeof hasFeatures === 'function', 'hasFeatures defined');
   t.ok(typeof getFeatures === 'function', 'getFeatures defined');
   t.end();
 });
 
-test('webgl#caps#hasFeatures (WebGL1)', t => {
+test('webgl#caps#hasFeatures (WebGL1)', (t) => {
   const {gl} = fixture;
   const UNSUPPORTED_WEBGL1_FEATURES = [FEATURES.WEBGL2, FEATURES.COLOR_ATTACHMENT_FLOAT];
 
@@ -52,7 +52,7 @@ test('webgl#caps#hasFeatures (WebGL1)', t => {
   t.end();
 });
 
-test('webgl#caps#hasFeatures (WebGL2)', t => {
+test('webgl#caps#hasFeatures (WebGL2)', (t) => {
   const {gl2} = fixture;
   const SUPPORTED_WEBGL2_FEATURES = [FEATURES.VERTEX_ARRAY_OBJECT, FEATURES.INSTANCED_RENDERING];
 
@@ -62,7 +62,7 @@ test('webgl#caps#hasFeatures (WebGL2)', t => {
   t.end();
 });
 
-test('webgl#caps#getFeatures', t => {
+test('webgl#caps#getFeatures', (t) => {
   const {gl} = fixture;
 
   const info = getFeatures(gl);
@@ -75,7 +75,7 @@ test('webgl#caps#getFeatures', t => {
   t.end();
 });
 
-test('webgl#caps#hasFeature(WebGL1)', t => {
+test('webgl#caps#hasFeature(WebGL1)', (t) => {
   const {gl} = fixture;
   t.ok(typeof hasFeatures === 'function', 'hasFeatures defined');
 
@@ -88,7 +88,7 @@ test('webgl#caps#hasFeature(WebGL1)', t => {
   t.end();
 });
 
-test('webgl#caps#hasFeature(WebGL2)', t => {
+test('webgl#caps#hasFeature(WebGL2)', (t) => {
   const {gl2} = fixture;
 
   if (gl2) {
@@ -102,7 +102,7 @@ test('webgl#caps#hasFeature(WebGL2)', t => {
   t.end();
 });
 
-test('webgl#caps#canCompileGLGSExtension', t => {
+test('webgl#caps#canCompileGLGSExtension', (t) => {
   const {gl} = fixture;
 
   const userAgentNonIE =
@@ -168,7 +168,7 @@ test('webgl#caps#canCompileGLGSExtension', t => {
   t.end();
 });
 
-test('webgl#caps#cache', t => {
+test('webgl#caps#cache', (t) => {
   const {gl} = fixture;
   const cap = FEATURES.WEBGL2;
   // @ts-ignore

@@ -34,7 +34,7 @@ export default class GLTFInstantiator {
 
   instantiate(gltf) {
     this.gltf = gltf;
-    const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
+    const scenes = (gltf.scenes || []).map((scene) => this.createScene(scene));
     return scenes;
   }
 
@@ -48,7 +48,7 @@ export default class GLTFInstantiator {
 
   createScene(gltfScene) {
     const gltfNodes = gltfScene.nodes || [];
-    const nodes = gltfNodes.map(node => this.createNode(node));
+    const nodes = gltfNodes.map((node) => this.createNode(node));
     const scene = new GroupNode({
       id: gltfScene.name || gltfScene.id,
       children: nodes
@@ -59,7 +59,7 @@ export default class GLTFInstantiator {
   createNode(gltfNode) {
     if (!gltfNode._node) {
       const gltfChildren = gltfNode.children || [];
-      const children = gltfChildren.map(child => this.createNode(child));
+      const children = gltfChildren.map((child) => this.createNode(child));
 
       // Node can have children nodes and meshes at the same time
       if (gltfNode.mesh) {
@@ -138,7 +138,7 @@ export default class GLTFInstantiator {
   createAttributes(attributes, indices) {
     const loadedAttributes = {};
 
-    Object.keys(attributes).forEach(attrName => {
+    Object.keys(attributes).forEach((attrName) => {
       loadedAttributes[attrName] = this.createAccessor(
         attributes[attrName],
         this.createBuffer(attributes[attrName], this.gl.ARRAY_BUFFER)

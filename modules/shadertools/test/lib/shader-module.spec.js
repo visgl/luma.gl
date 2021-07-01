@@ -1,7 +1,7 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import ShaderModule, {normalizeShaderModule} from '@luma.gl/shadertools/lib/shader-module';
 
-test('ShaderModule', t => {
+test('ShaderModule', (t) => {
   let shaderModule = new ShaderModule({name: 'empty-shader-module'});
 
   t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
@@ -26,7 +26,7 @@ varying float vClipped;
   t.end();
 });
 
-test('ShaderModule#checkDeprecations', t => {
+test('ShaderModule#checkDeprecations', (t) => {
   const shaderModule = new ShaderModule({
     name: 'test-shader-module',
     deprecations: [
@@ -69,7 +69,7 @@ void main() {
   t.end();
 });
 
-test('normalizeShaderModule', t => {
+test('normalizeShaderModule', (t) => {
   const module = {
     name: 'test-shader-module',
     uniforms: {

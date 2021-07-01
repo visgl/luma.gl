@@ -1,5 +1,5 @@
 /* eslint-disable max-len, max-statements */
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Query} from '@luma.gl/webgl';
 import util from 'util';
 import GL from '@luma.gl/constants';
@@ -8,8 +8,8 @@ import {fixture} from 'test/setup';
 function pollQuery(query, t) {
   return query
     .createPoll(10)
-    .then(result => t.pass(`Timer query: ${result}ms`))
-    .catch(error => t.fail(`Timer query: ${error}`));
+    .then((result) => t.pass(`Timer query: ${result}ms`))
+    .catch((error) => t.fail(`Timer query: ${error}`));
 }
 
 function testQueryConstructDelete(gl, t) {
@@ -39,13 +39,13 @@ function testQueryConstructDelete(gl, t) {
   t.end();
 }
 
-test('WebGL#Query construct/delete', t => {
+test('WebGL#Query construct/delete', (t) => {
   const {gl} = fixture;
 
   testQueryConstructDelete(gl, t);
 });
 
-test('WebGL2#Query construct/delete', t => {
+test('WebGL2#Query construct/delete', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -68,13 +68,13 @@ function testQueryCompleteFail(gl, t) {
   return pollQuery(timerQuery, t);
 }
 
-test('WebGL#Query completed/failed queries', t => {
+test('WebGL#Query completed/failed queries', (t) => {
   const {gl} = fixture;
   testQueryCompleteFail(gl, t);
   t.end();
 });
 
-test('WebGL2#Query completed/failed queries', t => {
+test('WebGL2#Query completed/failed queries', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -96,14 +96,14 @@ function testQuery(gl, opts, target, t) {
   return pollQuery(query, t);
 }
 
-test('WebGL#TimeElapsedQuery', t => {
+test('WebGL#TimeElapsedQuery', (t) => {
   const {gl} = fixture;
   const opts = ['timers'];
   testQuery(gl, opts, GL.TIME_ELAPSED_EXT, t);
   t.end();
 });
 
-test('WebGL2#TimeElapsedQuery', t => {
+test('WebGL2#TimeElapsedQuery', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -115,14 +115,14 @@ test('WebGL2#TimeElapsedQuery', t => {
   t.end();
 });
 
-test('WebGL#OcclusionQuery', t => {
+test('WebGL#OcclusionQuery', (t) => {
   const {gl} = fixture;
   const opts = ['queries'];
   testQuery(gl, opts, GL.ANY_SAMPLES_PASSED_CONSERVATIVE, t);
   t.end();
 });
 
-test('WebGL2#OcclusionQuery', t => {
+test('WebGL2#OcclusionQuery', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -134,14 +134,14 @@ test('WebGL2#OcclusionQuery', t => {
   t.end();
 });
 
-test('WebGL#TransformFeedbackQuery', t => {
+test('WebGL#TransformFeedbackQuery', (t) => {
   const {gl} = fixture;
   const opts = ['queries'];
   testQuery(gl, opts, GL.TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, t);
   t.end();
 });
 
-test('WebGL2#TransformFeedbackQuery', t => {
+test('WebGL2#TransformFeedbackQuery', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

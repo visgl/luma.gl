@@ -32,7 +32,7 @@ export default class ModelNode extends ScenegraphNode {
       this.model = null;
     }
 
-    this.managedResources.forEach(resource => resource.delete());
+    this.managedResources.forEach((resource) => resource.delete());
     this.managedResources = [];
   }
 

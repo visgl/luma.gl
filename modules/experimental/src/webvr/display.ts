@@ -1,12 +1,23 @@
+import {AnimationLoop} from '@luma.gl/engine';
 import {withParameters} from '@luma.gl/gltools';
 
 export default class Display {
-  constructor() {
+  readonly animationLoop: AnimationLoop;
+
+  constructor(props?) {
     // TODO
     this.animationLoop = null;
   }
 
-  getViews(options) {
+  delete(): void {}
+
+  getViews(options): {
+    params: {
+      viewport: any[];
+      scissor: any[];
+      scissorTest: boolean;
+    };
+  }[] {
     const {width, height} = options;
     return [
       {
@@ -19,19 +30,17 @@ export default class Display {
     ];
   }
 
-  submitFrame() {
+  submitFrame(): boolean {
     return true;
   }
 
   // return true if animation frame has been requested
-  requestAnimationFrame(renderFrame) {
+  requestAnimationFrame(renderFrame): boolean {
     return false;
   }
 
-  delete() {}
-
   // AnimationLoop calls this API
-  _renderFrame(options) {
+  _renderFrame(options): boolean {
     const views = this.getViews(options);
     if (!views) {
       return false;

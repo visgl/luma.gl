@@ -1,7 +1,7 @@
 import {sepia, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('sepia#build/uniform', t => {
+test('sepia#build/uniform', (t) => {
   normalizeShaderModule(sepia);
   const uniforms = sepia.getUniforms();
 

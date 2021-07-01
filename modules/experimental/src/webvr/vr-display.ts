@@ -3,6 +3,13 @@ import Display from './display';
 import {createEnterVRButton} from './vr-button';
 
 export default class VRDisplay extends Display {
+  private _vrSupported: boolean;
+  vrDisplay;
+  vrFrameData;
+  vrButton: HTMLButtonElement | null = null;
+  vrPresenting = false;
+  vrFrame = false;
+
   static isSupported() {
     return (
       typeof navigator !== 'undefined' && 'getVRDisplays' in navigator && 'VRFrameData' in window
@@ -14,9 +21,8 @@ export default class VRDisplay extends Display {
 
     this._vrSupported = VRDisplay.isSupported();
     if (this._vrSupported) {
+      // @ts-ignore VR typings
       this.vrFrameData = new window.VRFrameData();
-      this.vrPresenting = false;
-      this.vrFrame = false;
       window.addEventListener('vrdisplaypresentchange', this._vrDisplayPresentChange.bind(this));
     }
   }
@@ -110,13 +116,14 @@ export default class VRDisplay extends Display {
       return;
     }
 
+    // @ts-ignore VR typings
     const displays = await navigator.getVRDisplays();
     if (displays && displays.length) {
       log.info(2, 'Found VR Displays', displays)();
 
       this.vrDisplay = displays[0];
       this.vrButton = createEnterVRButton({
-        canvas,
+        canvas: canvas as HTMLCanvasElement,
         title: `Enter VR (${this.vrDisplay.displayName})`
       });
       this.vrButton.onclick = () => this._startDisplay();

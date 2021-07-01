@@ -13,9 +13,9 @@ const DEFAULT_TEST_CASE = {
 
 const DEFAULT_TEST_OPTIONS = {
   // test lifecycle callback
-  onTestStart: testCase => console.log(`# ${testCase.name}`),
-  onTestPass: testCase => console.log(`ok ${testCase.name} passed`),
-  onTestFail: testCase => console.log(`not ok ${testCase.name} failed`),
+  onTestStart: (testCase) => console.log(`# ${testCase.name}`),
+  onTestPass: (testCase) => console.log(`ok ${testCase.name} passed`),
+  onTestFail: (testCase) => console.log(`not ok ${testCase.name} failed`),
 
   // milliseconds to wait for each test case before aborting
   timeout: 2000
@@ -58,7 +58,7 @@ export default class TestRunner {
   run(options = {}) {
     Object.assign(this.testOptions, options);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this._animationLoop = new AnimationLoop(
         // @ts-ignore TODO
         Object.assign({}, this.props, {
@@ -74,7 +74,7 @@ export default class TestRunner {
       this.isRunning = true;
       this.isDiffing = false;
       this._currentTestCase = null;
-    }).catch(error => {
+    }).catch((error) => {
       this._fail({error: error.message});
     });
   }
@@ -202,7 +202,7 @@ export default class TestRunner {
             tick: 0
           })
         )
-      ).then(userData => {
+      ).then((userData) => {
         this._testCaseData = userData || {};
       });
       // invoke user callback

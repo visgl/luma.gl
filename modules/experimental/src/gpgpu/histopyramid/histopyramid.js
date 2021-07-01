@@ -159,7 +159,10 @@ export function histoPyramidGenerateIndices(gl, opts) {
   const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(gl, opts);
 
   const keyIndexCount = topLevelData[0] + topLevelData[1] + topLevelData[2] + topLevelData[3];
-  const keyIndex = new Buffer(gl, new Float32Array(keyIndexCount).map((_, index) => index));
+  const keyIndex = new Buffer(
+    gl,
+    new Float32Array(keyIndexCount).map((_, index) => index)
+  );
   const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
 
   const transform = new Transform(gl, {

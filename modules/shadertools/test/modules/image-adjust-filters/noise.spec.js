@@ -1,7 +1,7 @@
 import {noise, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('noise#build/uniform', t => {
+test('noise#build/uniform', (t) => {
   normalizeShaderModule(noise);
   const uniforms = noise.getUniforms();
 

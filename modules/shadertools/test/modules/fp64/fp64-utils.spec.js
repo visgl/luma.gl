@@ -1,8 +1,8 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fp64} from '@luma.gl/shadertools';
 import {_Pose as Pose} from '@math.gl/core';
 
-test('fp64#fp64LowPart', t => {
+test('fp64#fp64LowPart', (t) => {
   const x = Math.PI;
   const x32 = new Float32Array([x])[0];
 
@@ -11,7 +11,7 @@ test('fp64#fp64LowPart', t => {
   t.end();
 });
 
-test('fp64#fp64ify', t => {
+test('fp64#fp64ify', (t) => {
   const x = Math.PI;
 
   const xHi = Math.fround(x);
@@ -27,7 +27,7 @@ test('fp64#fp64ify', t => {
   t.end();
 });
 
-test('fp64#fp64ifyMatrix4', t => {
+test('fp64#fp64ifyMatrix4', (t) => {
   const matrix = new Pose({
     yaw: -0.00032679972032649654,
     pitch: 0.0017499351314303354,

@@ -16,16 +16,16 @@ const examples = {
   }
 };
 
-export default Object.keys(examples).map(name => {
+export default Object.keys(examples).map((name) => {
   const app = new DemoApp(examples[name]);
   const animationLoop = new AnimationLoop(app);
 
   return {
     name,
-    onInitialize: params => {
+    onInitialize: (params) => {
       return animationLoop.onInitialize(params);
     },
-    onRender: params => {
+    onRender: (params) => {
       const result = animationLoop.onRender(params);
       if (result !== false) {
         params.done();

@@ -1,7 +1,7 @@
 import {triangleBlur, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('triangleBlur#build/uniform', t => {
+test('triangleBlur#build/uniform', (t) => {
   normalizeShaderModule(triangleBlur);
   const uniforms = triangleBlur.getUniforms();
 

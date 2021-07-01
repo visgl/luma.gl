@@ -21,7 +21,7 @@
 import {Buffer} from '@luma.gl/webgl';
 import {Transform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
 // TODO: test WebGL1 when Transform class is ready
@@ -74,7 +74,7 @@ const TEST_CASES = [
   }
 ];
 
-test('picking#getUniforms', t => {
+test('picking#getUniforms', (t) => {
   t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
@@ -106,7 +106,7 @@ test('picking#getUniforms', t => {
   t.end();
 });
 
-test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
+test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -141,7 +141,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
     elementCount
   });
 
-  TEST_CASES.forEach(testCase => {
+  TEST_CASES.forEach((testCase) => {
     const uniforms = picking.getUniforms({
       pickingSelectedColor: testCase.pickingSelectedColor
     });
@@ -158,7 +158,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', t => {
 });
 
 /* eslint-disable max-nested-callbacks */
-test('picking#picking_setPickingColor', t => {
+test('picking#picking_setPickingColor', (t) => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -194,7 +194,7 @@ test('picking#picking_setPickingColor', t => {
     elementCount
   });
 
-  TEST_CASES.forEach(testCase => {
+  TEST_CASES.forEach((testCase) => {
     const uniforms = picking.getUniforms({
       pickingSelectedColor: testCase.pickingSelectedColor,
       pickingThreshold: testCase.pickingThreshold

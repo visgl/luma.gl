@@ -17,8 +17,8 @@
     "3d"
   ],
   "types": "src/index.d.ts",
-  "main": "dist/es5/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "files": [
     "src",
     "dist",
@@ -30,7 +30,7 @@
     "gl/wrap": false
   },
   "scripts": {
-    "pre-build": "npm run build-bundle && npm run build-bundle -- --env.dev",
+    "pre-build": "npm run build-bundle",
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {

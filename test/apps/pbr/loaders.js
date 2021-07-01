@@ -47,7 +47,7 @@ function loadCubeMap(gl, envMap, type, state) {
     type;
 
   function onLoadEnvironmentImage(texture, face, image, j) {
-    return function() {
+    return function () {
       gl.activeTexture(activeTextureEnum);
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);

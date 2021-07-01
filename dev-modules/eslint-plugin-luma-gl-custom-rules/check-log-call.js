@@ -19,9 +19,9 @@ const logFunctions = new Set([
 ]);
 
 module.exports = {
-  create: context => {
+  create: (context) => {
     return {
-      CallExpression: node => {
+      CallExpression: (node) => {
         if (
           node.callee &&
           node.callee.object &&
@@ -33,7 +33,7 @@ module.exports = {
           context.report({
             node,
             message: `Use log.${node.callee.property.name}(...)()`,
-            fix: fixer => {
+            fix: (fixer) => {
               return fixer.insertTextAfter(node, '()');
             }
           });

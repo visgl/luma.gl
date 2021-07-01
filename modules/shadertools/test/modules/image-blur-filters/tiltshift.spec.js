@@ -1,7 +1,7 @@
 import {tiltShift, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('tiltShift#build/uniform', t => {
+test('tiltShift#build/uniform', (t) => {
   normalizeShaderModule(tiltShift);
   const uniforms = tiltShift.getUniforms();
 

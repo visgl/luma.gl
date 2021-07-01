@@ -5,7 +5,7 @@ import injectShader, {
   combineInjects,
   DECLARATION_INJECT_MARKER
 } from '@luma.gl/shadertools/lib/inject-shader';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 const fixture = {
   gl: createTestContext()
@@ -95,12 +95,12 @@ const COMBINED_INJECT = {
   'vs:#main-start': ' uNewUniform = uNewUniform2;\n'
 };
 
-test('injectShader#import', t => {
+test('injectShader#import', (t) => {
   t.ok(injectShader !== undefined, 'injectShader import successful');
   t.end();
 });
 
-test('injectShader#injectShader', t => {
+test('injectShader#injectShader', (t) => {
   let injectResult;
 
   injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', injectionData(INJECT), true);
@@ -128,7 +128,7 @@ test('injectShader#injectShader', t => {
   t.end();
 });
 
-test('injectShader#assembleShaders', t => {
+test('injectShader#assembleShaders', (t) => {
   const assembleResult = assembleShaders(fixture.gl, {
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
@@ -156,7 +156,7 @@ test('injectShader#assembleShaders', t => {
   t.end();
 });
 
-test('injectShader#combineInjects', t => {
+test('injectShader#combineInjects', (t) => {
   t.deepEqual(combineInjects([INJECT1, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
   t.end();
 });

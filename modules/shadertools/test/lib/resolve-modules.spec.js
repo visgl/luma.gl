@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {resolveModules, TEST_EXPORTS} from '@luma.gl/shadertools/lib/resolve-modules';
 
 const {getDependencyGraph} = TEST_EXPORTS;
@@ -22,16 +22,16 @@ const project64 = {
   dependencies: [project, fp64]
 };
 
-test('ShaderModules#import', t => {
+test('ShaderModules#import', (t) => {
   t.ok(resolveModules !== undefined, 'resolveModules import successful');
   t.ok(getDependencyGraph !== undefined, 'getDependencyGraph import successful');
   t.end();
 });
 
-test('ShaderModules#getShaderDependencies', t => {
+test('ShaderModules#getShaderDependencies', (t) => {
   const result = resolveModules([project64, project]);
   t.deepEqual(
-    result.map(module => module.name),
+    result.map((module) => module.name),
     [fp32.name, project.name, fp64.name, project64.name],
     'Module order is correct'
   );
@@ -46,7 +46,7 @@ test('ShaderModules#getShaderDependencies', t => {
   t.end();
 });
 
-test('ShaderModules#getDependencyGraph', t => {
+test('ShaderModules#getDependencyGraph', (t) => {
   const moduleDepth = {};
   getDependencyGraph({
     modules: [project64, project],

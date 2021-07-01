@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {setParameters, getParameters, resetParameters} from '@luma.gl/gltools';
 
 import GL from '@luma.gl/constants';
@@ -21,7 +21,7 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-test('WebGL#set and get', t => {
+test('WebGL#set and get', (t) => {
   const {gl} = fixture;
   resetParameters(gl);
 
@@ -45,7 +45,7 @@ test('WebGL#set and get', t => {
   t.end();
 });
 
-test('WebGL#composite setter', t => {
+test('WebGL#composite setter', (t) => {
   const {gl} = fixture;
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
   const partialCompositeStateValues = {
@@ -90,7 +90,7 @@ test('WebGL#composite setter', t => {
   t.end();
 });
 
-test('WebGLState#get all parameters', t => {
+test('WebGLState#get all parameters', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -119,7 +119,7 @@ test('WebGLState#get all parameters', t => {
   t.end();
 });
 
-test('WebGL#reset', t => {
+test('WebGL#reset', (t) => {
   const {gl} = fixture;
 
   // Set custom values and verify.
@@ -152,7 +152,7 @@ test('WebGL#reset', t => {
   t.end();
 });
 
-test('WebGLState#setParameters framebuffer', t => {
+test('WebGLState#setParameters framebuffer', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -177,7 +177,7 @@ test('WebGLState#setParameters framebuffer', t => {
   t.end();
 });
 
-test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
+test('WebGLState#setParameters read-framebuffer (WebGL2 only)', (t) => {
   const {gl2} = fixture;
   // const gl2 = createTestContext({webgl2: true, webgl1: false});
   if (gl2) {

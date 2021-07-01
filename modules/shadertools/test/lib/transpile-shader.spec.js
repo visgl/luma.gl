@@ -1,7 +1,6 @@
-/* eslint-disable camelcase */
 import {createTestContext} from '@luma.gl/test-utils';
 import transpileShader from '@luma.gl/shadertools/lib/transpile-shader';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
 import {minifyShader} from './minify-shader';
@@ -14,16 +13,16 @@ const fixture = {
   gl2: createTestContext({webgl2: true, webgl1: false})
 };
 
-test('transpileShader#import', t => {
+test('transpileShader#import', (t) => {
   t.ok(transpileShader, 'transpileShader import successful');
   t.end();
 });
 
-test('transpileShader', t => {
+test('transpileShader', (t) => {
   let assembleResult;
 
   for (const tc of TRANSPILATION_TEST_CASES) {
-    const {title, isVertex, GLSL_300, GLSL_100, GLSL_300_transpiled} = tc;
+    const {title, isVertex, GLSL_300, GLSL_100, GLSL_300_TRANSPILED} = tc;
 
     t.throws(
       () => transpileShader(GLSL_300, 400, isVertex),
@@ -35,32 +34,32 @@ test('transpileShader', t => {
     t.equal(assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
 
     assembleResult = transpileShader(GLSL_300, 300, isVertex);
-    t.equal(assembleResult, GLSL_300_transpiled, `3.00 => 3.00: ${title}`);
+    t.equal(assembleResult, GLSL_300_TRANSPILED, `3.00 => 3.00: ${title}`);
 
     assembleResult = transpileShader(GLSL_100, 100, isVertex);
     t.equal(assembleResult, GLSL_100, `1.00 => 1.00: ${title}`);
 
     assembleResult = transpileShader(GLSL_100, 300, isVertex);
-    t.equal(assembleResult, GLSL_300_transpiled, `1.00 => 3.00: ${title}`);
+    t.equal(assembleResult, GLSL_300_TRANSPILED, `1.00 => 3.00: ${title}`);
 
     // minified shaders
     assembleResult = minifyShader(transpileShader(minifyShader(GLSL_300), 100, isVertex));
     t.equal(assembleResult, minifyShader(GLSL_100), `minified 3.00 => 1.00: ${title}`);
 
     assembleResult = minifyShader(transpileShader(minifyShader(GLSL_300), 300, isVertex));
-    t.equal(assembleResult, minifyShader(GLSL_300_transpiled), `minified 3.00 => 3.00: ${title}`);
+    t.equal(assembleResult, minifyShader(GLSL_300_TRANSPILED), `minified 3.00 => 3.00: ${title}`);
 
     assembleResult = minifyShader(transpileShader(minifyShader(GLSL_100), 100, isVertex));
     t.equal(assembleResult, minifyShader(GLSL_100), `minified 1.00 => 1.00: ${title}`);
 
     assembleResult = minifyShader(transpileShader(minifyShader(GLSL_100), 300, isVertex));
-    t.equal(assembleResult, minifyShader(GLSL_300_transpiled), `minified 1.00 => 3.00: ${title}`);
+    t.equal(assembleResult, minifyShader(GLSL_300_TRANSPILED), `minified 1.00 => 3.00: ${title}`);
   }
 
   t.end();
 });
 
-test('transpileShader#compilation', t => {
+test('transpileShader#compilation', (t) => {
   const {gl1, gl2} = fixture;
 
   for (const tc of COMPILATION_TEST_CASES) {

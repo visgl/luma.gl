@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import BufferTransform from '@luma.gl/engine/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl';
 import {Model} from '@luma.gl/engine';
@@ -20,7 +20,7 @@ void main(void) {
 }
 `;
 
-test('WebGL#BufferTransform construct', t => {
+test('WebGL#BufferTransform construct', (t) => {
   const gl = fixture.gl;
 
   const bt = new BufferTransform(gl, {
@@ -33,7 +33,7 @@ test('WebGL#BufferTransform construct', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform construct with feedbackBuffer', t => {
+test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
   let gl = fixture.gl;
   let source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
   let feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
@@ -76,7 +76,7 @@ test('WebGL#BufferTransform construct with feedbackBuffer', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform feedbackBuffer with referece', t => {
+test('WebGL#BufferTransform feedbackBuffer with referece', (t) => {
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -99,7 +99,7 @@ test('WebGL#BufferTransform feedbackBuffer with referece', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform updateModelProps', t => {
+test('WebGL#BufferTransform updateModelProps', (t) => {
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -144,7 +144,7 @@ test('WebGL#BufferTransform updateModelProps', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform setupResources', t => {
+test('WebGL#BufferTransform setupResources', (t) => {
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');
@@ -172,7 +172,7 @@ test('WebGL#BufferTransform setupResources', t => {
   t.end();
 });
 
-test('WebGL#BufferTransform swap', t => {
+test('WebGL#BufferTransform swap', (t) => {
   const gl = fixture.gl2;
   if (!gl) {
     t.comment('WebGL2 not available, skipping tests');

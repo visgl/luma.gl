@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Renderbuffer, getKey} from '@luma.gl/webgl';
 
@@ -8,7 +8,7 @@ import {fixture} from 'test/setup';
 
 // const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
 
-test('WebGL#Renderbuffer construct/delete', t => {
+test('WebGL#Renderbuffer construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -30,7 +30,7 @@ test('WebGL#Renderbuffer construct/delete', t => {
   t.end();
 });
 
-test('WebGL#Renderbuffer format creation', t => {
+test('WebGL#Renderbuffer format creation', (t) => {
   const {gl} = fixture;
 
   for (const formatName in RENDERBUFFER_FORMATS) {
@@ -49,7 +49,7 @@ test('WebGL#Renderbuffer format creation', t => {
   t.end();
 });
 
-test('WebGL2#Renderbuffer format creation', t => {
+test('WebGL2#Renderbuffer format creation', (t) => {
   const {gl2} = fixture;
 
   if (!gl2) {

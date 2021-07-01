@@ -1,5 +1,5 @@
 import formatGLSLError from '@luma.gl/webgl/glsl-utils/format-glsl-error';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 const SHADER_SOURCE = `
 #define AMD_GPU
@@ -1094,7 +1094,7 @@ GLSL compilation error in vertex shader scatterplot-layer-vertex-shader-64
 
 `;
 
-test('WebGL#formatGLSLError', t => {
+test('WebGL#formatGLSLError', (t) => {
   const error = formatGLSLError(ERROR_LOG, SHADER_SOURCE, SHADER_TYPE);
   t.equal(error, EXPECTED, 'formatGLSLError generated correct error');
   t.end();

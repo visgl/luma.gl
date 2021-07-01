@@ -1,7 +1,7 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {lights} from '@luma.gl/shadertools';
 
-test('shadertools#lights', t => {
+test('shadertools#lights', (t) => {
   let uniforms = lights.getUniforms();
   t.ok(uniforms, 'Generated default uniforms');
 

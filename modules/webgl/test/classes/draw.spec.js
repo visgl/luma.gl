@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Program} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
 
@@ -17,7 +17,7 @@ void main(void) {
 }
 `;
 
-test('WebGL#draw', t => {
+test('WebGL#draw', (t) => {
   const {gl} = fixture;
   t.ok(gl, 'Created gl context');
 

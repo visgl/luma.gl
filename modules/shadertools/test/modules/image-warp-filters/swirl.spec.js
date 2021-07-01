@@ -1,7 +1,7 @@
 import {swirl, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('swirl#build/uniform', t => {
+test('swirl#build/uniform', (t) => {
   normalizeShaderModule(swirl);
   const uniforms = swirl.getUniforms();
 

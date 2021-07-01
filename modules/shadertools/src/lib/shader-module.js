@@ -73,7 +73,7 @@ ${moduleSource}\
 
   // Warn about deprecated uniforms or functions
   checkDeprecations(shaderSource, log) {
-    this.deprecations.forEach(def => {
+    this.deprecations.forEach((def) => {
       if (def.regex.test(shaderSource)) {
         if (def.deprecated) {
           log.deprecated(def.old, def.new)();
@@ -85,7 +85,7 @@ ${moduleSource}\
   }
 
   _parseDeprecationDefinitions(deprecations) {
-    deprecations.forEach(def => {
+    deprecations.forEach((def) => {
       switch (def.type) {
         case 'function':
           def.regex = new RegExp(`\\b${def.old}\\(`);

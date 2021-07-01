@@ -1,7 +1,7 @@
 // The MIT License (MIT) Copyright (c) 2017 Tarek Sherif
 // @ts-nocheck
 
-(function() {
+(function () {
   let translateMat;
   let rotateXMat;
   let rotateYMat;
@@ -224,7 +224,7 @@
     },
 
     loadImages(urls) {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         let numImages = urls.length;
 
         let images = new Array(numImages);
@@ -244,7 +244,7 @@
     },
 
     loadImageArray(urls) {
-      return this.loadImages(urls).then(images => {
+      return this.loadImages(urls).then((images) => {
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         let width = images[0].width;
@@ -256,7 +256,7 @@
           ctx.drawImage(images[i], 0, i * height);
         }
 
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
           let image = new Image();
           image.onload = () => {
             resolve({
@@ -420,210 +420,42 @@
 
       let uvs = new Float32Array([
         //front
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
 
         //right
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
 
         //back
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
 
         //left
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
 
         //top
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
 
         //bottom
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        1,
-        1,
-        0,
-        1,
-        1
+        0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1
       ]);
 
       let normals = new Float32Array([
         // front
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
+        0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
 
         // right
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
+        1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
 
         // back
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
+        0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
 
         // left
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
+        -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
 
         // top
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
-        0,
-        1,
-        0,
+        0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
 
         // bottom
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0,
-        0,
-        -1,
-        0
+        0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
       ]);
 
       return {
@@ -812,12 +644,12 @@
     },
 
     loadBinary(url) {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         let xhr = new XMLHttpRequest();
         xhr.open('GET', url);
         xhr.responseType = 'arraybuffer';
 
-        xhr.onload = function() {
+        xhr.onload = function () {
           resolve(xhr.response);
         };
 
@@ -826,7 +658,7 @@
     },
 
     loadBinaries(urls) {
-      return Promise.all(urls.map(url => this.loadBinary(url)));
+      return Promise.all(urls.map((url) => this.loadBinary(url)));
     },
 
     // http://cdn.imgtec.com/sdk-documentation/PVR+File+Format.Specification.pdf

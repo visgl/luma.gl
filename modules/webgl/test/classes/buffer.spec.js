@@ -1,11 +1,11 @@
 import GL from '@luma.gl/constants';
 import {isWebGL} from '@luma.gl/gltools';
 import {Buffer} from '@luma.gl/webgl';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
 
-test('Buffer#constructor/delete', t => {
+test('Buffer#constructor/delete', (t) => {
   const {gl} = fixture;
   t.ok(isWebGL(gl), 'Created gl context');
 
@@ -24,7 +24,7 @@ test('Buffer#constructor/delete', t => {
   t.end();
 });
 
-test('Buffer#constructor offset and size', t => {
+test('Buffer#constructor offset and size', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -65,19 +65,16 @@ test('Buffer#constructor offset and size', t => {
   t.end();
 });
 
-test('Buffer#bind/unbind', t => {
+test('Buffer#bind/unbind', (t) => {
   const {gl} = fixture;
 
-  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER})
-    .bind()
-    .unbind()
-    .delete();
+  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER}).bind().unbind().delete();
   t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
 
   t.end();
 });
 
-test('Buffer#bind/unbind with index', t => {
+test('Buffer#bind/unbind with index', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -85,16 +82,13 @@ test('Buffer#bind/unbind with index', t => {
     return;
   }
 
-  const buffer = new Buffer(gl2, {target: GL.UNIFORM_BUFFER, index: 0})
-    .bind()
-    .unbind()
-    .delete();
+  const buffer = new Buffer(gl2, {target: GL.UNIFORM_BUFFER, index: 0}).bind().unbind().delete();
   t.ok(buffer instanceof Buffer, 'Buffer bind/unbind with index successful');
 
   t.end();
 });
 
-test('Buffer#construction', t => {
+test('Buffer#construction', (t) => {
   const {gl} = fixture;
 
   let buffer;
@@ -118,7 +112,7 @@ test('Buffer#construction', t => {
   t.end();
 });
 
-test('Buffer#initialize/subData', t => {
+test('Buffer#initialize/subData', (t) => {
   const {gl} = fixture;
 
   let buffer;
@@ -155,7 +149,7 @@ test('Buffer#initialize/subData', t => {
   t.end();
 });
 
-test('Buffer#copyData', t => {
+test('Buffer#copyData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -190,7 +184,7 @@ test('Buffer#copyData', t => {
   t.end();
 });
 
-test('Buffer#getData', t => {
+test('Buffer#getData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -243,7 +237,7 @@ test('Buffer#getData', t => {
   t.end();
 });
 
-test('Buffer#getElementCount', t => {
+test('Buffer#getElementCount', (t) => {
   const {gl} = fixture;
 
   let vertexCount;
@@ -264,7 +258,7 @@ test('Buffer#getElementCount', t => {
   t.end();
 });
 
-test('Buffer#reallocate', t => {
+test('Buffer#reallocate', (t) => {
   const {gl} = fixture;
 
   const buffer = new Buffer(gl, {byteLength: 100});

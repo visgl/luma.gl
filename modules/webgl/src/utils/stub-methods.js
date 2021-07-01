@@ -7,7 +7,7 @@ https://luma.gl/docs/upgrade-guide`;
 
   const prototype = Object.getPrototypeOf(instance);
 
-  methodNames.forEach(methodName => {
+  methodNames.forEach((methodName) => {
     if (prototype.methodName) {
       return;
     }

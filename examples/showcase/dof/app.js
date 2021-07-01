@@ -390,10 +390,7 @@ export default class AppAnimationLoop extends AnimationLoop {
           scale,
           translate,
           rotate,
-          matrix: new Matrix4()
-            .translate(translate)
-            .rotateXYZ(rotate)
-            .scale(scale)
+          matrix: new Matrix4().translate(translate).rotateXYZ(rotate).scale(scale)
         };
 
         instancedCubes.matrices.set(instancedCubes.xforms[cubeI].matrix, cubeI * 16);
@@ -473,11 +470,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       const box = instancedCubes.xforms[i];
       box.rotate[0] += 0.01;
       box.rotate[1] += 0.02;
-      box.matrix
-        .identity()
-        .translate(box.translate)
-        .rotateXYZ(box.rotate)
-        .scale(box.scale);
+      box.matrix.identity().translate(box.translate).rotateXYZ(box.rotate).scale(box.scale);
       instancedCubes.matrices.set(box.matrix, i * 16);
     }
 

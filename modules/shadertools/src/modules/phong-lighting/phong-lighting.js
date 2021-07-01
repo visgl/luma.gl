@@ -12,7 +12,7 @@ function getMaterialUniforms(material) {
     lighting_uAmbient: ambient,
     lighting_uDiffuse: diffuse,
     lighting_uShininess: shininess,
-    lighting_uSpecularColor: specularColor.map(x => x / 255)
+    lighting_uSpecularColor: specularColor.map((x) => x / 255)
   };
 }
 

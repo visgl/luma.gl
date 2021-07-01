@@ -25,7 +25,7 @@ const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 
 export default class ClipSpace extends Model {
   constructor(gl, opts) {
-    const TEX_COORDS = POSITIONS.map(coord => (coord === -1 ? 0 : coord));
+    const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
 
     super(
       gl,

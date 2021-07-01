@@ -68,7 +68,7 @@ function assembleShader(
 
   // Combine Module and Application Defines
   const allDefines = {};
-  modules.forEach(module => {
+  modules.forEach((module) => {
     Object.assign(allDefines, module.getDefines());
   });
   Object.assign(allDefines, defines);
@@ -250,7 +250,7 @@ function normalizeHookFunctions(hookFunctions) {
     fs: {}
   };
 
-  hookFunctions.forEach(hook => {
+  hookFunctions.forEach((hook) => {
     let opts;
     if (typeof hook !== 'string') {
       opts = hook;

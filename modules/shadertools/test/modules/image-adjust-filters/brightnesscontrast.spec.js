@@ -1,7 +1,7 @@
 import {brightnessContrast, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('brightnessContrast#build/uniform', t => {
+test('brightnessContrast#build/uniform', (t) => {
   normalizeShaderModule(brightnessContrast);
   const uniforms = brightnessContrast.getUniforms();
 

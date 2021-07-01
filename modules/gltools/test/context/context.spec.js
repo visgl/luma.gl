@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} from '@luma.gl/gltools';
 import {createTestContext} from '@luma.gl/test-utils';
 
@@ -12,19 +12,19 @@ const glContext = {
 // @ts-ignore
 const glMock = glContext;
 
-test('WebGL#headless context creation', t => {
+test('WebGL#headless context creation', (t) => {
   t.ok(isWebGL(gl), 'Context creation ok');
   t.end();
 });
 
-test('WebGL#getContextDebugInfo', t => {
+test('WebGL#getContextDebugInfo', (t) => {
   const info = getContextDebugInfo(gl);
   t.ok(typeof info.vendor === 'string', 'info.vendor ok');
   t.ok(typeof info.renderer === 'string', 'info.renderer ok');
   t.end();
 });
 
-test('WebGL#isWebGL1', t => {
+test('WebGL#isWebGL1', (t) => {
   t.ok(isWebGL(gl), 'isWebGL should return true WebGL context');
   t.ok(isWebGL(glDebug), 'isWebGL should return true on WebGL debug context');
 
@@ -39,7 +39,7 @@ test('WebGL#isWebGL1', t => {
   t.end();
 });
 
-test('WebGL#isWebGL2', t => {
+test('WebGL#isWebGL2', (t) => {
   t.notOk(isWebGL2(gl), 'isWebGL2 should return false WebGL context');
   t.notOk(isWebGL2(glDebug), 'isWebGL2 should return false on WebGL debug context');
 
@@ -54,7 +54,7 @@ test('WebGL#isWebGL2', t => {
   t.end();
 });
 
-test('WebGL#resizeGLContext', t => {
+test('WebGL#resizeGLContext', (t) => {
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate gl context
   glContext.drawingBufferWidth = glContext.canvas.clientWidth;

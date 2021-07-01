@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 // @ts-ignore
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 import {getContextDebugInfo} from '@luma.gl/gltools';
 import {runTests} from './fp64-test-utils-transform';
@@ -77,7 +77,7 @@ function getTestCasesFor(glslFunc) {
     return [];
   }
   const debugInfo = getContextDebugInfo(gl);
-  const testCases = commonTestCases.filter(testCase => {
+  const testCases = commonTestCases.filter((testCase) => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {
         if (
@@ -93,32 +93,32 @@ function getTestCasesFor(glslFunc) {
   return testCases;
 }
 
-test('fp64#sum_fp64', t => {
+test('fp64#sum_fp64', (t) => {
   const glslFunc = 'sum_fp64';
   const testCases = getTestCasesFor(glslFunc);
   runTests(gl, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
 });
 
-test('fp64#sub_fp64', t => {
+test('fp64#sub_fp64', (t) => {
   const glslFunc = 'sub_fp64';
   const testCases = getTestCasesFor(glslFunc);
   runTests(gl, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
 });
 
-test('fp64#mul_fp64', t => {
+test('fp64#mul_fp64', (t) => {
   const glslFunc = 'mul_fp64';
   const testCases = getTestCasesFor(glslFunc);
   runTests(gl, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
 });
 
-test('fp64#div_fp64', t => {
+test('fp64#div_fp64', (t) => {
   const glslFunc = 'div_fp64';
   const testCases = getTestCasesFor(glslFunc);
   runTests(gl, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
 });
 
-test('fp64#sqrt_fp64', t => {
+test('fp64#sqrt_fp64', (t) => {
   const glslFunc = 'sqrt_fp64';
   const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, op: a => Math.sqrt(a), limit: 128, testCases, t});
+  runTests(gl, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
 });

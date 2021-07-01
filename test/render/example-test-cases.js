@@ -18,16 +18,16 @@ const examples = {
   texture3d: require('../../examples/api/texture-3d/app').default
 };
 
-export default Object.keys(examples).map(name => {
+export default Object.keys(examples).map((name) => {
   const AppAnimationLoop = examples[name];
   const animationLoop = new AppAnimationLoop();
   return {
     name,
-    onInitialize: params => {
+    onInitialize: (params) => {
       setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
       return animationLoop.onInitialize(params);
     },
-    onRender: params => {
+    onRender: (params) => {
       // remove animation in the example
       params.tick = 0;
       const result = animationLoop.onRender(params);

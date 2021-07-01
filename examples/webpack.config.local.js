@@ -4,10 +4,10 @@
 //
 // This enables using the examples to debug the main library source
 // without publishing or npm linking, with conveniences such hot reloading etc.
-
+const {getWebpackConfig} = require('ocular-dev-tools');
 const resolve = require('path').resolve;
 // eslint-disable-next-line import/no-extraneous-dependencies
-const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+const ALIASES = getWebpackConfig({
   root: resolve(__dirname, '..')
 }).aliases;
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -87,17 +87,19 @@ function addAnalyzerSettings(config) {
   return config;
 }
 
-module.exports = (baseConfig, opts = {}) => env => {
-  let config = baseConfig;
+module.exports =
+  (baseConfig, opts = {}) =>
+  (env) => {
+    let config = baseConfig;
 
-  if (env && env.analyze) {
-    config = addAnalyzerSettings(config);
-  }
+    if (env && env.analyze) {
+      config = addAnalyzerSettings(config);
+    }
 
-  if (env && env.local) {
-    config = addLocalDevSettings(config, opts);
-  }
+    if (env && env.local) {
+      config = addLocalDevSettings(config, opts);
+    }
 
-  // console.warn(JSON.stringify(config, null, 2));
-  return config;
-};
+    // console.warn(JSON.stringify(config, null, 2));
+    return config;
+  };

@@ -42,7 +42,7 @@ export default class SnapshotTestRunner extends TestRunner {
 
     // Take screenshot and compare
     // @ts-ignore
-    window.browserTestDriver_captureAndDiffScreen(diffOptions).then(result => {
+    window.browserTestDriver_captureAndDiffScreen(diffOptions).then((result) => {
       // invoke user callback
       if (result.success) {
         this._pass(result);

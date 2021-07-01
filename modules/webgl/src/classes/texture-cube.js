@@ -75,7 +75,7 @@ export default class TextureCube extends Texture {
     // ... }
 
     const resolvedFaces = await Promise.all(
-      FACES.map(face => {
+      FACES.map((face) => {
         const facePixels = imageDataMap[face];
         return Promise.all(Array.isArray(facePixels) ? facePixels : [facePixels]);
       })
@@ -122,7 +122,7 @@ export default class TextureCube extends Texture {
 
     this.bind();
     if (imageData instanceof Promise) {
-      imageData.then(resolvedImageData =>
+      imageData.then((resolvedImageData) =>
         this.setImageDataForFace(
           Object.assign({}, options, {
             face,

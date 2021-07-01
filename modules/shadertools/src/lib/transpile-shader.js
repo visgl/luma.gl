@@ -99,7 +99,7 @@ function convertFragmentShaderTo300(source) {
   } else {
     const outputName = 'fragmentColor';
     source = source
-      .replace(REGEX_START_OF_MAIN, match => `out vec4 ${outputName};\n${match}`)
+      .replace(REGEX_START_OF_MAIN, (match) => `out vec4 ${outputName};\n${match}`)
       .replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
   }
 

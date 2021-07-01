@@ -1,7 +1,7 @@
 import {dotScreen, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('dotScreen#build/uniform', t => {
+test('dotScreen#build/uniform', (t) => {
   normalizeShaderModule(dotScreen);
   const uniforms = dotScreen.getUniforms();
 

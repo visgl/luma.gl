@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {ScenegraphNode} from '@luma.gl/experimental';
 import {Matrix4, Vector3} from '@math.gl/core';
 
@@ -30,7 +30,7 @@ const PROPS = {
   matrix: new Matrix4().scale(4)
 };
 
-test('ScenegraphNode#constructor', t => {
+test('ScenegraphNode#constructor', (t) => {
   const sgNode = new ScenegraphNode(PROPS);
   t.ok(sgNode instanceof ScenegraphNode, 'should construct the object');
   for (const key in PROPS) {
@@ -41,14 +41,14 @@ test('ScenegraphNode#constructor', t => {
   t.end();
 });
 
-test('ScenegraphNode#delete', t => {
+test('ScenegraphNode#delete', (t) => {
   const sgNode = new ScenegraphNode();
   t.doesNotThrow(() => sgNode.delete(), 'delete should work');
 
   t.end();
 });
 
-test('ScenegraphNode#setProps', t => {
+test('ScenegraphNode#setProps', (t) => {
   const sgNode = new ScenegraphNode();
   sgNode.setProps(PROPS);
   for (const key in PROPS) {
@@ -59,14 +59,14 @@ test('ScenegraphNode#setProps', t => {
   t.end();
 });
 
-test('ScenegraphNode#toString', t => {
+test('ScenegraphNode#toString', (t) => {
   const sgNode = new ScenegraphNode();
   t.doesNotThrow(() => sgNode.toString(), 'delete should work');
 
   t.end();
 });
 
-test('ScenegraphNode#setMatrix', t => {
+test('ScenegraphNode#setMatrix', (t) => {
   const sgNode = new ScenegraphNode();
   const matrix = new Matrix4().scale(1.5);
 
@@ -79,7 +79,7 @@ test('ScenegraphNode#setMatrix', t => {
   t.end();
 });
 
-test('ScenegraphNode#setMatrixComponents', t => {
+test('ScenegraphNode#setMatrixComponents', (t) => {
   const sgNode = new ScenegraphNode();
   const position = new Vector3(1, 1, 1);
   const rotation = new Vector3(2, 2, 2);
@@ -91,17 +91,14 @@ test('ScenegraphNode#setMatrixComponents', t => {
   sgNode.setMatrixComponents({position, rotation, scale});
   t.deepEqual(
     sgNode.matrix,
-    new Matrix4()
-      .translate(position)
-      .rotateXYZ(rotation)
-      .scale(scale),
+    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale),
     'should update the matrix'
   );
 
   t.end();
 });
 
-test('ScenegraphNode#update', t => {
+test('ScenegraphNode#update', (t) => {
   const sgNode = new ScenegraphNode();
   const position = new Vector3(1, 1, 1);
   const rotation = new Vector3(2, 2, 2);
@@ -113,17 +110,14 @@ test('ScenegraphNode#update', t => {
   sgNode.update({position, rotation, scale});
   t.deepEqual(
     sgNode.matrix,
-    new Matrix4()
-      .translate(position)
-      .rotateXYZ(rotation)
-      .scale(scale),
+    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale),
     'should update the matrix'
   );
 
   t.end();
 });
 
-test('ScenegraphNode#getCoordinateUniforms', t => {
+test('ScenegraphNode#getCoordinateUniforms', (t) => {
   const sgNode = new ScenegraphNode();
 
   // @ts-ignore

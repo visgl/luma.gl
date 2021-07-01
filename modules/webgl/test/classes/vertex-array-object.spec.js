@@ -1,10 +1,10 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {VertexArrayObject} from '@luma.gl/webgl';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#VertexArrayObject (default)#enable', t => {
+test('WebGL#VertexArrayObject (default)#enable', (t) => {
   const {gl} = fixture;
 
   const vertexAttributes = VertexArrayObject.getDefaultArray(gl);
@@ -50,7 +50,7 @@ test('WebGL#VertexArrayObject (default)#enable', t => {
   t.end();
 });
 
-test('WebGL#VertexArrayObject construct/delete', t => {
+test('WebGL#VertexArrayObject construct/delete', (t) => {
   const {gl} = fixture;
 
   if (!VertexArrayObject.isSupported(gl)) {
@@ -74,7 +74,7 @@ test('WebGL#VertexArrayObject construct/delete', t => {
   t.end();
 });
 
-test('WebGL#vertexArrayObject#WebGL2 support', t => {
+test('WebGL#vertexArrayObject#WebGL2 support', (t) => {
   const {gl2: gl} = fixture;
 
   if (!gl) {
@@ -100,7 +100,7 @@ test('WebGL#vertexArrayObject#WebGL2 support', t => {
   t.end();
 });
 
-test('WebGL#VertexArrayObject#getConstantBuffer', t => {
+test('WebGL#VertexArrayObject#getConstantBuffer', (t) => {
   const {gl} = fixture;
 
   const vertexAttributes = VertexArrayObject.getDefaultArray(gl);

@@ -4,7 +4,6 @@
 
 import {project} from '../project/project';
 
-/* eslint-disable camelcase */
 const DEFAULT_LIGHT_DIRECTION = new Float32Array([1, 1, 2]);
 
 const DEFAULT_MODULE_OPTIONS = {

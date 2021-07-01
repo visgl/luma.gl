@@ -26,7 +26,7 @@ function getShaderDependencies(modules) {
   // Return a reverse sort so that dependencies come before the modules that use them
   return Object.keys(moduleDepth)
     .sort((a, b) => moduleDepth[b] - moduleDepth[a])
-    .map(name => moduleMap[name]);
+    .map((name) => moduleMap[name]);
 }
 
 /**
@@ -63,7 +63,7 @@ function getDependencyGraph({modules, level, moduleMap, moduleDepth}) {
 }
 
 function instantiateModules(modules, seen) {
-  return modules.map(module => {
+  return modules.map((module) => {
     if (module instanceof ShaderModule) {
       return module;
     }

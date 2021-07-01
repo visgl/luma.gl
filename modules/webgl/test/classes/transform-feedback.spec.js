@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {TransformFeedback, Buffer} from '@luma.gl/webgl';
 // TODO - tests shouldn't depend on higher level module?
 import {Model} from '@luma.gl/core';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
 
@@ -23,14 +23,14 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback isSupported', t => {
+test('WebGL#TransformFeedback isSupported', (t) => {
   const {gl, gl2} = fixture;
   t.notok(TransformFeedback.isSupported(gl), 'isSupported returns correct result');
   t.is(TransformFeedback.isSupported(gl2), Boolean(gl2), 'isSupported returns correct result');
   t.end();
 });
 
-test('WebGL#TransformFeedback constructor/delete', t => {
+test('WebGL#TransformFeedback constructor/delete', (t) => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -58,7 +58,7 @@ test('WebGL#TransformFeedback constructor/delete', t => {
   t.end();
 });
 
-test('WebGL#TransformFeedback bindBuffers', t => {
+test('WebGL#TransformFeedback bindBuffers', (t) => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -125,11 +125,11 @@ function testDataCapture({t, gl2, byteOffset = 0}) {
   const outData = outBuffer.getData().slice(offset, offset + vertexCount);
   t.deepEqual(
     outData,
-    inData.map(x => x * 2),
+    inData.map((x) => x * 2),
     `Data should be captured in buffer when offset is ${offset}`
   );
 }
-test('WebGL#TransformFeedback capture', t => {
+test('WebGL#TransformFeedback capture', (t) => {
   const {gl2} = fixture;
 
   if (!gl2) {

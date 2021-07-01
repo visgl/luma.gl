@@ -1,8 +1,7 @@
-/* eslint-disable camelcase */
 import {ProgramManager} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
 import {fixture} from 'test/setup';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 const vs = `\
 attribute vec4 positions;
@@ -45,12 +44,12 @@ const FS_300 = `#version 300 es
   }
 `;
 
-test('ProgramManager#import', t => {
+test('ProgramManager#import', (t) => {
   t.ok(ProgramManager !== undefined, 'ProgramManager import successful');
   t.end();
 });
 
-test('ProgramManager#getDefaultProgramManager', t => {
+test('ProgramManager#getDefaultProgramManager', (t) => {
   const {gl} = fixture;
 
   const pm1 = ProgramManager.getDefaultProgramManager(gl);
@@ -62,7 +61,7 @@ test('ProgramManager#getDefaultProgramManager', t => {
   t.end();
 });
 
-test('ProgramManager#basic', t => {
+test('ProgramManager#basic', (t) => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
@@ -141,7 +140,7 @@ test('ProgramManager#basic', t => {
   t.end();
 });
 
-test('ProgramManager#hooks', t => {
+test('ProgramManager#hooks', (t) => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
@@ -258,7 +257,7 @@ test('ProgramManager#hooks', t => {
   t.end();
 });
 
-test('ProgramManager#defaultModules', t => {
+test('ProgramManager#defaultModules', (t) => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
@@ -318,7 +317,7 @@ test('ProgramManager#defaultModules', t => {
   t.end();
 });
 
-test('ProgramManager#release', t => {
+test('ProgramManager#release', (t) => {
   const {gl} = fixture;
   const pm = new ProgramManager(gl);
 
@@ -336,7 +335,7 @@ test('ProgramManager#release', t => {
   t.end();
 });
 
-test('ProgramManager#transpileToGLSL100', t => {
+test('ProgramManager#transpileToGLSL100', (t) => {
   const {gl} = fixture;
 
   const pm = new ProgramManager(gl);
