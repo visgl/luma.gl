@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": ".",
     "paths": {

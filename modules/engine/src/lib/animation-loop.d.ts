@@ -79,7 +79,7 @@ export default class AnimationLoop {
   readonly canvas: HTMLCanvasElement | OffscreenCanvas
   readonly framebuffer: Framebuffer
   readonly timeline: Timeline
-  readonly stats: StatsManager
+  readonly stats: Stats
   readonly cpuTime: Stats
   readonly gpuTime: Stats
   readonly frameRate: Stats

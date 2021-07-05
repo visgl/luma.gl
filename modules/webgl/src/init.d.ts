@@ -1,6 +1,8 @@
+import {Stats} from 'probe.gl';
+
 export class StatsManager {
   constructor();
-  get(name: any): any; // TODO: Isn't this get(name: string): Stats;
+  get(name: any): Stats; // TODO: Isn't this get(name: string): Stats;
 }
 
 export const lumaStats: StatsManager;

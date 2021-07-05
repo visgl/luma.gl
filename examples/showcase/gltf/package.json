@@ -12,15 +12,15 @@
     "open-vr": "adb reverse tcp:8080 tcp:8080 && adb shell am start -a android.intent.action.VIEW -d http://localhost:8080/"
   },
   "dependencies": {
-    "@loaders.gl/core": "^3.0.0-alpha.6",
-    "@loaders.gl/gltf": "^3.0.0-alpha.6",
-    "@loaders.gl/polyfills": "^3.0.0-alpha.6",
+    "@loaders.gl/core": "^3.0.0-beta.8",
+    "@loaders.gl/gltf": "^3.0.0-beta.8",
+    "@loaders.gl/polyfills": "^3.0.0-beta.8",
     "@luma.gl/constants": "8.5.0-alpha.2",
     "@luma.gl/engine": "8.5.0-alpha.2",
     "@luma.gl/experimental": "8.5.0-alpha.2",
     "@luma.gl/gltools": "8.5.0-alpha.2",
     "@luma.gl/webgl": "8.5.0-alpha.2",
-    "@math.gl/core": "^3.4.2"
+    "@math.gl/core": "^3.5.0-beta.1"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",
