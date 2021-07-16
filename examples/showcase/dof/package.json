@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-dof",
-  "version": "8.5.0-alpha.2",
+  "version": "8.5.0",
   "private": true,
   "description": "An es6 Depth of Field example for luma.gl.",
   "contributors": [
@@ -11,11 +11,11 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/constants": "8.5.0-alpha.2",
-    "@luma.gl/core": "8.5.0-alpha.2",
-    "@luma.gl/engine": "8.5.0-alpha.2",
-    "@luma.gl/gltools": "8.5.0-alpha.2",
-    "@luma.gl/webgl": "8.5.0-alpha.2",
+    "@luma.gl/constants": "8.5.0",
+    "@luma.gl/core": "8.5.0",
+    "@luma.gl/engine": "8.5.0",
+    "@luma.gl/gltools": "8.5.0",
+    "@luma.gl/webgl": "8.5.0",
     "@math.gl/core": "^3.5.0-beta.1"
   },
   "devDependencies": {

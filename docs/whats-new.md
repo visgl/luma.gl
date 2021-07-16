@@ -1,5 +1,19 @@
 # What's New
 
+## Version 8.5
+
+Date: Jul 15, 2021
+
+### `@luma.gl/shadertools`
+
+- GLSL transpiler now handles `gl_FragColor` in fragment shader when transpliting from ES 1.00 to 3.00
+- New `magnify` effect
+
+### `@luma.gl/experimental`
+
+- Support for compressed textures in glTF.
+- Now exports `GLTFMaterialParser`
+
 ## Version 8.4
 
 Date: Feb 1, 2021

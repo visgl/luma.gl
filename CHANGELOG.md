@@ -1,3 +1,11 @@
+# luma.gl CHANGELOG
+
+## v8.5.0
+
+- Bump dependencies to beta (#1476)
+- Transpile gl_FragColor in fragment shader from ES 1.00 to 3.00 (#1475)
+- Fix constants bundle namespace (#1469)
+
 ## v8.5.0-alpha.2
 
 - Shadertools: add magnify effect (#1464)

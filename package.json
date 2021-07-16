@@ -71,5 +71,6 @@
   },
   "pre-commit": [
     "test-fast"
-  ]
+  ],
+  "dependencies": {}
 }
