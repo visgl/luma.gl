@@ -38,12 +38,12 @@
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
-    "@loaders.gl/core": "^3.0.0-beta.8",
-    "@loaders.gl/gltf": "^3.0.0-beta.8",
-    "@loaders.gl/polyfills": "^3.0.0-beta.8",
-    "@probe.gl/bench": "^3.4.0-beta.2",
-    "@probe.gl/stats-widget": "^3.4.0-beta.2",
-    "@probe.gl/test-utils": "^3.4.0-beta.2",
+    "@loaders.gl/core": "^3.0.4",
+    "@loaders.gl/gltf": "^3.0.4",
+    "@loaders.gl/polyfills": "^3.0.4",
+    "@probe.gl/bench": "^3.4.0",
+    "@probe.gl/stats-widget": "^3.4.0",
+    "@probe.gl/test-utils": "^3.4.0",
     "@turf/boolean-within": "^6.0.1",
     "@turf/helpers": "^6.1.4",
     "@typescript-eslint/eslint-plugin": "^4.13.0",
