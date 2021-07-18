@@ -5,9 +5,11 @@
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": ".",
@@ -43,11 +45,12 @@
     "modules/webgl/src/classes/uniforms.js",
     "modules/webgl/src/classes/vertex-array.js",
 
-    "**/modules/*/dist",
+    "modules/**/dist",
 
     "website",
     "test/apps",
     "test/**/*",
-    "**/node_modules"
+    "coverage",
+    "node_modules"
   ]
 }
