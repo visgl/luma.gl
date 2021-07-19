@@ -18,7 +18,7 @@
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
   },
   "dependencies": {
-    "@loaders.gl/polyfills": "^3.0.4",
+    "@loaders.gl/polyfills": "^3.0.6",
     "@probe.gl/stats-widget": "^3.4.0",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
