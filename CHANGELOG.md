@@ -1,5 +1,14 @@
 # luma.gl CHANGELOG
 
+## v8.5.2
+
+- Bump probe.gl and loaders.gl (#1479)
+
+## v8.5.1
+
+- chore: bump loaders.gl and probe.gl (#1478)
+- bump: math.gl@3.5.0 (#1477)
+
 ## v8.5.0
 
 - Bump dependencies to beta (#1476)
