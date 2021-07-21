@@ -25,12 +25,12 @@ export default Object.keys(examples).map((name) => {
     name,
     onInitialize: (params) => {
       setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-      return animationLoop.onInitialize(params);
+      return animationLoop.onInitialize && animationLoop.onInitialize(params);
     },
     onRender: (params) => {
       // remove animation in the example
       params.tick = 0;
-      const result = animationLoop.onRender(params);
+      const result = animationLoop.onRender && animationLoop.onRender(params);
       if (result !== false) {
         params.done();
       }

@@ -17,7 +17,6 @@ export function cloneTextureFrom(refTexture, overrides) {
 
   const TextureType = refTexture.constructor;
 
-  // @ts-expect-error
   const {gl, width, height, format, type, dataFormat, border, mipmaps} = refTexture;
 
   const textureOptions = Object.assign(

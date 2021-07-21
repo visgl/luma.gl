@@ -23,10 +23,10 @@ export default Object.keys(examples).map((name) => {
   return {
     name,
     onInitialize: (params) => {
-      return animationLoop.onInitialize(params);
+      return animationLoop.onInitialize && animationLoop.onInitialize(params);
     },
     onRender: (params) => {
-      const result = animationLoop.onRender(params);
+      const result = animationLoop.onRender && animationLoop.onRender(params);
       if (result !== false) {
         params.done();
       }
