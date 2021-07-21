@@ -10,6 +10,91 @@
       ]
     },
     {
+      "title": "Developer Guide",
+      "entries": [
+        { "entry": "docs/developer-guide" },
+        { "entry": "docs/developer-guide/accessors" },
+        { "entry": "docs/developer-guide/transform-feedback" },
+        { "entry": "docs/developer-guide/shader-modules" },
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/bundling" },
+        { "entry": "docs/developer-guide/contributing" }
+      ]
+    },
+    {
+      "title": "API Reference",
+      "chapters": [
+        {
+          "title": "@luma.gl/engine",
+          "entries": [
+            { "entry": "modules/engine/docs/api-reference/model" },
+            { "entry": "modules/engine/docs/api-reference/animation-loop" },
+            { "entry": "modules/engine/docs/api-reference/transform" },
+            { "entry": "modules/engine/docs/api-reference/geometry" },
+            { "entry": "modules/engine/docs/api-reference/geometries" },
+            { "entry": "modules/engine/docs/api-reference/program-manager" },
+            { "entry": "modules/engine/docs/api-reference/animation/timeline" },
+            { "entry": "modules/engine/docs/api-reference/animation/key-frames" }
+          ]
+        },
+        {
+          "title": "@luma.gl/webgl",
+          "entries": [
+            { "entry": "modules/webgl/docs/api-reference/accessor" },
+            { "entry": "modules/webgl/docs/api-reference/buffer" },
+            { "entry": "modules/webgl/docs/api-reference/framebuffer" },
+            { "entry": "modules/webgl/docs/api-reference/program" },
+            { "entry": "modules/webgl/docs/api-reference/query" },
+            { "entry": "modules/webgl/docs/api-reference/renderbuffer" },
+            { "entry": "modules/webgl/docs/api-reference/shader" },
+            { "entry": "modules/webgl/docs/api-reference/texture" },
+            { "entry": "modules/webgl/docs/api-reference/texture-2d" },
+            { "entry": "modules/webgl/docs/api-reference/texture-3d" },
+            { "entry": "modules/webgl/docs/api-reference/texture-cube" },
+            { "entry": "modules/webgl/docs/api-reference/transform-feedback" },
+            { "entry": "modules/webgl/docs/api-reference/uniform-buffer-layout" },
+            { "entry": "modules/webgl/docs/api-reference/vertex-array" },
+            { "entry": "modules/webgl/docs/api-reference/vertex-array-object" },
+            { "entry": "modules/webgl/docs/api-reference/resource" },
+            { "entry": "modules/webgl/docs/api-reference/context/feature-checking" },
+            { "entry": "modules/webgl/docs/api-reference/context/context-properties" },
+            { "entry": "modules/webgl/docs/api-reference/moving-data" }
+          ]
+        },
+        {
+          "title": "@luma.gl/gltools",
+          "entries": [
+            { "entry": "modules/gltools/docs/api-reference/context" },
+            { "entry": "modules/gltools/docs/api-reference/parameter-setting" },
+            { "entry": "modules/gltools/docs/api-reference/device-pixels" }
+          ]
+        },
+        {
+          "title": "@luma.gl/shadertools",
+          "entries": [
+            { "entry": "modules/shadertools/docs/api-reference/assemble-shaders" },
+            { "entry": "modules/shadertools/docs/api-reference/core-shader-modules" },
+            { "entry": "modules/shadertools/docs/api-reference/effects-shader-modules" }
+          ]
+        },
+        {
+          "title": "@luma.gl/experimental",
+          "entries": [
+            { "entry": "modules/experimental/docs/api-reference/warning" },
+            { "entry": "modules/experimental/docs/api-reference/scenegraph/scenegraph-node" },
+            { "entry": "modules/experimental/docs/api-reference/scenegraph/model-node" },
+            { "entry": "modules/experimental/docs/api-reference/scenegraph/group-node" }
+          ]
+        },
+        {
+          "title": "@luma.gl/debug",
+          "entries": [
+            { "entry": "modules/debug/docs" }
+          ]
+        }
+      ]
+    },
+    {
       "title": "Tutorials",
       "entries": [
         { "entry": "docs/getting-started" },
@@ -27,101 +112,6 @@
         { "entry": "docs/getting-started/lighting" },
         { "entry": "docs/getting-started/instanced-transform" },
         { "entry": "docs/getting-started/whats-next" }
-      ]
-    },
-    {
-      "title": "API Reference",
-      "chapters": [
-        {
-          "title": "Overview",
-          "entries": [
-            { "entry": "docs/api-reference" }
-          ]
-        },
-        {
-          "title": "Engine",
-          "entries": [
-            { "entry": "docs/api-reference/engine/model" },
-            { "entry": "docs/api-reference/engine/animation-loop" },
-            { "entry": "docs/api-reference/engine/transform" },
-            { "entry": "docs/api-reference/engine/geometry" },
-            { "entry": "docs/api-reference/engine/geometries" },
-            { "entry": "docs/api-reference/engine/program-manager" },
-            { "entry": "docs/api-reference/engine/animation/timeline" },
-            { "entry": "docs/api-reference/engine/animation/key-frames" }
-          ]
-        },
-        {
-          "title": "WebGL",
-          "entries": [
-            { "entry": "docs/api-reference/webgl/accessor" },
-            { "entry": "docs/api-reference/webgl/buffer" },
-            { "entry": "docs/api-reference/webgl/framebuffer" },
-            { "entry": "docs/api-reference/webgl/program" },
-            { "entry": "docs/api-reference/webgl/query" },
-            { "entry": "docs/api-reference/webgl/renderbuffer" },
-            { "entry": "docs/api-reference/webgl/shader" },
-            { "entry": "docs/api-reference/webgl/texture" },
-            { "entry": "docs/api-reference/webgl/texture-2d" },
-            { "entry": "docs/api-reference/webgl/texture-3d" },
-            { "entry": "docs/api-reference/webgl/texture-cube" },
-            { "entry": "docs/api-reference/webgl/transform-feedback" },
-            { "entry": "docs/api-reference/webgl/uniform-buffer-layout" },
-            { "entry": "docs/api-reference/webgl/vertex-array" },
-            { "entry": "docs/api-reference/webgl/vertex-array-object" },
-            { "entry": "docs/api-reference/webgl/resource" },
-            { "entry": "docs/api-reference/webgl/context/feature-checking" },
-            { "entry": "docs/api-reference/webgl/context/context-properties" },
-            { "entry": "docs/api-reference/webgl/moving-data" }
-          ]
-        },
-        {
-          "title": "GLTools",
-          "entries": [
-            { "entry": "docs/api-reference/gltools/context" },
-            { "entry": "docs/api-reference/gltools/parameter-setting" },
-            { "entry": "docs/api-reference/gltools/device-pixels" }
-          ]
-        },
-        {
-          "title": "Shadertools",
-          "entries": [
-            { "entry": "docs/api-reference/shadertools/assemble-shaders" },
-            { "entry": "docs/api-reference/shadertools/core-shader-modules" },
-            { "entry": "docs/api-reference/shadertools/effects-shader-modules" }
-          ]
-        },
-        {
-          "title": "Debug",
-          "entries": [
-            { "entry": "docs/api-reference/debug" }
-          ]
-        },
-        {
-          "title": "Experimental",
-          "entries": [
-            { "entry": "docs/api-reference/experimental/warning" },
-            { "entry": "docs/api-reference/experimental/scenegraph/scenegraph-node" },
-            { "entry": "docs/api-reference/experimental/scenegraph/model-node" },
-            { "entry": "docs/api-reference/experimental/scenegraph/group-node" }
-          ]
-        }
-      ]
-    },
-    {
-      "title": "Developer Guide",
-      "entries": [
-        { "entry": "docs/developer-guide/accessors" },
-        { "entry": "docs/developer-guide/transform-feedback" },
-        { "entry": "docs/developer-guide/shader-modules" },
-        { "entry": "docs/developer-guide/debugging" },
-        { "entry": "docs/developer-guide/bundling" }
-      ]
-    },
-    {
-      "title": "Contributor Guide",
-      "entries": [
-        { "entry": "docs/contributor-guide" }
       ]
     }
   ]

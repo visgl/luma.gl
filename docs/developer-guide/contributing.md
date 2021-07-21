@@ -1,4 +1,8 @@
-# Development Environment
+# Contributing
+
+In order to contribute to luma.gl you need to be able to build and test luma.gl itself.
+
+## Development Environment
 
 To get started developing luma.gl, first make sure to install all dependancies from the repository root:
 

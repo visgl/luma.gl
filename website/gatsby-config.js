@@ -88,48 +88,56 @@ module.exports = {
 
         EXAMPLES: [
           {
+            category: 'Showcases',
             title: 'Instancing',
             componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
             path: 'examples/showcase/instancing/',
             image: 'images/example-instancing.jpg'
           },
           {
-            title: 'Geospatial',
-            componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
-            path: 'examples/showcase/geospatial/',
-            image: 'images/example-geospatial.jpg'
-          },
-          {
+            category: 'Showcases',
             title: 'Persistence',
             componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
             path: 'examples/showcase/persistence/',
             image: 'images/example-persistence.jpg'
           },
           {
-            title: 'Wandering',
-            componentUrl: resolve(__dirname, './templates/showcase/example-wandering.jsx'),
-            path: 'examples/showcase/wandering/',
-            image: 'images/example-wandering.png'
-          },
-          {
-            title: 'DOF',
-            componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
-            path: 'examples/showcase/dof/',
-            image: 'images/example-dof.jpg'
-          },
-          {
+            category: 'Showcases',
             title: 'GLTF',
             componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
             path: 'examples/showcase/gltf/',
             image: 'images/example-gltf.jpg'
           },
           {
+            category: 'Showcases',
+            title: 'DOF',
+            componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
+            path: 'examples/showcase/dof/',
+            image: 'images/example-dof.jpg'
+          },
+          {
+            category: 'Showcases',
+            title: 'Geospatial',
+            componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
+            path: 'examples/showcase/geospatial/',
+            image: 'images/example-geospatial.jpg'
+          },
+          {
+            category: 'Showcases',
+            title: 'Wandering',
+            componentUrl: resolve(__dirname, './templates/showcase/example-wandering.jsx'),
+            path: 'examples/showcase/wandering/',
+            image: 'images/example-wandering.png'
+          },
+          {
+            category: 'Tutorials',
             title: 'Hello Triangle',
             componentUrl: resolve(__dirname, './templates/getting-started/example-hello-triangle.jsx'),
             path: 'examples/getting-started/hello-triangle',
             image: 'images/example-hello-triangle.png'
           },
           {
+            category: 'Tutorials',
             title: 'Hello Instancing - High-level',
             componentUrl: resolve(
               __dirname,
@@ -139,6 +147,7 @@ module.exports = {
             image: 'images/example-hello-instancing.png'
           },
           {
+            category: 'Tutorials',
             title: 'Hello Instancing - Mid-level',
             componentUrl: resolve(
               __dirname,
@@ -148,6 +157,7 @@ module.exports = {
             image: 'images/example-hello-instancing.png'
           },
           {
+            category: 'Tutorials',
             title: 'Hello Instancing - Low-level',
             componentUrl: resolve(
               __dirname,
@@ -157,18 +167,21 @@ module.exports = {
             image: 'images/example-hello-instancing.png'
           },
           {
+            category: 'Tutorials',
             title: 'Shader Modules',
             componentUrl: resolve(__dirname, './templates/getting-started/example-shader-modules.jsx'),
             path: 'examples/getting-started/shader-modules',
             image: 'images/example-shader-modules.png'
           },
           {
+            category: 'Tutorials',
             title: 'Shader Hooks',
             componentUrl: resolve(__dirname, './templates/getting-started/example-shader-hooks.jsx'),
             path: 'examples/getting-started/shader-hooks',
             image: 'images/example-shader-hooks.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Shader Modules - Low-level',
             componentUrl: resolve(
               __dirname,
@@ -178,6 +191,7 @@ module.exports = {
             image: 'images/example-shader-hooks.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Transform Feedback',
             componentUrl: resolve(
               __dirname,
@@ -187,24 +201,28 @@ module.exports = {
             image: 'images/example-transform-feedback.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'External Context',
             componentUrl: resolve(__dirname, './templates/getting-started/example-external-context.jsx'),
             path: 'examples/getting-started/external-context',
             image: 'images/example-hello-triangle.png'
           },
           {
+            category: 'Tutorials',
             title: 'Hello Cube',
             componentUrl: resolve(__dirname, './templates/getting-started/example-hello-cube.jsx'),
             path: 'examples/getting-started/hello-cube/',
             image: 'images/example-hello-cube.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Lighting',
             componentUrl: resolve(__dirname, './templates/getting-started/example-lighting.jsx'),
             path: 'examples/getting-started/lighting/',
             image: 'images/example-lighting.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Instanced Transform',
             componentUrl: resolve(
               __dirname,
@@ -214,30 +232,35 @@ module.exports = {
             image: 'images/example-instanced-transform.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Animation',
             componentUrl: resolve(__dirname, './templates/api/example-animation.jsx'),
             path: 'examples/api/animation/',
             image: 'images/example-animation.png'
           },
           {
+            category: 'Tutorials',
             title: 'Program Management',
             componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
             path: 'examples/api/program-management/',
             image: 'images/example-program-management.png'
           },
           {
+            category: 'Tutorials',
             title: 'Cubemap',
             componentUrl: resolve(__dirname, './templates/api/example-cubemap.jsx'),
             path: 'examples/api/cubemap/',
             image: 'images/example-cubemap.jpg'
           },
           {
+            category: 'Tutorials',
             title: 'Texture3D',
             componentUrl: resolve(__dirname, './templates/api/example-texture-3d.jsx'),
             path: 'examples/api/texture3d/',
             image: 'images/example-texture3d.png'
           },
           {
+            category: 'Performance',
             title: 'Stress Test',
             componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
             path: 'examples/performance/stress-test/',
