@@ -12,16 +12,16 @@ const ES300_REPLACEMENTS = [
 const ES300_VERTEX_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `attribute` keyword replaced with `in`
-  [/^[ \t]*attribute[ \t]+(.+;)/gm, 'in $1'],
+  [/\battribute[ \t]+(.+;)/g, 'in $1'],
   // `varying` keyword replaced with `out`
-  [/^[ \t]*varying[ \t]+(.+;)/gm, 'out $1']
+  [/\bvarying[ \t]+(.+;)/g, 'out $1']
 ];
 
 /** Simple regex replacements for GLSL ES 1.00 syntax that has changed in GLSL ES 3.00 */
 const ES300_FRAGMENT_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `varying` keyword replaced with `in`
-  [/^[ \t]*varying[ \t]+(.+;)/gm, 'in $1']
+  [/\bvarying[ \t]+(.+;)/g, 'in $1']
 ];
 
 const ES100_REPLACEMENTS = [
@@ -38,18 +38,18 @@ const ES100_REPLACEMENTS = [
 
 const ES100_VERTEX_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
-  [/^[ \t]*in[ \t]+(.+;)/gm, 'attribute $1'],
-  [/^[ \t]*out[ \t]+(.+;)/gm, 'varying $1']
+  [/\bin[ \t]+(.+;)/g, 'attribute $1'],
+  [/\bout[ \t]+(.+;)/g, 'varying $1']
 ];
 
 const ES100_FRAGMENT_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
   // Replace `in` with `varying`
-  [/^[ \t]*in[ \t]+/gm, 'varying ']
+  [/\bin[ \t]+(.+;)/g, 'varying $1']
 ];
 
 const ES100_FRAGMENT_OUTPUT_NAME = 'gl_FragColor';
-const ES300_FRAGMENT_OUTPUT_REGEX = /^[ \t]*out[ \t]+vec4[ \t]+(\w+)[ \t]*;\s+/m;
+const ES300_FRAGMENT_OUTPUT_REGEX = /\bout[ \t]+vec4[ \t]+(\w+)[ \t]*;\n?/;
 
 const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 
@@ -79,7 +79,6 @@ function convertShader(source, replacements) {
 }
 
 function convertFragmentShaderTo300(source) {
-  // /gm - treats each line as a string, so that ^ matches after newlines
   source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
 
   const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
@@ -97,7 +96,6 @@ function convertFragmentShaderTo300(source) {
 }
 
 function convertFragmentShaderTo100(source) {
-  // /gm - treats each line as a string, so that ^ matches after newlines
   source = convertShader(source, ES100_FRAGMENT_REPLACEMENTS);
 
   const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
