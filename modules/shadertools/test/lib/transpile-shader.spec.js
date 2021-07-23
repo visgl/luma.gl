@@ -4,6 +4,7 @@ import transpileShader from '@luma.gl/shadertools/lib/transpile-shader';
 import test from 'tape-catch';
 
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
+import {compressShader} from './transpile-shader-compress';
 
 const VERTEX = true;
 const FRAGMENT = false;
@@ -41,6 +42,19 @@ test('transpileShader', t => {
 
     assembleResult = transpileShader(GLSL_100, 300, isVertex);
     t.equal(assembleResult, GLSL_300_transpiled, `1.00 => 3.00: ${title}`);
+
+    // minified shaders
+    assembleResult = compressShader(transpileShader(compressShader(GLSL_300), 100, isVertex));
+    t.equal(assembleResult, compressShader(GLSL_100), `minified 3.00 => 1.00: ${title}`);
+
+    assembleResult = compressShader(transpileShader(compressShader(GLSL_300), 300, isVertex));
+    t.equal(assembleResult, compressShader(GLSL_300_transpiled), `minified 3.00 => 3.00: ${title}`);
+
+    assembleResult = compressShader(transpileShader(compressShader(GLSL_100), 100, isVertex));
+    t.equal(assembleResult, compressShader(GLSL_100), `minified 1.00 => 1.00: ${title}`);
+
+    assembleResult = compressShader(transpileShader(compressShader(GLSL_100), 300, isVertex));
+    t.equal(assembleResult, compressShader(GLSL_300_transpiled), `minified 1.00 => 3.00: ${title}`);
   }
 
   t.end();

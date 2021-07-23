@@ -12,16 +12,16 @@ const ES300_REPLACEMENTS = [
 const ES300_VERTEX_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `attribute` keyword replaced with `in`
-  [/\battribute[ \t]+(.+;)/g, 'in $1'],
+  [/\battribute[ \t]+([^,;\)\]]+;)/g, 'in $1'],
   // `varying` keyword replaced with `out`
-  [/\bvarying[ \t]+(.+;)/g, 'out $1']
+  [/\bvarying[ \t]+([^,;\)\]]+;)/g, 'out $1']
 ];
 
 /** Simple regex replacements for GLSL ES 1.00 syntax that has changed in GLSL ES 3.00 */
 const ES300_FRAGMENT_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `varying` keyword replaced with `in`
-  [/\bvarying[ \t]+(.+;)/g, 'in $1']
+  [/\bvarying[ \t]+([^,;\)\]]+;)/g, 'in $1']
 ];
 
 const ES100_REPLACEMENTS = [
@@ -38,14 +38,14 @@ const ES100_REPLACEMENTS = [
 
 const ES100_VERTEX_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
-  [/\bin[ \t]+(.+;)/g, 'attribute $1'],
-  [/\bout[ \t]+(.+;)/g, 'varying $1']
+  [/\bin[ \t]+([^,;\)\]]+;)/g, 'attribute $1'],
+  [/\bout[ \t]+([^,;\)\]]+;)/g, 'varying $1']
 ];
 
 const ES100_FRAGMENT_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
   // Replace `in` with `varying`
-  [/\bin[ \t]+(.+;)/g, 'varying $1']
+  [/\bin[ \t]+([^,;\)\]]+;)/g, 'varying $1']
 ];
 
 const ES100_FRAGMENT_OUTPUT_NAME = 'gl_FragColor';
