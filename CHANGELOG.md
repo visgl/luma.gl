@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.3
+
+- Fix transpiling minified shader (#1482)
+
 ## v8.5.2
 
 - Bump probe.gl and loaders.gl (#1479)
