@@ -1,5 +1,5 @@
 // copied from rollup-plugin-glslify
-export function compressShader(code) {
+export function minifyShader(code) {
   let needNewline = false;
   return code
     .replace(/\\(?:\r\n|\n\r|\n|\r)|\/\*.*?\*\/|\/\/(?:\\(?:\r\n|\n\r|\n|\r)|[^\n\r])*/g, '')
