@@ -11,9 +11,11 @@ export const TRANSPILATION_TEST_CASES = [
 #version 300 es
 
 in vec4 positions;
+in vec4 texCoords[2];
 uniform sampler2D sampler;
 uniform samplerCube sCube;
 out vec4 vColor;
+out vec4 vTexCoords[2];
 
 void f(out float a, in float b) {}
 
@@ -26,6 +28,8 @@ void main(void) {
   texLod = texture2DLod(sampler, texCoord, 1.0);
   texCubeLod = textureCubeLod(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
+  vTexCoords[0] = texCoords[0];
+  vTexCoords[1] = texCoords[1];
 }
 `,
 
@@ -34,9 +38,11 @@ void main(void) {
 #version 300 es
 
 in vec4 positions;
+in vec4 texCoords[2];
 uniform sampler2D sampler;
 uniform samplerCube sCube;
 out vec4 vColor;
+out vec4 vTexCoords[2];
 
 void f(out float a, in float b) {}
 
@@ -49,6 +55,8 @@ void main(void) {
   texLod = textureLod(sampler, texCoord, 1.0);
   texCubeLod = textureLod(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
+  vTexCoords[0] = texCoords[0];
+  vTexCoords[1] = texCoords[1];
 }
 `,
 
@@ -56,9 +64,11 @@ void main(void) {
 #version 100
 
 attribute vec4 positions;
+attribute vec4 texCoords[2];
 uniform sampler2D sampler;
 uniform samplerCube sCube;
 varying vec4 vColor;
+varying vec4 vTexCoords[2];
 
 void f(out float a, in float b) {}
 
@@ -71,6 +81,8 @@ void main(void) {
   texLod = texture2DLodEXT(sampler, texCoord, 1.0);
   texCubeLod = textureCubeLodEXT(sCube, cubeCoord, 1.0);
   vColor = vec4(1., 0., 0., 1.);
+  vTexCoords[0] = texCoords[0];
+  vTexCoords[1] = texCoords[1];
 }
 `
   },

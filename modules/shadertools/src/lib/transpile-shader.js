@@ -1,5 +1,16 @@
 // TRANSPILATION TABLES
 
+function testVariable(qualifier) {
+  /*
+    should match:
+      in float weight;
+      out vec4 positions[2];
+    should not match:
+      void f(out float a, in float b) {}
+   */
+  return new RegExp(`\\b${qualifier}[ \\t]+(\\w+[ \\t]+\\w+(\\[\\w+\\])?;)`, 'g');
+}
+
 /** Simple regex replacements for GLSL ES 1.00 syntax that has changed in GLSL ES 3.00 */
 const ES300_REPLACEMENTS = [
   // Fix poorly formatted version directive
@@ -12,16 +23,16 @@ const ES300_REPLACEMENTS = [
 const ES300_VERTEX_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `attribute` keyword replaced with `in`
-  [/\battribute[ \t]+([ \t\w]+;)/g, 'in $1'],
+  [testVariable('attribute'), 'in $1'],
   // `varying` keyword replaced with `out`
-  [/\bvarying[ \t]+([ \t\w]+;)/g, 'out $1']
+  [testVariable('varying'), 'out $1']
 ];
 
 /** Simple regex replacements for GLSL ES 1.00 syntax that has changed in GLSL ES 3.00 */
 const ES300_FRAGMENT_REPLACEMENTS = [
   ...ES300_REPLACEMENTS,
   // `varying` keyword replaced with `in`
-  [/\bvarying[ \t]+([ \t\w]+;)/g, 'in $1']
+  [testVariable('varying'), 'in $1']
 ];
 
 const ES100_REPLACEMENTS = [
@@ -38,14 +49,14 @@ const ES100_REPLACEMENTS = [
 
 const ES100_VERTEX_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
-  [/\bin[ \t]+([ \t\w]+;)/g, 'attribute $1'],
-  [/\bout[ \t]+([ \t\w]+;)/g, 'varying $1']
+  [testVariable('in'), 'attribute $1'],
+  [testVariable('out'), 'varying $1']
 ];
 
 const ES100_FRAGMENT_REPLACEMENTS = [
   ...ES100_REPLACEMENTS,
   // Replace `in` with `varying`
-  [/\bin[ \t]+([ \t\w]+;)/g, 'varying $1']
+  [testVariable('in'), 'varying $1']
 ];
 
 const ES100_FRAGMENT_OUTPUT_NAME = 'gl_FragColor';
