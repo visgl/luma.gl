@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.4
+
+- Fix transpilation of array variables (#1485)
+
 ## v8.5.3
 
 - Fix transpiling minified shader (#1482)
