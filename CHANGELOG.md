@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.5
+
+- Work around fp32 compile error in Safari 15 (#1491)
+
 ## v8.5.4
 
 - Fix transpilation of array variables (#1485)
