@@ -79,7 +79,7 @@ float tan_taylor_fp32(float a) {
     int j = int(q);
 
     if (j < -2 || j > 2) {
-        return 0.0 / 0.0;
+        return 1.0 / 0.0;
     }
 
     t = r - PI_2 * q;
@@ -89,7 +89,7 @@ float tan_taylor_fp32(float a) {
     int abs_k = int(abs(float(k)));
 
     if (abs_k > 4) {
-        return 0.0 / 0.0;
+        return 1.0 / 0.0;
     } else {
         t = t - PI_16 * q;
     }
