@@ -342,7 +342,7 @@ export default class AnimationLoop {
       return this.display.cancelAnimationFrame(animationFrameId);
     }
 
-    cancelAnimationFrame(animationFrameId);
+    return cancelAnimationFrame(animationFrameId);
   }
 
   _requestAnimationFrame(renderFrameCallback) {
@@ -354,6 +354,7 @@ export default class AnimationLoop {
 
       return requestAnimationFrame(renderFrameCallback);
     }
+    return undefined;
   }
 
   // Called on each frame, can be overridden to call onRender multiple times
