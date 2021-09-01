@@ -215,7 +215,7 @@ export default class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       this._finalizeCallbackData();
-      cancelAnimationFrame(this._animationFrameId);
+      this._cancelAnimationFrame(this._animationFrameId);
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._animationFrameId = null;
@@ -299,7 +299,7 @@ export default class AnimationLoop {
     };
 
     // cancel any pending renders to ensure only one loop can ever run
-    cancelAnimationFrame(this._animationFrameId);
+    this._cancelAnimationFrame(this._animationFrameId);
     this._animationFrameId = this._requestAnimationFrame(renderFrame);
   }
 
@@ -336,13 +336,24 @@ export default class AnimationLoop {
     this.display = display;
   }
 
-  _requestAnimationFrame(renderFrameCallback) {
+  _cancelAnimationFrame(animationFrameId) {
     // E.g. VR display has a separate animation frame to sync with headset
-    if (this.display && this.display.requestAnimationFrame(renderFrameCallback)) {
-      return;
+    if (this.display && this.display.cancelAnimationFrame) {
+      return this.display.cancelAnimationFrame(animationFrameId);
     }
 
-    requestAnimationFrame(renderFrameCallback);
+    cancelAnimationFrame(animationFrameId);
+  }
+
+  _requestAnimationFrame(renderFrameCallback) {
+    if (this._running) {
+      // E.g. VR display has a separate animation frame to sync with headset
+      if (this.display && this.display.requestAnimationFrame) {
+        return this.display.requestAnimationFrame(renderFrameCallback);
+      }
+
+      return requestAnimationFrame(renderFrameCallback);
+    }
   }
 
   // Called on each frame, can be overridden to call onRender multiple times
