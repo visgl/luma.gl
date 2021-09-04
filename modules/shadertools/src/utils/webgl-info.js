@@ -58,6 +58,9 @@ function identifyGPUVendor(vendor, renderer) {
   if (vendor.match(/INTEL/i) || renderer.match(/INTEL/i)) {
     return 'INTEL';
   }
+  if (vendor.match(/Apple/i) || renderer.match(/Apple/i)) {
+    return 'APPLE';
+  }
   if (
     vendor.match(/AMD/i) ||
     renderer.match(/AMD/i) ||
@@ -66,7 +69,7 @@ function identifyGPUVendor(vendor, renderer) {
   ) {
     return 'AMD';
   }
-  return 'UNKNOWN GPU';
+  return 'UNKNOWN';
 }
 
 const compiledGlslExtensions = {};
