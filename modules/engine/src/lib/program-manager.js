@@ -25,7 +25,7 @@ export default class ProgramManager {
   }
 
   addDefaultModule(module) {
-    if (!this._defaultModules.find(m => m.name === module.name)) {
+    if (!this._defaultModules.find((m) => m.name === module.name)) {
       this._defaultModules.push(module);
     }
 
@@ -34,7 +34,7 @@ export default class ProgramManager {
 
   removeDefaultModule(module) {
     const moduleName = typeof module === 'string' ? module : module.name;
-    this._defaultModules = this._defaultModules.filter(m => m.name !== moduleName);
+    this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
     this.stateHash++;
   }
 
@@ -63,8 +63,8 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    const moduleHashes = modules.map(m => this._getHash(m.name)).sort();
-    const varyingHashes = varyings.map(v => this._getHash(v));
+    const moduleHashes = modules.map((m) => this._getHash(m.name)).sort();
+    const varyingHashes = varyings.map((v) => this._getHash(v));
 
     const defineKeys = Object.keys(defines).sort();
     const injectKeys = Object.keys(inject).sort();
@@ -106,7 +106,7 @@ export default class ProgramManager {
         bufferMode
       });
 
-      this._getUniforms[hash] = assembled.getUniforms || (x => {});
+      this._getUniforms[hash] = assembled.getUniforms || ((x) => {});
       this._useCounts[hash] = 0;
     }
 

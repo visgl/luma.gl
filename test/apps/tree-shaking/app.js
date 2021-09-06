@@ -1,5 +1,6 @@
 /* eslint-disable no-var, max-statements */
 import GL from '@luma.gl/constants';
+// eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/core';
 import {createTestContext} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';

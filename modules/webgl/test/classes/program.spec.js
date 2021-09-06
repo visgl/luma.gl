@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Program, Buffer, VertexArray} from '@luma.gl/webgl';
 
 import {fixture} from 'test/setup';
@@ -23,7 +23,7 @@ void main(void) {
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
-test('WebGL#Program construct/delete', t => {
+test('WebGL#Program construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -47,7 +47,7 @@ test('WebGL#Program construct/delete', t => {
   t.end();
 });
 
-test('WebGL#Program draw', t => {
+test('WebGL#Program draw', (t) => {
   const {gl} = fixture;
 
   const program = new Program(gl, {fs, vs});
@@ -75,7 +75,7 @@ test('WebGL#Program draw', t => {
   t.end();
 });
 
-test('WebGL#Program caching', t => {
+test('WebGL#Program caching', (t) => {
   const {gl} = fixture;
 
   const program = new Program(gl, {fs, vs});
@@ -95,7 +95,7 @@ test('WebGL#Program caching', t => {
   t.end();
 });
 
-test('WebGL#Program uniform array', t => {
+test('WebGL#Program uniform array', (t) => {
   const {gl} = fixture;
 
   const program = new Program(gl, {vs, fs});

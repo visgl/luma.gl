@@ -1,7 +1,7 @@
 import {edgeWork, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('edgeWork#build/uniform', t => {
+test('edgeWork#build/uniform', (t) => {
   normalizeShaderModule(edgeWork);
   const uniforms = edgeWork.getUniforms();
 

@@ -182,7 +182,7 @@ function updateModel(value, gl, glState, viewMatrix, projectionMatrix, backBuffe
     error: (jqXhr, textStatus, errorThrown) => {
       error.innerHTML += `Failed to load model: ${errorThrown}<br>`;
     },
-    success: gltf => {
+    success: (gltf) => {
       const scene = new Scene(gl, glState, `${BASE_URL}/models/${value}/glTF/`, gltf);
       scene.projectionMatrix = projectionMatrix;
       scene.viewMatrix = viewMatrix;
@@ -262,7 +262,7 @@ function setupGUI(gl, viewMatrix, canvas, ctx2d) {
   const folder = gui.addFolder('Metallic-Roughness Material');
 
   const text = {Model: DEFAULT_MODEL_NAME};
-  folder.add(text, 'Model', MODELS).onChange(value => {
+  folder.add(text, 'Model', MODELS).onChange((value) => {
     updateModel(value, gl, glState, viewMatrix, projectionMatrix, canvas, ctx2d);
   });
   folder.open();
@@ -290,7 +290,7 @@ function setupGUI(gl, viewMatrix, canvas, ctx2d) {
   createMouseOverScale('#metallic', 'metallic');
   createMouseOverScale('#roughness', 'roughness');
 
-  $('#pbrMath').click(function(ev) {
+  $('#pbrMath').click(function (ev) {
     if (scaleVals.pinned && scaleVals.pinnedElement) {
       $(scaleVals.pinnedElement).removeClass('pinnedComponent');
     }
@@ -299,7 +299,7 @@ function setupGUI(gl, viewMatrix, canvas, ctx2d) {
 
   updateMathScales();
 
-  $(glState.canvas2d).mousemove(e => pickPixel(e.pageX, e.pageY));
+  $(glState.canvas2d).mousemove((e) => pickPixel(e.pageX, e.pageY));
 }
 
 // picker
@@ -377,9 +377,12 @@ function setPinnedComponent(el) {
 function createMouseOverScale() {
   const localArgs = arguments;
   const el = $(localArgs[0]);
-  el.hover(ev => setActiveComponent(el), ev => setActiveComponent(null));
+  el.hover(
+    (ev) => setActiveComponent(el),
+    (ev) => setActiveComponent(null)
+  );
 
-  el.click(ev => {
+  el.click((ev) => {
     if (scaleVals.pinnedElement) {
       setPinnedComponent(null);
     } else {

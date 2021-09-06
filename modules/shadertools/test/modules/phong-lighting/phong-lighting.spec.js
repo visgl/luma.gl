@@ -1,7 +1,7 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {phongLighting} from '@luma.gl/shadertools';
 
-test('shadertools#phongLighting', t => {
+test('shadertools#phongLighting', (t) => {
   let uniforms = phongLighting.getUniforms();
   t.deepEqual(uniforms, {}, `Default phong lighting uniforms ok`);
 

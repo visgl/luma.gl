@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {UniformBufferLayout, Buffer, Program} from '@luma.gl/webgl';
 // TODO - tests shouldn't depend on higher level module?
@@ -63,7 +63,7 @@ const TEST_CASES = [
 ];
 */
 
-test('WebGL#UniformBufferLayout', t => {
+test('WebGL#UniformBufferLayout', (t) => {
   const std140 = new UniformBufferLayout({
     uEnabled: GL.BOOL,
     uProjectionMatrix: GL.FLOAT_MAT4
@@ -80,7 +80,7 @@ test('WebGL#UniformBufferLayout', t => {
   t.end();
 });
 
-test('WebGL#UniformBufferLayout getData', t => {
+test('WebGL#UniformBufferLayout getData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -98,9 +98,8 @@ test('WebGL#UniformBufferLayout getData', t => {
   );
 
   // float offsests
-  const offsets = program.getActiveUniforms(indices, GL.UNIFORM_OFFSET).map(x => x / 4);
+  const offsets = program.getActiveUniforms(indices, GL.UNIFORM_OFFSET).map((x) => x / 4);
 
-  /* eslint-disable camelcase */
   const std140 = new UniformBufferLayout({
     float_1: GL.FLOAT,
     vec2_1: GL.FLOAT_VEC2,
@@ -128,7 +127,7 @@ test('WebGL#UniformBufferLayout getData', t => {
   t.end();
 });
 
-test('WebGL#UniformBufferLayout setData', t => {
+test('WebGL#UniformBufferLayout setData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -150,7 +149,6 @@ test('WebGL#UniformBufferLayout setData', t => {
     elementCount: 5
   });
 
-  /* eslint-disable camelcase */
   const std140 = new UniformBufferLayout({
     float_1: GL.FLOAT,
     vec2_1: GL.FLOAT_VEC2,
@@ -177,7 +175,7 @@ test('WebGL#UniformBufferLayout setData', t => {
   transform.run();
   ubo.unbind();
   const outData = transform.getBuffer('outValue').getData();
-  const expectedData = sourceData.map(value => value * 30.0);
+  const expectedData = sourceData.map((value) => value * 30.0);
   t.deepEqual(outData, expectedData, 'Should receive expected data');
 
   t.end();

@@ -44,7 +44,7 @@ export default class Accessor {
   }
 
   constructor(...accessors) {
-    accessors.forEach(accessor => this._assign(accessor)); // Merge in sequence
+    accessors.forEach((accessor) => this._assign(accessor)); // Merge in sequence
     Object.freeze(this);
   }
 

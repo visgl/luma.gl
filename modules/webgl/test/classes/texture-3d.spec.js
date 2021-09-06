@@ -1,10 +1,10 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Texture3D} from '@luma.gl/webgl';
 // import {Buffer} from '@luma.gl/webgl';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#Texture3D construct/delete', t => {
+test('WebGL#Texture3D construct/delete', (t) => {
   const gl = fixture.gl2;
 
   if (!gl) {

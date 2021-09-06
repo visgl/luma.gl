@@ -1,7 +1,7 @@
 import {colorHalftone, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('colorHalftone#build/uniform', t => {
+test('colorHalftone#build/uniform', (t) => {
   normalizeShaderModule(colorHalftone);
   const uniforms = colorHalftone.getUniforms();
 

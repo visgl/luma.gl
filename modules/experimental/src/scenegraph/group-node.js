@@ -7,7 +7,7 @@ export default class GroupNode extends ScenegraphNode {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
     log.assert(
-      children.every(child => child instanceof ScenegraphNode),
+      children.every((child) => child instanceof ScenegraphNode),
       'every child must an instance of ScenegraphNode'
     );
     super(props);
@@ -41,7 +41,7 @@ export default class GroupNode extends ScenegraphNode {
   }
 
   delete() {
-    this.children.forEach(child => child.delete());
+    this.children.forEach((child) => child.delete());
     this.removeAll();
     super.delete();
   }

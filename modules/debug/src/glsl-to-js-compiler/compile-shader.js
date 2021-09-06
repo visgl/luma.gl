@@ -17,7 +17,7 @@ export function compileShaderModule(moduleName, source) {
   source = normalize(source);
 
   const compileModule = Compiler({
-    uniform: name => `uniforms.${name}`,
+    uniform: (name) => `uniforms.${name}`,
     version: getVersion(source)
   });
 
@@ -41,8 +41,8 @@ export function compileVertexShader(shaderName, source) {
   source = normalize(source);
 
   const compileVS = Compiler({
-    uniform: name => `uniforms.${name}`,
-    attribute: name => `attributes.${name}`,
+    uniform: (name) => `uniforms.${name}`,
+    attribute: (name) => `attributes.${name}`,
     version: getVersion(source)
   });
 
@@ -70,8 +70,8 @@ export function compileFragmentShader(shaderName, source) {
   source = normalize(source);
 
   const compileFS = Compiler({
-    uniform: name => `uniforms.${name}`,
-    varying: name => `varyings.${name}`,
+    uniform: (name) => `uniforms.${name}`,
+    varying: (name) => `varyings.${name}`,
     version: getVersion(source)
   });
 

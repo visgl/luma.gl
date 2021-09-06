@@ -13,7 +13,7 @@ module.exports = function _(opts) {
         // specifiers: [ ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier ];
         // source: Literal;
         const specifiers = path.get('specifiers');
-        specifiers.forEach(specifier => {
+        specifiers.forEach((specifier) => {
           if (specifier.type === 'ImportDefaultSpecifier') {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {

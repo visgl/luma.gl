@@ -29,7 +29,7 @@ const uniforms = {
     value: 0.5,
     min: 0,
     max: 0.1,
-    adjust: strength => 0.53 + 200 * Math.pow(1 - strength, 4) // TODO - JS preprocessing
+    adjust: (strength) => 0.53 + 200 * Math.pow(1 - strength, 4) // TODO - JS preprocessing
   }
 };
 

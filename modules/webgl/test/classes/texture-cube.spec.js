@@ -1,10 +1,10 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {TextureCube} from '@luma.gl/webgl';
 import GL from '@luma.gl/constants';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#TextureCube construct/delete', t => {
+test('WebGL#TextureCube construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
@@ -28,7 +28,7 @@ test('WebGL#TextureCube construct/delete', t => {
   t.end();
 });
 
-test('WebGL#TextureCube buffer update', t => {
+test('WebGL#TextureCube buffer update', (t) => {
   const {gl} = fixture;
 
   let texture = new TextureCube(gl);
@@ -40,7 +40,7 @@ test('WebGL#TextureCube buffer update', t => {
   t.end();
 });
 
-test('WebGL#TextureCube multiple LODs', t => {
+test('WebGL#TextureCube multiple LODs', (t) => {
   const {gl} = fixture;
 
   const texture = new TextureCube(gl, {

@@ -3,10 +3,10 @@
 class Controls {
   constructor(canvas, redraw) {
     // Set control callbacks
-    canvas.onmousedown = ev => this._handleMouseDown(ev);
-    document.onmouseup = ev => this._handleMouseUp(ev);
-    document.onmousemove = ev => this._handleMouseMove(ev, redraw);
-    document.onwheel = ev => this._handleWheel(ev, redraw);
+    canvas.onmousedown = (ev) => this._handleMouseDown(ev);
+    document.onmouseup = (ev) => this._handleMouseUp(ev);
+    document.onmousemove = (ev) => this._handleMouseMove(ev, redraw);
+    document.onwheel = (ev) => this._handleWheel(ev, redraw);
 
     this.lastMouseX = null;
     this.lastMouseY = null;

@@ -5,7 +5,7 @@ import {Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer} from '@luma.gl/webgl';
 import {CubeGeometry} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
 import {getBuffersFromGeometry} from '@luma.gl/engine/lib/model-utils';
@@ -47,7 +47,7 @@ const FS_300 = `#version 300 es
   }
 `;
 
-test('Model#construct/destruct', t => {
+test('Model#construct/destruct', (t) => {
   const {gl} = fixture;
 
   // Avoid re-using program from ProgramManager
@@ -72,7 +72,7 @@ test('Model#construct/destruct', t => {
   t.end();
 });
 
-test('Model#multiple delete', t => {
+test('Model#multiple delete', (t) => {
   const {gl} = fixture;
 
   // Avoid re-using program from ProgramManager
@@ -103,7 +103,7 @@ test('Model#multiple delete', t => {
   t.end();
 });
 
-test('Model#setAttribute', t => {
+test('Model#setAttribute', (t) => {
   const {gl} = fixture;
 
   const buffer1 = new Buffer(gl, {accessor: {size: 2}, data: new Float32Array(4).fill(1)});
@@ -138,7 +138,7 @@ test('Model#setAttribute', t => {
   t.end();
 });
 
-test('Model#setters, getters', t => {
+test('Model#setters, getters', (t) => {
   const {gl} = fixture;
 
   const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
@@ -159,7 +159,7 @@ test('Model#setters, getters', t => {
   t.end();
 });
 
-test('Model#draw', t => {
+test('Model#draw', (t) => {
   const {gl} = fixture;
 
   const model = new Model(gl, {
@@ -179,7 +179,7 @@ test('Model#draw', t => {
   t.end();
 });
 
-test('Model#program management', t => {
+test('Model#program management', (t) => {
   const {gl} = fixture;
 
   const pm = new ProgramManager(gl);
@@ -270,7 +270,7 @@ test('Model#program management', t => {
   t.end();
 });
 
-test('Model#program management - getModuleUniforms', t => {
+test('Model#program management - getModuleUniforms', (t) => {
   const {gl} = fixture;
 
   const pm = new ProgramManager(gl);
@@ -301,7 +301,7 @@ test('Model#program management - getModuleUniforms', t => {
   t.end();
 });
 
-test('Model#getBuffersFromGeometry', t => {
+test('Model#getBuffersFromGeometry', (t) => {
   const {gl} = fixture;
 
   let buffers = getBuffersFromGeometry(gl, {
@@ -361,7 +361,7 @@ test('Model#getBuffersFromGeometry', t => {
   t.end();
 });
 
-test('Model#transpileToGLSL100', t => {
+test('Model#transpileToGLSL100', (t) => {
   const {gl} = fixture;
 
   let model;

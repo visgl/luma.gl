@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 import {equals} from '@math.gl/core';
 import {Buffer} from '@luma.gl/webgl';
@@ -9,17 +9,55 @@ const {gl2} = fixture;
 const TEST_CASES = [
   {
     name: 'all - in',
-    polygons: [[[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]],
-    points: [[0, 0], [-0.25, -0.25], [0.25, -0.25], [0.25, 0.25], [-0.25, 0.25], [-0.45, 0.45]]
+    polygons: [
+      [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [0.5, 0.5],
+        [-0.5, 0.5],
+        [-0.5, -0.5]
+      ]
+    ],
+    points: [
+      [0, 0],
+      [-0.25, -0.25],
+      [0.25, -0.25],
+      [0.25, 0.25],
+      [-0.25, 0.25],
+      [-0.45, 0.45]
+    ]
   },
   {
     name: 'all - out',
-    polygons: [[[-0.35, -0.35], [0.35, -0.35], [0.35, 0.35], [-0.35, 0.35], [-0.35, -0.35]]],
-    points: [[-0.45, -0.25], [0.25, -0.5], [0.45, 0.25], [-0.25, 0.45], [-0.45, 0.45], [10, 0]]
+    polygons: [
+      [
+        [-0.35, -0.35],
+        [0.35, -0.35],
+        [0.35, 0.35],
+        [-0.35, 0.35],
+        [-0.35, -0.35]
+      ]
+    ],
+    points: [
+      [-0.45, -0.25],
+      [0.25, -0.5],
+      [0.45, 0.25],
+      [-0.25, 0.45],
+      [-0.45, 0.45],
+      [10, 0]
+    ]
   },
   {
     name: 'mix',
-    polygons: [[[-0.35, -0.35], [0.45, -0.35], [0.35, 0.45], [-0.5, 0.35], [-0.35, -0.35]]],
+    polygons: [
+      [
+        [-0.35, -0.35],
+        [0.45, -0.35],
+        [0.35, 0.45],
+        [-0.5, 0.35],
+        [-0.35, -0.35]
+      ]
+    ],
     points: [
       [-0.35, -0.35],
       [0.25, -0.45],
@@ -146,16 +184,35 @@ const TEST_CASES = [
     name: 'polygon with hole',
     polygons: [
       [
-        [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]], // outer ring
-        [[-0.25, -0.25], [0.25, -0.25], [0.25, 0.25], [-0.25, 0.25], [-0.25, -0.25]] // hole
+        [
+          [-0.5, -0.5],
+          [0.5, -0.5],
+          [0.5, 0.5],
+          [-0.5, 0.5],
+          [-0.5, -0.5]
+        ], // outer ring
+        [
+          [-0.25, -0.25],
+          [0.25, -0.25],
+          [0.25, 0.25],
+          [-0.25, 0.25],
+          [-0.25, -0.25]
+        ] // hole
       ]
     ],
-    points: [[0, 0], [-0.35, -0.25], [0.15, -0.15], [0.25, 0.35], [-0.75, 0.25], [-0.45, 0.45]]
+    points: [
+      [0, 0],
+      [-0.35, -0.25],
+      [0.15, -0.15],
+      [0.25, 0.35],
+      [-0.75, 0.25],
+      [-0.45, 0.45]
+    ]
   }
 ];
 
 /* eslint-disable max-nested-callbacks */
-test('gpgpu#GPUPointInPolygon CPU vs GPU', t => {
+test('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -163,11 +220,11 @@ test('gpgpu#GPUPointInPolygon CPU vs GPU', t => {
   }
   const gpuPointInPolygon = new GPUPointInPolygon(gl2, {textureSize: 512});
 
-  TEST_CASES.forEach(tc => {
+  TEST_CASES.forEach((tc) => {
     const scales = tc.scales || [1];
-    scales.forEach(scale => {
+    scales.forEach((scale) => {
       const polygons = tc.polygons || [tc.polygon];
-      const points = tc.points.map(xy => [xy[0] * scale, xy[1] * scale]);
+      const points = tc.points.map((xy) => [xy[0] * scale, xy[1] * scale]);
       const name = `${tc.name} scale:${scale}`;
 
       const count = points.length;

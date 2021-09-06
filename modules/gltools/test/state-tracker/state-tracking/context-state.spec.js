@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/gltools';
 
@@ -21,7 +21,7 @@ const fixture = {
   gl2: createTestContext({webgl2: true, webgl1: false})
 };
 
-test('WebGL#state', t => {
+test('WebGL#state', (t) => {
   t.ok(getParameters, 'getParameters imported ok');
   t.ok(setParameters, 'setParameters imported ok');
   t.ok(withParameters, 'withParameters imported ok');
@@ -30,7 +30,7 @@ test('WebGL#state', t => {
   t.end();
 });
 
-test('WebGLState#getParameters', t => {
+test('WebGLState#getParameters', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -43,7 +43,7 @@ test('WebGLState#getParameters', t => {
   t.end();
 });
 
-test('WebGLState#getParameters (WebGL2)', t => {
+test('WebGLState#getParameters (WebGL2)', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     resetParameters(gl2);
@@ -60,7 +60,7 @@ test('WebGLState#getParameters (WebGL2)', t => {
   t.end();
 });
 
-test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
+test('WebGLState#setParameters (Mixing enum and function style keys)', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -79,7 +79,7 @@ test('WebGLState#setParameters (Mixing enum and function style keys)', t => {
   t.end();
 });
 
-test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))', t => {
+test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))', (t) => {
   const {gl} = fixture;
   const parameters = {
     blendFunc: [GL.SRC_ALPHA, GL.ONE],
@@ -124,10 +124,10 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
   t.end();
 });
 
-test('WebGLState#withParameters', t => {
+test('WebGLState#withParameters', (t) => {
   const {gl} = fixture;
 
-  const checkParameters = expected => {
+  const checkParameters = (expected) => {
     const parameters = getParameters(gl);
     for (const key in expected) {
       const value = parameters[key];
@@ -198,7 +198,7 @@ test('WebGLState#withParameters', t => {
   t.end();
 });
 
-test('WebGLState#withParameters: recursive', t => {
+test('WebGLState#withParameters: recursive', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -328,7 +328,7 @@ test('WebGLState#withParameters: recursive', t => {
 });
 
 // EXT_blend_minmax
-test('WebGLState#BlendEquationMinMax', t => {
+test('WebGLState#BlendEquationMinMax', (t) => {
   // TODO: For WebGL1 this test passing could be false positive.
   // Verify if state set is scuccessful, we could be just returning the value from cache.
 
@@ -388,7 +388,7 @@ test('WebGLState#BlendEquationMinMax', t => {
   t.end();
 });
 
-test('WebGLState#bindFramebuffer (WebGL1)', t => {
+test('WebGLState#bindFramebuffer (WebGL1)', (t) => {
   const {gl} = fixture;
   const framebuffer = new Framebuffer(gl);
   let fbHandle;
@@ -408,7 +408,7 @@ test('WebGLState#bindFramebuffer (WebGL1)', t => {
   t.end();
 });
 
-test('WebGLState#bindFramebuffer (WebGL2)', t => {
+test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
   const {gl2} = fixture;
   if (gl2) {
     const framebuffer = new Framebuffer(gl2);
@@ -481,7 +481,7 @@ test('WebGLState#bindFramebuffer (WebGL2)', t => {
   t.end();
 });
 
-test('WebGLState#withParameters framebuffer', t => {
+test('WebGLState#withParameters framebuffer', (t) => {
   const {gl} = fixture;
   const framebufferOne = new Framebuffer(gl);
   const framebufferTwo = new Framebuffer(gl);
@@ -514,7 +514,7 @@ test('WebGLState#withParameters framebuffer', t => {
   t.end();
 });
 
-test('WebGLState#withParameters empty parameters object', t => {
+test('WebGLState#withParameters empty parameters object', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);

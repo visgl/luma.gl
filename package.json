@@ -24,7 +24,7 @@
     "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn && ocular-bootstrap",
     "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/docs/contributor-guide",
     "clean": "ocular-clean",
-    "build": "ocular-clean && lerna run pre-build && ocular-build",
+    "build": "ocular-clean && ocular-build --dist esm && lerna run pre-build",
     "cover": "ocular-test cover",
     "lint": "tsc && ocular-lint",
     "publish": "ocular-publish",
@@ -46,31 +46,32 @@
     "@probe.gl/test-utils": "^3.4.0",
     "@turf/boolean-within": "^6.0.1",
     "@turf/helpers": "^6.1.4",
-    "@typescript-eslint/eslint-plugin": "^4.13.0",
-    "@typescript-eslint/parser": "^4.13.0",
-    "babel-loader": "^8.0.0",
     "babel-plugin-inline-webgl-constants": "1.0.1",
     "babel-plugin-remove-glsl-comments": "^1.0.0",
-    "core-js": "^3.5.0",
-    "coveralls": "^3.0.0",
-    "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
-    "eslint-plugin-tree-shaking": "^1.7.3",
+    "eslint-plugin-tree-shaking": "^1.9.2",
     "gl": "^4.9.0",
     "mjolnir.js": "^2.1.2",
     "mkdirp": "^0.5.1",
     "npm-normalize-package-bin": "^1.0.0",
-    "ocular-dev-tools": "^0.3.1",
+    "ocular-dev-tools": "1.0.0-alpha.7",
     "pre-commit": "^1.2.2",
-    "pre-push": "^0.1.1",
-    "raw-loader": "^0.5.1",
-    "reify": "^0.18.1",
-    "source-map-support": "^0.4.2",
-    "tape-promise": "^1.1.0",
-    "typescript": "^4.1.3"
+    "pre-push": "^0.1.1"
+  },
+  "resolutions_notes": [
+    "TODO - remove when ocular upgrades",
+    "Note: tape 4.12 and higher no longer compares 0 and -0 equally...",
+    "Note: newer prettier breaks on typescript import type"
+  ],
+  "resolutions": {
+    "tape": "4.11.0",
+    "prettier": "2.3.1"
   },
   "pre-commit": [
     "test-fast"
   ],
-  "dependencies": {}
+  "dependencies": {
+    "@types/offscreencanvas": "^2019.6.3",
+    "@types/webgl2": "^0.0.6"
+  }
 }

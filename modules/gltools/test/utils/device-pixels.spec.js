@@ -1,7 +1,7 @@
 import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/gltools';
 import {getDevicePixelRatio} from '@luma.gl/gltools/utils/device-pixels';
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 const LOW_DPR = 0.5;
 const HIGH_DPR = 4;
 const HIGH_DPR_FRACTION = 2.5;
@@ -22,7 +22,11 @@ const MAP_TEST_CASES = [
       }
     },
     ratio: 1,
-    windowPositions: [[0, 0], [2, 2], [9, 9]],
+    windowPositions: [
+      [0, 0],
+      [2, 2],
+      [9, 9]
+    ],
     devicePositionsInverted: [
       {
         x: 0,
@@ -115,7 +119,11 @@ const MAP_TEST_CASES = [
     },
     ratio: HIGH_DPR,
     yInvert: true,
-    windowPositions: [[0, 0], [2, 2], [9, 9]],
+    windowPositions: [
+      [0, 0],
+      [2, 2],
+      [9, 9]
+    ],
     // 0 4 8 12 16 20 24 28 32 36 40
     // 0 1 2 3  4  5  6  7  8  9
     devicePositionsInverted: [
@@ -176,7 +184,11 @@ const MAP_TEST_CASES = [
     },
     ratio: HIGH_DPR_FRACTION,
     yInvert: true,
-    windowPositions: [[0, 0], [2, 2], [9, 9]],
+    windowPositions: [
+      [0, 0],
+      [2, 2],
+      [9, 9]
+    ],
     // round (2.5) = 3
     // CSS size :   10X10
     // Device size: 25X25
@@ -241,7 +253,12 @@ const MAP_TEST_CASES = [
     },
     ratio: LOW_DPR,
     yInvert: true,
-    windowPositions: [[0, 0], [1, 1], [2, 2], [8, 8]],
+    windowPositions: [
+      [0, 0],
+      [1, 1],
+      [2, 2],
+      [8, 8]
+    ],
     devicePositionsInverted: [
       {
         x: 0,
@@ -298,7 +315,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('webgl#getDevicePixelRatio', t => {
+test('webgl#getDevicePixelRatio', (t) => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -333,22 +350,20 @@ test('webgl#getDevicePixelRatio', t => {
     }
   ];
 
-  TEST_CAES.forEach(tc => {
+  TEST_CAES.forEach((tc) => {
     t.equal(tc.expected, getDevicePixelRatio(tc.useDevicePixels), tc.name);
   });
   t.end();
 });
 
-test('webgl#cssToDevicePixels', t => {
-  MAP_TEST_CASES.forEach(tc => {
+test('webgl#cssToDevicePixels', (t) => {
+  MAP_TEST_CASES.forEach((tc) => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
         cssToDevicePixels(tc.gl, tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
-        `${tc.name}(yInvert=true): device pixel should be ${
-          tc.devicePositionsInverted[i]
-        } for window position ${tc.windowPositions[i]}`
+        `${tc.name}(yInvert=true): device pixel should be ${tc.devicePositionsInverted[i]} for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
         cssToDevicePixels(tc.gl, tc.windowPositions[i], false),
@@ -360,8 +375,8 @@ test('webgl#cssToDevicePixels', t => {
   t.end();
 });
 
-test('webgl#cssToDeviceRatio', t => {
-  MAP_TEST_CASES.forEach(tc => {
+test('webgl#cssToDeviceRatio', (t) => {
+  MAP_TEST_CASES.forEach((tc) => {
     t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');
   });
 

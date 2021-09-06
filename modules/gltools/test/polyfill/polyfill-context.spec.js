@@ -1,10 +1,10 @@
 import {polyfillContext} from '@luma.gl/gltools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {makeSpy} from '@probe.gl/test-utils';
 
 import {fixture} from 'test/setup';
 
-test('WebGL#polyfillContext', t => {
+test('WebGL#polyfillContext', (t) => {
   const {gl, gl2} = fixture;
 
   t.ok(typeof polyfillContext === 'function', 'polyfillContext defined');
@@ -20,7 +20,7 @@ test('WebGL#polyfillContext', t => {
   t.end();
 });
 
-test('WebGL#polyfillContext getSupportedExtensions when context is lost', t => {
+test('WebGL#polyfillContext getSupportedExtensions when context is lost', (t) => {
   const {gl, gl2} = fixture;
 
   const getSupportedExtensionsSpy = makeSpy(gl, 'getSupportedExtensions');

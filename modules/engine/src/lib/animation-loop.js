@@ -29,7 +29,7 @@ export default class AnimationLoop {
    */
   constructor(props = {}) {
     const {
-      onCreateContext = opts => createGLContext(opts),
+      onCreateContext = (opts) => createGLContext(opts),
       onAddHTML = null,
       onInitialize = () => {},
       onRender = () => {},
@@ -161,7 +161,7 @@ export default class AnimationLoop {
         // Note: onIntialize can return a promise (in case it needs to load resources)
         return this.onInitialize(this.animationProps);
       })
-      .then(appContext => {
+      .then((appContext) => {
         if (this._running) {
           this._addCallbackData(appContext || {});
           if (appContext !== false) {
@@ -238,7 +238,7 @@ export default class AnimationLoop {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
-      this._nextFramePromise = new Promise(resolve => {
+      this._nextFramePromise = new Promise((resolve) => {
         this._resolveNextFrame = resolve;
       });
     }

@@ -3,14 +3,14 @@ import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
-test('gltf#loading', t => {
+test('gltf#loading', (t) => {
   const {gl} = fixture;
 
   load('test/data/box.glb', GLTFLoader, {gl})
-    .then(gltf => {
+    .then((gltf) => {
       const result = createGLTFObjects(gl, gltf);
 
       t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
@@ -18,10 +18,10 @@ test('gltf#loading', t => {
 
       t.end();
     })
-    .catch(e => t.fail(e));
+    .catch((e) => t.fail(e));
 });
 
-test('gltf#environment', t => {
+test('gltf#environment', (t) => {
   const {gl} = fixture;
 
   const environment = new GLTFEnvironment(gl, {

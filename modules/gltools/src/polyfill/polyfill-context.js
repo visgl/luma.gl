@@ -51,7 +51,7 @@ function initializeExtensions(gl) {
 
 // Install simple overrides (mostly get* functions)
 function installOverrides(gl, {target, target2}) {
-  Object.keys(WEBGL2_CONTEXT_OVERRIDES).forEach(key => {
+  Object.keys(WEBGL2_CONTEXT_OVERRIDES).forEach((key) => {
     if (typeof WEBGL2_CONTEXT_OVERRIDES[key] === 'function') {
       // install an override, if no implementation was detected
       const originalFunc = gl[key] ? gl[key].bind(gl) : () => {};

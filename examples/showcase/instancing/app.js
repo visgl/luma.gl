@@ -220,7 +220,6 @@ export default class AppAnimationLoop extends AnimationLoop {
 function pickInstance(gl, pickX, pickY, model, framebuffer) {
   framebuffer.clear({color: true, depth: true});
   // Render picking colors
-  /* eslint-disable camelcase */
   model.setUniforms({picking_uActive: 1});
   model.draw({framebuffer});
   model.setUniforms({picking_uActive: 0});

@@ -7,7 +7,7 @@ const {_enableDOMLogging} = require('@probe.gl/test-utils');
 const PERF_TEST_CASES = require('./performance-test-cases').default;
 
 _enableDOMLogging({
-  getStyle: message => ({
+  getStyle: (message) => ({
     background: '#fff',
     position: 'absolute',
     top: 0
@@ -24,7 +24,7 @@ new PerformanceTestRunner({
   .run({
     timeout: 5000,
     maxFramesToRender: 120,
-    onTestStart: testCase => console.log(testCase.name),
+    onTestStart: (testCase) => console.log(testCase.name),
     onTestPass: (testCase, result) =>
       console.log(`perf: ${result.framesRendered} frames at ${result.fps} fps`),
     onTestFail: (testCase, result) =>

@@ -71,7 +71,7 @@ export default class Resource {
     // @ts-ignore
     if (children && deleteChildren) {
       // @ts-ignore
-      children.filter(Boolean).forEach(child => child.delete());
+      children.filter(Boolean).forEach((child) => child.delete());
     }
 
     return this;

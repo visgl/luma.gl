@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {SnapshotTestRunner} from '@luma.gl/test-utils';
 
 import EXAMPLE_TEST_CASES from './example-test-cases';
@@ -6,7 +6,7 @@ import EXAMPLE_TEST_CASES from './example-test-cases';
 
 const renderTestCaseCount = EXAMPLE_TEST_CASES.length; //  + GLTF_TEST_CASES.length;
 
-test('RenderTest', t => {
+test('RenderTest', (t) => {
   // tape's default timeout is 500ms
   t.timeoutAfter(renderTestCaseCount * 4000);
 
@@ -14,7 +14,7 @@ test('RenderTest', t => {
     .add(EXAMPLE_TEST_CASES)
     // .add(GLTF_TEST_CASES)
     .run({
-      onTestStart: testCase => t.comment(testCase.name),
+      onTestStart: (testCase) => t.comment(testCase.name),
       onTestPass: (testCase, result) => t.pass(`match: ${result.matchPercentage}`),
       onTestFail: (testCase, result) => t.fail(result.error || `match: ${result.matchPercentage}`),
 

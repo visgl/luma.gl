@@ -1,7 +1,7 @@
 import {bulgePinch, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('bulgePinch#build/uniform', t => {
+test('bulgePinch#build/uniform', (t) => {
   normalizeShaderModule(bulgePinch);
   const uniforms = bulgePinch.getUniforms();
 

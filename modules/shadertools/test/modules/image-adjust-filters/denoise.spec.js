@@ -1,7 +1,7 @@
 import {denoise, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('denoise#build/uniform', t => {
+test('denoise#build/uniform', (t) => {
   normalizeShaderModule(denoise);
   const uniforms = denoise.getUniforms();
 

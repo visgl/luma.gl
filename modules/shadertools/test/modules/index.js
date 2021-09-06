@@ -13,7 +13,7 @@ import './image-warp-filters';
 import * as shaderModules from '@luma.gl/shadertools/modules';
 import ShaderModule from '@luma.gl/shadertools/lib/shader-module';
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 function getUniformType(value) {
   if (value === null) {
@@ -47,7 +47,7 @@ function verifyShaderModule(t, module) {
   t.ok(isUniformsVaid, `${module.name} getUniforms returns valid default values`);
 }
 
-test('shadertools#module imports are defined', t => {
+test('shadertools#module imports are defined', (t) => {
   for (const name in shaderModules) {
     verifyShaderModule(t, shaderModules[name]);
   }

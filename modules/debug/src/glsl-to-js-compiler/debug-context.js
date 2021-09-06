@@ -128,7 +128,7 @@ export default class DebugContext {
 
   _rgbaToColor(color) {
     if (Array.isArray(color)) {
-      const rgb = color.slice(0, 3).map(x => (x * 255) | 0);
+      const rgb = color.slice(0, 3).map((x) => (x * 255) | 0);
       const a = Number.isFinite(color[3]) ? color[3] : 1;
       return `rgba(${rgb.join(',')},${a.toFixed(2)})`;
     }

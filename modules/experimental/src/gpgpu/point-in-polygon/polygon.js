@@ -297,7 +297,9 @@ export function getSurfaceIndices(normalizedPolygon, positionSize, preproject) {
   let holeIndices = null;
 
   if (normalizedPolygon.holeIndices) {
-    holeIndices = normalizedPolygon.holeIndices.map(positionIndex => positionIndex / positionSize);
+    holeIndices = normalizedPolygon.holeIndices.map(
+      (positionIndex) => positionIndex / positionSize
+    );
   }
   let positions = normalizedPolygon.positions || normalizedPolygon;
 

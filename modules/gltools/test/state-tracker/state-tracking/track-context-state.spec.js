@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import {
@@ -28,14 +28,14 @@ const fixture = {
   gl: createTestContext({debug: true})
 };
 
-test('WebGLState#imports', t => {
+test('WebGLState#imports', (t) => {
   t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
   t.ok(typeof pushContextState === 'function', 'trackContextState imported OK');
   t.ok(typeof popContextState === 'function', 'trackContextState imported OK');
   t.end();
 });
 
-test('WebGLState#trackContextState', t => {
+test('WebGLState#trackContextState', (t) => {
   const {gl} = fixture;
   t.doesNotThrow(
     () => trackContextState(gl, {copyState: false}),
@@ -44,7 +44,7 @@ test('WebGLState#trackContextState', t => {
   t.end();
 });
 
-test('WebGLState#push & pop', t => {
+test('WebGLState#push & pop', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -116,7 +116,7 @@ test('WebGLState#push & pop', t => {
   t.end();
 });
 
-test('WebGLState#gl API', t => {
+test('WebGLState#gl API', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -171,7 +171,7 @@ test('WebGLState#gl API', t => {
   t.end();
 });
 
-test('WebGLState#intercept gl calls', t => {
+test('WebGLState#intercept gl calls', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);

@@ -60,7 +60,7 @@ class Scene {
   loadImage(imageInfo, gl) {
     this.pendingTextures++;
 
-    loadImage(imageInfo.uri).then(image => {
+    loadImage(imageInfo.uri).then((image) => {
       const lumatexture = new Texture2D(gl, {
         // gl.TEXTUREn enums are in numeric order.
         textureUnit: imageInfo.samplerIndex, // gl.TEXTURE0 +

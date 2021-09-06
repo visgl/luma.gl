@@ -23,7 +23,7 @@ const WEBGL_FEATURES = {
 
 // Create a key-mirrored FEATURES array
 const FEATURES = {};
-Object.keys(WEBGL_FEATURES).forEach(key => {
+Object.keys(WEBGL_FEATURES).forEach((key) => {
   FEATURES[key] = key;
 });
 
@@ -80,13 +80,13 @@ const compiledGlslExtensions = {};
 // in the list of supported extensions.
 // opts allows user agent to be overridden for testing
 /*
-* Inputs :
-*  gl : WebGL context
-*  cap : Key of WEBGL_FEATURES object identifying the extension
-*  opts :
-*   behavior : behavior of extension to be tested, by defualt `enable` is used
-* Returns : true, if shader is compiled successfully, false otherwise
-*/
+ * Inputs :
+ *  gl : WebGL context
+ *  cap : Key of WEBGL_FEATURES object identifying the extension
+ *  opts :
+ *   behavior : behavior of extension to be tested, by defualt `enable` is used
+ * Returns : true, if shader is compiled successfully, false otherwise
+ */
 export function canCompileGLGSExtension(gl, cap, opts = {}) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
@@ -131,5 +131,5 @@ function getFeature(gl, cap) {
 
 export function hasFeatures(gl, features) {
   features = Array.isArray(features) ? features : [features];
-  return features.every(feature => getFeature(gl, feature));
+  return features.every((feature) => getFeature(gl, feature));
 }

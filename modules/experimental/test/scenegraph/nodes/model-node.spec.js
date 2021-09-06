@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {makeSpy} from '@probe.gl/test-utils';
 import {fixture} from 'test/setup';
 import {Model} from '@luma.gl/engine';
@@ -33,7 +33,7 @@ const DUMMY_FS = `
   void main() { gl_FragColor = vec4(1.0); }
 `;
 
-test('ModelNode#constructor', t => {
+test('ModelNode#constructor', (t) => {
   const {gl} = fixture;
   const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
 
@@ -46,7 +46,7 @@ test('ModelNode#constructor', t => {
   t.end();
 });
 
-test('ModelNode#setProps', t => {
+test('ModelNode#setProps', (t) => {
   const props = {
     instanceCount: 100
   };
@@ -63,7 +63,7 @@ test('ModelNode#setProps', t => {
   t.end();
 });
 
-test('ModelNode#Model forwards', t => {
+test('ModelNode#Model forwards', (t) => {
   const {gl} = fixture;
   const model = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
   const resourceModel = new Model(gl, {vs: DUMMY_VS, fs: DUMMY_FS});
@@ -72,7 +72,7 @@ test('ModelNode#Model forwards', t => {
   const mNode = new ModelNode(model, {managedResources});
   // make sure `delete` is the last method to call
   const modelMethods = ['draw', 'setUniforms', 'setAttributes', 'updateModuleSettings', 'delete'];
-  modelMethods.forEach(methodName => {
+  modelMethods.forEach((methodName) => {
     const spy = makeSpy(model, methodName);
     mNode[methodName]();
     t.equal(spy.callCount, 1, `should forward ${methodName} to model`);

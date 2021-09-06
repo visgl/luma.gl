@@ -1,8 +1,8 @@
 /* eslint-disable max-len */
 import isOldIE from '@luma.gl/shadertools/utils/is-old-ie';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('isOldIE', t => {
+test('isOldIE', (t) => {
   t.equal(
     isOldIE({userAgent: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)'}),
     true,

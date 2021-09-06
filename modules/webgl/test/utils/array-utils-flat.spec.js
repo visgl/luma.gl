@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fillArray} from '@luma.gl/webgl/utils/array-utils-flat';
 
 const FILL_ARRAY_TEST_CASES = [
@@ -29,12 +29,12 @@ const FILL_ARRAY_TEST_CASES = [
   }
 ];
 
-test('flatten#import', t => {
+test('flatten#import', (t) => {
   t.ok(typeof fillArray === 'function', 'fillArray imported OK');
   t.end();
 });
 
-test('fillArray#tests', t => {
+test('fillArray#tests', (t) => {
   for (const tc of FILL_ARRAY_TEST_CASES) {
     const result = fillArray(tc.arguments);
     t.deepEqual(result, tc.result, `fillArray ${tc.title} returned expected result`);

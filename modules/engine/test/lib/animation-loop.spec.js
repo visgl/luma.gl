@@ -1,8 +1,8 @@
 import {AnimationLoop} from '@luma.gl/core';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
-test('core#AnimationLoop constructor', t => {
+test('core#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
 
   const {gl} = fixture;
@@ -11,7 +11,7 @@ test('core#AnimationLoop constructor', t => {
   t.end();
 });
 
-test('core#AnimationLoop start,stop', t => {
+test('core#AnimationLoop start,stop', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
   let renderCalled = 0;
@@ -41,7 +41,7 @@ test('core#AnimationLoop start,stop', t => {
   }).start();
 });
 
-test('core#AnimationLoop redraw', t => {
+test('core#AnimationLoop redraw', (t) => {
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -61,7 +61,7 @@ test('core#AnimationLoop redraw', t => {
   }).start();
 });
 
-test('core#AnimationLoop should not call initialize more than once', async t => {
+test('core#AnimationLoop should not call initialize more than once', async (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -79,7 +79,7 @@ test('core#AnimationLoop should not call initialize more than once', async t => 
   t.end();
 });
 
-test('core#AnimationLoop two start()s should only run one loop', async t => {
+test('core#AnimationLoop two start()s should only run one loop', async (t) => {
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -99,7 +99,7 @@ test('core#AnimationLoop two start()s should only run one loop', async t => {
   t.end();
 });
 
-test('core#AnimationLoop start followed immediately by stop() should stop', t => {
+test('core#AnimationLoop start followed immediately by stop() should stop', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -117,7 +117,7 @@ test('core#AnimationLoop start followed immediately by stop() should stop', t =>
   }, 100);
 });
 
-test('core#AnimationLoop a start/stop/start should not call initialize again', t => {
+test('core#AnimationLoop a start/stop/start should not call initialize again', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 

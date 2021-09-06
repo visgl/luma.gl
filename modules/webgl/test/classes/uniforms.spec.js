@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments */
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Program, Texture2D} from '@luma.gl/webgl';
 import {isBrowser} from 'probe.gl/env';
 import {equals} from '@math.gl/core';
@@ -149,14 +149,14 @@ const WEBGL1_GOOD_UNIFORMS_ARRAY = {
   i: new Int32Array([40, -103, 34, 87, 26]),
   b: [false, false, true, true, false]
 };
-test('WebGL#Uniforms pre verify uniforms', t => {
+test('WebGL#Uniforms pre verify uniforms', (t) => {
   // @ts-ignore
   t.ok(checkUniformValues(WEBGL1_GOOD_UNIFORMS), 'Uniform values are well formed');
 
   t.end();
 });
 
-test('WebGL#Uniforms Program uniform locations', t => {
+test('WebGL#Uniforms Program uniform locations', (t) => {
   const {gl} = fixture;
 
   const program = new Program(gl, {
@@ -304,13 +304,13 @@ const testSetUniformScalarArray = (gl, t) => {
   t.end();
 };
 
-test('WebGL#Uniforms Program setUniforms', t => {
+test('WebGL#Uniforms Program setUniforms', (t) => {
   const {gl} = fixture;
 
   testSetUniform(gl, t);
 });
 
-test('WebGL2#Uniforms Program setUniforms', t => {
+test('WebGL2#Uniforms Program setUniforms', (t) => {
   const {gl2} = fixture;
 
   if (gl2) {
@@ -320,7 +320,7 @@ test('WebGL2#Uniforms Program setUniforms', t => {
   }
 });
 
-test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
+test('WebGL2#Uniforms Program setUniforms for scalar arrays', (t) => {
   const {gl2} = fixture;
 
   if (gl2) {
@@ -330,7 +330,7 @@ test('WebGL2#Uniforms Program setUniforms for scalar arrays', t => {
   }
 });
 
-test('WebGL#Uniforms parseUniformName', t => {
+test('WebGL#Uniforms parseUniformName', (t) => {
   const regularUniform = parseUniformName('position');
   t.equal(regularUniform.name, 'position');
   t.ok(!regularUniform.isArray);
@@ -345,7 +345,7 @@ test('WebGL#Uniforms parseUniformName', t => {
   t.end();
 });
 
-test('WebGL#Uniforms caching', t => {
+test('WebGL#Uniforms caching', (t) => {
   let called = false;
 
   const setCalled = () => {
@@ -360,13 +360,13 @@ test('WebGL#Uniforms caching', t => {
 
   const glStub = {};
 
-  CACHING_TEST_CASES.forEach(testCase => {
+  CACHING_TEST_CASES.forEach((testCase) => {
     if (!glStub[testCase.function]) {
       glStub[testCase.function] = getUniformStub(t, testCase.arrayType, setCalled);
     }
   });
 
-  CACHING_TEST_CASES.forEach(testCase => {
+  CACHING_TEST_CASES.forEach((testCase) => {
     // @ts-ignore
     const setter = getUniformSetter(glStub, null, {type: testCase.glType});
 

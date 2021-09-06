@@ -1,7 +1,7 @@
 import {normalizeShaderModule, hexagonalPixelate} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('hexagonalPixelate#build/uniform', t => {
+test('hexagonalPixelate#build/uniform', (t) => {
   normalizeShaderModule(hexagonalPixelate);
   const uniforms = hexagonalPixelate.getUniforms();
 

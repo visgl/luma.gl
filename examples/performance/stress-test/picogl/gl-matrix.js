@@ -16,8 +16,8 @@
     var a = factory();
     for (var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
   }
-})(this, function() {
-  return /******/ (function(modules) {
+})(this, function () {
+  return /******/ (function (modules) {
     // webpackBootstrap
     /******/ // The module cache
     /******/ var installedModules = {}; // The require function
@@ -58,7 +58,7 @@
     /************************************************************************/
     /******/ [
       /* 0 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /**
          * @fileoverview gl-matrix - High performance matrix and vector operations
          * @author Brandon Jones
@@ -100,7 +100,7 @@
         /***/
       },
       /* 1 */
-      /***/ function(module, exports) {
+      /***/ function (module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -142,7 +142,7 @@
          *
          * @param {Type} type Array type, such as Float32Array or Array
          */
-        glMatrix.setMatrixArrayType = function(type) {
+        glMatrix.setMatrixArrayType = function (type) {
           glMatrix.ARRAY_TYPE = type;
         };
 
@@ -153,7 +153,7 @@
          *
          * @param {Number} a Angle in Degrees
          */
-        glMatrix.toRadian = function(a) {
+        glMatrix.toRadian = function (a) {
           return a * degree;
         };
 
@@ -166,7 +166,7 @@
          * @param {Number} b The second number to test.
          * @returns {Boolean} True if the numbers are approximately equal, false otherwise.
          */
-        glMatrix.equals = function(a, b) {
+        glMatrix.equals = function (a, b) {
           return Math.abs(a - b) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
         };
 
@@ -175,7 +175,7 @@
         /***/
       },
       /* 2 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -209,7 +209,7 @@
          *
          * @returns {mat2} a new 2x2 matrix
          */
-        mat2.create = function() {
+        mat2.create = function () {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = 1;
           out[1] = 0;
@@ -224,7 +224,7 @@
          * @param {mat2} a matrix to clone
          * @returns {mat2} a new 2x2 matrix
          */
-        mat2.clone = function(a) {
+        mat2.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = a[0];
           out[1] = a[1];
@@ -240,7 +240,7 @@
          * @param {mat2} a the source matrix
          * @returns {mat2} out
          */
-        mat2.copy = function(out, a) {
+        mat2.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -254,7 +254,7 @@
          * @param {mat2} out the receiving matrix
          * @returns {mat2} out
          */
-        mat2.identity = function(out) {
+        mat2.identity = function (out) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -271,7 +271,7 @@
          * @param {Number} m11 Component in column 1, row 1 position (index 3)
          * @returns {mat2} out A new 2x2 matrix
          */
-        mat2.fromValues = function(m00, m01, m10, m11) {
+        mat2.fromValues = function (m00, m01, m10, m11) {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = m00;
           out[1] = m01;
@@ -290,7 +290,7 @@
          * @param {Number} m11 Component in column 1, row 1 position (index 3)
          * @returns {mat2} out
          */
-        mat2.set = function(out, m00, m01, m10, m11) {
+        mat2.set = function (out, m00, m01, m10, m11) {
           out[0] = m00;
           out[1] = m01;
           out[2] = m10;
@@ -305,7 +305,7 @@
          * @param {mat2} a the source matrix
          * @returns {mat2} out
          */
-        mat2.transpose = function(out, a) {
+        mat2.transpose = function (out, a) {
           // If we are transposing ourselves we can skip a few steps but have to cache some values
           if (out === a) {
             var a1 = a[1];
@@ -328,7 +328,7 @@
          * @param {mat2} a the source matrix
          * @returns {mat2} out
          */
-        mat2.invert = function(out, a) {
+        mat2.invert = function (out, a) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -356,7 +356,7 @@
          * @param {mat2} a the source matrix
          * @returns {mat2} out
          */
-        mat2.adjoint = function(out, a) {
+        mat2.adjoint = function (out, a) {
           // Caching this value is nessecary if out == a
           var a0 = a[0];
           out[0] = a[3];
@@ -373,7 +373,7 @@
          * @param {mat2} a the source matrix
          * @returns {Number} determinant of a
          */
-        mat2.determinant = function(a) {
+        mat2.determinant = function (a) {
           return a[0] * a[3] - a[2] * a[1];
         };
 
@@ -385,7 +385,7 @@
          * @param {mat2} b the second operand
          * @returns {mat2} out
          */
-        mat2.multiply = function(out, a, b) {
+        mat2.multiply = function (out, a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -415,7 +415,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat2} out
          */
-        mat2.rotate = function(out, a, rad) {
+        mat2.rotate = function (out, a, rad) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -437,7 +437,7 @@
          * @param {vec2} v the vec2 to scale the matrix by
          * @returns {mat2} out
          **/
-        mat2.scale = function(out, a, v) {
+        mat2.scale = function (out, a, v) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -462,7 +462,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat2} out
          */
-        mat2.fromRotation = function(out, rad) {
+        mat2.fromRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
           out[0] = c;
@@ -483,7 +483,7 @@
          * @param {vec2} v Scaling vector
          * @returns {mat2} out
          */
-        mat2.fromScaling = function(out, v) {
+        mat2.fromScaling = function (out, v) {
           out[0] = v[0];
           out[1] = 0;
           out[2] = 0;
@@ -497,7 +497,7 @@
          * @param {mat2} a matrix to represent as a string
          * @returns {String} string representation of the matrix
          */
-        mat2.str = function(a) {
+        mat2.str = function (a) {
           return 'mat2(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
         };
 
@@ -507,7 +507,7 @@
          * @param {mat2} a the matrix to calculate Frobenius norm of
          * @returns {Number} Frobenius norm
          */
-        mat2.frob = function(a) {
+        mat2.frob = function (a) {
           return Math.sqrt(
             Math.pow(a[0], 2) + Math.pow(a[1], 2) + Math.pow(a[2], 2) + Math.pow(a[3], 2)
           );
@@ -521,7 +521,7 @@
          * @param {mat2} a the input matrix to factorize
          */
 
-        mat2.LDU = function(L, D, U, a) {
+        mat2.LDU = function (L, D, U, a) {
           L[2] = a[2] / a[0];
           U[0] = a[0];
           U[1] = a[1];
@@ -537,7 +537,7 @@
          * @param {mat2} b the second operand
          * @returns {mat2} out
          */
-        mat2.add = function(out, a, b) {
+        mat2.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -553,7 +553,7 @@
          * @param {mat2} b the second operand
          * @returns {mat2} out
          */
-        mat2.subtract = function(out, a, b) {
+        mat2.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -574,7 +574,7 @@
          * @param {mat2} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat2.exactEquals = function(a, b) {
+        mat2.exactEquals = function (a, b) {
           return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
         };
 
@@ -585,7 +585,7 @@
          * @param {mat2} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat2.equals = function(a, b) {
+        mat2.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -610,7 +610,7 @@
          * @param {Number} b amount to scale the matrix's elements by
          * @returns {mat2} out
          */
-        mat2.multiplyScalar = function(out, a, b) {
+        mat2.multiplyScalar = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -627,7 +627,7 @@
          * @param {Number} scale the amount to scale b's elements by before adding
          * @returns {mat2} out
          */
-        mat2.multiplyScalarAndAdd = function(out, a, b, scale) {
+        mat2.multiplyScalarAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -640,7 +640,7 @@
         /***/
       },
       /* 3 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -688,7 +688,7 @@
          *
          * @returns {mat2d} a new 2x3 matrix
          */
-        mat2d.create = function() {
+        mat2d.create = function () {
           var out = new glMatrix.ARRAY_TYPE(6);
           out[0] = 1;
           out[1] = 0;
@@ -705,7 +705,7 @@
          * @param {mat2d} a matrix to clone
          * @returns {mat2d} a new 2x3 matrix
          */
-        mat2d.clone = function(a) {
+        mat2d.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(6);
           out[0] = a[0];
           out[1] = a[1];
@@ -723,7 +723,7 @@
          * @param {mat2d} a the source matrix
          * @returns {mat2d} out
          */
-        mat2d.copy = function(out, a) {
+        mat2d.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -739,7 +739,7 @@
          * @param {mat2d} out the receiving matrix
          * @returns {mat2d} out
          */
-        mat2d.identity = function(out) {
+        mat2d.identity = function (out) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -760,7 +760,7 @@
          * @param {Number} ty Component TY (index 5)
          * @returns {mat2d} A new mat2d
          */
-        mat2d.fromValues = function(a, b, c, d, tx, ty) {
+        mat2d.fromValues = function (a, b, c, d, tx, ty) {
           var out = new glMatrix.ARRAY_TYPE(6);
           out[0] = a;
           out[1] = b;
@@ -783,7 +783,7 @@
          * @param {Number} ty Component TY (index 5)
          * @returns {mat2d} out
          */
-        mat2d.set = function(out, a, b, c, d, tx, ty) {
+        mat2d.set = function (out, a, b, c, d, tx, ty) {
           out[0] = a;
           out[1] = b;
           out[2] = c;
@@ -800,7 +800,7 @@
          * @param {mat2d} a the source matrix
          * @returns {mat2d} out
          */
-        mat2d.invert = function(out, a) {
+        mat2d.invert = function (out, a) {
           var aa = a[0],
             ab = a[1],
             ac = a[2],
@@ -829,7 +829,7 @@
          * @param {mat2d} a the source matrix
          * @returns {Number} determinant of a
          */
-        mat2d.determinant = function(a) {
+        mat2d.determinant = function (a) {
           return a[0] * a[3] - a[1] * a[2];
         };
 
@@ -841,7 +841,7 @@
          * @param {mat2d} b the second operand
          * @returns {mat2d} out
          */
-        mat2d.multiply = function(out, a, b) {
+        mat2d.multiply = function (out, a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -877,7 +877,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat2d} out
          */
-        mat2d.rotate = function(out, a, rad) {
+        mat2d.rotate = function (out, a, rad) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -903,7 +903,7 @@
          * @param {vec2} v the vec2 to scale the matrix by
          * @returns {mat2d} out
          **/
-        mat2d.scale = function(out, a, v) {
+        mat2d.scale = function (out, a, v) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -929,7 +929,7 @@
          * @param {vec2} v the vec2 to translate the matrix by
          * @returns {mat2d} out
          **/
-        mat2d.translate = function(out, a, v) {
+        mat2d.translate = function (out, a, v) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -958,7 +958,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat2d} out
          */
-        mat2d.fromRotation = function(out, rad) {
+        mat2d.fromRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
           out[0] = c;
@@ -981,7 +981,7 @@
          * @param {vec2} v Scaling vector
          * @returns {mat2d} out
          */
-        mat2d.fromScaling = function(out, v) {
+        mat2d.fromScaling = function (out, v) {
           out[0] = v[0];
           out[1] = 0;
           out[2] = 0;
@@ -1002,7 +1002,7 @@
          * @param {vec2} v Translation vector
          * @returns {mat2d} out
          */
-        mat2d.fromTranslation = function(out, v) {
+        mat2d.fromTranslation = function (out, v) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -1018,7 +1018,7 @@
          * @param {mat2d} a matrix to represent as a string
          * @returns {String} string representation of the matrix
          */
-        mat2d.str = function(a) {
+        mat2d.str = function (a) {
           return (
             'mat2d(' +
             a[0] +
@@ -1042,7 +1042,7 @@
          * @param {mat2d} a the matrix to calculate Frobenius norm of
          * @returns {Number} Frobenius norm
          */
-        mat2d.frob = function(a) {
+        mat2d.frob = function (a) {
           return Math.sqrt(
             Math.pow(a[0], 2) +
               Math.pow(a[1], 2) +
@@ -1062,7 +1062,7 @@
          * @param {mat2d} b the second operand
          * @returns {mat2d} out
          */
-        mat2d.add = function(out, a, b) {
+        mat2d.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -1080,7 +1080,7 @@
          * @param {mat2d} b the second operand
          * @returns {mat2d} out
          */
-        mat2d.subtract = function(out, a, b) {
+        mat2d.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -1104,7 +1104,7 @@
          * @param {Number} b amount to scale the matrix's elements by
          * @returns {mat2d} out
          */
-        mat2d.multiplyScalar = function(out, a, b) {
+        mat2d.multiplyScalar = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -1123,7 +1123,7 @@
          * @param {Number} scale the amount to scale b's elements by before adding
          * @returns {mat2d} out
          */
-        mat2d.multiplyScalarAndAdd = function(out, a, b, scale) {
+        mat2d.multiplyScalarAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -1140,7 +1140,7 @@
          * @param {mat2d} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat2d.exactEquals = function(a, b) {
+        mat2d.exactEquals = function (a, b) {
           return (
             a[0] === b[0] &&
             a[1] === b[1] &&
@@ -1158,7 +1158,7 @@
          * @param {mat2d} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat2d.equals = function(a, b) {
+        mat2d.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -1186,7 +1186,7 @@
         /***/
       },
       /* 4 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1220,7 +1220,7 @@
          *
          * @returns {mat3} a new 3x3 matrix
          */
-        mat3.create = function() {
+        mat3.create = function () {
           var out = new glMatrix.ARRAY_TYPE(9);
           out[0] = 1;
           out[1] = 0;
@@ -1241,7 +1241,7 @@
          * @param {mat4} a   the source 4x4 matrix
          * @returns {mat3} out
          */
-        mat3.fromMat4 = function(out, a) {
+        mat3.fromMat4 = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -1260,7 +1260,7 @@
          * @param {mat3} a matrix to clone
          * @returns {mat3} a new 3x3 matrix
          */
-        mat3.clone = function(a) {
+        mat3.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(9);
           out[0] = a[0];
           out[1] = a[1];
@@ -1281,7 +1281,7 @@
          * @param {mat3} a the source matrix
          * @returns {mat3} out
          */
-        mat3.copy = function(out, a) {
+        mat3.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -1308,7 +1308,7 @@
          * @param {Number} m22 Component in column 2, row 2 position (index 8)
          * @returns {mat3} A new mat3
          */
-        mat3.fromValues = function(m00, m01, m02, m10, m11, m12, m20, m21, m22) {
+        mat3.fromValues = function (m00, m01, m02, m10, m11, m12, m20, m21, m22) {
           var out = new glMatrix.ARRAY_TYPE(9);
           out[0] = m00;
           out[1] = m01;
@@ -1337,7 +1337,7 @@
          * @param {Number} m22 Component in column 2, row 2 position (index 8)
          * @returns {mat3} out
          */
-        mat3.set = function(out, m00, m01, m02, m10, m11, m12, m20, m21, m22) {
+        mat3.set = function (out, m00, m01, m02, m10, m11, m12, m20, m21, m22) {
           out[0] = m00;
           out[1] = m01;
           out[2] = m02;
@@ -1356,7 +1356,7 @@
          * @param {mat3} out the receiving matrix
          * @returns {mat3} out
          */
-        mat3.identity = function(out) {
+        mat3.identity = function (out) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -1376,7 +1376,7 @@
          * @param {mat3} a the source matrix
          * @returns {mat3} out
          */
-        mat3.transpose = function(out, a) {
+        mat3.transpose = function (out, a) {
           // If we are transposing ourselves we can skip a few steps but have to cache some values
           if (out === a) {
             var a01 = a[1],
@@ -1410,7 +1410,7 @@
          * @param {mat3} a the source matrix
          * @returns {mat3} out
          */
-        mat3.invert = function(out, a) {
+        mat3.invert = function (out, a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1450,7 +1450,7 @@
          * @param {mat3} a the source matrix
          * @returns {mat3} out
          */
-        mat3.adjoint = function(out, a) {
+        mat3.adjoint = function (out, a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1479,7 +1479,7 @@
          * @param {mat3} a the source matrix
          * @returns {Number} determinant of a
          */
-        mat3.determinant = function(a) {
+        mat3.determinant = function (a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1505,7 +1505,7 @@
          * @param {mat3} b the second operand
          * @returns {mat3} out
          */
-        mat3.multiply = function(out, a, b) {
+        mat3.multiply = function (out, a, b) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1553,7 +1553,7 @@
          * @param {vec2} v vector to translate by
          * @returns {mat3} out
          */
-        mat3.translate = function(out, a, v) {
+        mat3.translate = function (out, a, v) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1588,7 +1588,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat3} out
          */
-        mat3.rotate = function(out, a, rad) {
+        mat3.rotate = function (out, a, rad) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1623,7 +1623,7 @@
          * @param {vec2} v the vec2 to scale the matrix by
          * @returns {mat3} out
          **/
-        mat3.scale = function(out, a, v) {
+        mat3.scale = function (out, a, v) {
           var x = v[0],
             y = v[1];
 
@@ -1652,7 +1652,7 @@
          * @param {vec2} v Translation vector
          * @returns {mat3} out
          */
-        mat3.fromTranslation = function(out, v) {
+        mat3.fromTranslation = function (out, v) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -1676,7 +1676,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat3} out
          */
-        mat3.fromRotation = function(out, rad) {
+        mat3.fromRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
 
@@ -1705,7 +1705,7 @@
          * @param {vec2} v Scaling vector
          * @returns {mat3} out
          */
-        mat3.fromScaling = function(out, v) {
+        mat3.fromScaling = function (out, v) {
           out[0] = v[0];
           out[1] = 0;
           out[2] = 0;
@@ -1727,7 +1727,7 @@
          * @param {mat2d} a the matrix to copy
          * @returns {mat3} out
          **/
-        mat3.fromMat2d = function(out, a) {
+        mat3.fromMat2d = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = 0;
@@ -1750,7 +1750,7 @@
          *
          * @returns {mat3} out
          */
-        mat3.fromQuat = function(out, q) {
+        mat3.fromQuat = function (out, q) {
           var x = q[0],
             y = q[1],
             z = q[2],
@@ -1791,7 +1791,7 @@
          *
          * @returns {mat3} out
          */
-        mat3.normalFromMat4 = function(out, a) {
+        mat3.normalFromMat4 = function (out, a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -1849,7 +1849,7 @@
          * @param {mat3} a matrix to represent as a string
          * @returns {String} string representation of the matrix
          */
-        mat3.str = function(a) {
+        mat3.str = function (a) {
           return (
             'mat3(' +
             a[0] +
@@ -1879,7 +1879,7 @@
          * @param {mat3} a the matrix to calculate Frobenius norm of
          * @returns {Number} Frobenius norm
          */
-        mat3.frob = function(a) {
+        mat3.frob = function (a) {
           return Math.sqrt(
             Math.pow(a[0], 2) +
               Math.pow(a[1], 2) +
@@ -1901,7 +1901,7 @@
          * @param {mat3} b the second operand
          * @returns {mat3} out
          */
-        mat3.add = function(out, a, b) {
+        mat3.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -1922,7 +1922,7 @@
          * @param {mat3} b the second operand
          * @returns {mat3} out
          */
-        mat3.subtract = function(out, a, b) {
+        mat3.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -1949,7 +1949,7 @@
          * @param {Number} b amount to scale the matrix's elements by
          * @returns {mat3} out
          */
-        mat3.multiplyScalar = function(out, a, b) {
+        mat3.multiplyScalar = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -1971,7 +1971,7 @@
          * @param {Number} scale the amount to scale b's elements by before adding
          * @returns {mat3} out
          */
-        mat3.multiplyScalarAndAdd = function(out, a, b, scale) {
+        mat3.multiplyScalarAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -1991,7 +1991,7 @@
          * @param {mat3} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat3.exactEquals = function(a, b) {
+        mat3.exactEquals = function (a, b) {
           return (
             a[0] === b[0] &&
             a[1] === b[1] &&
@@ -2012,7 +2012,7 @@
          * @param {mat3} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat3.equals = function(a, b) {
+        mat3.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -2049,7 +2049,7 @@
         /***/
       },
       /* 5 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2086,7 +2086,7 @@
          *
          * @returns {mat4} a new 4x4 matrix
          */
-        mat4.create = function() {
+        mat4.create = function () {
           var out = new glMatrix.ARRAY_TYPE(16);
           out[0] = 1;
           out[1] = 0;
@@ -2113,7 +2113,7 @@
          * @param {mat4} a matrix to clone
          * @returns {mat4} a new 4x4 matrix
          */
-        mat4.clone = function(a) {
+        mat4.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(16);
           out[0] = a[0];
           out[1] = a[1];
@@ -2141,7 +2141,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.copy = function(out, a) {
+        mat4.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -2182,7 +2182,7 @@
          * @param {Number} m33 Component in column 3, row 3 position (index 15)
          * @returns {mat4} A new mat4
          */
-        mat4.fromValues = function(
+        mat4.fromValues = function (
           m00,
           m01,
           m02,
@@ -2242,7 +2242,7 @@
          * @param {Number} m33 Component in column 3, row 3 position (index 15)
          * @returns {mat4} out
          */
-        mat4.set = function(
+        mat4.set = function (
           out,
           m00,
           m01,
@@ -2286,7 +2286,7 @@
          * @param {mat4} out the receiving matrix
          * @returns {mat4} out
          */
-        mat4.identity = function(out) {
+        mat4.identity = function (out) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -2313,7 +2313,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.scalar.transpose = function(out, a) {
+        mat4.scalar.transpose = function (out, a) {
           // If we are transposing ourselves we can skip a few steps but have to cache some values
           if (out === a) {
             var a01 = a[1],
@@ -2364,7 +2364,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.SIMD.transpose = function(out, a) {
+        mat4.SIMD.transpose = function (out, a) {
           var a0, a1, a2, a3, tmp01, tmp23, out0, out1, out2, out3;
 
           a0 = SIMD.Float32x4.load(a, 0);
@@ -2405,7 +2405,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.scalar.invert = function(out, a) {
+        mat4.scalar.invert = function (out, a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -2469,7 +2469,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.SIMD.invert = function(out, a) {
+        mat4.SIMD.invert = function (out, a) {
           var row0,
             row1,
             row2,
@@ -2585,7 +2585,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.scalar.adjoint = function(out, a) {
+        mat4.scalar.adjoint = function (out, a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -2685,7 +2685,7 @@
          * @param {mat4} a the source matrix
          * @returns {mat4} out
          */
-        mat4.SIMD.adjoint = function(out, a) {
+        mat4.SIMD.adjoint = function (out, a) {
           var a0, a1, a2, a3;
           var row0, row1, row2, row3;
           var tmp1;
@@ -2781,7 +2781,7 @@
          * @param {mat4} a the source matrix
          * @returns {Number} determinant of a
          */
-        mat4.determinant = function(a) {
+        mat4.determinant = function (a) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -2823,7 +2823,7 @@
          * @param {mat4} b the second operand, must be a Float32Array
          * @returns {mat4} out
          */
-        mat4.SIMD.multiply = function(out, a, b) {
+        mat4.SIMD.multiply = function (out, a, b) {
           var a0 = SIMD.Float32x4.load(a, 0);
           var a1 = SIMD.Float32x4.load(a, 4);
           var a2 = SIMD.Float32x4.load(a, 8);
@@ -2892,7 +2892,7 @@
          * @param {mat4} b the second operand
          * @returns {mat4} out
          */
-        mat4.scalar.multiply = function(out, a, b) {
+        mat4.scalar.multiply = function (out, a, b) {
           var a00 = a[0],
             a01 = a[1],
             a02 = a[2],
@@ -2973,7 +2973,7 @@
          * @param {vec3} v vector to translate by
          * @returns {mat4} out
          */
-        mat4.scalar.translate = function(out, a, v) {
+        mat4.scalar.translate = function (out, a, v) {
           var x = v[0],
             y = v[1],
             z = v[2],
@@ -3039,7 +3039,7 @@
          * @param {vec3} v vector to translate by
          * @returns {mat4} out
          */
-        mat4.SIMD.translate = function(out, a, v) {
+        mat4.SIMD.translate = function (out, a, v) {
           var a0 = SIMD.Float32x4.load(a, 0),
             a1 = SIMD.Float32x4.load(a, 4),
             a2 = SIMD.Float32x4.load(a, 8),
@@ -3089,7 +3089,7 @@
          * @param {vec3} v the vec3 to scale the matrix by
          * @returns {mat4} out
          **/
-        mat4.scalar.scale = function(out, a, v) {
+        mat4.scalar.scale = function (out, a, v) {
           var x = v[0],
             y = v[1],
             z = v[2];
@@ -3121,7 +3121,7 @@
          * @param {vec3} v the vec3 to scale the matrix by
          * @returns {mat4} out
          **/
-        mat4.SIMD.scale = function(out, a, v) {
+        mat4.SIMD.scale = function (out, a, v) {
           var a0, a1, a2;
           var vec = SIMD.Float32x4(v[0], v[1], v[2], 0);
 
@@ -3172,7 +3172,7 @@
          * @param {vec3} axis the axis to rotate around
          * @returns {mat4} out
          */
-        mat4.rotate = function(out, a, rad, axis) {
+        mat4.rotate = function (out, a, rad, axis) {
           var x = axis[0],
             y = axis[1],
             z = axis[2],
@@ -3271,7 +3271,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.scalar.rotateX = function(out, a, rad) {
+        mat4.scalar.rotateX = function (out, a, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad),
             a10 = a[4],
@@ -3315,7 +3315,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.SIMD.rotateX = function(out, a, rad) {
+        mat4.SIMD.rotateX = function (out, a, rad) {
           var s = SIMD.Float32x4.splat(Math.sin(rad)),
             c = SIMD.Float32x4.splat(Math.cos(rad));
 
@@ -3365,7 +3365,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.scalar.rotateY = function(out, a, rad) {
+        mat4.scalar.rotateY = function (out, a, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad),
             a00 = a[0],
@@ -3409,7 +3409,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.SIMD.rotateY = function(out, a, rad) {
+        mat4.SIMD.rotateY = function (out, a, rad) {
           var s = SIMD.Float32x4.splat(Math.sin(rad)),
             c = SIMD.Float32x4.splat(Math.cos(rad));
 
@@ -3459,7 +3459,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.scalar.rotateZ = function(out, a, rad) {
+        mat4.scalar.rotateZ = function (out, a, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad),
             a00 = a[0],
@@ -3503,7 +3503,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.SIMD.rotateZ = function(out, a, rad) {
+        mat4.SIMD.rotateZ = function (out, a, rad) {
           var s = SIMD.Float32x4.splat(Math.sin(rad)),
             c = SIMD.Float32x4.splat(Math.cos(rad));
 
@@ -3556,7 +3556,7 @@
          * @param {vec3} v Translation vector
          * @returns {mat4} out
          */
-        mat4.fromTranslation = function(out, v) {
+        mat4.fromTranslation = function (out, v) {
           out[0] = 1;
           out[1] = 0;
           out[2] = 0;
@@ -3587,7 +3587,7 @@
          * @param {vec3} v Scaling vector
          * @returns {mat4} out
          */
-        mat4.fromScaling = function(out, v) {
+        mat4.fromScaling = function (out, v) {
           out[0] = v[0];
           out[1] = 0;
           out[2] = 0;
@@ -3619,7 +3619,7 @@
          * @param {vec3} axis the axis to rotate around
          * @returns {mat4} out
          */
-        mat4.fromRotation = function(out, rad, axis) {
+        mat4.fromRotation = function (out, rad, axis) {
           var x = axis[0],
             y = axis[1],
             z = axis[2],
@@ -3672,7 +3672,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.fromXRotation = function(out, rad) {
+        mat4.fromXRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
 
@@ -3707,7 +3707,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.fromYRotation = function(out, rad) {
+        mat4.fromYRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
 
@@ -3742,7 +3742,7 @@
          * @param {Number} rad the angle to rotate the matrix by
          * @returns {mat4} out
          */
-        mat4.fromZRotation = function(out, rad) {
+        mat4.fromZRotation = function (out, rad) {
           var s = Math.sin(rad),
             c = Math.cos(rad);
 
@@ -3781,7 +3781,7 @@
          * @param {vec3} v Translation vector
          * @returns {mat4} out
          */
-        mat4.fromRotationTranslation = function(out, q, v) {
+        mat4.fromRotationTranslation = function (out, q, v) {
           // Quaternion math
           var x = q[0],
             y = q[1],
@@ -3829,7 +3829,7 @@
          * @param  {mat4} mat Matrix to be decomposed (input)
          * @return {vec3} out
          */
-        mat4.getTranslation = function(out, mat) {
+        mat4.getTranslation = function (out, mat) {
           out[0] = mat[12];
           out[1] = mat[13];
           out[2] = mat[14];
@@ -3846,7 +3846,7 @@
          * @param {mat4} mat Matrix to be decomposed (input)
          * @return {quat} out
          */
-        mat4.getRotation = function(out, mat) {
+        mat4.getRotation = function (out, mat) {
           // Algorithm taken from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
           var trace = mat[0] + mat[5] + mat[10];
           var S = 0;
@@ -3897,7 +3897,7 @@
          * @param {vec3} s Scaling vector
          * @returns {mat4} out
          */
-        mat4.fromRotationTranslationScale = function(out, q, v, s) {
+        mat4.fromRotationTranslationScale = function (out, q, v, s) {
           // Quaternion math
           var x = q[0],
             y = q[1],
@@ -3959,7 +3959,7 @@
          * @param {vec3} o The origin vector around which to scale and rotate
          * @returns {mat4} out
          */
-        mat4.fromRotationTranslationScaleOrigin = function(out, q, v, s, o) {
+        mat4.fromRotationTranslationScaleOrigin = function (out, q, v, s, o) {
           // Quaternion math
           var x = q[0],
             y = q[1],
@@ -4012,7 +4012,7 @@
          *
          * @returns {mat4} out
          */
-        mat4.fromQuat = function(out, q) {
+        mat4.fromQuat = function (out, q) {
           var x = q[0],
             y = q[1],
             z = q[2],
@@ -4065,7 +4065,7 @@
          * @param {Number} far Far bound of the frustum
          * @returns {mat4} out
          */
-        mat4.frustum = function(out, left, right, bottom, top, near, far) {
+        mat4.frustum = function (out, left, right, bottom, top, near, far) {
           var rl = 1 / (right - left),
             tb = 1 / (top - bottom),
             nf = 1 / (near - far);
@@ -4098,7 +4098,7 @@
          * @param {number} far Far bound of the frustum
          * @returns {mat4} out
          */
-        mat4.perspective = function(out, fovy, aspect, near, far) {
+        mat4.perspective = function (out, fovy, aspect, near, far) {
           var f = 1.0 / Math.tan(fovy / 2),
             nf = 1 / (near - far);
           out[0] = f / aspect;
@@ -4131,7 +4131,7 @@
          * @param {number} far Far bound of the frustum
          * @returns {mat4} out
          */
-        mat4.perspectiveFromFieldOfView = function(out, fov, near, far) {
+        mat4.perspectiveFromFieldOfView = function (out, fov, near, far) {
           var upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0),
             downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0),
             leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0),
@@ -4170,7 +4170,7 @@
          * @param {number} far Far bound of the frustum
          * @returns {mat4} out
          */
-        mat4.ortho = function(out, left, right, bottom, top, near, far) {
+        mat4.ortho = function (out, left, right, bottom, top, near, far) {
           var lr = 1 / (left - right),
             bt = 1 / (bottom - top),
             nf = 1 / (near - far);
@@ -4202,7 +4202,7 @@
          * @param {vec3} up vec3 pointing up
          * @returns {mat4} out
          */
-        mat4.lookAt = function(out, eye, center, up) {
+        mat4.lookAt = function (out, eye, center, up) {
           var x0,
             x1,
             x2,
@@ -4297,7 +4297,7 @@
          * @param {mat4} a matrix to represent as a string
          * @returns {String} string representation of the matrix
          */
-        mat4.str = function(a) {
+        mat4.str = function (a) {
           return (
             'mat4(' +
             a[0] +
@@ -4341,7 +4341,7 @@
          * @param {mat4} a the matrix to calculate Frobenius norm of
          * @returns {Number} Frobenius norm
          */
-        mat4.frob = function(a) {
+        mat4.frob = function (a) {
           return Math.sqrt(
             Math.pow(a[0], 2) +
               Math.pow(a[1], 2) +
@@ -4370,7 +4370,7 @@
          * @param {mat4} b the second operand
          * @returns {mat4} out
          */
-        mat4.add = function(out, a, b) {
+        mat4.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -4398,7 +4398,7 @@
          * @param {mat4} b the second operand
          * @returns {mat4} out
          */
-        mat4.subtract = function(out, a, b) {
+        mat4.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -4432,7 +4432,7 @@
          * @param {Number} b amount to scale the matrix's elements by
          * @returns {mat4} out
          */
-        mat4.multiplyScalar = function(out, a, b) {
+        mat4.multiplyScalar = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -4461,7 +4461,7 @@
          * @param {Number} scale the amount to scale b's elements by before adding
          * @returns {mat4} out
          */
-        mat4.multiplyScalarAndAdd = function(out, a, b, scale) {
+        mat4.multiplyScalarAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -4488,7 +4488,7 @@
          * @param {mat4} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat4.exactEquals = function(a, b) {
+        mat4.exactEquals = function (a, b) {
           return (
             a[0] === b[0] &&
             a[1] === b[1] &&
@@ -4516,7 +4516,7 @@
          * @param {mat4} b The second matrix.
          * @returns {Boolean} True if the matrices are equal, false otherwise.
          */
-        mat4.equals = function(a, b) {
+        mat4.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -4576,7 +4576,7 @@
         /***/
       },
       /* 6 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -4613,7 +4613,7 @@
          *
          * @returns {quat} a new quaternion
          */
-        quat.create = function() {
+        quat.create = function () {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = 0;
           out[1] = 0;
@@ -4633,12 +4633,12 @@
          * @param {vec3} b the destination vector
          * @returns {quat} out
          */
-        quat.rotationTo = (function() {
+        quat.rotationTo = (function () {
           var tmpvec3 = vec3.create();
           var xUnitVec3 = vec3.fromValues(1, 0, 0);
           var yUnitVec3 = vec3.fromValues(0, 1, 0);
 
-          return function(out, a, b) {
+          return function (out, a, b) {
             var dot = vec3.dot(a, b);
             if (dot < -0.999999) {
               vec3.cross(tmpvec3, xUnitVec3, a);
@@ -4673,10 +4673,10 @@
          * @param {vec3} up    the vector representing the local "up" direction
          * @returns {quat} out
          */
-        quat.setAxes = (function() {
+        quat.setAxes = (function () {
           var matr = mat3.create();
 
-          return function(out, view, right, up) {
+          return function (out, view, right, up) {
             matr[0] = right[0];
             matr[3] = right[1];
             matr[6] = right[2];
@@ -4743,7 +4743,7 @@
          * @param {quat} out the receiving quaternion
          * @returns {quat} out
          */
-        quat.identity = function(out) {
+        quat.identity = function (out) {
           out[0] = 0;
           out[1] = 0;
           out[2] = 0;
@@ -4760,7 +4760,7 @@
          * @param {Number} rad the angle in radians
          * @returns {quat} out
          **/
-        quat.setAxisAngle = function(out, axis, rad) {
+        quat.setAxisAngle = function (out, axis, rad) {
           rad = rad * 0.5;
           var s = Math.sin(rad);
           out[0] = s * axis[0];
@@ -4783,7 +4783,7 @@
          * @param  {quat} q     Quaternion to be decomposed
          * @return {Number}     Angle, in radians, of the rotation
          */
-        quat.getAxisAngle = function(out_axis, q) {
+        quat.getAxisAngle = function (out_axis, q) {
           var rad = Math.acos(q[3]) * 2.0;
           var s = Math.sin(rad / 2.0);
           if (s != 0.0) {
@@ -4818,7 +4818,7 @@
          * @param {quat} b the second operand
          * @returns {quat} out
          */
-        quat.multiply = function(out, a, b) {
+        quat.multiply = function (out, a, b) {
           var ax = a[0],
             ay = a[1],
             az = a[2],
@@ -4860,7 +4860,7 @@
          * @param {number} rad angle (in radians) to rotate
          * @returns {quat} out
          */
-        quat.rotateX = function(out, a, rad) {
+        quat.rotateX = function (out, a, rad) {
           rad *= 0.5;
 
           var ax = a[0],
@@ -4885,7 +4885,7 @@
          * @param {number} rad angle (in radians) to rotate
          * @returns {quat} out
          */
-        quat.rotateY = function(out, a, rad) {
+        quat.rotateY = function (out, a, rad) {
           rad *= 0.5;
 
           var ax = a[0],
@@ -4910,7 +4910,7 @@
          * @param {number} rad angle (in radians) to rotate
          * @returns {quat} out
          */
-        quat.rotateZ = function(out, a, rad) {
+        quat.rotateZ = function (out, a, rad) {
           rad *= 0.5;
 
           var ax = a[0],
@@ -4936,7 +4936,7 @@
          * @param {quat} a quat to calculate W component of
          * @returns {quat} out
          */
-        quat.calculateW = function(out, a) {
+        quat.calculateW = function (out, a) {
           var x = a[0],
             y = a[1],
             z = a[2];
@@ -4979,7 +4979,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {quat} out
          */
-        quat.slerp = function(out, a, b, t) {
+        quat.slerp = function (out, a, b, t) {
           // benchmarks:
           //    http://jsperf.com/quaternion-slerp-implementations
 
@@ -5037,11 +5037,11 @@
          * @param {Number} t interpolation amount
          * @returns {quat} out
          */
-        quat.sqlerp = (function() {
+        quat.sqlerp = (function () {
           var temp1 = quat.create();
           var temp2 = quat.create();
 
-          return function(out, a, b, c, d, t) {
+          return function (out, a, b, c, d, t) {
             quat.slerp(temp1, a, d, t);
             quat.slerp(temp2, b, c, t);
             quat.slerp(out, temp1, temp2, 2 * t * (1 - t));
@@ -5057,7 +5057,7 @@
          * @param {quat} a quat to calculate inverse of
          * @returns {quat} out
          */
-        quat.invert = function(out, a) {
+        quat.invert = function (out, a) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -5082,7 +5082,7 @@
          * @param {quat} a quat to calculate conjugate of
          * @returns {quat} out
          */
-        quat.conjugate = function(out, a) {
+        quat.conjugate = function (out, a) {
           out[0] = -a[0];
           out[1] = -a[1];
           out[2] = -a[2];
@@ -5141,7 +5141,7 @@
          * @returns {quat} out
          * @function
          */
-        quat.fromMat3 = function(out, m) {
+        quat.fromMat3 = function (out, m) {
           // Algorithm in Ken Shoemake's article in 1987 SIGGRAPH course notes
           // article "Quaternion Calculus and Fast Animation".
           var fTrace = m[0] + m[4] + m[8];
@@ -5180,7 +5180,7 @@
          * @param {quat} a vector to represent as a string
          * @returns {String} string representation of the vector
          */
-        quat.str = function(a) {
+        quat.str = function (a) {
           return 'quat(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
         };
 
@@ -5207,7 +5207,7 @@
         /***/
       },
       /* 7 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -5241,7 +5241,7 @@
          *
          * @returns {vec3} a new 3D vector
          */
-        vec3.create = function() {
+        vec3.create = function () {
           var out = new glMatrix.ARRAY_TYPE(3);
           out[0] = 0;
           out[1] = 0;
@@ -5255,7 +5255,7 @@
          * @param {vec3} a vector to clone
          * @returns {vec3} a new 3D vector
          */
-        vec3.clone = function(a) {
+        vec3.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(3);
           out[0] = a[0];
           out[1] = a[1];
@@ -5271,7 +5271,7 @@
          * @param {Number} z Z component
          * @returns {vec3} a new 3D vector
          */
-        vec3.fromValues = function(x, y, z) {
+        vec3.fromValues = function (x, y, z) {
           var out = new glMatrix.ARRAY_TYPE(3);
           out[0] = x;
           out[1] = y;
@@ -5286,7 +5286,7 @@
          * @param {vec3} a the source vector
          * @returns {vec3} out
          */
-        vec3.copy = function(out, a) {
+        vec3.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -5302,7 +5302,7 @@
          * @param {Number} z Z component
          * @returns {vec3} out
          */
-        vec3.set = function(out, x, y, z) {
+        vec3.set = function (out, x, y, z) {
           out[0] = x;
           out[1] = y;
           out[2] = z;
@@ -5317,7 +5317,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.add = function(out, a, b) {
+        vec3.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -5332,7 +5332,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.subtract = function(out, a, b) {
+        vec3.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -5353,7 +5353,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.multiply = function(out, a, b) {
+        vec3.multiply = function (out, a, b) {
           out[0] = a[0] * b[0];
           out[1] = a[1] * b[1];
           out[2] = a[2] * b[2];
@@ -5374,7 +5374,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.divide = function(out, a, b) {
+        vec3.divide = function (out, a, b) {
           out[0] = a[0] / b[0];
           out[1] = a[1] / b[1];
           out[2] = a[2] / b[2];
@@ -5394,7 +5394,7 @@
          * @param {vec3} a vector to ceil
          * @returns {vec3} out
          */
-        vec3.ceil = function(out, a) {
+        vec3.ceil = function (out, a) {
           out[0] = Math.ceil(a[0]);
           out[1] = Math.ceil(a[1]);
           out[2] = Math.ceil(a[2]);
@@ -5408,7 +5408,7 @@
          * @param {vec3} a vector to floor
          * @returns {vec3} out
          */
-        vec3.floor = function(out, a) {
+        vec3.floor = function (out, a) {
           out[0] = Math.floor(a[0]);
           out[1] = Math.floor(a[1]);
           out[2] = Math.floor(a[2]);
@@ -5423,7 +5423,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.min = function(out, a, b) {
+        vec3.min = function (out, a, b) {
           out[0] = Math.min(a[0], b[0]);
           out[1] = Math.min(a[1], b[1]);
           out[2] = Math.min(a[2], b[2]);
@@ -5438,7 +5438,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.max = function(out, a, b) {
+        vec3.max = function (out, a, b) {
           out[0] = Math.max(a[0], b[0]);
           out[1] = Math.max(a[1], b[1]);
           out[2] = Math.max(a[2], b[2]);
@@ -5452,7 +5452,7 @@
          * @param {vec3} a vector to round
          * @returns {vec3} out
          */
-        vec3.round = function(out, a) {
+        vec3.round = function (out, a) {
           out[0] = Math.round(a[0]);
           out[1] = Math.round(a[1]);
           out[2] = Math.round(a[2]);
@@ -5467,7 +5467,7 @@
          * @param {Number} b amount to scale the vector by
          * @returns {vec3} out
          */
-        vec3.scale = function(out, a, b) {
+        vec3.scale = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -5483,7 +5483,7 @@
          * @param {Number} scale the amount to scale b by before adding
          * @returns {vec3} out
          */
-        vec3.scaleAndAdd = function(out, a, b, scale) {
+        vec3.scaleAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -5497,7 +5497,7 @@
          * @param {vec3} b the second operand
          * @returns {Number} distance between a and b
          */
-        vec3.distance = function(a, b) {
+        vec3.distance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1],
             z = b[2] - a[2];
@@ -5517,7 +5517,7 @@
          * @param {vec3} b the second operand
          * @returns {Number} squared distance between a and b
          */
-        vec3.squaredDistance = function(a, b) {
+        vec3.squaredDistance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1],
             z = b[2] - a[2];
@@ -5536,7 +5536,7 @@
          * @param {vec3} a vector to calculate length of
          * @returns {Number} length of a
          */
-        vec3.length = function(a) {
+        vec3.length = function (a) {
           var x = a[0],
             y = a[1],
             z = a[2];
@@ -5555,7 +5555,7 @@
          * @param {vec3} a vector to calculate squared length of
          * @returns {Number} squared length of a
          */
-        vec3.squaredLength = function(a) {
+        vec3.squaredLength = function (a) {
           var x = a[0],
             y = a[1],
             z = a[2];
@@ -5575,7 +5575,7 @@
          * @param {vec3} a vector to negate
          * @returns {vec3} out
          */
-        vec3.negate = function(out, a) {
+        vec3.negate = function (out, a) {
           out[0] = -a[0];
           out[1] = -a[1];
           out[2] = -a[2];
@@ -5589,7 +5589,7 @@
          * @param {vec3} a vector to invert
          * @returns {vec3} out
          */
-        vec3.inverse = function(out, a) {
+        vec3.inverse = function (out, a) {
           out[0] = 1.0 / a[0];
           out[1] = 1.0 / a[1];
           out[2] = 1.0 / a[2];
@@ -5603,7 +5603,7 @@
          * @param {vec3} a vector to normalize
          * @returns {vec3} out
          */
-        vec3.normalize = function(out, a) {
+        vec3.normalize = function (out, a) {
           var x = a[0],
             y = a[1],
             z = a[2];
@@ -5625,7 +5625,7 @@
          * @param {vec3} b the second operand
          * @returns {Number} dot product of a and b
          */
-        vec3.dot = function(a, b) {
+        vec3.dot = function (a, b) {
           return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
         };
 
@@ -5637,7 +5637,7 @@
          * @param {vec3} b the second operand
          * @returns {vec3} out
          */
-        vec3.cross = function(out, a, b) {
+        vec3.cross = function (out, a, b) {
           var ax = a[0],
             ay = a[1],
             az = a[2],
@@ -5660,7 +5660,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {vec3} out
          */
-        vec3.lerp = function(out, a, b, t) {
+        vec3.lerp = function (out, a, b, t) {
           var ax = a[0],
             ay = a[1],
             az = a[2];
@@ -5681,7 +5681,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {vec3} out
          */
-        vec3.hermite = function(out, a, b, c, d, t) {
+        vec3.hermite = function (out, a, b, c, d, t) {
           var factorTimes2 = t * t,
             factor1 = factorTimes2 * (2 * t - 3) + 1,
             factor2 = factorTimes2 * (t - 2) + t,
@@ -5706,7 +5706,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {vec3} out
          */
-        vec3.bezier = function(out, a, b, c, d, t) {
+        vec3.bezier = function (out, a, b, c, d, t) {
           var inverseFactor = 1 - t,
             inverseFactorTimesTwo = inverseFactor * inverseFactor,
             factorTimes2 = t * t,
@@ -5729,7 +5729,7 @@
          * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
          * @returns {vec3} out
          */
-        vec3.random = function(out, scale) {
+        vec3.random = function (out, scale) {
           scale = scale || 1.0;
 
           var r = glMatrix.RANDOM() * 2.0 * Math.PI;
@@ -5751,7 +5751,7 @@
          * @param {mat4} m matrix to transform with
          * @returns {vec3} out
          */
-        vec3.transformMat4 = function(out, a, m) {
+        vec3.transformMat4 = function (out, a, m) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -5771,7 +5771,7 @@
          * @param {mat4} m the 3x3 matrix to transform with
          * @returns {vec3} out
          */
-        vec3.transformMat3 = function(out, a, m) {
+        vec3.transformMat3 = function (out, a, m) {
           var x = a[0],
             y = a[1],
             z = a[2];
@@ -5789,7 +5789,7 @@
          * @param {quat} q quaternion to transform with
          * @returns {vec3} out
          */
-        vec3.transformQuat = function(out, a, q) {
+        vec3.transformQuat = function (out, a, q) {
           // benchmarks: http://jsperf.com/quaternion-transform-vec3-implementations
 
           var x = a[0],
@@ -5820,7 +5820,7 @@
          * @param {Number} c The angle of rotation
          * @returns {vec3} out
          */
-        vec3.rotateX = function(out, a, b, c) {
+        vec3.rotateX = function (out, a, b, c) {
           var p = [],
             r = [];
           //Translate point to the origin
@@ -5849,7 +5849,7 @@
          * @param {Number} c The angle of rotation
          * @returns {vec3} out
          */
-        vec3.rotateY = function(out, a, b, c) {
+        vec3.rotateY = function (out, a, b, c) {
           var p = [],
             r = [];
           //Translate point to the origin
@@ -5878,7 +5878,7 @@
          * @param {Number} c The angle of rotation
          * @returns {vec3} out
          */
-        vec3.rotateZ = function(out, a, b, c) {
+        vec3.rotateZ = function (out, a, b, c) {
           var p = [],
             r = [];
           //Translate point to the origin
@@ -5911,10 +5911,10 @@
          * @returns {Array} a
          * @function
          */
-        vec3.forEach = (function() {
+        vec3.forEach = (function () {
           var vec = vec3.create();
 
-          return function(a, stride, offset, count, fn, arg) {
+          return function (a, stride, offset, count, fn, arg) {
             var i, l;
             if (!stride) {
               stride = 3;
@@ -5950,7 +5950,7 @@
          * @param {vec3} b The second operand
          * @returns {Number} The angle in radians
          */
-        vec3.angle = function(a, b) {
+        vec3.angle = function (a, b) {
           var tempA = vec3.fromValues(a[0], a[1], a[2]);
           var tempB = vec3.fromValues(b[0], b[1], b[2]);
 
@@ -5972,7 +5972,7 @@
          * @param {vec3} a vector to represent as a string
          * @returns {String} string representation of the vector
          */
-        vec3.str = function(a) {
+        vec3.str = function (a) {
           return 'vec3(' + a[0] + ', ' + a[1] + ', ' + a[2] + ')';
         };
 
@@ -5983,7 +5983,7 @@
          * @param {vec3} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec3.exactEquals = function(a, b) {
+        vec3.exactEquals = function (a, b) {
           return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
         };
 
@@ -5994,7 +5994,7 @@
          * @param {vec3} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec3.equals = function(a, b) {
+        vec3.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2];
@@ -6013,7 +6013,7 @@
         /***/
       },
       /* 8 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6047,7 +6047,7 @@
          *
          * @returns {vec4} a new 4D vector
          */
-        vec4.create = function() {
+        vec4.create = function () {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = 0;
           out[1] = 0;
@@ -6062,7 +6062,7 @@
          * @param {vec4} a vector to clone
          * @returns {vec4} a new 4D vector
          */
-        vec4.clone = function(a) {
+        vec4.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = a[0];
           out[1] = a[1];
@@ -6080,7 +6080,7 @@
          * @param {Number} w W component
          * @returns {vec4} a new 4D vector
          */
-        vec4.fromValues = function(x, y, z, w) {
+        vec4.fromValues = function (x, y, z, w) {
           var out = new glMatrix.ARRAY_TYPE(4);
           out[0] = x;
           out[1] = y;
@@ -6096,7 +6096,7 @@
          * @param {vec4} a the source vector
          * @returns {vec4} out
          */
-        vec4.copy = function(out, a) {
+        vec4.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           out[2] = a[2];
@@ -6114,7 +6114,7 @@
          * @param {Number} w W component
          * @returns {vec4} out
          */
-        vec4.set = function(out, x, y, z, w) {
+        vec4.set = function (out, x, y, z, w) {
           out[0] = x;
           out[1] = y;
           out[2] = z;
@@ -6130,7 +6130,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.add = function(out, a, b) {
+        vec4.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           out[2] = a[2] + b[2];
@@ -6146,7 +6146,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.subtract = function(out, a, b) {
+        vec4.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           out[2] = a[2] - b[2];
@@ -6168,7 +6168,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.multiply = function(out, a, b) {
+        vec4.multiply = function (out, a, b) {
           out[0] = a[0] * b[0];
           out[1] = a[1] * b[1];
           out[2] = a[2] * b[2];
@@ -6190,7 +6190,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.divide = function(out, a, b) {
+        vec4.divide = function (out, a, b) {
           out[0] = a[0] / b[0];
           out[1] = a[1] / b[1];
           out[2] = a[2] / b[2];
@@ -6211,7 +6211,7 @@
          * @param {vec4} a vector to ceil
          * @returns {vec4} out
          */
-        vec4.ceil = function(out, a) {
+        vec4.ceil = function (out, a) {
           out[0] = Math.ceil(a[0]);
           out[1] = Math.ceil(a[1]);
           out[2] = Math.ceil(a[2]);
@@ -6226,7 +6226,7 @@
          * @param {vec4} a vector to floor
          * @returns {vec4} out
          */
-        vec4.floor = function(out, a) {
+        vec4.floor = function (out, a) {
           out[0] = Math.floor(a[0]);
           out[1] = Math.floor(a[1]);
           out[2] = Math.floor(a[2]);
@@ -6242,7 +6242,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.min = function(out, a, b) {
+        vec4.min = function (out, a, b) {
           out[0] = Math.min(a[0], b[0]);
           out[1] = Math.min(a[1], b[1]);
           out[2] = Math.min(a[2], b[2]);
@@ -6258,7 +6258,7 @@
          * @param {vec4} b the second operand
          * @returns {vec4} out
          */
-        vec4.max = function(out, a, b) {
+        vec4.max = function (out, a, b) {
           out[0] = Math.max(a[0], b[0]);
           out[1] = Math.max(a[1], b[1]);
           out[2] = Math.max(a[2], b[2]);
@@ -6273,7 +6273,7 @@
          * @param {vec4} a vector to round
          * @returns {vec4} out
          */
-        vec4.round = function(out, a) {
+        vec4.round = function (out, a) {
           out[0] = Math.round(a[0]);
           out[1] = Math.round(a[1]);
           out[2] = Math.round(a[2]);
@@ -6289,7 +6289,7 @@
          * @param {Number} b amount to scale the vector by
          * @returns {vec4} out
          */
-        vec4.scale = function(out, a, b) {
+        vec4.scale = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           out[2] = a[2] * b;
@@ -6306,7 +6306,7 @@
          * @param {Number} scale the amount to scale b by before adding
          * @returns {vec4} out
          */
-        vec4.scaleAndAdd = function(out, a, b, scale) {
+        vec4.scaleAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           out[2] = a[2] + b[2] * scale;
@@ -6321,7 +6321,7 @@
          * @param {vec4} b the second operand
          * @returns {Number} distance between a and b
          */
-        vec4.distance = function(a, b) {
+        vec4.distance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1],
             z = b[2] - a[2],
@@ -6342,7 +6342,7 @@
          * @param {vec4} b the second operand
          * @returns {Number} squared distance between a and b
          */
-        vec4.squaredDistance = function(a, b) {
+        vec4.squaredDistance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1],
             z = b[2] - a[2],
@@ -6362,7 +6362,7 @@
          * @param {vec4} a vector to calculate length of
          * @returns {Number} length of a
          */
-        vec4.length = function(a) {
+        vec4.length = function (a) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -6382,7 +6382,7 @@
          * @param {vec4} a vector to calculate squared length of
          * @returns {Number} squared length of a
          */
-        vec4.squaredLength = function(a) {
+        vec4.squaredLength = function (a) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -6403,7 +6403,7 @@
          * @param {vec4} a vector to negate
          * @returns {vec4} out
          */
-        vec4.negate = function(out, a) {
+        vec4.negate = function (out, a) {
           out[0] = -a[0];
           out[1] = -a[1];
           out[2] = -a[2];
@@ -6418,7 +6418,7 @@
          * @param {vec4} a vector to invert
          * @returns {vec4} out
          */
-        vec4.inverse = function(out, a) {
+        vec4.inverse = function (out, a) {
           out[0] = 1.0 / a[0];
           out[1] = 1.0 / a[1];
           out[2] = 1.0 / a[2];
@@ -6433,7 +6433,7 @@
          * @param {vec4} a vector to normalize
          * @returns {vec4} out
          */
-        vec4.normalize = function(out, a) {
+        vec4.normalize = function (out, a) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -6456,7 +6456,7 @@
          * @param {vec4} b the second operand
          * @returns {Number} dot product of a and b
          */
-        vec4.dot = function(a, b) {
+        vec4.dot = function (a, b) {
           return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
         };
 
@@ -6469,7 +6469,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {vec4} out
          */
-        vec4.lerp = function(out, a, b, t) {
+        vec4.lerp = function (out, a, b, t) {
           var ax = a[0],
             ay = a[1],
             az = a[2],
@@ -6488,7 +6488,7 @@
          * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
          * @returns {vec4} out
          */
-        vec4.random = function(out, scale) {
+        vec4.random = function (out, scale) {
           scale = scale || 1.0;
 
           //TODO: This is a pretty awful way of doing this. Find something better.
@@ -6509,7 +6509,7 @@
          * @param {mat4} m matrix to transform with
          * @returns {vec4} out
          */
-        vec4.transformMat4 = function(out, a, m) {
+        vec4.transformMat4 = function (out, a, m) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -6529,7 +6529,7 @@
          * @param {quat} q quaternion to transform with
          * @returns {vec4} out
          */
-        vec4.transformQuat = function(out, a, q) {
+        vec4.transformQuat = function (out, a, q) {
           var x = a[0],
             y = a[1],
             z = a[2],
@@ -6563,10 +6563,10 @@
          * @returns {Array} a
          * @function
          */
-        vec4.forEach = (function() {
+        vec4.forEach = (function () {
           var vec = vec4.create();
 
-          return function(a, stride, offset, count, fn, arg) {
+          return function (a, stride, offset, count, fn, arg) {
             var i, l;
             if (!stride) {
               stride = 4;
@@ -6604,7 +6604,7 @@
          * @param {vec4} a vector to represent as a string
          * @returns {String} string representation of the vector
          */
-        vec4.str = function(a) {
+        vec4.str = function (a) {
           return 'vec4(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ')';
         };
 
@@ -6615,7 +6615,7 @@
          * @param {vec4} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec4.exactEquals = function(a, b) {
+        vec4.exactEquals = function (a, b) {
           return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
         };
 
@@ -6626,7 +6626,7 @@
          * @param {vec4} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec4.equals = function(a, b) {
+        vec4.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1],
             a2 = a[2],
@@ -6648,7 +6648,7 @@
         /***/
       },
       /* 9 */
-      /***/ function(module, exports, __webpack_require__) {
+      /***/ function (module, exports, __webpack_require__) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6682,7 +6682,7 @@
          *
          * @returns {vec2} a new 2D vector
          */
-        vec2.create = function() {
+        vec2.create = function () {
           var out = new glMatrix.ARRAY_TYPE(2);
           out[0] = 0;
           out[1] = 0;
@@ -6695,7 +6695,7 @@
          * @param {vec2} a vector to clone
          * @returns {vec2} a new 2D vector
          */
-        vec2.clone = function(a) {
+        vec2.clone = function (a) {
           var out = new glMatrix.ARRAY_TYPE(2);
           out[0] = a[0];
           out[1] = a[1];
@@ -6709,7 +6709,7 @@
          * @param {Number} y Y component
          * @returns {vec2} a new 2D vector
          */
-        vec2.fromValues = function(x, y) {
+        vec2.fromValues = function (x, y) {
           var out = new glMatrix.ARRAY_TYPE(2);
           out[0] = x;
           out[1] = y;
@@ -6723,7 +6723,7 @@
          * @param {vec2} a the source vector
          * @returns {vec2} out
          */
-        vec2.copy = function(out, a) {
+        vec2.copy = function (out, a) {
           out[0] = a[0];
           out[1] = a[1];
           return out;
@@ -6737,7 +6737,7 @@
          * @param {Number} y Y component
          * @returns {vec2} out
          */
-        vec2.set = function(out, x, y) {
+        vec2.set = function (out, x, y) {
           out[0] = x;
           out[1] = y;
           return out;
@@ -6751,7 +6751,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.add = function(out, a, b) {
+        vec2.add = function (out, a, b) {
           out[0] = a[0] + b[0];
           out[1] = a[1] + b[1];
           return out;
@@ -6765,7 +6765,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.subtract = function(out, a, b) {
+        vec2.subtract = function (out, a, b) {
           out[0] = a[0] - b[0];
           out[1] = a[1] - b[1];
           return out;
@@ -6785,7 +6785,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.multiply = function(out, a, b) {
+        vec2.multiply = function (out, a, b) {
           out[0] = a[0] * b[0];
           out[1] = a[1] * b[1];
           return out;
@@ -6805,7 +6805,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.divide = function(out, a, b) {
+        vec2.divide = function (out, a, b) {
           out[0] = a[0] / b[0];
           out[1] = a[1] / b[1];
           return out;
@@ -6824,7 +6824,7 @@
          * @param {vec2} a vector to ceil
          * @returns {vec2} out
          */
-        vec2.ceil = function(out, a) {
+        vec2.ceil = function (out, a) {
           out[0] = Math.ceil(a[0]);
           out[1] = Math.ceil(a[1]);
           return out;
@@ -6837,7 +6837,7 @@
          * @param {vec2} a vector to floor
          * @returns {vec2} out
          */
-        vec2.floor = function(out, a) {
+        vec2.floor = function (out, a) {
           out[0] = Math.floor(a[0]);
           out[1] = Math.floor(a[1]);
           return out;
@@ -6851,7 +6851,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.min = function(out, a, b) {
+        vec2.min = function (out, a, b) {
           out[0] = Math.min(a[0], b[0]);
           out[1] = Math.min(a[1], b[1]);
           return out;
@@ -6865,7 +6865,7 @@
          * @param {vec2} b the second operand
          * @returns {vec2} out
          */
-        vec2.max = function(out, a, b) {
+        vec2.max = function (out, a, b) {
           out[0] = Math.max(a[0], b[0]);
           out[1] = Math.max(a[1], b[1]);
           return out;
@@ -6878,7 +6878,7 @@
          * @param {vec2} a vector to round
          * @returns {vec2} out
          */
-        vec2.round = function(out, a) {
+        vec2.round = function (out, a) {
           out[0] = Math.round(a[0]);
           out[1] = Math.round(a[1]);
           return out;
@@ -6892,7 +6892,7 @@
          * @param {Number} b amount to scale the vector by
          * @returns {vec2} out
          */
-        vec2.scale = function(out, a, b) {
+        vec2.scale = function (out, a, b) {
           out[0] = a[0] * b;
           out[1] = a[1] * b;
           return out;
@@ -6907,7 +6907,7 @@
          * @param {Number} scale the amount to scale b by before adding
          * @returns {vec2} out
          */
-        vec2.scaleAndAdd = function(out, a, b, scale) {
+        vec2.scaleAndAdd = function (out, a, b, scale) {
           out[0] = a[0] + b[0] * scale;
           out[1] = a[1] + b[1] * scale;
           return out;
@@ -6920,7 +6920,7 @@
          * @param {vec2} b the second operand
          * @returns {Number} distance between a and b
          */
-        vec2.distance = function(a, b) {
+        vec2.distance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1];
           return Math.sqrt(x * x + y * y);
@@ -6939,7 +6939,7 @@
          * @param {vec2} b the second operand
          * @returns {Number} squared distance between a and b
          */
-        vec2.squaredDistance = function(a, b) {
+        vec2.squaredDistance = function (a, b) {
           var x = b[0] - a[0],
             y = b[1] - a[1];
           return x * x + y * y;
@@ -6957,7 +6957,7 @@
          * @param {vec2} a vector to calculate length of
          * @returns {Number} length of a
          */
-        vec2.length = function(a) {
+        vec2.length = function (a) {
           var x = a[0],
             y = a[1];
           return Math.sqrt(x * x + y * y);
@@ -6975,7 +6975,7 @@
          * @param {vec2} a vector to calculate squared length of
          * @returns {Number} squared length of a
          */
-        vec2.squaredLength = function(a) {
+        vec2.squaredLength = function (a) {
           var x = a[0],
             y = a[1];
           return x * x + y * y;
@@ -6994,7 +6994,7 @@
          * @param {vec2} a vector to negate
          * @returns {vec2} out
          */
-        vec2.negate = function(out, a) {
+        vec2.negate = function (out, a) {
           out[0] = -a[0];
           out[1] = -a[1];
           return out;
@@ -7007,7 +7007,7 @@
          * @param {vec2} a vector to invert
          * @returns {vec2} out
          */
-        vec2.inverse = function(out, a) {
+        vec2.inverse = function (out, a) {
           out[0] = 1.0 / a[0];
           out[1] = 1.0 / a[1];
           return out;
@@ -7020,7 +7020,7 @@
          * @param {vec2} a vector to normalize
          * @returns {vec2} out
          */
-        vec2.normalize = function(out, a) {
+        vec2.normalize = function (out, a) {
           var x = a[0],
             y = a[1];
           var len = x * x + y * y;
@@ -7040,7 +7040,7 @@
          * @param {vec2} b the second operand
          * @returns {Number} dot product of a and b
          */
-        vec2.dot = function(a, b) {
+        vec2.dot = function (a, b) {
           return a[0] * b[0] + a[1] * b[1];
         };
 
@@ -7053,7 +7053,7 @@
          * @param {vec2} b the second operand
          * @returns {vec3} out
          */
-        vec2.cross = function(out, a, b) {
+        vec2.cross = function (out, a, b) {
           var z = a[0] * b[1] - a[1] * b[0];
           out[0] = out[1] = 0;
           out[2] = z;
@@ -7069,7 +7069,7 @@
          * @param {Number} t interpolation amount between the two inputs
          * @returns {vec2} out
          */
-        vec2.lerp = function(out, a, b, t) {
+        vec2.lerp = function (out, a, b, t) {
           var ax = a[0],
             ay = a[1];
           out[0] = ax + t * (b[0] - ax);
@@ -7084,7 +7084,7 @@
          * @param {Number} [scale] Length of the resulting vector. If ommitted, a unit vector will be returned
          * @returns {vec2} out
          */
-        vec2.random = function(out, scale) {
+        vec2.random = function (out, scale) {
           scale = scale || 1.0;
           var r = glMatrix.RANDOM() * 2.0 * Math.PI;
           out[0] = Math.cos(r) * scale;
@@ -7100,7 +7100,7 @@
          * @param {mat2} m matrix to transform with
          * @returns {vec2} out
          */
-        vec2.transformMat2 = function(out, a, m) {
+        vec2.transformMat2 = function (out, a, m) {
           var x = a[0],
             y = a[1];
           out[0] = m[0] * x + m[2] * y;
@@ -7116,7 +7116,7 @@
          * @param {mat2d} m matrix to transform with
          * @returns {vec2} out
          */
-        vec2.transformMat2d = function(out, a, m) {
+        vec2.transformMat2d = function (out, a, m) {
           var x = a[0],
             y = a[1];
           out[0] = m[0] * x + m[2] * y + m[4];
@@ -7133,7 +7133,7 @@
          * @param {mat3} m matrix to transform with
          * @returns {vec2} out
          */
-        vec2.transformMat3 = function(out, a, m) {
+        vec2.transformMat3 = function (out, a, m) {
           var x = a[0],
             y = a[1];
           out[0] = m[0] * x + m[3] * y + m[6];
@@ -7151,7 +7151,7 @@
          * @param {mat4} m matrix to transform with
          * @returns {vec2} out
          */
-        vec2.transformMat4 = function(out, a, m) {
+        vec2.transformMat4 = function (out, a, m) {
           var x = a[0],
             y = a[1];
           out[0] = m[0] * x + m[4] * y + m[12];
@@ -7171,10 +7171,10 @@
          * @returns {Array} a
          * @function
          */
-        vec2.forEach = (function() {
+        vec2.forEach = (function () {
           var vec = vec2.create();
 
-          return function(a, stride, offset, count, fn, arg) {
+          return function (a, stride, offset, count, fn, arg) {
             var i, l;
             if (!stride) {
               stride = 2;
@@ -7208,7 +7208,7 @@
          * @param {vec2} a vector to represent as a string
          * @returns {String} string representation of the vector
          */
-        vec2.str = function(a) {
+        vec2.str = function (a) {
           return 'vec2(' + a[0] + ', ' + a[1] + ')';
         };
 
@@ -7219,7 +7219,7 @@
          * @param {vec2} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec2.exactEquals = function(a, b) {
+        vec2.exactEquals = function (a, b) {
           return a[0] === b[0] && a[1] === b[1];
         };
 
@@ -7230,7 +7230,7 @@
          * @param {vec2} b The second vector.
          * @returns {Boolean} True if the vectors are equal, false otherwise.
          */
-        vec2.equals = function(a, b) {
+        vec2.equals = function (a, b) {
           var a0 = a[0],
             a1 = a[1];
           var b0 = b[0],

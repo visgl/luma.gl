@@ -1,8 +1,7 @@
-/* eslint-disable camelcase */
 import {createTestContext} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
 const fixture = {
   gl1: createTestContext({webgl2: false, webgl1: true}),
@@ -250,12 +249,12 @@ void main(void) {
 }
 `;
 
-test('assembleShaders#import', t => {
+test('assembleShaders#import', (t) => {
   t.ok(assembleShaders !== undefined, 'assembleShaders import successful');
   t.end();
 });
 
-test('assembleShaders#version_directive', t => {
+test('assembleShaders#version_directive', (t) => {
   const assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -275,7 +274,7 @@ test('assembleShaders#version_directive', t => {
   t.end();
 });
 
-test('assembleShaders#getUniforms', t => {
+test('assembleShaders#getUniforms', (t) => {
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -315,7 +314,7 @@ test('assembleShaders#getUniforms', t => {
   t.end();
 });
 
-test('assembleShaders#defines', t => {
+test('assembleShaders#defines', (t) => {
   const assembleResult = assembleShaders(fixture.gl1, {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -328,7 +327,7 @@ test('assembleShaders#defines', t => {
   t.end();
 });
 
-test('assembleShaders#shaderhooks', t => {
+test('assembleShaders#shaderhooks', (t) => {
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
     {
@@ -483,7 +482,7 @@ test('assembleShaders#shaderhooks', t => {
   t.end();
 });
 
-test('assembleShaders#injection order', t => {
+test('assembleShaders#injection order', (t) => {
   const gl = fixture.gl1;
 
   let assembleResult = assembleShaders(gl, {
@@ -549,7 +548,7 @@ test('assembleShaders#injection order', t => {
   t.end();
 });
 
-test('assembleShaders#transpilation', t => {
+test('assembleShaders#transpilation', (t) => {
   const gl = fixture.gl1;
   let assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300,

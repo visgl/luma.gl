@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Accessor} from '@luma.gl/webgl';
 // @ts-ignore
@@ -26,12 +26,12 @@ const TEST_CASES_FOR_RESOLVE = [
   }
 ];
 
-test('Accessor#import', t => {
+test('Accessor#import', (t) => {
   t.ok(Accessor, 'Accessor import successful');
   t.end();
 });
 
-test('Accessor#construct', t => {
+test('Accessor#construct', (t) => {
   for (const tc of TEST_CASES_FOR_CONSTRUCTOR) {
     const accessor = new Accessor(...tc.accessors);
     t.deepEquals(accessor, tc.result, 'Accessor constructed correctly');
@@ -40,7 +40,7 @@ test('Accessor#construct', t => {
   t.end();
 });
 
-test('Accessor#resolve', t => {
+test('Accessor#resolve', (t) => {
   for (const tc of TEST_CASES_FOR_RESOLVE) {
     const accessor = Accessor.resolve(...tc.accessors);
     t.deepEquals(accessor, tc.result, 'Accessor resolved correctly');

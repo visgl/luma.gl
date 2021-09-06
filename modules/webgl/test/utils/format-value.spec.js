@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {formatValue} from '@luma.gl/webgl/utils/format-value';
 
 const FORMAT_VALUE_TEST_CASES = [
@@ -74,8 +74,8 @@ const FORMAT_VALUE_TEST_CASES = [
   }
 ];
 
-test('formatValue', t => {
-  FORMAT_VALUE_TEST_CASES.forEach(tc => {
+test('formatValue', (t) => {
+  FORMAT_VALUE_TEST_CASES.forEach((tc) => {
     t.equal(formatValue(tc.value, tc.opts), tc.result);
   });
   t.end();

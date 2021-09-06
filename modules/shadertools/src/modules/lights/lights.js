@@ -8,7 +8,7 @@ const INITIAL_MODULE_OPTIONS = {
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
 function convertColor({color = [0, 0, 0], intensity = 1.0} = {}) {
-  return color.map(component => (component * intensity) / 255.0);
+  return color.map((component) => (component * intensity) / 255.0);
 }
 
 function getLightSourceUniforms({ambientLight, pointLights = [], directionalLights = []}) {
@@ -24,17 +24,14 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
     lightSourceUniforms[`lighting_uPointLight[${index}].color`] = convertColor(pointLight);
     lightSourceUniforms[`lighting_uPointLight[${index}].position`] = pointLight.position;
     lightSourceUniforms[`lighting_uPointLight[${index}].attenuation`] = pointLight.attenuation || [
-      1,
-      0,
-      0
+      1, 0, 0
     ];
   });
   lightSourceUniforms.lighting_uPointLightCount = pointLights.length;
 
   directionalLights.forEach((directionalLight, index) => {
-    lightSourceUniforms[`lighting_uDirectionalLight[${index}].color`] = convertColor(
-      directionalLight
-    );
+    lightSourceUniforms[`lighting_uDirectionalLight[${index}].color`] =
+      convertColor(directionalLight);
     lightSourceUniforms[`lighting_uDirectionalLight[${index}].direction`] =
       directionalLight.direction;
   });

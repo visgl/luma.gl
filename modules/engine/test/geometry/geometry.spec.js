@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {Geometry} from '@luma.gl/engine';
 
 const TEST_CASES = [
@@ -63,7 +63,7 @@ const TEST_CASES = [
   }
 ];
 
-test('Geometry#constructor', t => {
+test('Geometry#constructor', (t) => {
   for (const testCase of TEST_CASES) {
     if (testCase.shouldThrow) {
       t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);

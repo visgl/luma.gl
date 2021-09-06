@@ -211,7 +211,7 @@ export default class Framebuffer extends Resource {
 
     // Any current attachments need to be removed, add null values to map
     if (clearAttachments) {
-      Object.keys(this.attachments).forEach(key => {
+      Object.keys(this.attachments).forEach((key) => {
         newAttachments[key] = null;
       });
     }
@@ -254,8 +254,8 @@ export default class Framebuffer extends Resource {
     // Assign to attachments and remove any nulls to get a clean attachment map
     Object.assign(this.attachments, attachments);
     Object.keys(this.attachments)
-      .filter(key => !this.attachments[key])
-      .forEach(key => {
+      .filter((key) => !this.attachments[key])
+      .forEach((key) => {
         delete this.attachments[key];
       });
   }

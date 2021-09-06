@@ -89,10 +89,12 @@ export function readPixelsToBuffer(
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
+    // @ts-expect-error TODO why is WebGL2 context not compatible
     target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
   target.bind({target: GL.PIXEL_PACK_BUFFER});
+  // @ts-expect-error TODO why is WebGL2 context not compatible
   withParameters(gl2, {framebuffer}, () => {
     gl2.readPixels(
       sourceX,
@@ -278,12 +280,10 @@ export function blit(source, target, options = {}) {
     mask = 0
   } = options;
 
-  const {framebuffer: srcFramebuffer, deleteFramebuffer: deleteSrcFramebuffer} = getFramebuffer(
-    source
-  );
-  const {framebuffer: dstFramebuffer, deleteFramebuffer: deleteDstFramebuffer} = getFramebuffer(
-    target
-  );
+  const {framebuffer: srcFramebuffer, deleteFramebuffer: deleteSrcFramebuffer} =
+    getFramebuffer(source);
+  const {framebuffer: dstFramebuffer, deleteFramebuffer: deleteDstFramebuffer} =
+    getFramebuffer(target);
 
   assert(srcFramebuffer);
   assert(dstFramebuffer);

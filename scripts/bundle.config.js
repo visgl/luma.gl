@@ -1,7 +1,8 @@
+const {getOcularConfig} = require('ocular-dev-tools');
 const {resolve} = require('path');
 const webpack = require('webpack');
 
-const ALIASES = require('ocular-dev-tools/config/ocular.config')({
+const ALIASES = getOcularConfig({
   aliasMode: 'src',
   root: resolve(__dirname, '..')
 }).aliases;
@@ -42,11 +43,30 @@ const NODE = {
   crypto: 'empty'
 };
 
+const ES5_BABEL_CONFIG = {
+  presets: [
+    '@babel/preset-typescript',
+    ['@babel/preset-env', {forceAllTransforms: true}]
+  ],
+  plugins: [
+    // webpack 4 cannot parse the most recent JS syntax
+    '@babel/plugin-proposal-optional-chaining',
+    '@babel/plugin-proposal-nullish-coalescing-operator',
+    // typescript supports class properties
+    '@babel/plugin-proposal-class-properties',
+    // inject __VERSION__ from package.json
+    'version-inline',
+    ["@babel/plugin-transform-modules-commonjs", { allowTopLevelThis: true }],
+    'inline-webgl-constants',
+    ['remove-glsl-comments', {patterns: ['**/*.glsl.js']}]
+  ]
+};
+
 const config = {
   mode: 'production',
 
   entry: {
-    main: resolve('./src/bundle')
+    main: resolve('./src/bundle.ts')
   },
 
   output: {
@@ -58,6 +78,7 @@ const config = {
   node: NODE,
 
   resolve: {
+    extensions: ['.js', '.mjs', '.jsx', '.ts', '.tsx', '.json'],
     alias: ALIASES
   },
 
@@ -65,19 +86,15 @@ const config = {
     rules: [
       {
         // Compile ES2015 using babel
-        test: /\.js$/,
+        test: /\.(js|ts)$/,
         loader: 'babel-loader',
         include: [/src/, /esm/],
-        options: {
-          presets: [['@babel/preset-env', {forceAllTransforms: true}]],
-          // all of the helpers will reference the module @babel/runtime to avoid duplication
-          // across the compiled output.
-          plugins: [
-            '@babel/transform-runtime',
-            'inline-webgl-constants',
-            ['remove-glsl-comments', {patterns: ['**/*.glsl.js']}]
-          ]
-        }
+        options: ES5_BABEL_CONFIG
+      },
+      {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: "javascript/auto"
       }
     ]
   },
@@ -106,7 +123,7 @@ module.exports = (env = {}) => {
     // Remove .min from the name
     config.output.filename = 'dist/dist.js';
     // Disable transpilation
-    config.module.rules = [];
+    // config.module.rules = [];
   }
 
   // NOTE uncomment to display config

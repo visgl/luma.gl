@@ -1,7 +1,7 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {compileShaderModule, compileVertexShader, compileFragmentShader} from '@luma.gl/debug';
 
-test('compileVertexShader', t => {
+test('compileVertexShader', (t) => {
   const vs = `
 uniform mat4 viewMatrix;
 uniform vec2 color64[3];
@@ -21,7 +21,11 @@ void main() {
   const vsFunc = compileVertexShader('test-vertex-shader', vs);
   const result = vsFunc(
     {
-      color64: [[1.0, 0.0], [0.5, 0.0], [0.0, 0.0]],
+      color64: [
+        [1.0, 0.0],
+        [0.5, 0.0],
+        [0.0, 0.0]
+      ],
       viewMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
     },
     {positions: [1, 0, 0, 1]}
@@ -33,7 +37,7 @@ void main() {
   t.end();
 });
 
-test('compileFragmentShader', t => {
+test('compileFragmentShader', (t) => {
   const fs = `
 uniform float opacity;
 varying vec4 vColor;
@@ -57,7 +61,7 @@ void main() {
   t.end();
 });
 
-test('compileShaderModule', t => {
+test('compileShaderModule', (t) => {
   const vs = `
 uniform float intensity;
 

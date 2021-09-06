@@ -164,10 +164,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
       // Get a random vector and cross
       const q = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
-      const axis = pos
-        .clone()
-        .cross(q)
-        .normalize();
+      const axis = pos.clone().cross(q).normalize();
 
       const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
@@ -216,10 +213,7 @@ export default class AppAnimationLoop extends AnimationLoop {
         .translate(nPos[i]);
 
       const translation = [modelMatrix[12], modelMatrix[13], modelMatrix[14]];
-      modelMatrix
-        .identity()
-        .translate(translation)
-        .scale([0.25, 0.25, 0.25]);
+      modelMatrix.identity().translate(translation).scale([0.25, 0.25, 0.25]);
 
       sphere.draw({
         framebuffer: mainFramebuffer,

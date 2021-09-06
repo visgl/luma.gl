@@ -14,7 +14,7 @@ export function loadFile(url, options = {}) {
   assert(typeof url === 'string');
   url = pathPrefix + url;
   const dataType = options.dataType || 'text';
-  return fetch(url, options).then(res => res[dataType]());
+  return fetch(url, options).then((res) => res[dataType]());
 }
 
 /*

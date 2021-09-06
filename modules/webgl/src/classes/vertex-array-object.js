@@ -158,11 +158,10 @@ export default class VertexArrayObject extends Resource {
 
     if (!disablingAttributeZero) {
       location = Number(location);
-      this.bind(
-        () =>
-          enable
-            ? this.gl.enableVertexAttribArray(location)
-            : this.gl.disableVertexAttribArray(location)
+      this.bind(() =>
+        enable
+          ? this.gl.enableVertexAttribArray(location)
+          : this.gl.disableVertexAttribArray(location)
       );
     }
     return this;

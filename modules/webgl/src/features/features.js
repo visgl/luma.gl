@@ -17,7 +17,7 @@ export function hasFeature(gl, feature) {
 // Check one or more features
 export function hasFeatures(gl, features) {
   features = Array.isArray(features) ? features : [features];
-  return features.every(feature => {
+  return features.every((feature) => {
     return isFeatureSupported(gl, feature);
   });
 }

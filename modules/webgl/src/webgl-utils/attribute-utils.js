@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import {assert} from '../utils';
 
 const GL_BYTE = 0x1400;

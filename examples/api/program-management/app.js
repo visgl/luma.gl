@@ -75,7 +75,12 @@ export default class AppAnimationLoop extends AnimationLoop {
     programManager.addShaderHook('vs:LUMAGL_normal(inout vec3 normal)');
     programManager.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
 
-    const translations = [[2, -2, 0], [2, 2, 0], [-2, 2, 0], [-2, -2, 0]];
+    const translations = [
+      [2, -2, 0],
+      [2, 2, 0],
+      [-2, 2, 0],
+      [-2, -2, 0]
+    ];
 
     const rotations = [
       [random(), random(), random()],
@@ -84,7 +89,12 @@ export default class AppAnimationLoop extends AnimationLoop {
       [random(), random(), random()]
     ];
 
-    const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]];
+    const colors = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+      [1, 1, 0]
+    ];
 
     this.cubes = new Array(4);
 
@@ -147,10 +157,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       cube.rotation[1] += 0.01;
       cube.rotation[2] += 0.01;
 
-      modelMatrix
-        .identity()
-        .translate(cube.translation)
-        .rotateXYZ(cube.rotation);
+      modelMatrix.identity().translate(cube.translation).rotateXYZ(cube.rotation);
 
       cube.model
         .setUniforms({

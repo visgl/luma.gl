@@ -38,13 +38,13 @@ export default function injectShader(source, type, inject, injectStandardStubs =
       // inject code at the beginning of the main function
       case 'vs:#main-start':
         if (isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
+          source = source.replace(REGEX_START_OF_MAIN, (match) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'vs:#main-end':
         if (isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, match => fragmentString + match);
+          source = source.replace(REGEX_END_OF_MAIN, (match) => fragmentString + match);
         }
         break;
       // declarations are injected before the main function
@@ -56,13 +56,13 @@ export default function injectShader(source, type, inject, injectStandardStubs =
       // inject code at the beginning of the main function
       case 'fs:#main-start':
         if (!isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, match => match + fragmentString);
+          source = source.replace(REGEX_START_OF_MAIN, (match) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'fs:#main-end':
         if (!isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, match => fragmentString + match);
+          source = source.replace(REGEX_END_OF_MAIN, (match) => fragmentString + match);
         }
         break;
 
@@ -70,7 +70,7 @@ export default function injectShader(source, type, inject, injectStandardStubs =
         // TODO(Tarek): I think this usage should be deprecated.
 
         // inject code after key, leaving key in place
-        source = source.replace(key, match => match + fragmentString);
+        source = source.replace(key, (match) => match + fragmentString);
     }
   }
 
@@ -79,7 +79,7 @@ export default function injectShader(source, type, inject, injectStandardStubs =
 
   // Finally, if requested, insert an automatic module injector chunk
   if (injectStandardStubs) {
-    source = source.replace(/\}\s*$/, match => match + MODULE_INJECTORS[type]);
+    source = source.replace(/\}\s*$/, (match) => match + MODULE_INJECTORS[type]);
   }
 
   return source;
@@ -91,7 +91,7 @@ export default function injectShader(source, type, inject, injectStandardStubs =
 export function combineInjects(injects) {
   const result = {};
   assert(Array.isArray(injects) && injects.length > 1);
-  injects.forEach(inject => {
+  injects.forEach((inject) => {
     for (const key in inject) {
       result[key] = result[key] ? `${result[key]}\n${inject[key]}` : inject[key];
     }

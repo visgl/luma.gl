@@ -1,7 +1,7 @@
 import {zoomBlur, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('zoomBlur#build/uniform', t => {
+test('zoomBlur#build/uniform', (t) => {
   normalizeShaderModule(zoomBlur);
   const uniforms = zoomBlur.getUniforms();
 

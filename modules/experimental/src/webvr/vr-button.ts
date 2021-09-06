@@ -1,4 +1,5 @@
-export function createEnterVRButton({canvas, title}) {
+export function createEnterVRButton(options: {canvas: HTMLCanvasElement; title: string}): HTMLButtonElement {
+  const {canvas, title} = options;
   const {top, left, width, height} = canvas.getBoundingClientRect();
 
   const container = document.createElement('div');

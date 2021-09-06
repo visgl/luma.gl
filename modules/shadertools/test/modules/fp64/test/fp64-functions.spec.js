@@ -22,7 +22,7 @@
 // TODO - enable these
 
 /*
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {testcase, gl} from './fp64-test-utils';
 
 addSpan('------------------------', di);

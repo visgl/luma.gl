@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import {GroupNode, ScenegraphNode} from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 
-test('GroupNode#construction', t => {
+test('GroupNode#construction', (t) => {
   const grandChild = new ScenegraphNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -38,7 +38,7 @@ test('GroupNode#construction', t => {
   t.end();
 });
 
-test('GroupNode#add', t => {
+test('GroupNode#add', (t) => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -50,7 +50,7 @@ test('GroupNode#add', t => {
   t.end();
 });
 
-test('GroupNode#remove', t => {
+test('GroupNode#remove', (t) => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -66,7 +66,7 @@ test('GroupNode#remove', t => {
   t.end();
 });
 
-test('GroupNode#removeAll', t => {
+test('GroupNode#removeAll', (t) => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -79,7 +79,7 @@ test('GroupNode#removeAll', t => {
   t.end();
 });
 
-test('GroupNode#delete', t => {
+test('GroupNode#delete', (t) => {
   const grandChild = new GroupNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -92,7 +92,7 @@ test('GroupNode#delete', t => {
   t.end();
 });
 
-test('GroupNode#traverse', t => {
+test('GroupNode#traverse', (t) => {
   const modelMatrices = {};
   const matrix = new Matrix4().identity().scale(2);
 

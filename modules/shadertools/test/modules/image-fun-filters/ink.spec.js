@@ -1,7 +1,7 @@
 import {ink, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('ink#build/uniform', t => {
+test('ink#build/uniform', (t) => {
   normalizeShaderModule(ink);
   const uniforms = ink.getUniforms();
 

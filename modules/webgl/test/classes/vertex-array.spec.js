@@ -1,4 +1,4 @@
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {VertexArray, VertexArrayObject, Buffer, Program} from '@luma.gl/webgl';
 
@@ -6,7 +6,7 @@ import {fixture} from 'test/setup';
 
 const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
-test('WebGL#VertexArray construct/delete', t => {
+test('WebGL#VertexArray construct/delete', (t) => {
   const {gl} = fixture;
 
   // @ts-ignore
@@ -24,7 +24,7 @@ test('WebGL#VertexArray construct/delete', t => {
   t.end();
 });
 
-test('WebGL#VertexArray#enable', t => {
+test('WebGL#VertexArray#enable', (t) => {
   const {gl} = fixture;
 
   const vertexArray = new VertexArray(gl);
@@ -42,7 +42,7 @@ test('WebGL#VertexArray#enable', t => {
   t.end();
 });
 
-test('WebGL#VertexArray#setAttributes(unused)', t => {
+test('WebGL#VertexArray#setAttributes(unused)', (t) => {
   const {gl} = fixture;
 
   const vertexArray = new VertexArray(gl);
@@ -58,7 +58,7 @@ test('WebGL#VertexArray#setAttributes(unused)', t => {
   t.end();
 });
 
-test('WebGL#VertexArray#_getAttributeIndex', t => {
+test('WebGL#VertexArray#_getAttributeIndex', (t) => {
   const {gl} = fixture;
 
   const vertexArray = new VertexArray(gl);
@@ -86,7 +86,7 @@ test('WebGL#VertexArray#_getAttributeIndex', t => {
   t.end();
 });
 
-test('WebGL#VertexArray#constant multi-column attribute', t => {
+test('WebGL#VertexArray#constant multi-column attribute', (t) => {
   const {gl} = fixture;
 
   const vs = `

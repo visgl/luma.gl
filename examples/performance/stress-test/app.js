@@ -128,9 +128,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const statsWidget = new StatsWidget(this.stats, {
       container: document.getElementById('info-stats'),
-      title: `Drawing ${CUBES_PER_DRAWCALL *
-        OPAQUE_DRAWCALLS} opaque cubes and ${CUBES_PER_DRAWCALL *
-        TRANSPARENT_DRAWCALLS} transparent cubes in ${NUM_DRAWCALLS} draw calls`,
+      title: `Drawing ${CUBES_PER_DRAWCALL * OPAQUE_DRAWCALLS} opaque cubes and ${
+        CUBES_PER_DRAWCALL * TRANSPARENT_DRAWCALLS
+      } transparent cubes in ${NUM_DRAWCALLS} draw calls`,
       css: {
         position: 'absolute',
         top: '10px',
@@ -233,10 +233,10 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   onFinalize({opaqueCubes, transparentCubes}) {
     if (opaqueCubes) {
-      opaqueCubes.forEach(c => c.delete());
+      opaqueCubes.forEach((c) => c.delete());
     }
     if (transparentCubes) {
-      transparentCubes.forEach(c => c.delete());
+      transparentCubes.forEach((c) => c.delete());
     }
   }
 

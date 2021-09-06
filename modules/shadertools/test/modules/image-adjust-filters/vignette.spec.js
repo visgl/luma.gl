@@ -1,7 +1,7 @@
 import {vignette, normalizeShaderModule} from '@luma.gl/shadertools';
-import test from 'tape-catch';
+import test from 'tape-promise/tape';
 
-test('vignette#build/uniform', t => {
+test('vignette#build/uniform', (t) => {
   normalizeShaderModule(vignette);
   const uniforms = vignette.getUniforms();
 

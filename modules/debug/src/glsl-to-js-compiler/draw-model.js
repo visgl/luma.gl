@@ -18,13 +18,8 @@ export default ({model, draw, colorMode = COLOR_MODE.NONE}) => {
 
   // draw params
   const {uniforms} = model.program;
-  const {
-    instancedAttributes,
-    vertexAttributes,
-    indices,
-    attributeValues,
-    vertexCount
-  } = sortAttributes(model._attributes);
+  const {instancedAttributes, vertexAttributes, indices, attributeValues, vertexCount} =
+    sortAttributes(model._attributes);
   const drawMode = model.getDrawMode();
   const instanceCount = model.instanceCount || 1;
 

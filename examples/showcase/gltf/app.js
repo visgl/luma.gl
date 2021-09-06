@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {GLTFLoader} from '@loaders.gl/gltf';
@@ -244,7 +243,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       this.rotation[1] = this.rotationStart[1] + dX / 100;
     };
 
-    canvas.addEventListener('wheel', e => {
+    canvas.addEventListener('wheel', (e) => {
       this.translate += e.deltaY / 10;
       if (this.translate < 0.5) {
         this.translate = 0.5;
@@ -252,52 +251,52 @@ export default class AppAnimationLoop extends AnimationLoop {
       e.preventDefault();
     });
 
-    canvas.addEventListener('mousedown', e => {
+    canvas.addEventListener('mousedown', (e) => {
       pointerDown(e.clientX, e.clientY);
 
       e.preventDefault();
     });
 
-    canvas.addEventListener('mouseup', e => {
+    canvas.addEventListener('mouseup', (e) => {
       pointerIsDown = false;
     });
 
-    canvas.addEventListener('mousemove', e => {
+    canvas.addEventListener('mousemove', (e) => {
       pointerMove(e.clientX, e.clientY);
     });
 
-    canvas.addEventListener('touchstart', e => {
+    canvas.addEventListener('touchstart', (e) => {
       pointerDown(e.touches[0].clientX, e.touches[0].clientY);
 
       e.preventDefault();
     });
 
-    canvas.addEventListener('touchmove', e => {
+    canvas.addEventListener('touchmove', (e) => {
       pointerMove(e.touches[0].clientX, e.touches[0].clientY);
     });
 
-    canvas.addEventListener('touchend', e => {
+    canvas.addEventListener('touchend', (e) => {
       if (e.touches.length === 0) {
         pointerIsDown = false;
       }
     });
 
-    canvas.addEventListener('dragover', e => {
+    canvas.addEventListener('dragover', (e) => {
       e.dataTransfer.dropEffect = 'link';
       e.preventDefault();
     });
 
-    canvas.addEventListener('drop', e => {
+    canvas.addEventListener('drop', (e) => {
       e.preventDefault();
       if (e.dataTransfer.files && e.dataTransfer.files.length === 1) {
         this._deleteScenes();
-        const readPromise = new Promise(resolve => {
+        const readPromise = new Promise((resolve) => {
           const reader = new window.FileReader();
-          reader.onload = ev => resolve(ev.target.result);
+          reader.onload = (ev) => resolve(ev.target.result);
           reader.readAsArrayBuffer(e.dataTransfer.files[0]);
         });
 
-        loadGLTF(readPromise, this.gl, this.loadOptions).then(result => this._fileLoaded(result));
+        loadGLTF(readPromise, this.gl, this.loadOptions).then((result) => this._fileLoaded(result));
       }
     });
   }
@@ -337,19 +336,19 @@ export default class AppAnimationLoop extends AnimationLoop {
         imageBasedLightingEnvironment: null,
         lights: true
       };
-      loadGLTF(this.modelFile, this.gl, options).then(result => this._fileLoaded(result));
+      loadGLTF(this.modelFile, this.gl, options).then((result) => this._fileLoaded(result));
     } else {
       const modelUrl = GLTF_DEFAULT_MODEL;
-      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then(result =>
+      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then((result) =>
         this._fileLoaded(result)
       );
     }
 
     const showSelector = document.getElementById('showSelector');
     if (showSelector) {
-      showSelector.onchange = event => {
+      showSelector.onchange = (event) => {
         // @ts-ignore
-        const value = showSelector.value.split(' ').map(x => parseFloat(x));
+        const value = showSelector.value.split(' ').map((x) => parseFloat(x));
         this.u_ScaleDiffBaseMR = value.slice(0, 4);
         this.u_ScaleFGDSpec = value.slice(4);
       };
@@ -357,7 +356,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const lightSelector = document.getElementById('lightSelector');
     if (lightSelector) {
-      lightSelector.onchange = event => {
+      lightSelector.onchange = (event) => {
         // @ts-ignore
         this.light = lightSelector.value;
       };
@@ -365,7 +364,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const iblSelector = document.getElementById('iblSelector');
     if (iblSelector) {
-      iblSelector.onchange = event => {
+      iblSelector.onchange = (event) => {
         // @ts-ignore
         this._updateLightSettings(iblSelector.value);
         this._rebuildModel();
@@ -406,16 +405,16 @@ export default class AppAnimationLoop extends AnimationLoop {
   _rebuildModel() {
     // Clean and regenerate model so we have new "#defines"
     // TODO: Find better way to do this
-    (this.gltf.meshes || []).forEach(mesh => delete mesh._mesh);
-    (this.gltf.nodes || []).forEach(node => delete node._node);
-    (this.gltf.bufferViews || []).forEach(bufferView => delete bufferView.lumaBuffers);
+    (this.gltf.meshes || []).forEach((mesh) => delete mesh._mesh);
+    (this.gltf.nodes || []).forEach((node) => delete node._node);
+    (this.gltf.bufferViews || []).forEach((bufferView) => delete bufferView.lumaBuffers);
 
     this._deleteScenes();
     Object.assign(this, createGLTFObjects(this.gl, this.gltf, this.loadOptions));
   }
 
   _deleteScenes() {
-    this.scenes.forEach(scene => scene.delete());
+    this.scenes.forEach((scene) => scene.delete());
     this.scenes = [];
 
     lumaStats.get('Resource Counts').forEach(({name, count}) => {

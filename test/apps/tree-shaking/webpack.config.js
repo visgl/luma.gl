@@ -24,7 +24,6 @@ module.exports = {
   },
   plugins: [
     // new BabiliWebpackPlugin({}, {verbose: true, warn: true, warnings: true}),
-    /* eslint-disable camelcase */
     // new webpack.LoaderOptionsPlugin({
     //   minimize: true,
     //   debug: false
