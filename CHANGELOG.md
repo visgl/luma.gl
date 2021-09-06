@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v8.5.6
+
+- Remove overly broad platform defines (#1496)
+- Fix animation frame scheduling and cancellation (#1495)
+
 ## v8.5.5
 
 - Work around fp32 compile error in Safari 15 (#1491)
