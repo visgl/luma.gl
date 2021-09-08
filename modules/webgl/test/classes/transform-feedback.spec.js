@@ -42,7 +42,7 @@ test('WebGL#TransformFeedback constructor/delete', (t) => {
   t.throws(
     // @ts-ignore
     () => new TransformFeedback(),
-    /.*Requires WebGL2.*/,
+    /.*Invalid WebGLRenderingContext.*/,
     'Buffer throws on missing gl context'
   );
 

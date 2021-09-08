@@ -4,7 +4,7 @@ import Resource from './resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
-import {copyToDataUrl} from './copy-and-blit.js';
+import {copyToDataUrl} from './copy-and-blit';
 
 import {getFeatures} from '../features';
 import {getKey} from '../webgl-utils';
@@ -408,6 +408,7 @@ export default class Framebuffer extends Resource {
     return values;
   }
 
+  // @ts-expect-error
   getParameters(keys = true) {
     const attachments = Object.keys(this.attachments);
     // if (this === this.gl.luma.defaultFramebuffer) {
