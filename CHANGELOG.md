@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.7
+
+- chore(webgl): get rid of circular references (#1499)
+
 ## v8.5.6
 
 - Remove overly broad platform defines (#1496)
