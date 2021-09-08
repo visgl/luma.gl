@@ -14,8 +14,8 @@ const examples = {
   persistence: require('../../examples/showcase/persistence/app').default,
   wandering: require('../../examples/showcase/wandering/app').default,
   animation: require('../../examples/api/animation/app').default,
-  programManagement: require('../../examples/api/program-management/app').default,
-  texture3d: require('../../examples/api/texture-3d/app').default
+  programManagement: require('../../examples/api/program-management/app').default
+  // texture3d: require('../../examples/api/texture-3d/app').default
 };
 
 export default Object.keys(examples).map((name) => {
