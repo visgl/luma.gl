@@ -12,11 +12,9 @@ const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
 // luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 class StatsManager {
-  constructor() {
-    this.stats = new Map();
-  }
+  stats = new Map();
 
-  get(name) {
+  get(name: string): Stats {
     if (!this.stats.has(name)) {
       this.stats.set(name, new Stats({id: name}));
     }
@@ -25,7 +23,7 @@ class StatsManager {
   }
 }
 
-const lumaStats = new StatsManager();
+const lumaStats: StatsManager = new StatsManager();
 
 if (global.luma && global.luma.VERSION !== VERSION) {
   throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);

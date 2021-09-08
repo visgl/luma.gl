@@ -1,5 +1,5 @@
 const resolve = require('path').resolve;
-const getOcularConfig = require('ocular-dev-tools/config/ocular.config');
+const {getOcularConfig} = require('ocular-dev-tools');
 const DEPENDENCIES = require('./package.json').dependencies;
 
 module.exports.onCreateWebpackConfig = function onCreateWebpackConfigOverride(opts) {
