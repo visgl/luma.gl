@@ -1,5 +1,5 @@
-import {isOldIE} from '@luma.gl/webgl/utils';
-import test from 'tape-catch';
+import {isOldIE} from '@luma.gl/webgl/utils/is-old-ie';
+import test from 'tape-promise/tape';
 
 test('isOldIE', t => {
   t.equal(

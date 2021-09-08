@@ -3,7 +3,7 @@ import Resource from './resource';
 import Buffer from './buffer';
 import {isWebGL2} from '@luma.gl/gltools';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 import {getBrowser} from 'probe.gl';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';

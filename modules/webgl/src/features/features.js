@@ -5,7 +5,7 @@
 
 import WEBGL_FEATURES from './webgl-features-table';
 import {isWebGL2, log} from '@luma.gl/gltools';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 const LOG_UNSUPPORTED_FEATURE = 2;
 

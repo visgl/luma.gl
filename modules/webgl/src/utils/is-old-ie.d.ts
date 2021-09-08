@@ -1,1 +1,1 @@
-export default function isOldIE(opts?: {}): boolean;
+export function isOldIE(opts?: {}): boolean;

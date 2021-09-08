@@ -3,7 +3,8 @@ import {log} from '@luma.gl/gltools';
 import Accessor from './accessor';
 import Buffer from './buffer';
 import VertexArrayObject from './vertex-array-object';
-import {assert, stubRemovedMethods} from '../utils';
+import {assert} from '../utils/assert';
+import {stubRemovedMethods} from '../utils/stub-methods';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';

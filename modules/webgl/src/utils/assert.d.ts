@@ -1,1 +1,1 @@
-export default function assert(condition: any, message?: string): void;
+export function assert(condition: any, message?: string): void;

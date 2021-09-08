@@ -7,8 +7,8 @@ import {clear, clearBuffer} from './clear';
 import {copyToDataUrl} from './copy-and-blit.js';
 
 import {getFeatures} from '../features';
-import {getKey} from '../webgl-utils';
-import {assert} from '../utils';
+import {getKey} from '../webgl-utils/constants-to-keys';
+import {assert} from '../utils/assert';
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 

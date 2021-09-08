@@ -1,5 +1,5 @@
 import {assertWebGL2Context, withParameters} from '@luma.gl/gltools';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
