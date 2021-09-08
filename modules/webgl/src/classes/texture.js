@@ -11,7 +11,8 @@ import {
   isFormatSupported,
   isLinearFilteringSupported
 } from './texture-formats';
-import {uid, isPowerOfTwo, assert} from '../utils';
+import {assert} from '../utils/assert';
+import {uid, isPowerOfTwo} from '../utils/utils';
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];

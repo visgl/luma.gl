@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 // Returns number of components in a specific readPixels WebGL format
 export function glFormatToComponents(format) {

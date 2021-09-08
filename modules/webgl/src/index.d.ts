@@ -61,7 +61,7 @@ export {default as getShaderVersion} from './glsl-utils/get-shader-version';
 
 // UTILS
 export {log} from '@luma.gl/gltools';
-export {default as assert} from './utils/assert';
+export {assert} from './utils/assert';
 export {uid, isObjectEmpty} from './utils/utils';
 
 // INTERNAL

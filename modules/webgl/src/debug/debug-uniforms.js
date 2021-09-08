@@ -1,4 +1,5 @@
-import {formatValue, assert} from '../utils';
+import {assert} from '../utils/assert';
+import {formatValue} from '../utils/format-value';
 
 // Prepares a table suitable for console.table
 /* eslint-disable max-statements, complexity */

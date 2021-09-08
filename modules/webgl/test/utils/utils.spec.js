@@ -1,5 +1,5 @@
-import {uid, isPowerOfTwo} from '@luma.gl/webgl/utils';
-import test from 'tape-catch';
+import {uid, isPowerOfTwo} from '@luma.gl/webgl/utils/utils';
+import test from 'tape-promise/tape';
 
 test('Utils#uid', t => {
   t.ok(typeof uid() === 'string', 'Type of uid() is correct');

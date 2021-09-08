@@ -6,7 +6,7 @@ import {log} from '@luma.gl/gltools';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 const UNIFORM_SETTERS = {
   // WEBGL1

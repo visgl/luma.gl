@@ -1,6 +1,6 @@
 import isOldIE from './check-old-ie';
 import WEBGL_FEATURES from './webgl-features-table';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 // Enables feature detection in IE11 due to a bug where gl.getExtension may return true
 // but fail to compile when the extension is enabled in the shader. Specifically,
