@@ -1,5 +1,6 @@
 // Utils
 export {log} from './utils/log';
+
 export {
   isWebGL,
   isWebGL2,
@@ -26,6 +27,7 @@ export {
   popContextState
 } from './state-tracker/track-context-state';
 
+export type {CreateGLContextOptions} from './context/context';
 export {
   createGLContext,
   resizeGLContext,
