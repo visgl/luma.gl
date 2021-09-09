@@ -1,8 +1,10 @@
+/** @typedef {import('@luma.gl/gltools').GLParameters} GLParameters  */
 import GL from '@luma.gl/constants';
 
 // NOTE: These settings are same as ENUM_STYLE_SETTINGS_SET1
 // In unit tests for bellow settings, we use ENUM_STYLE_SETTINGS_SET1
 // to verify expected state.
+/** @type {GLParameters} */
 export const FUNCTION_STYLE_SETTINGS_SET1 = {
   blend: true,
   blendColor: new Float32Array([0.5, 0.5, 0.5, 0]),

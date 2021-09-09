@@ -63,6 +63,7 @@ test('WebGL#VertexArray#_getAttributeIndex', (t) => {
 
   const vertexArray = new VertexArray(gl);
   vertexArray.setProps({
+    // @ts-expect-error
     configuration: {
       getAttributeLocation: () => 1
     }

@@ -1,10 +1,7 @@
-/** @typedef {import('./device-pixels')} types */
-
 /**
  * Returns multiplier need to convert CSS size to Device size
- * @type {types['cssToDeviceRatio']}
  */
-export function cssToDeviceRatio(gl) {
+ export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
   // @ts-ignore
   const {luma} = gl;
 
@@ -20,9 +17,17 @@ export function cssToDeviceRatio(gl) {
 
 /**
  * Maps CSS pixel position to device pixel position
- * @type {types['cssToDevicePixels']}
  */
-export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
+ export function cssToDevicePixels(
+  gl: WebGLRenderingContext,
+  cssPixel: number[],
+  yInvert: boolean = true
+): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
   const ratio = cssToDeviceRatio(gl);
   const width = gl.drawingBufferWidth;
   const height = gl.drawingBufferHeight;
@@ -33,9 +38,11 @@ export function cssToDevicePixels(gl, cssPixel, yInvert = true) {
 
 /**
  * Calulates device pixel ratio, used during context creation
- * @type {types['getDevicePixelRatio']}
+ *
+ * @param useDevicePixels - boolean or a number
+ * @return - device pixel ratio
  */
-export function getDevicePixelRatio(useDevicePixels) {
+ export function getDevicePixelRatio(useDevicePixels: boolean | number): number {
   const windowRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   if (Number.isFinite(useDevicePixels)) {
     // @ts-ignore Can no longer be boolean after previous line

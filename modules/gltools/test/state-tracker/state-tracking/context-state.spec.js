@@ -81,11 +81,7 @@ test('WebGLState#setParameters (Mixing enum and function style keys)', (t) => {
 
 test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))', (t) => {
   const {gl} = fixture;
-  const parameters = {
-    blendFunc: [GL.SRC_ALPHA, GL.ONE],
-    stencilFunc: [GL.LEQUAL, 0.5, 0xbbbbbbbb],
-    stencilOp: [GL.REPLACE, GL.INCR, GL.DECR]
-  };
+
   const expectedValues = {
     // blendFunc
     [GL.BLEND_SRC_RGB]: GL.SRC_ALPHA,
@@ -110,7 +106,11 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
 
   resetParameters(gl);
 
-  setParameters(gl, parameters);
+  setParameters(gl, {
+    blendFunc: [GL.SRC_ALPHA, GL.ONE],
+    stencilFunc: [GL.LEQUAL, 0.5, 0xbbbbbbbb],
+    stencilOp: [GL.REPLACE, GL.INCR, GL.DECR]
+  });
   const actualParameters = getParameters(gl);
 
   for (const key in expectedValues) {

@@ -1,18 +1,31 @@
 import GL from '@luma.gl/constants';
-import Resource from './resource';
+import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
+import {getBrowser} from 'probe.gl';
+import Program from './program';
+import Resource, {ResourceProps} from './resource';
 import Buffer from './buffer';
-import {isWebGL2} from '@luma.gl/gltools';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
-import {getBrowser} from 'probe.gl';
+import {getLumaContextData} from '../context/luma-context-data';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
+/**
+ * VertexArrayObject properties
+ * @param constantAttributeZero Attribute 0 can not be disable on most desktop OpenGL based browsers
+ * and on iOS Safari browser.
+ */
+export type VertexArrayObjectProps = ResourceProps & {
+  constantAttributeZero?: boolean;
+  program?: Program;
+  isDefaultArray?: boolean;
+};
+
 export default class VertexArrayObject extends Resource {
-  static isSupported(gl, options = {}) {
-    // Attribute 0 can not be disable on most desktop OpenGL based browsers
-    // and on iOS Safari browser.
-    if (options.constantAttributeZero) {
+  private static MAX_ATTRIBUTES: number;
+
+  static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean {
+    if (options?.constantAttributeZero) {
       return isWebGL2(gl) || getBrowser() === 'Chrome';
     }
 
@@ -20,17 +33,19 @@ export default class VertexArrayObject extends Resource {
     return true;
   }
 
-  // Returns the global (null) vertex array object. Exists even when no extension available
-  // TODO(Tarek): VAOs are now polyfilled. Deprecate this in 9.0
-  static getDefaultArray(gl) {
-    gl.luma = gl.luma || {};
-    if (!gl.luma.defaultVertexArray) {
-      gl.luma.defaultVertexArray = new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
-    }
-    return gl.luma.defaultVertexArray;
+  /**
+   * Returns the global (null) vertex array object. Exists even when no extension available.
+   * @todo (Tarek): VAOs are now polyfilled. Deprecate this in 9.0
+   */
+  static getDefaultArray(gl: WebGLRenderingContext): VertexArrayObject {
+    const lumaContextData = getLumaContextData(gl);
+    lumaContextData.defaultVertexArray = lumaContextData.defaultVertexArray || 
+      new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
+    return lumaContextData.defaultVertexArray;
   }
 
-  static getMaxAttributes(gl) {
+  /** Get maximum number of attributes in a vertex array */
+  static getMaxAttributes(gl: WebGLRenderingContext): number {
     // TODO - should be cached per context
     // @ts-ignore
     VertexArrayObject.MAX_ATTRIBUTES =
@@ -40,45 +55,50 @@ export default class VertexArrayObject extends Resource {
     return VertexArrayObject.MAX_ATTRIBUTES;
   }
 
-  // Note: Constants are stored globally on the WebGL context, not the VAO
-  // So they need to be updated before every render
-  // TODO - use known type (in configuration or passed in) to allow non-typed arrays?
-  // TODO - remember/cache values to avoid setting them unnecessarily?
-  static setConstant(gl, location, array) {
+  /**
+   * Set an attribute to a constant value
+   * @param gl 
+   * @param location 
+   * @param array 
+   * 
+   * @note Constants are stored globally on the WebGL context, not the VAO
+   * so they need to be updated before every render
+   * @todo - use known type (in configuration or passed in) to allow non-typed arrays?
+   * @todo - remember/cache values to avoid setting them unnecessarily?
+   */
+  static setConstant(gl: WebGLRenderingContext, location: any, array: any): void {
     switch (array.constructor) {
       case Float32Array:
         VertexArrayObject._setConstantFloatArray(gl, location, array);
         break;
       case Int32Array:
-        VertexArrayObject._setConstantIntArray(gl, location, array);
+        VertexArrayObject._setConstantIntArray(assertWebGL2Context(gl), location, array);
         break;
       case Uint32Array:
-        VertexArrayObject._setConstantUintArray(gl, location, array);
+        VertexArrayObject._setConstantUintArray(assertWebGL2Context(gl), location, array);
         break;
       default:
         assert(false);
     }
   }
 
+  private buffer: Buffer | null = null;
+  private bufferValue = null;
+  private isDefaultArray: boolean = false;
+
   // Create a VertexArray
-  constructor(gl, opts = {}) {
+  constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
-    const id = opts.id || (opts.program && opts.program.id);
-    super(gl, Object.assign({}, opts, {id}));
+    super(gl, {...opts, id: opts?.id || (opts?.program && opts?.program.id)});
 
     this.buffer = null;
     this.bufferValue = null;
-    this.isDefaultArray = opts.isDefaultArray || false;
-
-    /** @type {WebGL2RenderingContext} */
-    this.gl2 = gl;
-
-    this.initialize(opts);
+    this.isDefaultArray = opts?.isDefaultArray || false;
 
     Object.seal(this);
   }
 
-  delete() {
+  delete(): this {
     super.delete();
     if (this.buffer) {
       this.buffer.delete();
@@ -86,17 +106,8 @@ export default class VertexArrayObject extends Resource {
     return this;
   }
 
-  get MAX_ATTRIBUTES() {
+  get MAX_ATTRIBUTES(): number {
     return VertexArrayObject.getMaxAttributes(this.gl);
-  }
-
-  initialize(props = {}) {
-    return this.setProps(props);
-  }
-
-  setProps(props) {
-    // TODO: decide which props should be supported
-    return this;
   }
 
   // Set (bind) an elements buffer, for indexed rendering.
@@ -112,8 +123,8 @@ export default class VertexArrayObject extends Resource {
     return this;
   }
 
-  // Set a location in vertex attributes array to a bufferk, enables the location, sets divisor
-  setBuffer(location, buffer, accessor) {
+  /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
+  setBuffer(location, buffer, accessor): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       return this.setElementBuffer(buffer, accessor);
@@ -145,11 +156,13 @@ export default class VertexArrayObject extends Resource {
     return this;
   }
 
-  // Enabling an attribute location makes it reference the currently bound buffer
-  // Disabling an attribute location makes it reference the global constant value
-  // TODO - handle single values for size 1 attributes?
-  // TODO - convert classic arrays based on known type?
-  enable(location, enable = true) {
+  /**
+   * Enabling an attribute location makes it reference the currently bound buffer
+   *  Disabling an attribute location makes it reference the global constant value
+   * TODO - handle single values for size 1 attributes?
+   * TODO - convert classic arrays based on known type?
+   */ 
+  enable(location, enable = true): this {
     // Attribute 0 cannot be disabled in most desktop OpenGL based browsers
     const disablingAttributeZero =
       !enable &&
@@ -167,11 +180,13 @@ export default class VertexArrayObject extends Resource {
     return this;
   }
 
-  // Provide a means to create a buffer that is equivalent to a constant.
-  // NOTE: Desktop OpenGL cannot disable attribute 0.
-  // https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
-  // this-has-significant-performance-penalt
-  getConstantBuffer(elementCount, value) {
+  /**
+   * Provide a means to create a buffer that is equivalent to a constant.
+   * NOTE: Desktop OpenGL cannot disable attribute 0.
+   * https://stackoverflow.com/questions/20305231/webgl-warning-attribute-0-is-disabled-
+   * this-has-significant-performance-penalty
+   */ 
+  getConstantBuffer(elementCount: number, value): Buffer {
     // Create buffer only when needed, and reuse it (avoids inflating buffer creation statistics)
 
     const constantValue = this._normalizeConstantArrayValue(value);
@@ -199,6 +214,19 @@ export default class VertexArrayObject extends Resource {
     return this.buffer;
   }
 
+  // DEPRECATED
+
+  /** @deprecated this function has no effect */
+  initialize(props?: VertexArrayObjectProps): this {
+    return this.setProps(props);
+  }
+
+  /** @deprecated this function is not implemented */
+  setProps(props: VertexArrayObjectProps): this {
+    // TODO: decide which props should be supported
+    return this;
+  }  
+
   // PRIVATE
 
   // TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
@@ -210,7 +238,7 @@ export default class VertexArrayObject extends Resource {
     return arrayValue;
   }
 
-  _compareConstantArrayValues(v1, v2) {
+  _compareConstantArrayValues(v1, v2): boolean {
     if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
       return false;
     }
@@ -222,7 +250,7 @@ export default class VertexArrayObject extends Resource {
     return true;
   }
 
-  static _setConstantFloatArray(gl, location, array) {
+  static _setConstantFloatArray(gl: WebGLRenderingContext, location, array): void {
     switch (array.length) {
       case 1:
         gl.vertexAttrib1fv(location, array);
@@ -241,68 +269,66 @@ export default class VertexArrayObject extends Resource {
     }
   }
 
-  static _setConstantIntArray(gl, location, array) {
+  static _setConstantIntArray(gl: WebGL2RenderingContext, location, array) {
     assert(isWebGL2(gl));
-    switch (array.length) {
-      case 1:
-        gl.vertexAttribI1iv(location, array);
-        break;
-      case 2:
-        gl.vertexAttribI2iv(location, array);
-        break;
-      case 3:
-        gl.vertexAttribI3iv(location, array);
-        break;
-      case 4:
-        gl.vertexAttribI4iv(location, array);
-        break;
-      default:
-        assert(false);
-    }
+    gl.vertexAttribI4iv(location, array);
+    // switch (array.length) {
+    //   case 1:
+    //     gl.vertexAttribI1iv(location, array);
+    //     break;
+    //   case 2:
+    //     gl.vertexAttribI2iv(location, array);
+    //     break;
+    //   case 3:
+    //     gl.vertexAttribI3iv(location, array);
+    //     break;
+    //   case 4:
+    //     break;
+    //   default:
+    //     assert(false);
+    // }
   }
 
-  static _setConstantUintArray(gl, location, array) {
+  static _setConstantUintArray(gl: WebGL2RenderingContext, location, array) {
     assert(isWebGL2(gl));
-    switch (array.length) {
-      case 1:
-        gl.vertexAttribI1uiv(location, array);
-        break;
-      case 2:
-        gl.vertexAttribI2uiv(location, array);
-        break;
-      case 3:
-        gl.vertexAttribI3uiv(location, array);
-        break;
-      case 4:
-        gl.vertexAttribI4uiv(location, array);
-        break;
-      default:
-        assert(false);
-    }
+    gl.vertexAttribI4uiv(location, array);
+    // switch (array.length) {
+    //   case 1:
+    //     gl.vertexAttribI1uiv(location, array);
+    //     break;
+    //   case 2:
+    //     gl.vertexAttribI2uiv(location, array);
+    //     break;
+    //   case 3:
+    //     gl.vertexAttribI3uiv(location, array);
+    //     break;
+    //   case 4:
+    //     gl.vertexAttribI4uiv(location, array);
+    //     break;
+    //   default:
+    //     assert(false);
+    // }
   }
 
   // RESOURCE IMPLEMENTATION
 
   _createHandle() {
-    /** @type {WebGL2RenderingContext} */
-    // @ts-ignore
-    const gl2 = this.gl;
-    return gl2.createVertexArray();
+    return this.gl2.createVertexArray();
   }
 
-  _deleteHandle(handle) {
-    this.gl2.deleteVertexArray(handle);
+  _deleteHandle(): void {
+    this.gl2.deleteVertexArray(this.handle);
     // @ts-ignore
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }
 
-  _bindHandle(handle) {
+  _bindHandle(handle): void {
     this.gl2.bindVertexArray(handle);
   }
 
   // Generic getter for information about a vertex attribute at a given position
-  _getParameter(pname, {location}) {
+  _getParameter(pname: number, {location}) {
     assert(Number.isFinite(location));
     return this.bind(() => {
       switch (pname) {

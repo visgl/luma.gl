@@ -2,7 +2,9 @@ import GL from '@luma.gl/constants';
 import {log} from '@luma.gl/gltools';
 import Accessor from './accessor';
 import Buffer from './buffer';
-import VertexArrayObject from './vertex-array-object';
+import Program from './program'; 
+import ProgramConfiguration from './program-configuration';
+import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
 import {assert, stubRemovedMethods} from '../utils';
 
 const ERR_ATTRIBUTE_TYPE =
@@ -13,48 +15,50 @@ const ERR_ATTRIBUTE_TYPE =
 // in vertex-array.md
 const MULTI_LOCATION_ATTRIBUTE_REGEXP = /^(.+)__LOCATION_([0-9]+)$/;
 
-const DEPRECATIONS_V6 = [
-  'setBuffers',
-  'setGeneric',
-  'clearBindings',
-  'setLocations',
-  'setGenericValues',
-  'setDivisor',
-  'enable',
-  'disable'
-];
+export type VertexArrayProps = {
+  id?: string;
+  program?: Program;
+  configuration?: ProgramConfiguration;
+  attributes?: any[];
+  elements?: any;
+  bindOnUse?: boolean;
+};
 
 export default class VertexArray {
-  constructor(gl, opts = {}) {
+  id: string;
+  gl: WebGLRenderingContext;
+  readonly attributes: object = {};
+
+  vertexArrayObject: VertexArrayObject;
+  accessors: Accessor[] = [];
+  configuration: ProgramConfiguration | null = null;
+
+  // Extracted information
+  elements = null;
+  elementsAccessor = null;
+  values = null;
+  unused = null;
+  drawParams = null;
+  buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
+  
+  bindOnUse = false;
+
+  constructor(gl: WebGLRenderingContext, props?: VertexArrayProps) {
     // Use program's id if program is supplied but no id is supplied
-    const id = opts.id || (opts.program && opts.program.id);
-    // super(gl, Object.assign({}, opts, {id}));
+    const id = props?.id || (props?.program && props?.program.id);
+    // super(gl, Object.assign({}, props, {id}));
+
+    this.vertexArrayObject = new VertexArrayObject(gl);
 
     this.id = id;
     this.gl = gl;
     this.configuration = null;
 
-    // Extracted information
-    this.elements = null;
-    this.elementsAccessor = null;
-    this.values = null;
-    this.accessors = null;
-    this.unused = null;
-    this.drawParams = null;
-    this.buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
-
-    this.attributes = {};
-
-    this.vertexArrayObject = new VertexArrayObject(gl);
-
-    // Issue errors when using removed methods
-    stubRemovedMethods(this, 'VertexArray', 'v6.0', DEPRECATIONS_V6);
-
-    this.initialize(opts);
+    this.initialize(props);
     Object.seal(this);
   }
 
-  delete() {
+  delete(): void {
     if (this.buffer) {
       this.buffer.delete();
     }
@@ -62,11 +66,11 @@ export default class VertexArray {
     this.vertexArrayObject.delete();
   }
 
-  initialize(props = {}) {
+  initialize(props?: VertexArrayProps) {
     this.reset();
     this.configuration = null;
     this.bindOnUse = false;
-    return this.setProps(props);
+    return this.setProps(props || {});
   }
 
   // Resets all attributes (to default valued constants)
@@ -86,7 +90,7 @@ export default class VertexArray {
     return this;
   }
 
-  setProps(props) {
+  setProps(props: VertexArrayProps) {
     if ('program' in props) {
       this.configuration = props.program && props.program.configuration;
     }
@@ -100,6 +104,7 @@ export default class VertexArray {
       this.setElementBuffer(props.elements);
     }
     if ('bindOnUse' in props) {
+      // @ts-expect-error
       props = props.bindOnUse;
     }
     return this;
@@ -124,7 +129,7 @@ export default class VertexArray {
   //     {attributeName: buffer}
   //     {attributeName: [buffer, accessor]}
   //     {attributeName: (typed) array} => constant
-  setAttributes(attributes) {
+  setAttributes(attributes): this {
     Object.assign(this.attributes, attributes);
     this.vertexArrayObject.bind(() => {
       for (const locationOrName in attributes) {
@@ -140,7 +145,7 @@ export default class VertexArray {
 
   // Set (bind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
-  setElementBuffer(elementBuffer = null, accessor = {}) {
+  setElementBuffer(elementBuffer: Buffer | null = null, accessor = {}): this {
     this.elements = elementBuffer; // Save value for debugging
     this.elementsAccessor = accessor;
     this.clearDrawParams();
@@ -150,10 +155,11 @@ export default class VertexArray {
   }
 
   // Set a location in vertex attributes array to a buffer
-  setBuffer(locationOrName, buffer, appAccessor = {}) {
+  setBuffer(locationOrName, buffer: Buffer, appAccessor = {}): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
-      return this.setElementBuffer(buffer, appAccessor);
+      this.setElementBuffer(buffer, appAccessor);
+      return this;
     }
 
     const {location, accessor} = this._resolveLocationAndAccessor(
@@ -175,12 +181,13 @@ export default class VertexArray {
 
   // Set attribute to constant value (small typed array corresponding to one vertex' worth of data)
   setConstant(locationOrName, arrayValue, appAccessor = {}) {
+    // @ts-expect-error
     const {location, accessor} = this._resolveLocationAndAccessor(
       locationOrName,
       arrayValue,
       // Ensure that size isn't taken from program for multi-column
       // attributes
-      Object.assign({size: arrayValue.length}, appAccessor)
+      {size: arrayValue.length, ...appAccessor}
     );
 
     if (location >= 0) {
@@ -202,7 +209,7 @@ export default class VertexArray {
 
   // Workaround for Chrome TransformFeedback binding issue
   // If required, unbind temporarily to avoid conflicting with TransformFeedback
-  unbindBuffers() {
+  unbindBuffers(): this {
     this.vertexArrayObject.bind(() => {
       if (this.elements) {
         this.vertexArrayObject.setElementBuffer(null);
@@ -227,7 +234,7 @@ export default class VertexArray {
 
   // Workaround for Chrome TransformFeedback binding issue
   // If required, rebind rebind after temporary unbind
-  bindBuffers() {
+  bindBuffers(): this {
     this.vertexArrayObject.bind(() => {
       if (this.elements) {
         this.setElementBuffer(this.elements);
@@ -324,7 +331,7 @@ export default class VertexArray {
     return {location: -1};
   }
 
-  _setAttribute(locationOrName, value) {
+  _setAttribute(locationOrName, value): void {
     if (value instanceof Buffer) {
       //  Signature: {attributeName: Buffer}
       this.setBuffer(locationOrName, value);
@@ -351,7 +358,7 @@ export default class VertexArray {
   // Updates all constant attribute values (constants are used when vertex attributes are disabled).
   // This needs to be done repeatedly since in contrast to buffer bindings,
   // constants are stored on the WebGL context, not the VAO
-  _setConstantAttributes(vertexCount, instanceCount) {
+  _setConstantAttributes(vertexCount, instanceCount): void {
     // TODO - use accessor to determine what length to use
     const elementCount = Math.max(vertexCount | 0, instanceCount | 0);
     let constant = this.values[0];
@@ -367,7 +374,7 @@ export default class VertexArray {
     }
   }
 
-  _setConstantAttributeZero(constant, elementCount) {
+  _setConstantAttributeZero(constant, elementCount: number): void {
     if (VertexArrayObject.isSupported(this.gl, {constantAttributeZero: true})) {
       this._setConstantAttribute(0, constant);
       return;
@@ -380,13 +387,16 @@ export default class VertexArray {
     this.vertexArrayObject.setBuffer(0, buffer, this.accessors[0]);
   }
 
-  _setConstantAttribute(location, constant) {
+  _setConstantAttribute(location, constant): void {
     VertexArrayObject.setConstant(this.gl, location, constant);
   }
 
   // Walks the buffers and updates draw parameters
   _updateDrawParams() {
     const drawParams = {
+      elementCount: 0,
+      indexType: Uint16Array,
+      indexOffset: 0,
       isIndexed: false,
       isInstanced: false,
       indexCount: Infinity,
@@ -421,7 +431,7 @@ export default class VertexArray {
     return drawParams;
   }
 
-  _updateDrawParamsForLocation(drawParams, location) {
+  _updateDrawParamsForLocation(drawParams, location): void {
     const value = this.values[location];
     const accessor = this.accessors[location];
 

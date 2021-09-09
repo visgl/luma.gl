@@ -280,13 +280,6 @@ export type ResourceProps = {
 
   // PRIVATE METHODS
 
-  _context() {
-    // @ts-expect-error
-    this.gl.luma = this.gl.luma || {};
-    // @ts-expect-error
-    return this.gl.luma;
-  }
-
   _addStats() {
     const name = this.constructor.name;
     const stats = lumaStats.get('Resource Counts');

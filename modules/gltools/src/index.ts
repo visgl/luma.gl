@@ -13,6 +13,7 @@ export {
 export {polyfillContext} from './polyfill/polyfill-context';
 
 // unified parameter APIs
+export type {GLParameters} from './state-tracker/webgl-parameters';
 export {
   getParameters,
   setParameters,
