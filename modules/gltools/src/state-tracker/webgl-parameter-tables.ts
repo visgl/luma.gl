@@ -1,12 +1,12 @@
 // Tables describing WebGL parameters
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../utils/webgl-checks';
-
+import {GLParameters} from './webgl-parameters';
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
 /* eslint-disable no-shadow */
 
-export const GL_PARAMETER_DEFAULTS = {
+export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.BLEND]: false,
   [GL.BLEND_COLOR]: new Float32Array([0, 0, 0, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_ADD,

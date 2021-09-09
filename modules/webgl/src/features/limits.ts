@@ -1,15 +1,15 @@
 import GL from '@luma.gl/constants';
-
-import WEBGL_LIMITS from './webgl-limits-table';
 import {isWebGL2, getContextDebugInfo} from '@luma.gl/gltools';
+import WEBGL_LIMITS from './webgl-limits-table';
+import {getLumaContextData} from '../context/luma-context-data';
 
 export function getContextLimits(gl) {
-  gl.luma = gl.luma || {};
+  const lumaContextData = getLumaContextData(gl);
 
-  if (!gl.luma.limits) {
-    gl.luma.limits = {};
-    gl.luma.webgl1MinLimits = {};
-    gl.luma.webgl2MinLimits = {};
+  if (!lumaContextData.limits) {
+    lumaContextData.limits = {};
+    lumaContextData.webgl1MinLimits = {};
+    lumaContextData.webgl2MinLimits = {};
 
     const isWebgl2 = isWebGL2(gl);
 
@@ -28,21 +28,21 @@ export function getContextLimits(gl) {
         ('extension' in limit && !gl.getExtension(limit.extension));
 
       const value = limitNotAvailable ? minLimit : gl.getParameter(parameter);
-      gl.luma.limits[parameter] = value;
-      gl.luma.webgl1MinLimits[parameter] = webgl1MinLimit;
-      gl.luma.webgl2MinLimits[parameter] = webgl2MinLimit;
+      lumaContextData.limits[parameter] = value;
+      lumaContextData.webgl1MinLimits[parameter] = webgl1MinLimit;
+      lumaContextData.webgl2MinLimits[parameter] = webgl2MinLimit;
     }
   }
 
-  return gl.luma.limits;
+  return lumaContextData.limits;
 }
 
 export function getGLContextInfo(gl) {
-  gl.luma = gl.luma || {};
+  const lumaContextData = getLumaContextData(gl);
 
   const info = getContextDebugInfo(gl);
-  if (!gl.luma.info) {
-    gl.luma.info = {
+  if (!lumaContextData.info) {
+    lumaContextData.info = {
       [GL.UNMASKED_VENDOR_WEBGL]: info.vendor,
       [GL.UNMASKED_RENDERER_WEBGL]: info.renderer,
       [GL.VENDOR]: info.vendorMasked,
@@ -52,14 +52,15 @@ export function getGLContextInfo(gl) {
     };
   }
 
-  return gl.luma.info;
+  return lumaContextData.info;
 }
 
 export function getContextInfo(gl) {
+  const lumaContextData = getLumaContextData(gl);
   return Object.assign(getContextDebugInfo(gl), {
     limits: getContextLimits(gl),
     info: getGLContextInfo(gl),
-    webgl1MinLimits: gl.luma.webgl1MinLimits,
-    webgl2MinLimits: gl.luma.webgl2MinLimits
+    webgl1MinLimits: lumaContextData.webgl1MinLimits,
+    webgl2MinLimits: lumaContextData.webgl2MinLimits
   });
 }

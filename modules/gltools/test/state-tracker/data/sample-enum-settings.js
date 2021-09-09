@@ -1,7 +1,9 @@
+/** @typedef {import('@luma.gl/gltools').GLParameters} GLParameters  */
 import GL from '@luma.gl/constants';
 
 // eslint-disable-next-line
 // NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1
+/** @type {GLParameters} */
 export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([0.5, 0.5, 0.5, 0]),
@@ -75,6 +77,7 @@ export const ENUM_STYLE_SETTINGS_SET1 = Object.assign({}, ENUM_STYLE_SETTINGS_SE
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: GL.DECR
 });
 
+/** @type {GLParameters} */
 // eslint-disable-next-line
 export const ENUM_STYLE_SETTINGS_SET2 = {
   [GL.BLEND]: true,

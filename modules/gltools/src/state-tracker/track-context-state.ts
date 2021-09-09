@@ -88,6 +88,13 @@ function installProgramSpy(gl) {
 
 /* eslint-disable no-shadow */
 class GLState {
+  gl: WebGLRenderingContext;
+  program = null;
+  stateStack = [];
+  enable = true;
+  cache;
+  log;
+
   constructor(
     gl,
     {
@@ -96,9 +103,6 @@ class GLState {
     } = {}
   ) {
     this.gl = gl;
-    this.program = null;
-    this.stateStack = [];
-    this.enable = true;
     this.cache = copyState ? getParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
     this.log = log;
 
@@ -156,12 +160,20 @@ class GLState {
 
 /**
  * Initialize WebGL state caching on a context
- * @type {types['trackContextState']}
+ * can be called multiple times to enable/disable
+ * 
+ * @note After calling this function, context state will be cached
+ * gl.state.push() and gl.state.pop() will be available for saving,
+ * temporarily modifying, and then restoring state.
  */
-// After calling this function, context state will be cached
-// gl.state.push() and gl.state.pop() will be available for saving,
-// temporarily modifying, and then restoring state.
-export function trackContextState(gl, options = {}) {
+ export function trackContextState(
+  gl: WebGLRenderingContext,
+  options?: {
+    enable?: boolean;
+    copyState?: boolean;
+    log?: any;
+  }
+): WebGLRenderingContext {
   const {enable = true, copyState} = options;
   assert(copyState !== undefined);
   // @ts-ignore
@@ -197,10 +209,9 @@ export function trackContextState(gl, options = {}) {
 }
 
 /**
- * Initialize WebGL state caching on a context
- * @type {types['pushContextState']}
+ * Saves current WebGL context state onto an internal per-context stack
  */
-export function pushContextState(gl) {
+ export function pushContextState(gl: WebGLRenderingContext): void {
   // @ts-ignore
   if (!gl.state) {
     trackContextState(gl, {copyState: false});
@@ -209,11 +220,11 @@ export function pushContextState(gl) {
   gl.state.push();
 }
 
+
 /**
- * Initialize WebGL state caching on a context
- * @type {types['popContextState']}
+ * Restores previously saved WebGL context state
  */
-export function popContextState(gl) {
+export function popContextState(gl: WebGLRenderingContext): void {
   // @ts-ignore
   assert(gl.state);
   // @ts-ignore

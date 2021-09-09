@@ -48,10 +48,6 @@ test('WebGL#set and get', (t) => {
 test('WebGL#composite setter', (t) => {
   const {gl} = fixture;
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
-  const partialCompositeStateValues = {
-    [GL.STENCIL_FUNC]: GL.NEVER,
-    [GL.STENCIL_REF]: 0.5
-  };
 
   resetParameters(gl);
 
@@ -66,20 +62,15 @@ test('WebGL#composite setter', (t) => {
   }
 
   // Update only two states out of three.
-  setParameters(gl, partialCompositeStateValues);
+  setParameters(gl, {
+    [GL.STENCIL_FUNC]: GL.NEVER,
+    [GL.STENCIL_REF]: 0.5
+  });
 
   let value = getParameters(gl, [GL.STENCIL_FUNC])[GL.STENCIL_FUNC];
-  t.deepEqual(
-    value,
-    partialCompositeStateValues[GL.STENCIL_FUNC],
-    `got expected updated value ${stringifyTypedArray(value)}`
-  );
+  t.deepEqual(value, GL.NEVER, `got expected updated value ${stringifyTypedArray(value)}`);
   value = getParameters(gl, [GL.STENCIL_REF])[GL.STENCIL_REF];
-  t.deepEqual(
-    value,
-    partialCompositeStateValues[GL.STENCIL_REF],
-    `got expected updated value ${stringifyTypedArray(value)}`
-  );
+  t.deepEqual(value, 0.5, `got expected updated value ${stringifyTypedArray(value)}`);
   value = getParameters(gl, [GL.STENCIL_VALUE_MASK])[GL.STENCIL_VALUE_MASK];
   t.deepEqual(
     value,

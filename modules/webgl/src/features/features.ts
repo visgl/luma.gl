@@ -6,6 +6,7 @@
 import WEBGL_FEATURES from './webgl-features-table';
 import {isWebGL2, log} from '@luma.gl/gltools';
 import {assert} from '../utils';
+import {getLumaContextData} from '../context/luma-context-data';
 
 const LOG_UNSUPPORTED_FEATURE = 2;
 
@@ -24,30 +25,30 @@ export function hasFeatures(gl, features) {
 
 // Return a list of supported features
 export function getFeatures(gl) {
-  gl.luma = gl.luma || {};
-  gl.luma.caps = gl.luma.caps || {};
+  const lumaContextData = getLumaContextData(gl);
+  lumaContextData.caps = lumaContextData.caps || {};
   for (const cap in WEBGL_FEATURES) {
-    if (gl.luma.caps[cap] === undefined) {
-      gl.luma.caps[cap] = isFeatureSupported(gl, cap);
+    if (lumaContextData.caps[cap] === undefined) {
+      lumaContextData.caps[cap] = isFeatureSupported(gl, cap);
     }
   }
-  return gl.luma.caps;
+  return lumaContextData.caps;
 }
 
 // TODO - cache the value
 function isFeatureSupported(gl, cap) {
-  gl.luma = gl.luma || {};
-  gl.luma.caps = gl.luma.caps || {};
+  const lumaContextData = getLumaContextData(gl);
+  lumaContextData.caps = lumaContextData.caps || {};
 
-  if (gl.luma.caps[cap] === undefined) {
-    gl.luma.caps[cap] = queryFeature(gl, cap);
+  if (lumaContextData.caps[cap] === undefined) {
+    lumaContextData.caps[cap] = queryFeature(gl, cap);
   }
 
-  if (!gl.luma.caps[cap]) {
+  if (!lumaContextData.caps[cap]) {
     log.log(LOG_UNSUPPORTED_FEATURE, `Feature: ${cap} not supported`)();
   }
 
-  return gl.luma.caps[cap];
+  return lumaContextData.caps[cap];
 }
 
 function queryFeature(gl, cap) {

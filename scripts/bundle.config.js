@@ -57,7 +57,7 @@ const ES5_BABEL_CONFIG = {
     // inject __VERSION__ from package.json
     'version-inline',
     ["@babel/plugin-transform-modules-commonjs", { allowTopLevelThis: true }],
-    'inline-webgl-constants',
+    // 'inline-webgl-constants',
     ['remove-glsl-comments', {patterns: ['**/*.glsl.js']}]
   ]
 };
