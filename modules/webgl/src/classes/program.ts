@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 
-import Resource from './resource';
+import Resource, {ResourceProps} from './resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -17,34 +17,50 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
-const V6_DEPRECATED_METHODS = [
-  'setVertexArray',
-  'setAttributes',
-  'setBuffers',
-  'unsetBuffers',
+export type ProgramProps = ResourceProps & {
+  hash?;
+  vs?; 
+  fs?;
+  varyings?; 
+  bufferMode?: number;
+}
 
-  'use',
-  'getUniformCount',
-  'getUniformInfo',
-  'getUniformLocation',
-  'getUniformValue',
-
-  'getVarying',
-  'getFragDataLocation',
-  'getAttachedShaders',
-  'getAttributeCount',
-  'getAttributeLocation',
-  'getAttributeInfo'
-];
+export type ProgramDrawOptions = {
+  logPriority?: any;
+  drawMode?: any;
+  vertexCount: any;
+  offset?: number;
+  start?: any;
+  end?: any;
+  isIndexed?: boolean;
+  indexType?: any;
+  instanceCount?: number;
+  isInstanced?: boolean;
+  vertexArray?: any;
+  transformFeedback?: any;
+  framebuffer?: any;
+  parameters?: {};
+  uniforms?: any;
+  samplers?: any;
+};
 
 export default class Program extends Resource {
-  constructor(gl, props = {}) {
+  configuration: ProgramConfiguration;
+  // Experimental flag to avoid deleting Program object while it is cached
+  _isCached = false;
+  _textureIndexCounter = 0;
+  hash: string;; // Used by ProgramManager
+  vs;
+  fs;
+  uniforms: {};
+  _textureUniforms: {};
+  varyings: {};
+  _uniformCount = 0;
+  _uniformSetters: {};
+  
+  constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
     super(gl, props);
 
-    this.stubRemovedMethods('Program', 'v6.0', V6_DEPRECATED_METHODS);
-
-    // Experimental flag to avoid deleting Program object while it is cached
-    this._isCached = false;
 
     this.initialize(props);
 
@@ -53,7 +69,7 @@ export default class Program extends Resource {
     this._setId(props.id);
   }
 
-  initialize(props = {}) {
+  initialize(props: ProgramProps = {}) {
     const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
 
     this.hash = hash || ''; // Used by ProgramManager
@@ -102,7 +118,8 @@ export default class Program extends Resource {
 
   // A good thing about the WebGL API is that there are so many ways to draw things ;)
   // This function unifies those ways into a single call using common parameters with sane defaults
-  draw({
+  draw(options: ProgramDrawOptions): boolean {
+    const {
     logPriority, // Probe log priority, enables Model to do more integrated logging
 
     drawMode = GL.TRIANGLES,
@@ -118,13 +135,15 @@ export default class Program extends Resource {
     vertexArray = null,
     transformFeedback,
     framebuffer,
-    parameters = {},
 
     // Deprecated
     uniforms,
     samplers
-  }) {
-    if (uniforms || samplers) {
+  } = options;
+
+  let {parameters = {}} = options;
+
+  if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
       this.setUniforms(uniforms || {});
@@ -357,10 +376,12 @@ export default class Program extends Resource {
       const info = this.gl.getActiveUniform(this.handle, i);
       const {name} = parseUniformName(info.name);
       let location = gl.getUniformLocation(this.handle, name);
+      // @ts-expect-error
       this._uniformSetters[name] = getUniformSetter(gl, location, info);
       if (info.size > 1) {
         for (let l = 0; l < info.size; l++) {
           location = gl.getUniformLocation(this.handle, `${name}[${l}]`);
+          // @ts-expect-error
           this._uniformSetters[`${name}[${l}]`] = getUniformSetter(gl, location, info);
         }
       }
