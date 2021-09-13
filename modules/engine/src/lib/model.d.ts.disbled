@@ -59,6 +59,12 @@ export default class Model {
   readonly vertexCount: number;
   program: Program;
 
+  programProps;
+  program;
+  _programDirty
+  _programManagerState;
+  _managedProgram;
+
   constructor(gl: WebGLRenderingContext, props?: ModelProps);
   initialize(props: any): void;
   setProps(props: any): void;

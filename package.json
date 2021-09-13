@@ -72,7 +72,6 @@
     "test-fast"
   ],
   "dependencies": {
-    "@types/offscreencanvas": "^2019.6.3",
-    "@types/webgl2": "^0.0.6"
+    "@types/offscreencanvas": "^2019.6.4"
   }
 }

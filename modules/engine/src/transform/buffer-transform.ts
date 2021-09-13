@@ -1,28 +1,41 @@
 import {isWebGL2} from '@luma.gl/gltools';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl';
 import {assert} from '@luma.gl/webgl';
+import type {TransformProps, TransformDrawOptions, TransformRunOptions, TransformBinding} from './transform-types';
+
+// import {TransformDrawOptions, TransformModelProps} from './resource-transform';
+// export interface BufferTransform2 {
+//   setupResources(opts: any): void;
+//   updateModelProps(props?: {}): TransformProps;
+//   getDrawOptions(opts?: {}): TransformDrawOptions;
+//   swap(): boolean;
+//   update(opts?: {}): void;
+//   getBuffer(varyingName: any): any;
+//   getData(options?: {varyingName: string}): any;
+//   delete(): void;
+// }
 
 export default class BufferTransform {
-  constructor(gl, props = {}) {
+  gl: WebGL2RenderingContext;
+  currentIndex = 0;
+  feedbackMap = {};
+  varyings: string[] | null = null; // varyings array
+  bindings: TransformBinding[] = [];
+  resources = {}; // resources to be deleted
+
+  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
     this.gl = gl;
-    this.currentIndex = 0;
-    this.feedbackMap = {};
-    this.varyings = null; // varyings array
-    this.bindings = []; // each element is an object : {sourceBuffers, feedbackBuffers, transformFeedback}
-
-    this.resources = {}; // resources to be deleted
-
     this._initialize(props);
     Object.seal(this);
   }
 
-  setupResources(opts) {
+  setupResources(opts): void {
     for (const binding of this.bindings) {
       this._setupTransformFeedback(binding, opts);
     }
   }
 
-  updateModelProps(props = {}) {
+  updateModelProps(props: TransformProps = {}): TransformProps {
     const {varyings} = this;
     if (varyings.length > 0) {
       props = Object.assign({}, props, {varyings});
@@ -30,15 +43,16 @@ export default class BufferTransform {
     return props;
   }
 
-  getDrawOptions(opts = {}) {
+  // @ts-expect-error
+  getDrawOptions(opts: TransformRunOptions = {}): TransformDrawOptions {
     const binding = this.bindings[this.currentIndex];
     const {sourceBuffers, transformFeedback} = binding;
+    // @ts-expect-error
     const attributes = Object.assign({}, sourceBuffers, opts.attributes);
-
     return {attributes, transformFeedback};
   }
 
-  swap() {
+  swap(): boolean {
     if (this.feedbackMap) {
       this.currentIndex = this._getNextIndex();
       return true;
@@ -52,7 +66,7 @@ export default class BufferTransform {
   }
 
   // returns current feedbackBuffer of given name
-  getBuffer(varyingName) {
+  getBuffer(varyingName: string | null): Buffer | null {
     const {feedbackBuffers} = this.bindings[this.currentIndex];
     const bufferOrParams = varyingName ? feedbackBuffers[varyingName] : null;
     if (!bufferOrParams) {
@@ -61,7 +75,7 @@ export default class BufferTransform {
     return bufferOrParams instanceof Buffer ? bufferOrParams : bufferOrParams.buffer;
   }
 
-  getData(options = {}) {
+  getData(options: {varyingName?: string}) {
     const {varyingName} = options;
     const buffer = this.getBuffer(varyingName);
     if (buffer) {
@@ -71,7 +85,7 @@ export default class BufferTransform {
   }
 
   // Delete owned resources.
-  delete() {
+  delete(): void {
     for (const name in this.resources) {
       this.resources[name].delete();
     }
@@ -79,7 +93,7 @@ export default class BufferTransform {
 
   // Private
 
-  _initialize(props = {}) {
+  _initialize(props: TransformProps = {}): void {
     this._setupBuffers(props);
     this.varyings = props.varyings || Object.keys(this.bindings[this.currentIndex].feedbackBuffers);
     if (this.varyings.length > 0) {
@@ -125,13 +139,15 @@ export default class BufferTransform {
   }
 
   _setupBuffers(props = {}) {
-    const {sourceBuffers = null} = props;
-    Object.assign(this.feedbackMap, props.feedbackMap);
+  // @ts-expect-error
+  const {sourceBuffers = null} = props;
+  // @ts-expect-error
+  Object.assign(this.feedbackMap, props.feedbackMap);
     const feedbackBuffers = this._getFeedbackBuffers(props);
     this._updateBindings({sourceBuffers, feedbackBuffers});
   }
 
-  _setupTransformFeedback(binding, {model}) {
+  _setupTransformFeedback(binding, {model}): void {
     const {program} = model;
     binding.transformFeedback = new TransformFeedback(this.gl, {
       program,
@@ -139,7 +155,7 @@ export default class BufferTransform {
     });
   }
 
-  _updateBindings(opts) {
+  _updateBindings(opts): void {
     this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this.feedbackMap) {
       const {sourceBuffers, feedbackBuffers} = this._swapBuffers(this.bindings[this.currentIndex]);
@@ -166,7 +182,7 @@ export default class BufferTransform {
     return binding;
   }
 
-  _swapBuffers(opts) {
+  _swapBuffers(opts): {sourceBuffers: any; feedbackBuffers: any} {
     if (!this.feedbackMap) {
       return null;
     }
@@ -184,7 +200,7 @@ export default class BufferTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  _createNewBuffer(name, opts) {
+  _createNewBuffer(name, opts): Buffer {
     const buffer = new Buffer(this.gl, opts);
     if (this.resources[name]) {
       this.resources[name].delete();
@@ -193,7 +209,7 @@ export default class BufferTransform {
     return buffer;
   }
 
-  _getNextIndex() {
+  _getNextIndex(): number {
     return (this.currentIndex + 1) % 2;
   }
 }

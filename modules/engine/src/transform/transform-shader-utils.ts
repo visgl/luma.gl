@@ -8,7 +8,18 @@ const VS_POS_VARIABLE = 'transform_position';
 // Scan provided vertex shader
 // for each texture attribute, inject sampler instructions and build uniforms for sampler
 // for texture target, get varying type and inject position instruction
-export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, targetTexture}) {
+export function updateForTextures(options: {
+  vs: any;
+  sourceTextureMap: any;
+  targetTextureVarying: any;
+  targetTexture: any;
+}): {
+  vs: any;
+  targetTextureType: any;
+  inject: {};
+  samplerTextureMap: {};
+} {
+  const {vs, sourceTextureMap, targetTextureVarying, targetTexture} = options;
   const texAttributeNames = Object.keys(sourceTextureMap);
   let sourceCount = texAttributeNames.length;
   let targetTextureType = null;
@@ -67,46 +78,47 @@ export function updateForTextures({vs, sourceTextureMap, targetTextureVarying, t
 }
 
 // builds and returns an object contaning size uniform for each texture
-export function getSizeUniforms({sourceTextureMap, targetTextureVarying, targetTexture}) {
+export function getSizeUniforms(options: {
+  sourceTextureMap: any;
+  targetTextureVarying: any;
+  targetTexture: any;
+}): {} {
   const uniforms = {};
   let width;
   let height;
-  if (targetTextureVarying) {
-    ({width, height} = targetTexture);
-    uniforms[`${SIZE_UNIFORM_PREFIX}${targetTextureVarying}`] = [width, height];
+  if (options.targetTextureVarying) {
+    ({width, height} = options.targetTexture);
+    uniforms[`${SIZE_UNIFORM_PREFIX}${options.targetTextureVarying}`] = [width, height];
   }
-  for (const textureName in sourceTextureMap) {
-    ({width, height} = sourceTextureMap[textureName]);
+  for (const textureName in options.sourceTextureMap) {
+    ({width, height} = options.sourceTextureMap[textureName]);
     uniforms[`${SIZE_UNIFORM_PREFIX}${textureName}`] = [width, height];
   }
   return uniforms;
 }
 
-// Checks if provided line is defining an attribute, if so returns details otherwise null
-function getAttributeDefinition(line) {
-  return getQualifierDetails(line, ['attribute', 'in']);
-}
-
-function getSamplerDeclerations(textureName) {
-  const samplerName = `${SAMPLER_UNIFORM_PREFIX}${textureName}`;
-  const sizeName = `${SIZE_UNIFORM_PREFIX}${textureName}`;
-  const uniformDeclerations = `\
-  uniform sampler2D ${samplerName};
-  uniform vec2 ${sizeName};`;
-  return {samplerName, sizeName, uniformDeclerations};
-}
-
 // Return size (float, vec2 etc) of a given varying, null if doens't exist.
-export function getVaryingType(line, varying) {
-  const qualaiferDetails = getQualifierDetails(line, ['varying', 'out']);
-  if (!qualaiferDetails) {
+
+export function getVaryingType(line: any, varying: any): any {
+  const qualiferDetails = getQualifierDetails(line, ['varying', 'out']);
+  if (!qualiferDetails) {
     return null;
   }
-  return qualaiferDetails.name === varying ? qualaiferDetails.type : null;
+  return qualiferDetails.name === varying ? qualiferDetails.type : null;
 }
 
 // build required definitions, sample instructions for each texture attribute
-export function processAttributeDefinition(line, textureMap) {
+export function processAttributeDefinition(
+  line: any,
+  textureMap: any
+): {
+  updatedLine: string;
+  inject: {
+    'vs:#decl': string;
+    'vs:#main-start': string;
+  };
+  samplerTextureMap: {};
+} {
   const samplerTextureMap = {};
   const attributeData = getAttributeDefinition(line);
   if (!attributeData) {
@@ -116,7 +128,7 @@ export function processAttributeDefinition(line, textureMap) {
   if (name && textureMap[name]) {
     // eslint-disable-next-line no-useless-escape
     const updatedLine = `\// ${line} => Replaced by Transform with a sampler`;
-    const {samplerName, sizeName, uniformDeclerations} = getSamplerDeclerations(name);
+    const {samplerName, sizeName, uniformDeclerations} = getSamplerDeclarations(name);
 
     const channels = typeToChannelSuffix(type);
     const sampleInstruction = `  ${type} ${name} = transform_getInput(${samplerName}, ${sizeName}).${channels};\n`;
@@ -138,4 +150,20 @@ export function processAttributeDefinition(line, textureMap) {
     };
   }
   return null;
+}
+
+// HELPERS
+
+// Checks if provided line is defining an attribute, if so returns details otherwise null
+function getAttributeDefinition(line) {
+  return getQualifierDetails(line, ['attribute', 'in']);
+}
+
+function getSamplerDeclarations(textureName) {
+  const samplerName = `${SAMPLER_UNIFORM_PREFIX}${textureName}`;
+  const sizeName = `${SIZE_UNIFORM_PREFIX}${textureName}`;
+  const uniformDeclerations = `\
+  uniform sampler2D ${samplerName};
+  uniform vec2 ${sizeName};`;
+  return {samplerName, sizeName, uniformDeclerations};
 }

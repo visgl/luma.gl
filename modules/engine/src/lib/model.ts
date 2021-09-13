@@ -2,8 +2,9 @@
 
 import GL from '@luma.gl/constants';
 import {isWebGL} from '@luma.gl/gltools';
-import ProgramManager from './program-manager';
+import {ProgramProps} from '@luma.gl/webgl';
 import {
+  Shader,
   Program,
   VertexArray,
   clear,
@@ -19,7 +20,9 @@ import {
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
 } from '@luma.gl/webgl';
+import ProgramManager from './program-manager';
 import {getBuffersFromGeometry} from './model-utils';
+import {TransformRunOptions} from '../transform/transform-types';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -29,16 +32,94 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const NOOP = () => {};
 const DRAW_PARAMS = {};
 
+// type InjectionMap = object;
+
+// type ProgramProps = {
+//   program?: Program
+//   vs?: Shader | string
+//   fs?: Shader | string
+//   modules?: (object | string)[]; // Array<ShaderModule | ShaderModuleObject | string>
+//   defines?: DefineMap
+//   inject?: InjectionMap
+//   varyings?: string[]
+//   bufferMode?: number
+//   transpileToGLSL100?: boolean
+// }
+
+export type ModelProps = ProgramProps & {
+  id?: string
+  moduleSettings?: object; // UniformsOptions
+  attributes?: object,
+  uniforms?: object; // Uniforms
+  geometry?: object; // Geometry
+  vertexCount?: number
+  drawMode?: number
+  isInstanced?: boolean
+  instanceCount?: number
+  programManager?: ProgramManager
+  onBeforeRender?: () => void
+  onAfterRender?: () => void
+  _feedbackBuffers?: object; // FeedbackBuffers
+
+  // Deprecated? 
+  isIndexed?: boolean;
+  indexType?;
+  indexOffset?: number;
+  vertexArrayInstanced?: boolean;
+};
+
+export type ModelDrawOptions = {
+  moduleSettings?;
+  framebuffer?;
+  uniforms?;
+  attributes?;
+  transformFeedback?;
+  parameters?;
+  vertexArray?;
+};
+
 export default class Model {
-  constructor(gl, props = {}) {
+  readonly id: string;
+  readonly gl: WebGLRenderingContext;
+  readonly animated: boolean = false;
+  programManager: ProgramManager;
+  vertexCount: number;
+
+  lastLogTime: number = 0; // TODO - move to probe.gl
+
+  props: ModelProps;
+  userData: Record<string, any> = {};
+  needsRedraw: boolean = true;
+  attributes: Record<string, any> = {};
+  _attributes: Record<string, any> = {};
+  uniforms: Record<string, any> = {};
+
+  drawMode;
+  instanceCount: number;
+  pickable: boolean = true;
+
+  programProps: ProgramProps & {program?: Program; modules; inject; defines; varyings; bufferMode; transpileToGLSL100;};
+  vertexArray: VertexArray;
+  program: Program;
+  transformFeedback: TransformFeedback | undefined;
+  _programDirty = true;
+  _programManagerState;
+  _managedProgram;
+
+  // Track buffers created by setGeometry
+  geometryBuffers = {};
+  // geometry might have set drawMode and vertexCount
+  isInstanced: boolean;
+  // TODO - just to unbreak deck.gl 7.0-beta, remove as soon as updated
+  geometry = {};
+  
+  constructor(gl, props: ModelProps = {}) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
     assert(isWebGL(gl));
     this.id = id;
     this.gl = gl;
     this.id = props.id || uid('Model');
-    this.lastLogTime = 0; // TODO - move to probe.gl
-    this.animated = false;
     this.initialize(props);
   }
 
@@ -63,9 +144,9 @@ export default class Model {
 
     this.programProps = {
       program,
+      modules,
       vs,
       fs,
-      modules,
       defines,
       inject,
       varyings,
@@ -75,10 +156,6 @@ export default class Model {
     this.program = null;
     this.vertexArray = null;
     this._programDirty = true;
-
-    // Initialize state
-    this.userData = {};
-    this.needsRedraw = true;
 
     // Attributes and buffers
     // Model manages auto Buffer creation from typed arrays
@@ -239,7 +316,7 @@ export default class Model {
     return this;
   }
 
-  getModuleUniforms(opts) {
+  getModuleUniforms(opts?) {
     this._checkProgram();
 
     const getUniforms = this.programManager.getUniforms(this.program);
@@ -251,7 +328,7 @@ export default class Model {
     return {};
   }
 
-  updateModuleSettings(opts) {
+  updateModuleSettings(opts?) {
     const uniforms = this.getModuleUniforms(opts || {});
     return this.setUniforms(uniforms);
   }
@@ -263,7 +340,7 @@ export default class Model {
     return this;
   }
 
-  draw(opts = {}) {
+  draw(opts: ModelDrawOptions = {}) {
     // Lazy update program and vertex array
     this._checkProgram();
 
@@ -335,8 +412,9 @@ export default class Model {
     return didDraw;
   }
 
-  // Draw call for transform feedback
-  transform(opts = {}) {
+  // Draw call for transform feedback, TBD...
+  transform(opts: ModelDrawOptions = {}) {
+    // @ts-expect-error
     const {discard = true, feedbackBuffers, unbindModels = []} = opts;
 
     let {parameters} = opts;
@@ -505,7 +583,7 @@ export default class Model {
     return logLevel;
   }
 
-  _logDrawCallEnd(logLevel, vertexArray, uniforms, framebuffer) {
+  _logDrawCallEnd(logLevel, vertexArray, uniforms, framebuffer?) {
     // HACK: logLevel === undefined means logDrawCallStart didn't run
     if (logLevel === undefined) {
       return;
