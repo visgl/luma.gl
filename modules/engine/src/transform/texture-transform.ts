@@ -1,4 +1,3 @@
-/** @typedef {import('./transform').TransformProps} TransformProps */
 import GL from '@luma.gl/constants';
 
 import {
@@ -19,6 +18,8 @@ import {
 
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
+import type {TransformProps, TransformDrawOptions} from './transform-types';
+
 // TODO: move these constants to transform-shader-utils
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {
@@ -30,7 +31,24 @@ const SRC_TEX_PARAMETER_OVERRIDES = {
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
 export default class TextureTransform {
-  constructor(gl, props = {}) {
+  gl: WebGL2RenderingContext;
+  id = 0;
+  currentIndex = 0;
+  _swapTexture = null;
+  targetTextureVarying = null;
+  targetTextureType = null;
+  samplerTextureMap = null;
+  bindings = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
+  resources = {}; // resources to be deleted
+
+  hasTargetTexture: boolean = false;
+  hasSourceTextures: boolean = false;
+  ownTexture: Texture2D | null = null;
+  elementIDBuffer: Buffer | null = null;
+  _targetRefTexName: string;
+  elementCount: number;
+
+  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
     this.gl = gl;
     this.id = this.currentIndex = 0;
     this._swapTexture = null;
@@ -45,12 +63,12 @@ export default class TextureTransform {
     Object.seal(this);
   }
 
-  updateModelProps(props = {}) {
+  updateModelProps(props: TransformProps = {}) {
     const updatedModelProps = this._processVertexShader(props);
     return Object.assign({}, props, updatedModelProps);
   }
 
-  getDrawOptions(opts = {}) {
+  getDrawOptions(opts: TransformProps = {}): TransformDrawOptions {
     const {sourceBuffers, sourceTextures, framebuffer, targetTexture} =
       this.bindings[this.currentIndex];
 
@@ -75,7 +93,6 @@ export default class TextureTransform {
       });
       Object.assign(uniforms, sizeUniforms);
     }
-
     if (this.hasTargetTexture) {
       discard = false;
       parameters.viewport = [0, 0, framebuffer.width, framebuffer.height];
@@ -137,17 +154,18 @@ export default class TextureTransform {
       this.ownTexture.delete();
     }
     if (this.elementIDBuffer) {
+      // @ts-ignore
       this.elementIDBuffer.delete();
     }
   }
 
   // Private
 
-  _initialize(props = {}) {
+  _initialize(props: TransformProps = {}) {
     const {_targetTextureVarying, _swapTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
-    this.hasTargetTexture = _targetTextureVarying;
+    this.hasTargetTexture = Boolean(_targetTextureVarying);
     this._setupTextures(props);
   }
 
@@ -170,8 +188,7 @@ export default class TextureTransform {
     return this._createNewTexture(refTexture);
   }
 
-  /** @param {TransformProps} props */
-  _setupTextures(props = {}) {
+  _setupTextures(props: TransformProps = {}) {
     const {sourceBuffers, _sourceTextures = {}, _targetTexture} = props;
     const targetTexture = this._createTargetTexture({
       sourceTextures: _sourceTextures,
@@ -185,7 +202,7 @@ export default class TextureTransform {
     }
   }
 
-  _updateElementIDBuffer(elementCount) {
+  _updateElementIDBuffer(elementCount: number): void {
     if (typeof elementCount !== 'number' || this.elementCount >= elementCount) {
       return;
     }
@@ -304,7 +321,7 @@ export default class TextureTransform {
   }
 
   // build and return shader releated parameters
-  _processVertexShader(props = {}) {
+  _processVertexShader(props: TransformProps = {}) {
     const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
     // @ts-ignore TODO - uniforms is not present
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
@@ -326,6 +343,7 @@ export default class TextureTransform {
       });
     const modules =
       this.hasSourceTextures || this.targetTextureVarying
+        // @ts-expect-error
         ? [transformModule].concat(props.modules || [])
         : props.modules;
     return {vs, fs, modules, uniforms, inject: combinedInject};

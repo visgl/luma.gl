@@ -1,32 +1,35 @@
 import GL from '@luma.gl/constants';
 import {getPassthroughFS} from '@luma.gl/shadertools';
-import BufferTransform from './buffer-transform';
-import TextureTransform from './texture-transform';
-
 import {isWebGL2} from '@luma.gl/gltools';
+import type {Framebuffer, Buffer} from '@luma.gl/webgl';
 import {assert, isObjectEmpty, getShaderVersion} from '@luma.gl/webgl';
 import Model from '../lib/model';
+import BufferTransform from './buffer-transform';
+import TextureTransform from './texture-transform';
+import {TransformProps, TransformRunOptions, TransformDrawOptions} from './transform-types';
 
 // takes source and target buffers/textures and setsup the pipeline
 export default class Transform {
-  static isSupported(gl) {
-    // TODO : differentiate writting to buffer vs not
+  static isSupported(gl: WebGLRenderingContext): boolean {
+    // TODO : differentiate writing to buffer vs not
     return isWebGL2(gl);
   }
 
-  constructor(gl, props = {}) {
+  readonly gl: WebGL2RenderingContext;
+  model: Model | null = null;
+  elementCount = 0;
+  bufferTransform = null;
+  textureTransform = null;
+  elementIDBuffer = null;
+
+  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
     this.gl = gl;
-    this.model = null;
-    this.elementCount = 0;
-    this.bufferTransform = null;
-    this.textureTransform = null;
-    this.elementIDBuffer = null;
     this._initialize(props);
     Object.seal(this);
   }
 
   // Delete owned resources.
-  delete() {
+  delete(): void {
     const {model, bufferTransform, textureTransform} = this;
     if (model) {
       model.delete();
@@ -40,10 +43,10 @@ export default class Transform {
   }
 
   // Run one transform loop.
-  run(opts = {}) {
-    const {clearRenderTarget = true} = opts;
+  run(options?: TransformRunOptions): void {
+    const {clearRenderTarget = true} = options || {};
 
-    const updatedOpts = this._updateDrawOptions(opts);
+    const updatedOpts = this._updateDrawOptions(options);
 
     if (clearRenderTarget && updatedOpts.framebuffer) {
       updatedOpts.framebuffer.clear({color: true});
@@ -53,7 +56,7 @@ export default class Transform {
   }
 
   // swap resources if a map is provided
-  swap() {
+  swap(): void {
     let swapped = false;
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
@@ -63,16 +66,16 @@ export default class Transform {
   }
 
   // Return Buffer object for given varying name.
-  getBuffer(varyingName = null) {
+  getBuffer(varyingName: string = null): Buffer {
     return this.bufferTransform && this.bufferTransform.getBuffer(varyingName);
   }
 
   // Return data either from Buffer or from Texture
-  getData(opts = {}) {
+  getData(options: {packed?: boolean; varyingName?: string} = {}) {
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
       // @ts-ignore
-      const data = resourceTransform.getData(opts);
+      const data = resourceTransform.getData(options);
       if (data) {
         return data;
       }
@@ -81,25 +84,25 @@ export default class Transform {
   }
 
   // Return framebuffer object if rendering to textures
-  getFramebuffer() {
+  getFramebuffer(): Framebuffer | null {
     return this.textureTransform && this.textureTransform.getFramebuffer();
   }
 
   // Update some or all buffer/texture bindings.
-  update(opts = {}) {
-    if ('elementCount' in opts) {
+  update(props: TransformProps): void {
+    if ('elementCount' in props) {
       // @ts-ignore TODO
-      this.model.setVertexCount(opts.elementCount);
+      this.model.setVertexCount(props.elementCount);
     }
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      resourceTransform.update(opts);
+      resourceTransform.update(props);
     }
   }
 
   // Private
 
-  _initialize(props = {}) {
+  _initialize(props: TransformProps): void {
     const {gl} = this;
     this._buildResourceTransforms(gl, props);
 
@@ -107,7 +110,7 @@ export default class Transform {
     this.model = new Model(
       gl,
       Object.assign({}, props, {
-        fs: props.fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
+        fs: props._fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
         id: props.id || 'transform-model',
         drawMode: props.drawMode || GL.POINTS,
         vertexCount: props.elementCount
@@ -119,8 +122,8 @@ export default class Transform {
     /* eslint-enable no-unused-expressions */
   }
 
-  _updateModelProps(props) {
-    let updatedProps = Object.assign({}, props);
+  _updateModelProps(props: TransformProps): TransformProps {
+    let updatedProps = {...props};
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
       updatedProps = resourceTransform.updateModelProps(updatedProps);
@@ -128,7 +131,7 @@ export default class Transform {
     return updatedProps;
   }
 
-  _buildResourceTransforms(gl, props) {
+  _buildResourceTransforms(gl: WebGL2RenderingContext, props: TransformProps) {
     if (canCreateBufferTransform(props)) {
       this.bufferTransform = new BufferTransform(gl, props);
     }
@@ -141,8 +144,8 @@ export default class Transform {
     );
   }
 
-  _updateDrawOptions(opts) {
-    let updatedOpts = Object.assign({}, opts);
+  _updateDrawOptions(options: TransformRunOptions): TransformDrawOptions {
+    let updatedOpts = {...options};
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
       updatedOpts = Object.assign(updatedOpts, resourceTransform.getDrawOptions(updatedOpts));
@@ -153,25 +156,17 @@ export default class Transform {
 
 // Helper Methods
 
-function canCreateBufferTransform(props) {
-  if (
-    !isObjectEmpty(props.feedbackBuffers) ||
-    !isObjectEmpty(props.feedbackMap) ||
-    (props.varyings && props.varyings.length > 0)
-  ) {
-    return true;
-  }
-  return false;
+function canCreateBufferTransform(props: TransformProps): boolean {
+  const canCreate = !isObjectEmpty(props.feedbackBuffers) ||
+  !isObjectEmpty(props.feedbackMap) ||
+  (props.varyings && props.varyings.length > 0);
+  return Boolean(canCreate);
 }
 
-function canCreateTextureTransform(props) {
-  if (
+function canCreateTextureTransform(props: TransformProps): boolean {
+  const canCreate =
     !isObjectEmpty(props._sourceTextures) ||
     props._targetTexture ||
     props._targetTextureVarying
-  ) {
-    return true;
-  }
-
-  return false;
+  return canCreate;
 }
