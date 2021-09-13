@@ -1,14 +1,40 @@
 import GL from '@luma.gl/constants';
+import {isWebGL2} from '@luma.gl/gltools';
+
+export function isRenderbufferFormatSupported(gl: WebGLRenderingContext, format: GL): boolean {
+  const info = RENDERBUFFER_FORMATS[format];
+  // Unknown format
+  if (!info) {
+    return false;
+  }
+  if (info.ext) {
+    return Boolean(gl.getExtension(info.ext));
+  }
+  if (info.gl2) {
+    return isWebGL2(gl);
+  }
+  return true;
+}
+
+export function getRenderbufferFormatBytesPerPixel(format: GL): number {
+  return RENDERBUFFER_FORMATS[format].bpp;
+}
 
 // Define local extension strings to optimize minification
-// const SRGB = 'EXT_sRGB';
-// const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_WEBGL2 = 'EXT_color_buffer_float';
-// const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
-// NOTE(Tarek): bpp === "bytes per pixel", used for
-// memory usage calculations.
-export default {
+/**
+ * @param bpp "bytes per pixel", used for memory usage calculations.
+ * @param gl2 requires WebGL2
+ * @param ext requires extension
+ */
+type RenderbufferFormat = {
+  bpp: number;
+  gl2?: boolean;
+  ext?: string;
+};
+
+const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
   [GL.DEPTH_COMPONENT16]: {bpp: 2}, // 16 depth bits.
   [GL.DEPTH_COMPONENT24]: {gl2: true, bpp: 3},
   [GL.DEPTH_COMPONENT32F]: {gl2: true, bpp: 4},
@@ -52,13 +78,15 @@ export default {
   [GL.RGBA32UI]: {gl2: true, bpp: 16},
 
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
-  [GL.R16F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 2},
-  [GL.RG16F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 4},
-  [GL.RGBA16F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 8},
-  [GL.R32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 4},
-  [GL.RG32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 8},
+  [GL.R16F]: {ext: EXT_FLOAT_WEBGL2, bpp: 2},
+  [GL.RG16F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4},
+  [GL.RGBA16F]: {ext: EXT_FLOAT_WEBGL2, bpp: 8},
+  [GL.R32F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4},
+  [GL.RG32F]: {ext: EXT_FLOAT_WEBGL2, bpp: 8},
   // TODO - can't get WEBGL_color_buffer_float to work on renderbuffers
-  [GL.RGBA32F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 16},
-  // [GL.RGBA32F]: {gl2: EXT_FLOAT_WEBGL2, gl1: EXT_FLOAT_WEBGL1},
-  [GL.R11F_G11F_B10F]: {gl2: EXT_FLOAT_WEBGL2, bpp: 4}
+  [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2, bpp: 16},
+  // [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2, gl1: EXT_FLOAT_WEBGL1},
+  [GL.R11F_G11F_B10F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4}
 };
+
+export default RENDERBUFFER_FORMATS;
