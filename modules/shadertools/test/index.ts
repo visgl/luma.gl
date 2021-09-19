@@ -5,11 +5,12 @@ import './lib/glsl-utils/shader-utils.spec';
 
 import './lib/compiler-log/format-compiler-log.spec';
 
-import './lib/inject-shader.spec.js';
-import './lib/transpile-shader.spec.js';
-import './lib/assemble-shaders.spec.js';
-import './lib/resolve-modules.spec';
-import './lib/shader-module.spec';
+import './lib/transpiler/transpile-shader.spec';
+
+import './lib/shader-assembler/inject-shader.spec';
+import './lib/shader-assembler/assemble-shaders.spec';
+import './lib/shader-assembler/resolve-modules.spec';
+import './lib/shader-assembler/shader-module.spec';
 
 import './modules';
 

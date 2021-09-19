@@ -1,11 +1,10 @@
-import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../modules/module-injectors';
-import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
+import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../modules/module-injectors';
 import {assert} from '../utils/assert';
 
 // TODO - experimental
 const MODULE_INJECTORS = {
-  [VERTEX_SHADER]: MODULE_INJECTORS_VS,
-  [FRAGMENT_SHADER]: MODULE_INJECTORS_FS
+  vs: MODULE_INJECTORS_VS,
+  fs: MODULE_INJECTORS_FS
 };
 
 const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
@@ -18,7 +17,7 @@ export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 // RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-injection-rfc.md
 /* eslint-disable complexity */
 export default function injectShader(source, type, inject, injectStandardStubs = false) {
-  const isVertex = type === VERTEX_SHADER;
+  const isVertex = type === 'vs';
 
   for (const key in inject) {
     const fragmentData = inject[key];

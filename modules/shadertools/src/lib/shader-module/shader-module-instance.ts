@@ -1,47 +1,8 @@
 import {assert} from '../utils/assert';
-import {parsePropTypes} from './filters/prop-types';
-import {ShaderModule as ShaderModuleProps} from '../types';
+import {parsePropTypes} from '../filters/prop-types';
+import {ShaderModule} from '../../types';
 
-const VERTEX_SHADER = 'vs';
-const FRAGMENT_SHADER = 'fs';
-
-/*
-import {
-  Uniforms,
-  UniformsOptions
-} from '@luma.gl/webgl/src/classes/uniforms'
-
-interface ShaderModuleDeprecatedApi {
-  type: 'function' | string
-  old: string
-  new: string
-  deprecated: boolean
-}
-
-interface Injection {
-  injection: string
-  order: number
-}
-
-// https://luma.gl/docs/api-reference/shadertools/assemble-shaders#injection-map
-interface InjectionMap {
-  [shaderHook: string]: string | Injection
-}
-
-// https://luma.gl/docs/developer-guide/shader-modules#shader-module-descriptor
-interface ShaderModuleObject {
-  name: string
-  fs?: string
-  vs?: string
-  inject?: InjectionMap
-  getUniforms: (opts: UniformsOptions, context: Uniforms) => Uniforms
-  uniforms: Uniforms
-  dependencies: Array<ShaderModuleObject>
-  deprecations: Array<ShaderModuleDeprecatedApi>
-}
-*/
-
-export default class ShaderModule {
+export class ShaderModuleInstance {
   name;
   vs;
   fs;
@@ -52,7 +13,7 @@ export default class ShaderModule {
   injections;
   uniforms;
 
-  constructor(props: ShaderModuleProps) {
+  constructor(props: ShaderModule) {
     const {
       name,
       vs,
@@ -64,9 +25,10 @@ export default class ShaderModule {
       defines = {},
       // @ts-expect-error
       inject = {},
-      // DEPRECATED
+      /** @deprecated */
       // @ts-expect-error
       vertexShader,
+      /** @deprecated */
       // @ts-expect-error
       fragmentShader
     } = props;
@@ -90,10 +52,10 @@ export default class ShaderModule {
   getModuleSource(type) {
     let moduleSource;
     switch (type) {
-      case VERTEX_SHADER:
+      case 'vs':
         moduleSource = this.vs || '';
         break;
-      case FRAGMENT_SHADER:
+      case 'fs':
         moduleSource = this.fs || '';
         break;
       default:
@@ -170,16 +132,6 @@ ${moduleSource}\
   }
 }
 
-export function normalizeShaderModule(module: any): any {
-  if (!module.normalized) {
-    module.normalized = true;
-    if (module.uniforms && !module.getUniforms) {
-      const shaderModule = new ShaderModule(module);
-      module.getUniforms = shaderModule.getUniforms.bind(shaderModule);
-    }
-  }
-  return module;
-}
 
 function normalizeInjections(injections) {
   const result = {

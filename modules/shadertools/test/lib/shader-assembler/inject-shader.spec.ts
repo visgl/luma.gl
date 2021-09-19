@@ -4,7 +4,7 @@ import {assembleShaders} from '@luma.gl/shadertools';
 import injectShader, {
   combineInjects,
   DECLARATION_INJECT_MARKER
-} from '@luma.gl/shadertools/lib/inject-shader';
+} from '@luma.gl/shadertools/lib/shader-assembler/inject-shader';
 import test from 'tape-promise/tape';
 
 const fixture = {

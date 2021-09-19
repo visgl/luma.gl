@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import isOldIE from '@luma.gl/shadertools/utils/is-old-ie';
+import isOldIE from '@luma.gl/shadertools/lib/utils/is-old-ie';
 import test from 'tape-promise/tape';
 
 test('isOldIE', (t) => {

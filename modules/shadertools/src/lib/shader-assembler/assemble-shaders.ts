@@ -1,15 +1,14 @@
-import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
-import transpileShader from './transpile-shader';
+import transpileShader from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
-  [VERTEX_SHADER]: 'vertex',
-  [FRAGMENT_SHADER]: 'fragment'
+  'fs': 'vertex',
+  'vs': 'fragment'
 };
 
 // Precision prologue to inject before functions are injected in shader
@@ -59,9 +58,9 @@ export function assembleShaders(
   return {
     gl,
     // @ts-expect-error
-    vs: assembleShader(gl, Object.assign({}, options, {source: vs, type: VERTEX_SHADER, modules})),
+    vs: assembleShader(gl, {...options, source: vs, type: 'vs', modules}),
     // @ts-expect-error
-    fs: assembleShader(gl, Object.assign({}, options, {source: fs, type: FRAGMENT_SHADER, modules})),
+    fs: assembleShader(gl, {...options, source: fs, type: 'fs', modules}),
     getUniforms: assembleGetUniforms(modules)
   };
 }
@@ -70,7 +69,21 @@ export function assembleShaders(
 // adding prologues, requested module chunks, and any final injections.
 function assembleShader(
   gl,
-  {
+  options: {
+    id?: string,
+    source: string,
+    type: 'vs' | 'fs',
+    modules: any[],
+    defines?: Record<string, string>,
+    hookFunctions?: any[],
+    inject?: Record<string, any>,
+    transpileToGLSL100?: boolean,
+    prologue?: boolean,
+    log?
+  }
+) {
+
+  const {
     id,
     source,
     type,
@@ -81,11 +94,11 @@ function assembleShader(
     transpileToGLSL100 = false,
     prologue = true,
     log
-  }
-) {
+  } = options;
+
   assert(typeof source === 'string', 'shader source must be a string');
 
-  const isVertex = type === VERTEX_SHADER;
+  const isVertex = type === 'vs';
 
   const sourceLines = source.split('\n');
   let glslVersion = 100;

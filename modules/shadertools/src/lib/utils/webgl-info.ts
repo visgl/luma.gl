@@ -22,12 +22,12 @@ const WEBGL_FEATURES = {
 };
 
 // Create a key-mirrored FEATURES array
-const FEATURES = {};
-Object.keys(WEBGL_FEATURES).forEach((key) => {
-  FEATURES[key] = key;
-});
-
-export {FEATURES};
+export const FEATURES = {
+  GLSL_FRAG_DATA: 'GLSL_FRAG_DATA',
+  GLSL_FRAG_DEPTH: 'GLSL_FRAG_DEPTH',
+  GLSL_DERIVATIVES: 'GLSL_DERIVATIVES',
+  GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD',
+};
 
 function isWebGL2(gl) {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
@@ -87,7 +87,7 @@ const compiledGlslExtensions = {};
  *   behavior : behavior of extension to be tested, by defualt `enable` is used
  * Returns : true, if shader is compiled successfully, false otherwise
  */
-export function canCompileGLGSExtension(gl, cap, opts = {}) {
+export function canCompileGLGSExtension(gl, cap, opts: {behavior?} = {}) {
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 

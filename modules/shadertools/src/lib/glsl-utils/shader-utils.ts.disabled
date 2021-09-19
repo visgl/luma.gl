@@ -1,4 +1,9 @@
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+import {assert} from '../../utils/assert';
+
+=======
 // luma.gl, MIT license
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
 const FS100 = `void main() {gl_FragColor = vec4(0);}`;
 const FS_GLES = `\
 out vec4 transform_output;
@@ -14,7 +19,15 @@ type QualifierInfo = {
 }
 
 // Prase given glsl line and return qualifier details or null
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+export function getQualifierDetails(line: string, qualifiers: string | string[]):  {
+  qualifier: string;
+  type: string;
+  name: string;
+} {
+=======
 export function getQualifierDetails(line: string, qualifiers: string | string[]): QualifierInfo {
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
   qualifiers = Array.isArray(qualifiers) ? qualifiers : [qualifiers];
   const words = line.replace(/^\s+/, '').split(/\s+/);
   // TODO add support for precession qualifiers (highp, mediump and lowp)
@@ -26,6 +39,19 @@ export function getQualifierDetails(line: string, qualifiers: string | string[])
   return {qualifier, type, name};
 }
 
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+type PassthroughFSOptions = {
+  version?: number;
+  input?: string
+  inputType?: string;
+  output?: string
+};
+
+// Given the shader version, input and output variable names,
+// builds and return a pass through fragment shader.
+export function getPassthroughFS(options: PassthroughFSOptions = {}) {
+  const {version = 100, input, inputType, output} = options;
+=======
 /**
  * Given the shader version, input and output variable names,
  * builds and return a pass through fragment shader.
@@ -37,6 +63,7 @@ export function getPassthroughFS(options?: {
   output?
 }): string {
   const {version = 100, input, inputType, output} = options || {};
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
   if (!input) {
     if (version === 300) {
       // Fast-path for WebGL 2.0
@@ -67,9 +94,14 @@ void main() {
 }`;
 }
 
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+// convert glsl type to suffix
+export function typeToChannelSuffix(type: string): 'x' | 'xy' | 'xyz' | 'xyzw' {
+=======
 /** convert glsl type to suffix */
-export function typeToChannelSuffix(type: string):  'x' | 'xy' | 'xyz' | 'xyzw' {
+export function typeToChannelSuffix(type: string): string {
   // prettier-ignore
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
   switch (type) {
     case 'float': return 'x';
     case 'vec2': return 'xy';
@@ -80,9 +112,14 @@ export function typeToChannelSuffix(type: string):  'x' | 'xy' | 'xyz' | 'xyzw' 
   }
 }
 
-/** convert glsl type to channel count */
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+// convert glsl type to channel count
 export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
+=======
+/** convert glsl type to channel count */
+export function typeToChannelCount(type: string): number {
   // prettier-ignore
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
   switch (type) {
     case 'float': return 1;
     case 'vec2': return 2;
@@ -93,9 +130,14 @@ export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
   }
 }
 
+<<<<<<< HEAD:modules/shadertools/src/lib/glsl-utils/shader-utils.ts
+// Returns glsl instruction for converting to vec4
+export function convertToVec4(variable: string, type: string): string {
+=======
 /** Returns glsl instruction for converting to vec4 */
 export function convertToVec4(variable: string, type: string): string {
   // prettier-ignore
+>>>>>>> chore(shadertools): typescript and directory overhaul:modules/shadertools/src/lib/utils/shader-utils.ts
   switch (type) {
     case 'float': return `vec4(${variable}, 0.0, 0.0, 1.0)`;
     case 'vec2': return `vec4(${variable}, 0.0, 1.0)`;

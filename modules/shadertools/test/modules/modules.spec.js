@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 
-import ShaderModuleInstance from '@luma.gl/shadertools/lib/shader-module';
+import {ShaderModuleInstance} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
 import * as imports from '@luma.gl/shadertools';
 
 const shaderModules = {};
