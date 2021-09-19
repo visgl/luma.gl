@@ -17,39 +17,144 @@ import {
   assert
 } from '@luma.gl/webgl';
 
+import { Stats } from 'probe.gl'
+import { Timeline } from '../animation/timeline'
+
+import {CreateGLContextOptions} from '@luma.gl/gltools'
+
 import {isBrowser} from 'probe.gl/env';
+
 
 const isPage = isBrowser() && typeof document !== 'undefined';
 
 let statIdCounter = 0;
 
+/** AnimationLoop properties */
+export type AnimationLoopProps = {
+  onCreateContext?: (opts: CreateGLContextOptions) => WebGLRenderingContext; // TODO: signature from createGLContext
+  onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
+  onInitialize?: ((animationProps: AnimationProps) => {}) | ((animationProps: AnimationProps) => {});
+  onRender?: (animationProps: AnimationProps) => void;
+  onFinalize?: (animationProps: AnimationProps) => void;
+  onError?: (reason: any) => void;
+
+  stats?: Stats;
+
+  gl?: WebGLRenderingContext
+  glOptions?: CreateGLContextOptions // createGLContext options
+  debug?: boolean;
+
+  // view parameters
+  autoResizeViewport?: boolean;
+  autoResizeDrawingBuffer?: boolean;
+  useDevicePixels?: number | boolean;
+
+  /** @deprecated */
+  createFramebuffer?: boolean;
+};
+
+export type AnimationProps = {
+  gl: WebGLRenderingContext
+
+  stop: () => AnimationLoop
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  framebuffer: Framebuffer
+  // Initial values
+  useDevicePixels: number | boolean
+  needsRedraw?: string
+  // Animation props
+  startTime: number
+  engineTime: number
+  tick: number
+  tock: number
+
+  // Timeline time for back compatibility
+  time: number
+
+  width: number
+  height: number
+  aspect: number
+
+  // Experimental
+  _timeline: Timeline
+  _loop: AnimationLoop
+  _animationLoop: AnimationLoop
+  _mousePosition?: [number, number] // [offsetX, offsetY]
+  _offScreen: boolean
+}
+
+/* instance of parameters after construction
+type AnimationLoopPropsInternal = {
+  onCreateContext: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
+  onAddHTML?: (div: HTMLDivElement) => string // innerHTML
+  onInitialize: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
+  onRender: (animationProps: AnimationProps) => void
+  onFinalize: (animationProps: AnimationProps) => void
+  onError: (reason: any) => PromiseLike<never>
+  gl?: WebGLRenderingContext
+  glOptions: CreateGLContextOptions // createGLContext options
+  debug: boolean
+  createFramebuffer: boolean
+}
+*/
+
+const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
+  onCreateContext: (opts) => createGLContext(opts),
+  onAddHTML: null,
+  onInitialize: () => ({}),
+  onRender: () => {},
+  onFinalize: () => {},
+  // eslint-disable-next-line no-console
+  onError: (error) => console.error(error),
+
+  gl: null,
+  glOptions: {},
+  debug: false,
+
+  createFramebuffer: false,
+
+  // view parameters
+  useDevicePixels: true,
+  autoResizeViewport: true,
+  autoResizeDrawingBuffer: true,
+  stats: lumaStats.get(`animation-loop-${statIdCounter++}`)
+};
+
 export default class AnimationLoop {
+  animationProps: AnimationProps;
+  props: Required<AnimationLoopProps>;
+  gl: WebGLRenderingContext;
+  canvas: HTMLCanvasElement | OffscreenCanvas;
+  framebuffer: Framebuffer = null;
+  timeline: Timeline = null;
+  stats: Stats;
+  cpuTime: Stats;
+  gpuTime: Stats;
+  frameRate: Stats;
+  offScreen: boolean;
+
+  display: any;
+
+  needsRedraw: string | null = 'initialized';
+
+  _initialized: boolean = false;
+  _running: boolean = false;
+  _animationFrameId = null;
+  _pageLoadPromise: Promise<{}> | null = null;
+  _nextFramePromise: Promise<AnimationLoop> | null = null;
+  _resolveNextFrame: ((AnimationLoop) => void) | null = null;
+  _cpuStartTime: number = 0;
+
+  _gpuTimeQuery: Query | null = null;
+
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor(props = {}) {
-    const {
-      onCreateContext = (opts) => createGLContext(opts),
-      onAddHTML = null,
-      onInitialize = () => {},
-      onRender = () => {},
-      onFinalize = () => {},
-      // eslint-disable-next-line no-console
-      onError = (error) => console.error(error),
+  constructor(props: AnimationLoopProps = {}) {
+    this.props = {...DEFAULT_ANIMATION_LOOP_PROPS, ...props};
+    props = this.props;
 
-      gl = null,
-      glOptions = {},
-      debug = false,
-
-      createFramebuffer = false,
-
-      // view parameters
-      autoResizeViewport = true,
-      autoResizeDrawingBuffer = true,
-      stats = lumaStats.get(`animation-loop-${statIdCounter++}`)
-    } = props;
-
-    let {useDevicePixels = true} = props;
+    let {useDevicePixels = true} = this.props;
 
     if ('useDevicePixelRatio' in props) {
       log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
@@ -57,39 +162,16 @@ export default class AnimationLoop {
       useDevicePixels = props.useDevicePixelRatio;
     }
 
-    this.props = {
-      onCreateContext,
-      onAddHTML,
-      onInitialize,
-      onRender,
-      onFinalize,
-      onError,
-
-      gl,
-      glOptions,
-      debug,
-      createFramebuffer
-    };
-
     // state
-    this.gl = gl;
-    this.needsRedraw = null;
-    this.timeline = null;
-    this.stats = stats;
+    this.gl = props.gl;
+    this.stats = props.stats;
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
     this.frameRate = this.stats.get('Frame Rate');
 
-    this._initialized = false;
-    this._running = false;
-    this._animationFrameId = null;
-    this._nextFramePromise = null;
-    this._resolveNextFrame = null;
-    this._cpuStartTime = 0;
-
     this.setProps({
-      autoResizeViewport,
-      autoResizeDrawingBuffer,
+      autoResizeViewport: props.autoResizeViewport,
+      autoResizeDrawingBuffer: props.autoResizeDrawingBuffer,
       useDevicePixels
     });
 
@@ -97,32 +179,30 @@ export default class AnimationLoop {
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
 
-    this._pageLoadPromise = null;
 
     this._onMousemove = this._onMousemove.bind(this);
     this._onMouseleave = this._onMouseleave.bind(this);
   }
 
-  delete() {
+  delete(): void {
     this.stop();
     this._setDisplay(null);
   }
 
-  setNeedsRedraw(reason) {
-    assert(typeof reason === 'string');
+  setNeedsRedraw(reason: string): this {
     this.needsRedraw = this.needsRedraw || reason;
     return this;
   }
 
-  setProps(props) {
+  setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
-      this.autoResizeViewport = props.autoResizeViewport;
+      this.props.autoResizeViewport = props.autoResizeViewport;
     }
     if ('autoResizeDrawingBuffer' in props) {
-      this.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
+      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
     }
     if ('useDevicePixels' in props) {
-      this.useDevicePixels = props.useDevicePixels;
+      this.props.useDevicePixels = props.useDevicePixels;
     }
     return this;
   }
@@ -132,8 +212,9 @@ export default class AnimationLoop {
     return this;
   }
 
-  // Starts a render loop if not already running
-  // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
+  /** Starts a render loop if not already running
+   * @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
+   */
   async _start(opts) {
     if (this._running) {
       return this;
@@ -180,8 +261,8 @@ export default class AnimationLoop {
     }
   }
 
-  // Redraw now
-  redraw() {
+  /** Explicitly draw a frame */
+  redraw(): this {
     if (this.isContextLost()) {
       return this;
     }
@@ -196,9 +277,12 @@ export default class AnimationLoop {
     // clear needsRedraw flag
     this._clearNeedsRedraw();
 
+    // Offscreen Canvas Support: Commit the frame
     // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
     // Chrome's offscreen canvas does not require gl.commit
+    // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
     if (this.offScreen && this.gl.commit) {
+      // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
       this.gl.commit();
     }
 
@@ -226,17 +310,16 @@ export default class AnimationLoop {
     return this;
   }
 
-  attachTimeline(timeline) {
+  attachTimeline(timeline: Timeline): Timeline {
     this.timeline = timeline;
-
     return this.timeline;
   }
 
-  detachTimeline() {
+  detachTimeline(): void {
     this.timeline = null;
   }
 
-  waitForRender() {
+  waitForRender(): Promise<AnimationLoop> {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
@@ -260,18 +343,22 @@ export default class AnimationLoop {
   }
 
   onCreateContext(...args) {
+    // @ts-expect-error
     return this.props.onCreateContext(...args);
   }
 
   onInitialize(...args) {
+    // @ts-expect-error
     return this.props.onInitialize(...args);
   }
 
   onRender(...args) {
+    // @ts-expect-error
     return this.props.onRender(...args);
   }
 
   onFinalize(...args) {
+    // @ts-expect-error
     return this.props.onFinalize(...args);
   }
 
@@ -402,6 +489,7 @@ export default class AnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
+    // @ts-expect-error
     this.animationProps = {
       gl: this.gl,
 
@@ -410,7 +498,7 @@ export default class AnimationLoop {
       framebuffer: this.framebuffer,
 
       // Initial values
-      useDevicePixels: this.useDevicePixels,
+      useDevicePixels: this.props.useDevicePixels,
       needsRedraw: null,
 
       // Animation props
@@ -539,7 +627,7 @@ export default class AnimationLoop {
 
   // Default viewport setup
   _resizeViewport() {
-    if (this.autoResizeViewport) {
+    if (this.props.autoResizeViewport) {
       this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
     }
   }
@@ -547,8 +635,8 @@ export default class AnimationLoop {
   // Resize the render buffer of the canvas to match canvas client size
   // Optionally multiplying with devicePixel ratio
   _resizeCanvasDrawingBuffer() {
-    if (this.autoResizeDrawingBuffer) {
-      resizeGLContext(this.gl, {useDevicePixels: this.useDevicePixels});
+    if (this.props.autoResizeDrawingBuffer) {
+      resizeGLContext(this.gl, {useDevicePixels: this.props.useDevicePixels});
     }
   }
 
