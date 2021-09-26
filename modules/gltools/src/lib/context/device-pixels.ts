@@ -1,14 +1,16 @@
+import {log} from '../utils/log';
+import {getContextState} from './context-state';
+
 /**
  * Returns multiplier need to convert CSS size to Device size
  */
- export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
-  // @ts-expect-error
-  const {luma} = gl;
+export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
+  const state = getContextState(gl);
 
-  if (gl.canvas && luma) {
+  if (gl.canvas && state) {
     // For headless gl we might have used custom width and height
     // hence use cached clientWidth
-    const {clientWidth} = luma.canvasSizeInfo;
+    const {clientWidth} = state._canvasSizeInfo;
     return clientWidth ? gl.drawingBufferWidth / clientWidth : 1;
   }
   // use default device pixel ratio
@@ -34,8 +36,6 @@
   return scalePixels(cssPixel, ratio, width, height, yInvert);
 }
 
-// HELPER METHOD
-
 /**
  * Calulates device pixel ratio, used during context creation
  *
@@ -50,6 +50,54 @@
   }
   return useDevicePixels ? windowRatio : 1;
 }
+
+// use devicePixelRatio to set canvas width and height
+export function setDevicePixelRatio(gl, devicePixelRatio, options: {width?: number, height?: number} = {}) {
+  // NOTE: if options.width and options.height not used remove in v8
+  let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth;
+  let clientHeight = 'height' in options ? options.height : gl.canvas.clientHeight;
+
+  if (!clientWidth || !clientHeight) {
+    log.log(1, 'Canvas clientWidth/clientHeight is 0')();
+    // by forcing devicePixel ratio to 1, we do not scale gl.canvas.width and height in each frame.
+    devicePixelRatio = 1;
+    clientWidth = gl.canvas.width || 1;
+    clientHeight = gl.canvas.height || 1;
+  }
+
+  const contextState = getContextState(gl);
+  const cachedSize = contextState._canvasSizeInfo;
+  // Check if canvas needs to be resized
+  if (
+    cachedSize.clientWidth !== clientWidth ||
+    cachedSize.clientHeight !== clientHeight ||
+    cachedSize.devicePixelRatio !== devicePixelRatio
+  ) {
+    let clampedPixelRatio = devicePixelRatio;
+
+    const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
+    const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
+    gl.canvas.width = canvasWidth;
+    gl.canvas.height = canvasHeight;
+
+    // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
+    // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
+    // for those cases, reduce devicePixelRatio.
+    if (gl.drawingBufferWidth !== canvasWidth || gl.drawingBufferHeight !== canvasHeight) {
+      log.warn(`Device pixel ratio clamped`)();
+      clampedPixelRatio = Math.min(
+        gl.drawingBufferWidth / clientWidth,
+        gl.drawingBufferHeight / clientHeight
+      );
+
+      gl.canvas.width = Math.floor(clientWidth * clampedPixelRatio);
+      gl.canvas.height = Math.floor(clientHeight * clampedPixelRatio);
+    }
+
+    Object.assign(contextState._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});
+  }
+}
+
 
 // PRIVATE
 

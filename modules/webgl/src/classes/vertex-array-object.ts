@@ -24,7 +24,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 export default class VertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   private static MAX_ATTRIBUTES: number;
 
-  static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean {
+  static isSupported(gl: WebGLRenderingContext | WebGL2RenderingContext, options?: VertexArrayObjectProps): boolean {
     if (options?.constantAttributeZero) {
       return isWebGL2(gl) || getBrowser() === 'Chrome';
     }

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {getBrowser} from '@probe.gl/env';
 import {assert} from '../utils/assert';
 import {FEATURES} from './get-webgl-features';
 
@@ -9,11 +10,11 @@ import {FEATURES} from './get-webgl-features';
 const compiledGlslExtensions = {};
 
 // options allows user agent to be overridden for testing
-export default function canCompileGLGSExtension(gl, cap, options = {}) {
+export default function canCompileGLGSExtension(gl, cap) {
   const feature = FEATURES[cap];
   assert(feature, cap);
 
-  if (!isOldIE(options)) {
+  if (getBrowser() !== 'IE') {
     return true;
   }
 
@@ -31,20 +32,4 @@ export default function canCompileGLGSExtension(gl, cap, options = {}) {
   gl.deleteShader(shader);
   compiledGlslExtensions[cap] = canCompile;
   return canCompile;
-}
-
-/**
- * Check for IE11
- * @param opts not used (allows user agent to be overridden for testing)
- * @deprecated IE11 no longer supported
- */
- export function isOldIE(opts = {}) {
-  const navigator = (typeof window !== 'undefined' && window.navigator) || {};
-  // @ts-expect-error
-  const userAgent = opts.userAgent || navigator.userAgent || '';
-  // We only care about older versions of IE (IE 11 and below). Newer versions of IE (Edge)
-  // have much better web standards support.
-  const isMSIE = userAgent.indexOf('MSIE ') !== -1;
-  const isTrident = userAgent.indexOf('Trident/') !== -1;
-  return isMSIE || isTrident;
 }

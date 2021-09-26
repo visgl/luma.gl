@@ -1,4 +1,5 @@
 import {createTestContext} from '@luma.gl/test-utils';
+import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 import transpileShader from '@luma.gl/shadertools/lib/transpiler/transpile-shader';
 import test from 'tape-promise/tape';
 
@@ -9,8 +10,8 @@ const VERTEX = true;
 const FRAGMENT = false;
 
 const fixture = {
-  gl1: createTestContext({webgl2: false, webgl1: true, throwOnError: true}),
-  gl2: createTestContext({webgl2: true, webgl1: false})
+  gl1: webgl1TestDevice.gl,
+  gl2: webgl2TestDevice.isWebGL2 && webgl2TestDevice.gl2
 };
 
 test('transpileShader#import', (t) => {

@@ -30,9 +30,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     // @ts-expect-error
     const {id, userData = {}} = props || {};
     this.gl = gl;
-    // @ts-expect-error
-    this.gl2 = gl;
-    // this.ext = polyfillContext(gl);
+    this.gl2 = gl as WebGL2RenderingContext;
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
 

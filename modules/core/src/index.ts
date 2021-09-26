@@ -18,8 +18,8 @@ export {
 export {
   lumaStats,
   FEATURES,
-  hasFeature,
-  hasFeatures,
+  // hasFeature,
+  // hasFeatures,
   Buffer,
   Program,
   Framebuffer,

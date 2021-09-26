@@ -1,5 +1,6 @@
 // @ts-nocheck TODO remove
-import {Texture2D, hasFeature, FEATURES, log} from '@luma.gl/webgl';
+import {hasFeature, FEATURES} from '@luma.gl/gltools';
+import {Texture2D, log} from '@luma.gl/webgl';
 
 export type GLTFMaterialParserProps = {
   attributes: any;
