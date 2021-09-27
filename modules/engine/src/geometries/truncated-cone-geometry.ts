@@ -7,8 +7,20 @@ const INDEX_OFFSETS = {
   z: [1, 2, 0]
 };
 
-export default class TruncatedConeGeometry extends Geometry {
-  constructor(props = {}) {
+export type TruncatedConeGeometryProps = {
+  id?: string;
+  topRadius?: number;
+  bottomRadius?: number;
+  topCap?: boolean;
+  bottomCap?: boolean;
+  attributes?
+};
+
+// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+// copyright 2011 Google Inc. new BSD License
+// (http://www.opensource.org/licenses/bsd-license.php).
+export class TruncatedConeGeometry extends Geometry {
+  constructor(props: TruncatedConeGeometryProps = {}) {
     const {id = uid('truncated-code-geometry')} = props;
     const {indices, attributes} = tesselateTruncatedCone(props);
     super({
@@ -20,9 +32,6 @@ export default class TruncatedConeGeometry extends Geometry {
   }
 }
 
-// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
-// copyright 2011 Google Inc. new BSD License
-// (http://www.opensource.org/licenses/bsd-license.php).
 /* eslint-disable max-statements, complexity */
 function tesselateTruncatedCone(props) {
   const {

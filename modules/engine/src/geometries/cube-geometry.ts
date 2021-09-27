@@ -1,6 +1,23 @@
 import Geometry from '../geometry/geometry';
 import {uid} from '@luma.gl/webgl';
 
+export type CubeGeometryProps = {
+  id?: string;
+  attributes?
+};
+
+export class CubeGeometry extends Geometry {
+  constructor(props: CubeGeometryProps = {}) {
+    const {id = uid('cube-geometry')} = props;
+    super({
+      ...props,
+      id,
+      indices: {size: 1, value: new Uint16Array(CUBE_INDICES)},
+      attributes: {...ATTRIBUTES, ...props.attributes}
+    });
+  }
+}
+
 // prettier-ignore
 const CUBE_INDICES = new Uint16Array([
   0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13,
@@ -55,15 +72,3 @@ const ATTRIBUTES = {
   NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
   TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
 };
-
-export default class CubeGeometry extends Geometry {
-  constructor(props = {}) {
-    const {id = uid('cube-geometry')} = props;
-    super({
-      ...props,
-      id,
-      indices: {size: 1, value: new Uint16Array(CUBE_INDICES)},
-      attributes: {...ATTRIBUTES, ...props.attributes}
-    });
-  }
-}

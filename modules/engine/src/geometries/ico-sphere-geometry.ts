@@ -7,8 +7,15 @@ import {uid} from '@luma.gl/webgl';
 const ICO_POSITIONS = [-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, -1, 0, 1, 0, 0];
 const ICO_INDICES = [3, 4, 5, 3, 5, 1, 3, 1, 0, 3, 0, 4, 4, 0, 2, 4, 2, 5, 2, 0, 1, 5, 2, 1];
 
-export default class IcoSphereGeometry extends Geometry {
-  constructor(props = {}) {
+export type IcoSphereGeometryProps = {
+  id?: string;
+  radius?: number;
+  iterations?: number;
+  attributes?
+};
+
+export class IcoSphereGeometry extends Geometry {
+  constructor(props: IcoSphereGeometryProps = {}) {
     const {id = uid('ico-sphere-geometry')} = props;
     const {indices, attributes} = tesselateIcosaHedron(props);
     super({
@@ -20,7 +27,7 @@ export default class IcoSphereGeometry extends Geometry {
   }
 }
 
-function tesselateIcosaHedron(props) {
+function tesselateIcosaHedron(props: IcoSphereGeometryProps) {
   const {iterations = 0} = props;
 
   const PI = Math.PI;

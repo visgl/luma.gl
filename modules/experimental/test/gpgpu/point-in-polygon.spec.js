@@ -3,7 +3,7 @@ import {fixture} from 'test/setup';
 import {equals} from '@math.gl/core';
 import {Buffer} from '@luma.gl/webgl';
 import {GPUPointInPolygon} from '@luma.gl/experimental';
-import {cpuPointInPolygon} from './cpu-point-in-polygon';
+import {cpuPointInPolygon} from './point-in-polygon-cpu';
 
 const {gl2} = fixture;
 const TEST_CASES = [

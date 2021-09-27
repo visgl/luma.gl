@@ -2,8 +2,17 @@ import Geometry from '../geometry/geometry';
 import {unpackIndexedGeometry} from '../geometry/geometry-utils';
 import {uid} from '@luma.gl/webgl';
 
-export default class PlaneGeometry extends Geometry {
-  constructor(props = {}) {
+export type PlaneGeometryProps = {
+  id?: string;
+  radius?: number;
+  attributes?
+};
+
+// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+// copyright 2011 Google Inc. new BSD License
+// (http://www.opensource.org/licenses/bsd-license.php).
+export class PlaneGeometry extends Geometry {
+  constructor(props: PlaneGeometryProps = {}) {
     const {id = uid('plane-geometry')} = props;
 
     const {indices, attributes} = tesselatePlane(props);
@@ -16,10 +25,6 @@ export default class PlaneGeometry extends Geometry {
   }
 }
 
-// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
-// copyright 2011 Google Inc. new BSD License
-// (http://www.opensource.org/licenses/bsd-license.php).
-/* eslint-disable max-statements, complexity */
 /* eslint-disable complexity, max-statements */
 function tesselatePlane(props) {
   const {type = 'x,y', offset = 0, flipCull = false, unpack = false} = props;

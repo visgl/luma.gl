@@ -1,6 +1,6 @@
 // ClipSpace
 import GL from '@luma.gl/constants';
-import Model from '../lib/model';
+import Model, {ModelProps} from '../lib/model';
 import Geometry from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = `\
@@ -23,8 +23,9 @@ void main(void) {
 /* eslint-disable indent, no-multi-spaces */
 const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 
+
 export default class ClipSpace extends Model {
-  constructor(gl, opts) {
+  constructor(gl: WebGLRenderingContext, opts?: ModelProps) {
     const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
 
     super(

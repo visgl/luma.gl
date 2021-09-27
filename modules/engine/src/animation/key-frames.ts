@@ -1,18 +1,20 @@
-/** @type {import('@luma.gl/engine').KeyFrames} */
+// keyframes
+export type KeyFrame<T> = [number, T];
 
-export class KeyFrames {
-  constructor(keyFrames) {
-    this._lastTime = -1;
-    this.startIndex = -1;
-    this.endIndex = -1;
-    this.factor = 0;
-    this.times = [];
-    this.values = [];
+export class KeyFrames<T = number> {
+  startIndex: number = -1;
+  endIndex: number = -1;
+  factor: number = 0;
+  times: number[] = [];
+  values: T[] = [];
+  private _lastTime = -1;
+
+  constructor(keyFrames: KeyFrame<T>[]) {
     this.setKeyFrames(keyFrames);
     this.setTime(0);
   }
 
-  setKeyFrames(keyFrames) {
+  setKeyFrames(keyFrames: KeyFrame<T>[]): void {
     const numKeys = keyFrames.length;
     this.times.length = numKeys;
     this.values.length = numKeys;
@@ -25,7 +27,7 @@ export class KeyFrames {
     this._calculateKeys(this._lastTime);
   }
 
-  setTime(time) {
+  setTime(time: number): void {
     time = Math.max(0, time);
 
     if (time !== this._lastTime) {
@@ -34,23 +36,23 @@ export class KeyFrames {
     }
   }
 
-  getStartTime() {
+  getStartTime(): number {
     return this.times[this.startIndex];
   }
 
-  getEndTime() {
+  getEndTime(): number {
     return this.times[this.endIndex];
   }
 
-  getStartData() {
+  getStartData(): T {
     return this.values[this.startIndex];
   }
 
-  getEndData() {
+  getEndData(): T {
     return this.values[this.endIndex];
   }
 
-  _calculateKeys(time) {
+  _calculateKeys(time: number): void {
     let index = 0;
     const numKeys = this.times.length;
 

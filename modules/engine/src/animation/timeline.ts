@@ -1,20 +1,56 @@
+// luma.gl, MIT license
+
+/**
+ * Timeline channel properties
+ * @param delay = 0;
+ * @param duration = Number.POSITIVE_INFINITY;
+ * @param rate = 1
+ * @param repeat = 1
+ */
+ export type ChannelOptions = {
+  delay?: number
+  duration?: number
+  rate?: number
+  repeat?: number
+}
+
+export type AnimationOptions = {
+  setTime: (time: number) => void
+}
+
+ type Channel = {
+  time: number
+  delay: number
+  duration: number
+  rate: number
+  repeat: number
+}
+
+type Animation = {
+  channel: number;
+  animation: {
+    setTime: (time: number) => void
+  }
+}
+
 let channelHandles = 1;
 let animationHandles = 1;
 
 export class Timeline {
+  time: number = 0;
+  channels = new Map<number, Channel>();
+  animations = new Map<number, Animation>();
+  playing: boolean = false;
+  lastEngineTime: number = -1;
+
   constructor() {
-    this.time = 0;
-    this.channels = new Map();
-    this.animations = new Map();
-    this.playing = false;
-    this.lastEngineTime = -1;
   }
 
-  addChannel(props) {
+  addChannel(props: ChannelOptions): number {
     const {delay = 0, duration = Number.POSITIVE_INFINITY, rate = 1, repeat = 1} = props;
 
     const handle = channelHandles++;
-    const channel = {
+    const channel: Channel = {
       time: 0,
       delay,
       duration,
@@ -27,7 +63,7 @@ export class Timeline {
     return handle;
   }
 
-  removeChannel(handle) {
+  removeChannel(handle: number): void {
     this.channels.delete(handle);
 
     for (const [animationHandle, animation] of this.animations) {
@@ -37,7 +73,7 @@ export class Timeline {
     }
   }
 
-  isFinished(handle) {
+  isFinished(handle: number): boolean {
     const channel = this.channels.get(handle);
     if (channel === undefined) {
       return false;
@@ -46,7 +82,7 @@ export class Timeline {
     return this.time >= channel.delay + channel.duration * channel.repeat;
   }
 
-  getTime(handle) {
+  getTime(handle: number): number {
     if (handle === undefined) {
       return this.time;
     }
@@ -60,7 +96,7 @@ export class Timeline {
     return channel.time;
   }
 
-  setTime(time) {
+  setTime(time: number): void {
     this.time = Math.max(0, time);
 
     const channels = this.channels.values();
@@ -75,20 +111,20 @@ export class Timeline {
     }
   }
 
-  play() {
+  play(): void {
     this.playing = true;
   }
 
-  pause() {
+  pause(): void {
     this.playing = false;
     this.lastEngineTime = -1;
   }
 
-  reset() {
+  reset(): void {
     this.setTime(0);
   }
 
-  attachAnimation(animation, channelHandle) {
+  attachAnimation(animation: AnimationOptions, channelHandle: number): number {
     const animationHandle = animationHandles++;
 
     this.animations.set(animationHandle, {
@@ -101,11 +137,11 @@ export class Timeline {
     return animationHandle;
   }
 
-  detachAnimation(handle) {
+  detachAnimation(handle: number): void {
     this.animations.delete(handle);
   }
 
-  update(engineTime) {
+  update(engineTime: number): void {
     if (this.playing) {
       if (this.lastEngineTime === -1) {
         this.lastEngineTime = engineTime;
@@ -115,7 +151,7 @@ export class Timeline {
     }
   }
 
-  _setChannelTime(channel, time) {
+  _setChannelTime(channel: Channel, time: number): void {
     const offsetTime = time - channel.delay;
     const totalDuration = channel.duration * channel.repeat;
     // Note(Tarek): Don't loop on final repeat.
