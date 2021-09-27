@@ -6,5 +6,5 @@ module.exports = {
   instrument: true,
   extensions: ['.ts'],
   include: ['dev-modules', 'modules/**/src'],
-  exclude: ['**/deprecated', '**/bundle.ts', 'modules/test-utils/']
+  exclude: ['**/deprecated', '**/bundle.ts', 'modules/constants', 'modules/core', 'modules/debug', 'modules/test-utils/']
 };
