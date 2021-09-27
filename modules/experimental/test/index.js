@@ -8,4 +8,4 @@ import './scenegraph/model-node.spec';
 
 // GPGPY
 import './gpgpu/histopyramid.spec';
-import './gpgpu/point-in-polygon/point-in-polygon.spec';
+import './gpgpu/point-in-polygon.spec';
