@@ -215,10 +215,9 @@ export default class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       this._finalizeCallbackData();
-      this._cancelAnimationFrame(this._animationFrameId);
+      this._cancelAnimationFrame();
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
-      this._animationFrameId = null;
       this._running = false;
     }
     return this;
@@ -290,17 +289,9 @@ export default class AnimationLoop {
   // PRIVATE METHODS
 
   _startLoop() {
-    const renderFrame = () => {
-      if (!this._running) {
-        return;
-      }
-      this.redraw();
-      this._animationFrameId = this._requestAnimationFrame(renderFrame);
-    };
-
     // cancel any pending renders to ensure only one loop can ever run
-    this._cancelAnimationFrame(this._animationFrameId);
-    this._animationFrameId = this._requestAnimationFrame(renderFrame);
+    this._cancelAnimationFrame();
+    this._requestAnimationFrame();
   }
 
   // PRIVATE METHODS
@@ -336,25 +327,41 @@ export default class AnimationLoop {
     this.display = display;
   }
 
-  _cancelAnimationFrame(animationFrameId) {
-    // E.g. VR display has a separate animation frame to sync with headset
-    if (this.display && this.display.cancelAnimationFrame) {
-      return this.display.cancelAnimationFrame(animationFrameId);
+  _requestAnimationFrame() {
+    if (!this._running) {
+      return;
     }
 
-    return cancelAnimationFrame(animationFrameId);
+    // VR display has a separate animation frame to sync with headset
+    // TODO WebVR API discontinued, replaced by WebXR: https://immersive-web.github.io/webxr/
+    // See https://developer.mozilla.org/en-US/docs/Web/API/VRDisplay/requestAnimationFrame
+    // if (this.display && this.display.requestAnimationFrame) {
+    //   this._animationFrameId = this.display.requestAnimationFrame(this._animationFrame.bind(this));
+    // }
+    this._animationFrameId = requestAnimationFrame(this._animationFrame.bind(this));
   }
 
-  _requestAnimationFrame(renderFrameCallback) {
-    if (this._running) {
-      // E.g. VR display has a separate animation frame to sync with headset
-      if (this.display && this.display.requestAnimationFrame) {
-        return this.display.requestAnimationFrame(renderFrameCallback);
-      }
-
-      return requestAnimationFrame(renderFrameCallback);
+  _cancelAnimationFrame() {
+    if (this._animationFrameId !== null) {
+      return;
     }
-    return undefined;
+
+    // VR display has a separate animation frame to sync with headset
+    // TODO WebVR API discontinued, replaced by WebXR: https://immersive-web.github.io/webxr/
+    // See https://developer.mozilla.org/en-US/docs/Web/API/VRDisplay/requestAnimationFrame
+    // if (this.display && this.display.cancelAnimationFrame) {
+    //   this.display.cancelAnimationFrame(this._animationFrameId);
+    // }
+    cancelAnimationFrame(this._animationFrameId);
+    this._animationFrameId = null;
+  }
+
+  _animationFrame() {
+    if (!this._running) {
+      return;
+    }
+    this.redraw();
+    this._requestAnimationFrame();
   }
 
   // Called on each frame, can be overridden to call onRender multiple times
