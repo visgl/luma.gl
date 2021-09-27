@@ -4,8 +4,8 @@
   "sourceMap": false,
   "instrument": true,
   "include": [
-    "dev-modules/**/*.js",
-    "modules/**/src/**/*.js"
+    "dev-modules/**/*.{js,ts}",
+    "modules/**/src/**/*.{js,ts}"
   ],
   "exclude": [
     "**/deprecated",
