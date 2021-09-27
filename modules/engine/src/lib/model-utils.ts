@@ -11,8 +11,8 @@ const GLTF_TO_LUMA_ATTRIBUTE_MAP = {
   TEXCOORD_2: 'texCoords2'
 };
 
-export function getBuffersFromGeometry(gl, geometry, options) {
-  const buffers = {};
+export function getBuffersFromGeometry(gl: WebGLRenderingContext, geometry, options) {
+  const buffers: Record<string, Buffer | [Buffer, {}]> = {};
   let indices = geometry.indices;
 
   for (const name in geometry.attributes) {

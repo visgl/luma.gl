@@ -1,57 +1,70 @@
+// luma.gl, MIT license
+import GL from '@luma.gl/constants';
 import {uid, assert} from '@luma.gl/webgl';
 
-// Rendering primitives - specify how to extract primitives from vertices.
-// NOTE: These are numerically identical to the corresponding WebGL/OpenGL constants
-export const DRAW_MODE = {
-  POINTS: 0x0000, // draw single points.
-  LINES: 0x0001, // draw lines. Each vertex connects to the one after it.
-  LINE_LOOP: 0x0002, // draw lines. Each set of two vertices is treated as a separate line segment.
-  LINE_STRIP: 0x0003, // draw a connected group of line segments from the first vertex to the last
-  TRIANGLES: 0x0004, // draw triangles. Each set of three vertices creates a separate triangle.
-  TRIANGLE_STRIP: 0x0005, // draw a connected group of triangles.
-  TRIANGLE_FAN: 0x0006 // draw a connected group of triangles.
-  // Each vertex connects to the previous and the first vertex in the fan.
+/**
+ * Rendering primitives - "opology" specifies how to extract primitives from vertices.
+ */
+export type Topology =
+  GL.POINTS |  // draw single points.
+  GL.LINES |  // draw lines. Each vertex connects to the one after it.
+  GL.LINE_LOOP |  // draw lines. Each set of two vertices is treated as a separate line segment.
+  GL.LINE_STRIP |  // draw a connected group of line segments from the first vertex to the last
+  GL.TRIANGLES |  // draw triangles. Each set of three vertices creates a separate triangle.
+  GL.TRIANGLE_STRIP |  // draw a connected group of triangles.
+  GL.TRIANGLE_FAN // draw a connected group of triangles.
+  ;
+
+export type GeometryProps = {
+  id?: string;
+  drawMode?: Topology,
+  attributes?: {},
+  indices?;
+  vertexCount?: number
 };
 
 export default class Geometry {
-  static get DRAW_MODE() {
-    return DRAW_MODE;
-  }
+  /** @deprecated */
+  static DRAW_MODE = {
+    POINTS: GL.POINTS,  // draw single points.
+    LINES: GL.LINES,  // draw lines. Each vertex connects to the one after it.
+    LINE_LOOP: GL.LINE_LOOP,  // draw lines. Each set of two vertices is treated as a separate line segment.
+    LINE_STRIP: GL.LINE_STRIP,  // draw a connected group of line segments from the first vertex to the last
+    TRIANGLES: GL.TRIANGLES,  // draw triangles. Each set of three vertices creates a separate triangle.
+    TRIANGLE_STRIP: GL.TRIANGLE_STRIP,  // draw a connected group of triangles.
+    TRIANGLE_FAN: GL.TRIANGLE_FAN // draw a connected group of triangles.
+  };
 
-  constructor(props = {}) {
+  readonly id: string;
+  readonly drawMode: Topology = GL.TRIANGLES;
+
+  vertexCount: number;
+  attributes = {};
+  indices;
+  userData: Record<string, any> = {};
+
+  constructor(props: GeometryProps = {}) {
     const {
       id = uid('geometry'),
-      drawMode = DRAW_MODE.TRIANGLES,
+      drawMode = GL.TRIANGLES,
       attributes = {},
       indices = null,
       vertexCount = null
     } = props;
 
     this.id = id;
-    this.drawMode = drawMode | 0;
-    this.attributes = {};
-    this.userData = {};
+    this.drawMode = drawMode;
 
     this._setAttributes(attributes, indices);
 
     this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
-
-    // stubRemovedMethods(this, [
-    //   'setNeedsRedraw', 'needsRedraw', 'setAttributes'
-    // ], 'Immutable');
-
-    // stubRemovedMethods(this, [
-    //   'hasAttribute', 'getAttribute', 'getArray'
-    // ], 'Use geometry.attributes and geometry.indices');
-
-    // deprecateMethods(this, ['getAttributes'])
   }
 
   get mode() {
     return this.drawMode;
   }
 
-  getVertexCount() {
+  getVertexCount(): number {
     return this.vertexCount;
   }
 
@@ -62,7 +75,7 @@ export default class Geometry {
 
   // PRIVATE
 
-  _print(attributeName) {
+  _print(attributeName): string {
     return `Geometry ${this.id} attribute ${attributeName}`;
   }
 
@@ -71,7 +84,7 @@ export default class Geometry {
   // type: indices, vertices, uvs
   // size: elements per vertex
   // target: WebGL buffer type (string or constant)
-  _setAttributes(attributes, indices) {
+  _setAttributes(attributes, indices): this {
     if (indices) {
       this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
     }
@@ -108,7 +121,7 @@ export default class Geometry {
     return this;
   }
 
-  _calculateVertexCount(attributes, indices) {
+  _calculateVertexCount(attributes, indices): number {
     if (indices) {
       return indices.value.length;
     }

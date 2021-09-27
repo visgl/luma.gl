@@ -1,8 +1,19 @@
 import Geometry from '../geometry/geometry';
 import {uid} from '@luma.gl/webgl';
 
-export default class SphereGeometry extends Geometry {
-  constructor(props = {}) {
+export type SphereGeometryProps = {
+  id?: string;
+  radius?: number;
+  nlat?: number;
+  nlong?: number;
+  attributes?
+};
+
+// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+// copyright 2011 Google Inc. new BSD License
+// (http://www.opensource.org/licenses/bsd-license.php).
+export class SphereGeometry extends Geometry {
+  constructor(props: SphereGeometryProps = {}) {
     const {id = uid('sphere-geometry')} = props;
     const {indices, attributes} = tesselateSphere(props);
     super({
@@ -14,13 +25,9 @@ export default class SphereGeometry extends Geometry {
   }
 }
 
-// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
-// copyright 2011 Google Inc. new BSD License
-// (http://www.opensource.org/licenses/bsd-license.php).
 /* eslint-disable max-statements, complexity */
-function tesselateSphere(props) {
+function tesselateSphere(props: SphereGeometryProps) {
   const {nlat = 10, nlong = 10} = props;
-  let {radius = 1} = props;
 
   const startLat = 0;
   const endLat = Math.PI;
@@ -30,10 +37,7 @@ function tesselateSphere(props) {
   const longRange = endLong - startLong;
   const numVertices = (nlat + 1) * (nlong + 1);
 
-  if (typeof radius === 'number') {
-    const value = radius;
-    radius = (n1, n2, n3, u, v) => value;
-  }
+  const radius = (n1, n2, n3, u, v) => props.radius || 1;
 
   const positions = new Float32Array(numVertices * 3);
   const normals = new Float32Array(numVertices * 3);

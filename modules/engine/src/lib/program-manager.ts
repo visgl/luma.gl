@@ -1,30 +1,48 @@
 import {assembleShaders} from '@luma.gl/shadertools';
 import {Program} from '@luma.gl/webgl';
 
-export default class ProgramManager {
-  static getDefaultProgramManager(gl) {
-    gl.luma = gl.luma || {};
-    gl.luma.defaultProgramManager = gl.luma.defaultProgramManager || new ProgramManager(gl);
+type Module = 'string' | {name: string}; // TODO
 
+type GetProgramOptions = {
+  vs?: string,
+  fs?: string,
+  defines?: {},
+  inject?: {},
+  varyings?: string[],
+  bufferMode?: number,
+  modules?: Module[];
+  transpileToGLSL100?: boolean
+};
+
+export default class ProgramManager {
+  readonly gl: WebGLRenderingContext;
+
+  stateHash = 0; // Used change hashing if hooks are modified
+  private _hashCounter = 0;
+  private readonly _hashes = {};
+  private readonly _useCounts = {};
+
+  private readonly _programCache = {};
+  private readonly _getUniforms = {};
+  private readonly _registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
+  private readonly _hookFunctions = [];
+  private _defaultModules = [];
+
+  static getDefaultProgramManager(gl: WebGLRenderingContext): ProgramManager {
+    // @ts-expect-error
+    gl.luma = gl.luma || {};
+    // @ts-expect-error
+    gl.luma.defaultProgramManager = gl.luma.defaultProgramManager || new ProgramManager(gl);
+    // @ts-expect-error
     return gl.luma.defaultProgramManager;
   }
 
-  constructor(gl) {
+  constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
-
-    this._programCache = {};
-    this._getUniforms = {};
-    this._registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
-    this._hookFunctions = [];
-    this._defaultModules = [];
-
-    this._hashes = {};
-    this._hashCounter = 0;
-    this.stateHash = 0; // Used change hashing if hooks are modified
-    this._useCounts = {};
   }
 
-  addDefaultModule(module) {
+  addDefaultModule(module: Module): void {
+    // @ts-expect-error
     if (!this._defaultModules.find((m) => m.name === module.name)) {
       this._defaultModules.push(module);
     }
@@ -32,7 +50,7 @@ export default class ProgramManager {
     this.stateHash++;
   }
 
-  removeDefaultModule(module) {
+  removeDefaultModule(module: Module): void {
     const moduleName = typeof module === 'string' ? module : module.name;
     this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
     this.stateHash++;
@@ -48,7 +66,7 @@ export default class ProgramManager {
     this.stateHash++;
   }
 
-  get(props = {}) {
+  get(props: GetProgramOptions = {}) {
     const {
       vs = '',
       fs = '',
@@ -63,6 +81,7 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
+    // @ts-expect-error
     const moduleHashes = modules.map((m) => this._getHash(m.name)).sort();
     const varyingHashes = varyings.map((v) => this._getHash(v));
 
@@ -115,11 +134,11 @@ export default class ProgramManager {
     return this._programCache[hash];
   }
 
-  getUniforms(program) {
+  getUniforms(program: Program) {
     return this._getUniforms[program.hash] || null;
   }
 
-  release(program) {
+  release(program: Program): void {
     const hash = program.hash;
     this._useCounts[hash]--;
 
@@ -131,7 +150,7 @@ export default class ProgramManager {
     }
   }
 
-  _getHash(key) {
+  _getHash(key: string): string {
     if (this._hashes[key] === undefined) {
       this._hashes[key] = this._hashCounter++;
     }
@@ -140,7 +159,7 @@ export default class ProgramManager {
   }
 
   // Dedup and combine with default modules
-  _getModuleList(appModules = []) {
+  _getModuleList(appModules: Module[] = []): Module[] {
     const modules = new Array(this._defaultModules.length + appModules.length);
     const seen = {};
     let count = 0;
@@ -154,6 +173,7 @@ export default class ProgramManager {
 
     for (let i = 0, len = appModules.length; i < len; ++i) {
       const module = appModules[i];
+      // @ts-expect-error
       const name = module.name;
       if (!seen[name]) {
         modules[count++] = module;
