@@ -1,3 +1,4 @@
+// luma.gl, MIT license
 module.exports = {
   extends: '@istanbuljs/nyc-config-typescript',
   all: 'true',
@@ -5,5 +6,5 @@ module.exports = {
   instrument: true,
   extensions: ['.ts'],
   include: ['dev-modules', 'modules/**/src'],
-  exclude: ['**/deprecated', '**/bundle.js', 'modules/test-utils/']
+  exclude: ['**/deprecated', '**/bundle.ts', 'modules/test-utils/']
 };

@@ -72,7 +72,3 @@ const ATTRIBUTES = {
   NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
   TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
 };
-
-function getAttributes() {
-  return ATTRIBUTES;
-}
