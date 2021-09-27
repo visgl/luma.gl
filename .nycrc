@@ -1,4 +1,5 @@
 {
+  "extends": "@istanbuljs/nyc-config-typescript",
   "all": "true",
   "sourceMap": false,
   "instrument": true,
