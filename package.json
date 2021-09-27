@@ -38,6 +38,7 @@
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@loaders.gl/core": "^3.0.6",
     "@loaders.gl/gltf": "^3.0.6",
     "@loaders.gl/polyfills": "^3.0.6",
