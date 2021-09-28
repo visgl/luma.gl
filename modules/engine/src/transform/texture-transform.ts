@@ -1,16 +1,10 @@
 import GL from '@luma.gl/constants';
 
-import {
-  cloneTextureFrom,
-  readPixelsToArray,
-  getShaderVersion,
-  Buffer,
-  Texture2D,
-  Framebuffer
-} from '@luma.gl/webgl';
+import {cloneTextureFrom, readPixelsToArray, Buffer, Texture2D, Framebuffer} from '@luma.gl/webgl';
 
 import {
   _transform as transformModule,
+  getShaderInfo,
   getPassthroughFS,
   typeToChannelCount,
   combineInjects
@@ -336,7 +330,7 @@ export default class TextureTransform {
     const fs =
       props._fs ||
       getPassthroughFS({
-        version: getShaderVersion(vs),
+        version: getShaderInfo(vs).version,
         input: this.targetTextureVarying,
         inputType: targetTextureType,
         output: FS_OUTPUT_VARIABLE

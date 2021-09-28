@@ -1,6 +1,8 @@
+// luma.gl, MIT license
 import GL from '@luma.gl/constants';
 import {assertWebGLContext, log} from '@luma.gl/gltools';
-import {parseGLSLCompilerError, getShaderName} from '../glsl-utils';
+import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
+import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
 import {uid, assert} from '../utils';
 import Resource, {ResourceProps} from './resource';
 
@@ -16,16 +18,21 @@ export type ShaderProps = ImmutableShaderProps & {
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
 export class ImmutableShader extends Resource {
-  private readonly _stage: 'vertex' | 'fragment';
+  readonly stage: 'vertex' | 'fragment';
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
     super(gl, {id: getShaderIdFromProps(props)});
-    this._stage = props.stage;
+    this.stage = props.stage;
     this._compile(props.source);
   }
 
-   // PRIVATE METHODS
-   _compile(source) {
+  async compilationInfo(): Promise<readonly CompilerMessage[]> {
+    const log = this.gl.getShaderInfoLog(this.handle);
+    return parseShaderCompilerLog(log);
+  }
+
+  // PRIVATE METHODS
+  _compile(source) {
     if (!source.startsWith('#version ')) {
       source = `#version 100\n${source}`;
     }
@@ -37,22 +44,19 @@ export class ImmutableShader extends Resource {
     // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
     const compileStatus = this.getParameter(GL.COMPILE_STATUS);
     if (!compileStatus) {
-      const infoLog = this.gl.getShaderInfoLog(this.handle);
-      const {shaderName, errors, warnings} = parseGLSLCompilerError(
-        infoLog,
-        source,
-        this._stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER,
-        this.id
-      );
-      log.error(`GLSL compilation errors in ${shaderName}\n${errors}`)();
-      log.warn(`GLSL compilation warnings in ${shaderName}\n${warnings}`)();
+      const shaderLog = this.gl.getShaderInfoLog(this.handle);
+      const messages = parseShaderCompilerLog(shaderLog).filter(message => message.type === 'error');
+      const formattedLog = formatCompilerLog(messages, source);
+      const shaderName: string = getShaderInfo(source).name;
+      const shaderDescription = `${this.stage} shader ${shaderName}`;
+      log.error(`GLSL compilation errors in ${shaderName}\n${formattedLog}`)();
       throw new Error(`GLSL compilation errors in ${shaderName}`);
     }
   }
 
   // PRIVATE METHODS
   _createHandle() {
-    return this.gl.createShader(this._stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
+    return this.gl.createShader(this.stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
   }
 
   _deleteHandle(): void {
@@ -64,7 +68,7 @@ export class ImmutableShader extends Resource {
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
  * For now this is an internal class
  */
- export class Shader extends ImmutableShader {
+export class Shader extends ImmutableShader {
   shaderType: GL.FRAGMENT_SHADER | GL.VERTEX_SHADER;
   source: string;
 
@@ -89,7 +93,7 @@ export class ImmutableShader extends Resource {
     this.shaderType = props.shaderType;
     this.source = props.source;
 
-    const shaderName = getShaderName(props.source, null);
+    const shaderName = getShaderInfo(props.source).name;
     if (shaderName) {
       this.id = uid(shaderName);
     }
@@ -97,7 +101,7 @@ export class ImmutableShader extends Resource {
 
   initialize(props: ShaderProps): this {
     this._compile(props.source);
-    const shaderName = getShaderName(props.source, null);
+    const shaderName = getShaderInfo(props.source).name;
     if (shaderName) {
       this.id = uid(shaderName);
     }
@@ -115,7 +119,7 @@ export class ImmutableShader extends Resource {
   }
 
   getName(): string {
-    return getShaderName(this.source) || 'unnamed-shader';
+    return getShaderInfo(this.source).name || 'unnamed-shader';
   }
 
   getSource(): string {
@@ -179,7 +183,7 @@ function getShaderProps(props: ShaderProps | string, shaderType: GL.VERTEX_SHADE
 
 /** Deduce an id, from shader source, or supplied id, or shader type */
 function getShaderIdFromProps(props: ShaderProps): string {
-  return getShaderName(props.source, null) ||
+  return getShaderInfo(props.source).name ||
     props.id ||
     uid(`unnamed ${props.stage || Shader.getTypeName(props.shaderType)}`);
 }
