@@ -208,3 +208,22 @@ test('WebGLState#intercept gl calls', t => {
 
   t.end();
 });
+
+test('WebGLState#not intercepted calls', t => {
+  const {gl} = fixture;
+
+  resetParameters(gl);
+  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), null, 'no bound buffer');
+
+  const buffer = gl.createBuffer();
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), buffer, 'buffer is bound');
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), null, 'no bound buffer');
+
+  gl.deleteBuffer(buffer);
+
+  t.end();
+});
