@@ -19,10 +19,10 @@ function installGetterOverride(gl, functionName) {
   gl[functionName] = function get(...params) {
     const pname = params[0];
 
-    // WebGL limits are not prepopulated in the cache, we must
-    // query first time. They are all primitive (single value)
+    // WebGL limits are not prepopulated in the cache, it's neither undefined in GL_PARAMETER_DEFAULTS
+    // nor intercepted by GL_HOOKED_SETTERS. Query the original getter.
     if (!(pname in gl.state.cache)) {
-      gl.state.cache[pname] = originalGetterFunc(...params);
+      return originalGetterFunc(...params);
     }
 
     // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
