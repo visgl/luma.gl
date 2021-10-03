@@ -1,5 +1,6 @@
 // Tables describing WebGL parameters
 import GL from '@luma.gl/constants';
+import { render } from '@luma.gl/shadertools/test/gpu-test-utils';
 import {isWebGL2} from '../utils/webgl-checks';
 import {GLParameters} from './webgl-parameters';
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
@@ -25,14 +26,38 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.DEPTH_RANGE]: new Float32Array([0, 1]), // TBD
   [GL.DEPTH_WRITEMASK]: true,
   [GL.DITHER]: true,
+
+  [GL.CURRENT_PROGRAM]: null,
   // FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
   [GL.FRAMEBUFFER_BINDING]: null,
+  [GL.RENDERBUFFER_BINDING]: null,
+  [GL.TRANSFORM_FEEDBACK_BINDING]: null,
+  [GL.VERTEX_ARRAY_BINDING]: null,
+
+  // Buffers
+  [GL.ARRAY_BUFFER_BINDING]: null,
+  [GL.COPY_READ_BUFFER_BINDING]: null,
+  [GL.COPY_WRITE_BUFFER_BINDING]: null,
+  [GL.ELEMENT_ARRAY_BUFFER_BINDING]: null,
+  [GL.PIXEL_PACK_BUFFER_BINDING]: null,
+  [GL.PIXEL_UNPACK_BUFFER_BINDING]: null,
+  [GL.TRANSFORM_FEEDBACK_BUFFER_BINDING]: null,
+  [GL.UNIFORM_BUFFER_BINDING]: null,
+
+  // Textures
+  [GL.TEXTURE_BINDING_2D]: null,
+  [GL.TEXTURE_BINDING_2D_ARRAY]: null,
+  [GL.TEXTURE_BINDING_3D]: null,
+  [GL.TEXTURE_BINDING_CUBE_MAP]: null,
+
   [GL.FRONT_FACE]: GL.CCW,
   [GL.GENERATE_MIPMAP_HINT]: GL.DONT_CARE,
   [GL.LINE_WIDTH]: 1,
   [GL.POLYGON_OFFSET_FILL]: false,
   [GL.POLYGON_OFFSET_FACTOR]: 0,
   [GL.POLYGON_OFFSET_UNITS]: 0,
+  [GL.SAMPLE_ALPHA_TO_COVERAGE]: false,
+  [GL.SAMPLE_COVERAGE]: false,
   [GL.SAMPLE_COVERAGE_VALUE]: 1.0,
   [GL.SAMPLE_COVERAGE_INVERT]: false,
   [GL.SCISSOR_TEST]: false,
@@ -84,12 +109,41 @@ const enable = (gl, value, key) => (value ? gl.enable(key) : gl.disable(key));
 const hint = (gl, value, key) => gl.hint(key, value);
 const pixelStorei = (gl, value, key) => gl.pixelStorei(key, value);
 
-const drawFramebuffer = (gl, value) => {
-  const target = isWebGL2(gl) ? GL.DRAW_FRAMEBUFFER : GL.FRAMEBUFFER;
+const bindFramebuffer = (gl, value, key) => {
+  let target;
+  if (key === GL.FRAMEBUFFER_BINDING) {
+    target = isWebGL2(gl) ? GL.DRAW_FRAMEBUFFER : GL.FRAMEBUFFER;
+  } else {
+    // GL.READ_FRAMEBUFFER_BINDING
+    target = GL.READ_FRAMEBUFFER;
+  }
   return gl.bindFramebuffer(target, value);
 };
-const readFramebuffer = (gl, value) => {
-  return gl.bindFramebuffer(GL.READ_FRAMEBUFFER, value);
+
+const bindBuffer = (gl, value, key) => {
+  const target = ({
+    [GL.ARRAY_BUFFER_BINDING]: [GL.ARRAY_BUFFER],
+    [GL.COPY_READ_BUFFER_BINDING]: [GL.COPY_READ_BUFFER],
+    [GL.COPY_WRITE_BUFFER_BINDING]: [GL.COPY_WRITE_BUFFER],
+    [GL.ELEMENT_ARRAY_BUFFER_BINDING]: [GL.ELEMENT_ARRAY_BUFFER],
+    [GL.PIXEL_PACK_BUFFER_BINDING]: [GL.PIXEL_PACK_BUFFER],
+    [GL.PIXEL_UNPACK_BUFFER_BINDING]: [GL.PIXEL_UNPACK_BUFFER],
+    [GL.TRANSFORM_FEEDBACK_BUFFER_BINDING]: [GL.TRANSFORM_FEEDBACK_BUFFER],
+    [GL.UNIFORM_BUFFER_BINDING]: [GL.UNIFORM_BUFFER],
+  })[key];
+
+  gl.bindBuffer(target, value);
+};
+
+const bindTexture = (gl, value, key) => {
+  const target = ({
+    [GL.TEXTURE_BINDING_2D]: [GL.TEXTURE_2D],
+    [GL.TEXTURE_BINDING_2D_ARRAY]: [GL.TEXTURE_2D_ARRAY],
+    [GL.TEXTURE_BINDING_3D]: [GL.TEXTURE_3D],
+    [GL.TEXTURE_BINDING_CUBE_MAP]: [GL.TEXTURE_CUBE_MAP]
+  })[key];
+
+  gl.bindTexture(target, value);
 };
 
 // Utility
@@ -120,8 +174,31 @@ export const GL_PARAMETER_SETTERS = {
   [GL.DEPTH_WRITEMASK]: (gl, value) => gl.depthMask(value),
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
+
+  [GL.CURRENT_PROGRAM]: (gl, value) => gl.useProgram(value),
+  [GL.RENDERBUFFER_BINDING]: (gl, value) => gl.bindRenderbuffer(GL.RENDERBUFFER, value),
+  [GL.TRANSFORM_FEEDBACK_BINDING]: (gl, value) => gl.bindTransformFeedback?.(GL.TRANSFORM_FEEDBACK, value),
+  [GL.VERTEX_ARRAY_BINDING]: (gl, value) => gl.bindVertexArray(value),
   // NOTE: FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
-  [GL.FRAMEBUFFER_BINDING]: drawFramebuffer,
+  [GL.FRAMEBUFFER_BINDING]: bindFramebuffer,
+  [GL.READ_FRAMEBUFFER_BINDING]: bindFramebuffer,
+
+  // Buffers
+  [GL.ARRAY_BUFFER_BINDING]: bindBuffer,
+  [GL.COPY_READ_BUFFER_BINDING]: bindBuffer,
+  [GL.COPY_WRITE_BUFFER_BINDING]: bindBuffer,
+  [GL.ELEMENT_ARRAY_BUFFER_BINDING]: bindBuffer,
+  [GL.PIXEL_PACK_BUFFER_BINDING]: bindBuffer,
+  [GL.PIXEL_UNPACK_BUFFER_BINDING]: bindBuffer,
+  [GL.TRANSFORM_FEEDBACK_BUFFER_BINDING]: bindBuffer,
+  [GL.UNIFORM_BUFFER_BINDING]: bindBuffer,
+
+  // Textures
+  [GL.TEXTURE_BINDING_2D]: bindTexture,
+  [GL.TEXTURE_BINDING_2D_ARRAY]: bindTexture,
+  [GL.TEXTURE_BINDING_3D]: bindTexture,
+  [GL.TEXTURE_BINDING_CUBE_MAP]: bindTexture,
+
   [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl, value) => gl.lineWidth(value),
@@ -129,6 +206,8 @@ export const GL_PARAMETER_SETTERS = {
   [GL.POLYGON_OFFSET_FACTOR]: 'polygonOffset',
   [GL.POLYGON_OFFSET_UNITS]: 'polygonOffset',
   [GL.RASTERIZER_DISCARD]: enable,
+  [GL.SAMPLE_ALPHA_TO_COVERAGE]: enable,
+  [GL.SAMPLE_COVERAGE]: enable,
   [GL.SAMPLE_COVERAGE_VALUE]: 'sampleCoverage',
   [GL.SAMPLE_COVERAGE_INVERT]: 'sampleCoverage',
   [GL.SCISSOR_TEST]: enable,
@@ -163,7 +242,6 @@ export const GL_PARAMETER_SETTERS = {
   [GL.PACK_ROW_LENGTH]: pixelStorei,
   [GL.PACK_SKIP_PIXELS]: pixelStorei,
   [GL.PACK_SKIP_ROWS]: pixelStorei,
-  [GL.READ_FRAMEBUFFER_BINDING]: readFramebuffer,
   [GL.UNPACK_ROW_LENGTH]: pixelStorei,
   [GL.UNPACK_IMAGE_HEIGHT]: pixelStorei,
   [GL.UNPACK_SKIP_PIXELS]: pixelStorei,
@@ -327,6 +405,18 @@ export const GL_HOOKED_SETTERS = {
     }),
 
   // SPECIFIC SETTERS
+  useProgram: (update, value) => update({
+    [GL.CURRENT_PROGRAM]: value,
+  }),
+  bindRenderbuffer: (update, target, value) => update({
+    [GL.RENDERBUFFER_BINDING]: value
+  }),
+  bindTransformFeedback: (update, target, value) => update({
+    [GL.TRANSFORM_FEEDBACK_BINDING]: value
+  }),
+  bindVertexArray: (update, value) => update({
+    [GL.VERTEX_ARRAY_BINDING]: value,
+  }),
 
   bindFramebuffer: (update, target, framebuffer) => {
     switch (target) {
@@ -343,6 +433,38 @@ export const GL_HOOKED_SETTERS = {
         return null;
     }
   },
+  bindBuffer: (update, target, buffer) => {
+    const pname = ({
+      [GL.ARRAY_BUFFER]: [GL.ARRAY_BUFFER_BINDING],
+      [GL.COPY_READ_BUFFER]: [GL.COPY_READ_BUFFER_BINDING],
+      [GL.COPY_WRITE_BUFFER]: [GL.COPY_WRITE_BUFFER_BINDING],
+      [GL.ELEMENT_ARRAY_BUFFER]: [GL.ELEMENT_ARRAY_BUFFER_BINDING],
+      [GL.PIXEL_PACK_BUFFER]: [GL.PIXEL_PACK_BUFFER_BINDING],
+      [GL.PIXEL_UNPACK_BUFFER]: [GL.PIXEL_UNPACK_BUFFER_BINDING],
+      [GL.TRANSFORM_FEEDBACK_BUFFER]: [GL.TRANSFORM_FEEDBACK_BUFFER_BINDING],
+      [GL.UNIFORM_BUFFER]: [GL.UNIFORM_BUFFER_BINDING],
+    })[target];
+
+    if (pname) {
+      return update({[pname]: buffer});
+    }
+    return null;
+  },
+
+  bindTexture: (update, target, texture) => {
+    const pname = ({
+      [GL.TEXTURE_2D]: [GL.TEXTURE_BINDING_2D],
+      [GL.TEXTURE_2D_ARRAY]: [GL.TEXTURE_BINDING_2D_ARRAY],
+      [GL.TEXTURE_3D]: [GL.TEXTURE_BINDING_3D],
+      [GL.TEXTURE_CUBE_MAP]: [GL.TEXTURE_BINDING_CUBE_MAP]
+    })[target];
+
+    if (pname) {
+      return update({[pname]: texture});
+    }
+    return null;
+  },
+
   blendColor: (update, r, g, b, a) =>
     update({
       [GL.BLEND_COLOR]: new Float32Array([r, g, b, a])
@@ -513,3 +635,34 @@ export const GL_PARAMETER_GETTERS = {
   // WebGL 2
   [GL.RASTERIZER_DISCARD]: isEnabled
 };
+
+export const NON_CACHE_PARAMETERS = new Set([
+  // setter not intercepted
+  GL.ACTIVE_TEXTURE,
+  GL.TRANSFORM_FEEDBACK_ACTIVE,
+  GL.TRANSFORM_FEEDBACK_PAUSED,
+
+  // states depending on READ_FRAMEBUFFER_BINDING
+  GL.IMPLEMENTATION_COLOR_READ_FORMAT,
+  GL.IMPLEMENTATION_COLOR_READ_TYPE,
+  // states depending on FRAMEBUFFER_BINDING
+  GL.READ_BUFFER,
+  GL.DRAW_BUFFER0,
+  GL.DRAW_BUFFER1,
+  GL.DRAW_BUFFER2,
+  GL.DRAW_BUFFER3,
+  GL.DRAW_BUFFER4,
+  GL.DRAW_BUFFER5,
+  GL.DRAW_BUFFER6,
+  GL.DRAW_BUFFER7,
+  GL.DRAW_BUFFER8,
+  GL.DRAW_BUFFER9,
+  GL.DRAW_BUFFER10,
+  GL.DRAW_BUFFER11,
+  GL.DRAW_BUFFER12,
+  GL.DRAW_BUFFER13,
+  GL.DRAW_BUFFER14,
+  GL.DRAW_BUFFER15,
+  // states depending on ACTIVE_TEXTURE
+  GL.SAMPLER_BINDING
+]);

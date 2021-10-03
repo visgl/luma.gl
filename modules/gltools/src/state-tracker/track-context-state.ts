@@ -2,7 +2,7 @@
 // NOTE: this system does not handle buffer bindings
 /** @typedef {import('./track-context-state')} types */
 
-import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS} from './webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS, NON_CACHE_PARAMETERS} from './webgl-parameter-tables';
 import {setParameters, getParameters} from './unified-parameter-api';
 import {assert} from '../utils/assert';
 import {deepArrayEqual} from '../utils/utils';
@@ -16,13 +16,15 @@ function installGetterOverride(gl, functionName) {
   const originalGetterFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
-  gl[functionName] = function get(...params) {
-    const pname = params[0];
+  gl[functionName] = function get(pname) {
+    if (pname === undefined || NON_CACHE_PARAMETERS.has(pname)) {
+      // Invalid or blacklisted parameter, do not cache
+      return originalGetterFunc(pname);
+    }
 
-    // WebGL limits are not prepopulated in the cache, it's neither undefined in GL_PARAMETER_DEFAULTS
-    // nor intercepted by GL_HOOKED_SETTERS. Query the original getter.
     if (!(pname in gl.state.cache)) {
-      return originalGetterFunc(...params);
+      // WebGL limits are not prepopulated in the cache, call the original getter when first queried.
+      gl.state.cache[pname] = originalGetterFunc(pname);
     }
 
     // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
@@ -30,7 +32,7 @@ function installGetterOverride(gl, functionName) {
       ? // Call the getter the params so that it can e.g. serve from a cache
         gl.state.cache[pname]
       : // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
-        originalGetterFunc(...params);
+        originalGetterFunc(pname);
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
@@ -45,6 +47,10 @@ function installGetterOverride(gl, functionName) {
 // updated with a copy of the WebGL context state.
 function installSetterSpy(gl, functionName, setter) {
   // Get the original function from the WebGLRenderingContext
+  if (!gl[functionName]) {
+    // This could happen if we try to intercept WebGL2 method on a WebGL1 context
+    return;
+  }
   const originalSetterFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called
