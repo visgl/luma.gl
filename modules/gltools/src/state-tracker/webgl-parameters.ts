@@ -78,14 +78,28 @@ export type GLValueParameters = {
    [GL.DEPTH_WRITEMASK]?: boolean;
    [GL.DITHER]?: boolean;
    [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
-   // NOTE?: FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
-   [GL.FRAMEBUFFER_BINDING]?: Framebuffer | null;
+   [GL.CURRENT_PROGRAM]?: WebGLProgram | null,
+   [GL.FRAMEBUFFER_BINDING]?: WebGLFramebuffer | null;
+   [GL.RENDERBUFFER_BINDING]?: WebGLRenderbuffer | null,
+   [GL.TRANSFORM_FEEDBACK_BINDING]?: WebGLTransformFeedback | null,
+   [GL.VERTEX_ARRAY_BINDING]?: WebGLVertexArrayObject | null,
+   [GL.ARRAY_BUFFER_BINDING]?: WebGLBuffer | null,
+   [GL.COPY_READ_BUFFER_BINDING]?: WebGLBuffer | null,
+   [GL.COPY_WRITE_BUFFER_BINDING]?: WebGLBuffer | null,
+   [GL.PIXEL_PACK_BUFFER_BINDING]?: WebGLBuffer | null,
+   [GL.PIXEL_UNPACK_BUFFER_BINDING]?: WebGLBuffer | null,
+   [GL.TEXTURE_BINDING_2D]?: WebGLTexture | null,
+   [GL.TEXTURE_BINDING_2D_ARRAY]?: WebGLTexture | null,
+   [GL.TEXTURE_BINDING_3D]?: WebGLTexture | null,
+   [GL.TEXTURE_BINDING_CUBE_MAP]?: WebGLTexture | null,
    [GL.FRONT_FACE]?: GL.CW | GL.CCW;
    [GL.GENERATE_MIPMAP_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
    [GL.LINE_WIDTH]?: number;
    [GL.POLYGON_OFFSET_FILL]?: boolean;
    [GL.POLYGON_OFFSET_FACTOR]?: number;
    [GL.POLYGON_OFFSET_UNITS]?: number;
+   [GL.SAMPLE_ALPHA_TO_COVERAGE]?: boolean,
+   [GL.SAMPLE_COVERAGE]?: boolean,
    [GL.RASTERIZER_DISCARD]?: boolean;
    [GL.SAMPLE_COVERAGE_VALUE]?: number;
    [GL.SAMPLE_COVERAGE_INVERT]?: boolean;
