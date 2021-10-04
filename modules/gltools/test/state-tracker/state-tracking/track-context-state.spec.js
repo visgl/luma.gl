@@ -2,6 +2,7 @@ import test from 'tape-catch';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import {
+  isWebGL2,
   trackContextState,
   pushContextState,
   popContextState,
@@ -9,6 +10,7 @@ import {
   setParameters,
   resetParameters
 } from '@luma.gl/gltools';
+import {Framebuffer} from '@luma.gl/webgl';
 
 import {
   GL_PARAMETER_DEFAULTS,
@@ -25,7 +27,7 @@ function stringifyTypedArray(v) {
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createTestContext({debug: true})
+  gl: createTestContext({debug: true, webgl1: true, webgl2: true})
 };
 
 test('WebGLState#imports', t => {
@@ -178,6 +180,10 @@ test('WebGLState#intercept gl calls', t => {
 
   pushContextState(gl);
 
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), buffer, 'buffer is bound');
+
   gl.blendEquation(gl.FUNC_SUBTRACT);
   t.is(getParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
 
@@ -206,24 +212,37 @@ test('WebGLState#intercept gl calls', t => {
     );
   }
 
+  gl.deleteBuffer(buffer);
   t.end();
 });
 
-test('WebGLState#not intercepted calls', t => {
+test('WebGLState#not cached parameters', t => {
+  /** @type WebGL2RenderingContext */
+  // @ts-ignore
   const {gl} = fixture;
+  if (!isWebGL2(gl)) {
+    t.comment('test only valid with WebGL2RenderingContext');
+    t.end();
+    return;
+  }
 
   resetParameters(gl);
-  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), null, 'no bound buffer');
 
-  const buffer = gl.createBuffer();
+  t.is(gl.getParameter(gl.DRAW_BUFFER0), gl.BACK, 'draw buffers for drawingbuffer');
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), buffer, 'buffer is bound');
+  const fb = new Framebuffer(gl);
+  fb.bind();
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), null, 'no bound buffer');
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+  t.is(
+    gl.getParameter(gl.DRAW_BUFFER0),
+    gl.COLOR_ATTACHMENT0,
+    'draw buffers for currently bound framebuffer'
+  );
 
-  gl.deleteBuffer(buffer);
+  fb.unbind();
+  t.is(gl.getParameter(gl.DRAW_BUFFER0), gl.BACK, 'draw buffers for drawingbuffer');
 
+  fb.delete();
   t.end();
 });
