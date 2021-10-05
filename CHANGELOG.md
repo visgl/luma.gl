@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.9
+
+- Revert Improve context state tracking (#1513)
+
 ## v8.5.8
 
 - Improve context state tracking (#1513)
