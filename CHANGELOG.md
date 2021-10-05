@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v8.5.8
+
+- Improve context state tracking (#1513)
+- Fix outdated parameter cache (#1510)
+
 ## v8.5.7
 
 - chore(webgl): get rid of circular references (#1499)
