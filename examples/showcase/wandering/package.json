@@ -1,16 +1,16 @@
 {
   "name": "luma.gl-examples-wandering",
-  "version": "8.5.9",
+  "version": "8.5.10",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.5.9",
-    "@luma.gl/gltools": "8.5.9",
-    "@luma.gl/shadertools": "8.5.9",
-    "@luma.gl/webgl": "8.5.9",
+    "@luma.gl/engine": "8.5.10",
+    "@luma.gl/gltools": "8.5.10",
+    "@luma.gl/shadertools": "8.5.10",
+    "@luma.gl/webgl": "8.5.10",
     "probe.gl": "^3.4.0"
   },
   "devDependencies": {

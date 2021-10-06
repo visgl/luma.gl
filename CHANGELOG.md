@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.10
+
+- Revert remove overly broad platform defines (#1496)
+
 ## v8.5.9
 
 - Revert Improve context state tracking (#1513)
