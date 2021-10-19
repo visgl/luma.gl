@@ -2,7 +2,6 @@ import test from 'tape-promise/tape';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import {
-  isWebGL2,
   trackContextState,
   pushContextState,
   popContextState,
@@ -10,7 +9,7 @@ import {
   setParameters,
   resetParameters
 } from '@luma.gl/gltools';
-import {Framebuffer} from '@luma.gl/webgl';
+import {Texture2D} from '@luma.gl/webgl';
 
 import {
   GL_PARAMETER_DEFAULTS,
@@ -27,7 +26,7 @@ function stringifyTypedArray(v) {
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createTestContext({debug: true, webgl1: true, webgl2: true})
+  gl: createTestContext({debug: true})
 };
 
 test('WebGLState#imports', (t) => {
@@ -217,32 +216,25 @@ test('WebGLState#intercept gl calls', (t) => {
 });
 
 test('WebGLState#not cached parameters', (t) => {
-  /** @type WebGL2RenderingContext */
-  // @ts-ignore
   const {gl} = fixture;
-  if (!isWebGL2(gl)) {
-    t.comment('test only valid with WebGL2RenderingContext');
-    t.end();
-    return;
-  }
 
   resetParameters(gl);
 
-  t.is(gl.getParameter(gl.DRAW_BUFFER0), gl.BACK, 'draw buffers for drawingbuffer');
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
-  const fb = new Framebuffer(gl);
-  fb.bind();
+  const tex = new Texture2D(gl);
+  tex.bind();
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 
-  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-  t.is(
-    gl.getParameter(gl.DRAW_BUFFER0),
-    gl.COLOR_ATTACHMENT0,
-    'draw buffers for currently bound framebuffer'
-  );
+  gl.activeTexture(gl.TEXTURE1);
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture1');
 
-  fb.unbind();
-  t.is(gl.getParameter(gl.DRAW_BUFFER0), gl.BACK, 'draw buffers for drawingbuffer');
+  gl.activeTexture(gl.TEXTURE0);
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture at texture0');
 
-  fb.delete();
+  tex.unbind();
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
+
+  tex.delete();
   t.end();
 });

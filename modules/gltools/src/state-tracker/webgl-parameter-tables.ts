@@ -32,8 +32,6 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.RENDERBUFFER_BINDING]: null,
   [GL.VERTEX_ARRAY_BINDING]: null,
   [GL.ARRAY_BUFFER_BINDING]: null,
-  [GL.TEXTURE_BINDING_2D]: null,
-  [GL.TEXTURE_BINDING_CUBE_MAP]: null,
   [GL.FRONT_FACE]: GL.CCW,
   [GL.GENERATE_MIPMAP_HINT]: GL.DONT_CARE,
   [GL.LINE_WIDTH]: 1,
@@ -79,8 +77,6 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.COPY_WRITE_BUFFER_BINDING]: null,
   [GL.PIXEL_PACK_BUFFER_BINDING]: null,
   [GL.PIXEL_UNPACK_BUFFER_BINDING]: null,
-  [GL.TEXTURE_BINDING_2D_ARRAY]: null,
-  [GL.TEXTURE_BINDING_3D]: null,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.DONT_CARE,
   [GL.READ_FRAMEBUFFER_BINDING]: null,
   [GL.RASTERIZER_DISCARD]: false,
@@ -121,17 +117,6 @@ const bindBuffer = (gl, value, key) => {
   })[key];
 
   gl.bindBuffer(target, value);
-};
-
-const bindTexture = (gl, value, key) => {
-  const target = ({
-    [GL.TEXTURE_BINDING_2D]: [GL.TEXTURE_2D],
-    [GL.TEXTURE_BINDING_2D_ARRAY]: [GL.TEXTURE_2D_ARRAY],
-    [GL.TEXTURE_BINDING_3D]: [GL.TEXTURE_3D],
-    [GL.TEXTURE_BINDING_CUBE_MAP]: [GL.TEXTURE_CUBE_MAP]
-  })[key];
-
-  gl.bindTexture(target, value);
 };
 
 // Utility
@@ -177,12 +162,6 @@ export const GL_PARAMETER_SETTERS = {
   [GL.COPY_WRITE_BUFFER_BINDING]: bindBuffer,
   [GL.PIXEL_PACK_BUFFER_BINDING]: bindBuffer,
   [GL.PIXEL_UNPACK_BUFFER_BINDING]: bindBuffer,
-
-  // Textures
-  [GL.TEXTURE_BINDING_2D]: bindTexture,
-  [GL.TEXTURE_BINDING_2D_ARRAY]: bindTexture,
-  [GL.TEXTURE_BINDING_3D]: bindTexture,
-  [GL.TEXTURE_BINDING_CUBE_MAP]: bindTexture,
 
   [GL.FRONT_FACE]: (gl, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
@@ -434,20 +413,6 @@ export const GL_HOOKED_SETTERS = {
     return {valueChanged: true};
   },
 
-  bindTexture: (update, target, texture) => {
-    const pname = ({
-      [GL.TEXTURE_2D]: [GL.TEXTURE_BINDING_2D],
-      [GL.TEXTURE_2D_ARRAY]: [GL.TEXTURE_BINDING_2D_ARRAY],
-      [GL.TEXTURE_3D]: [GL.TEXTURE_BINDING_3D],
-      [GL.TEXTURE_CUBE_MAP]: [GL.TEXTURE_BINDING_CUBE_MAP]
-    })[target];
-
-    if (pname) {
-      return update({[pname]: texture});
-    }
-    return null;
-  },
-
   blendColor: (update, r, g, b, a) =>
     update({
       [GL.BLEND_COLOR]: new Float32Array([r, g, b, a])
@@ -653,5 +618,9 @@ export const NON_CACHE_PARAMETERS = new Set([
   GL.DRAW_BUFFER14,
   GL.DRAW_BUFFER15,
   // states depending on ACTIVE_TEXTURE
-  GL.SAMPLER_BINDING
+  GL.SAMPLER_BINDING,
+  GL.TEXTURE_BINDING_2D,
+  GL.TEXTURE_BINDING_2D_ARRAY,
+  GL.TEXTURE_BINDING_3D,
+  GL.TEXTURE_BINDING_CUBE_MAP
 ]);
