@@ -74,7 +74,8 @@
           "entries": [
             { "entry": "modules/shadertools/docs/api-reference/assemble-shaders" },
             { "entry": "modules/shadertools/docs/api-reference/core-shader-modules" },
-            { "entry": "modules/shadertools/docs/api-reference/effects-shader-modules" }
+            { "entry": "modules/shadertools/docs/api-reference/effects-shader-modules" },
+            { "entry": "modules/shadertools/docs/api-reference/shader-logs" }
           ]
         },
         {

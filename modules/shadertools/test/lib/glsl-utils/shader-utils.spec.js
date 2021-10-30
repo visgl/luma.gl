@@ -4,7 +4,7 @@ import {
   typeToChannelSuffix,
   typeToChannelCount,
   convertToVec4
-} from '@luma.gl/shadertools/utils/shader-utils';
+} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('shader-utils#getQualifierDetails', (t) => {

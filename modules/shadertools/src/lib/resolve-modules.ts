@@ -1,5 +1,5 @@
 import ShaderModule from './shader-module';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 // Instantiate shader modules and any dependencies resolve dependencies
 export function resolveModules(modules: any[]): any[] {

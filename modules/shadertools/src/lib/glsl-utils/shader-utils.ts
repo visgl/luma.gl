@@ -1,4 +1,5 @@
-import {assert} from '../utils';
+import {assert} from '../../utils/assert';
+
 const FS100 = `void main() {gl_FragColor = vec4(0);}`;
 const FS_GLES = `\
 out vec4 transform_output;
@@ -8,7 +9,11 @@ void main() {
 const FS300 = `#version 300 es\n${FS_GLES}`;
 
 // Prase given glsl line and return qualifier details or null
-export function getQualifierDetails(line, qualifiers) {
+export function getQualifierDetails(line: string, qualifiers: string | string[]):  {
+  qualifier: string;
+  type: string;
+  name: string;
+} {
   qualifiers = Array.isArray(qualifiers) ? qualifiers : [qualifiers];
   const words = line.replace(/^\s+/, '').split(/\s+/);
   // TODO add support for precession qualifiers (highp, mediump and lowp)
@@ -20,9 +25,16 @@ export function getQualifierDetails(line, qualifiers) {
   return {qualifier, type, name};
 }
 
+type PassthroughFSOptions = {
+  version?: number;
+  input?: string
+  inputType?: string;
+  output?: string
+};
+
 // Given the shader version, input and output variable names,
 // builds and return a pass through fragment shader.
-export function getPassthroughFS(options = {}) {
+export function getPassthroughFS(options: PassthroughFSOptions = {}) {
   const {version = 100, input, inputType, output} = options;
   if (!input) {
     if (version === 300) {
@@ -55,7 +67,7 @@ void main() {
 }
 
 // convert glsl type to suffix
-export function typeToChannelSuffix(type) {
+export function typeToChannelSuffix(type: string): 'x' | 'xy' | 'xyz' | 'xyzw' {
   switch (type) {
     case 'float':
       return 'x';
@@ -72,7 +84,7 @@ export function typeToChannelSuffix(type) {
 }
 
 // convert glsl type to channel count
-export function typeToChannelCount(type) {
+export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
   switch (type) {
     case 'float':
       return 1;
@@ -89,7 +101,7 @@ export function typeToChannelCount(type) {
 }
 
 // Returns glsl instruction for converting to vec4
-export function convertToVec4(variable, type) {
+export function convertToVec4(variable: string, type: string): string {
   switch (type) {
     case 'float':
       return `vec4(${variable}, 0.0, 0.0, 1.0)`;
