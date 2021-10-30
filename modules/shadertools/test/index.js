@@ -1,5 +1,9 @@
 import './utils/is-old-ie.spec';
-import './utils/shader-utils.spec';
+
+import './lib/glsl-utils/get-shader-info.spec';
+import './lib/glsl-utils/shader-utils.spec';
+
+import './lib/compiler-log/format-compiler-log.spec';
 
 import './lib/inject-shader.spec.js';
 import './lib/transpile-shader.spec.js';
