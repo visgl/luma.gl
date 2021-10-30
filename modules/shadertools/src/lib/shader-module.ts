@@ -1,4 +1,4 @@
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 import {parsePropTypes} from './filters/prop-types';
 import {ShaderModule as ShaderModuleProps} from '../types';
 

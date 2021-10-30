@@ -1,5 +1,13 @@
 # What's New
 
+## Version 9.0
+
+Date: TBD
+
+### `@luma.gl/shadertools`
+
+- New `CompilerMessage` type and `formatCompilerLog` function for platform and shader language independent handling of shader logs.
+
 ## Version 8.5
 
 Date: Jul 15, 2021

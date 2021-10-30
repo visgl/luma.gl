@@ -5,7 +5,7 @@
 
 /* eslint-disable no-inline-comments, max-len */
 import isOldIE from './is-old-ie';
-import assert from './assert';
+import {assert} from './assert';
 
 const GL_VENDOR = 0x1f00;
 const GL_RENDERER = 0x1f01;
