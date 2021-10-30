@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, log} from '@luma.gl/gltools';
-import Resource, {ResourceProps} from './resource';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './buffer';
 import {isObjectEmpty} from '../utils';
 
@@ -8,7 +8,7 @@ export type TransformFeedbackProps = ResourceProps & {
   [key: string]: any;
 };
 
-export default class TransformFeedback extends Resource {
+export default class TransformFeedback extends WebGLResource<TransformFeedbackProps> {
   buffers = {};
   unused = {};
   configuration = null;

@@ -10,15 +10,15 @@ test('Buffer#constructor/delete', (t) => {
   t.ok(isWebGL(gl), 'Created gl context');
 
   // @ts-ignore
-  t.throws(() => new Buffer(), /.*WebGLRenderingContext.*/, 'Buffer throws on missing gl context');
+  t.throws(() => new Buffer(), 'Buffer throws on missing gl context');
 
   const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER});
   t.ok(buffer instanceof Buffer, 'Buffer construction successful');
 
-  buffer.delete();
+  buffer.destroy();
   t.ok(buffer instanceof Buffer, 'Buffer delete successful');
 
-  buffer.delete();
+  buffer.destroy();
   t.ok(buffer instanceof Buffer, 'Buffer repeated delete successful');
 
   t.end();
@@ -68,8 +68,9 @@ test('Buffer#constructor offset and size', (t) => {
 test('Buffer#bind/unbind', (t) => {
   const {gl} = fixture;
 
-  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER}).bind().unbind().delete();
+  const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER}).bind().unbind();
   t.ok(buffer instanceof Buffer, 'Buffer bind/unbind successful');
+  buffer.destroy();
 
   t.end();
 });
@@ -82,8 +83,9 @@ test('Buffer#bind/unbind with index', (t) => {
     return;
   }
 
-  const buffer = new Buffer(gl2, {target: GL.UNIFORM_BUFFER, index: 0}).bind().unbind().delete();
+  const buffer = new Buffer(gl2, {target: GL.UNIFORM_BUFFER, index: 0}).bind().unbind();
   t.ok(buffer instanceof Buffer, 'Buffer bind/unbind with index successful');
+  buffer.destroy();
 
   t.end();
 });
@@ -95,9 +97,9 @@ test('Buffer#construction', (t) => {
 
   buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER, data: new Float32Array([1, 2, 3])})
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'Buffer(ARRAY_BUFFER) successful');
+  buffer.destroy();
 
   // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
   buffer = new Buffer(gl, {
@@ -105,9 +107,9 @@ test('Buffer#construction', (t) => {
     data: new Float32Array([1, 2, 3])
   })
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'Buffer(ELEMENT_ARRAY_BUFFER) successful');
+  buffer.destroy();
 
   t.end();
 });
@@ -120,31 +122,31 @@ test('Buffer#initialize/subData', (t) => {
   buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER})
     .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_BUFFER) successful');
+  buffer.destroy();
 
   buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER, data: new Float32Array([1, 2, 3])})
     .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_BUFFER) successful');
+  buffer.destroy();
 
   buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
     .initialize({data: new Float32Array([1, 2, 3])})
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'buffer.initialize(ELEMENT_ARRAY_BUFFER) successful');
+  buffer.destroy();
 
   buffer = new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER})
     .initialize({data: new Float32Array([1, 2, 3])})
     .subData({data: new Float32Array([1, 1, 1])})
     .bind()
-    .unbind()
-    .delete();
+    .unbind();
   t.ok(buffer instanceof Buffer, 'Buffer.subData(ARRAY_ELEMENT_BUFFER) successful');
+  buffer.destroy();
 
   t.end();
 });

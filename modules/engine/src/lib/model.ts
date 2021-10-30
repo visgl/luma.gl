@@ -562,7 +562,7 @@ export default class Model {
       // Buffer is raw value (for indices) or first element of [buffer, accessor] pair
       const buffer = this.geometryBuffers[name][0] || this.geometryBuffers[name];
       if (buffer instanceof Buffer) {
-        buffer.delete();
+        buffer.destroy();
       }
     }
   }

@@ -33,4 +33,8 @@ export default class Texture2D extends Texture {
 
     Object.seal(this);
   }
+
+  get [Symbol.toStringTag](): string {
+    return 'Texture2D';
+  }
 }

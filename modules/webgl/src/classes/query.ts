@@ -1,7 +1,7 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-import Resource from './resource';
-import {FEATURES, hasFeatures} from '../features';
 import {isWebGL2} from '@luma.gl/gltools';
+import WebGLResource, {ResourceProps} from './webgl-resource';
+import {FEATURES, hasFeatures} from '../features';
 import {assert} from '../utils';
 
 const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.
@@ -14,14 +14,13 @@ const GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 0x8c88; // #primitives written 
 const GL_ANY_SAMPLES_PASSED = 0x8c2f; // Occlusion query (if drawing passed depth test)
 const GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8d6a; // Occlusion query less accurate/faster version
 
-export type QueryProps = {
-
-}
+export type QueryProps = ResourceProps & {
+};
 
 /**
  * Asynchronous queries for different kinds of information
  */
-export default class Query extends Resource {
+export default class Query extends WebGLResource<QueryProps> {
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
   static isSupported(gl: WebGLRenderingContext, options: string[] = []): boolean {

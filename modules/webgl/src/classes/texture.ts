@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
 import {global} from 'probe.gl/env';
 
-import Resource, {ResourceProps} from './resource';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './buffer';
 import {
   TEXTURE_FORMATS,
@@ -42,7 +42,7 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 // Note (Tarek): Do we really need to support this API?
 const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
 
-export default class Texture extends Resource {
+export default class Texture extends WebGLResource<TextureProps> {
   readonly MAX_ATTRIBUTES: number;
 
   data;
@@ -316,7 +316,7 @@ export default class Texture extends Resource {
    */
   /* eslint-disable max-len, max-statements, complexity */
   setImageData(options) {
-    this._trackDeallocatedMemory('Texture');
+    this.trackDeallocatedMemory('Texture');
 
     const {
       target = this.target,
@@ -417,13 +417,13 @@ export default class Texture extends Resource {
     });
 
     if (data && data.byteLength) {
-      this._trackAllocatedMemory(data.byteLength, 'Texture');
+      this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
       // NOTE(Tarek): Default to RGBA bytes
       const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
       const channelSize = TYPE_SIZES[this.type] || 1;
 
-      this._trackAllocatedMemory(this.width * this.height * channels * channelSize, 'Texture');
+      this.trackAllocatedMemory(this.width * this.height * channels * channelSize, 'Texture');
     }
 
     this.loaded = true;
@@ -750,7 +750,7 @@ export default class Texture extends Resource {
 
   _deleteHandle(): void {
     this.gl.deleteTexture(this.handle);
-    this._trackDeallocatedMemory('Texture');
+    this.trackDeallocatedMemory('Texture');
   }
 
   _getParameter(pname: number): any {

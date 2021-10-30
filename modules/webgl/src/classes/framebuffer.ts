@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
-import Resource, {ResourceProps} from './resource';
+import Resource, {ResourceProps} from './webgl-resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
@@ -38,8 +38,8 @@ export type FramebufferProps = ImmutableFramebufferProps & {
 
 type colorBufferFloatOptions = {colorBufferFloat?: boolean; colorBufferHalfFloat?: boolean};
 
-export class ImmutableFramebuffer extends Resource {
-  constructor(gl: WebGLRenderingContext, props?: ImmutableFramebufferProps) {
+export class ImmutableFramebuffer extends Resource<FramebufferProps> {
+  constructor(gl: WebGLRenderingContext, props?: FramebufferProps) {
     super(gl, props);
     this._initialize({
       attachments: props?.attachments || {},

@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
 import {getBrowser} from 'probe.gl';
 import Program from './program';
-import Resource, {ResourceProps} from './resource';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './buffer';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
@@ -21,7 +21,7 @@ export type VertexArrayObjectProps = ResourceProps & {
   isDefaultArray?: boolean;
 };
 
-export default class VertexArrayObject extends Resource {
+export default class VertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   private static MAX_ATTRIBUTES: number;
 
   static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean {
