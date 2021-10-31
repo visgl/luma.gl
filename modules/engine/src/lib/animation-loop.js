@@ -34,7 +34,8 @@ export default class AnimationLoop {
       onInitialize = () => {},
       onRender = () => {},
       onFinalize = () => {},
-      onError,
+      // eslint-disable-next-line no-console
+      onError = (error) => console.error(error),
 
       gl = null,
       glOptions = {},
@@ -126,55 +127,57 @@ export default class AnimationLoop {
     return this;
   }
 
+  start(opts = {}) {
+    this._start(opts);
+    return this;
+  }
+
   // Starts a render loop if not already running
   // @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
-  start(opts = {}) {
+  async _start(opts) {
     if (this._running) {
       return this;
     }
     this._running = true;
+
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
-    const startPromise = this._getPageLoadPromise()
-      .then(() => {
-        if (!this._running || this._initialized) {
-          return null;
-        }
+    try {
+      await this._getPageLoadPromise();
 
-        // Create the WebGL context
-        this._createWebGLContext(opts);
-        this._createFramebuffer();
-        this._startEventHandling();
+      // check that we haven't been stopped
+      if (!this._running) {
+        return null;
+      }
 
-        // Initialize the callback data
-        this._initializeCallbackData();
-        this._updateCallbackData();
-
-        // Default viewport setup, in case onInitialize wants to render
-        this._resizeCanvasDrawingBuffer();
-        this._resizeViewport();
-
-        this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
-
+      let appContext;
+      if (!this._initialized) {
         this._initialized = true;
+        this._initialize(opts);
 
-        // Note: onIntialize can return a promise (in case it needs to load resources)
-        return this.onInitialize(this.animationProps);
-      })
-      .then((appContext) => {
-        if (this._running) {
-          this._addCallbackData(appContext || {});
-          if (appContext !== false) {
-            this._startLoop();
-          }
-        }
-      });
+        // Note: onIntialize can return a promise (in case app needs to load resources)
+        appContext = await this.onInitialize(this.animationProps);
+        this._addCallbackData(appContext || {});
+      }
 
-    if (this.props.onError) {
-      startPromise.catch(this.props.onError);
+      // check that we haven't been stopped
+      if (!this._running) {
+        return null;
+      }
+
+      // Start the loop
+      if (appContext !== false) {
+        // cancel any pending renders to ensure only one loop can ever run
+        this._cancelAnimationFrame();
+        this._requestAnimationFrame();
+      }
+
+      return this;
+    } catch (error) {
+      this.props.onError(error);
+      // this._running = false; // TODO
+      return null;
     }
-
-    return this;
   }
 
   // Redraw now
@@ -288,13 +291,22 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
-  _startLoop() {
-    // cancel any pending renders to ensure only one loop can ever run
-    this._cancelAnimationFrame();
-    this._requestAnimationFrame();
-  }
+  _initialize(opts) {
+    // Create the WebGL context
+    this._createWebGLContext(opts);
+    this._createFramebuffer();
+    this._startEventHandling();
 
-  // PRIVATE METHODS
+    // Initialize the callback data
+    this._initializeCallbackData();
+    this._updateCallbackData();
+
+    // Default viewport setup, in case onInitialize wants to render
+    this._resizeCanvasDrawingBuffer();
+    this._resizeViewport();
+
+    this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+  }
 
   _getPageLoadPromise() {
     if (!this._pageLoadPromise) {
