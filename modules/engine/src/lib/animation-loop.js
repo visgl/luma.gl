@@ -139,17 +139,26 @@ export default class AnimationLoop {
       return this;
     }
     this._running = true;
+
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
     try {
       await this._getPageLoadPromise();
 
-      this._initialize(opts);
+      // check that we haven't been stopped
+      if (!this._running) {
+        return null;
+      }
 
-      // Note: onIntialize can return a promise (in case it needs to load resources)
-      const appContext = await this.onInitialize(this.animationProps);
+      let appContext;
+      if (!this._initialized) {
+        this._initialized = true;
+        this._initialize(opts);
 
-      this._addCallbackData(appContext || {});
+        // Note: onIntialize can return a promise (in case app needs to load resources)
+        appContext = await this.onInitialize(this.animationProps);
+        this._addCallbackData(appContext || {});
+      }
 
       // check that we haven't been stopped
       if (!this._running) {
@@ -283,9 +292,6 @@ export default class AnimationLoop {
   // PRIVATE METHODS
 
   _initialize(opts) {
-    if (this._initialized) {
-      return;
-    }
     // Create the WebGL context
     this._createWebGLContext(opts);
     this._createFramebuffer();
@@ -300,8 +306,6 @@ export default class AnimationLoop {
     this._resizeViewport();
 
     this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
-
-    this._initialized = true;
   }
 
   _getPageLoadPromise() {
