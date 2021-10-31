@@ -82,7 +82,7 @@ export class Timeline {
     return this.time >= channel.delay + channel.duration * channel.repeat;
   }
 
-  getTime(handle: number): number {
+  getTime(handle?: number): number {
     if (handle === undefined) {
       return this.time;
     }
