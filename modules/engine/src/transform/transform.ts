@@ -110,7 +110,7 @@ export default class Transform {
     this.model = new Model(
       gl,
       Object.assign({}, props, {
-        fs: props._fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
+        fs: props.fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
         id: props.id || 'transform-model',
         drawMode: props.drawMode || GL.POINTS,
         vertexCount: props.elementCount
