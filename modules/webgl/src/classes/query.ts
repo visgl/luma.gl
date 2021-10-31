@@ -14,6 +14,10 @@ const GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN = 0x8c88; // #primitives written 
 const GL_ANY_SAMPLES_PASSED = 0x8c2f; // Occlusion query (if drawing passed depth test)
 const GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8d6a; // Occlusion query less accurate/faster version
 
+export type QueryProps = {
+
+}
+
 /**
  * Asynchronous queries for different kinds of information
  */
@@ -48,7 +52,7 @@ export default class Query extends Resource {
   _pollingPromise = null;
 
   // Create a query class
-  constructor(gl: WebGLRenderingContext, opts: {} = {}) {
+  constructor(gl: WebGLRenderingContext, opts: QueryProps = {}) {
     super(gl, opts);
 
     Object.seal(this);

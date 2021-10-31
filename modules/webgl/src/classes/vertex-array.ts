@@ -24,6 +24,17 @@ export type VertexArrayProps = {
   bindOnUse?: boolean;
 };
 
+export type DrawParams = {
+  elementCount: number;
+  indexType: Uint16ArrayConstructor | Uint32ArrayConstructor;
+  indexOffset: number;
+  isIndexed: boolean;
+  isInstanced: boolean;
+  indexCount: number;
+  vertexCount: number;
+  instanceCount: number;
+};
+
 export default class VertexArray {
   id: string;
   gl: WebGLRenderingContext;
@@ -111,11 +122,11 @@ export default class VertexArray {
   }
 
   // Automatically called if buffers changed through VertexArray API
-  clearDrawParams() {
+  clearDrawParams(): void {
     this.drawParams = null;
   }
 
-  getDrawParams() {
+  getDrawParams(): DrawParams {
     // Auto deduced draw parameters
     this.drawParams = this.drawParams || this._updateDrawParams();
 
@@ -180,7 +191,7 @@ export default class VertexArray {
   }
 
   // Set attribute to constant value (small typed array corresponding to one vertex' worth of data)
-  setConstant(locationOrName, arrayValue, appAccessor = {}) {
+  setConstant(locationOrName, arrayValue, appAccessor = {}): this {
     // @ts-expect-error
     const {location, accessor} = this._resolveLocationAndAccessor(
       locationOrName,
@@ -392,7 +403,7 @@ export default class VertexArray {
   }
 
   // Walks the buffers and updates draw parameters
-  _updateDrawParams() {
+  _updateDrawParams(): DrawParams {
     const drawParams = {
       elementCount: 0,
       indexType: Uint16Array,
@@ -431,7 +442,7 @@ export default class VertexArray {
     return drawParams;
   }
 
-  _updateDrawParamsForLocation(drawParams, location): void {
+  _updateDrawParamsForLocation(drawParams: DrawParams, location): void {
     const value = this.values[location];
     const accessor = this.accessors[location];
 
