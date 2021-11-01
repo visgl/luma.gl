@@ -5,7 +5,7 @@ export type ConeGeometryProps = {
   id?: string;
   radius?: number;
   cap?: boolean;
-}
+};
 
 export class ConeGeometry extends TruncatedConeGeometry {
   constructor(props: ConeGeometryProps = {}) {

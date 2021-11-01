@@ -1,8 +1,9 @@
 import GL from '@luma.gl/constants';
-import {getPassthroughFS} from '@luma.gl/shadertools';
+import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import {isWebGL2} from '@luma.gl/gltools';
 import type {Framebuffer, Buffer} from '@luma.gl/webgl';
-import {assert, isObjectEmpty, getShaderVersion} from '@luma.gl/webgl';
+import {assert, isObjectEmpty} from '@luma.gl/webgl';
+
 import Model from '../lib/model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
@@ -110,7 +111,7 @@ export default class Transform {
     this.model = new Model(
       gl,
       Object.assign({}, props, {
-        fs: props.fs || getPassthroughFS({version: getShaderVersion(props.vs)}),
+        fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
         id: props.id || 'transform-model',
         drawMode: props.drawMode || GL.POINTS,
         vertexCount: props.elementCount

@@ -55,10 +55,6 @@ export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 export {setPathPrefix, loadFile, loadImage} from './utils/load-file';
 
-// PARSE SHADER SOURCE
-export {default as getShaderName} from './glsl-utils/get-shader-name';
-export {default as getShaderVersion} from './glsl-utils/get-shader-version';
-
 // UTILS
 export {log} from '@luma.gl/gltools';
 export {default as assert} from './utils/assert';
@@ -69,3 +65,8 @@ export {parseUniformName, getUniformSetter} from './classes/uniforms';
 export {getDebugTableForUniforms} from './debug/debug-uniforms';
 export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
+
+// REMOVED in v8.6
+// getShaderInfo,
+// getShaderName
+// getShaderVersion
