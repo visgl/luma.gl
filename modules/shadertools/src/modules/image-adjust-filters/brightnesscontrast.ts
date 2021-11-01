@@ -1,5 +1,4 @@
-import {ShaderPass} from '../../types';
-
+// import {ShaderPass} from '../../lib/shaderpass';
 
 const fs = `\
 uniform float brightness;
@@ -31,7 +30,7 @@ const uniforms = {
  * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
  * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
- export const brightnessContrast: ShaderPass = {
+ export const brightnessContrast = {
   name: 'brightnessContrast',
   uniforms,
   fs,

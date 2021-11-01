@@ -1,4 +1,4 @@
-import {ShaderModule} from '../../types';
+// import {ShaderModule} from '../../types';
 
 // TODO - reuse normal from geometry module
 const vs = `\
@@ -34,7 +34,7 @@ vec3 geometry_getNormal() {
 /**
  * Geometry varyings
  */
-export const geometry: ShaderModule = {
+export const geometry = {
   name: 'geometry',
   vs,
   fs
