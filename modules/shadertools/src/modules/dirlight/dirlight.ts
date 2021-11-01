@@ -1,7 +1,5 @@
-import {ShaderModule} from '../../types';
-
-// Cheap lighting - single directional light, single dot product, one uniform
-
+// import {checkType} from 'test/utils/types';
+import type {ShaderModule} from '../../types';
 import {project} from '../project/project';
 
 const DEFAULT_LIGHT_DIRECTION = new Float32Array([1, 1, 2]);
@@ -38,10 +36,13 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
-export const dirlight: ShaderModule = {
+export const dirlight = {
   name: 'dirlight',
   vs,
   fs,
   getUniforms,
   dependencies: [project]
 };
+
+// type checks
+// checkType<ShaderModule>(dirlight);
