@@ -1,9 +1,9 @@
 import GL from '@luma.gl/constants';
-import Resource, {ResourceProps} from './resource';
+import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
+import {Buffer, BufferProps} from '../api/buffer';
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils';
-import {assertWebGL2Context, log} from '@luma.gl/gltools';
 import {assert, checkProps} from '../utils';
 
 const DEBUG_DATA_LENGTH = 10;
@@ -37,7 +37,9 @@ const PROP_CHECKS_SET_PROPS = {
   removedProps: DEPRECATED_PROPS
 };
 
-export type BufferProps = ResourceProps & {
+/** WebGL Buffer interface */
+export type WebGLBufferProps = BufferProps & {
+  handle?: WebGLBuffer;
   data?: any; // ArrayBufferView;
   byteLength?: number;
   target?: number;
@@ -54,14 +56,19 @@ export type BufferProps = ResourceProps & {
   type?: number
 }
 
-export default class Buffer extends Resource {
-  // readonly handle: WebGLBuffer;
-  byteLength: number;
-  bytesUsed: number;
-  usage: number;
-  accessor: Accessor;
+/** WebGL Buffer interface */
+export default class WebGLBuffer extends Buffer {
+  readonly gl: WebGLRenderingContext;
+  readonly gl2: WebGL2RenderingContext | null;
+  readonly handle: WebGLBuffer;
 
   target: number;
+  usage: number;
+
+  byteLength: number;
+  bytesUsed: number;
+
+  accessor: Accessor;
 
   debugData;
 
@@ -70,7 +77,12 @@ export default class Buffer extends Resource {
   constructor(gl: WebGLRenderingContext, byteLength: number);
 
   constructor(gl: WebGLRenderingContext, props = {}) {
-    super(gl, props);
+    super(gl as any, props, {} as any);
+
+    this.gl = gl;
+    this.gl2 = getWebGL2Context(gl);
+    const handle = typeof props === 'object' ? (props as BufferProps).handle : undefined;
+    this.handle = handle || this.gl.createBuffer();
 
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
@@ -81,6 +93,16 @@ export default class Buffer extends Resource {
     this.initialize(props);
 
     Object.seal(this);
+  }
+
+  destroy(): void {
+    if (this.handle) {
+      this.removeStats();
+      this.trackDeallocatedMemory();
+      this.gl.deleteBuffer(this.handle);
+      // @ts-expect-error
+      this.handle = null;
+    }
   }
 
   // returns number of elements in the buffer (assuming that the full buffer is used)
@@ -352,7 +374,7 @@ export default class Buffer extends Resource {
   _setData(data, offset: number = 0, byteLength: number = data.byteLength + offset): this {
     assert(ArrayBuffer.isView(data));
 
-    this._trackDeallocatedMemory();
+    this.trackDeallocatedMemory();
 
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
@@ -362,8 +384,8 @@ export default class Buffer extends Resource {
 
     this.debugData = data.slice(0, DEBUG_DATA_LENGTH);
     this.bytesUsed = byteLength;
-
-    this._trackAllocatedMemory(byteLength);
+    this.byteLength = byteLength;
+    this.trackAllocatedMemory(byteLength);
 
     // infer GL type from supplied typed array
     const type = getGLTypeFromTypedArray(data);
@@ -376,7 +398,7 @@ export default class Buffer extends Resource {
   _setByteLength(byteLength: number, usage = this.usage): this {
     assert(byteLength >= 0);
 
-    this._trackDeallocatedMemory();
+    this.trackDeallocatedMemory();
 
     // Workaround needed for Safari (#291):
     // gl.bufferData with size equal to 0 crashes. Instead create zero sized array.
@@ -394,8 +416,9 @@ export default class Buffer extends Resource {
     this.usage = usage;
     this.debugData = null;
     this.bytesUsed = byteLength;
+    this.byteLength = byteLength;
 
-    this._trackAllocatedMemory(byteLength);
+    this.trackAllocatedMemory(byteLength);
 
     return this;
   }
@@ -423,16 +446,7 @@ export default class Buffer extends Resource {
 
   // RESOURCE METHODS
 
-  _createHandle() {
-    return this.gl.createBuffer();
-  }
-
-  _deleteHandle() {
-    this.gl.deleteBuffer(this.handle);
-    this._trackDeallocatedMemory();
-  }
-
-  _getParameter(pname) {
+  getParameter(pname) {
     this.gl.bindBuffer(this.target, this.handle);
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);

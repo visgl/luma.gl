@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 
-import Resource, {ResourceProps} from './resource';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -44,7 +44,7 @@ export type ProgramDrawOptions = {
   samplers?: any;
 };
 
-export default class Program extends Resource {
+export default class Program extends WebGLResource<ProgramProps> {
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
   _isCached = false;

@@ -22,7 +22,8 @@ export {default as canCompileGLGSExtension} from './features/check-glsl-extensio
 export {default as Accessor} from './classes/accessor';
 
 // WebGL1 classes
-export {default as Buffer, BufferProps} from './classes/buffer';
+export type {WebGLBufferProps as BufferProps} from './classes/buffer';
+export {default as Buffer} from './classes/buffer';
 export {default as Texture2D, Texture2DProps} from './classes/texture-2d';
 export {default as TextureCube, TextureCubeProps} from './classes/texture-cube';
 

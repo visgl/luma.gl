@@ -53,7 +53,7 @@ export default class Texture3D extends Texture {
     data,
     parameters = {}
   }: SetImageDataOptions) {
-    this._trackDeallocatedMemory('Texture');
+    this.trackDeallocatedMemory('Texture');
 
     this.gl.bindTexture(this.target, this.handle);
 
@@ -93,7 +93,7 @@ export default class Texture3D extends Texture {
     });
 
     if (data && data.byteLength) {
-      this._trackAllocatedMemory(data.byteLength, 'Texture');
+      this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
       // NOTE(Tarek): Default to RGBA bytes
       // @ts-ignore
@@ -101,7 +101,7 @@ export default class Texture3D extends Texture {
       // @ts-ignore
       const channelSize = TYPE_SIZES[this.type] || 1;
 
-      this._trackAllocatedMemory(
+      this.trackAllocatedMemory(
         this.width * this.height * this.depth * channels * channelSize,
         'Texture'
       );

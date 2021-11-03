@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments */
 import GL from '@luma.gl/constants';
-import Resource, {ResourceProps} from './resource';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import {isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel} from './renderbuffer-formats';
 import {isWebGL2} from '@luma.gl/gltools';
 import {assert} from '../utils';
@@ -28,24 +28,24 @@ const DEFAULT_RENDERBUFFER_PROPS = {
  * use Textures instead.
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
-export class ImmutableRenderbuffer extends Resource {
+export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
     return !options.format || isRenderbufferFormatSupported(gl, options.format);
   }
 
   constructor(gl: WebGLRenderingContext, props: RenderbufferProps) {
     super(gl, props);
-    this._initialize(props);
+    this._initialize(this.props);
   }
 
   // PRIVATE METHODS
 
   /** Creates and initializes a renderbuffer object's data store */
-  protected _initialize(props: RenderbufferProps) {
-    const {format, width, height, samples} = {...DEFAULT_RENDERBUFFER_PROPS, ...props};
+  protected _initialize(props: Required<RenderbufferProps>) {
+    const {format, width, height, samples} = props;
     assert(format, 'Needs format');
 
-    this._trackDeallocatedMemory();
+    this.trackDeallocatedMemory();
 
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
@@ -58,7 +58,7 @@ export class ImmutableRenderbuffer extends Resource {
 
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 
-    this._trackAllocatedMemory(
+    this.trackAllocatedMemory(
       width * height * (samples || 1) * getRenderbufferFormatBytesPerPixel(format)
     );
 
@@ -73,7 +73,7 @@ export class ImmutableRenderbuffer extends Resource {
 
   _deleteHandle(): void {
     this.gl.deleteRenderbuffer(this.handle);
-    this._trackDeallocatedMemory();
+    this.trackDeallocatedMemory();
   }
 
   _bindHandle(handle): void {
@@ -126,6 +126,7 @@ export class ImmutableRenderbuffer extends Resource {
   /** Creates and initializes a renderbuffer object's data store */
   initialize(props: RenderbufferProps): this {
     props = {...DEFAULT_RENDERBUFFER_PROPS, ...props};
+    // @ts-expect-error
     this._initialize(props);
     this.format = props.format;
     this.width = props.width;

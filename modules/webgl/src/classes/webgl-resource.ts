@@ -1,20 +1,15 @@
 import {isWebGL2, assertWebGLContext} from '@luma.gl/gltools';
-import {lumaStats} from '../init';
 import {getKey, getKeyValue} from '../webgl-utils';
 import {uid, assert, stubRemovedMethods} from '../utils';
+import Resource from '../api/resource';
+export type {ResourceProps} from '../api/resource';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
-
-export type ResourceProps = {
-  id?: string;
-  handle?: any;
-  userData?: any;
-}
 
 /**
  * Base class for WebGL object wrappers
  */
- export default class Resource {
+ export default class WebGLResource<Props> extends Resource<Props> {
   id: string;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;
@@ -25,9 +20,13 @@ export type ResourceProps = {
   // Only meaningful for resources that allocate GPU memory
   byteLength = 0;
 
-  constructor(gl: WebGLRenderingContext, props?: ResourceProps) {
+  constructor(gl: WebGLRenderingContext, props?: Props, defaultProps?: Required<Props>) {
+    super(gl as any, props, defaultProps);
+
     assertWebGLContext(gl);
 
+    // extends 
+    // @ts-expect-error
     const {id, userData = {}} = props || {};
     this.gl = gl;
     // @ts-ignore
@@ -43,14 +42,13 @@ export type ResourceProps = {
     // this.glCount = glGetContextLossCount(this.gl);
 
     // Default VertexArray needs to be created with null handle, so compare against undefined
+    // @ts-expect-error
     this._handle = props?.handle;
     if (this._handle === undefined) {
       this._handle = this._createHandle();
     }
 
     this.byteLength = 0;
-
-    this._addStats();
   }
 
   toString(): string {
@@ -75,7 +73,7 @@ export type ResourceProps = {
     // @ts-ignore
     const children = this._handle && this._deleteHandle(this._handle);
     if (this._handle) {
-      this._removeStats();
+      this.removeStats();
     }
     this._handle = null;
 
@@ -280,6 +278,7 @@ export type ResourceProps = {
 
   // PRIVATE METHODS
 
+  /*
   _addStats() {
     const name = this.constructor.name;
     const stats = lumaStats.get('Resource Counts');
@@ -296,7 +295,7 @@ export type ResourceProps = {
     stats.get(`${name}s Active`).decrementCount();
   }
 
-  _trackAllocatedMemory(bytes, name = this.constructor.name) {
+  trackAllocatedMemory(bytes, name = this.constructor.name) {
     const stats = lumaStats.get('Memory Usage');
 
     stats.get('GPU Memory').addCount(bytes);
@@ -304,11 +303,12 @@ export type ResourceProps = {
     this.byteLength = bytes;
   }
 
-  _trackDeallocatedMemory(name = this.constructor.name) {
+  trackDeallocatedMemory(name = this.constructor.name) {
     const stats = lumaStats.get('Memory Usage');
 
     stats.get('GPU Memory').subtractCount(this.byteLength);
     stats.get(`${name} Memory`).subtractCount(this.byteLength);
     this.byteLength = 0;
   }
+  */
 }

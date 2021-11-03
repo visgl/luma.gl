@@ -2,26 +2,24 @@
 import GL from '@luma.gl/constants';
 import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
+import WebGLResource, {ResourceProps} from './webgl-resource';
 import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
 import {uid, assert} from '../utils';
-import Resource, {ResourceProps} from './resource';
 
-export type ImmutableShaderProps = ResourceProps & {
+export type ShaderProps = ResourceProps & {
   source: string;
   stage?: 'vertex' | 'fragment';
-};
-
-export type ShaderProps = ImmutableShaderProps & {
+  /** @deprecated use props.stage */
   shaderType?: GL.VERTEX_SHADER | GL.FRAGMENT_SHADER;
 };
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
-export class ImmutableShader extends Resource {
+export class ImmutableShader extends WebGLResource<ShaderProps> {
   readonly stage: 'vertex' | 'fragment';
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
-    super(gl, {id: getShaderIdFromProps(props)});
+    super(gl, {id: getShaderIdFromProps(props), ...props});
     this.stage = props.stage;
     this._compile(props.source);
   }
