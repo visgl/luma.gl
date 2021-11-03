@@ -13,7 +13,7 @@ export type {ShaderProps};
 
 export class WEBGLShader extends ShaderAPI {
   readonly gl: WebGLRenderingContext;
-  readonly handle: WebGLBuffer;
+  readonly handle: WebGLShader;
 
   readonly stage: 'vertex' | 'fragment';
 
