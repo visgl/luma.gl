@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, withParameters} from '@luma.gl/gltools';
 import Texture, {TextureProps} from './texture';
 import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
-import Buffer from './buffer';
+import Buffer from './webgl-buffer';
 
 export type Texture3DProps = TextureProps & {
 };

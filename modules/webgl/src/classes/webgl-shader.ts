@@ -2,28 +2,38 @@
 import GL from '@luma.gl/constants';
 import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import {Shader as ShaderAPI, ShaderProps} from '../api/shader';
 import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
 import {uid, assert} from '../utils';
 
-export type ShaderProps = ResourceProps & {
-  source: string;
-  stage?: 'vertex' | 'fragment';
-  /** @deprecated use props.stage */
-  shaderType?: GL.VERTEX_SHADER | GL.FRAGMENT_SHADER;
-};
-
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
-export class ImmutableShader extends WebGLResource<ShaderProps> {
+
+export type {ShaderProps};
+
+export class WEBGLShader extends ShaderAPI {
+  readonly gl: WebGLRenderingContext;
+  readonly handle: WebGLBuffer;
+
   readonly stage: 'vertex' | 'fragment';
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
-    super(gl, {id: getShaderIdFromProps(props), ...props});
-    this.stage = props.stage;
+    super(gl as any, {id: getShaderIdFromProps(props), ...props}, {} as any);
+    this.stage = this.props.stage;
+    this.gl = gl;
+    this.handle = this.props.handle || this.gl.createShader(this.stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
     this._compile(props.source);
   }
 
+  destroy(): void {
+    if (this.handle) {
+      this.removeStats();
+      this.gl.deleteShader(this.handle);
+      // @ts-expect-error
+      this.handle = null;
+    }
+  }  
+  
   async compilationInfo(): Promise<readonly CompilerMessage[]> {
     const log = this.gl.getShaderInfoLog(this.handle);
     return parseShaderCompilerLog(log);
@@ -40,7 +50,7 @@ export class ImmutableShader extends WebGLResource<ShaderProps> {
     // TODO - For performance reasons, avoid checking shader compilation errors on production?
     // TODO - Load log even when no error reported, to catch warnings?
     // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-    const compileStatus = this.getParameter(GL.COMPILE_STATUS);
+    const compileStatus = this.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compileStatus) {
       const shaderLog = this.gl.getShaderInfoLog(this.handle);
       const messages = parseShaderCompilerLog(shaderLog).filter(message => message.type === 'error');
@@ -51,22 +61,13 @@ export class ImmutableShader extends WebGLResource<ShaderProps> {
       throw new Error(`GLSL compilation errors in ${shaderName}`);
     }
   }
-
-  // PRIVATE METHODS
-  _createHandle() {
-    return this.gl.createShader(this.stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
-  }
-
-  _deleteHandle(): void {
-    this.gl.deleteShader(this.handle);
-  }  
 }
  
 /**
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
  * For now this is an internal class
  */
-export class Shader extends ImmutableShader {
+export class Shader extends WEBGLShader {
   shaderType: GL.FRAGMENT_SHADER | GL.VERTEX_SHADER;
   source: string;
 

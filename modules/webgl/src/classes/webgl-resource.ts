@@ -20,7 +20,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
   // Only meaningful for resources that allocate GPU memory
   byteLength = 0;
 
-  constructor(gl: WebGLRenderingContext, props?: Props, defaultProps?: Required<Props>) {
+  constructor(gl: WebGLRenderingContext, props: Props, defaultProps: Required<Props>) {
     super(gl as any, props, defaultProps);
 
     assertWebGLContext(gl);

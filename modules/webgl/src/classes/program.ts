@@ -4,7 +4,7 @@ import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
-import {VertexShader, FragmentShader} from './shader';
+import {VertexShader, FragmentShader} from './webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
@@ -59,7 +59,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: {};
   
   constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
-    super(gl, props);
+    super(gl, props, {} as any);
 
 
     this.initialize(props);
