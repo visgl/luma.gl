@@ -1,8 +1,8 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context, getWebGL2Context, withParameters, log} from '@luma.gl/gltools';
 import {global} from 'probe.gl/env';
-
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import {getKey, getKeyValue} from '../webgl-utils';
+import {Texture, TextureProps} from '../api/texture';
 import Buffer from './webgl-buffer';
 import {
   TEXTURE_FORMATS,
@@ -13,27 +13,7 @@ import {
 } from './texture-formats';
 import {uid, isPowerOfTwo, assert} from '../utils';
 
-export type TextureProps = ResourceProps & {
-  data?: any;
-  width?: number;
-  height?: number;
-  depth?: number;
-
-  pixels?: any;
-  format?: number;
-  dataFormat?: number;
-  border?: number;
-  recreate?: boolean;
-  type?: number;
-  compressed?: boolean;
-  mipmaps?: boolean;
-
-  parameters?: object;
-  pixelStore?: object;
-  textureUnit?: number;
-
-  target?: number;
-};
+export {TextureProps};
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
@@ -42,8 +22,12 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 // Note (Tarek): Do we really need to support this API?
 const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
 
-export default class Texture extends WebGLResource<TextureProps> {
+export default class WEBGLTexture extends Texture {
   readonly MAX_ATTRIBUTES: number;
+
+  readonly gl: WebGLRenderingContext;
+  readonly gl2: WebGL2RenderingContext | null;
+  readonly handle: WebGLTexture;
 
   data;
 
@@ -93,7 +77,7 @@ export default class Texture extends WebGLResource<TextureProps> {
   // attempting to bind it as GL_TEXTURE_1D will give rise to an error
   // (while run-time).
   constructor(gl: WebGLRenderingContext, props: TextureProps) {
-    super(gl, props, {} as any);
+    super(gl as any, props, {} as any);
 
     const {
       id = uid('texture'),
@@ -119,6 +103,20 @@ export default class Texture extends WebGLResource<TextureProps> {
     this.border = undefined;
     this.textureUnit = undefined;
     this.mipmaps = undefined;
+
+    this.gl = gl;
+    this.gl2 = getWebGL2Context(gl);
+    this.handle = this.props.handle || this.gl.createTexture();
+  }
+
+  destroy(): void {
+    if (this.handle) {
+      this.gl.deleteTexture(this.handle);
+      this.removeStats();
+      this.trackDeallocatedMemory('Texture');
+      // @ts-expect-error
+      this.handle = null;
+    }
   }
 
   toString(): string {
@@ -744,16 +742,135 @@ export default class Texture extends WebGLResource<TextureProps> {
 
   // RESOURCE METHODS
 
-  _createHandle(): WebGLTexture {
-    return this.gl.createTexture();
-  }
-
-  _deleteHandle(): void {
-    this.gl.deleteTexture(this.handle);
-    this.trackDeallocatedMemory('Texture');
-  }
-
-  _getParameter(pname: number): any {
+    /**
+   * Query a Resource parameter
+   *
+   * @param name
+   * @return param
+   */
+     getParameter(pname: number, props = {}): any {
+      pname = getKeyValue(this.gl, pname);
+      assert(pname);
+  
+      // @ts-ignore
+      const parameters = this.constructor.PARAMETERS || {};
+  
+      // Use parameter definitions to handle unsupported parameters
+      const parameter = parameters[pname];
+      if (parameter) {
+        const isWebgl2 = isWebGL2(this.gl);
+  
+        // Check if we can query for this parameter
+        const parameterAvailable =
+          (!('webgl2' in parameter) || isWebgl2) &&
+          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+  
+        if (!parameterAvailable) {
+          const webgl1Default = parameter.webgl1;
+          const webgl2Default = 'webgl2' in parameter ? parameter.webgl2 : parameter.webgl1;
+          const defaultValue = isWebgl2 ? webgl2Default : webgl1Default;
+          return defaultValue;
+        }
+      }
+  
+      // If unknown parameter - Could be a valid parameter not covered by PARAMS
+      // Attempt to query for it and let WebGL report errors
+      return this._getParameter(pname, props);
+    }
+  
+    // Many resources support a getParameter call -
+    // getParameters will get all parameters - slow but useful for debugging
+    // eslint-disable-next-line complexity
+    getParameters(options: {parameters?, keys?} = {}) {
+      const {parameters, keys} = options;
+  
+      // Get parameter definitions for this Resource
+      // @ts-ignore
+      const PARAMETERS = this.constructor.PARAMETERS || {};
+  
+      const isWebgl2 = isWebGL2(this.gl);
+  
+      const values = {};
+  
+      // Query all parameters if no list provided
+      const parameterKeys = parameters || Object.keys(PARAMETERS);
+  
+      // WEBGL limits
+      for (const pname of parameterKeys) {
+        const parameter = PARAMETERS[pname];
+  
+        // Check if this parameter is available on this platform
+        const parameterAvailable =
+          parameter &&
+          (!('webgl2' in parameter) || isWebgl2) &&
+          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+  
+        if (parameterAvailable) {
+          const key = keys ? getKey(this.gl, pname) : pname;
+          values[key] = this.getParameter(pname, options);
+          if (keys && parameter.type === 'GLenum') {
+            values[key] = getKey(this.gl, values[key]);
+          }
+        }
+      }
+  
+      return values;
+    }
+  
+    /**
+     * Update a Resource setting
+     *
+     * @todo - cache parameter to avoid issuing WebGL calls?
+     *
+     * @param {string} pname - parameter (GL constant, value or key)
+     * @param {GLint|GLfloat|GLenum} value
+     * @return {Resource} returns self to enable chaining
+     */
+    setParameter(pname, value) {
+      pname = getKeyValue(this.gl, pname);
+      assert(pname);
+  
+      // @ts-ignore
+      const parameters = this.constructor.PARAMETERS || {};
+  
+      const parameter = parameters[pname];
+      if (parameter) {
+        const isWebgl2 = isWebGL2(this.gl);
+  
+        // Check if this parameter is available on this platform
+        const parameterAvailable =
+          (!('webgl2' in parameter) || isWebgl2) &&
+          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+  
+        if (!parameterAvailable) {
+          throw new Error('Parameter not available on this platform');
+        }
+  
+        // Handle string keys
+        if (parameter.type === 'GLenum') {
+          // @ts-expect-error
+          value = getKeyValue(value);
+        }
+      }
+  
+      // If unknown parameter - Could be a valid parameter not covered by PARAMS
+      // attempt to set it and let WebGL report errors
+      this._setParameter(pname, value);
+      return this;
+    }
+  
+    /*
+     * Batch update resource parameters
+     * Assumes the subclass supports a setParameter call
+     */
+    setParameters(parameters) {
+      for (const pname in parameters) {
+        this.setParameter(pname, parameters[pname]);
+      }
+      return this;
+    }
+  
+  _getParameter(pname: number, props?): any {
     switch (pname) {
       case GL.TEXTURE_WIDTH:
         return this.width;
@@ -779,7 +896,7 @@ export default class Texture extends WebGLResource<TextureProps> {
     switch (pname) {
       case GL.TEXTURE_MIN_LOD:
       case GL.TEXTURE_MAX_LOD:
-        this.gl.texParameterf(this.handle, pname, param);
+        this.gl.texParameterf(this.target, pname, param);
         break;
 
       case GL.TEXTURE_WIDTH:
