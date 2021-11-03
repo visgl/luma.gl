@@ -52,7 +52,7 @@ export default class Query extends WebGLResource<QueryProps> {
 
   // Create a query class
   constructor(gl: WebGLRenderingContext, opts: QueryProps = {}) {
-    super(gl, opts);
+    super(gl, opts, {} as any);
 
     Object.seal(this);
   }

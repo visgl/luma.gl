@@ -12,7 +12,11 @@ export type RenderbufferProps = ResourceProps & {
   samples?: number;
 };
 
-const DEFAULT_RENDERBUFFER_PROPS = {
+const DEFAULT_RENDERBUFFER_PROPS: Required<RenderbufferProps> = {
+  id: undefined,
+  handle: undefined,
+  userData: undefined,
+  format: 0,
   width: 1, 
   height: 1, 
   samples: 0
@@ -34,7 +38,7 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
   }
 
   constructor(gl: WebGLRenderingContext, props: RenderbufferProps) {
-    super(gl, props);
+    super(gl, props, DEFAULT_RENDERBUFFER_PROPS);
     this._initialize(this.props);
   }
 
@@ -92,11 +96,11 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
  * use Textures instead.
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
- export default class Renderbuffer extends ImmutableRenderbuffer {
-  width: number;
-  height: number;
-  format: number;
-  samples: number;
+export default class Renderbuffer extends ImmutableRenderbuffer {
+  get width(): number { return this.props.width; }
+  get height(): number { return this.props.height; }
+  get format(): number  { return this.props.format; }
+  get samples(): number { return this.props.samples; }
 
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
     return ImmutableRenderbuffer.isSupported(gl, options);
@@ -109,10 +113,6 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
 
   constructor(gl: WebGLRenderingContext, props?: RenderbufferProps) {
     super(gl, props);
-    this.format = props.format;
-    this.width = props.width;
-    this.height = props.height;
-    this.samples = props.samples;
   }
 
   resize(size: {width: number, height: number}): this {
@@ -125,13 +125,8 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
 
   /** Creates and initializes a renderbuffer object's data store */
   initialize(props: RenderbufferProps): this {
-    props = {...DEFAULT_RENDERBUFFER_PROPS, ...props};
-    // @ts-expect-error
-    this._initialize(props);
-    this.format = props.format;
-    this.width = props.width;
-    this.height = props.height;
-    this.samples = props.samples;
+    Object.assign(this.props, props);
+    this._initialize(this.props);
     return this;
   }
 
@@ -139,10 +134,12 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
 
   _syncHandle(handle) {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
-    this.format = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_INTERNAL_FORMAT);
-    this.width = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_WIDTH);
-    this.height = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_HEIGHT);
-    this.samples = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_SAMPLES);
+    Object.assign(this.props, {
+      format: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_INTERNAL_FORMAT),
+      width: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_WIDTH),
+      height: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_HEIGHT),
+      samples: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_SAMPLES)
+    });
   }
 
   // @param {Boolean} opt.autobind=true - method call will bind/unbind object

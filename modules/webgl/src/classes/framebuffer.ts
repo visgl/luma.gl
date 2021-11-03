@@ -40,7 +40,7 @@ type colorBufferFloatOptions = {colorBufferFloat?: boolean; colorBufferHalfFloat
 
 export class ImmutableFramebuffer extends Resource<FramebufferProps> {
   constructor(gl: WebGLRenderingContext, props?: FramebufferProps) {
-    super(gl, props);
+    super(gl, props, {} as any);
     this._initialize({
       attachments: props?.attachments || {},
       readBuffer: props?.readBuffer,

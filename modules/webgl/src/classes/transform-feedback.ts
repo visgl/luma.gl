@@ -21,7 +21,7 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   }
 
   constructor(gl: WebGLRenderingContext, props: TransformFeedbackProps = {}) {
-    super(gl, props);
+    super(gl, props, {} as any);
     assertWebGL2Context(gl);
 
     this.initialize(props);

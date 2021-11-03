@@ -19,9 +19,9 @@ export class WEBGLShader extends ShaderAPI {
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
     super(gl as any, {id: getShaderIdFromProps(props), ...props}, {} as any);
+    this.stage = this.props.stage;
     this.gl = gl;
     this.handle = this.props.handle || this.gl.createShader(this.stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
-    this.stage = this.props.stage;
     this._compile(props.source);
   }
 

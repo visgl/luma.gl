@@ -59,7 +59,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: {};
   
   constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
-    super(gl, props);
+    super(gl, props, {} as any);
 
 
     this.initialize(props);

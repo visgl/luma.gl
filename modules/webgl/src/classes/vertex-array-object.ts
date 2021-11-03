@@ -89,7 +89,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   // Create a VertexArray
   constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
-    super(gl, {...opts, id: opts?.id || (opts?.program && opts?.program.id)});
+    super(gl, {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
 
     this.buffer = null;
     this.bufferValue = null;

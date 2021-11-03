@@ -93,7 +93,7 @@ export default class Texture extends WebGLResource<TextureProps> {
   // attempting to bind it as GL_TEXTURE_1D will give rise to an error
   // (while run-time).
   constructor(gl: WebGLRenderingContext, props: TextureProps) {
-    super(gl, props);
+    super(gl, props, {} as any);
 
     const {
       id = uid('texture'),

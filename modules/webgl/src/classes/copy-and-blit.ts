@@ -1,6 +1,6 @@
 // @ts-nocheck
 import GL from '@luma.gl/constants';
-import Buffer from './buffer';
+import Buffer from './webgl-buffer';
 import Framebuffer from './framebuffer';
 import Texture from './texture';
 import {assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
