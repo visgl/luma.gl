@@ -1,5 +1,7 @@
 
 import StatsManager, {lumaStats} from './stats-manager';
+import type {Buffer, BufferProps} from './buffer';
+import type {Shader, ShaderProps} from './shader';
 
 /**
  * WebGPU Device/WebGL context abstraction
@@ -23,9 +25,9 @@ export default class Device {
   // abstract getFeatures(): string[];
   // abstract getLimits(): DeviceLimits;
 
-  // abstract createBuffer(props: BufferProps): Buffer;
-  // abstract createTexture(props: TextureProps): Texture;
-  // abstract createShader(props: ShaderProps): Shader;
+  createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
+  // createTexture(props: TextureProps): Texture;
+  createShader(props: ShaderProps): Shader  { throw new Error('not implemented'); }
   // abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
   // abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 }

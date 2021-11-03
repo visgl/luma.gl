@@ -3,7 +3,7 @@ import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltoo
 import {global} from 'probe.gl/env';
 
 import WebGLResource, {ResourceProps} from './webgl-resource';
-import Buffer from './buffer';
+import Buffer from './webgl-buffer';
 import {
   TEXTURE_FORMATS,
   DATA_FORMAT_CHANNELS,

@@ -1,4 +1,4 @@
-import Buffer from '../classes/buffer';
+import Buffer from '../classes/webgl-buffer';
 import {getKey} from '../webgl-utils';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';
 import {formatValue} from '../utils';

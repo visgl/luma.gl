@@ -3,7 +3,7 @@ import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
 import {getBrowser} from 'probe.gl';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
-import Buffer from './buffer';
+import Buffer from './webgl-buffer';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils';
 import {getLumaContextData} from '../context/luma-context-data';
