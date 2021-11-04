@@ -47,11 +47,8 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   /** Get maximum number of attributes in a vertex array */
   static getMaxAttributes(gl: WebGLRenderingContext): number {
     // TODO - should be cached per context
-    // @ts-ignore
     VertexArrayObject.MAX_ATTRIBUTES =
-      // @ts-ignore
       VertexArrayObject.MAX_ATTRIBUTES || gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-    // @ts-ignore
     return VertexArrayObject.MAX_ATTRIBUTES;
   }
 
@@ -318,7 +315,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
 
   _deleteHandle(): void {
     this.gl2.deleteVertexArray(this.handle);
-    // @ts-ignore
+    // @ts-expect-error
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }

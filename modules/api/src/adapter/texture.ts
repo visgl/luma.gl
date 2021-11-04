@@ -64,7 +64,7 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   usage: 0
 };
 
-/** 
+/**
  * Abstract Texture interface
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture

@@ -24,7 +24,7 @@ export default class PerformanceTestRunner extends TestRunner {
     this._fps.timeEnd();
     this._fps.timeStart();
 
-    // @ts-ignore
+    // @ts-expect-error
     if (this._fps.count > this.testOptions.maxFramesToRender) {
       animationProps.done();
     }
@@ -33,7 +33,7 @@ export default class PerformanceTestRunner extends TestRunner {
   }
 
   assert(testCase) {
-    // @ts-ignore
+    // @ts-expect-error
     const targetFPS = testCase.targetFPS || this.testOptions.targetFPS;
     const count = this._fps.count;
     const fps = this._fps.getHz();

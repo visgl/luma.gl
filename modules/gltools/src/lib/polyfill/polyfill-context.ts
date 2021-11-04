@@ -18,9 +18,9 @@ import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-tab
  * Registers extensions, polyfills or mock functions for extensions in the polyfills list
  */
  export function polyfillContext(gl: WebGLRenderingContext): WebGL2RenderingContext {
-  // @ts-ignore
+  // @ts-expect-error
   gl.luma = gl.luma || {};
-  // @ts-ignore
+  // @ts-expect-error
   const {luma} = gl;
 
   if (!luma.polyfilled) {
@@ -33,13 +33,13 @@ import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-tab
 
   // TODO - only supporting a few members
   /** @type {WebGL2RenderingContext} */
-  // @ts-ignore
+  // @ts-expect-error
   return gl;
 }
 
 // TODO - is this still required?
 const global_ = typeof global !== 'undefined' ? global : window;
-// @ts-ignore
+// @ts-expect-error
 global_.polyfillContext = polyfillContext;
 
 function initializeExtensions(gl) {

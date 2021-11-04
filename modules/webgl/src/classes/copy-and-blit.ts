@@ -70,7 +70,7 @@ export function readPixelsToArray(source, options = {}) {
 
   const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   gl.readPixels(sourceX, sourceY, sourceWidth, sourceHeight, sourceFormat, sourceType, target);
-  // @ts-ignore
+  // @ts-expect-error
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (deleteFramebuffer) {
     framebuffer.delete();
@@ -315,7 +315,7 @@ export function copyToTexture(
   if (texture) {
     texture.unbind();
   }
-  // @ts-ignore
+  // @ts-expect-error
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (deleteFramebuffer) {
     framebuffer.delete();
@@ -378,7 +378,7 @@ export function blit(
 
   assert(srcFramebuffer);
   assert(dstFramebuffer);
-  // @ts-ignore
+  // @ts-expect-error
   const {gl, handle, width, height, readBuffer} = dstFramebuffer;
   const gl2 = assertWebGL2Context(gl);
 
@@ -427,9 +427,9 @@ export function blit(
     filter
   );
   gl2.readBuffer(readBuffer);
-  // @ts-ignore
+  // @ts-expect-error
   gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
-  // @ts-ignore
+  // @ts-expect-error
   gl2.bindFramebuffer(GL.DRAW_FRAMEBUFFER, prevDrawHandle || null);
   if (deleteSrcFramebuffer) {
     srcFramebuffer.delete();

@@ -73,7 +73,7 @@ test('WebGL#Framebuffer construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
-    // @ts-ignore
+    // @ts-expect-error
     () => new Framebuffer(),
     /.*WebGLRenderingContext.*/,
     'Framebuffer throws on missing gl context'
@@ -126,7 +126,7 @@ function testFramebuffer(t, gl) {
       framebuffer.resize({width: 100, height: 100});
       framebuffer.checkStatus();
 
-      // @ts-ignore
+      // @ts-expect-error
       framebuffer.delete({recursive: true});
     };
 

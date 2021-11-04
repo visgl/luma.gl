@@ -18,7 +18,7 @@ test('WebGL#Texture2D construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
-    // @ts-ignore
+    // @ts-expect-error
     () => new Texture2D(),
     /.*WebGLRenderingContext.*/,
     'Texture2D throws on missing gl context'
@@ -118,7 +118,6 @@ function testFormatCreation(t, glContext, withData = false) {
       if (Texture2D.isSupported(glContext, {format})) {
         const texture = new Texture2D(glContext, options);
         t.equals(
-          // @ts-ignore
           texture.format,
           format,
           `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(
@@ -145,11 +144,8 @@ function testFormatDeduction(t, glContext) {
     if (Texture2D.isSupported(glContext, {format})) {
       const texture = new Texture2D(glContext, options);
       const msg = `Texture2D({format: ${getKey(GL, format)}}) created`;
-      // @ts-ignore
       t.equals(texture.format, Number(format), msg);
-      // @ts-ignore
       t.equals(texture.type, expectedType, msg);
-      // @ts-ignore
       t.equals(texture.dataFormat, expectedDataFormat, msg);
       texture.delete();
     }
@@ -609,7 +605,6 @@ test('WebGL2#Texture2D resize', (t) => {
     mipmaps: true
   });
 
-  // @ts-ignore
   t.ok(texture.mipmaps, 'mipmaps should set to true for POT.');
 
   texture.resize({
@@ -618,7 +613,6 @@ test('WebGL2#Texture2D resize', (t) => {
     mipmaps: true
   });
 
-  // @ts-ignore
   t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing to NPOT.');
 
   texture = new Texture2D(gl, {
@@ -633,7 +627,6 @@ test('WebGL2#Texture2D resize', (t) => {
     height: 4
   });
 
-  // @ts-ignore
   t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing.');
 
   t.end();
@@ -649,7 +642,6 @@ test('WebGL2#Texture2D generateMipmap', (t) => {
   });
 
   texture.generateMipmap();
-  // @ts-ignore
   t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
 
   texture = new Texture2D(gl, {
@@ -660,7 +652,6 @@ test('WebGL2#Texture2D generateMipmap', (t) => {
   });
 
   texture.generateMipmap();
-  // @ts-ignore
   t.ok(texture.mipmaps, 'Should turn on mipmaps for POT.');
 
   t.end();

@@ -113,7 +113,7 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op}) {
   );
 
   program
-    // @ts-ignore TODO - this looks like a real error?
+    // @ts-expect-error TODO - this looks like a real error?
     .setBuffers({
       positions: new Buffer(gl, {target: gl.ARRAY_BUFFER, data: BUFFER_DATA, size: 2})
     })

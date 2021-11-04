@@ -8,7 +8,7 @@ export default class SnapshotTestRunner extends TestRunner {
   constructor(props: TestRunnerOptions) {
     super(props);
 
-    // @ts-ignore
+    // @ts-expect-error
     this.testOptions.imageDiffOptions = {};
   }
 
@@ -33,18 +33,18 @@ export default class SnapshotTestRunner extends TestRunner {
 
     const diffOptions = Object.assign(
       {},
-      // @ts-ignore
+      // @ts-expect-error
       this.testOptions.imageDiffOptions,
       testCase.imageDiffOptions,
       {
         goldenImage: testCase.goldenImage,
-        // @ts-ignore
+        // @ts-expect-error
         region: getBoundingBoxInPage(this._animationProps.canvas)
       }
     );
 
     // Take screenshot and compare
-    // @ts-ignore
+    // @ts-expect-error
     window.browserTestDriver_captureAndDiffScreen(diffOptions).then((result) => {
       // invoke user callback
       if (result.success) {

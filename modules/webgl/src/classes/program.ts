@@ -47,16 +47,16 @@ export type ProgramDrawOptions = {
 export default class Program extends WebGLResource<ProgramProps> {
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
-  _isCached = false;
-  _textureIndexCounter = 0;
   hash: string;; // Used by ProgramManager
   vs;
   fs;
-  uniforms: {};
-  _textureUniforms: {};
-  varyings: {};
-  _uniformCount = 0;
-  _uniformSetters: {};
+  uniforms: Record<string, any>;
+  varyings: Record<string, any>;
+  _textureUniforms: Record<string, any>;
+  _isCached: boolean = false;
+  _textureIndexCounter: number = 0;
+  _uniformCount: number = 0;
+  _uniformSetters: Record<string, Function>;
   
   constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
     super(gl, props, {} as any);
@@ -234,12 +234,15 @@ export default class Program extends WebGLResource<ProgramProps> {
 
           if (textureUpdate) {
             // eslint-disable-next-line max-depth
+            // @ts-expect-error
             if (uniformSetter.textureIndex === undefined) {
+              // @ts-expect-error
               uniformSetter.textureIndex = this._textureIndexCounter++;
             }
 
             // Bind texture to index
             const texture = value;
+            // @ts-expect-error
             const {textureIndex} = uniformSetter;
 
             texture.bind(textureIndex);
@@ -247,6 +250,7 @@ export default class Program extends WebGLResource<ProgramProps> {
 
             this._textureUniforms[uniformName] = texture;
           } else {
+            // @ts-expect-error
             value = uniformSetter.textureIndex;
           }
         } else if (this._textureUniforms[uniformName]) {
@@ -285,6 +289,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   // Note: This is currently done before every draw call
   _bindTextures() {
     for (const uniformName in this._textureUniforms) {
+      // @ts-expect-error
       const textureIndex = this._uniformSetters[uniformName].textureIndex;
       this._textureUniforms[uniformName].bind(textureIndex);
     }
@@ -308,11 +313,11 @@ export default class Program extends WebGLResource<ProgramProps> {
       const type = this.gl.getShaderParameter(this.handle, GL.SHADER_TYPE);
       switch (type) {
         case GL.VERTEX_SHADER:
-          // @ts-ignore
+          // @ts-expect-error
           opts.vs = new VertexShader({handle: shaderHandle});
           break;
         case GL.FRAGMENT_SHADER:
-          // @ts-ignore
+          // @ts-expect-error
           opts.fs = new FragmentShader({handle: shaderHandle});
           break;
         default:
@@ -351,7 +356,7 @@ export default class Program extends WebGLResource<ProgramProps> {
     log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
 
     // Avoid checking program linking error in production
-    // @ts-ignore
+    // @ts-expect-error
     if (gl.debug || log.level > 0) {
       const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
       if (!linked) {

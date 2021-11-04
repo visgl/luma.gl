@@ -30,7 +30,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     // @ts-expect-error
     const {id, userData = {}} = props || {};
     this.gl = gl;
-    // @ts-ignore
+    // @ts-expect-error
     this.gl2 = gl;
     // this.ext = polyfillContext(gl);
     this.id = id || uid(this.constructor.name);
@@ -71,7 +71,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
 
   delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
-    // @ts-ignore
+    // @ts-expect-error
     const children = this._handle && this._deleteHandle(this._handle);
     if (this._handle) {
       this.removeStats();
@@ -79,9 +79,9 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     this._handle = null;
 
     // Optionally, recursively delete the children
-    // @ts-ignore
+    // @ts-expect-error
     if (children && deleteChildren) {
-      // @ts-ignore
+      // @ts-expect-error
       children.filter(Boolean).forEach((child) => child.delete());
     }
 
@@ -125,7 +125,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
-    // @ts-ignore
+    // @ts-expect-error
     const parameters = this.constructor.PARAMETERS || {};
 
     // Use parameter definitions to handle unsupported parameters
@@ -158,7 +158,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     const {parameters, keys} = options;
 
     // Get parameter definitions for this Resource
-    // @ts-ignore
+    // @ts-expect-error
     const PARAMETERS = this.constructor.PARAMETERS || {};
 
     const isWebgl2 = isWebGL2(this.gl);
@@ -203,7 +203,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
-    // @ts-ignore
+    // @ts-expect-error
     const parameters = this.constructor.PARAMETERS || {};
 
     const parameter = parameters[pname];

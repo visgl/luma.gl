@@ -542,7 +542,7 @@ export default class Model {
     this.program = program;
 
     if (this.vertexArray) {
-      // @ts-ignore TODO
+      // @ts-expect-error TODO
       this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
     } else {
       this.vertexArray = new VertexArray(this.gl, {program: this.program});
@@ -618,7 +618,7 @@ export default class Model {
     const attributeTable = getDebugTableForVertexArray({
       vertexArray,
       header: `${this.id} attributes`,
-      // @ts-ignore
+      // @ts-expect-error
       attributes: this._attributes
     });
 

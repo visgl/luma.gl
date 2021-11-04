@@ -245,12 +245,12 @@ export function copyUniform(uniforms: object, key: string, value: any): void {
   if (Array.isArray(value) || ArrayBuffer.isView(value)) {
     if (uniforms[key]) {
       const dest = uniforms[key];
-      // @ts-ignore
+      // @ts-expect-error
       for (let i = 0, len = value.length; i < len; ++i) {
         dest[i] = value[i];
       }
     } else {
-      // @ts-ignore
+      // @ts-expect-error
       uniforms[key] = value.slice();
     }
   } else {

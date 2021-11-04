@@ -2,7 +2,7 @@
  * Returns multiplier need to convert CSS size to Device size
  */
  export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
-  // @ts-ignore
+  // @ts-expect-error
   const {luma} = gl;
 
   if (gl.canvas && luma) {
@@ -45,7 +45,7 @@
  export function getDevicePixelRatio(useDevicePixels: boolean | number): number {
   const windowRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   if (Number.isFinite(useDevicePixels)) {
-    // @ts-ignore Can no longer be boolean after previous line
+    // @ts-expect-error Can no longer be boolean after previous line
     return useDevicePixels <= 0 ? 1 : useDevicePixels;
   }
   return useDevicePixels ? windowRatio : 1;

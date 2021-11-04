@@ -9,7 +9,7 @@ const glContext = {
 };
 
 /** @type {WebGLRenderingContext} */
-// @ts-ignore
+// @ts-expect-error
 const glMock = glContext;
 
 test('WebGL#headless context creation', (t) => {

@@ -138,18 +138,18 @@ export function instrumentGLContext(
   options?: GLContextOptions
 ): WebGLRenderingContext {
   // Avoid multiple instrumentations
-  // @ts-ignore
+  // @ts-expect-error
   if (!gl || gl._instrumented) {
     return gl;
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   gl._version = gl._version || getVersion(gl);
 
   // Cache canvas size information to avoid setting it on every frame.
-  // @ts-ignore
+  // @ts-expect-error
   gl.luma = gl.luma || {};
-  // @ts-ignore
+  // @ts-expect-error
   gl.luma.canvasSizeInfo = gl.luma.canvasSizeInfo || {};
 
   options = Object.assign({}, CONTEXT_DEFAULTS, options);
@@ -165,18 +165,16 @@ export function instrumentGLContext(
 
   // Add debug instrumentation to the context
   if (isBrowser && debug) {
-    // @ts-ignore
     if (!globalThis.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
-      // @ts-ignore
       gl = globalThis.makeDebugContext(gl, options);
       // Debug forces log level to at least 1
       log.level = Math.max(log.level, 1);
     }
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   gl._instrumented = true;
 
   return gl;

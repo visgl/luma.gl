@@ -59,7 +59,7 @@ test('WebGL#VertexArrayObject construct/delete', (t) => {
     return;
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   t.throws(() => new VertexArrayObject(), 'VertexArrayObject throws on missing gl context');
 
   const vao = new VertexArrayObject(gl);

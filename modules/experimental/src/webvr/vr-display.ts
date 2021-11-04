@@ -21,7 +21,7 @@ export default class VRDisplay extends Display {
 
     this._vrSupported = VRDisplay.isSupported();
     if (this._vrSupported) {
-      // @ts-ignore VR typings
+      // @ts-expect-error VR typings
       this.vrFrameData = new window.VRFrameData();
       window.addEventListener('vrdisplaypresentchange', this._vrDisplayPresentChange.bind(this));
     }
@@ -116,7 +116,7 @@ export default class VRDisplay extends Display {
       return;
     }
 
-    // @ts-ignore VR typings
+    // @ts-expect-error VR typings
     const displays = await navigator.getVRDisplays();
     if (displays && displays.length) {
       log.info(2, 'Found VR Displays', displays)();
@@ -141,7 +141,6 @@ export default class VRDisplay extends Display {
   }
 
   _startDisplay() {
-    // @ts-ignore
     this.vrDisplay.requestPresent([
       {
         source: this._getCanvas()

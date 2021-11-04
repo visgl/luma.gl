@@ -9,7 +9,7 @@ test('Buffer#constructor/delete', (t) => {
   const {gl} = fixture;
   t.ok(isWebGL(gl), 'Created gl context');
 
-  // @ts-ignore
+  // @ts-expect-error
   t.throws(() => new Buffer(), 'Buffer throws on missing gl context');
 
   const buffer = new Buffer(gl, {target: GL.ARRAY_BUFFER});
@@ -229,7 +229,7 @@ test('Buffer#getData', (t) => {
     'Buffer.getData: with src/dst offsets and length successful'
   );
 
-  // @ts-ignore
+  // @ts-expect-error
   data = new Uint8Array([128, 255, 1]);
   buffer = new Buffer(gl2, {data});
 
