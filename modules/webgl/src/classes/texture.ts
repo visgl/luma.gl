@@ -2,7 +2,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, getWebGL2Context, withParameters, log} from '@luma.gl/gltools';
 import {global} from 'probe.gl/env';
 import {getKey, getKeyValue} from '../webgl-utils';
-import {Texture, TextureProps} from '../api/texture';
+import {Texture, TextureProps} from '@luma.gl/api';
 import Buffer from './webgl-buffer';
 import {
   TEXTURE_FORMATS,
@@ -77,7 +77,7 @@ export default class WEBGLTexture extends Texture {
   // attempting to bind it as GL_TEXTURE_1D will give rise to an error
   // (while run-time).
   constructor(gl: WebGLRenderingContext, props: TextureProps) {
-    super(gl as any, props, {} as any);
+    super(gl as any, props);
 
     const {
       id = uid('texture'),
