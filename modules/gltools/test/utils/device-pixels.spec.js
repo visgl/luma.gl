@@ -1,5 +1,5 @@
 import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/gltools';
-import {getDevicePixelRatio} from '@luma.gl/gltools/lib/utils/device-pixels';
+import {getDevicePixelRatio} from '@luma.gl/gltools/lib/context/device-pixels';
 
 import test from 'tape-promise/tape';
 const LOW_DPR = 0.5;

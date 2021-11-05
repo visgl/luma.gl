@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../utils/webgl-checks';
+import {isWebGL2} from '../context/webgl-checks';
 
 const OES_element_index = 'OES_element_index';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';

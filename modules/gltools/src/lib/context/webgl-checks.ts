@@ -1,4 +1,4 @@
-import {assert} from './assert';
+import {assert} from '../utils/assert';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;
