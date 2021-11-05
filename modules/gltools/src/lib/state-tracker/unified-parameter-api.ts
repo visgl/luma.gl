@@ -11,7 +11,7 @@ import {
 
 import {pushContextState, popContextState} from './track-context-state';
 import {assert} from '../utils/assert';
-import {isWebGL} from '../utils/webgl-checks';
+import {isWebGL} from '../context/webgl-checks';
 import {isObjectEmpty} from '../utils/utils';
 
 /**

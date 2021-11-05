@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {assert} from '../utils/assert';
-import {isWebGL2} from '../utils/webgl-checks';
+import {isWebGL2} from '../context/webgl-checks';
 
 import {getParameterPolyfill} from './get-parameter-polyfill';
 

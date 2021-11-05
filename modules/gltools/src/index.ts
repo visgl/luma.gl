@@ -7,7 +7,17 @@ export {
   getWebGL2Context,
   assertWebGLContext,
   assertWebGL2Context
-} from './lib/utils/webgl-checks';
+} from './lib/context/webgl-checks';
+
+export type {GLContextOptions} from './lib/context/context';
+export {
+  createGLContext,
+  resizeGLContext,
+  instrumentGLContext,
+  getContextDebugInfo
+} from './lib/context/context';
+
+export {cssToDeviceRatio, cssToDevicePixels} from './lib/context/device-pixels';
 
 // Polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
 export {polyfillContext} from './lib/polyfill/polyfill-context';
@@ -28,12 +38,3 @@ export {
   popContextState
 } from './lib/state-tracker/track-context-state';
 
-export type {GLContextOptions} from './lib/context/context';
-export {
-  createGLContext,
-  resizeGLContext,
-  instrumentGLContext,
-  getContextDebugInfo
-} from './lib/context/context';
-
-export {cssToDeviceRatio, cssToDevicePixels} from './lib/utils/device-pixels';

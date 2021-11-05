@@ -6,8 +6,8 @@ import {trackContextState} from '../state-tracker/track-context-state';
 
 import {log} from '../utils/log';
 import {assert} from '../utils/assert';
-import {getDevicePixelRatio} from '../utils/device-pixels';
-import {isWebGL2} from '../utils/webgl-checks';
+import {isWebGL2} from './webgl-checks';
+import {getDevicePixelRatio} from './device-pixels';
 
 const isBrowser = getIsBrowser();
 const isPage = isBrowser && typeof document !== 'undefined';
