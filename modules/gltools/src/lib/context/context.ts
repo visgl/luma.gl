@@ -42,7 +42,7 @@ const isPage = isBrowser && typeof document !== 'undefined';
 * WEBGL/HEADLESS CONTEXT PARAMETERS
 * Remaining options are passed through to context creator
 */
-export type CreateGLContextOptions = {
+export type GLContextOptions = {
   // COMMON CONTEXT PARAMETERS
   webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
   webgl1?: boolean; // set to false to not create a WebGL1 context (fail if webgl2 not available)
@@ -90,7 +90,7 @@ const CONTEXT_DEFAULTS = {
  * Creates a context giving access to the WebGL API
  */
 /* eslint-disable complexity, max-statements */
-export function createGLContext(options?: CreateGLContextOptions): WebGLRenderingContext {
+export function createGLContext(options?: GLContextOptions): WebGLRenderingContext {
   assert(
     isBrowser,
     "createGLContext only available in the browser.\nCreate your own headless context or use 'createHeadlessContext' from @luma.gl/test-utils"
@@ -135,7 +135,7 @@ export function createGLContext(options?: CreateGLContextOptions): WebGLRenderin
  */
 export function instrumentGLContext(
   gl: WebGLRenderingContext,
-  options?: CreateGLContextOptions
+  options?: GLContextOptions
 ): WebGLRenderingContext {
   // Avoid multiple instrumentations
   // @ts-ignore

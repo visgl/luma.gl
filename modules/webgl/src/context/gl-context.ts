@@ -1,5 +1,5 @@
 // 
-import type {CreateGLContextOptions} from '@luma.gl/gltools';
+import type {GLContextOptions} from '@luma.gl/gltools';
 import {createGLContext, isWebGL2} from '@luma.gl/gltools';
 import Device from '../api/device';
 import type {BufferProps} from '../api/buffer';
@@ -12,7 +12,7 @@ export default class GLContext extends Device {
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;
 
-  constructor(props: CreateGLContextOptions) {
+  constructor(props: GLContextOptions) {
     super();
     this.gl = createGLContext(props);
     this.gl2 = isWebGL2(this.gl) ? this.gl as WebGL2RenderingContext : null;
