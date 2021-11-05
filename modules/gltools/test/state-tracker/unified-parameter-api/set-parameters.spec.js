@@ -6,7 +6,7 @@ import {Framebuffer, getKey} from '@luma.gl/webgl';
 
 import {createTestContext} from '@luma.gl/test-utils';
 
-import {GL_PARAMETER_DEFAULTS} from '@luma.gl/gltools/state-tracker/webgl-parameter-tables';
+import {GL_PARAMETER_DEFAULTS} from '@luma.gl/gltools/lib/state-tracker/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from '../data/sample-enum-settings';
 

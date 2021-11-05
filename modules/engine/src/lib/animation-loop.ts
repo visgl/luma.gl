@@ -20,7 +20,7 @@ import {
 import { Stats } from 'probe.gl'
 import { Timeline } from '../animation/timeline'
 
-import {CreateGLContextOptions} from '@luma.gl/gltools'
+import type {GLContextOptions} from '@luma.gl/gltools'
 
 import {isBrowser} from 'probe.gl/env';
 
@@ -31,7 +31,7 @@ let statIdCounter = 0;
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
-  onCreateContext?: (opts: CreateGLContextOptions) => WebGLRenderingContext; // TODO: signature from createGLContext
+  onCreateContext?: (opts: GLContextOptions) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: ((animationProps: AnimationProps) => {}) | ((animationProps: AnimationProps) => {});
   onRender?: (animationProps: AnimationProps) => void;
@@ -41,7 +41,7 @@ export type AnimationLoopProps = {
   stats?: Stats;
 
   gl?: WebGLRenderingContext
-  glOptions?: CreateGLContextOptions // createGLContext options
+  glOptions?: GLContextOptions // createGLContext options
   debug?: boolean;
 
   // view parameters
@@ -85,14 +85,14 @@ export type AnimationProps = {
 
 /* instance of parameters after construction
 type AnimationLoopPropsInternal = {
-  onCreateContext: (opts: CreateGLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
+  onCreateContext: (opts: GLContextOptions) => WebGLRenderingContext // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string // innerHTML
   onInitialize: (animationProps: AnimationProps) => AnimationProps | Promise<AnimationProps>
   onRender: (animationProps: AnimationProps) => void
   onFinalize: (animationProps: AnimationProps) => void
   onError: (reason: any) => PromiseLike<never>
   gl?: WebGLRenderingContext
-  glOptions: CreateGLContextOptions // createGLContext options
+  glOptions: GLContextOptions // createGLContext options
   debug: boolean
   createFramebuffer: boolean
 }

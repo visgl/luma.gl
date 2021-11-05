@@ -1,5 +1,5 @@
 // Utils
-export {log} from './utils/log';
+export {log} from './lib/utils/log';
 
 export {
   isWebGL,
@@ -7,33 +7,33 @@ export {
   getWebGL2Context,
   assertWebGLContext,
   assertWebGL2Context
-} from './utils/webgl-checks';
+} from './lib/utils/webgl-checks';
 
 // Polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
-export {polyfillContext} from './polyfill/polyfill-context';
+export {polyfillContext} from './lib/polyfill/polyfill-context';
 
 // unified parameter APIs
-export type {GLParameters} from './state-tracker/webgl-parameters';
+export type {GLParameters} from './lib/state-tracker/webgl-parameters';
 export {
   getParameters,
   setParameters,
   resetParameters,
   withParameters
-} from './state-tracker/unified-parameter-api';
+} from './lib/state-tracker/unified-parameter-api';
 
 // state tracking
 export {
   trackContextState,
   pushContextState,
   popContextState
-} from './state-tracker/track-context-state';
+} from './lib/state-tracker/track-context-state';
 
-export type {CreateGLContextOptions} from './context/context';
+export type {GLContextOptions} from './lib/context/context';
 export {
   createGLContext,
   resizeGLContext,
   instrumentGLContext,
   getContextDebugInfo
-} from './context/context';
+} from './lib/context/context';
 
-export {cssToDeviceRatio, cssToDevicePixels} from './utils/device-pixels';
+export {cssToDeviceRatio, cssToDevicePixels} from './lib/utils/device-pixels';

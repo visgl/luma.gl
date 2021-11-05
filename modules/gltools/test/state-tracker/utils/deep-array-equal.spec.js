@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {deepArrayEqual} from '@luma.gl/gltools/utils/utils';
+import {deepArrayEqual} from '@luma.gl/gltools/lib/utils/utils';
 
 test('WebGLState#deepArrayEqual', (t) => {
   const ARRAY = [0, 1, 2];
