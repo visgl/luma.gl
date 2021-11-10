@@ -1,0 +1,34 @@
+// This is a base TS config for the individual packages, mainly for building .d.ts files
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Uncomment to debug
+    "listEmittedFiles": true
+  },
+  "references": [
+    {"path": "modules/contants"},
+    {"path": "modules/core"},
+    {"path": "modules/engine"},
+    {"path": "modules/experimental"},
+    {"path": "modules/gltools"},
+    {"path": "modules/shadertools"},
+    {"path": "modules/test-utils"},
+    {"path": "modules/webgl"}
+  ],
+  "include": [
+    "modules/*/src"
+  ],
+  "exclude": [
+    "modules/*/src/libs",
+    "modules/tile-converter",
+    "modules/textures/src/libs/basis_encoder.js",
+    "examples",
+    "test",
+    "scripts",
+    "modules/*/wip",
+    "modules/*/bin",
+    "modules/*/wip",
+    "modules/*/test",
+    "modules/*/dist"
+  ]
+}

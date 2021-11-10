@@ -15,6 +15,8 @@ stats.json
 .reify-cache
 .cache
 
+tsconfig.tsbuildinfo
+
 test/data/test.png
 
 package-lock.json

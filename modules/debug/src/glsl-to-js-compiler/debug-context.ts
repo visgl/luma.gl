@@ -7,6 +7,7 @@ export default class DebugContext {
   context: CanvasRenderingContext2D;
   positions;
   colors;
+  sourceCanvas;
 
   constructor(sourceCanvas) {
     this.sourceCanvas = sourceCanvas;

@@ -25,6 +25,8 @@
     "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/docs/contributor-guide",
     "clean": "ocular-clean",
     "build": "ocular-clean && ocular-build --dist esm && lerna run pre-build",
+    "tsclean": "find . -name tsconfig.tsbuildinfo -exec rm {} \\;",
+    "tsbuild": "tsc -b tsconfig.build.json && scripts/add-js-to-imports.sh",
     "cover": "ocular-test cover",
     "lint": "tsc && ocular-lint",
     "publish": "ocular-publish",
