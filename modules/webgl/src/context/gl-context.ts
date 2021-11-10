@@ -1,9 +1,8 @@
 // 
 import type {GLContextOptions} from '@luma.gl/gltools';
 import {createGLContext, isWebGL2} from '@luma.gl/gltools';
-import Device from '../api/device';
-import type {BufferProps} from '../api/buffer';
-import type {ShaderProps} from '../api/shader';
+import {Device} from '@luma.gl/api';
+import type {BufferProps, ShaderProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
 import {WEBGLShader, } from '../classes/webgl-shader';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';

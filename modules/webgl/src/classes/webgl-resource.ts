@@ -1,8 +1,9 @@
+// luma.gl, MIT license
 import {isWebGL2, assertWebGLContext} from '@luma.gl/gltools';
+import {Resource} from '@luma.gl/api';
+export type {ResourceProps} from '@luma.gl/api';
 import {getKey, getKeyValue} from '../webgl-utils';
 import {uid, assert, stubRemovedMethods} from '../utils';
-import Resource from '../api/resource';
-export type {ResourceProps} from '../api/resource';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 

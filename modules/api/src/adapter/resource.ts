@@ -8,6 +8,12 @@ export type ResourceProps = {
   userData?: {[key: string]: any};
 }
 
+export const DEFAULT_RESOURCE_PROPS: Required<ResourceProps> = {
+  id: undefined,
+  handle: undefined,
+  userData: {}
+};
+
 const globalDevice = new Device();
 
 /**

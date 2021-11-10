@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
-import {Buffer, BufferProps} from '../api/buffer';
+import {Buffer, BufferProps} from '@luma.gl/api';
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils';
@@ -57,7 +57,7 @@ export type WebGLBufferProps = BufferProps & {
 }
 
 /** WebGL Buffer interface */
-export default class WebGLBuffer extends Buffer {
+export default class WEBGLBuffer extends Buffer {
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLBuffer;
@@ -77,7 +77,7 @@ export default class WebGLBuffer extends Buffer {
   constructor(gl: WebGLRenderingContext, byteLength: number);
 
   constructor(gl: WebGLRenderingContext, props = {}) {
-    super(gl as any, props, {} as any);
+    super(gl as any, props);
 
     this.gl = gl;
     this.gl2 = getWebGL2Context(gl);

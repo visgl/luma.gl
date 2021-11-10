@@ -2,7 +2,7 @@
 import GL from '@luma.gl/constants';
 import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
-import {Shader as ShaderAPI, ShaderProps} from '../api/shader';
+import {Shader as ShaderAPI, ShaderProps} from '@luma.gl/api';
 import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
 import {uid, assert} from '../utils';
 
@@ -18,10 +18,19 @@ export class WEBGLShader extends ShaderAPI {
   readonly stage: 'vertex' | 'fragment';
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
-    super(gl as any, {id: getShaderIdFromProps(props), ...props}, {} as any);
-    this.stage = this.props.stage;
+    super(gl as any, {id: getShaderIdFromProps(props), ...props});
     this.gl = gl;
-    this.handle = this.props.handle || this.gl.createShader(this.stage === 'vertex' ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER);
+    switch (this.props.stage) {
+      case 'vertex':
+        this.handle = this.props.handle || this.gl.createShader(GL.VERTEX_SHADER);
+        break;
+      case 'fragment':
+        this.handle = this.props.handle || this.gl.createShader(GL.FRAGMENT_SHADER);
+        break;
+      default:
+        throw new Error(this.props.stage);
+    }
+    this.stage = this.props.stage;
     this._compile(props.source);
   }
 
@@ -83,10 +92,11 @@ export class Shader extends WEBGLShader {
     }
   }
 
-  constructor(gl: WebGLRenderingContext, props: ShaderProps) {
+  constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'>) {
     assertWebGLContext(gl);
     assert(typeof props.source === 'string', ERR_SOURCE);
 
+    // @ts-expect-error
     super(gl, {...props, id: getShaderIdFromProps(props), stage: props.shaderType === GL.VERTEX_SHADER ? 'vertex' : 'fragment'});
 
     this.shaderType = props.shaderType;
@@ -145,9 +155,10 @@ export class Shader extends WEBGLShader {
 
 /**
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
+ * @deprecated Use `device.createShader({stage: 'vertex', ...})`
  */
  export class VertexShader extends Shader {
-  constructor(gl: WebGLRenderingContext, props: ShaderProps | string) {
+  constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'> | string) {
     super(gl, getShaderProps(props, GL.VERTEX_SHADER));
   }
 
@@ -159,9 +170,10 @@ export class Shader extends WEBGLShader {
 
 /**
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
+ * @deprecated Use `device.createShader({stage: 'fragment', ...})`
  */
  export class FragmentShader extends Shader {
-  constructor(gl: WebGLRenderingContext, props: ShaderProps | string) {
+  constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'> | string) {
     super(gl, getShaderProps(props, GL.FRAGMENT_SHADER));
   }
 
@@ -173,7 +185,7 @@ export class Shader extends WEBGLShader {
 
 // HELPERS
 
-function getShaderProps(props: ShaderProps | string, shaderType: GL.VERTEX_SHADER | GL.FRAGMENT_SHADER): ShaderProps {
+function getShaderProps(props: Omit<ShaderProps, 'stage'> | string, shaderType: GL.VERTEX_SHADER | GL.FRAGMENT_SHADER): Omit<ShaderProps, 'stage'> {
   if (typeof props === 'string') {
     return {source: props, shaderType};
   }
