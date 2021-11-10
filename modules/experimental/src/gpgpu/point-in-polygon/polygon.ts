@@ -77,10 +77,8 @@ export function getVertexCount(
  * @return {Object} - {positions: <Float64Array>, holeIndices: <Array|null>}
  */
 /* eslint-disable max-statements */
-export function normalize(polygon, positionSize: number, vertexCount?: number): {
-  positions: Float64Array,
-  holeIndices
-} {
+export function normalize(polygon, positionSize: number, vertexCount?: number): Float64Array | {positions: Float64Array, holeIndices } 
+{
   validate(polygon);
 
   vertexCount = vertexCount || getVertexCount(polygon, positionSize);

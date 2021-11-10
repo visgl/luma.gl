@@ -78,6 +78,7 @@ export default function createGLTFModel(gl: WebGLRenderingContext, options: any)
   // not deallocate resources/textures/buffers that are shared
   const managedResources = [];
   managedResources.push(...materialParser.generatedTextures);
+  // @ts-expect-error
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   const model = new ModelNode(
