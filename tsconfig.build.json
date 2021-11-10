@@ -6,7 +6,7 @@
     "listEmittedFiles": true
   },
   "references": [
-    {"path": "modules/contants"},
+    {"path": "modules/constants"},
     {"path": "modules/core"},
     {"path": "modules/engine"},
     {"path": "modules/experimental"},

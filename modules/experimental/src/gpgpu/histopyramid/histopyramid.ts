@@ -52,7 +52,7 @@ export function buildHistopyramidBaseLevel(
   let {width, height} = texture;
   width = nextPowerOfTwo(width);
   height = nextPowerOfTwo(height);
-  // Use sqaured next power of two size, then use half of it since we are packing 2X2 group into a single RGBA pixel
+  // Use squared next power of two size, then use half of it since we are packing 2X2 group into a single RGBA pixel
   const size = (width > height ? width : height) / 2;
   const baseTexture = cloneTextureFrom(texture, {
     width: size,
@@ -60,6 +60,7 @@ export function buildHistopyramidBaseLevel(
   });
 
   // build individual pyramid textures
+  // @ts-expect-error
   const transform = new Transform(gl, {
     _sourceTextures: {
       inTexture: texture
@@ -136,6 +137,7 @@ export function getHistoPyramid(
     }
 
     // build individual pyramid textures
+    // @ts-expect-error
     const transform = new Transform(gl, {
       _sourceTextures: {
         inTexture: pyramidTextures[0]
@@ -192,6 +194,7 @@ export function histoPyramidGenerateIndices(
   );
   const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
 
+  // @ts-expect-error
   const transform = new Transform(gl, {
     sourceBuffers: {
       keyIndex

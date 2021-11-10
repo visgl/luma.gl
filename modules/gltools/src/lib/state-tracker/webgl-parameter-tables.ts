@@ -1,6 +1,5 @@
 // Tables describing WebGL parameters
 import GL from '@luma.gl/constants';
-import { render } from '@luma.gl/shadertools/test/gpu-test-utils';
 import {isWebGL2} from '../context/webgl-checks';
 import {GLParameters} from './webgl-parameters';
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS

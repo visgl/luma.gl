@@ -150,6 +150,7 @@ export default class GLTFInstantiator {
     });
 
     if (indices) {
+      // @ts-expect-error
       loadedAttributes.indices = this.createAccessor(
         indices,
         this.createBuffer(indices, this.gl.ELEMENT_ARRAY_BUFFER)
