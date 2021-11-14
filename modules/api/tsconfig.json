@@ -8,8 +8,5 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../api"},
-    {"path": "../constants"},
-    {"path": "../gltools"}
   ]
 }

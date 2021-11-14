@@ -6,6 +6,7 @@
     "listEmittedFiles": true
   },
   "references": [
+    {"path": "modules/api"},
     {"path": "modules/constants"},
     {"path": "modules/core"},
     {"path": "modules/engine"},
