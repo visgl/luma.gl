@@ -1,5 +1,52 @@
 # luma.gl CHANGELOG
 
+## v8.6.0-alpha.1
+
+- chore: disable script builds (#1533)
+- feat: TypeScript monorepo setup (#1532)
+- feat(api): New API module (#1529)
+- chore(gltools): Light reorg of gltools (#1531)
+- chore(gltools): improve directory structure (#1530)
+- chore(webgl): Texture inherits from API Resource (#1528)
+- chore(webgl): Shader inherits from API class (#1527)
+- chore(webgl): webgl Buffer inherits from API Buffer and Resource (#1526)
+- chore(shadertools): Improve shader module typings (#1522)
+- chore(webgl): use new shadertools function for shader log parsing (#1516)
+- chore(engine): Initial typing improvements for Transform classes (#1521)
+- chore(engine): Inline types for `AnimationLoop` (#1520)
+- chore(engine): animation loop light refactor (#1504)
+- chore(engine): Convert Model to .ts (#1519)
+- build(deps): bump url-parse from 1.5.1 to 1.5.3 (#1514)
+- feat(shadertools): Add WebGPU compatible compiler log type and formatter (#1517)
+- fix texture binding tracking (#1515)
+- Improve context state tracking (#1513)
+- Fix outdated parameter cache (#1510)
+- Ib/ts geometry (#1507)
+- chore: Add typescript support to .nycrc (#1508)
+- fix(engine): AnimationLoop request/cancel animation frames (#1506)
+- chore(webgl): improved typings for Framebuffer, Renderbuffer, Shader (#1503)
+- chore(webgl): .ts file for Program class (#1502)
+- chore(typescript): Additional .d.ts -> .ts conversion (#1500)
+- chore: merge and rename files from {.js,d.ts} to .ts. (#1497)
+- website: adjust to new ocular version (#1498)
+- chore: upgrade to ocular@1.0.0-alpha.7 (#1484)
+- Bump tar from 4.4.15 to 4.4.19 (#1494)
+- Bump path-parse from 1.0.6 to 1.0.7 (#1487)
+- Fix animation frame scheduling and cancellation (#1495)
+- remove overly broad platform defines (#1496)
+- Bump tar from 4.4.13 to 4.4.15 (#1486)
+- Work around fp32 compile error in Safari 15 (#1491)
+- Fix CI (#1492)
+- Fix transpilation on array variables (#1485)
+- Fix transpiling minified shader (#1482)
+- chore(docs): Reorganize docs (#1483)
+- chore: bump lerna.json to 8.6.0-alpha.0 (#1480)
+- Bump probe.gl and loaders.gl (#1479)
+
+## v8.5.1
+
+- chore: bump loaders.gl and probe.gl (#1478)
+- bump: math.gl@3.5.0 (#1477)
 ## v8.5.0
 
 - Bump dependencies to beta (#1476)
