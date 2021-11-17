@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, getWebGL2Context, withParameters, log} from '@luma.gl/gltools';
-import {global} from 'probe.gl/env';
 import {getKey, getKeyValue} from '../webgl-utils';
 import {Texture, TextureProps} from '@luma.gl/api';
 import Buffer from './webgl-buffer';
@@ -19,9 +18,6 @@ export {TextureProps};
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
 // Polyfill
-// Note (Tarek): Do we really need to support this API?
-const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
-
 export default class WEBGLTexture extends Texture {
   readonly MAX_ATTRIBUTES: number;
 

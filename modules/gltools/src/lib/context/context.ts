@@ -1,7 +1,7 @@
 // WebGLRenderingContext related methods
 /* eslint-disable quotes */
 import GL from '@luma.gl/constants';
-import {global, isBrowser as getIsBrowser} from 'probe.gl/env';
+import {isBrowser as getIsBrowser} from '@probe.gl/env';
 import {trackContextState} from '../state-tracker/track-context-state';
 
 import {log} from '../utils/log';
@@ -166,11 +166,11 @@ export function instrumentGLContext(
   // Add debug instrumentation to the context
   if (isBrowser && debug) {
     // @ts-ignore
-    if (!global.makeDebugContext) {
+    if (!globalThis.makeDebugContext) {
       log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
     } else {
       // @ts-ignore
-      gl = global.makeDebugContext(gl, options);
+      gl = globalThis.makeDebugContext(gl, options);
       // Debug forces log level to at least 1
       log.level = Math.max(log.level, 1);
     }
