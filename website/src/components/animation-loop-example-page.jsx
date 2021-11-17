@@ -9,8 +9,8 @@ import {InfoPanel} from 'gatsby-theme-ocular/components';
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.2-release';
 
 // WORKAROUND FOR luma.gl VRDisplay
-if (typeof global !== 'undefined' && !global.navigator) {
-  global.navigator = {};
+if (!globalThis.navigator) {
+  globalThis.navigator = {};
 }
 
 if (typeof window !== 'undefined') {

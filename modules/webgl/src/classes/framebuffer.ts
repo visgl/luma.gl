@@ -82,7 +82,8 @@ export class ImmutableFramebuffer extends Resource<FramebufferProps> {
     }
     message = message || `Framebuffer ${this.id}`;
     const image = copyToDataUrl(this, {targetMaxHeight: 100});
-    log.image({logLevel, message, image}, message)();
+    // @ts-expect-error probe.gl typings incorrectly require priority...
+    log.image({logLevel, message, image})();
     return this;
   }
 

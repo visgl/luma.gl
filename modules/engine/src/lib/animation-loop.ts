@@ -17,12 +17,12 @@ import {
   assert
 } from '@luma.gl/webgl';
 
-import { Stats } from 'probe.gl'
+import { Stats, Stat } from '@probe.gl/stats'
 import { Timeline } from '../animation/timeline'
 
 import type {GLContextOptions} from '@luma.gl/gltools'
 
-import {isBrowser} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 
 
 const isPage = isBrowser() && typeof document !== 'undefined';
@@ -128,9 +128,9 @@ export default class AnimationLoop {
   framebuffer: Framebuffer = null;
   timeline: Timeline = null;
   stats: Stats;
-  cpuTime: Stats;
-  gpuTime: Stats;
-  frameRate: Stats;
+  cpuTime: Stat;
+  gpuTime: Stat;
+  frameRate: Stat;
   offScreen: boolean;
 
   display: any;

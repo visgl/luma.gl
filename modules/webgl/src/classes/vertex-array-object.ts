@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
-import {getBrowser} from 'probe.gl';
+import {getBrowser} from '@probe.gl/env';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';

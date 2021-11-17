@@ -2,7 +2,7 @@ import {Buffer, readPixelsToArray, Framebuffer} from '@luma.gl/webgl';
 import {picking} from '@luma.gl/shadertools';
 import {AnimationLoop, Model, Transform} from '@luma.gl/engine';
 import {cssToDevicePixels, isWebGL2} from '@luma.gl/gltools';
-import {Log} from 'probe.gl';
+import {Log} from '@probe.gl/log';
 import {getRandom} from '../../utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
