@@ -522,7 +522,7 @@ test('assembleShaders#injection order', (t) => {
   t.end();
 });
 
-test.only('assembleShaders#transpilation', (t) => {
+test('assembleShaders#transpilation', (t) => {
   const gl = fixture.gl1;
   let assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300,

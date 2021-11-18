@@ -2,8 +2,12 @@ import GL from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 
-// Converts TYPED ARRAYS to corresponding GL constant
-// Used to auto deduce gl parameter types
+/**
+ * Converts TYPED ARRAYS to corresponding GL constant
+ * Used to auto deduce gl parameter types
+ * @param {*} arrayOrType
+ * @returns
+ */
 export function getGLTypeFromTypedArray(arrayOrType) {
   // If typed array, look up constructor
   const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
@@ -29,10 +33,14 @@ export function getGLTypeFromTypedArray(arrayOrType) {
   }
 }
 
-// Converts GL constant to corresponding TYPED ARRAY
-// Used to auto deduce gl parameter types
-
-/* eslint-disable complexity */
+/**
+ * Converts GL constant to corresponding TYPED ARRAY
+ * Used to auto deduce gl parameter types
+ * @param {*} glType
+ * @param {*} param1
+ * @returns
+ */
+// eslint-disable-next-line complexity
 export function getTypedArrayFromGLType(glType, {clamped = true} = {}) {
   // Sorted in some order of likelihood to reduce amount of comparisons
   switch (glType) {
@@ -57,11 +65,13 @@ export function getTypedArrayFromGLType(glType, {clamped = true} = {}) {
       throw new Error('Failed to deduce typed array type from GL constant');
   }
 }
-/* eslint-enable complexity */
 
-// Flip rows (can be used on arrays returned from `Framebuffer.readPixels`)
-// https://stackoverflow.com/questions/41969562/
-// how-can-i-flip-the-result-of-webglrenderingcontext-readpixels
+/**
+ * Flip rows (can be used on arrays returned from `Framebuffer.readPixels`)
+ * https: *stackoverflow.com/questions/41969562/
+ * how-can-i-flip-the-result-of-webglrenderingcontext-readpixels
+ * @param {*} param0
+ */
 export function flipRows({data, width, height, bytesPerPixel = 4, temp}) {
   const bytesPerRow = width * bytesPerPixel;
 

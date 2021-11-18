@@ -7,7 +7,7 @@ import {getRandom} from '../../utils';
 
 const RED = new Uint8Array([255, 0, 0, 255]);
 
-/* eslint-disable max-len */
+// eslint-disable-next-line max-len
 const INFO_HTML = `
 <p>
   Instanced triangles animated on the GPU using a luma.gl <code>Transform</code> object.
@@ -17,7 +17,6 @@ const INFO_HTML = `
     WebGL2Samples
   </a>
 `;
-/* eslint-enable max-len */
 
 // Text to be displayed on environments when this demos is not supported.
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
@@ -147,7 +146,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     return INFO_HTML;
   }
 
-  /* eslint-disable max-statements */
+  // eslint-disable-next-line max-statements
   onInitialize({canvas, gl, width, height}) {
     this.demoNotSupported = !isWebGL2(gl);
     if (this.demoNotSupported) {
@@ -233,7 +232,6 @@ export default class AppAnimationLoop extends AnimationLoop {
       pickingFramebuffer
     };
   }
-  /* eslint-enable max-statements */
 
   onRender({gl, width, height, renderModel, transform, time, pickingFramebuffer}) {
     if (this.demoNotSupported) {

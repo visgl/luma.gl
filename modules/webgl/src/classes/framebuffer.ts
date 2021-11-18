@@ -414,7 +414,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
     return this;
   }
 
-  // Attachment resize is expected to be a noop if size is same
+  /** Attachment resize is expected to be a noop if size is same */
   resize(size?: {width?: number; height?: number}): this {
     let {width, height} = size || {};
     // for default framebuffer, just update the stored size
@@ -443,7 +443,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
     return this;
   }
 
-  // Attach from a map of attachments
+  /** Attach from a map of attachments */
   attach(attachments, {clearAttachments = false, resizeAttachments = true} = {}) {
     const newAttachments = {};
 
@@ -673,10 +673,14 @@ export default class Framebuffer extends ImmutableFramebuffer {
     delete this.attachments[attachment];
   }
 
-  // Attempt to provide workable defaults for WebGL2 symbols under WebGL1
-  // null means OK to query
-  // TODO - move to webgl1 polyfills
-  /* eslint-disable complexity */
+  /**
+   * Attempt to provide workable defaults for WebGL2 symbols under WebGL1
+   * null means OK to query
+   * TODO - move to webgl1 polyfills
+   * @param pname 
+   * @returns 
+   */
+  // eslint-disable-next-line complexity
   _getAttachmentParameterFallback(pname) {
     const caps = getFeatures(this.gl);
 
@@ -698,7 +702,6 @@ export default class Framebuffer extends ImmutableFramebuffer {
         return null;
     }
   }
-  /* eslint-enable complexity */
 }
 
 // PUBLIC METHODS

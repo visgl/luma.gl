@@ -13,10 +13,22 @@ const fragments = [];
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
+/**
 // A minimal shader injection/templating system.
 // RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/shader-injection-rfc.md
-/* eslint-disable complexity */
-export default function injectShader(source, type, inject, injectStandardStubs = false) {
+ * @param source 
+ * @param type 
+ * @param inject 
+ * @param injectStandardStubs 
+ * @returns 
+ */
+// eslint-disable-next-line complexity
+export default function injectShader(
+  source: string, 
+  type: 'vs' | 'fs', 
+  inject: Record<string, any>, 
+  injectStandardStubs = false
+): string {
   const isVertex = type === 'vs';
 
   for (const key in inject) {
@@ -83,8 +95,6 @@ export default function injectShader(source, type, inject, injectStandardStubs =
 
   return source;
 }
-
-/* eslint-enable complexity */
 
 // Takes an array of inject objects and combines them into one
 export function combineInjects(injects) {

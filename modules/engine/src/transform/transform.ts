@@ -118,9 +118,9 @@ export default class Transform {
       })
     );
 
-    /* eslint-disable no-unused-expressions */
-    this.bufferTransform && this.bufferTransform.setupResources({model: this.model});
-    /* eslint-enable no-unused-expressions */
+    if (this.bufferTransform) {
+      this.bufferTransform.setupResources({model: this.model});
+    }
   }
 
   _updateModelProps(props: TransformProps): TransformProps {
