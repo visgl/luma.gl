@@ -2,6 +2,16 @@ import GL from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 
+type TypedArrayConstructor =
+  | Float32ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
+  | Uint8ArrayConstructor
+  | Uint8ClampedArrayConstructor
+  | Int8ArrayConstructor
+  | Int16ArrayConstructor
+  | Int32ArrayConstructor;
+
 /**
  * Converts TYPED ARRAYS to corresponding GL constant
  * Used to auto deduce gl parameter types
@@ -41,7 +51,13 @@ export function getGLTypeFromTypedArray(arrayOrType) {
  * @returns
  */
 // eslint-disable-next-line complexity
-export function getTypedArrayFromGLType(glType, {clamped = true} = {}) {
+export function getTypedArrayFromGLType(
+  glType: any,
+  options?: {
+    clamped?: boolean;
+  }
+): TypedArrayConstructor {
+  const {clamped = true} = options || {};
   // Sorted in some order of likelihood to reduce amount of comparisons
   switch (glType) {
     case GL.FLOAT:
@@ -72,24 +88,41 @@ export function getTypedArrayFromGLType(glType, {clamped = true} = {}) {
  * how-can-i-flip-the-result-of-webglrenderingcontext-readpixels
  * @param {*} param0
  */
-export function flipRows({data, width, height, bytesPerPixel = 4, temp}) {
+ export function flipRows(options: {
+  data: any;
+  width: any;
+  height: any;
+  bytesPerPixel?: number;
+  temp?: any;
+}): void {
+  const {data, width, height, bytesPerPixel = 4, temp} = options;
   const bytesPerRow = width * bytesPerPixel;
 
   // make a temp buffer to hold one row
-  temp = temp || new Uint8Array(bytesPerRow);
+  const tempBuffer = temp || new Uint8Array(bytesPerRow);
   for (let y = 0; y < height / 2; ++y) {
     const topOffset = y * bytesPerRow;
     const bottomOffset = (height - y - 1) * bytesPerRow;
     // make copy of a row on the top half
-    temp.set(data.subarray(topOffset, topOffset + bytesPerRow));
+    tempBuffer.set(data.subarray(topOffset, topOffset + bytesPerRow));
     // copy a row from the bottom half to the top
     data.copyWithin(topOffset, bottomOffset, bottomOffset + bytesPerRow);
     // copy the copy of the top half row to the bottom half
-    data.set(temp, bottomOffset);
+    data.set(tempBuffer, bottomOffset);
   }
 }
 
-export function scalePixels({data, width, height}) {
+
+export function scalePixels(options: {
+  data: any;
+  width: any;
+  height: any;
+}): {
+  data: Uint8Array;
+  width: number;
+  height: number;
+} {
+  const {data, width, height} = options;
   const newWidth = Math.round(width / 2);
   const newHeight = Math.round(height / 2);
   const newData = new Uint8Array(newWidth * newHeight * 4);

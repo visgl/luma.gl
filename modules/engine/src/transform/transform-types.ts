@@ -12,6 +12,7 @@ export type TransformProps = {
   uniforms?: any;
   parameters?: any;
   discard?: boolean;
+  isIndexed?: boolean;
   _sourceTextures?: any;
   _targetTexture?: any;
   _targetTextureVarying?: string;

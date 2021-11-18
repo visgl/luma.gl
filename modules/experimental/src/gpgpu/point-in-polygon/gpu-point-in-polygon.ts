@@ -1,24 +1,35 @@
-// @ts-nocheck TODO remove
-
 import GL from '@luma.gl/constants';
 import {Buffer, Texture2D, assert} from '@luma.gl/webgl';
-import {isWebGL2} from '@luma.gl/gltools';
+// import {isWebGL2} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
-import * as Polygon from './polygon';
+import {normalize, getSurfaceIndices, getVertexCount} from './polygon';
 const TEXTURE_SIZE = 512;
 
+export type GPUPointInPolygonProps = {polygons?, textureSize?};
+
 export default class GPUPointInPolygon {
-  constructor(gl: WebGLRenderingContext, props = {}) {
+  gl: WebGL2RenderingContext;
+  textureSize = TEXTURE_SIZE;
+
+  boundingBox: number[];
+  
+  polygonTexture: Texture2D;
+  positionBuffer: Buffer;
+  idBuffer: Buffer;
+  indexBuffer: Buffer;
+  polyTextureTransform: Transform;
+  filterTransform: Transform;
+
+  constructor(gl: WebGL2RenderingContext, props: GPUPointInPolygonProps = {}) {
     this.gl = gl;
-    assert(isWebGL2(gl)); // supports WebGL2 only
-    this.textureSize = TEXTURE_SIZE;
     this._setupResources();
     this.update(props);
   }
 
-  update({polygons, textureSize} = {}) {
+  update(props: GPUPointInPolygonProps = {}) {
+    const {polygons, textureSize} = props;
     if (textureSize) {
       this.textureSize = textureSize;
     }
@@ -43,6 +54,7 @@ export default class GPUPointInPolygon {
     const {polygonTexture, boundingBox} = this;
 
     this.filterTransform.run({
+      // @ts-expect-error
       moduleSettings: {boundingBox, texture: polygonTexture}
     });
   }
@@ -163,13 +175,14 @@ function triangulatePolygons(polygons) {
   let count = 0;
   let polygonId = 0;
   for (let i = 0; i < polygons.length; i++) {
-    const normalized = Polygon.normalize(polygons[i], SIZE);
+    const normalized = normalize(polygons[i], SIZE);
+    // @ts-expect-error
     const curVertices = normalized.positions || normalized;
     const curCount = curVertices.length / SIZE;
     const curIds = new Array(curCount).fill(polygonId);
     vertices.push(...curVertices);
     ids.push(...curIds);
-    const curIndices = Polygon.getSurfaceIndices(normalized, SIZE);
+    const curIndices = getSurfaceIndices(normalized, SIZE);
     const indexCount = curIndices.length;
     for (let j = 0; j < indexCount; j++) {
       curIndices[j] += count;
@@ -182,7 +195,7 @@ function triangulatePolygons(polygons) {
   // UInt16 (UNSIGNED_SHORT) buffer is used for indices
   assert(count < 65536); // 0xFFFF
 
-  const vertexCount = Polygon.getVertexCount(vertices, SIZE);
+  const vertexCount = getVertexCount(vertices, SIZE);
 
   return {vertices, indices, ids, vertexCount};
 }

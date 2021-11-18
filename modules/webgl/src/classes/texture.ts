@@ -37,7 +37,7 @@ export default class WEBGLTexture extends Texture {
   border = undefined;
   mipmaps: boolean = undefined;
 
-  target: number;
+  target: GL;
   textureUnit: number = undefined;
 
   // Program.draw() checks the loaded flag of all textures to avoid
@@ -511,7 +511,7 @@ export default class WEBGLTexture extends Texture {
         // const gl2 = assertWebGL2Context(this.gl);
         // @ts-expect-error last offset parameter is ignored under WebGL1
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data, offset);
-      } else if (data instanceof WebGLBuffer) {
+      } else if (typeof WebGLBuffer !== 'undefined' && data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
         const gl2 = assertWebGL2Context(this.gl);
         // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER

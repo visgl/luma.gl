@@ -7,8 +7,6 @@
 // This is intended to be a stand-alone file with minimal dependencies,
 // easy to reuse or repurpose in other projects.
 
-/** @typedef {import('./polyfill-context')} types */
-
 import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
 import {assert} from '../utils/assert';
 
@@ -32,9 +30,7 @@ import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-tab
   }
 
   // TODO - only supporting a few members
-  /** @type {WebGL2RenderingContext} */
-  // @ts-expect-error
-  return gl;
+  return gl as WebGL2RenderingContext;
 }
 
 // TODO - is this still required?

@@ -1,9 +1,24 @@
-// @ts-nocheck TODO remove
 import GL from '@luma.gl/constants';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {loadImage} from '@loaders.gl/images';
 
+
+export type GLTFEnvironmentProps = {
+  brdfLutUrl: any;
+  getTexUrl: any;
+  specularMipLevels?: number;
+}
+
 export default class GLTFEnvironment {
+  gl: WebGLRenderingContext;
+  brdfLutUrl: any;
+  getTexUrl: any;
+  specularMipLevels: number = 10;
+
+  _DiffuseEnvSampler;
+  _SpecularEnvSampler;
+  _BrdfTexture;
+
   constructor(
     gl: WebGLRenderingContext,
     props: {
@@ -89,7 +104,7 @@ export default class GLTFEnvironment {
     return this._BrdfTexture;
   }
 
-  delete() {
+  destroy() {
     if (this._DiffuseEnvSampler) {
       this._DiffuseEnvSampler.delete();
       this._DiffuseEnvSampler = null;
@@ -104,5 +119,10 @@ export default class GLTFEnvironment {
       this._BrdfTexture.delete();
       this._BrdfTexture = null;
     }
+  }
+
+  /** @deprecated */
+  delete() {
+    this.destroy();
   }
 }

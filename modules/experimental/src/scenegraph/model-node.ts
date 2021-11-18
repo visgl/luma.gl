@@ -1,13 +1,22 @@
-import {Model} from '@luma.gl/engine';
-import ScenegraphNode from './scenegraph-node';
+import {Model, ModelProps} from '@luma.gl/engine';
+import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
+
+export type ModelNodeProps = ScenegraphNodeProps & ModelProps & {
+  managedResources?: any[];
+}
 
 export default class ModelNode extends ScenegraphNode {
-  constructor(gl, props = {}) {
-    super(props);
+  readonly model: Model;
 
-    // pverride callbacks to make sure we call them with this
-    this.onBeforeRender = null;
-    this.AfterRender = null;
+  AfterRender = null;
+  managedResources: any[];
+
+  // override callbacks to make sure we call them with this
+  onBeforeRender = null;
+  onAfterRender = null;
+
+  constructor(gl: Model | WebGLRenderingContext, props: ModelNodeProps = {}) {
+    super(props);
 
     // Create new Model or used supplied Model
     if (gl instanceof Model) {
@@ -20,15 +29,16 @@ export default class ModelNode extends ScenegraphNode {
     this.managedResources = props.managedResources || [];
   }
 
-  setProps(props) {
+  setProps(props: ModelNodeProps) {
     super.setProps(props);
     this._setModelNodeProps(props);
     return this;
   }
 
-  delete() {
+  destroy() {
     if (this.model) {
       this.model.delete();
+      // @ts-expect-error
       this.model = null;
     }
 
@@ -36,7 +46,7 @@ export default class ModelNode extends ScenegraphNode {
     this.managedResources = [];
   }
 
-  // Forward node methods
+  // Expose model methods
   draw(...args) {
     // Return value indicates if something was actually drawn
     return this.model.draw(...args);

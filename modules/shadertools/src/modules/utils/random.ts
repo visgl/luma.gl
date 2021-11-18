@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 const fs = `\
 float random(vec3 scale, float seed) {
   /* use the fragment position for a different seed per-pixel */

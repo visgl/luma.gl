@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 import {lights} from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
@@ -31,7 +29,6 @@ function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
   return getMaterialUniforms(material);
 }
 
-/** @type {ShaderModule} */
 export const gouraudLighting = {
   name: 'gouraud-lighting',
   dependencies: [lights],
@@ -42,7 +39,6 @@ export const gouraudLighting = {
   getUniforms
 };
 
-/** @type {ShaderModule} */
 export const phongLighting = {
   name: 'phong-lighting',
   dependencies: [lights],

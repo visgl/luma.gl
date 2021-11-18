@@ -1,4 +1,3 @@
-// @ts-nocheck TODO remove
 // shader module to perform texture filtering
 
 const vs = `
@@ -21,14 +20,15 @@ vec2 textureFilter_filter(vec2 position) {
 }
 `;
 
-// @ts-nocheck TODO remove
-function getUniforms(opts = {}) {
+function getUniforms(opts: {boundingBox?: number[], texture?} = {}) {
   const uniforms = {};
   if (opts.boundingBox) {
     const [xMin, yMin, xMax, yMax] = opts.boundingBox;
+    // @ts-expect-error
     uniforms.textureFilter_uBoundingBox = [xMin, yMin, xMax - xMin, yMax - yMin];
   }
   if (opts.texture) {
+    // @ts-expect-error
     uniforms.textureFilter_uTexture = opts.texture;
   }
   return uniforms;

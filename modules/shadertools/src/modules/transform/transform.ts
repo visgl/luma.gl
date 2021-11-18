@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 const vs = `\
 attribute float transform_elementID;
 
