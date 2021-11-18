@@ -95,16 +95,12 @@ export function readPixelsToBuffer(
     sourceType?: number;
   }
 ): Buffer {
-
-  const {
-    sourceX,
-    sourceY,
-    sourceFormat,
-    target,
-    targetByteOffset
+  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, 
+    targetByteOffset = 0
   } = options || {};
     // following parameters are auto deduced if not provided
   let {
+    target,
     sourceWidth,
     sourceHeight,
     sourceType,
@@ -114,7 +110,7 @@ export function readPixelsToBuffer(
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
-  // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
+  // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
   const gl2 = assertWebGL2Context(framebuffer.gl);
 
   // deduce type if not available.
@@ -125,7 +121,6 @@ export function readPixelsToBuffer(
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    // @ts-expect-error TODO why is WebGL2 context not compatible
     target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
@@ -286,7 +281,7 @@ export function copyToTexture(
       case GL.TEXTURE_2D:
       case GL.TEXTURE_CUBE_MAP:
         gl.copyTexSubImage2D(
-          target,
+          textureTarget,
           targetMipmaplevel,
           targetX,
           targetY,
@@ -300,7 +295,7 @@ export function copyToTexture(
       case GL.TEXTURE_3D:
         const gl2 = assertWebGL2Context(gl);
         gl2.copyTexSubImage3D(
-          target,
+          textureTarget,
           targetMipmaplevel,
           targetX,
           targetY,
