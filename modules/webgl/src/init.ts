@@ -3,7 +3,7 @@ import {isBrowser} from '@probe.gl/env';
 import {lumaStats} from '@luma.gl/api';
 
 // Version detection using babel plugin
-// @ts-ignore
+// @ts-expect-error
 const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
 
 const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';

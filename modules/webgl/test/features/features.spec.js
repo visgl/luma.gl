@@ -171,9 +171,9 @@ test('webgl#caps#canCompileGLGSExtension', (t) => {
 test('webgl#caps#cache', (t) => {
   const {gl} = fixture;
   const cap = FEATURES.WEBGL2;
-  // @ts-ignore
+  // @ts-expect-error
   gl.luma = gl.luma || {};
-  // @ts-ignore
+  // @ts-expect-error
   const {luma} = gl;
 
   const originalCaps = luma.caps;

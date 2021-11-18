@@ -37,7 +37,7 @@ export default class TextureCube extends Texture {
     // Store props for accessors
     this.props = props;
 
-    // @ts-ignore
+    // @ts-expect-error
     this.setCubeMapImageData(props).then(() => {
       this.loaded = true;
 
@@ -54,7 +54,7 @@ export default class TextureCube extends Texture {
 
   subImage(options: {face: any; data: any; x?: number; y?: number; mipmapLevel?: number}): any {
     const {face, data, x = 0, y = 0, mipmapLevel = 0} = options;
-    // @ts-ignore TODO - is this a bug?
+    // @ts-expect-error TODO - is this a bug?
     return this._subImage({target: face, data, x, y, mipmapLevel});
   }
 

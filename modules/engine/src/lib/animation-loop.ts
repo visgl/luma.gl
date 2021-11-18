@@ -158,7 +158,7 @@ export default class AnimationLoop {
 
     if ('useDevicePixelRatio' in props) {
       log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
-      // @ts-ignore
+      // @ts-expect-error
       useDevicePixels = props.useDevicePixelRatio;
     }
 
@@ -366,7 +366,7 @@ export default class AnimationLoop {
 
   getHTMLControlValue(id, defaultValue = 1) {
     const element = document.getElementById(id);
-    // @ts-ignore Not all html elements have value
+    // @ts-expect-error Not all html elements have value
     return element ? Number(element.value) : defaultValue;
   }
 

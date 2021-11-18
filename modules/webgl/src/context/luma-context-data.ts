@@ -20,8 +20,8 @@ export type LumaContextData = {
  * @returns 
  */
 export function getLumaContextData(gl: WebGLRenderingContext): LumaContextData {
-  // @ts-ignore
+  // @ts-expect-error
   gl.luma = gl.luma || {};
-  // @ts-ignore
+  // @ts-expect-error
   return gl.luma as LumaContextData;
 }

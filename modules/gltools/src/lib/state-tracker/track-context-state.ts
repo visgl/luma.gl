@@ -182,17 +182,17 @@ class GLState {
 ): WebGLRenderingContext {
   const {enable = true, copyState} = options;
   assert(copyState !== undefined);
-  // @ts-ignore
+  // @ts-expect-error
   if (!gl.state) {
     const global_ = typeof global !== 'undefined' ? global : window;
-    // @ts-ignore
+    // @ts-expect-error
     const {polyfillContext} = global_;
     if (polyfillContext) {
       polyfillContext(gl);
     }
 
     // Create a state cache
-    // @ts-ignore
+    // @ts-expect-error
     gl.state = new GLState(gl, {copyState});
 
     installProgramSpy(gl);
@@ -208,7 +208,7 @@ class GLState {
     installGetterOverride(gl, 'isEnabled');
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   gl.state.enable = enable;
 
   return gl;
@@ -218,11 +218,11 @@ class GLState {
  * Saves current WebGL context state onto an internal per-context stack
  */
  export function pushContextState(gl: WebGLRenderingContext): void {
-  // @ts-ignore
+  // @ts-expect-error
   if (!gl.state) {
     trackContextState(gl, {copyState: false});
   }
-  // @ts-ignore
+  // @ts-expect-error
   gl.state.push();
 }
 
@@ -231,8 +231,8 @@ class GLState {
  * Restores previously saved WebGL context state
  */
 export function popContextState(gl: WebGLRenderingContext): void {
-  // @ts-ignore
+  // @ts-expect-error
   assert(gl.state);
-  // @ts-ignore
+  // @ts-expect-error
   gl.state.pop();
 }

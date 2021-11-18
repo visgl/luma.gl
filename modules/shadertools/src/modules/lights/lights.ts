@@ -76,7 +76,7 @@ function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS) {
   // Support for array of lights. Type of light is detected by type field
   if ('lights' in opts) {
     const lightSources = {pointLights: [], directionalLights: []};
-    // @ts-ignore
+    // @ts-expect-error
     for (const light of opts.lights || []) {
       switch (light.type) {
         case 'ambient':

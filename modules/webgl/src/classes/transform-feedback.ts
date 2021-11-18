@@ -90,19 +90,19 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   }
 
   begin(primitiveMode = GL.POINTS) {
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     this._bindBuffers();
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.beginTransformFeedback(primitiveMode);
     return this;
   }
 
   end() {
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.endTransformFeedback();
     this._unbindBuffers();
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     return this;
   }
@@ -162,10 +162,10 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   _bindBuffer(index, buffer, byteOffset = 0, byteSize?) {
     const handle = buffer && buffer.handle;
     if (!handle || byteSize === undefined) {
-      // @ts-ignore
+      // @ts-expect-error
       this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
-      // @ts-ignore
+      // @ts-expect-error
       this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteSize);
     }
     return this;
@@ -174,17 +174,17 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   // RESOURCE METHODS
 
   _createHandle() {
-    // @ts-ignore
+    // @ts-expect-error
     return this.gl.createTransformFeedback();
   }
 
   _deleteHandle() {
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.deleteTransformFeedback(this.handle);
   }
 
   _bindHandle(handle) {
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
   }
 }

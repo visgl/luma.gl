@@ -125,7 +125,7 @@ export default class TextureTransform {
     // readPixels returns 4 elements for each pixel, pack the elements when requested
     const ArrayType = pixels.constructor;
     const channelCount = typeToChannelCount(this.targetTextureType);
-    // @ts-ignore
+    // @ts-expect-error
     const packedPixels = new ArrayType((pixels.length * channelCount) / 4);
     let packCount = 0;
     for (let i = 0; i < pixels.length; i += 4) {
@@ -148,7 +148,6 @@ export default class TextureTransform {
       this.ownTexture.delete();
     }
     if (this.elementIDBuffer) {
-      // @ts-ignore
       this.elementIDBuffer.delete();
     }
   }
@@ -317,7 +316,7 @@ export default class TextureTransform {
   // build and return shader releated parameters
   _processVertexShader(props: TransformProps = {}) {
     const {sourceTextures, targetTexture} = this.bindings[this.currentIndex];
-    // @ts-ignore TODO - uniforms is not present
+    // @ts-expect-error TODO - uniforms is not present
     const {vs, uniforms, targetTextureType, inject, samplerTextureMap} = updateForTextures({
       vs: props.vs,
       sourceTextureMap: sourceTextures,

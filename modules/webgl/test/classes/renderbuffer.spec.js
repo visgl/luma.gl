@@ -12,7 +12,7 @@ test('WebGL#Renderbuffer construct/delete', (t) => {
   const {gl} = fixture;
 
   t.throws(
-    // @ts-ignore
+    // @ts-expect-error
     () => new Renderbuffer(),
     /.*WebGLRenderingContext.*/,
     'Renderbuffer throws on missing gl context'

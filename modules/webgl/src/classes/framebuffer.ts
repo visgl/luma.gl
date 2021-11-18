@@ -61,7 +61,7 @@ export class ImmutableFramebuffer extends Resource<FramebufferProps> {
     const {gl} = this;
     const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
     const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-    // @ts-ignore
+    // @ts-expect-error
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
     return status;
   }
@@ -113,7 +113,7 @@ export class ImmutableFramebuffer extends Resource<FramebufferProps> {
     if (drawBuffers) {
       this._setDrawBuffers(drawBuffers);
     }
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     return this;
@@ -132,7 +132,7 @@ export class ImmutableFramebuffer extends Resource<FramebufferProps> {
       this._attachOne(attachmentPoint, attachment);
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   }
 
@@ -408,7 +408,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
       this._setDrawBuffers(drawBuffers);
       this.drawBuffers = drawBuffers;
     }
-    // @ts-ignore
+    // @ts-expect-error
     gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     return this;
@@ -481,7 +481,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
       }
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     // Assign to attachments and remove any nulls to get a clean attachment map
@@ -507,7 +507,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
       clearBuffer(this.gl, {drawBuffer, value});
     });
 
-    // @ts-ignore
+    // @ts-expect-error
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
 
     return this;
@@ -532,10 +532,10 @@ export default class Framebuffer extends ImmutableFramebuffer {
       gl2.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments);
     } else {
       // TODO - why does type checking fail on this line
-      // @ts-ignore
+      // @ts-expect-error
       gl2.invalidateFramebuffer(GL.READ_FRAMEBUFFER, attachments, x, y, width, height);
     }
-    // @ts-ignore
+    // @ts-expect-error
     gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, prevHandle);
     return this;
   }
@@ -550,7 +550,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
       this.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     }
     if (keys && value > 1000) {
-      // @ts-ignore
+      // @ts-expect-error
       value = getKey(this.gl, value);
     }
     return value;
@@ -559,7 +559,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
   getAttachmentParameters(
     attachment = GL.COLOR_ATTACHMENT0,
     keys,
-    // @ts-ignore
+    // @ts-expect-error
     parameters = this.constructor.ATTACHMENT_PARAMETERS || []
   ) {
     const values = {};
@@ -717,7 +717,7 @@ function mapIndexToCubeMapFace(layer) {
 // Get a string describing the framebuffer error if installed
 function _getFrameBufferStatus(status) {
   // Use error mapping if installed
-  // @ts-ignore
+  // @ts-expect-error
   const STATUS = Framebuffer.STATUS || {};
   return STATUS[status] || `Framebuffer error ${status}`;
 }

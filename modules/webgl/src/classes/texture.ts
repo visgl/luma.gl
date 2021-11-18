@@ -35,7 +35,7 @@ export default class WEBGLTexture extends Texture {
   type = undefined;
   dataFormat = undefined;
   border = undefined;
-  mipmaps = undefined;
+  mipmaps: boolean = undefined;
 
   target: number;
   textureUnit: number = undefined;
@@ -135,7 +135,7 @@ export default class WEBGLTexture extends Texture {
       return this;
     }
     const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
-    // @ts-ignore
+    // @ts-expect-error
     if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
       this._video = null; // Declare member before the object is sealed
       data.addEventListener('loadeddata', () => this.initialize(props));
@@ -227,7 +227,7 @@ export default class WEBGLTexture extends Texture {
       this._video = {
         video: data,
         parameters,
-        // @ts-ignore
+        // @ts-expect-error
         lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
       };
     }
@@ -238,7 +238,7 @@ export default class WEBGLTexture extends Texture {
   update(): this {
     if (this._video) {
       const {video, parameters, lastTime} = this._video;
-      // @ts-ignore
+      // @ts-expect-error
       if (lastTime === video.currentTime || video.readyState < HTMLVideoElement.HAVE_CURRENT_DATA) {
         return;
       }
@@ -362,7 +362,6 @@ export default class WEBGLTexture extends Texture {
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
           // assert((offset === 0 || isWebGL2(gl)), 'offset supported in WebGL2 only');
-          // @ts-ignore
           gl.texImage2D(
             target,
             level,
@@ -373,7 +372,7 @@ export default class WEBGLTexture extends Texture {
             dataFormat,
             type,
             data,
-            // @ts-ignore
+            // @ts-expect-error
             offset
           );
           break;
@@ -510,7 +509,7 @@ export default class WEBGLTexture extends Texture {
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
         // const gl2 = assertWebGL2Context(this.gl);
-        // @ts-ignore last offset parameter is ignored under WebGL1
+        // @ts-expect-error last offset parameter is ignored under WebGL1
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data, offset);
       } else if (data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
@@ -746,7 +745,7 @@ export default class WEBGLTexture extends Texture {
       pname = getKeyValue(this.gl, pname);
       assert(pname);
   
-      // @ts-ignore
+      // @ts-expect-error
       const parameters = this.constructor.PARAMETERS || {};
   
       // Use parameter definitions to handle unsupported parameters
@@ -779,7 +778,7 @@ export default class WEBGLTexture extends Texture {
       const {parameters, keys} = options;
   
       // Get parameter definitions for this Resource
-      // @ts-ignore
+      // @ts-expect-error
       const PARAMETERS = this.constructor.PARAMETERS || {};
   
       const isWebgl2 = isWebGL2(this.gl);
@@ -824,7 +823,7 @@ export default class WEBGLTexture extends Texture {
       pname = getKeyValue(this.gl, pname);
       assert(pname);
   
-      // @ts-ignore
+      // @ts-expect-error
       const parameters = this.constructor.PARAMETERS || {};
   
       const parameter = parameters[pname];

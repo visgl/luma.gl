@@ -13,7 +13,7 @@ const MAP_TEST_CASES = [
       drawingBufferWidth: 10,
       drawingBufferHeight: 10,
       canvas: {}, // To emulate real context
-      // @ts-ignore
+      // @ts-expect-error
       luma: {
         canvasSizeInfo: {
           clientWidth: 10,
@@ -75,7 +75,7 @@ const MAP_TEST_CASES = [
       drawingBufferWidth: 1,
       drawingBufferHeight: 1,
       canvas: {},
-      // @ts-ignore
+      // @ts-expect-error
       luma: {
         canvasSizeInfo: {
           clientWidth: 1,
@@ -109,7 +109,7 @@ const MAP_TEST_CASES = [
       drawingBufferWidth: 10 * HIGH_DPR,
       drawingBufferHeight: 10 * HIGH_DPR,
       canvas: {},
-      // @ts-ignore
+      // @ts-expect-error
       luma: {
         canvasSizeInfo: {
           clientWidth: 10,
@@ -174,7 +174,7 @@ const MAP_TEST_CASES = [
       drawingBufferWidth: 10 * HIGH_DPR_FRACTION,
       drawingBufferHeight: 10 * HIGH_DPR_FRACTION,
       canvas: {},
-      // @ts-ignore
+      // @ts-expect-error
       luma: {
         canvasSizeInfo: {
           clientWidth: 10,
@@ -243,7 +243,7 @@ const MAP_TEST_CASES = [
       drawingBufferWidth: 10 * LOW_DPR,
       drawingBufferHeight: 10 * LOW_DPR,
       canvas: {},
-      // @ts-ignore
+      // @ts-expect-error
       luma: {
         canvasSizeInfo: {
           clientWidth: 10,
@@ -382,7 +382,7 @@ test('webgl#cssToDeviceRatio', (t) => {
 
   const glWithNoCanvas = {};
   t.equal(
-    // @ts-ignore
+    // @ts-expect-error
     cssToDeviceRatio(glWithNoCanvas),
     1,
     'cssToDeviceRatio should return 1 when there is no canvas'

@@ -111,7 +111,6 @@ export function getParameterPolyfill(gl, originalGetParameter, pname) {
   // Return mock limits (usually 0) for WebGL2 constants to ensure these
   // can be queries without error
   const limit = WEBGL_PARAMETERS[pname];
-  // @ts-ignore TODO pname parameter not declared
   const value = typeof limit === 'function' ? limit(gl, originalGetParameter, pname) : limit;
   const result = value !== undefined ? value : originalGetParameter(pname);
   return result;

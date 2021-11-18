@@ -81,9 +81,7 @@ function getDebugTableRow(vertexArray, attribute, accessor, header) {
     marker = changed ? '*' : '';
 
     value = data;
-    // @ts-ignore
     bytes = buffer.byteLength;
-    // @ts-ignore
     verts = bytes / data.BYTES_PER_ELEMENT / size;
 
     let format;

@@ -12,13 +12,13 @@ import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
  */
  export default class ProgramConfiguration {
   id: string;
-  attributeInfos = [];
-  attributeInfosByName = {};
+  attributeInfos: any[] = [];
+  attributeInfosByName: Record<string, any> = {};
   // Locations may not be contiguous the case of matrix attributes
   // so keep a separate location->attribute map.
-  attributeInfosByLocation = [];
-  varyingInfos = [];
-  varyingInfosByName = {};
+  attributeInfosByLocation: any[] = [];
+  varyingInfos: any[] = [];
+  varyingInfosByName: Record<string, any> = {};
 
   constructor(program) {
     this.id = program.id;

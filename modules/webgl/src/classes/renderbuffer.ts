@@ -54,7 +54,7 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
     if (samples !== 0 && isWebGL2(this.gl)) {
-      // @ts-ignore
+      // @ts-expect-error
       this.gl.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, format, width, height);
     } else {
       this.gl.renderbufferStorage(GL.RENDERBUFFER, format, width, height);

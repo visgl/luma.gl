@@ -40,7 +40,7 @@ test('WebGL#TransformFeedback constructor/delete', (t) => {
   }
 
   t.throws(
-    // @ts-ignore
+    // @ts-expect-error
     () => new TransformFeedback(),
     'TransformFeedback throws on missing gl context'
   );

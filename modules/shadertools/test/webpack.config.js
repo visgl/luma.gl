@@ -24,7 +24,7 @@ module.exports = {
   devtool: '#inline-source-maps',
 
   resolve: {
-    // @ts-ignore
+    // @ts-expect-error
     alias: require('../../../../../aliases')
   },
 

@@ -74,12 +74,10 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
     },
     endQuery: () => {},
     getQuery(handle, pname) {
-      // @ts-ignore
       return this.getQueryObject(handle, pname);
     },
     // The WebGL1 extension uses getQueryObject rather then getQueryParameter
     getQueryParameter(handle, pname) {
-      // @ts-ignore
       return this.getQueryObject(handle, pname);
     },
     getQueryObject: () => {}

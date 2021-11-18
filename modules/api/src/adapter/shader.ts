@@ -40,4 +40,3 @@ export default abstract class Shader extends Resource<ShaderProps> {
 
   abstract compilationInfo(): Promise<readonly CompilerMessage[]>;
 }
-

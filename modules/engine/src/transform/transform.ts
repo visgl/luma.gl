@@ -75,7 +75,6 @@ export default class Transform {
   getData(options: {packed?: boolean; varyingName?: string} = {}) {
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      // @ts-ignore
       const data = resourceTransform.getData(options);
       if (data) {
         return data;
@@ -92,7 +91,6 @@ export default class Transform {
   // Update some or all buffer/texture bindings.
   update(props: TransformProps): void {
     if ('elementCount' in props) {
-      // @ts-ignore TODO
       this.model.setVertexCount(props.elementCount);
     }
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
