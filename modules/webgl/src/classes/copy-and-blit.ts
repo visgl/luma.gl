@@ -1,3 +1,4 @@
+// @ts-nocheck
 import GL from '@luma.gl/constants';
 import Buffer from './webgl-buffer';
 import Framebuffer from './framebuffer';
@@ -9,16 +10,11 @@ import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
 import {assert} from '../utils';
 
-/**
- * Copies data from a Framebuffer or a Texture object into ArrayBuffer object.
- * App can provide targetPixelArray or have it auto allocated by this method
- *  newly allocated by this method unless provided by app.
- * @note Slow requires roundtrip to GPU
- * 
- * @param source 
- * @param options 
+// NOTE: Slow requires roundtrip to GPU
+// Copies data from a Framebuffer or a Texture object into ArrayBuffer object.
+// App can provide targetPixelArray or have it auto allocated by this method
 // @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
- */
+//  newly allocated by this method unless provided by app.
 export function readPixelsToArray(
   source: Framebuffer | Texture,
   options?: {
@@ -32,8 +28,15 @@ export function readPixelsToArray(
     sourceHeight?: number;
     sourceType?: number;
   }
-): Uint8Array | Uint16Array | Float32Array {
-  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA} = options || {};
+): Uint8Array | Uint16Array | Float32Array;
+
+// NOTE: Slow requires roundtrip to GPU
+// Copies data from a Framebuffer or a Texture object into ArrayBuffer object.
+// App can provide targetPixelArray or have it auto allocated by this method
+// @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
+//  newly allocated by this method unless provided by app.
+export function readPixelsToArray(source, options = {}) {
+  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA} = options;
   let {
     sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
     target = null,
@@ -41,7 +44,7 @@ export function readPixelsToArray(
     sourceWidth,
     sourceHeight,
     sourceType
-  } = options || {};
+  } = options;
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
@@ -75,12 +78,8 @@ export function readPixelsToArray(
   return target;
 }
 
-/**
- * Copies data from a Framebuffer or a Texture object into a Buffer object.
- * NOTE: doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
- * @param source 
- * @param options 
- */
+// NOTE: doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+// Copies data from a Framebuffer or a Texture object into a Buffer object.
 export function readPixelsToBuffer(
   source: Framebuffer | Texture,
   options?: {
@@ -94,23 +93,30 @@ export function readPixelsToBuffer(
     sourceHeight?: number;
     sourceType?: number;
   }
-): Buffer {
-  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, 
-    targetByteOffset = 0
-  } = options || {};
+): Buffer;
+
+// NOTE: doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+// Copies data from a Framebuffer or a Texture object into a Buffer object.
+export function readPixelsToBuffer(
+  source,
+  {
+    sourceX = 0,
+    sourceY = 0,
+    sourceFormat = GL.RGBA,
+    target = null, // A new Buffer object is created when not provided.
+    targetByteOffset = 0, // byte offset in buffer object
     // following parameters are auto deduced if not provided
-  let {
-    target,
     sourceWidth,
     sourceHeight,
-    sourceType,
-  } = options || {}
+    sourceType
+  }
+) {
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
-  // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
+  // Asynchronus read (PIXEL_PACK_BUFFER) is WebGL2 only feature
   const gl2 = assertWebGL2Context(framebuffer.gl);
 
   // deduce type if not available.
@@ -121,11 +127,12 @@ export function readPixelsToBuffer(
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
+    // @ts-expect-error TODO why is WebGL2 context not compatible
     target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
-  // @ts-expect-error
   target.bind({target: GL.PIXEL_PACK_BUFFER});
+  // @ts-expect-error TODO why is WebGL2 context not compatible
   withParameters(gl2, {framebuffer}, () => {
     gl2.readPixels(
       sourceX,
@@ -197,7 +204,6 @@ export function copyToImage(
 ): typeof Image {
   const dataUrl = copyToDataUrl(source, {sourceAttachment: options?.sourceAttachment || GL.COLOR_ATTACHMENT0});
   const targetImage = options?.targetImage || new Image();
-  // @ts-expect-error
   targetImage.src = dataUrl;
   // @ts-expect-error
   return targetImage;
@@ -209,7 +215,7 @@ export function copyToImage(
 // eslint-disable-next-line complexity, max-statements
 export function copyToTexture(
   source: Framebuffer | Texture,
-  target: Texture | GL,
+  target: Texture,
   options?: {
     sourceX?: number;
     sourceY?: number;
@@ -230,14 +236,14 @@ export function copyToTexture(
     // attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
     targetMipmaplevel = 0,
     targetInternalFormat = GL.RGBA
-  } = options || {};
+  } = options;
   let {
     targetX,
     targetY,
     targetZ,
     width, // defaults to target width
     height // defaults to target height
-  } = options || {};
+  } = options;
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
@@ -254,20 +260,17 @@ export function copyToTexture(
   // const prevBuffer = gl.readBuffer(attachment);
   assert(target);
   let texture = null;
-  let textureTarget: GL;
   if (target instanceof Texture) {
     texture = target;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
     texture.bind(0);
-    textureTarget = texture.target;
-  } else {
-    textureTarget = target;
+    target = texture.target;
   }
 
   if (!isSubCopy) {
     gl.copyTexImage2D(
-      textureTarget,
+      target,
       targetMipmaplevel,
       targetInternalFormat,
       sourceX,
@@ -281,7 +284,7 @@ export function copyToTexture(
       case GL.TEXTURE_2D:
       case GL.TEXTURE_CUBE_MAP:
         gl.copyTexSubImage2D(
-          textureTarget,
+          target,
           targetMipmaplevel,
           targetX,
           targetY,
@@ -295,7 +298,7 @@ export function copyToTexture(
       case GL.TEXTURE_3D:
         const gl2 = assertWebGL2Context(gl);
         gl2.copyTexSubImage3D(
-          textureTarget,
+          target,
           targetMipmaplevel,
           targetX,
           targetY,
@@ -375,6 +378,7 @@ export function blit(
 
   assert(srcFramebuffer);
   assert(dstFramebuffer);
+  // @ts-expect-error
   const {gl, handle, width, height, readBuffer} = dstFramebuffer;
   const gl2 = assertWebGL2Context(gl);
 
@@ -434,7 +438,7 @@ export function blit(
     dstFramebuffer.delete();
   }
 
-  // return dstFramebuffer;
+  return dstFramebuffer;
 }
 
 // Helper methods
