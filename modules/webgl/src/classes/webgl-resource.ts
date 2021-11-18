@@ -268,8 +268,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  /** @returns {number} */
-  _getParameter(pname, props) {
+  _getParameter(pname, props): number {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 

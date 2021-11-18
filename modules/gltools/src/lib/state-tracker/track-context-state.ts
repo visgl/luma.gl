@@ -1,7 +1,5 @@
 // Support for listening to context state changes and intercepting state queries
 // NOTE: this system does not handle buffer bindings
-/** @typedef {import('./track-context-state')} types */
-
 import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS, NON_CACHE_PARAMETERS} from './webgl-parameter-tables';
 import {setParameters, getParameters} from './unified-parameter-api';
 import {assert} from '../utils/assert';

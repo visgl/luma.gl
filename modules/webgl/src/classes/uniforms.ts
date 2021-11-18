@@ -1,5 +1,3 @@
-/** @typedef {import('./uniforms')} types */
-
 import GL from '@luma.gl/constants';
 import {log} from '@luma.gl/gltools';
 import {Matrix4} from '@math.gl/core';
