@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 import lightingShader from './lights.glsl';
 
 type LightSources = {

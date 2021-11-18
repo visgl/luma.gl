@@ -1,9 +1,18 @@
 import {Matrix4} from '@math.gl/core';
 import {log} from '@luma.gl/webgl';
-import ScenegraphNode from './scenegraph-node';
+import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
+
+export type GroupNodeProps = ScenegraphNodeProps & {
+  children?: ScenegraphNode[];
+}
 
 export default class GroupNode extends ScenegraphNode {
-  constructor(props = {}) {
+  children: ScenegraphNode[];
+
+  constructor(children: ScenegraphNode[]);
+  constructor(props?: GroupNodeProps);
+
+  constructor(props: ScenegraphNode[] | GroupNodeProps = {}) {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
     log.assert(
@@ -14,8 +23,14 @@ export default class GroupNode extends ScenegraphNode {
     this.children = children;
   }
 
+  destroy() {
+    this.children.forEach((child) => child.destroy());
+    this.removeAll();
+    super.destroy();
+  }
+
   // Unpacks arrays and nested arrays of children
-  add(...children) {
+  add(...children: ScenegraphNode[]): this {
     for (const child of children) {
       if (Array.isArray(child)) {
         this.add(...child);
@@ -26,7 +41,7 @@ export default class GroupNode extends ScenegraphNode {
     return this;
   }
 
-  remove(child) {
+  remove(child: ScenegraphNode): this {
     const children = this.children;
     const indexOf = children.indexOf(child);
     if (indexOf > -1) {
@@ -35,15 +50,9 @@ export default class GroupNode extends ScenegraphNode {
     return this;
   }
 
-  removeAll() {
+  removeAll(): this {
     this.children = [];
     return this;
-  }
-
-  delete() {
-    this.children.forEach((child) => child.delete());
-    this.removeAll();
-    super.delete();
   }
 
   traverse(visitor, {worldMatrix = new Matrix4()} = {}) {

@@ -1,14 +1,18 @@
 // TODO: Two subdirectories must not depend on each other (classes vs utils)!
+import Texture from '../classes/texture';
 import Texture2D from '../classes/texture-2d';
 import TextureCube from '../classes/texture-cube';
 import Texture3D from '../classes/texture-3d';
-import Framebuffer from '../classes/framebuffer';
+import Framebuffer, {FramebufferProps} from '../classes/framebuffer';
 import GL from '@luma.gl/constants';
 import {assert} from '../utils';
 
+
+type TextureType = Texture2D | TextureCube | Texture3D;
+
+
 // Clone a new texture object from a reference texture object.
-/** @type {import('./texture-utils').cloneTextureFrom} */
-export function cloneTextureFrom(refTexture, overrides) {
+export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides?: any): T {
   assert(
     refTexture instanceof Texture2D ||
       refTexture instanceof TextureCube ||
@@ -39,8 +43,7 @@ export function cloneTextureFrom(refTexture, overrides) {
 
 // Wraps a given texture into a framebuffer object, that can be further used
 // to read data from the texture object.
-/** @type {import('./texture-utils').toFramebuffer} */
-export function toFramebuffer(texture, opts) {
+export function toFramebuffer(texture: Texture, opts?: FramebufferProps): Framebuffer {
   const {gl, width, height, id} = texture;
   const framebuffer = new Framebuffer(
     gl,

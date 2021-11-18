@@ -1,4 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
 import {NumberArray} from '../../types';
 
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);

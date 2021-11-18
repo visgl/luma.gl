@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 import {Matrix4} from '@math.gl/core';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

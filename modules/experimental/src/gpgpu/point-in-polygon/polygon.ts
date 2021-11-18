@@ -142,7 +142,7 @@ export function normalize(polygon, positionSize: number, vertexCount?: number): 
  * @param positionSize - size of a position, 2 (xy) or 3 (xyz)
  * @returns {Array} array of indices
  */
-export function getSurfaceIndices(normalizedPolygon, positionSize: number, preproject: boolean) {
+export function getSurfaceIndices(normalizedPolygon, positionSize: number, preproject?: boolean) {
   let holeIndices = null;
 
   if (normalizedPolygon.holeIndices) {

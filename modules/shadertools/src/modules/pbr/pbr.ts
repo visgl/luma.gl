@@ -1,5 +1,3 @@
-/** @typedef {import('../../types').ShaderModule} ShaderModule */
-
 import {lights} from '../lights/lights';
 
 import vs from './pbr-vertex.glsl';

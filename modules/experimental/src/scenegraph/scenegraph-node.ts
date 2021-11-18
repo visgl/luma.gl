@@ -1,53 +1,70 @@
 import {Vector3, Matrix4} from '@math.gl/core';
 import {assert, uid} from '@luma.gl/webgl';
 
+export type ScenegraphNodeProps = {
+  id?: string;
+  matrix?;
+  display?;
+  position?;
+  rotation?;
+  scale?;
+  update?: boolean
+};
+
 export default class ScenegraphNode {
-  constructor(props = {}) {
+  readonly id: string;
+  matrix: Matrix4 = new Matrix4();
+
+  display = true; // whether to display the object at all
+  position = new Vector3();
+  rotation = new Vector3();
+  scale = new Vector3(1, 1, 1);
+  userData = {};
+
+  props = {};
+
+  constructor(props: ScenegraphNodeProps = {}) {
     const {id} = props;
 
     this.id = id || uid(this.constructor.name);
 
-    this.display = true; // whether to display the object at all
-    this.position = new Vector3();
-    this.rotation = new Vector3();
-    this.scale = new Vector3(1, 1, 1);
-    this.matrix = new Matrix4();
-    this.userData = {};
-
-    this.props = {};
     this._setScenegraphNodeProps(props);
   }
 
-  delete() {}
+  destroy(): void {}
 
-  setProps(props) {
+  /** @deprecated use .destroy() */
+  delete(): void {
+    this.destroy();
+  }
+  setProps(props: ScenegraphNodeProps): this {
     this._setScenegraphNodeProps(props);
     return this;
   }
 
-  toString() {
+  toString(): string {
     return `{type: ScenegraphNode, id: ${this.id})}`;
   }
 
-  setPosition(position) {
+  setPosition(position: any): this {
     assert(position.length === 3, 'setPosition requires vector argument');
     this.position = position;
     return this;
   }
 
-  setRotation(rotation) {
+  setRotation(rotation: any): this {
     assert(rotation.length === 3, 'setRotation requires vector argument');
     this.rotation = rotation;
     return this;
   }
 
-  setScale(scale) {
+  setScale(scale: any): this {
     assert(scale.length === 3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
   }
 
-  setMatrix(matrix, copyMatrix = true) {
+  setMatrix(matrix: any, copyMatrix: boolean = true): void {
     if (copyMatrix) {
       this.matrix.copy(matrix);
     } else {
@@ -55,7 +72,13 @@ export default class ScenegraphNode {
     }
   }
 
-  setMatrixComponents({position, rotation, scale, update = true}) {
+  setMatrixComponents(components: {
+    position?: any;
+    rotation?: any;
+    scale?: any;
+    update?: boolean;
+  }): this {
+    const {position, rotation, scale, update = true} = components;
     if (position) {
       this.setPosition(position);
     }
@@ -71,7 +94,7 @@ export default class ScenegraphNode {
     return this;
   }
 
-  updateMatrix() {
+  updateMatrix(): this {
     const pos = this.position;
     const rot = this.rotation;
     const scale = this.scale;
@@ -83,7 +106,7 @@ export default class ScenegraphNode {
     return this;
   }
 
-  update(options = {}) {
+  update(options: {position?: any; rotation?: any; scale?: any} = {}): this {
     const {position, rotation, scale} = options;
     if (position) {
       this.setPosition(position);
@@ -98,7 +121,17 @@ export default class ScenegraphNode {
     return this;
   }
 
-  getCoordinateUniforms(viewMatrix, modelMatrix) {
+  getCoordinateUniforms(
+    viewMatrix: any,
+    modelMatrix?: any
+  ): {
+    viewMatrix: any;
+    modelMatrix: any;
+    objectMatrix: any;
+    worldMatrix: any;
+    worldInverseMatrix: any;
+    worldInverseTransposeMatrix: any;
+  } {
     // TODO - solve multiple class problem
     // assert(viewMatrix instanceof Matrix4);
     assert(viewMatrix);
@@ -140,7 +173,7 @@ export default class ScenegraphNode {
   }
   */
 
-  _setScenegraphNodeProps(props) {
+  _setScenegraphNodeProps(props: ScenegraphNodeProps): void {
     if ('display' in props) {
       this.display = props.display;
     }
