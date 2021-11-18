@@ -46,7 +46,7 @@ export default class DebugContext {
     );
   }
 
-  /* eslint-disable complexity */
+  // eslint-disable-next-line complexity
   _draw({drawMode, indices, positions, colors}) {
     this.positions = positions.map(this._clipspaceToScreen, this);
     this.colors = colors.map(this._rgbaToColor, this);
@@ -105,8 +105,7 @@ export default class DebugContext {
         throw new Error('unknown draw mode');
     }
   }
-  /* eslint-enable complexity */
-
+  
   _createCanvas(container) {
     const canvas = document.createElement('canvas');
     container.append(canvas);

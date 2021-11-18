@@ -119,7 +119,7 @@ export default class WEBGLTexture extends Texture {
     return `Texture(${this.id},${this.width}x${this.height})`;
   }
 
-  /* eslint-disable max-len, max-statements */
+  // eslint-disable-next-line max-statements
   initialize(props: TextureProps = {}): this {
     let data = props.data;
 
@@ -308,7 +308,7 @@ export default class WEBGLTexture extends Texture {
    * @param {GLint} border - must be 0.
    * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
    */
-  /* eslint-disable max-len, max-statements, complexity */
+  // eslint-disable-next-line max-statements, complexity
   setImageData(options) {
     this.trackDeallocatedMemory('Texture');
 
@@ -424,8 +424,7 @@ export default class WEBGLTexture extends Texture {
 
     return this;
   }
-  /* eslint-enable max-len, max-statements, complexity */
-
+  
   /**
    * Redefines an area of an existing texture
    * Note: does not allocate storage
@@ -531,8 +530,7 @@ export default class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.target, null);
   }
-  /* eslint-enable max-len, max-statements, complexity */
-
+  
   /**
    * Defines a two-dimensional texture image or cube-map texture image with
    * pixels from the current framebuffer (rather than from client memory).

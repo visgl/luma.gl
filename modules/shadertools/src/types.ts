@@ -19,8 +19,7 @@ export type NumberArray = number[] | TypedArray;
 
 export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
 
-// 
-
+/** A shader module definition object */
 export type ShaderModule = {
   name: string;
   fs?: string;

@@ -1,27 +1,27 @@
-import {VERTEX_SHADER, FRAGMENT_SHADER} from './constants';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
-import transpileShader from './transpile-shader';
+import transpileShader from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 const SHADER_TYPE = {
-  [VERTEX_SHADER]: 'vertex',
-  [FRAGMENT_SHADER]: 'fragment'
+  'fs': 'fragment',
+  'vs': 'vertex'
 };
 
-// Precision prologue to inject before functions are injected in shader
-// TODO - extract any existing prologue in the fragment source and move it up...
+/**
+ * Precision prologue to inject before functions are injected in shader
+ * TODO - extract any existing prologue in the fragment source and move it up...
+ */
 const FRAGMENT_SHADER_PROLOGUE = `\
 precision highp float;
 
 `;
 
-interface DefineMap {
-  [define: string]: boolean | number
-}
+/** Define map */
+type Defines = Record<string, string | number | boolean>;
 
 export type HookFunction = string | { hook: string; header: string; footer: string; } | {
   vs: string;
@@ -34,7 +34,7 @@ export type AssembleShaderOptions = {
   fs: string;
   type?: any;
   modules?: any[];
-  defines?: object;
+  defines?: Defines;
   hookFunctions?: HookFunction[] | [string, string];
   inject?: object;
   transpileToGLSL100?: boolean;
@@ -58,19 +58,36 @@ export function assembleShaders(
   const modules = resolveModules(options.modules || []);
   return {
     gl,
-    // @ts-expect-error
-    vs: assembleShader(gl, Object.assign({}, options, {source: vs, type: VERTEX_SHADER, modules})),
-    // @ts-expect-error
-    fs: assembleShader(gl, Object.assign({}, options, {source: fs, type: FRAGMENT_SHADER, modules})),
+    vs: assembleShader(gl, {...options, source: vs, type: 'vs', modules}),
+    fs: assembleShader(gl, {...options, source: fs, type: 'fs', modules}),
     getUniforms: assembleGetUniforms(modules)
   };
 }
 
-// Pulls together complete source code for either a vertex or a fragment shader
-// adding prologues, requested module chunks, and any final injections.
+/**
+ * Pulls together complete source code for either a vertex or a fragment shader
+ * adding prologues, requested module chunks, and any final injections.
+ * @param gl 
+ * @param options 
+ * @returns 
+ */
 function assembleShader(
   gl,
-  {
+  options: {
+    id?: string,
+    source: string,
+    type: 'vs' | 'fs',
+    modules: any[],
+    defines?: Defines,
+    hookFunctions?: any[],
+    inject?: Record<string, any>,
+    transpileToGLSL100?: boolean,
+    prologue?: boolean,
+    log?
+  }
+) {
+
+  const {
     id,
     source,
     type,
@@ -81,18 +98,18 @@ function assembleShader(
     transpileToGLSL100 = false,
     prologue = true,
     log
-  }
-) {
+  } = options;
+
   assert(typeof source === 'string', 'shader source must be a string');
 
-  const isVertex = type === VERTEX_SHADER;
+  const isVertex = type === 'vs';
 
   const sourceLines = source.split('\n');
   let glslVersion = 100;
   let versionLine = '';
   let coreSource = source;
   // Extract any version directive string from source.
-  // TODO : keep all pre-processor statements at the begining of the shader.
+  // TODO : keep all pre-processor statements at the beginning of the shader.
   if (sourceLines[0].indexOf('#version ') === 0) {
     glslVersion = 300; // TODO - regexp that matches actual version number
     versionLine = sourceLines[0];
@@ -198,10 +215,14 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   return assembledSource;
 }
 
-// Returns a combined `getUniforms` covering the options for all the modules,
-// the created function will pass on options to the inidividual `getUniforms`
-// function of each shader module and combine the results into one object that
-// can be passed to setUniforms.
+/**
+ * Returns a combined `getUniforms` covering the options for all the modules,
+ * the created function will pass on options to the inidividual `getUniforms`
+ * function of each shader module and combine the results into one object that
+ * can be passed to setUniforms.
+ * @param modules 
+ * @returns 
+ */
 function assembleGetUniforms(modules) {
   return function getUniforms(opts) {
     const uniforms = {};
@@ -221,10 +242,13 @@ function getShaderType({type}) {
 `;
 }
 
-// Generate "glslify-compatible" SHADER_NAME defines
-// These are understood by the GLSL error parsing function
-// If id is provided and no SHADER_NAME constant is present in source, create one
-function getShaderName({id, source, type}) {
+/**
+ * Generate "glslify-compatible" SHADER_NAME defines
+ * These are understood by the GLSL error parsing function
+ * If id is provided and no SHADER_NAME constant is present in source, create one
+ */
+function getShaderName(options: {id, source: string, type: 'vs' | 'fs'}): string {
+  const {id, source, type} = options;
   const injectShaderName = id && typeof id === 'string' && source.indexOf('SHADER_NAME') === -1;
   return injectShaderName
     ? `
@@ -234,8 +258,8 @@ function getShaderName({id, source, type}) {
     : '';
 }
 
-// Generates application defines from an object
-function getApplicationDefines(defines = {}) {
+/** Generates application defines from an object of key value pairs */
+function getApplicationDefines(defines: Defines = {}): string {
   let count = 0;
   let sourceText = '';
   for (const define in defines) {
@@ -255,7 +279,7 @@ function getApplicationDefines(defines = {}) {
   return sourceText;
 }
 
-function getHookFunctions(hookFunctions, hookInjections) {
+function getHookFunctions(hookFunctions, hookInjections): string {
   let result = '';
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
@@ -279,7 +303,7 @@ function getHookFunctions(hookFunctions, hookInjections) {
   return result;
 }
 
-function normalizeHookFunctions(hookFunctions) {
+function normalizeHookFunctions(hookFunctions): {vs: Record<string, any>, fs: Record<string, any>} {
   const result = {
     vs: {},
     fs: {}

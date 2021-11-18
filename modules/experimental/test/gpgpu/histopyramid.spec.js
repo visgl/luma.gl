@@ -221,7 +221,6 @@ test('histopyramid#histoPyramid_getInput', (t) => {
 
   let sourceData = new Float32Array(WIDTH * HEIGHT).map((_, index) => index % WIDTH);
 
-  /* eslint-disable no-multi-spaces */
   sourceData = new Float32Array([
     0, 1, 10, 11, 20, 21, 30, 31, 2, 3, 12, 13, 22, 23, 32, 33,
 
@@ -231,7 +230,6 @@ test('histopyramid#histoPyramid_getInput', (t) => {
 
     120, 121, 130, 131, 140, 141, 150, 151, 122, 123, 132, 133, 142, 143, 152, 153
   ]);
-  /* eslint-enable no-multi-spaces */
 
   const expectedArray = new Array((WIDTH * HEIGHT) / 4).fill(0);
   const TEST_CASES = [

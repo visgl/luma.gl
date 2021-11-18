@@ -1,13 +1,14 @@
 import test from 'tape-promise/tape';
-import ShaderModule, {normalizeShaderModule} from '@luma.gl/shadertools/lib/shader-module';
+import {ShaderModuleInstance} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
+import {normalizeShaderModule} from '@luma.gl/shadertools/lib/shader-module/normalize-shader-module';
 
-test('ShaderModule', (t) => {
-  let shaderModule = new ShaderModule({name: 'empty-shader-module'});
+test('ShaderModuleInstance', (t) => {
+  let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module'});
 
   t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
   t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
 
-  shaderModule = new ShaderModule({
+  shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
     vs: `
 uniform mat4 uProjectMatrix;
@@ -26,8 +27,8 @@ varying float vClipped;
   t.end();
 });
 
-test('ShaderModule#checkDeprecations', (t) => {
-  const shaderModule = new ShaderModule({
+test('ShaderModuleInstance#checkDeprecations', (t) => {
+  const shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
     deprecations: [
       {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
@@ -82,6 +83,7 @@ test('normalizeShaderModule', (t) => {
   };
   normalizeShaderModule(module);
 
+  // @ts-expect-error
   t.deepEqual(module.getUniforms(), {
     center: [0.5, 0.5],
     strength: 0.3,
@@ -91,6 +93,7 @@ test('normalizeShaderModule', (t) => {
   });
 
   t.deepEqual(
+    // @ts-expect-error
     module.getUniforms({
       center: new Float32Array([0, 0]),
       sampler: {},
@@ -105,8 +108,11 @@ test('normalizeShaderModule', (t) => {
     }
   );
 
+  // @ts-expect-error
   t.throws(() => module.getUniforms({strength: -1}), 'invalid uniform');
+  // @ts-expect-error
   t.throws(() => module.getUniforms({strength: 2}), 'invalid uniform');
+  // @ts-expect-error
   t.throws(() => module.getUniforms({center: 0.5}), 'invalid uniform');
 
   t.end();

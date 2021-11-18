@@ -25,11 +25,10 @@ export function isPowerOfTwo(n: number): boolean {
 /** Returns true if given object is empty, false otherwise. */
 export function isObjectEmpty(obj: object): boolean {
   let isEmpty = true;
-  /* eslint-disable no-unused-vars  */
+  // eslint-disable-next-line no-unused-vars
   for (const key in obj) {
     isEmpty = false;
     break;
   }
-  /* eslint-enable no-unused-vars  */
   return isEmpty;
 }

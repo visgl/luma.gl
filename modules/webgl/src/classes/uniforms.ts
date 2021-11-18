@@ -54,7 +54,6 @@ type Uniforms = {
 const UNIFORM_SETTERS = {
   // WEBGL1
 
-  /* eslint-disable max-len */
   [GL.FLOAT]: getArraySetter.bind(null, 'uniform1fv', toFloatArray, 1, setVectorUniform),
   [GL.FLOAT_VEC2]: getArraySetter.bind(null, 'uniform2fv', toFloatArray, 2, setVectorUniform),
   [GL.FLOAT_VEC3]: getArraySetter.bind(null, 'uniform3fv', toFloatArray, 3, setVectorUniform),
@@ -169,7 +168,6 @@ const UNIFORM_SETTERS = {
   [GL.UNSIGNED_INT_SAMPLER_3D]: getSamplerSetter,
   [GL.UNSIGNED_INT_SAMPLER_CUBE]: getSamplerSetter,
   [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: getSamplerSetter
-  /* eslint-enable max-len */
 };
 
 // Pre-allocated typed arrays for temporary conversion
@@ -233,8 +231,7 @@ export function parseUniformName(name: string): {name: string; isArray: boolean,
       // Add space to source
       source = source ? `${source} ` : '';
       // Value could be unprintable so write the object on console
-      console.error(`${source} Bad uniform ${uniformName}`, value); // eslint-disable-line
-      /* eslint-enable no-console */
+      console.error(`${source} Bad uniform ${uniformName}`, value); // eslint-disable-line no-console
       throw new Error(`${source} Bad uniform ${uniformName}`);
     }
   }

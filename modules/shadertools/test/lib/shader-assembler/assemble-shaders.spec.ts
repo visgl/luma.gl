@@ -501,21 +501,8 @@ test('assembleShaders#injection order', (t) => {
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
-  let vShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vShader, assembleResult.vs);
-  gl.compileShader(vShader);
-
-  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fShader, assembleResult.fs);
-  gl.compileShader(fShader);
-
-  let program = gl.createProgram();
-  gl.attachShader(program, vShader);
-  gl.attachShader(program, fShader);
-  gl.linkProgram(program);
-
   t.ok(
-    gl.getProgramParameter(program, gl.LINK_STATUS),
+    compileAndLinkShaders(t, gl, assembleResult),
     'Hook functions have access to injected variables.'
   );
 
@@ -527,21 +514,8 @@ test('assembleShaders#injection order', (t) => {
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
-  vShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vShader, assembleResult.vs);
-  gl.compileShader(vShader);
-
-  fShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fShader, assembleResult.fs);
-  gl.compileShader(fShader);
-
-  program = gl.createProgram();
-  gl.attachShader(program, vShader);
-  gl.attachShader(program, fShader);
-  gl.linkProgram(program);
-
   t.ok(
-    gl.getProgramParameter(program, gl.LINK_STATUS),
+    compileAndLinkShaders(t, gl, assembleResult),
     'Hook functions have access to injected variables through modules.'
   );
 
@@ -563,24 +537,7 @@ test('assembleShaders#transpilation', (t) => {
   t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
   t.ok(!assembleResult.fs.match(/\bout vec4\b/), '"out" keyword removed');
 
-  let vShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vShader, assembleResult.vs);
-  gl.compileShader(vShader);
-
-  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fShader, assembleResult.fs);
-  gl.compileShader(fShader);
-
-  let program = gl.createProgram();
-  gl.attachShader(program, vShader);
-  gl.attachShader(program, fShader);
-  gl.linkProgram(program);
-
-  t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
-
-  gl.deleteShader(vShader);
-  gl.deleteShader(fShader);
-  gl.deleteProgram(program);
+  t.ok(compileAndLinkShaders(t, gl, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
   assembleResult = assembleShaders(gl, {
     vs: VS_GLSL_300_2,
@@ -589,24 +546,7 @@ test('assembleShaders#transpilation', (t) => {
     transpileToGLSL100: true
   });
 
-  vShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vShader, assembleResult.vs);
-  gl.compileShader(vShader);
-
-  fShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fShader, assembleResult.fs);
-  gl.compileShader(fShader);
-
-  program = gl.createProgram();
-  gl.attachShader(program, vShader);
-  gl.attachShader(program, fShader);
-  gl.linkProgram(program);
-
-  t.ok(gl.getProgramParameter(program, gl.LINK_STATUS), 'Transpile 300 to 100 valid program');
-
-  gl.deleteShader(vShader);
-  gl.deleteShader(fShader);
-  gl.deleteProgram(program);
+  t.ok(compileAndLinkShaders(t, gl, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
   /* TODO - broken test, common_space varying broken
   if (gl.getExtension('OES_standard_derivatives')) {
@@ -616,46 +556,11 @@ test('assembleShaders#transpilation', (t) => {
       transpileToGLSL100: true
     });
 
-    vShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vShader, assembleResult.vs);
-    gl.compileShader(vShader);
-    let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
-    if (!compileStatus) {
-      const infoLog = gl.getShaderInfoLog(vShader);
-      t.comment(`VS INFOLOG: ${infoLog}`);
-    }
-
-    fShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fShader, assembleResult.fs);
-    gl.compileShader(fShader);
-    compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
-    if (!compileStatus) {
-      const infoLog = gl.getShaderInfoLog(fShader);
-      t.comment(`FS INFOLOG: ${infoLog}`);
-    }
-
-    program = gl.createProgram();
-    gl.attachShader(program, vShader);
-    gl.attachShader(program, fShader);
-    gl.linkProgram(program);
-    const linkStatus = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (!linkStatus) {
-      const infoLog = gl.getProgramInfoLog(program);
-      t.comment(`LINKLOG ${infoLog}`);
-    }
-    gl.validateProgram(program);
-    const validateStatus = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
-    if (!linkStatus) {
-      const infoLog = gl.getProgramInfoLog(program);
-      t.comment(`VALIDATELOG ${infoLog}`);
-    }
-
     t.ok(
-      gl.getProgramParameter(program, gl.LINK_STATUS),
+      compileAndLinkShaders(t, gl, assembleResult),
       'Deck shaders transpile 300 to 100 valid program'
     );
 
-    process.exit(1);
   }
   */
 
@@ -666,22 +571,9 @@ test('assembleShaders#transpilation', (t) => {
     transpileToGLSL100: true
   });
 
-  vShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vShader, assembleResult.vs);
-  gl.compileShader(vShader);
-
-  fShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fShader, assembleResult.fs);
-  gl.compileShader(fShader);
-
-  program = gl.createProgram();
-  gl.attachShader(program, vShader);
-  gl.attachShader(program, fShader);
-  gl.linkProgram(program);
-
   t.ok(
-    gl.getProgramParameter(program, gl.LINK_STATUS),
-    'GLTF shaders transpile 300 to 100 valid program'
+    compileAndLinkShaders(t, gl, assembleResult),
+    'assemble GLSL300 + PBR assemble to 100'
   );
 
   if (fixture.gl2) {
@@ -694,24 +586,52 @@ test('assembleShaders#transpilation', (t) => {
       transpileToGLSL100: false
     });
 
-    vShader = gl2.createShader(gl2.VERTEX_SHADER);
-    gl2.shaderSource(vShader, assembleResult.vs);
-    gl2.compileShader(vShader);
-
-    fShader = gl2.createShader(gl2.FRAGMENT_SHADER);
-    gl2.shaderSource(fShader, assembleResult.fs);
-    gl2.compileShader(fShader);
-
-    program = gl2.createProgram();
-    gl2.attachShader(program, vShader);
-    gl2.attachShader(program, fShader);
-    gl2.linkProgram(program);
-
     t.ok(
-      gl2.getProgramParameter(program, gl2.LINK_STATUS),
-      'GLTF shaders transpile 300 to 300 valid program'
+      compileAndLinkShaders(t, gl2, assembleResult),
+      'assemble GLSL300 + PBR assemble to 100, WebGL2'
     );
   }
 
   t.end();
 });
+
+// HELPERS
+
+function compileAndLinkShaders(t, gl, assembleResult) {
+  let vShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vShader, assembleResult.vs);
+  gl.compileShader(vShader);
+  let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
+  if (!compileStatus) {
+    const infoLog = gl.getShaderInfoLog(vShader);
+    t.comment(`VS COMPILATION LOG: ${infoLog}`);
+    return false;
+  }
+
+  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fShader, assembleResult.fs);
+  gl.compileShader(fShader);
+  compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
+  if (!compileStatus) {
+    const infoLog = gl.getShaderInfoLog(fShader);
+    t.comment(`FS COMPLIATION LOG: ${infoLog}`);
+    return false;
+  }
+
+  let program = gl.createProgram();
+  gl.attachShader(program, vShader);
+  gl.attachShader(program, fShader);
+  gl.linkProgram(program);
+
+  const linkStatus = gl.getProgramParameter(program, gl.LINK_STATUS);
+  if (!linkStatus) {
+    const infoLog = gl.getProgramInfoLog(program);
+    t.comment(`LINKLOG ${infoLog}`);
+  }
+
+  gl.deleteShader(vShader);
+  gl.deleteShader(fShader);
+  gl.deleteProgram(program);
+
+  return linkStatus;
+}

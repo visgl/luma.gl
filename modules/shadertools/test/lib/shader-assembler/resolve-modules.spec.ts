@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {resolveModules, TEST_EXPORTS} from '@luma.gl/shadertools/lib/resolve-modules';
+import {resolveModules, TEST_EXPORTS} from '@luma.gl/shadertools/lib/shader-assembler/resolve-modules';
 
 const {getDependencyGraph} = TEST_EXPORTS;
 
@@ -37,10 +37,12 @@ test('ShaderModules#getShaderDependencies', (t) => {
   );
 
   t.throws(
+    // @ts-expect-error
     () => resolveModules(['project64']),
     /deprecated.+project64/,
     'Useful message for deprecated usage'
   );
+  // @ts-expect-error
   t.throws(() => resolveModules([{}]), /no name/, 'Alert about invalid modules');
 
   t.end();
