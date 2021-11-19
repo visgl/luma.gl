@@ -24,13 +24,19 @@ export {default as Accessor} from './classes/accessor';
 // WebGL1 classes
 export type {BufferProps} from '@luma.gl/api';
 export {default as Buffer} from './classes/webgl-buffer';
-export {default as Texture2D, Texture2DProps} from './classes/texture-2d';
-export {default as TextureCube, TextureCubeProps} from './classes/texture-cube';
+export type {Texture2DProps} from './classes/texture-2d';
+export {default as Texture2D} from './classes/texture-2d';
+export type {TextureCubeProps} from './classes/texture-cube';
+export {default as TextureCube} from './classes/texture-cube';
 
-export {Shader, VertexShader, FragmentShader, ShaderProps} from './classes/webgl-shader';
-export {default as Program, ProgramProps} from './classes/program';
-export {default as Framebuffer, FramebufferProps} from './classes/framebuffer';
-export {default as Renderbuffer, RenderbufferProps} from './classes/renderbuffer';
+export type {ShaderProps} from './classes/webgl-shader';
+export {Shader, VertexShader, FragmentShader} from './classes/webgl-shader';
+export type {ProgramProps} from './classes/program';
+export {default as Program} from './classes/program';
+export type {FramebufferProps} from './classes/framebuffer';
+export {default as Framebuffer} from './classes/framebuffer';
+export type {RenderbufferProps} from './classes/renderbuffer';
+export {default as Renderbuffer} from './classes/renderbuffer';
 
 export {clear, clearBuffer} from './classes/clear';
 
@@ -45,11 +51,16 @@ export {
 } from './classes/copy-and-blit';
 
 // WebGL2 classes & Extensions
-export {default as Query, QueryProps} from './classes/query';
-export {default as Texture3D, Texture3DProps} from './classes/texture-3d';
-export {default as TransformFeedback, TransformFeedbackProps} from './classes/transform-feedback';
-export {default as VertexArrayObject, VertexArrayObjectProps} from './classes/vertex-array-object';
-export {default as VertexArray, VertexArrayProps} from './classes/vertex-array';
+export type {QueryProps} from './classes/query';
+export {default as Query} from './classes/query';
+export type {Texture3DProps} from './classes/texture-3d';
+export {default as Texture3D} from './classes/texture-3d';
+export type {TransformFeedbackProps} from './classes/transform-feedback';
+export {default as TransformFeedback} from './classes/transform-feedback';
+export type {VertexArrayObjectProps} from './classes/vertex-array-object';
+export {default as VertexArrayObject} from './classes/vertex-array-object';
+export type {VertexArrayProps} from './classes/vertex-array';
+export {default as VertexArray} from './classes/vertex-array';
 export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 // experimental WebGL exports

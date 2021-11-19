@@ -12,7 +12,7 @@ import {
 } from './texture-formats';
 import {uid, isPowerOfTwo, assert} from '../utils';
 
-export {TextureProps};
+export type {TextureProps};
 
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
