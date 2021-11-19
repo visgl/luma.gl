@@ -10,19 +10,20 @@ export {default as Transform} from './transform/transform';
 export {default as Geometry} from './geometry/geometry';
 
 // Primitives
-export {ConeGeometry, ConeGeometryProps} from './geometries/cone-geometry';
-export {CubeGeometry, CubeGeometryProps} from './geometries/cube-geometry';
-export {CylinderGeometry, CylinderGeometryProps} from './geometries/cylinder-geometry';
-export {
-  IcoSphereGeometry,
-  IcoSphereGeometryProps
-} from './geometries/ico-sphere-geometry';
-export {PlaneGeometry, PlaneGeometryProps} from './geometries/plane-geometry';
-export {SphereGeometry, SphereGeometryProps} from './geometries/sphere-geometry';
-export {
-  TruncatedConeGeometry,
-  TruncatedConeGeometryProps
-} from './geometries/truncated-cone-geometry';
+export type {ConeGeometryProps} from './geometries/cone-geometry';
+export {ConeGeometry} from './geometries/cone-geometry';
+export type {CubeGeometryProps} from './geometries/cube-geometry';
+export {CubeGeometry} from './geometries/cube-geometry';
+export type {CylinderGeometryProps} from './geometries/cylinder-geometry';
+export {CylinderGeometry} from './geometries/cylinder-geometry';
+export type {IcoSphereGeometryProps} from './geometries/ico-sphere-geometry';
+export {IcoSphereGeometry} from './geometries/ico-sphere-geometry';
+export type {PlaneGeometryProps} from './geometries/plane-geometry';
+export {PlaneGeometry} from './geometries/plane-geometry';
+export type {SphereGeometryProps} from './geometries/sphere-geometry';
+export {SphereGeometry} from './geometries/sphere-geometry';
+export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
+export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 // Animation
 export {Timeline} from './animation/timeline';

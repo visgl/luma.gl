@@ -1,6 +1,7 @@
 // MAIN API ACCESS POINTS
 export {default as luma} from './lib/luma';
-export {default as Device, DeviceLimits, DeviceInfo} from './adapter/device';
+export type {DeviceLimits, DeviceInfo} from './adapter/device';
+export {default as Device} from './adapter/device';
 
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resource';
