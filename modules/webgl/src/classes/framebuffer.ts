@@ -6,7 +6,7 @@ import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
 import {copyToDataUrl} from './copy-and-blit';
 
-import {getLumaContextData} from '../context/luma-context-data';
+import {getLumaContextData} from '../device/luma-context-data';
 import {getFeatures} from '@luma.gl/gltools';
 import {getKey} from '../webgl-utils';
 import {assert} from '../utils';

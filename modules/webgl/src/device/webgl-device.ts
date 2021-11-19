@@ -2,9 +2,8 @@
 import {WebGLDevice as WebGLDeviceBase} from '@luma.gl/gltools';
 import type {BufferProps, ShaderProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
-import {WEBGLShader, } from '../classes/webgl-shader';
+import {WEBGLShader} from '../classes/webgl-shader';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
-
 
 export default class WebGLDevice extends WebGLDeviceBase {
   createBuffer(props: BufferProps): WEBGLBuffer {
