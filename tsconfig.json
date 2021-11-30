@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "jsx": "react",
+    // "typeRoots": [ "./node_modules/@webgpu/types" ],
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",
@@ -34,7 +35,7 @@
       "@luma.gl/test-utils/test/*": ["modules/test-utils/test/*"],
       "@luma.gl/webgl/*": ["modules/webgl/src/*"],
       "@luma.gl/webgl/test/*": ["modules/webgl/test/*"],
-      "@luma.gl/webgpu/*": ["modules/webpu/src/*"],
+      "@luma.gl/webgpu/*": ["modules/webgpu/src/*"],
       "@luma.gl/webgpu/test/*": ["modules/webgpu/test/*"],
       "test/*": ["test/*"]
     }
@@ -42,12 +43,18 @@
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
+  "include": [
+    "modules/**/*",
+    "node_modules/@webgpu/types"
+  ],
   "exclude":[
+    "modules/**/wip",
     "modules/**/dist/**/*.js",
     "website",
     "test/apps",
     "test/**/*",
     "coverage",
+    "modules/dist/**/*",
     "node_modules"
   ]
 }

@@ -81,11 +81,12 @@ export default class Model {
       }
       
       this.pipeline = this.device.createRenderPipeline({
-        vertexShader: this.vs,
-        fragmentShader: this.fs,
+        vs: this.vs,
+        fs: this.fs,
         topology: props.topology,
         parameters: props.parameters,
         // Geometry in the vertex shader!
+        // @ts-expect-error
         attributeLayouts: props.attributeLayouts
       });
     }
@@ -135,6 +136,7 @@ export default class Model {
   /** Set the bindings */
   setBindings(bindings: Binding[]): void {
     // Set up the bindings
+    // @ts-expect-error
     this._bindGroup = makeBindGroup(this.device.handle, this.pipeline._getBindGroupLayout(), bindings);
   }
 

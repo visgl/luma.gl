@@ -134,7 +134,6 @@ export default class VertexArray {
   getDrawParams(): DrawParams {
     // Auto deduced draw parameters
     this.drawParams = this.drawParams || this._updateDrawParams();
-
     return this.drawParams;
   }
 

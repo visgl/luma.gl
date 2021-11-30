@@ -13,7 +13,6 @@ export type Accessor = {
 
   // 
   stride?: number;
-  stepMode?: 'vertex' | 'instance';
 
   /** @deprecated - Use accessor.stepMode */
   divisor?: number;
@@ -26,13 +25,4 @@ export type Accessor = {
   normalized?: boolean;
   /** @deprecated - Infer from format */
   integer?: boolean;
-};
-
-/**
- * List of attribute descriptors for one interleaved buffer
- */
-export type InterleavedAccessors = {
-  stride?: number;
-  stepMode?: 'vertex' | 'instance';
-  attributes: Accessor[];
 };

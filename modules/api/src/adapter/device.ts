@@ -1,15 +1,18 @@
 // luma.gl, MIT license
 import StatsManager, {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
+import {uid} from '../utils/utils';
 import {TextureFormat} from './types/formats';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
 import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
+import type {default as ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {default as Sampler, SamplerProps} from './resources/sampler';
 import type {default as Shader, ShaderProps} from './resources/shader';
 import type {default as Texture, TextureProps, TextureData} from './resources/texture';
 import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
-import {uid} from '..';
+import type {default as RenderPass, RenderPassProps} from './resources/render-pass';
+import type {default as ComputePass, ComputePassProps} from './resources/compute-pass';
 
 /** Device properties */
 export type DeviceProps = {
@@ -274,18 +277,26 @@ export default abstract class Device {
     return this._createTexture(props);
   }
 
-  /** Create a render pipeline (aka program) */
-  abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
-
   /** Create a sampler */
   abstract createSampler(props: SamplerProps): Sampler;
+
+  abstract createFramebuffer(props: FramebufferProps): Framebuffer;
 
   /** Create a shader */
   abstract createShader(props: ShaderProps): Shader;
 
-  createFramebuffer(props: FramebufferProps): Framebuffer {
-    throw new Error('Not implemented');
-  }
+  /** Create a render pipeline (aka program) */
+  abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
+
+  /** Create a compute pipeline (aka program) */
+  // abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
+
+
+  /** Create a RenderPass */
+  // abstract beginRenderPass(props: RenderPassProps): RenderPass;
+
+  /** Create a ComputePass */
+  // abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
   // Implementation
 

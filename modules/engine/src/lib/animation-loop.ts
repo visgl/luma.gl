@@ -67,10 +67,10 @@ export type AnimationProps = {
   // Experimental
   _mousePosition?: [number, number] // [offsetX, offsetY],
 
-  /** @deprecated Will be removed, create your own Framebuffer */
-  framebuffer: Framebuffer
   /** @deprecated Use .device */
   gl: WebGLRenderingContext
+  /** @deprecated Will be removed */
+  framebuffer: Framebuffer
 
   /** @deprecated Use .timeline */
   _timeline: Timeline
@@ -497,10 +497,13 @@ export default class AnimationLoop {
       // Experimental
       _mousePosition: null, // Event props
 
-      // Deprecated
+      /** @deprecated */
       framebuffer: this.framebuffer,
+      /** @deprecated */
       _timeline: this.timeline,
+      /** @deprecated */
       _loop: this,
+      /** @deprecated */
       _animationLoop: this
     };
   }
@@ -617,7 +620,7 @@ export default class AnimationLoop {
     }
   }
 
-  /** 
+  /**
    * Resize the render buffer of the canvas to match canvas client size
    * Optionally multiplying with devicePixel ratio
    */
@@ -694,5 +697,5 @@ export default class AnimationLoop {
         height: this.gl.drawingBufferHeight
       });
     }
-  }  
+  }
 }

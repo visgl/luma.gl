@@ -224,7 +224,7 @@ function testFormatDeduction(t, glContext) {
       width: 1,
       mipmaps: Number(format) !== GL.RGB32F
     };
-    if (Texture2D.isSupported(glContext, {format})) {
+    if (Texture2D.isSupported(glContext, {format: Number(format)})) {
       const texture = new Texture2D(glContext, options);
       const msg = `Texture2D({format: ${getKey(GL, format)}}) created`;
       t.equals(texture.format, Number(format), msg);
@@ -235,7 +235,7 @@ function testFormatDeduction(t, glContext) {
   }
 }
 
-test('WebGL#Texture2D format deduction', (t) => {
+test.only('WebGL#Texture2D format deduction', (t) => {
   const {gl, gl2} = fixture;
   testFormatDeduction(t, gl);
   if (gl2) {

@@ -49,6 +49,11 @@ export type ProgramDrawOptions = {
   samplers?: any;
 };
 
+// export default class Program extends Resource {
+//   readonly gl: WebGLRenderingContext;
+//   readonly gl2: WebGL2RenderingContext | null;
+//   readonly handle: WebGLProgram;
+
 export default class Program extends WebGLResource<ProgramProps> {
   get [Symbol.toStringTag](): string { return 'Program'; }
 
@@ -442,3 +447,8 @@ export default class Program extends WebGLResource<ProgramProps> {
     this.gl2.uniformBlockBinding(this.handle, blockIndex, blockBinding);
   }
 }
+
+// function setBindings(gl2: WebGL2RenderingContext, program: WebGLProgram, bindings: Binding[]): void {
+//   // Set up indirection
+//   this.gl2.uniformBlockBinding(this.handle, blockIndex, blockBinding);
+// }

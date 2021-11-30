@@ -1,1 +1,1 @@
-import './webgl/helpers/parse-shader-compiler-log.spec';
+import './webgpu/adapter/webgpu-adapter.spec';

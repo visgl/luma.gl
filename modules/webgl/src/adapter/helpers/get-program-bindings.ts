@@ -1,8 +1,8 @@
 import {ProgramBindings, AttributeBinding, UniformBinding, UniformBlockBinding, VaryingBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../context/context/webgl-checks';
-import Accessor from '../classes/accessor';
-import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
+import {isWebGL2} from '../../context/context/webgl-checks';
+import Accessor from '../../classes/accessor'; // TODO - should not depend on classes
+import {decomposeCompositeGLType} from '../../webgl-utils/attribute-utils';
 
 /**
  * Extract metadata describing binding information for a program's shaders
@@ -42,14 +42,15 @@ function readAttributeBindings(gl: WebGL2RenderingContext, program: WebGLProgram
       const {type, components} = decomposeCompositeGLType(compositeType);
       const accessor = {type, size: size * components};
       inferProperties(location, name, accessor);
-    
+
       const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
       // @ts-expect-error
       attributes.push(attributeInfo);
     }
   }
 
-  attributes.sort((a, b) => a.location - b.location);
+  // @ts-expect-error
+  attributes.sort((a, b) => (a.location ?? a.field[0].location) - (b.location ?? b.field[0].location));
   return attributes;
 }
 
@@ -246,3 +247,45 @@ function inferProperties(accessor, location, name) {
     accessor.divisor = 1;
   }
 }
+
+/**
+ * TODO - verify this is a copy of above and delete
+ * import type {TextureFormat} from '@luma.gl/api';
+* Extract info about all "active" uniform blocks
+ * ("Active" just means that unused (inactive) blocks may have been optimized away during linking)
+ *
+ function getUniformBlockBindings(gl, program): Binding[] {
+  if (!isWebGL2(gl)) {
+    return;
+  }
+  const bindings: Binding[] = [];
+  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+  for (let blockIndex = 0; blockIndex < count; blockIndex++) {
+    const vertex = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
+    const fragment = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
+    const visibility = (vertex) + (fragment);
+    const binding: BufferBinding = {
+      location: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_BINDING),
+      // name: gl.getActiveUniformBlockName(program, blockIndex),
+      type: 'uniform',
+      visibility,
+      minBindingSize: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE),
+      // uniformCount: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
+      // uniformIndices: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
+    }
+    bindings.push(binding);
+  }
+  return bindings;
+}
+
+function setBindings(gl2: WebGL2RenderingContext, program: WebGLProgram, bindings: Binding[][]): void {
+  for (const bindGroup of bindings) {
+    for (const binding of bindGroup) {
+
+    }
+  }
+
+  // Set up indirection table
+  // this.gl2.uniformBlockBinding(this.handle, blockIndex, blockBinding);
+}
+ */

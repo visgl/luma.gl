@@ -109,7 +109,7 @@ export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
 
 // HELPERS - EXPERIMENTAL
-export {getProgramBindings} from './helpers/get-program-bindings';
+export {getProgramBindings} from './adapter/helpers/get-program-bindings';
 export {loadWebGLDeveloperTools} from './debug/webgl-developer-tools';
 
 // DEPRECATED

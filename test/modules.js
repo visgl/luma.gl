@@ -7,20 +7,24 @@ import '@luma.gl/debug';
 // await loadWebGLDeveloperTools(); - Doesn't work in Node.js
 
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies
-import '../modules/shadertools/test';
-
-import '../modules/api/test';
+// import '../modules/shadertools/test';
 
 // WEBGL-DEPENDENT TESTS
 
 // Generic webgl helper modules
-import '../modules/constants/test';
-import '../modules/debug/test';
-import '../modules/webgl/test';
 
 // DEVICE INDEPENDENT TESTS
+import '../modules/api/test';
+import '../modules/constants/test';
 
-// luma.gl core module: Test webgl-dependent code now
+// WEBGL ADAPTER TESTS
+import '../modules/webgl/test';
+import '../modules/debug/test';
+
+// WEBGPU ADAPTER TESTS
+import '../modules/webgpu/test';
+
+// CROSS-DEVICE TESTS
 import '../modules/engine/test/';
 import '../modules/experimental/test/';
 
