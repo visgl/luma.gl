@@ -4,7 +4,7 @@ import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
 import {Shader as ShaderAPI, ShaderProps} from '@luma.gl/api';
 import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
-import {uid, assert} from '../utils';
+import {uid, assert} from '../utils/index';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 

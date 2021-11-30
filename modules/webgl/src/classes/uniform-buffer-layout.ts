@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 

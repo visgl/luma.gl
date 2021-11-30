@@ -7,9 +7,9 @@
     "Georgios Karnas <georgios@uber.com>"
   ],
   "scripts": {
-    "start": "webpack-dev-server --progress --hot --open -d",
-    "start-local": "webpack-dev-server --env.local --progress --hot --open -d",
-    "open-vr": "adb reverse tcp:8080 tcp:8080 && adb shell am start -a android.intent.action.VIEW -d http://localhost:8080/"
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
   },
   "dependencies": {
     "@loaders.gl/core": "^3.0.6",
@@ -23,8 +23,7 @@
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {
-    "html-webpack-plugin": "^3.2.0",
-    "webpack": "^4.3.0",
-    "webpack-dev-server": "^3.1.1"
+    "typescript": "^4.3.2",
+    "vite": "^2.6.4"
   }
 }

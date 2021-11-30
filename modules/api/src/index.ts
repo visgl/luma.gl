@@ -18,5 +18,5 @@ export {default as StatsManager, lumaStats} from './utils/stats-manager';
 export {default as assert} from './utils/assert';
 
 // API TYPES
-export {Accessor, BufferAccessors} from './adapter/accessor';
+export type {Accessor, BufferAccessors} from './adapter/accessor';
 export {cast} from './adapter/types';

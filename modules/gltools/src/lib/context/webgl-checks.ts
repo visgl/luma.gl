@@ -1,3 +1,4 @@
+// luma.gl, MIT license
 import {assert} from '../utils/assert';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';

@@ -5,8 +5,8 @@ import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
-import {assert} from '../utils';
-import {getLumaContextData} from '../context/luma-context-data';
+import {assert} from '../utils/assert';
+import {getLumaContextData} from '../device/luma-context-data';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
@@ -24,7 +24,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 export default class VertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   private static MAX_ATTRIBUTES: number;
 
-  static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean {
+  static isSupported(gl: WebGLRenderingContext | WebGL2RenderingContext, options?: VertexArrayObjectProps): boolean {
     if (options?.constantAttributeZero) {
       return isWebGL2(gl) || getBrowser() === 'Chrome';
     }

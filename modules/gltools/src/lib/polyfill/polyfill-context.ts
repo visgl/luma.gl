@@ -11,65 +11,48 @@ import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
 import {assert} from '../utils/assert';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
+import {getContextState} from '../context/context-state';
 
 /**
  * Registers extensions, polyfills or mock functions for extensions in the polyfills list
  */
- export function polyfillContext(gl: WebGLRenderingContext): WebGL2RenderingContext {
-  // @ts-expect-error
-  gl.luma = gl.luma || {};
-  // @ts-expect-error
-  const {luma} = gl;
+export function polyfillContext(gl: WebGLRenderingContext): WebGL2RenderingContext {
+  const contextState = getContextState(gl);
 
-  if (!luma.polyfilled) {
+  if (!contextState._polyfilled) {
     polyfillVertexArrayObject(gl);
     initializeExtensions(gl);
     installPolyfills(gl, WEBGL2_CONTEXT_POLYFILLS);
-    installOverrides(gl, {target: luma, target2: gl});
-    luma.polyfilled = true;
+    installOverrides(gl, {target: contextState, target2: gl});
+    contextState._polyfilled = true;
   }
 
-  // TODO - only supporting a few members
+  // Note - only supports a subset of WebGL2
   return gl as WebGL2RenderingContext;
 }
 
-// TODO - is this still required?
-const global_ = typeof global !== 'undefined' ? global : window;
-// @ts-expect-error
-global_.polyfillContext = polyfillContext;
-
-function initializeExtensions(gl) {
-  gl.luma.extensions = {};
+function initializeExtensions(gl: WebGLRenderingContext): void {
+  const contextState = getContextState(gl);
   // `getSupportedExtensions` can return null when context is lost.
   const EXTENSIONS = gl.getSupportedExtensions() || [];
   for (const extension of EXTENSIONS) {
-    gl.luma[extension] = gl.getExtension(extension);
+    contextState._extensions[extension] = gl.getExtension(extension);
+    // TODO - this looks like a mistake?
+    contextState[extension] = gl.getExtension(extension);
   }
 }
 
-// Install simple overrides (mostly get* functions)
-function installOverrides(gl, {target, target2}) {
-  Object.keys(WEBGL2_CONTEXT_OVERRIDES).forEach((key) => {
-    if (typeof WEBGL2_CONTEXT_OVERRIDES[key] === 'function') {
-      // install an override, if no implementation was detected
-      const originalFunc = gl[key] ? gl[key].bind(gl) : () => {};
-      const polyfill = WEBGL2_CONTEXT_OVERRIDES[key].bind(null, gl, originalFunc);
-      target[key] = polyfill;
-      target2[key] = polyfill;
-    }
-  });
-}
-
-function installPolyfills(gl, polyfills) {
+function installPolyfills(gl: WebGLRenderingContext, polyfills): void {
+  const contextState = getContextState(gl);
   for (const extension of Object.getOwnPropertyNames(polyfills)) {
     if (extension !== 'overrides') {
-      polyfillExtension(gl, {extension, target: gl.luma, target2: gl});
+      polyfillExtension(gl, {extension, target: contextState, target2: gl});
     }
   }
 }
 
-// Polyfills a single WebGL extension into the `target` object
-function polyfillExtension(gl, {extension, target, target2}) {
+/** Polyfills a single WebGL extension into the `target` object */
+function polyfillExtension(gl: WebGLRenderingContext, {extension, target, target2}): void {
   const defaults = WEBGL2_CONTEXT_POLYFILLS[extension];
   assert(defaults);
 
@@ -87,7 +70,7 @@ function polyfillExtension(gl, {extension, target, target2}) {
     } else if (typeof gl[key] === 'function') {
       // WebGL2 implementation is already
     } else if (ext && typeof ext[extKey] === 'function') {
-      // pick extension implemenentation,if available
+      // pick extension implementation,if available
       polyfill = (...args) => ext[extKey](...args);
     } else if (typeof defaults[key] === 'function') {
       // pick the mock implementation, if no implementation was detected
@@ -99,4 +82,17 @@ function polyfillExtension(gl, {extension, target, target2}) {
       target2[key] = polyfill;
     }
   }
+}
+
+/** Install simple overrides (mostly get* functions) */
+function installOverrides(gl, {target, target2}) {
+  Object.keys(WEBGL2_CONTEXT_OVERRIDES).forEach((key) => {
+    if (typeof WEBGL2_CONTEXT_OVERRIDES[key] === 'function') {
+      // install an override, if no implementation was detected
+      const originalFunc = gl[key] ? gl[key].bind(gl) : () => {};
+      const polyfill = WEBGL2_CONTEXT_OVERRIDES[key].bind(null, gl, originalFunc);
+      target[key] = polyfill;
+      target2[key] = polyfill;
+    }
+  });
 }

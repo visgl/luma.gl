@@ -3,7 +3,7 @@ import GL from '@luma.gl/constants';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import {isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel} from './renderbuffer-formats';
 import {isWebGL2} from '@luma.gl/gltools';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 export type RenderbufferProps = ResourceProps & {
   format: number;

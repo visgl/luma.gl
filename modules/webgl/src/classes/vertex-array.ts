@@ -5,7 +5,7 @@ import Buffer from './webgl-buffer';
 import Program from './program'; 
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
-import {assert, stubRemovedMethods} from '../utils';
+import {assert} from '../utils/assert';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';

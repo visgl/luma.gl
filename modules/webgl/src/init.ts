@@ -1,6 +1,7 @@
 import {log} from '@luma.gl/gltools';
 import {isBrowser} from '@probe.gl/env';
-import {lumaStats} from '@luma.gl/api';
+import {luma, lumaStats} from '@luma.gl/api';
+import WebGLDevice from './device/webgl-device';
 
 // Version detection using babel plugin
 // @ts-expect-error
@@ -16,6 +17,8 @@ if (globalThis.luma && globalThis.luma.VERSION !== VERSION) {
 }
 
 if (!globalThis.luma) {
+  luma.registerDevices([WebGLDevice]);
+
   if (isBrowser()) {
     log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }

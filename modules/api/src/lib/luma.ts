@@ -1,6 +1,7 @@
 import type Device from '../adapter/device';
+import type {DeviceProps} from '../adapter/device';
 
-const deviceList = new Set();
+const deviceList = new Set<Device>();
 
 /**
  * Entry point to the luma.gl GPU abstraction
@@ -19,13 +20,12 @@ export default class luma {
     return Array.from(deviceList).map(Device => Device.name || 'device');
   }
 
-  static createDevice(props): Device {
-    for (const deviceClass of deviceList) {
+  static createDevice(props: DeviceProps): Device {
+    for (const DeviceConstructor of deviceList) {
       const isSelected =  true; // !name || (name ===)
-      // @ts-expect-error
-      if (isSelected && deviceClass?.isSupported()) {
+      if (isSelected) { // } && DeviceConstructor?.isSupported?.()) {
         // @ts-expect-error
-        return deviceClass;
+        return new DeviceConstructor(props);
       }
     }
 

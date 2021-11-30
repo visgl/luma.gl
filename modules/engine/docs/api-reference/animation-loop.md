@@ -157,7 +157,6 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 | `tick`            | `Number`                                                                            | Counter that updates for every frame rendered (monotonic).                         |
 | `framebuffer`     | `FrameBuffer`                                                                       | Availabel if `createFrameBuffer: true` was passed to the constructor.              |
 | `_mousePosition`  | `[x, y]` or `null`                                                                  | (**experimental**) Current mouse position over the canvas.                         |
-| `_offScreen`      | `Boolean`                                                                           | (**experimental**) If the animation loop is rendering to an OffscreenCanvas.       |
 | `_timeline`       | `Trimeline`                                                                         | (**experimental**) `Timeline` object tracking the animation timeline and channels. |
 | ...               | Any fields in the object that was returned by the `onInitialize` method.            |
 

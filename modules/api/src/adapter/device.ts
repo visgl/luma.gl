@@ -44,13 +44,28 @@ export type DeviceLimits = {
   readonly maxComputeWorkgroupsPerDimension?: number;
 };
 
+export type DeviceProps = {};
+
 /**
  * WebGPU Device/WebGL context abstraction
  */
 export default class Device {
   readonly statsManager: StatsManager = lumaStats;
 
-  createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
+  createBuffer(props: BufferProps): Buffer;
+  createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer;
+  
+  createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer { 
+    if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
+      return this._createBuffer({data: props});
+    }
+    return this._createBuffer(props);
+  }
   createTexture(props: TextureProps): Texture  { throw new Error('not implemented'); }
   createShader(props: ShaderProps): Shader  { throw new Error('not implemented'); }
+
+  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
+  commit(): void {}
+
+  protected _createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
 }

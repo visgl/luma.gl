@@ -1,0 +1,19 @@
+{
+  "name": "luma.gl-examples-shader-modules-low",
+  "version": "8.6.0-alpha.1",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/engine": "8.6.0-alpha.1",
+    "@luma.gl/gltools": "8.6.0-alpha.1",
+    "@luma.gl/shadertools": "8.6.0-alpha.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.3.2",
+    "vite": "^2.6.4"
+  }
+}

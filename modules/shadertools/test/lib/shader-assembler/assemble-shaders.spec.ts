@@ -1,11 +1,10 @@
-import {createTestContext} from '@luma.gl/test-utils';
+import test from 'tape-promise/tape';
+import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
 
-import test from 'tape-promise/tape';
-
 const fixture = {
-  gl1: createTestContext({webgl2: false, webgl1: true}),
-  gl2: createTestContext({webgl2: true, webgl1: false})
+  gl1: webgl1TestDevice.gl,
+  gl2: webgl2TestDevice.isWebGL2 && webgl2TestDevice.gl2
 };
 
 const VS_GLSL_300 = `\

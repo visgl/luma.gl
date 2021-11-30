@@ -1,7 +1,7 @@
 import Buffer from '../classes/webgl-buffer';
-import {getKey} from '../webgl-utils';
+import {getKey} from '../webgl-utils/constants-to-keys';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';
-import {formatValue} from '../utils';
+import {formatValue} from '../utils/format-value';
 
 // Creates object suitable as input for console.table
 export function getDebugTableForVertexArray(options?: {vertexArray: any; header?: string}): {} {

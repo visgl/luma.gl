@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL} from '@luma.gl/gltools';
 import {ProgramProps} from '@luma.gl/webgl';
@@ -31,9 +32,22 @@ const NOOP = () => {};
 const DRAW_PARAMS = {};
 
 export type ModelProps = ProgramProps & {
-  id?: string
+  id?: string;
+
+  // program props
+  // vs,
+  // fs,
+  // varyings,
+  // bufferMode,
+
+  program?: Program;
+  modules?: any[];
+  defines?: Record<string, number | boolean>;
+  inject?: Record<string, any>;
+  transpileToGLSL100?: boolean;
+
   moduleSettings?: object; // UniformsOptions
-  attributes?: object,
+  attributes?: object;
   uniforms?: object; // Uniforms
   geometry?: object; // Geometry
   vertexCount?: number
@@ -102,8 +116,10 @@ interface TransformOpts extends DrawOpts {
 */
 
 export default class Model {
-  readonly id: string;
+  readonly device: Device;
   readonly gl: WebGLRenderingContext;
+
+  readonly id: string;
   readonly animated: boolean = false;
   programManager: ProgramManager;
   vertexCount: number;
@@ -136,9 +152,13 @@ export default class Model {
   // TODO - just to unbreak deck.gl 7.0-beta, remove as soon as updated
   geometry = {};
 
+  constructor(device: Device, props?: ModelProps);
+  /* @deprecated */
+  constructor(gl: WebGLRenderingContext, props?: ModelProps);
   constructor(gl, props: ModelProps = {}) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
+    gl = gl.gl || gl;
     assert(isWebGL(gl));
     this.id = id;
     this.gl = gl;
@@ -146,7 +166,7 @@ export default class Model {
     this.initialize(props);
   }
 
-  initialize(props) {
+  initialize(props: ModelProps) {
     this.props = {};
 
     this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.gl);
@@ -226,7 +246,7 @@ export default class Model {
     this._setModelProps(props);
   }
 
-  delete() {
+  destroy(): void {
     // delete all attributes created by this model
     // TODO - should buffer deletes be handled by vertex array?
     for (const key in this._attributes) {
@@ -243,6 +263,11 @@ export default class Model {
     this.vertexArray.delete();
 
     this._deleteGeometryBuffers();
+  }
+
+  /** @deprecated Use .destroy() */
+  delete(): void {
+    this.destroy();
   }
 
   // GETTERS

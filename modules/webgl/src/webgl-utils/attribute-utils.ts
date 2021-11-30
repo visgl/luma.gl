@@ -1,4 +1,4 @@
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 
 const GL_BYTE = 0x1400;
 const GL_UNSIGNED_BYTE = 0x1401;

@@ -1,5 +1,6 @@
+import {Device} from '@luma.gl/api';
 import {assertWebGL2Context, withParameters} from '@luma.gl/gltools';
-import {assert} from '../utils';
+import {assert} from '../utils/assert';
 import Framebuffer from './framebuffer';
 
 // Should collapse during minification
@@ -17,9 +18,11 @@ const ERR_ARGUMENTS = 'clear: bad arguments';
 
 /** Optionally clears depth, color and stencil buffers */
 export function clear(
-  gl: WebGLRenderingContext,
+  device: Device | WebGLRenderingContext,
   options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}
 ): void {
+  // @ts-expect-error Extract context
+  const gl = device.gl || device;
   const {framebuffer = null, color = null, depth = null, stencil = null} = options || {};
   const parameters: any = {};
 
@@ -60,9 +63,11 @@ export function clear(
 
 /** WebGL2 - clear a specific drawing buffer */
 export function clearBuffer(
-  gl: any,
+  device: Device | WebGLRenderingContext,
   options?: {framebuffer?: Framebuffer; buffer?: any; drawBuffer?: any; value?: any}
 ) {
+  // @ts-expect-error Extract context
+  const gl = device.gl || device;
   assertWebGL2Context(gl);
 
   const {framebuffer = null, buffer = GL_COLOR, drawBuffer = 0, value = [0, 0, 0, 0]} = options || {};

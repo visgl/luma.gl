@@ -13,10 +13,6 @@ export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request
 // WebGL Functions
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
 export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
-export {getContextInfo, getGLContextInfo, getContextLimits} from './features/limits';
-export {FEATURES} from './features/webgl-features-table';
-export {hasFeature, hasFeatures, getFeatures} from './features/features';
-export {default as canCompileGLGSExtension} from './features/check-glsl-extension';
 
 // WebGL Helper Classes
 export {default as Accessor} from './classes/accessor';
@@ -77,6 +73,14 @@ export {parseUniformName, getUniformSetter} from './classes/uniforms';
 export {getDebugTableForUniforms} from './debug/debug-uniforms';
 export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
+
+// DEPRECATED
+export {
+  getContextInfo, getGLContextInfo, getContextLimits,
+  FEATURES,
+  getFeatures,
+  canCompileGLGSExtension
+} from '@luma.gl/gltools';
 
 // REMOVED in v8.6
 // getShaderInfo,

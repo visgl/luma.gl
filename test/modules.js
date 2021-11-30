@@ -14,9 +14,7 @@ import '@luma.gl/debug';
 // Generic webgl helper modules
 import '../modules/constants/test';
 import '../modules/gltools/test';
-import '../modules/debug/test/';
-
-// Main webgl classes
+import '../modules/debug/test';
 import '../modules/webgl/test';
 
 // DEVICE INDEPENDENT TESTS
