@@ -563,7 +563,7 @@ export default class AnimationLoop {
 
   /** Either uses supplied or existing context, or calls provided callback to create one */
   _createDevice(props: DeviceProps) {
-    const deviceProps = {...props, ...this.props.glOptions};
+    const deviceProps = {...this.props, ...props, ...this.props.glOptions};
 
     // TODO - support this.onCreateContext
     // Create the WebGL context if necessary

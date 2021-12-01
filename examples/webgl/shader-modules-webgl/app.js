@@ -1,4 +1,3 @@
-import 'core-js';
 import {assembleShaders} from '@luma.gl/shadertools';
 import {MiniAnimationLoop} from '../../utils';
 

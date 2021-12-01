@@ -22,10 +22,10 @@ export function createTestDevice(props: WebGLDeviceProps = {}): WebGLDevice | nu
     props = {...CONTEXT_DEFAULTS, ...props, gl};
     return new WebGLDevice(props);
   } catch (error) {
-    console.error(error);
+    console.error(error.message);
     return null;
   }
 }
 
 export const webgl1TestDevice = createTestDevice({webgl1: true, webgl2: false});
-export const webgl2TestDevice = createTestDevice({webgl1: true, webgl2: true});
+export const webgl2TestDevice = createTestDevice({webgl1: false, webgl2: true});

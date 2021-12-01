@@ -136,7 +136,6 @@ export default class WebGLDevice extends Device implements ContextState {
       return device;
     }
 
-
     // Create an instrument context
     this.gl = (this.props.gl || this._createContext(props)) as WebGLRenderingContext;
     this.gl2 = this.gl as WebGL2RenderingContext;

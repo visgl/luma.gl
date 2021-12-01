@@ -215,25 +215,25 @@ test('WebGLState#intercept gl calls', (t) => {
   t.end();
 });
 
-test('WebGLState#not cached parameters', (t) => {
+test.only('WebGLState#not cached parameters', (t) => {
   const {gl} = fixture;
 
   resetParameters(gl);
 
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), undefined, 'no bound texture');
 
   const tex = new Texture2D(gl);
   tex.bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 
   gl.activeTexture(gl.TEXTURE1);
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture1');
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), undefined, 'no binding for texture1');
 
   gl.activeTexture(gl.TEXTURE0);
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture at texture0');
 
   tex.unbind();
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
+  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), undefined, 'no binding for texture0');
 
   tex.delete();
   t.end();

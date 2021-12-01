@@ -35,7 +35,7 @@ function makeBabelRule() {
     // Compile source using babel
     test: /(\.js|\.ts|\.tsx)$/,
     loader: 'babel-loader',
-    include: [/modules\/.*\/src/, /modules\/.*\/test/],
+    include: [/modules\/.*\/src/, /modules\/.*\/test/, /examples/, /test/],
     exclude: [/node_modules/],
     options: {
       presets: [

@@ -64,7 +64,11 @@ export type ModelProps = ProgramProps & {
   indexType?;
   indexOffset?: number;
   vertexArrayInstanced?: boolean;
+
+  /** @deprecated Use isInstanced */
+  instanced?: boolean
 };
+
 
 export type ModelDrawOptions = {
   moduleSettings?;

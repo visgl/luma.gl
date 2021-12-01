@@ -30,6 +30,7 @@ test('WebGLDevice#isWebGL1', (t) => {
     t.end();
     return;
   }
+
   t.ok(isWebGL2(webgl2Device.gl), 'isWebGL should return true WebGL2 device');
   t.ok(isWebGL2(webgl2DebugDevice.gl2), 'isWebGL should return true on WebGL2 debug device');
 
@@ -40,11 +41,12 @@ test('WebGLDevice#isWebGL2', (t) => {
   t.notOk(isWebGL2(webgl1Device.gl), 'isWebGL2 should return false WebGL device');
   t.notOk(isWebGL2(webgl1DebugDevice.gl2), 'isWebGL2 should return false on WebGL debug device');
 
-  if (!webgl2Device.gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
+
   t.ok(isWebGL2(webgl2Device.gl2), 'isWebGL2 should return true WebGL2 device');
   t.ok(isWebGL2(webgl2DebugDevice.gl2), 'isWebGL2 should return true on WebGL2 debug device');
 

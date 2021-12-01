@@ -11,5 +11,5 @@ export {getResourceCounts, getLeakedResources} from './resource-tracker.js';
 /** @type {{gl: WebGLRenderingContext, gl2: WebGL2RenderingContext}} */
 export const fixture = {
   gl: webgl1TestDevice.gl,
-  gl2: webgl2TestDevice.isWebGL2 ? webgl2TestDevice.gl2 : null
+  gl2: webgl2TestDevice?.gl2
 };

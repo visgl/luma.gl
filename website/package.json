@@ -29,5 +29,8 @@
     "gatsby-theme-ocular": "^1.2.4",
     "gatsby-plugin-no-sourcemaps": "^2.1.2",
     "gh-pages": "^2.2.0"
+  },
+  "resolutions": {
+    "remark-mdx": "1.6.22"
   }
 }

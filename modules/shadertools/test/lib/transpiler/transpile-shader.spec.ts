@@ -11,7 +11,7 @@ const FRAGMENT = false;
 
 const fixture = {
   gl1: webgl1TestDevice.gl,
-  gl2: webgl2TestDevice.isWebGL2 && webgl2TestDevice.gl2
+  gl2: webgl2TestDevice?.gl2
 };
 
 test('transpileShader#import', (t) => {

@@ -599,7 +599,7 @@ export default class WEBGLTexture extends Texture {
     if (data instanceof Buffer) {
       return {data: data.handle, dataType: 'buffer'};
     }
-    if (data instanceof WebGLBuffer) {
+    if (typeof WebGLBuffer !== 'undefined' && data instanceof WebGLBuffer) {
       return {data, dataType: 'buffer'};
     }
     // Assume data is a browser supported object (ImageData, Canvas, ...)

@@ -1,4 +1,3 @@
-import 'core-js';
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 import {GLContextOptions, instrumentGLContext} from '@luma.gl/gltools';
