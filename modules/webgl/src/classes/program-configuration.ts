@@ -1,7 +1,7 @@
 // Contains metadata describing attribute configurations for a program's shaders
 // Much of this is automatically extracted from shaders after program linking
 import Accessor from './accessor';
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2} from '../context/context/webgl-checks';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 
 /**

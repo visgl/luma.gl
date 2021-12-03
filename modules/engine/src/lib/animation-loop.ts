@@ -1,30 +1,37 @@
 import {luma, Device} from '@luma.gl/api';
-import type {GLContextOptions} from '@luma.gl/gltools'
-type DeviceProps = GLContextOptions;
-
+import {
+  lumaStats,
+  // TODO - remove dependency on framebuffer (bundle size impact)
+  log,
+  assert
+} from '@luma.gl/api';
+import type {WebGLDeviceProps} from '@luma.gl/webgl'
+import {WebGLDevice} from '@luma.gl/webgl';
 import {
   isWebGL,
   // createGLContext,
   // instrumentGLContext,
-  resizeGLContext,
+  // resizeGLContext,
   resetParameters
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl';
+
 
 import {
   requestAnimationFrame,
   cancelAnimationFrame,
   Query,
-  lumaStats,
   // TODO - remove dependency on framebuffer (bundle size impact)
-  Framebuffer,
-  log,
-  assert
+  Framebuffer
 } from '@luma.gl/webgl';
 
 import { Stats, Stat } from '@probe.gl/stats'
+import {isBrowser} from '@probe.gl/env';
+
 import { Timeline } from '../animation/timeline'
 
-import {isBrowser} from '@probe.gl/env';
+
+type DeviceProps = WebGLDeviceProps;
+type ContextProps = WebGLDeviceProps;
 
 const isPage = isBrowser() && typeof document !== 'undefined';
 
@@ -33,7 +40,7 @@ let statIdCounter = 0;
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Device;
-  onCreateContext?: (opts: GLContextOptions) => WebGLRenderingContext; // TODO: signature from createGLContext
+  onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => {};
   onRender?: (animationProps: AnimationProps) => void;
@@ -43,7 +50,7 @@ export type AnimationLoopProps = {
   stats?: Stats;
 
   device?: Device;
-  glOptions?: GLContextOptions // createGLContext options
+  glOptions?: ContextProps; // createGLContext options
   debug?: boolean;
 
   // view parameters
@@ -360,7 +367,7 @@ export default class AnimationLoop {
   // DEPRECATED/REMOVED METHODS
 
   /** @deprecated Use .onCreateDevice() */
-  onCreateContext(props: GLContextOptions) {
+  onCreateContext(props: ContextProps) {
     return this.props.onCreateContext(props);
   }
 
@@ -634,7 +641,7 @@ export default class AnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      resizeGLContext(this.gl, {useDevicePixels: this.props.useDevicePixels});
+      (this.device as WebGLDevice).resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

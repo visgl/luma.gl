@@ -1,9 +1,9 @@
 /* eslint-disable no-inline-comments */
+import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import {isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel} from './renderbuffer-formats';
-import {isWebGL2} from '@luma.gl/gltools';
-import {assert} from '../utils/assert';
+import {isWebGL2} from '../context/context/webgl-checks';
 
 export type RenderbufferProps = ResourceProps & {
   format: number;

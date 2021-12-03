@@ -52,6 +52,7 @@
     "modules/webgl/src/classes/vertex-array.js",
 
     "modules/**/dist",
+    "modules-wip",
 
     "website",
     "test/apps",

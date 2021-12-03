@@ -1,11 +1,10 @@
-import GL from '@luma.gl/constants';
-import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
+import {log, assert, checkProps} from '@luma.gl/api';
 import {Buffer, BufferProps} from '@luma.gl/api';
+import GL from '@luma.gl/constants';
+import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
-import {assert} from '../utils/assert';
-import {checkProps} from '../utils/check-props';
 
 const DEBUG_DATA_LENGTH = 10;
 

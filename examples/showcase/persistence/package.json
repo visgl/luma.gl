@@ -11,7 +11,6 @@
     "@luma.gl/core": "8.6.0-alpha.1",
     "@luma.gl/engine": "8.6.0-alpha.1",
     "@luma.gl/experimental": "8.6.0-alpha.1",
-    "@luma.gl/gltools": "8.6.0-alpha.1",
     "@luma.gl/webgl": "8.6.0-alpha.1",
     "@math.gl/core": "^3.5.0"
   },

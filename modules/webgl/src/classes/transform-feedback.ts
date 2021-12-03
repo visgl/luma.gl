@@ -1,8 +1,8 @@
+import {log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, log} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
-import {isObjectEmpty} from '../utils/utils';
 
 export type TransformFeedbackProps = ResourceProps & {
   [key: string]: any;

@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl';
-import {instrumentGLContext} from '@luma.gl/gltools';
 import {Buffer} from '@luma.gl/webgl';
+// import {instrumentGLContext} from '@luma.gl/webgl';
 import {Model} from '@luma.gl/engine';
 import {MiniAnimationLoop} from '../../utils';
 
@@ -25,7 +25,7 @@ class CustomLayer {
   }
 
   onAdd(m, gl) {
-    instrumentGLContext(gl);
+    // instrumentGLContext(gl);
     this.map = m;
 
     const vertexSource = `

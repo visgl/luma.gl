@@ -1,15 +1,13 @@
+import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getWebGL2Context, assertWebGL2Context, log} from '@luma.gl/gltools';
+import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
+import WebGLDevice from '../device/webgl-device';
+import {getKey} from '../webgl-utils/constants-to-keys';
 import Resource, {ResourceProps} from './webgl-resource';
 import Texture2D from './texture-2d';
 import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
 import {copyToDataUrl} from './copy-and-blit';
-
-import {getLumaContextData} from '../device/luma-context-data';
-import {getFeatures} from '@luma.gl/gltools';
-import {getKey} from '../webgl-utils/constants-to-keys';
-import {assert} from '../utils/assert';
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
@@ -281,16 +279,16 @@ export default class Framebuffer extends ImmutableFramebuffer {
    * Creates a Framebuffer object wrapper for the default WebGL framebuffer (target === null)
    */
   static getDefaultFramebuffer(gl: WebGLRenderingContext): Framebuffer {
-    const lumaContextData = getLumaContextData(gl);
-    lumaContextData.defaultFramebuffer =
-      lumaContextData.defaultFramebuffer ||
+    const webglDevice = WebGLDevice.fromContext(gl);
+    webglDevice.defaultFramebuffer =
+      webglDevice.defaultFramebuffer ||
       new Framebuffer(gl, {
         id: 'default-framebuffer',
         handle: null,
         attachments: {}
       });
     // TODO - can we query for and get a handle to the GL.FRONT renderbuffer?
-    return lumaContextData.defaultFramebuffer;
+    return webglDevice.defaultFramebuffer;
   }
 
   get MAX_COLOR_ATTACHMENTS(): number {
@@ -682,22 +680,23 @@ export default class Framebuffer extends ImmutableFramebuffer {
    */
   // eslint-disable-next-line complexity
   _getAttachmentParameterFallback(pname) {
-    const caps = getFeatures(this.gl);
+    const webglDevice = WebGLDevice.fromContext(this.gl);
+    const features = webglDevice.features;
 
     switch (pname) {
       case GL.FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER: // GLint
-        return !caps.WEBGL2 ? 0 : null;
+        return !features.has('webgl2') ? 0 : null;
       case GL.FRAMEBUFFER_ATTACHMENT_RED_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_GREEN_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_BLUE_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE: // GLint
       case GL.FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE: // GLint
-        return !caps.WEBGL2 ? 8 : null;
+        return !features.has('webgl2') ? 8 : null;
       case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
-        return !caps.WEBGL2 ? GL.UNSIGNED_INT : null;
+        return !features.has('webgl2') ? GL.UNSIGNED_INT : null;
       case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-        return !caps.WEBGL2 && !caps.EXT_sRGB ? GL.LINEAR : null;
+        return !features.has('webgl2') && !features.has('webgl-color-encoding-srgb') ? GL.LINEAR : null;
       default:
         return null;
     }

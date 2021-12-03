@@ -5,7 +5,11 @@
 // Higher level abstractions can be built on these classes
 
 // Initialize any global state
-export {lumaStats} from './init';
+import './init';
+
+// export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
+export type {WebGLDeviceProps} from './device/webgl-device';
+export {default as WebGLDevice, getWebGLDevice} from './device/webgl-device';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
@@ -61,12 +65,40 @@ export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
 // experimental WebGL exports
 
-export {setPathPrefix, loadFile, loadImage} from './utils/load-file';
-
 // UTILS
-export {log} from '@luma.gl/gltools';
-export {default as assert} from './utils/assert';
-export {uid, isObjectEmpty} from './utils/utils';
+export {
+  isWebGL,
+  isWebGL2,
+  getWebGL2Context,
+  assertWebGLContext,
+  assertWebGL2Context
+} from './context/context/webgl-checks';
+
+// Device ratio
+export {cssToDeviceRatio, cssToDevicePixels} from './context/context/device-pixels';
+
+// Unified parameter API
+
+export type {GLParameters} from './context/parameters/webgl-parameters';
+export {
+  getParameters,
+  setParameters,
+  resetParameters
+} from './context/parameters/unified-parameter-api';
+
+export {
+  withParameters
+} from './context/state-tracker/with-parameters';
+
+// State tracking
+export {
+  trackContextState,
+  pushContextState,
+  popContextState
+} from './context/state-tracker/track-context-state';
+
+// Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
+export {polyfillContext} from './context/polyfill/polyfill-context';
 
 // INTERNAL
 export {parseUniformName, getUniformSetter} from './classes/uniforms';
@@ -75,12 +107,19 @@ export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
 
 // DEPRECATED
-export {
-  getContextInfo, getGLContextInfo, getContextLimits,
-  FEATURES,
-  getFeatures,
-  canCompileGLGSExtension
-} from '@luma.gl/gltools';
+
+// Deprecated re-exports
+export {lumaStats} from './init';
+export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
+export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
+
+
+// export {
+//   getContextInfo, getGLContextInfo, getContextLimits,
+//   FEATURES,
+//   getFeatures,
+//   canCompileGLGSExtension
+// } from '@luma.gl/gltools';
 
 // REMOVED in v8.6
 // getShaderInfo,

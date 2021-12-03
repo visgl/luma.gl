@@ -1,5 +1,6 @@
+import {log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {log, assertWebGLContext} from '@luma.gl/gltools';
+import {assertWebGLContext} from '../context/context/webgl-checks';
 import Texture, {TextureProps} from './texture';
 
 export type TextureCubeProps = TextureProps & {

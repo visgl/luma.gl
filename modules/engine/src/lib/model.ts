@@ -1,9 +1,9 @@
 // luma.gl, MIT license
 import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL} from '@luma.gl/gltools';
-import {ProgramProps} from '@luma.gl/webgl';
+import type {ProgramProps} from '@luma.gl/webgl';
 import {
+  isWebGL,
   Shader,
   Program,
   VertexArray,

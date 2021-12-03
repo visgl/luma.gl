@@ -1,9 +1,10 @@
+
+// UTILS: undocumented API for other luma.gl modules
+export {log, assert, uid} from '@luma.gl/api';
+
 // CORE MODULE EXPORTS FOR LUMA.GL
 
-// GLTOOLS
 export {
-  createGLContext,
-  instrumentGLContext,
   isWebGL,
   isWebGL2,
   getParameters,
@@ -12,14 +13,11 @@ export {
   resetParameters,
   cssToDeviceRatio,
   cssToDevicePixels
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl';
 
 // WEBGL
 export {
   lumaStats,
-  FEATURES,
-  // hasFeature,
-  // hasFeatures,
   Buffer,
   Program,
   Framebuffer,
@@ -72,5 +70,13 @@ export {
   pbr
 } from '@luma.gl/shadertools';
 
-// UTILS: undocumented API for other luma.gl modules
-export {log, assert, uid} from '@luma.gl/webgl';
+/* TODO restore for 8.7
+// GLTOOLS
+export {
+  createGLContext,
+  instrumentGLContext,
+  FEATURES,
+  // hasFeature,
+  // hasFeatures,
+} from '@luma.gl/gltools';
+*/

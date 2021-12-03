@@ -1,11 +1,10 @@
+import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {log} from '@luma.gl/gltools';
 import {Matrix4} from '@math.gl/core';
 
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';
-import {assert} from '../utils/assert';
 
 type NumberUniformInfo = {
   type: 'number'

@@ -1,12 +1,11 @@
-import {parse} from '@loaders.gl/core';
 // eslint-disable-next-line import/no-unresolved
 import {GLTFLoader} from '@loaders.gl/gltf';
 import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import GL from '@luma.gl/constants';
 import {AnimationLoop, Timeline} from '@luma.gl/engine';
-import {clear, log, lumaStats} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {clear, log, lumaStats, setParameters} from '@luma.gl/webgl';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
+import {parse} from '@loaders.gl/core';
 import {Matrix4, radians} from '@math.gl/core';
 
 const CUBE_FACE_TO_DIRECTION = {

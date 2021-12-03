@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2} from '../context/context/webgl-checks';
 
 export function isRenderbufferFormatSupported(gl: WebGLRenderingContext, format: GL): boolean {
   const info = RENDERBUFFER_FORMATS[format];

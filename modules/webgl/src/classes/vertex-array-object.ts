@@ -1,12 +1,11 @@
+import {assert, getScratchArray, fillArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
 import {getBrowser} from '@probe.gl/env';
+import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
+import WebGLDevice from '../device/webgl-device';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
-import {getScratchArray, fillArray} from '../utils/array-utils-flat';
-import {assert} from '../utils/assert';
-import {getLumaContextData} from '../device/luma-context-data';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
@@ -38,10 +37,10 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
    * @todo (Tarek): VAOs are now polyfilled. Deprecate this in 9.0
    */
   static getDefaultArray(gl: WebGLRenderingContext): VertexArrayObject {
-    const lumaContextData = getLumaContextData(gl);
-    lumaContextData.defaultVertexArray = lumaContextData.defaultVertexArray || 
+    const webglDevice = WebGLDevice.fromContext(gl);
+    webglDevice.defaultVertexArray = webglDevice.defaultVertexArray || 
       new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
-    return lumaContextData.defaultVertexArray;
+    return webglDevice.defaultVertexArray;
   }
 
   /** Get maximum number of attributes in a vertex array */

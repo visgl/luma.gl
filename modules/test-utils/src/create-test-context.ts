@@ -1,6 +1,14 @@
+import { createTestDevice } from "./create-test-device";
+
+export function createTestContext(opts: Record<string, any> = {}): WebGLRenderingContext | null {
+  const device = createTestDevice(opts);
+  return device && device.gl;
+}
+
+  /*
 import {isBrowser} from 'probe.gl/env';
 import {createGLContext, instrumentGLContext} from '@luma.gl/gltools';
-import { createHeadlessContext } from './create-headless-context';
+import {createHeadlessContext} from './create-headless-context';
 
 export function createTestContext(opts: Record<string, any> = {}): WebGLRenderingContext | null {
   // try {
@@ -18,3 +26,4 @@ export function createTestContext(opts: Record<string, any> = {}): WebGLRenderin
   //   }
   // }
 }
+*/

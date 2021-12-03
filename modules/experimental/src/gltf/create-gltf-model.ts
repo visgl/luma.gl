@@ -1,4 +1,4 @@
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2} from '@luma.gl/webgl';
 import {log} from '@luma.gl/webgl';
 import {pbr} from '@luma.gl/shadertools';
 import ModelNode from '../scenegraph/model-node';

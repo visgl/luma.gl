@@ -1,5 +1,7 @@
+import {log, assert, uid, isPowerOfTwo} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, getWebGL2Context, withParameters, log} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context, getWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
 import {Texture, TextureProps} from '@luma.gl/api';
 import Buffer from './webgl-buffer';
@@ -10,7 +12,6 @@ import {
   isFormatSupported,
   isLinearFilteringSupported
 } from './texture-formats';
-import {uid, isPowerOfTwo, assert} from '../utils/index';
 
 export type {TextureProps};
 

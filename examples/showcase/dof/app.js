@@ -13,9 +13,10 @@ import {
   Texture2D,
   VertexArray,
   UniformBufferLayout,
-  Buffer
+  Buffer,
+  isWebGL2,
+  setParameters
 } from '@luma.gl/webgl';
-import {setParameters, isWebGL2} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `

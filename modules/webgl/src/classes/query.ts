@@ -1,9 +1,9 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-import {FEATURES, hasFeatures} from '@luma.gl/gltools';
+import {assert} from '@luma.gl/api';
+import WebGLDevice from '../device/webgl-device';
 // import {FEATURES, hasFeatures} from '../features';
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2} from '../context/context/webgl-checks';
 import WebGLResource, {ResourceProps} from './webgl-resource';
-import {assert} from '../utils/assert';
 
 const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.
 const GL_QUERY_RESULT_AVAILABLE = 0x8867; // whether query result is available.
@@ -28,7 +28,8 @@ export default class Query extends WebGLResource<QueryProps> {
     const webgl2 = isWebGL2(gl);
 
     // Initial value
-    const hasTimerQuery = hasFeatures(gl, FEATURES.TIMER_QUERY);
+    const webglDevice = WebGLDevice.fromContext(gl);
+    const hasTimerQuery = webglDevice.features.has('webgl-timer-query');
     let supported = webgl2 || hasTimerQuery;
 
     for (const key of options) {

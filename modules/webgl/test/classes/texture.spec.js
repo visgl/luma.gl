@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/gltools';
+import {isWebGL2} from '@luma.gl/webgl';
 import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';

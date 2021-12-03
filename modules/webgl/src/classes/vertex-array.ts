@@ -1,11 +1,10 @@
+import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {log} from '@luma.gl/gltools';
 import Accessor from './accessor';
 import Buffer from './webgl-buffer';
 import Program from './program'; 
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
-import {assert} from '../utils/assert';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';

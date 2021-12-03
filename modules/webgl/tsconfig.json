@@ -9,7 +9,6 @@
   },
   "references": [
     {"path": "../api"},
-    {"path": "../constants"},
-    {"path": "../gltools"}
+    {"path": "../constants"}
   ]
 }

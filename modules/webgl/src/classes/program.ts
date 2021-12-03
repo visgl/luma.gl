@@ -1,3 +1,4 @@
+import {log, assert, uid} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
 import WebGLResource, {ResourceProps} from './webgl-resource';
@@ -8,11 +9,10 @@ import {VertexShader, FragmentShader} from './webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {assert} from '../utils/assert';
-import {uid} from '../utils/utils';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 

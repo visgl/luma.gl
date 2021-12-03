@@ -5,13 +5,21 @@ import type {default as Texture, TextureProps} from './texture';
 import type {default as Shader, ShaderProps} from './shader';
 // import type {RenderPipeline, RenderPipelineProps, ComputePipeline, ComputePipelineProps} from './pipeline';
 
+export type ShadingLanguage = 'glsl' | 'wgsl';
+
+/**
+ * Identifies the GPU vendor and driver.
+ * @see https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ */
 export type DeviceInfo = {
+  type: 'webgl' | 'webgl2' | 'webgpu';
   vendor: string,
   renderer: string,
-  vendorMasked: string,
-  rendererMasked: string,
   version: string,
-  shadingLanguage: string
+  vendorMasked?: string,
+  rendererMasked?: string,
+  shadingLanguages: ShadingLanguage[];
+  shadingLanguageVersions: Record<string, string>;
 };
 
 /** Limits for a device */

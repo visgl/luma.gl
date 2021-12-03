@@ -1,8 +1,8 @@
+import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import {isWebGL2} from '@luma.gl/gltools';
 import type {Framebuffer, Buffer} from '@luma.gl/webgl';
-import {assert, isObjectEmpty} from '@luma.gl/webgl';
+import {isWebGL2, isObjectEmpty} from '@luma.gl/webgl';
 
 import Model from '../lib/model';
 import BufferTransform from './buffer-transform';

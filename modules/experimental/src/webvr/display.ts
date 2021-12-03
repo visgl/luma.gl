@@ -1,5 +1,5 @@
 import {AnimationLoop} from '@luma.gl/engine';
-import {withParameters} from '@luma.gl/gltools';
+import {withParameters} from '@luma.gl/webgl';
 
 export default class Display {
   readonly animationLoop: AnimationLoop;

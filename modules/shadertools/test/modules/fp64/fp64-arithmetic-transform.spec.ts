@@ -19,10 +19,9 @@
 // THE SOFTWARE.
 
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
-import {getContextDebugInfo} from '@luma.gl/gltools';
+import { webgl2TestDevice } from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';
-const gl = fixture.gl2;
+const gl = webgl2TestDevice.gl2;
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
 // ignoreFor: [{gpu: ['glslFunc-1', 'glslFunc-2']}] => ignores for `'glslFunc-1' and 'glslFunc-2` when running on `gpu`
@@ -75,7 +74,7 @@ function getTestCasesFor(glslFunc) {
   if (!gl) {
     return [];
   }
-  const debugInfo = getContextDebugInfo(gl);
+  const debugInfo = webgl2TestDevice.info;
   const testCases = commonTestCases.filter((testCase) => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {

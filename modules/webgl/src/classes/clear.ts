@@ -1,6 +1,6 @@
-import {Device} from '@luma.gl/api';
-import {assertWebGL2Context, withParameters} from '@luma.gl/gltools';
-import {assert} from '../utils/assert';
+import {Device, assert} from '@luma.gl/api';
+import {assertWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
 import Framebuffer from './framebuffer';
 
 // Should collapse during minification

@@ -13,10 +13,18 @@ export {default as Texture} from './adapter/texture';
 export type {ShaderProps, CompilerMessage} from './adapter/shader';
 export {default as Shader} from './adapter/shader';
 
-// UTILS
-export {default as StatsManager, lumaStats} from './utils/stats-manager';
-export {default as assert} from './utils/assert';
-
 // API TYPES
 export type {Accessor, BufferAccessors} from './adapter/accessor';
 export {cast} from './adapter/types';
+
+// UTILS
+export {default as StatsManager, lumaStats} from './utils/stats-manager';
+export {assert} from './utils/assert';
+export {log} from './utils/log';
+export {default as isOldIE} from './utils/is-old-ie';
+export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
+export {formatValue} from './utils/format-value';
+export {stubRemovedMethods} from './utils/stub-methods';
+export {checkProps} from './utils/check-props';
+export {setPathPrefix, loadFile, loadImage} from './utils/load-file';
+export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';

@@ -1,4 +1,4 @@
-import {polyfillContext} from '@luma.gl/gltools';
+import {polyfillContext} from '@luma.gl/webgl';
 import {MiniAnimationLoop} from '../../utils';
 
 const INFO_HTML = `

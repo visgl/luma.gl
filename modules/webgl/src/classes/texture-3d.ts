@@ -1,5 +1,6 @@
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, withParameters} from '@luma.gl/gltools';
+import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
 import Texture, {TextureProps} from './texture';
 import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
 import Buffer from './webgl-buffer';
