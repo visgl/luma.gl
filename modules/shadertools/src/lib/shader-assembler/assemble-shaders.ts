@@ -1,3 +1,4 @@
+import {Device} from '@luma.gl/api';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
@@ -46,10 +47,9 @@ export type AssembleShaderOptions = {
  * Inject a list of shader modules into shader sources
  */
 export function assembleShaders(
-  gl: WebGLRenderingContext,
+  device: Device,
   options: AssembleShaderOptions
 ): {
-  gl: WebGLRenderingContext;
   vs: string;
   fs: string;
   getUniforms: any;
@@ -57,9 +57,8 @@ export function assembleShaders(
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
   return {
-    gl,
-    vs: assembleShader(gl, {...options, source: vs, type: 'vs', modules}),
-    fs: assembleShader(gl, {...options, source: fs, type: 'fs', modules}),
+    vs: assembleShader(device, {...options, source: vs, type: 'vs', modules}),
+    fs: assembleShader(device, {...options, source: fs, type: 'fs', modules}),
     getUniforms: assembleGetUniforms(modules)
   };
 }
@@ -72,7 +71,7 @@ export function assembleShaders(
  * @returns 
  */
 function assembleShader(
-  gl,
+  device: Device,
   options: {
     id?: string,
     source: string,
@@ -86,7 +85,6 @@ function assembleShader(
     log?
   }
 ) {
-
   const {
     id,
     source,
@@ -100,6 +98,7 @@ function assembleShader(
     log
   } = options;
 
+  assert(device, 'device');
   assert(typeof source === 'string', 'shader source must be a string');
 
   const isVertex = type === 'vs';
@@ -133,8 +132,8 @@ function assembleShader(
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getShaderType({type})}
-${getPlatformShaderDefines(gl)}
-${getVersionDefines(gl, glslVersion, !isVertex)}
+${getPlatformShaderDefines(device)}
+${getVersionDefines(device)}
 ${getApplicationDefines(allDefines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 `

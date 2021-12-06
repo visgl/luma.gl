@@ -1,5 +1,6 @@
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/api';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `
 Re-using shader code with shader modules
@@ -53,24 +54,24 @@ const colorModule = {
   `
 };
 
-export default class AppAnimationLoop extends AnimationLoop {
-  constructor() {
-    super({debug: true});
-  }
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
 
-  static getInfo() {
-    return INFO_HTML;
-  }
+  model1: Model;
+  model2: Model;
+  positionBuffer: Buffer;
 
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+  constructor({device, gl}: AnimationProps) {
+    super();
 
-    const model1 = new Model(gl, {
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+
+    this.model1 = new Model(device, {
       vs: vs1,
       fs: fs1,
       modules: [colorModule],
       attributes: {
-        position: positionBuffer
+        position: this.positionBuffer
       },
       uniforms: {
         hsvColor: [0.7, 1.0, 1.0]
@@ -78,37 +79,34 @@ export default class AppAnimationLoop extends AnimationLoop {
       vertexCount: 3
     });
 
-    const model2 = new Model(gl, {
+    this.model2 = new Model(gl, {
       vs: vs2,
       fs: fs2,
       modules: [colorModule],
       attributes: {
-        position: positionBuffer
+        position: this.positionBuffer
       },
       uniforms: {
         hsvColor: [1.0, 1.0, 1.0]
       },
       vertexCount: 3
     });
-
-    return {model1, model2, positionBuffer};
   }
 
-  onRender({gl, model1, model2}) {
-    clear(gl, {color: [0, 0, 0, 1]});
-    model1.draw();
-    model2.draw();
+  onFinalize() {
+    this.model1.delete();
+    this.model2.delete();
+    this.positionBuffer.delete();
   }
 
-  onFinalize({model1, model2, positionBuffer}) {
-    model1.delete();
-    model2.delete();
-    positionBuffer.delete();
+  onRender({device}) {
+    clear(device, {color: [0, 0, 0, 1]});
+    this.model1.draw();
+    this.model2.draw();
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

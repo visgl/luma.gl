@@ -5,6 +5,7 @@ import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-ch
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import WebGLDevice from '../device/webgl-device';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -58,6 +59,7 @@ export type WebGLBufferProps = BufferProps & {
 
 /** WebGL Buffer interface */
 export default class WEBGLBuffer extends Buffer {
+  readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLBuffer;
@@ -77,7 +79,7 @@ export default class WEBGLBuffer extends Buffer {
   constructor(gl: WebGLRenderingContext, byteLength: number);
 
   constructor(gl: WebGLRenderingContext, props = {}) {
-    super(gl as any, props);
+    super(WebGLDevice.attach(gl), props);
 
     this.gl = gl;
     this.gl2 = getWebGL2Context(gl);

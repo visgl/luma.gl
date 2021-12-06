@@ -1,9 +1,8 @@
-import {getContextInfo, hasFeatures, canCompileGLGSExtension, FEATURES} from '../utils/webgl-info';
+import {Device} from '@luma.gl/api';
 
-export function getPlatformShaderDefines(gl: WebGLRenderingContext): string {
-  const debugInfo = getContextInfo(gl);
-
-  switch (debugInfo.gpuVendor.toLowerCase()) {
+/** Adds defines to help identify GPU architecture / platform */
+export function getPlatformShaderDefines(device: Device): string {
+  switch (device.info?.gpuVendor.toLowerCase()) {
     case 'nvidia':
       return `\
 #define NVIDIA_GPU
@@ -40,12 +39,8 @@ export function getPlatformShaderDefines(gl: WebGLRenderingContext): string {
   }
 }
 
-export function getVersionDefines(
-  gl: WebGLRenderingContext,
-  glslVersion: any,
-  isFragment: any
-): string {
-  // Add shadertools defines to let shaders portably v1/v3 check for features
+/** Adds defines to let shaders portably v1/v3 check for features */
+export function getVersionDefines(device: Device): string {
   let versionDefines = `\
 #if (__VERSION__ > 120)
 
@@ -63,7 +58,7 @@ export function getVersionDefines(
 #endif // __VERSION
 `;
 
-  if (hasFeatures(gl, FEATURES.GLSL_FRAG_DEPTH)) {
+  if (device.features?.has('glsl-frag-depth')) {
     versionDefines += `\
 
 // FRAG_DEPTH => gl_FragDepth is available
@@ -75,10 +70,7 @@ export function getVersionDefines(
 #endif
 `;
   }
-  if (
-    hasFeatures(gl, FEATURES.GLSL_DERIVATIVES) &&
-    canCompileGLGSExtension(gl, FEATURES.GLSL_DERIVATIVES)
-  ) {
+  if (device.features?.has('glsl-derivatives')) {
     versionDefines += `\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
@@ -89,10 +81,7 @@ export function getVersionDefines(
 #endif
 `;
   }
-  if (
-    hasFeatures(gl, FEATURES.GLSL_FRAG_DATA) &&
-    canCompileGLGSExtension(gl, FEATURES.GLSL_FRAG_DATA, {behavior: 'require'})
-  ) {
+  if (device.features?.has('glsl-frag-data')) {
     versionDefines += `\
 
 // DRAW_BUFFERS => gl_FragData[] is available
@@ -103,7 +92,7 @@ export function getVersionDefines(
 #endif
 `;
   }
-  if (hasFeatures(gl, FEATURES.GLSL_TEXTURE_LOD)) {
+  if (device.features?.has('glsl-texture-lod')) {
     versionDefines += `\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod

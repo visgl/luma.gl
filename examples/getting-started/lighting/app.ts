@@ -1,6 +1,5 @@
-import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -48,12 +47,19 @@ const fs = `\
   }
 `;
 
-export default class AppAnimationLoop extends AnimationLoop {
-  static getInfo() {
-    return INFO_HTML;
-  }
+const eyePosition = [0, 0, 5];
 
-  onInitialize({gl}) {
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
+
+  model: Model;
+  modelMatrix = new Matrix4();
+  viewMatrix = new Matrix4().lookAt({eye: eyePosition});
+  mvpMatrix = new Matrix4();
+  
+  constructor({device, gl}: AnimationProps) {
+    super();
+
     setParameters(gl, {
       depthTest: true,
       depthFunc: gl.LEQUAL
@@ -63,12 +69,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       data: 'vis-logo.png'
     });
 
-    const eyePosition = [0, 0, 5];
-    const modelMatrix = new Matrix4();
-    const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
-    const mvpMatrix = new Matrix4();
-
-    const model = new Model(gl, {
+    this.model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -94,38 +95,31 @@ export default class AppAnimationLoop extends AnimationLoop {
         ]
       }
     });
-
-    return {
-      model,
-      modelMatrix,
-      viewMatrix,
-      mvpMatrix
-    };
   }
 
-  onRender({gl, aspect, tick, model, mvpMatrix, viewMatrix, modelMatrix}) {
-    modelMatrix
+  onFinalize() {
+    this.model.delete();
+  }
+
+  onRender({device, aspect, tick}) {
+    this.modelMatrix
       .identity()
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
 
-    mvpMatrix
+    this.mvpMatrix
       .perspective({fov: Math.PI / 3, aspect})
-      .multiplyRight(viewMatrix)
-      .multiplyRight(modelMatrix);
+      .multiplyRight(this.viewMatrix)
+      .multiplyRight(this.modelMatrix);
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    this.model.setUniforms({uMVP: this.mvpMatrix, uModel: this.modelMatrix});
 
-    model.setUniforms({uMVP: mvpMatrix, uModel: modelMatrix}).draw();
-  }
-
-  onFinalize({model}) {
-    model.delete();
+    clear(device, {color: [0, 0, 0, 1], depth: true});
+    this.model.draw();
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

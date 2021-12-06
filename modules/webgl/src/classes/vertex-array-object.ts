@@ -1,8 +1,8 @@
 import {assert, getScratchArray, fillArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
-import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
 import WebGLDevice from '../device/webgl-device';
+import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
@@ -85,7 +85,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   // Create a VertexArray
   constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
-    super(gl, {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
+    super(WebGLDevice.attach(gl), {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
 
     this.buffer = null;
     this.bufferValue = null;

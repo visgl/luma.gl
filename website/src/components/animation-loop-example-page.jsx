@@ -1,6 +1,7 @@
 import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types';
 import {lumaStats} from '@luma.gl/core';
+import {RenderLoop} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/webgl';
 import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
@@ -51,8 +52,12 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
-    const {AnimationLoop} = this.props;
-    this.animationLoop = new AnimationLoop();
+    // Render loop
+    if ('getAnimationLoop' in this.props.AnimationLoop) {
+      this.animationLoop = RenderLoop.getAnimationLoop(this.props.AnimationLoop);
+    } else {
+      this.animationLoop = new this.props.AnimationLoop();
+    }
     this.state = {
       supported: true
     };
@@ -167,8 +172,10 @@ export default class AnimationLoopExamplePage extends Component {
     }
 
     // HTML is stored on the app
-    const controls = this.props.AnimationLoop.getInfo() ||
-      (this.animationLoop.getInfo && this.animationLoop.getInfo());
+    const controls = 
+      this.props.AnimationLoop.info ||
+      this.props.AnimationLoop.getInfo?.() ||
+      (this.animationLoop.getInfo?.());
 
     return (
       <div style={{width: '100%', height: '100%', position: 'relative'}}>

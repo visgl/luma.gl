@@ -2,9 +2,9 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
-import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../context/context/webgl-checks';
+import {isOldIE} from '../webgl-utils/is-old-ie';
 
 export type DeviceFeature = 
   'depth-clamping' |
@@ -89,25 +89,30 @@ export function getWebGLFeatures(gl: WebGLRenderingContext): Set<WebGLFeature> {
   return features;
 }
 
-function isFeatureSupported(gl: WebGLRenderingContext, cap: WebGLFeature): boolean {
-  const feature = WEBGL_FEATURES[cap];
-  assert(feature, cap);
-
-  const [webgl1Feature, webgl2Feature] = feature;
+function isFeatureSupported(gl: WebGLRenderingContext, feature: WebGLFeature): boolean {
+  const [webgl1Feature, webgl2Feature] = WEBGL_FEATURES[feature];;
 
   // Get extension name from table
   const featureDefinition = isWebGL2(gl) ? webgl2Feature : webgl1Feature;
 
-  if (cap === 'webgl-color-attachment-rgba32f' && !isWebGL2(gl)) {
-    return checkFloat32ColorAttachment(gl);
-  }
-
   // Check if the value is dependent on checking one or more extensions
-  if (typeof featureDefinition === 'string') {
-    return Boolean(gl.getExtension(featureDefinition));
+  if (typeof featureDefinition === 'boolean') {
+    return featureDefinition;
   }
 
-  return featureDefinition;
+  switch (feature) {
+    case 'webgl-color-attachment-rgba32f':
+      return isWebGL2(gl) ? Boolean(gl.getExtension(featureDefinition)) :
+        checkFloat32ColorAttachment(gl);
+    case 'glsl-derivatives':
+      return canCompileGLSLExtension(gl, featureDefinition); // TODO options
+    case 'glsl-frag-data':
+      return canCompileGLSLExtension(gl, featureDefinition, {behavior: 'require'}); // TODO options
+    case 'glsl-frag-depth':
+      return canCompileGLSLExtension(gl, featureDefinition); // TODO options
+    default:
+      return Boolean(gl.getExtension(featureDefinition));
+  }
 }
 
 
@@ -142,8 +147,45 @@ function checkFloat32ColorAttachment(gl: WebGLRenderingContext): boolean {
   }
 }
 
-// Defines luma.gl "feature" names and semantics
-// Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
+const compiledGLSLExtensions = {};
+
+/*
+ * Enables feature detection in IE11 due to a bug where gl.getExtension may return true
+ * but fail to compile when the extension is enabled in the shader. Specifically,
+ * the OES_standard_derivatives and WEBGL_draw_buffers extensions fails to compile in IE11 even though its included
+ * in the list of supported extensions.
+ * opts allows user agent to be overridden for testing
+ * Inputs :
+ *  gl : WebGL context
+ *  cap : Key of WEBGL_FEATURES object identifying the extension
+ *  opts :
+ *   behavior : behavior of extension to be tested, by defualt `enable` is used
+ * Returns : true, if shader is compiled successfully, false otherwise
+ */
+export function canCompileGLSLExtension(gl: WebGLRenderingContext, extensionName, opts: {behavior?} = {}) {
+  if (!isOldIE(opts)) {
+    return true;
+  }
+
+  if (extensionName in compiledGLSLExtensions) {
+    return compiledGLSLExtensions[extensionName];
+  }
+
+  const behavior = opts.behavior || 'enable';
+  const source = `#extension GL_${extensionName} : ${behavior}\nvoid main(void) {}`;
+
+  const shader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  const canCompile = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+  gl.deleteShader(shader);
+  compiledGLSLExtensions[extensionName] = canCompile;
+  return canCompile;
+}
+
+/** Defines luma.gl "feature" names and semantics
+ * Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
+ */
 const WEBGL_FEATURES: Record<WebGLFeature, [boolean | string, boolean | string]> = {
   'webgl2': [false, true],
 

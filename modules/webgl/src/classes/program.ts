@@ -1,6 +1,6 @@
 import {log, assert, uid} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-
+import WebGLDevice from '../device/webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
@@ -60,7 +60,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: Record<string, Function>;
   
   constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
-    super(gl, props, {} as any);
+    super(WebGLDevice.attach(gl), props, {} as any);
 
 
     this.initialize(props);

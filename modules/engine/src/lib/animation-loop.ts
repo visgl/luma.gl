@@ -42,7 +42,7 @@ export type AnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Device;
   onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
-  onInitialize?: (animationProps: AnimationProps) => {};
+  onInitialize?: (animationProps: AnimationProps) => {} | void;
   onRender?: (animationProps: AnimationProps) => void;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: any) => void;
@@ -95,9 +95,6 @@ export type AnimationProps = {
   framebuffer: Framebuffer
   /** @deprecated Use .device */
   gl: WebGLRenderingContext
-
-  // Any fields returned from init function
-  [key: string]: unknown;
 }
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
@@ -125,6 +122,7 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   createFramebuffer: false
 };
 
+/** Convenient animation loop */
 export default class AnimationLoop {
   device: Device;
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -352,7 +350,7 @@ export default class AnimationLoop {
     return this.props.onCreateDevice(deviceProps);
   }
 
-  onInitialize(animationProps: AnimationProps) {
+  onInitialize(animationProps: AnimationProps): {} | void {
     return this.props.onInitialize(animationProps);
   }
 

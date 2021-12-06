@@ -1,24 +1,27 @@
-// @ts-nocheck TODO remove
-import {hasFeature, FEATURES} from '@luma.gl/gltools';
-import {Texture2D, log} from '@luma.gl/webgl';
+// import {Device} from '@luma.gl/api';
+import {WebGLDevice, Texture2D, log} from '@luma.gl/webgl';
 
 export type GLTFMaterialParserProps = {
   attributes: any;
   material: any;
-  pbrDebug: any;
+  pbrDebug?: boolean;
   imageBasedLightingEnvironment: any;
   lights: any;
-  useTangents: any;
+  useTangents?: boolean;
 };
 export default class GLTFMaterialParser {
-  readonly defines: object;
-  readonly uniforms: object;
-  readonly parameters: object;
+  readonly device: WebGLDevice;
+  readonly gl: WebGLRenderingContext
+
+  readonly defines: Record<string, number | boolean>;
+  readonly uniforms: Record<string, any>;
+  readonly parameters: Record<string, any>;
   readonly generatedTextures: object[];
 
-  constructor(gl: WebGLRenderingContext, props: GLTFMaterialParserProps) {
+  constructor(device: WebGLDevice, props: GLTFMaterialParserProps) {
     const {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents} = props;
-    this.gl = gl;
+    this.device = device;
+    this.gl = device.gl;
 
     this.defines = {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
@@ -26,7 +29,7 @@ export default class GLTFMaterialParser {
       SRGB_FAST_APPROXIMATION: 1
     };
 
-    if (hasFeature(gl, FEATURES.GLSL_TEXTURE_LOD)) {
+    if (this.device.features.has('glsl-texture-lod')) {
       this.defines.USE_TEX_LOD = 1;
     }
 

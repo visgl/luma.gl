@@ -1,0 +1,36 @@
+{
+  "name": "@luma.gl/gltools",
+  "version": "8.6.0-alpha.1",
+  "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl2",
+    "webgl",
+    "polyfill"
+  ],
+  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "pre-build": "npm run build-bundle",
+    "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.0.0",
+    "@luma.gl/constants": "8.6.0-alpha.1",
+    "@probe.gl/log": "3.5.0-alpha.5"
+  },
+  "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
+}

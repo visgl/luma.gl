@@ -1,5 +1,7 @@
+import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
+import WebGLDevice from '../device/webgl-device';
+import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {withParameters} from '../context/state-tracker/with-parameters';
 import Texture, {TextureProps} from './texture';
 import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
@@ -27,16 +29,20 @@ type SetImageDataOptions = {
  * They are accessed by 3-dimensional texture coordinates.
  */
 export default class Texture3D extends Texture {
-  static isSupported(gl: WebGLRenderingContext): boolean {
-    return isWebGL2(gl);
+  static isSupported(device: Device | WebGLRenderingContext): boolean {
+    try {
+      const webglDevice = WebGLDevice.attach(device);
+      return webglDevice.isWebGL2;
+    } catch {
+      return false;
+    }
   }
 
-  constructor(gl: WebGL2RenderingContext, props: Texture3DProps = {}) {
-    super(gl as WebGLRenderingContext, props);
-    assertWebGL2Context(gl);
+  constructor(device: Device | WebGL2RenderingContext, props: Texture3DProps = {}) {
+    super(device, props);
+    assertWebGL2Context(this.gl2);
     props = Object.assign({depth: 1}, props, {target: GL.TEXTURE_3D, unpackFlipY: false});
     this.initialize(props);
-
     Object.seal(this);
   }
 

@@ -1,6 +1,8 @@
 // CORE
 export type {AnimationLoopProps, AnimationProps} from './lib/animation-loop';
 export {default as AnimationLoop} from './lib/animation-loop';
+export {RenderLoop} from './lib/render-loop';
+
 export type {ModelProps} from './lib/model';
 export {default as Model} from './lib/model';
 export {default as ProgramManager} from './lib/program-manager';

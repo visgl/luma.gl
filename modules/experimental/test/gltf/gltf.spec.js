@@ -1,17 +1,17 @@
+import test from 'tape-promise/tape';
+import {webgl1TestDevice} from '@luma.gl/test-utils';
+
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
-import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
 
 test('gltf#loading', (t) => {
-  const {gl} = fixture;
-
-  load('test/data/box.glb', GLTFLoader, {gl})
+  // TODO - is gl argument used?
+  load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl})
     .then((gltf) => {
-      const result = createGLTFObjects(gl, gltf);
+      const result = createGLTFObjects(webgl1TestDevice, gltf);
 
       t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
       t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
@@ -22,9 +22,7 @@ test('gltf#loading', (t) => {
 });
 
 test('gltf#environment', (t) => {
-  const {gl} = fixture;
-
-  const environment = new GLTFEnvironment(gl, {
+  const environment = new GLTFEnvironment(webgl1TestDevice, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9

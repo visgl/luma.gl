@@ -1,5 +1,6 @@
-import {log} from '@luma.gl/api';
+import {Device, log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import WebGLDevice from '../device/webgl-device';
 import {assertWebGLContext} from '../context/context/webgl-checks';
 import Texture, {TextureProps} from './texture';
 
@@ -18,10 +19,8 @@ export default class TextureCube extends Texture {
 
   props;
 
-  constructor(gl: WebGLRenderingContext, props?: TextureCubeProps) {
-    assertWebGLContext(gl);
-
-    super(gl, Object.assign({}, props, {target: GL.TEXTURE_CUBE_MAP}));
+  constructor(device: Device | WebGLRenderingContext, props?: TextureCubeProps) {
+    super(device, Object.assign({}, props, {target: GL.TEXTURE_CUBE_MAP}));
 
     this.initialize(props);
 

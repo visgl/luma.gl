@@ -1,5 +1,6 @@
 import {log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import WebGLDevice from '../device/webgl-device';
 import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
@@ -21,7 +22,7 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   }
 
   constructor(gl: WebGLRenderingContext, props: TransformFeedbackProps = {}) {
-    super(gl, props, {} as any);
+    super(WebGLDevice.attach(gl), props, {} as any);
     assertWebGL2Context(gl);
 
     this.initialize(props);

@@ -1,10 +1,11 @@
-import {isWebGL2} from '@luma.gl/webgl';
+import {isWebGL2, WebGLDevice} from '@luma.gl/webgl';
 import {log} from '@luma.gl/webgl';
 import {pbr} from '@luma.gl/shadertools';
 import ModelNode from '../scenegraph/model-node';
 import GLTFMaterialParser from './gltf-material-parser';
 
 const vs = `
+#pragma vscode_glsllint_stage: vert
 #if (__VERSION__ < 300)
   #define _attr attribute
 #else
@@ -48,6 +49,7 @@ const vs = `
 `;
 
 const fs = `
+#pragma vscode_glsllint_stage: frag
 #if (__VERSION__ < 300)
   #define fragmentColor gl_FragColor
 #else
@@ -59,17 +61,9 @@ const fs = `
   }
 `;
 
-function addVersionToShader(gl, source) {
-  if (isWebGL2(gl)) {
-    return `#version 300 es\n${source}`;
-  }
-
-  return source;
-}
-
-export default function createGLTFModel(gl: WebGLRenderingContext, options: any): ModelNode {
+export default function createGLTFModel(device: WebGLDevice, options: any): ModelNode {
   const {id, drawMode, vertexCount, attributes, modelOptions} = options;
-  const materialParser = new GLTFMaterialParser(gl, options);
+  const materialParser = new GLTFMaterialParser(device, options);
 
   log.info(4, 'createGLTFModel defines: ', materialParser.defines)();
 
@@ -82,7 +76,7 @@ export default function createGLTFModel(gl: WebGLRenderingContext, options: any)
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   const model = new ModelNode(
-    gl,
+    device.gl,
     Object.assign(
       {
         id,
@@ -91,8 +85,8 @@ export default function createGLTFModel(gl: WebGLRenderingContext, options: any)
         modules: [pbr],
         defines: materialParser.defines,
         parameters: materialParser.parameters,
-        vs: addVersionToShader(gl, vs),
-        fs: addVersionToShader(gl, fs),
+        vs: addVersionToShader(device, vs),
+        fs: addVersionToShader(device, fs),
         managedResources
       },
       modelOptions
@@ -103,4 +97,8 @@ export default function createGLTFModel(gl: WebGLRenderingContext, options: any)
   model.setUniforms(materialParser.uniforms);
 
   return model;
+}
+
+function addVersionToShader(device: WebGLDevice, source: string): string {
+  return isWebGL2(device.gl) ? `#version 300 es\n${source}` : source;
 }

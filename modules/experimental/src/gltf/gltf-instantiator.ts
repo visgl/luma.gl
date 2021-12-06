@@ -1,5 +1,6 @@
+import {log} from '@luma.gl/api';
+import {WebGLDevice, Buffer, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
-import {Buffer, Accessor, log} from '@luma.gl/webgl';
 import GroupNode from '../scenegraph/group-node';
 
 import GLTFAnimator from './gltf-animator';
@@ -27,12 +28,12 @@ const DEFAULT_OPTIONS = {
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
 export default class GLTFInstantiator {
-  gl;
+  device: WebGLDevice;
   options;
   gltf;
 
-  constructor(gl, options = {}) {
-    this.gl = gl;
+  constructor(device: WebGLDevice, options = {}) {
+    this.device = device;
     this.options = Object.assign({}, DEFAULT_OPTIONS, options);
   }
 
@@ -123,7 +124,7 @@ export default class GLTFInstantiator {
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
     return createGLTFModel(
-      this.gl,
+      this.device,
       Object.assign(
         {
           id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
@@ -145,7 +146,7 @@ export default class GLTFInstantiator {
     Object.keys(attributes).forEach((attrName) => {
       loadedAttributes[attrName] = this.createAccessor(
         attributes[attrName],
-        this.createBuffer(attributes[attrName], this.gl.ARRAY_BUFFER)
+        this.createBuffer(attributes[attrName], this.device.gl.ARRAY_BUFFER)
       );
     });
 
@@ -153,7 +154,7 @@ export default class GLTFInstantiator {
       // @ts-expect-error
       loadedAttributes.indices = this.createAccessor(
         indices,
-        this.createBuffer(indices, this.gl.ELEMENT_ARRAY_BUFFER)
+        this.createBuffer(indices, this.device.gl.ELEMENT_ARRAY_BUFFER)
       );
     }
 
@@ -174,7 +175,7 @@ export default class GLTFInstantiator {
     }
 
     if (!bufferView.lumaBuffers[target]) {
-      bufferView.lumaBuffers[target] = new Buffer(this.gl, {
+      bufferView.lumaBuffers[target] = new Buffer(this.device.gl, {
         id: `from-${bufferView.id}`,
         // Draco decoded files have attribute.value
         data: bufferView.data || attribute.value,

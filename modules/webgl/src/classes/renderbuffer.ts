@@ -1,6 +1,7 @@
 /* eslint-disable no-inline-comments */
 import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import WebGLDevice from '../device/webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import {isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel} from './renderbuffer-formats';
 import {isWebGL2} from '../context/context/webgl-checks';
@@ -38,7 +39,7 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
   }
 
   constructor(gl: WebGLRenderingContext, props: RenderbufferProps) {
-    super(gl, props, DEFAULT_RENDERBUFFER_PROPS);
+    super(WebGLDevice.attach(gl), props, DEFAULT_RENDERBUFFER_PROPS);
     this._initialize(this.props);
   }
 

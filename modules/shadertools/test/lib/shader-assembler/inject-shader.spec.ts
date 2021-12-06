@@ -129,7 +129,7 @@ test('injectShader#injectShader', (t) => {
 });
 
 test('injectShader#assembleShaders', (t) => {
-  const assembleResult = assembleShaders(fixture.gl1, {
+  const assembleResult = assembleShaders(webgl1TestDevice, {
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
     inject: INJECT,

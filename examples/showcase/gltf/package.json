@@ -12,9 +12,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "^3.0.6",
-    "@loaders.gl/gltf": "^3.0.6",
-    "@loaders.gl/polyfills": "^3.0.6",
+    "@loaders.gl/core": "^3.1.0-beta.7",
+    "@loaders.gl/gltf": "^3.1.0-beta.7",
+    "@loaders.gl/polyfills": "^3.1.0-beta.7",
     "@luma.gl/constants": "8.6.0-alpha.1",
     "@luma.gl/engine": "8.6.0-alpha.1",
     "@luma.gl/experimental": "8.6.0-alpha.1",

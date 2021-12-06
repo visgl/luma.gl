@@ -1,7 +1,6 @@
 // WebGL2 Query (also handles disjoint timer extensions)
 import {assert} from '@luma.gl/api';
 import WebGLDevice from '../device/webgl-device';
-// import {FEATURES, hasFeatures} from '../features';
 import {isWebGL2} from '../context/context/webgl-checks';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 
@@ -54,8 +53,7 @@ export default class Query extends WebGLResource<QueryProps> {
 
   // Create a query class
   constructor(gl: WebGLRenderingContext, opts: QueryProps = {}) {
-    super(gl, opts, {} as any);
-
+    super(WebGLDevice.attach(gl), opts, {} as any);
     Object.seal(this);
   }
 

@@ -18,7 +18,7 @@ export type VertexArrayProps = {
   id?: string;
   program?: Program;
   configuration?: ProgramConfiguration;
-  attributes?: any[];
+  attributes?: Record<string, any>;
   elements?: any;
   bindOnUse?: boolean;
 };

@@ -1,6 +1,5 @@
-import {AnimationLoop, Transform, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
-import {isWebGL2} from '@luma.gl/gltools';
+import {RenderLoop, Transform, Model, AnimationProps} from '@luma.gl/engine';
+import {Buffer, clear, isWebGL2} from '@luma.gl/webgl';
 
 const INFO_HTML = `
 Animation via transform feedback.
@@ -50,24 +49,22 @@ void main() {
 }
 `;
 
-export default class AppAnimationLoop extends AnimationLoop {
-  constructor() {
-    super({debug: true});
-  }
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
 
-  static getInfo() {
-    return INFO_HTML;
-  }
+  transform: Transform;
+  model: Model;
 
-  onInitialize({gl}) {
-    this.demoNotSupported = !isWebGL2(gl);
-    if (this.demoNotSupported) {
-      return {};
+  constructor({device}: AnimationProps) {
+    super();
+
+    if (!Transform.isSupported(device)) {
+      throw new Error(ALT_TEXT);
     }
 
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-    const transform = new Transform(gl, {
+    this.transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
         position: positionBuffer
@@ -78,53 +75,38 @@ export default class AppAnimationLoop extends AnimationLoop {
       elementCount: 3
     });
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-    );
+    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
-    const model = new Model(gl, {
+    this.model = new Model(device, {
       vs: renderVs,
       fs: renderFs,
       attributes: {
-        position: transform.getBuffer('vPosition'),
+        position: this.transform.getBuffer('vPosition'),
         color: colorBuffer
       },
       vertexCount: 3
     });
-
-    return {transform, model};
   }
 
-  onRender({gl, transform, model}) {
-    if (this.demoNotSupported) {
-      return;
-    }
-
-    transform.run();
-
-    clear(gl, {color: [0, 0, 0, 1]});
-    model.setAttributes({position: transform.getBuffer('vPosition')}).draw();
-
-    transform.swap();
+  onFinalize() {
+    this.transform.destroy();
+    this.model.destroy();
   }
 
-  onFinalize({transform, model}) {
-    if (transform) {
-      transform.delete();
-    }
-    if (model) {
-      model.delete();
-    }
-  }
+  onRender({device}) {
+    this.transform.run();
+    this.model.setAttributes({
+      position: this.transform.getBuffer('vPosition')
+    });
 
-  getAltText() {
-    return ALT_TEXT;
+    clear(device, {color: [0, 0, 0, 1]});
+    this.model.draw();
+
+    this.transform.swap();
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

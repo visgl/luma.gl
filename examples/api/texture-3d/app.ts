@@ -1,15 +1,15 @@
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Texture3D, Buffer} from '@luma.gl/webgl';
-import {setParameters, isWebGL2} from '@luma.gl/gltools';
+/*
+  Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
+*/
+
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import GL from '@luma.gl/constants';
+import {Texture3D, Buffer, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 import {getRandom} from '../../utils';
 
 const random = getRandom();
-
-/*
-  Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
-*/
 
 const INFO_HTML = `
 <p>
@@ -48,20 +48,21 @@ const NEAR = 0.1;
 const FAR = 10.0;
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-export default class AppAnimationLoop extends AnimationLoop {
-  static getInfo() {
-    return INFO_HTML;
-  }
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
+  static props = {useDevicePixels: true};
 
-  constructor(props = {}) {
-    super(Object.assign(props, {useDevicePixels: true}));
-  }
+  mvpMat = new Matrix4();
+  viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
+  cloud: Model;
 
-  onInitialize({gl}) {
-    this.demoNotSupported = !isWebGL2(gl);
-    if (this.demoNotSupported) {
-      return {};
+  constructor({device, gl}: AnimationProps) {
+    super();
+    
+    if (!isWebGL2(gl)) {
+      throw new Error(ALT_TEXT);
     }
+
     const noise = perlin({
       interpolation: lerp,
       permutation: shuffle(range(0, 255), random)
@@ -95,7 +96,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       x += INCREMENT;
     }
 
-    const positionBuffer = new Buffer(gl, positionData);
+    const positionBuffer = device.createBuffer(positionData);
 
     // CREATE 3D TEXTURE
     const TEXTURE_DIMENSIONS = 16;
@@ -114,19 +115,16 @@ export default class AppAnimationLoop extends AnimationLoop {
       }
     }
 
-    const mvpMat = new Matrix4();
-    const viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
-
-    const texture = new Texture3D(gl, {
+    const texture = new Texture3D(device, {
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       data: textureData,
-      format: gl.RED,
-      dataFormat: gl.R8
+      format: GL.RED,
+      dataFormat: GL.R8
     });
 
-    const cloud = new Model(gl, {
+    this.cloud = new Model(device, {
       vs,
       fs,
       drawMode: gl.POINTS,
@@ -136,44 +134,30 @@ export default class AppAnimationLoop extends AnimationLoop {
       },
       uniforms: {
         uTexture: texture,
-        uView: viewMat
+        uView: this.viewMat
       }
     });
-
-    return {cloud, mvpMat, viewMat};
   }
 
-  onRender(animationProps) {
-    const {gl, cloud, mvpMat, viewMat, tick, aspect} = animationProps;
-    if (this.demoNotSupported) {
-      return;
-    }
+  onFinalize() {
+    this.cloud.destroy();
+  }
 
-    mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(viewMat);
+  onRender({gl, tick, aspect}: AnimationProps) {
+    this.mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
 
     // Draw the cubes
     gl.clear(gl.COLOR_BUFFER_BIT);
-    cloud.draw({
+    this.cloud.draw({
       uniforms: {
         uTime: tick / 100,
-        uMVP: mvpMat
+        uMVP: this.mvpMat
       }
     });
-  }
-
-  onFinalize({gl, cloud}) {
-    if (cloud) {
-      cloud.delete();
-    }
-  }
-
-  getAltText() {
-    return ALT_TEXT;
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

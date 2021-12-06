@@ -1,9 +1,10 @@
-import {log, assert, uid, isPowerOfTwo} from '@luma.gl/api';
+import {Device, log, assert, uid, isPowerOfTwo} from '@luma.gl/api';
+import {Texture, TextureProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2, assertWebGL2Context, getWebGL2Context} from '../context/context/webgl-checks';
+import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
-import {Texture, TextureProps} from '@luma.gl/api';
+import WebGLDevice from '../device/webgl-device';
 import Buffer from './webgl-buffer';
 import {
   TEXTURE_FORMATS,
@@ -15,13 +16,18 @@ import {
 
 export type {TextureProps};
 
+export type TextureSupportOptions = {
+  format: any;
+  linearFiltering: any;
+};
+
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
 // Polyfill
 export default class WEBGLTexture extends Texture {
   readonly MAX_ATTRIBUTES: number;
-
+  readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLTexture;
@@ -48,17 +54,15 @@ export default class WEBGLTexture extends Texture {
   _video;
 
   static isSupported(
-    gl: WebGLRenderingContext,
-    options?: {
-      format: any;
-      linearFiltering: any;
-    }
+    device: Device | WebGLRenderingContext,
+    options?: TextureSupportOptions
   ): boolean {
+    const webglDevice = WebGLDevice.attach(device);
     const {format, linearFiltering} = options;
     let supported = true;
     if (format) {
-      supported = supported && isFormatSupported(gl, format);
-      supported = supported && (!linearFiltering || isLinearFilteringSupported(gl, format));
+      supported = supported && isFormatSupported(webglDevice.gl, format);
+      supported = supported && (!linearFiltering || isLinearFilteringSupported(webglDevice.gl, format));
     }
     return supported;
   }
@@ -73,8 +77,8 @@ export default class WEBGLTexture extends Texture {
   // you must always bind it as a GL_TEXTURE_2D;
   // attempting to bind it as GL_TEXTURE_1D will give rise to an error
   // (while run-time).
-  constructor(gl: WebGLRenderingContext, props: TextureProps) {
-    super(gl as any, props);
+  constructor(device: Device | WebGLRenderingContext, props: TextureProps) {
+    super(WebGLDevice.attach(device), props);
 
     const {
       id = uid('texture'),
@@ -101,8 +105,9 @@ export default class WEBGLTexture extends Texture {
     this.textureUnit = undefined;
     this.mipmaps = undefined;
 
-    this.gl = gl;
-    this.gl2 = getWebGL2Context(gl);
+    this.device = WebGLDevice.attach(device);
+    this.gl = this.device.gl;
+    this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();
   }
 

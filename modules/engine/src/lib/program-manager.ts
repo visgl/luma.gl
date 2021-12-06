@@ -1,3 +1,4 @@
+import {Device} from '@luma.gl/api/';
 import {assembleShaders} from '@luma.gl/shadertools';
 import {Program} from '@luma.gl/webgl';
 
@@ -15,7 +16,7 @@ type GetProgramOptions = {
 };
 
 export default class ProgramManager {
-  readonly gl: WebGLRenderingContext;
+  readonly device: Device;
 
   stateHash = 0; // Used change hashing if hooks are modified
   private _hashCounter = 0;
@@ -28,17 +29,15 @@ export default class ProgramManager {
   private readonly _hookFunctions = [];
   private _defaultModules = [];
 
-  static getDefaultProgramManager(gl: WebGLRenderingContext): ProgramManager {
+  static getDefaultProgramManager(device: Device): ProgramManager {
     // @ts-expect-error
-    gl.luma = gl.luma || {};
+    device.defaultProgramManager = device.defaultProgramManager || new ProgramManager(device);
     // @ts-expect-error
-    gl.luma.defaultProgramManager = gl.luma.defaultProgramManager || new ProgramManager(gl);
-    // @ts-expect-error
-    return gl.luma.defaultProgramManager;
+    return device.defaultProgramManager;
   }
 
-  constructor(gl: WebGLRenderingContext) {
-    this.gl = gl;
+  constructor(device: Device) {
+    this.device = device;
   }
 
   addDefaultModule(module: Module): void {
@@ -56,17 +55,16 @@ export default class ProgramManager {
     this.stateHash++;
   }
 
-  addShaderHook(hook, opts) {
+  addShaderHook(hook, opts?): void {
     if (opts) {
       hook = Object.assign(opts, {hook});
     }
 
     this._hookFunctions.push(hook);
-
     this.stateHash++;
   }
 
-  get(props: GetProgramOptions = {}) {
+  get(props: GetProgramOptions = {}): Program {
     const {
       vs = '',
       fs = '',
@@ -107,7 +105,7 @@ export default class ProgramManager {
     }`;
 
     if (!this._programCache[hash]) {
-      const assembled = assembleShaders(this.gl, {
+      const assembled = assembleShaders(this.device, {
         vs,
         fs,
         modules,
@@ -117,7 +115,8 @@ export default class ProgramManager {
         transpileToGLSL100
       });
 
-      this._programCache[hash] = new Program(this.gl, {
+      // @ts-expect-error TODO - program should be created from device
+      this._programCache[hash] = new Program(this.device.gl, {
         hash,
         vs: assembled.vs,
         fs: assembled.fs,

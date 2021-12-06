@@ -114,4 +114,5 @@ export function getParameterPolyfill(gl, originalGetParameter, pname) {
   const limit = WEBGL_PARAMETERS[pname];
   const value = typeof limit === 'function' ? limit(gl, originalGetParameter, pname) : limit;
   const result = value !== undefined ? value : originalGetParameter(pname);
+  return result;
 }

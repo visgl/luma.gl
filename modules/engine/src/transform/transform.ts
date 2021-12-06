@@ -1,21 +1,32 @@
-import {assert} from '@luma.gl/api';
+import {Device, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import type {Framebuffer, Buffer} from '@luma.gl/webgl';
-import {isWebGL2, isObjectEmpty} from '@luma.gl/webgl';
+import {WebGLDevice, isObjectEmpty} from '@luma.gl/webgl';
 
 import Model from '../lib/model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
 import {TransformProps, TransformRunOptions, TransformDrawOptions} from './transform-types';
 
-// takes source and target buffers/textures and setsup the pipeline
+/** 
+ * Takes source and target buffers/textures and sets up the pipeline 
+ */
 export default class Transform {
-  static isSupported(gl: WebGLRenderingContext): boolean {
-    // TODO : differentiate writing to buffer vs not
-    return isWebGL2(gl);
+  /** 
+   * Check if Transforms are supported (they are not under WebGL1)
+   * @todo differentiate writing to buffer vs not
+   */
+  static isSupported(device: Device | WebGL2RenderingContext): boolean {
+    try {
+      const webglDevice = WebGLDevice.attach(device);
+      return webglDevice.isWebGL2;
+    } catch {
+      return false;
+    }
   }
 
+  readonly device: WebGLDevice;
   readonly gl: WebGL2RenderingContext;
   model: Model | null = null;
   elementCount = 0;
@@ -23,14 +34,16 @@ export default class Transform {
   textureTransform = null;
   elementIDBuffer = null;
 
-  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
-    this.gl = gl;
+  constructor(device: Device | WebGL2RenderingContext, props: TransformProps = {}) {
+    this.device = WebGLDevice.attach(device);
+    // TODO assert webgl2?
+    this.gl = this.device.gl2;
     this._initialize(props);
     Object.seal(this);
   }
 
-  // Delete owned resources.
-  delete(): void {
+  /** Delete owned resources. */
+  destroy(): void {
     const {model, bufferTransform, textureTransform} = this;
     if (model) {
       model.delete();
@@ -43,7 +56,12 @@ export default class Transform {
     }
   }
 
-  // Run one transform loop.
+  /** @deprecated Use destroy*() */
+  delete(): void {
+    this.destroy();
+  }
+
+  /** Run one transform loop. */
   run(options?: TransformRunOptions): void {
     const {clearRenderTarget = true} = options || {};
 
@@ -56,7 +74,7 @@ export default class Transform {
     this.model.transform(updatedOpts);
   }
 
-  // swap resources if a map is provided
+  /** swap resources if a map is provided */
   swap(): void {
     let swapped = false;
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
@@ -66,12 +84,12 @@ export default class Transform {
     assert(swapped, 'Nothing to swap');
   }
 
-  // Return Buffer object for given varying name.
+  /** Return Buffer object for given varying name. */
   getBuffer(varyingName: string = null): Buffer {
     return this.bufferTransform && this.bufferTransform.getBuffer(varyingName);
   }
 
-  // Return data either from Buffer or from Texture
+  /** Return data either from Buffer or from Texture */
   getData(options: {packed?: boolean; varyingName?: string} = {}) {
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
@@ -83,12 +101,12 @@ export default class Transform {
     return null;
   }
 
-  // Return framebuffer object if rendering to textures
+  /** Return framebuffer object if rendering to textures */
   getFramebuffer(): Framebuffer | null {
     return this.textureTransform && this.textureTransform.getFramebuffer();
   }
 
-  // Update some or all buffer/texture bindings.
+  /** Update some or all buffer/texture bindings. */
   update(props: TransformProps): void {
     if ('elementCount' in props) {
       this.model.setVertexCount(props.elementCount);
@@ -107,7 +125,7 @@ export default class Transform {
 
     props = this._updateModelProps(props);
     this.model = new Model(
-      gl,
+      this.device,
       Object.assign({}, props, {
         fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
         id: props.id || 'transform-model',

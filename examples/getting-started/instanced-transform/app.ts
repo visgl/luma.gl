@@ -1,9 +1,7 @@
-import {AnimationLoop, AnimationProps, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters, isWebGL2} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model, Transform, CubeGeometry} from '@luma.gl/engine';
+import {Buffer, Texture2D, clear, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
-import {getRandom} from '../../utils';
 
 const INFO_HTML = `
 <p>
@@ -14,8 +12,6 @@ Transform feedback on an instanced cube
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const PI2 = Math.PI * 2;
-
-const random = getRandom();
 
 const transformVs = `
   attribute float rotations;
@@ -91,17 +87,17 @@ const fs = `\
   }
 `;
 
-export default class AppAnimationLoop extends AnimationLoop {
-  demoNotSupported: boolean = false;
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
 
-  static getInfo() {
-    return INFO_HTML;
-  }
+  projectionMatrix = new Matrix4();
+  model: Model;
+  transform: Transform;
 
-  onInitialize({device, gl}: AnimationProps) {
-    this.demoNotSupported = !isWebGL2(gl);
-    if (this.demoNotSupported) {
-      return {};
+  constructor({device, gl}: AnimationProps) {
+    super();
+    if (!isWebGL2(gl)) {
+      throw new Error(ALT_TEXT);
     }
 
     setParameters(gl, {
@@ -115,9 +111,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     const axisBufferData = new Float32Array(12);
     for (let i = 0; i < 4; ++i) {
       const vi = i * 3;
-      const x = random();
-      const y = random();
-      const z = random();
+      const x = Math.random();
+      const y = Math.random();
+      const z = Math.random();
       const l = Math.sqrt(x * x + y * y + z * z);
 
       axisBufferData[vi] = x / l;
@@ -128,7 +124,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const rotationBuffer = new Buffer(
       gl,
-      new Float32Array([random() * PI2, random() * PI2, random() * PI2, random() * PI2])
+      new Float32Array([Math.random() * PI2, Math.random() * PI2, Math.random() * PI2, Math.random() * PI2])
     );
 
     const texture = new Texture2D(gl, {
@@ -137,9 +133,8 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const eyePosition = [0, 0, 10];
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
-    const projectionMatrix = new Matrix4();
 
-    const transform = new Transform(gl, {
+    this.transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
         rotations: rotationBuffer
@@ -150,7 +145,7 @@ export default class AppAnimationLoop extends AnimationLoop {
       elementCount: 4
     });
 
-    const model = new Model(device, {
+    this.model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -183,47 +178,29 @@ export default class AppAnimationLoop extends AnimationLoop {
       },
       instanceCount: 4
     });
-
-    return {
-      model,
-      transform,
-      projectionMatrix
-    };
   }
 
-  onRender({device, aspect, model, transform, projectionMatrix}: AnimationProps) {
-    if (this.demoNotSupported) {
-      return;
-    }
+  onFinalize() {
+    this.transform.destroy();
+    this.model.destroy();
+  }
 
-    projectionMatrix.perspective({fov: Math.PI / 3, aspect});
+  onRender({device, aspect}: AnimationProps) {
+    this.projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
-    transform.run();
+    this.transform.run();
 
     clear(device, {color: [0, 0, 0, 1], depth: true});
-    model
-      .setAttributes({rotations: [transform.getBuffer('vRotation'), {divisor: 1}]})
-      .setUniforms({uProjection: projectionMatrix})
+    this.model
+      .setAttributes({rotations: [this.transform.getBuffer('vRotation'), {divisor: 1}]})
+      .setUniforms({uProjection: this.projectionMatrix})
       .draw();
 
-    transform.swap();
-  }
-
-  onFinalize({model, transform}: AnimationProps) {
-    if (this.demoNotSupported) {
-      return;
-    }
-    transform.delete();
-    model.delete();
-  }
-
-  getAltText() {
-    return ALT_TEXT;
+    this.transform.swap();
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

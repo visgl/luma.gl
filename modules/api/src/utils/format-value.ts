@@ -1,6 +1,7 @@
-// TODO / DEPRECATED - delete when confident that probe.gl logging implements all opts
 /* eslint-disable no-console */
-function formatArrayValue(v, opts) {
+
+/** TODO @deprecated - delete when confident that probe.gl logging implements all opts */
+function formatArrayValue(v, opts: {maxElts?: number, size?: number} = {}): string {
   const {maxElts = 16, size = 1} = opts;
   let string = '[';
   for (let i = 0; i < v.length && i < maxElts; ++i) {
@@ -13,9 +14,10 @@ function formatArrayValue(v, opts) {
   return `${string}${terminator}`;
 }
 
-export function formatValue(v, opts?: {isInteger?: boolean, size?: number}) {
+/** TODO @deprecated - delete when confident that probe.gl logging implements all opts */
+export function formatValue(v, opts: {isInteger?: boolean, size?: number} = {}): string {
   const EPSILON = 1e-16;
-  const {isInteger = false} = opts || {};
+  const {isInteger = false} = opts;
   if (Array.isArray(v) || ArrayBuffer.isView(v)) {
     return formatArrayValue(v, opts);
   }

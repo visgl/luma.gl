@@ -6,7 +6,7 @@ import { ContextState } from '../context/context/context-state';
 import {getDevicePixelRatio, setDevicePixelRatio} from '../context/context/device-pixels';
 import {createBrowserContext} from '../context/context/create-context';
 import {getCanvas} from '../context/context/get-canvas';
-import {isWebGL2} from '../context/context/webgl-checks';
+import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
 import {getDeviceInfo} from './get-device-info';
 import {getDeviceFeatures, Feature} from './device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-limits';
@@ -131,8 +131,8 @@ export default class WebGLDevice extends Device implements ContextState {
     if (gl instanceof WebGLDevice) {
       return gl;
     }  
-    if (!gl) {
-      throw new Error('gl');
+    if (!isWebGL(gl)) {
+      throw new Error('Invalid WebGLRenderingContext');
     }
     return new WebGLDevice({...props, gl: gl as WebGLRenderingContext});
   }

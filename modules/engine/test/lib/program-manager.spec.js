@@ -1,6 +1,6 @@
 import {ProgramManager} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
-import {fixture} from 'test/setup';
+import {webgl1TestDevice} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 
 const vs = `\
@@ -50,10 +50,8 @@ test('ProgramManager#import', (t) => {
 });
 
 test('ProgramManager#getDefaultProgramManager', (t) => {
-  const {gl} = fixture;
-
-  const pm1 = ProgramManager.getDefaultProgramManager(gl);
-  const pm2 = ProgramManager.getDefaultProgramManager(gl);
+  const pm1 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
+  const pm2 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
 
   t.ok(pm1 instanceof ProgramManager, 'Default program manager created');
   t.ok(pm1 === pm2, 'Default program manager cached');
@@ -62,8 +60,7 @@ test('ProgramManager#getDefaultProgramManager', (t) => {
 });
 
 test('ProgramManager#basic', (t) => {
-  const {gl} = fixture;
-  const pm = new ProgramManager(gl);
+  const pm = new ProgramManager(webgl1TestDevice);
 
   const program1 = pm.get({vs, fs});
 
@@ -141,8 +138,7 @@ test('ProgramManager#basic', (t) => {
 });
 
 test('ProgramManager#hooks', (t) => {
-  const {gl} = fixture;
-  const pm = new ProgramManager(gl);
+  const pm = new ProgramManager(webgl1TestDevice);
 
   const preHookProgram = pm.get({vs, fs});
 
@@ -258,8 +254,7 @@ test('ProgramManager#hooks', (t) => {
 });
 
 test('ProgramManager#defaultModules', (t) => {
-  const {gl} = fixture;
-  const pm = new ProgramManager(gl);
+  const pm = new ProgramManager(webgl1TestDevice);
 
   const program = pm.get({vs, fs});
 
@@ -318,8 +313,7 @@ test('ProgramManager#defaultModules', (t) => {
 });
 
 test('ProgramManager#release', (t) => {
-  const {gl} = fixture;
-  const pm = new ProgramManager(gl);
+  const pm = new ProgramManager(webgl1TestDevice);
 
   const program1 = pm.get({vs, fs});
   const program2 = pm.get({vs, fs});
@@ -336,9 +330,7 @@ test('ProgramManager#release', (t) => {
 });
 
 test('ProgramManager#transpileToGLSL100', (t) => {
-  const {gl} = fixture;
-
-  const pm = new ProgramManager(gl);
+  const pm = new ProgramManager(webgl1TestDevice);
 
   t.throws(() => {
     pm.get({

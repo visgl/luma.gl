@@ -11,7 +11,7 @@
     {"path": "modules/core"},
     {"path": "modules/engine"},
     {"path": "modules/experimental"},
-    // {"path": "modules/gltools"},
+    {"path": "modules/gltools"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"}

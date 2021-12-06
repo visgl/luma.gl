@@ -1,5 +1,6 @@
-import {AnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import type {Buffer} from '@luma.gl/api';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API
@@ -23,21 +24,22 @@ const colorShaderModule = {
   `
 };
 
-export default class AppAnimationLoop extends AnimationLoop {
-  constructor() {
-    super({debug: true});
-  }
+export default class AppRenderLoop extends RenderLoop {
+  static info = INFO_HTML;
 
-  static getInfo() {
-    return INFO_HTML;
-  }
+  model: Model;
+  positionBuffer: Buffer;
+  colorBuffer: Buffer;
+  offsetBuffer: Buffer;
 
-  onInitialize({device}: AnimationProps) {
-    const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
-    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
-    const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
+  constructor({device}: AnimationProps) {
+    super();
 
-    const model = new Model(device, {
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
+    this.colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
+    this.offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
+
+    this.model = new Model(device, {
       vs: `
         attribute vec2 position;
         attribute vec3 color;
@@ -55,33 +57,30 @@ export default class AppAnimationLoop extends AnimationLoop {
       `,
       modules: [colorShaderModule],
       attributes: {
-        position: positionBuffer,
-        color: [colorBuffer, {divisor: 1}],
-        offset: [offsetBuffer, {divisor: 1}]
+        position: this.positionBuffer,
+        color: [this.colorBuffer, {divisor: 1}],
+        offset: [this.offsetBuffer, {divisor: 1}]
       },
       vertexCount: 3,
       instanceCount: 4,
       isInstanced: true
     });
-
-    return {model, positionBuffer, colorBuffer, offsetBuffer};
   }
 
-  onRender({device, model}: AnimationProps & {model: Model}) {
+  onFinalize() {
+    this.model.destroy();
+    this.positionBuffer.destroy();
+    this.colorBuffer.destroy();
+    this.offsetBuffer.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
     clear(device, {color: [0, 0, 0, 1]});
-    model.draw();
-  }
-
-  onFinalize({gl, model, positionBuffer, colorBuffer, offsetBuffer}: AnimationProps) {
-    model.delete();
-    positionBuffer.delete();
-    colorBuffer.delete();
-    offsetBuffer.delete();
+    this.model.draw();
   }
 }
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  const animationLoop = new AppAnimationLoop();
-  animationLoop.start();
+  RenderLoop.run(AppRenderLoop);
 }

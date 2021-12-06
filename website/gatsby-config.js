@@ -201,13 +201,13 @@ module.exports = {
             path: 'examples/api/animation/',
             image: 'images/example-animation.png'
           },
-          {
-            category: 'Tutorials',
-            title: 'Program Management',
-            componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
-            path: 'examples/api/program-management/',
-            image: 'images/example-program-management.png'
-          },
+          // {
+          //   category: 'Tutorials',
+          //   title: 'Program Management',
+          //   componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
+          //   path: 'examples/api/program-management/',
+          //   image: 'images/example-program-management.png'
+          // },
           {
             category: 'Tutorials',
             title: 'Cubemap',

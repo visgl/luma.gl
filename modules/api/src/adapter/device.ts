@@ -6,6 +6,7 @@ import type {default as Shader, ShaderProps} from './shader';
 // import type {RenderPipeline, RenderPipelineProps, ComputePipeline, ComputePipelineProps} from './pipeline';
 
 export type ShadingLanguage = 'glsl' | 'wgsl';
+// export type ShadingLanguageInfo = {version: string; features: Set<string>};
 
 /**
  * Identifies the GPU vendor and driver.
@@ -16,10 +17,11 @@ export type DeviceInfo = {
   vendor: string,
   renderer: string,
   version: string,
-  vendorMasked?: string,
-  rendererMasked?: string,
+  gpuVendor: 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN';
   shadingLanguages: ShadingLanguage[];
   shadingLanguageVersions: Record<string, string>;
+  vendorMasked?: string;
+  rendererMasked?: string;
 };
 
 /** Limits for a device */
@@ -57,9 +59,16 @@ export type DeviceProps = {};
 /**
  * WebGPU Device/WebGL context abstraction
  */
-export default class Device {
+export default abstract class Device {
   readonly statsManager: StatsManager = lumaStats;
 
+  abstract info: DeviceInfo;
+  abstract features: Set<string>;
+
+  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
+  commit(): void {}
+
+  // Resource creation
   createBuffer(props: BufferProps): Buffer;
   createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer;
   
@@ -71,9 +80,6 @@ export default class Device {
   }
   createTexture(props: TextureProps): Texture  { throw new Error('not implemented'); }
   createShader(props: ShaderProps): Shader  { throw new Error('not implemented'); }
-
-  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
-  commit(): void {}
 
   protected _createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
 }

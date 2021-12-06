@@ -1,21 +1,17 @@
-import {loadImage} from '@luma.gl/api';
+import {Device, loadImage} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGLContext} from '../context/context/webgl-checks';
-import Texture, {TextureProps} from './texture';
+import Texture, {TextureProps, TextureSupportOptions} from './texture';
 
 
 export type Texture2DProps = TextureProps & {
 };
 
 export default class Texture2D extends Texture {
-  static isSupported(gl: WebGLRenderingContext, opts?: object): boolean {
-    // @ts-expect-error
-    return Texture.isSupported(gl, opts);
+  static isSupported(device: Device | WebGLRenderingContext, opts?: object): boolean {
+    return Texture.isSupported(device, opts);
   }
 
-  constructor(gl: WebGLRenderingContext, props?: Texture2DProps | Promise<Texture2DProps>) {
-      assertWebGLContext(gl);
-
+  constructor(device: Device | WebGLRenderingContext, props?: Texture2DProps | Promise<Texture2DProps>) {
     // Signature: new Texture2D(gl, url | Promise)
     if (props instanceof Promise || typeof props === 'string') {
       props = {data: props};
@@ -26,7 +22,7 @@ export default class Texture2D extends Texture {
       props = Object.assign({}, props, {data: loadImage(props.data)});
     }
 
-    super(gl, Object.assign({}, props, {target: GL.TEXTURE_2D}));
+    super(device, Object.assign({}, props, {target: GL.TEXTURE_2D}));
 
     this.initialize(props);
 

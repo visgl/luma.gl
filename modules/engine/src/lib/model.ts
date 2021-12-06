@@ -3,8 +3,7 @@ import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {ProgramProps} from '@luma.gl/webgl';
 import {
-  isWebGL,
-  Shader,
+  WebGLDevice,
   Program,
   VertexArray,
   clear,
@@ -159,13 +158,13 @@ export default class Model {
   constructor(device: Device, props?: ModelProps);
   /* @deprecated */
   constructor(gl: WebGLRenderingContext, props?: ModelProps);
-  constructor(gl, props: ModelProps = {}) {
+  constructor(device, props: ModelProps = {}) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
-    gl = gl.gl || gl;
-    assert(isWebGL(gl));
     this.id = id;
-    this.gl = gl;
+    const webglDevice = WebGLDevice.attach(device);
+    this.device = webglDevice;
+    this.gl = webglDevice.gl;
     this.id = props.id || uid('Model');
     this.initialize(props);
   }
@@ -173,7 +172,7 @@ export default class Model {
   initialize(props: ModelProps) {
     this.props = {};
 
-    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.gl);
+    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.device);
     this._programManagerState = -1;
     this._managedProgram = false;
 
@@ -571,7 +570,6 @@ export default class Model {
     this.program = program;
 
     if (this.vertexArray) {
-      // @ts-expect-error TODO
       this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
     } else {
       this.vertexArray = new VertexArray(this.gl, {program: this.program});

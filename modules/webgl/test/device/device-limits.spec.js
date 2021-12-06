@@ -83,20 +83,29 @@ const WEBGL_LIMITS = {
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: true
 };
 
-test('WebGLDevice#limits', (t) => {
-  const gl = webgl1TestDevice.gl;
-  for (const limit in DEVICE_LIMITS) {
+test('WebGLDevice#limits (WebGPU style limits)', (t) => {
+  for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
     const actual = webgl1TestDevice.limits[limit];
-    t.ok(Number.isFinite(actual), `device.limits[GL.${getKey(gl, limit)}] returns a number`);
+    if (numeric) {
+      t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
+    } else {
+      t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+    }
   }
   t.end();
 });
 
-test('WebGLDevice#webglLimits', (t) => {
-  const gl = webgl1TestDevice.gl;
-  for (const limit in WEBGL_LIMITS) {
-    const actual = webgl1TestDevice.limits[limit];
-    t.ok(Number.isFinite(actual), `device.limits[GL.${getKey(gl, limit)}] returns a number`);
+test('WebGLDevice#webglLimits (WebGL style limits)', (t) => {
+  for (const [limit, numeric] of Object.entries(WEBGL_LIMITS)) {
+    const actual = webgl1TestDevice.webglLimits[limit];
+    if (numeric) {
+      t.ok(
+        Number.isFinite(actual),
+        `device.limits[${getKey(webgl1TestDevice.gl, limit)}] returns a number: ${actual}`
+      );
+    } else {
+      t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+    }
   }
   t.end();
 });
