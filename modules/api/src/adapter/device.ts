@@ -5,13 +5,23 @@ import type {default as Texture, TextureProps} from './texture';
 import type {default as Shader, ShaderProps} from './shader';
 // import type {RenderPipeline, RenderPipelineProps, ComputePipeline, ComputePipelineProps} from './pipeline';
 
+export type ShadingLanguage = 'glsl' | 'wgsl';
+// export type ShadingLanguageInfo = {version: string; features: Set<string>};
+
+/**
+ * Identifies the GPU vendor and driver.
+ * @see https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ */
 export type DeviceInfo = {
+  type: 'webgl' | 'webgl2' | 'webgpu';
   vendor: string,
   renderer: string,
-  vendorMasked: string,
-  rendererMasked: string,
   version: string,
-  shadingLanguage: string
+  gpuVendor: 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN';
+  shadingLanguages: ShadingLanguage[];
+  shadingLanguageVersions: Record<string, string>;
+  vendorMasked?: string;
+  rendererMasked?: string;
 };
 
 /** Limits for a device */
@@ -44,13 +54,32 @@ export type DeviceLimits = {
   readonly maxComputeWorkgroupsPerDimension?: number;
 };
 
+export type DeviceProps = {};
+
 /**
  * WebGPU Device/WebGL context abstraction
  */
-export default class Device {
+export default abstract class Device {
   readonly statsManager: StatsManager = lumaStats;
 
-  createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
+  abstract info: DeviceInfo;
+  abstract features: Set<string>;
+
+  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
+  commit(): void {}
+
+  // Resource creation
+  createBuffer(props: BufferProps): Buffer;
+  createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer;
+  
+  createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer { 
+    if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
+      return this._createBuffer({data: props});
+    }
+    return this._createBuffer(props);
+  }
   createTexture(props: TextureProps): Texture  { throw new Error('not implemented'); }
   createShader(props: ShaderProps): Shader  { throw new Error('not implemented'); }
+
+  protected _createBuffer(props: BufferProps): Buffer { throw new Error('not implemented'); }
 }

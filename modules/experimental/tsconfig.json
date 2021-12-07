@@ -9,7 +9,6 @@
   },
   "references": [
     {"path": "../engine"},
-    {"path": "../gltools"},
     {"path": "../shadertools"},
     {"path": "../webgl"}
   ]

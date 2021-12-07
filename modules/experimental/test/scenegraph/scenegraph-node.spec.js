@@ -1,22 +1,4 @@
-// Copyright (c) 2015 - 2019 Uber Technologies, Inc.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// luma.gl, MIT license
 
 import test from 'tape-promise/tape';
 import {ScenegraphNode} from '@luma.gl/experimental';
@@ -34,7 +16,6 @@ test('ScenegraphNode#constructor', (t) => {
   const sgNode = new ScenegraphNode(PROPS);
   t.ok(sgNode instanceof ScenegraphNode, 'should construct the object');
   for (const key in PROPS) {
-    // @ts-expect-error props is not documented
     t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
     t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
   }
@@ -52,7 +33,6 @@ test('ScenegraphNode#setProps', (t) => {
   const sgNode = new ScenegraphNode();
   sgNode.setProps(PROPS);
   for (const key in PROPS) {
-    // @ts-expect-error props is not documented
     t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
     t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
   }
@@ -120,7 +100,6 @@ test('ScenegraphNode#update', (t) => {
 test('ScenegraphNode#getCoordinateUniforms', (t) => {
   const sgNode = new ScenegraphNode();
 
-  // @ts-expect-error
   t.throws(() => sgNode.getCoordinateUniforms(), 'should throw on missing viewMatrix');
 
   const uniforms = sgNode.getCoordinateUniforms(new Matrix4());

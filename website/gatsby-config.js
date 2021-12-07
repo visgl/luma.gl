@@ -138,32 +138,12 @@ module.exports = {
           },
           {
             category: 'Tutorials',
-            title: 'Hello Instancing - High-level',
+            title: 'Hello Instancing',
             componentUrl: resolve(
               __dirname,
-              './templates/getting-started/example-hello-instancing-high.jsx'
+              './templates/getting-started/example-hello-instancing.jsx'
             ),
-            path: 'examples/getting-started/hello-instancing-high',
-            image: 'images/example-hello-instancing.png'
-          },
-          {
-            category: 'Tutorials',
-            title: 'Hello Instancing - Mid-level',
-            componentUrl: resolve(
-              __dirname,
-              './templates/getting-started/example-hello-instancing-mid.jsx'
-            ),
-            path: 'examples/getting-started/hello-instancing-mid',
-            image: 'images/example-hello-instancing.png'
-          },
-          {
-            category: 'Tutorials',
-            title: 'Hello Instancing - Low-level',
-            componentUrl: resolve(
-              __dirname,
-              './templates/getting-started/example-hello-instancing-low.jsx'
-            ),
-            path: 'examples/getting-started/hello-instancing-low',
+            path: 'examples/getting-started/hello-instancing',
             image: 'images/example-hello-instancing.png'
           },
           {
@@ -182,16 +162,6 @@ module.exports = {
           },
           {
             category: 'Tutorials',
-            title: 'Shader Modules - Low-level',
-            componentUrl: resolve(
-              __dirname,
-              './templates/getting-started/example-shader-modules-low.jsx'
-            ),
-            path: 'examples/getting-started/shader-modules-low',
-            image: 'images/example-shader-hooks.jpg'
-          },
-          {
-            category: 'Tutorials',
             title: 'Transform Feedback',
             componentUrl: resolve(
               __dirname,
@@ -199,13 +169,6 @@ module.exports = {
             ),
             path: 'examples/getting-started/transform-feedback',
             image: 'images/example-transform-feedback.jpg'
-          },
-          {
-            category: 'Tutorials',
-            title: 'External Context',
-            componentUrl: resolve(__dirname, './templates/getting-started/example-external-context.jsx'),
-            path: 'examples/getting-started/external-context',
-            image: 'images/example-hello-triangle.png'
           },
           {
             category: 'Tutorials',
@@ -238,13 +201,13 @@ module.exports = {
             path: 'examples/api/animation/',
             image: 'images/example-animation.png'
           },
-          {
-            category: 'Tutorials',
-            title: 'Program Management',
-            componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
-            path: 'examples/api/program-management/',
-            image: 'images/example-program-management.png'
-          },
+          // {
+          //   category: 'Tutorials',
+          //   title: 'Program Management',
+          //   componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
+          //   path: 'examples/api/program-management/',
+          //   image: 'images/example-program-management.png'
+          // },
           {
             category: 'Tutorials',
             title: 'Cubemap',
@@ -265,6 +228,43 @@ module.exports = {
             componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
             path: 'examples/performance/stress-test/',
             image: 'images/example-stress-test.png'
+          },
+          {
+            category: 'WebGL',
+            title: 'Hello Instancing - Mid-level',
+            componentUrl: resolve(
+              __dirname,
+              './templates/webgl/example-hello-instancing-webgl-mid.jsx'
+            ),
+            path: 'examples/webgl/hello-instancing-webgl-mid',
+            image: 'images/example-hello-instancing.png'
+          },
+          {
+            category: 'WebGL',
+            title: 'Hello Instancing - Raw WebGL',
+            componentUrl: resolve(
+              __dirname,
+              './templates/webgl/example-hello-instancing-webgl.jsx'
+            ),
+            path: 'examples/webgl/hello-instancing-webgl',
+            image: 'images/example-hello-instancing.png'
+          },
+          {
+            category: 'WebGL',
+            title: 'Shader Modules - Raw WebGL',
+            componentUrl: resolve(
+              __dirname,
+              './templates/webgl/example-shader-modules-webgl.jsx'
+            ),
+            path: 'examples/webgl/shader-modules-webgl',
+            image: 'images/example-shader-hooks.jpg'
+          },
+          {
+            category: 'WebGL',
+            title: 'External Context',
+            componentUrl: resolve(__dirname, './templates/webgl/example-external-webgl-context.jsx'),
+            path: 'examples/webgl/external-webgl-context',
+            image: 'images/example-hello-triangle.png'
           }
         ]      
       }

@@ -1,4 +1,4 @@
-import {assert} from '../utils';
+import {assert} from '@luma.gl/api';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function getKeyValue(gl, name) {

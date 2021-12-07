@@ -13,10 +13,7 @@ import '@luma.gl/debug';
 
 // Generic webgl helper modules
 import '../modules/constants/test';
-import '../modules/gltools/test';
-import '../modules/debug/test/';
-
-// Main webgl classes
+import '../modules/debug/test';
 import '../modules/webgl/test';
 
 // DEVICE INDEPENDENT TESTS
@@ -24,3 +21,6 @@ import '../modules/webgl/test';
 // luma.gl core module: Test webgl-dependent code now
 import '../modules/engine/test/';
 import '../modules/experimental/test/';
+
+// DEPRECATED TESTS
+// import '../modules/gltools/test';

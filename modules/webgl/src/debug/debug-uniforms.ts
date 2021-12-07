@@ -1,4 +1,4 @@
-import {formatValue, assert} from '../utils';
+import {assert, formatValue} from '@luma.gl/api';
 
 // Prepares a table suitable for console.table
 /* eslint-disable max-statements, complexity */

@@ -38,7 +38,6 @@
     "@loaders.gl/gltf": "^3.0.0",
     "@loaders.gl/images": "^3.0.0",
     "@luma.gl/engine": "^8.4.0",
-    "@luma.gl/gltools": "^8.4.0",
     "@luma.gl/shadertools": "^8.4.0",
     "@luma.gl/webgl": "^8.4.0"
   },

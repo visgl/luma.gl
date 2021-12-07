@@ -1,9 +1,9 @@
 // luma.gl, MIT license
+import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL} from '@luma.gl/gltools';
-import {ProgramProps} from '@luma.gl/webgl';
+import type {ProgramProps} from '@luma.gl/webgl';
 import {
-  Shader,
+  WebGLDevice,
   Program,
   VertexArray,
   clear,
@@ -31,9 +31,22 @@ const NOOP = () => {};
 const DRAW_PARAMS = {};
 
 export type ModelProps = ProgramProps & {
-  id?: string
+  id?: string;
+
+  // program props
+  // vs,
+  // fs,
+  // varyings,
+  // bufferMode,
+
+  program?: Program;
+  modules?: any[];
+  defines?: Record<string, number | boolean>;
+  inject?: Record<string, any>;
+  transpileToGLSL100?: boolean;
+
   moduleSettings?: object; // UniformsOptions
-  attributes?: object,
+  attributes?: object;
   uniforms?: object; // Uniforms
   geometry?: object; // Geometry
   vertexCount?: number
@@ -50,7 +63,11 @@ export type ModelProps = ProgramProps & {
   indexType?;
   indexOffset?: number;
   vertexArrayInstanced?: boolean;
+
+  /** @deprecated Use isInstanced */
+  instanced?: boolean
 };
+
 
 export type ModelDrawOptions = {
   moduleSettings?;
@@ -102,8 +119,10 @@ interface TransformOpts extends DrawOpts {
 */
 
 export default class Model {
-  readonly id: string;
+  readonly device: Device;
   readonly gl: WebGLRenderingContext;
+
+  readonly id: string;
   readonly animated: boolean = false;
   programManager: ProgramManager;
   vertexCount: number;
@@ -136,20 +155,24 @@ export default class Model {
   // TODO - just to unbreak deck.gl 7.0-beta, remove as soon as updated
   geometry = {};
 
-  constructor(gl, props: ModelProps = {}) {
+  constructor(device: Device, props?: ModelProps);
+  /* @deprecated */
+  constructor(gl: WebGLRenderingContext, props?: ModelProps);
+  constructor(device, props: ModelProps = {}) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
-    assert(isWebGL(gl));
     this.id = id;
-    this.gl = gl;
+    const webglDevice = WebGLDevice.attach(device);
+    this.device = webglDevice;
+    this.gl = webglDevice.gl;
     this.id = props.id || uid('Model');
     this.initialize(props);
   }
 
-  initialize(props) {
+  initialize(props: ModelProps) {
     this.props = {};
 
-    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.gl);
+    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.device);
     this._programManagerState = -1;
     this._managedProgram = false;
 
@@ -226,7 +249,7 @@ export default class Model {
     this._setModelProps(props);
   }
 
-  delete() {
+  destroy(): void {
     // delete all attributes created by this model
     // TODO - should buffer deletes be handled by vertex array?
     for (const key in this._attributes) {
@@ -243,6 +266,11 @@ export default class Model {
     this.vertexArray.delete();
 
     this._deleteGeometryBuffers();
+  }
+
+  /** @deprecated Use .destroy() */
+  delete(): void {
+    this.destroy();
   }
 
   // GETTERS
@@ -542,7 +570,6 @@ export default class Model {
     this.program = program;
 
     if (this.vertexArray) {
-      // @ts-expect-error TODO
       this.vertexArray.setProps({program: this.program, attributes: this.vertexArray.attributes});
     } else {
       this.vertexArray = new VertexArray(this.gl, {program: this.program});

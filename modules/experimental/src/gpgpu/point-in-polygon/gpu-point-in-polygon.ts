@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import {Buffer, Texture2D, assert} from '@luma.gl/webgl';
-// import {isWebGL2} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/engine';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';

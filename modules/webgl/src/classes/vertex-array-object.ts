@@ -1,12 +1,11 @@
+import {assert, getScratchArray, fillArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGL2Context, isWebGL2} from '@luma.gl/gltools';
 import {getBrowser} from '@probe.gl/env';
+import WebGLDevice from '../device/webgl-device';
+import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';
-import {getScratchArray, fillArray} from '../utils/array-utils-flat';
-import {assert} from '../utils';
-import {getLumaContextData} from '../context/luma-context-data';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
@@ -24,7 +23,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 export default class VertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   private static MAX_ATTRIBUTES: number;
 
-  static isSupported(gl: WebGLRenderingContext, options?: VertexArrayObjectProps): boolean {
+  static isSupported(gl: WebGLRenderingContext | WebGL2RenderingContext, options?: VertexArrayObjectProps): boolean {
     if (options?.constantAttributeZero) {
       return isWebGL2(gl) || getBrowser() === 'Chrome';
     }
@@ -38,10 +37,10 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
    * @todo (Tarek): VAOs are now polyfilled. Deprecate this in 9.0
    */
   static getDefaultArray(gl: WebGLRenderingContext): VertexArrayObject {
-    const lumaContextData = getLumaContextData(gl);
-    lumaContextData.defaultVertexArray = lumaContextData.defaultVertexArray || 
+    const webglDevice = WebGLDevice.fromContext(gl);
+    webglDevice.defaultVertexArray = webglDevice.defaultVertexArray || 
       new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
-    return lumaContextData.defaultVertexArray;
+    return webglDevice.defaultVertexArray;
   }
 
   /** Get maximum number of attributes in a vertex array */
@@ -86,7 +85,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   // Create a VertexArray
   constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
-    super(gl, {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
+    super(WebGLDevice.attach(gl), {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
 
     this.buffer = null;
     this.bufferValue = null;

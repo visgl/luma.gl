@@ -1,6 +1,6 @@
+import {assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getTypedArrayFromGLType} from '../webgl-utils';
-import {checkProps, assert} from '../utils';
+import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,

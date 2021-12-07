@@ -17,6 +17,7 @@ const config = deepMerge(defaultConfig, {
   },
 
   rules: {
+    'no-unused-expressions': 'warn',
     'import/no-unresolved': 1,
     'no-console': 1,
     'no-continue': ['warn'],
@@ -37,6 +38,7 @@ const config = deepMerge(defaultConfig, {
     {
       files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
       rules: {
+        'no-unused-expressions': 'warn',
         // For parquet module
         '@typescript-eslint/no-non-null-assertion': 0,
         '@typescript-eslint/no-non-null-asserted-optional-chain': 0,
@@ -74,16 +76,6 @@ const config = deepMerge(defaultConfig, {
         '@typescript-eslint/restrict-plus-operands': 0
       }
     },
-    {
-      // scripts use devDependencies
-      files: ['*worker*.js', '**/worker-utils/**/*.js'],
-      env: {
-        browser: true,
-        es2020: true,
-        node: true,
-        worker: true
-      }
-    },
     // tests are run with aliases set up in node and webpack.
     // This means lint will not find the imported files and generate false warnings
     {
@@ -92,12 +84,6 @@ const config = deepMerge(defaultConfig, {
       rules: {
         'import/no-unresolved': 0,
         'import/no-extraneous-dependencies': 0
-      }
-    },
-    {
-      files: ['examples/**/*.js'],
-      rules: {
-        'import/no-unresolved': 0
       }
     }
   ],

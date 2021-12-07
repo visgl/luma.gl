@@ -1,14 +1,15 @@
 // @ts-nocheck
+import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import Buffer from './webgl-buffer';
 import Framebuffer from './framebuffer';
 import Texture from './texture';
-import {assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
-import {flipRows, scalePixels} from '../webgl-utils';
+import {assertWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
+import {flipRows, scalePixels} from '../webgl-utils/typed-array-utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
-import {assert} from '../utils';
 
 // NOTE: Slow requires roundtrip to GPU
 // Copies data from a Framebuffer or a Texture object into ArrayBuffer object.

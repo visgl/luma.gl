@@ -1,5 +1,9 @@
 // Utils
-export {log} from './lib/utils/log';
+export {log} from '@luma.gl/api';
+
+// export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
+export type {WebGLDeviceProps} from '@luma.gl/webgl';
+export {WebGLDevice, getWebGLDevice} from '@luma.gl/webgl';
 
 export {
   isWebGL,
@@ -7,34 +11,49 @@ export {
   getWebGL2Context,
   assertWebGLContext,
   assertWebGL2Context
-} from './lib/context/webgl-checks';
+} from '@luma.gl/webgl';
 
-export type {GLContextOptions} from './lib/context/context';
-export {
-  createGLContext,
-  resizeGLContext,
-  instrumentGLContext,
-  getContextDebugInfo
-} from './lib/context/context';
+// Device ratio
+export {cssToDeviceRatio, cssToDevicePixels} from '@luma.gl/webgl';
 
-export {cssToDeviceRatio, cssToDevicePixels} from './lib/context/device-pixels';
+// Unified parameter API
 
-// Polyfills to support a subset of WebGL2 APIs on WebGL1 contexts
-export {polyfillContext} from './lib/polyfill/polyfill-context';
-
-// unified parameter APIs
-export type {GLParameters} from './lib/state-tracker/webgl-parameters';
+export type {GLParameters} from '@luma.gl/webgl';
 export {
   getParameters,
   setParameters,
-  resetParameters,
-  withParameters
-} from './lib/state-tracker/unified-parameter-api';
+  resetParameters
+} from '@luma.gl/webgl';
 
-// state tracking
+export {
+  withParameters
+} from '@luma.gl/webgl';
+
+// State tracking
 export {
   trackContextState,
   pushContextState,
   popContextState
-} from './lib/state-tracker/track-context-state';
+} from '@luma.gl/webgl';
 
+// Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
+export {polyfillContext} from '@luma.gl/webgl';
+
+// DEPRECATED
+
+export type {GLContextOptions} from './lib/deprecated/context-api';
+export {
+  createGLContext,
+  instrumentGLContext,
+  resizeGLContext,
+  hasFeature,
+  hasFeatures,
+  getFeatures,
+  getContextInfo,
+  getGLContextInfo,
+  getContextLimits,
+  getContextDebugInfo
+} from './lib/deprecated/context-api';
+
+// Features
+export {FEATURES} from './lib/deprecated/features';

@@ -1,5 +1,8 @@
 import {Stats} from 'probe.gl';
 
+/** 
+ * Helper class managing a collection of probe.gl stats objects 
+ */
 export default class StatsManager {
   stats = new Map();
 
@@ -16,4 +19,5 @@ export default class StatsManager {
   }
 }
 
+/** Global stats for all luma.gl devices */
 export const lumaStats: StatsManager = new StatsManager();

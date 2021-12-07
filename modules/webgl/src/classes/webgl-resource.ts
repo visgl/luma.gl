@@ -1,9 +1,10 @@
 // luma.gl, MIT license
-import {isWebGL2, assertWebGLContext} from '@luma.gl/gltools';
-import {Resource} from '@luma.gl/api';
+import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/api';
+import type {Device} from '@luma.gl/api';
 export type {ResourceProps} from '@luma.gl/api';
-import {getKey, getKeyValue} from '../webgl-utils';
-import {uid, assert, stubRemovedMethods} from '../utils';
+import {isWebGL2, assertWebGLContext} from '../context/context/webgl-checks';
+import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
+import WebGLDevice from '../device/webgl-device';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -12,17 +13,21 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
  */
  export default class WebGLResource<Props> extends Resource<Props> {
   id: string;
+  userData: any;
+  readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;
-  userData: any;
   private _handle: any;
 
   private _bound = false;
   // Only meaningful for resources that allocate GPU memory
   byteLength = 0;
 
-  constructor(gl: WebGLRenderingContext, props: Props, defaultProps: Required<Props>) {
-    super(gl as any, props, defaultProps);
+  constructor(device: Device, props: Props, defaultProps: Required<Props>) {
+    super(device, props, defaultProps);
+
+    this.device = WebGLDevice.attach(device);
+    const gl = this.device.gl;
 
     assertWebGLContext(gl);
 
@@ -30,9 +35,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     // @ts-expect-error
     const {id, userData = {}} = props || {};
     this.gl = gl;
-    // @ts-expect-error
-    this.gl2 = gl;
-    // this.ext = polyfillContext(gl);
+    this.gl2 = gl as WebGL2RenderingContext;
     this.id = id || uid(this.constructor.name);
     this.userData = userData;
 

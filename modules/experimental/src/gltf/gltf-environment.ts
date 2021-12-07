@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube} from '@luma.gl/webgl';
+import {WebGLDevice, Texture2D, TextureCube} from '@luma.gl/webgl';
 import {loadImage} from '@loaders.gl/images';
 
 
@@ -10,7 +10,7 @@ export type GLTFEnvironmentProps = {
 }
 
 export default class GLTFEnvironment {
-  gl: WebGLRenderingContext;
+  device: WebGLDevice;
   brdfLutUrl: any;
   getTexUrl: any;
   specularMipLevels: number = 10;
@@ -20,14 +20,14 @@ export default class GLTFEnvironment {
   _BrdfTexture;
 
   constructor(
-    gl: WebGLRenderingContext,
+    device: WebGLDevice,
     props: {
       brdfLutUrl: any;
       getTexUrl: any;
       specularMipLevels?: number;
     }
   ) {
-    this.gl = gl;
+    this.device = device;
     this.brdfLutUrl = props.brdfLutUrl;
     this.getTexUrl = props.getTexUrl;
     this.specularMipLevels = props.specularMipLevels || 10;
@@ -38,7 +38,7 @@ export default class GLTFEnvironment {
     TextureCube.FACES.forEach((face) => {
       pixels[face] = getTextureForFace(face);
     });
-    return new TextureCube(this.gl, {
+    return new TextureCube(this.device.gl, {
       id,
       mipmaps: false,
       parameters,
@@ -88,7 +88,7 @@ export default class GLTFEnvironment {
 
   getBrdfTexture() {
     if (!this._BrdfTexture) {
-      this._BrdfTexture = new Texture2D(this.gl, {
+      this._BrdfTexture = new Texture2D(this.device.gl, {
         id: 'brdfLUT',
         parameters: {
           [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,

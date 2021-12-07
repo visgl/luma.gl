@@ -4,7 +4,7 @@
   "compilerOptions": {
     "build": true,
     "target": "es2020",
-    "module": "commonjs",
+    "module": "es2015",
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,

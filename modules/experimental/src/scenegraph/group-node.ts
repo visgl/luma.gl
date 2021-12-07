@@ -30,7 +30,7 @@ export default class GroupNode extends ScenegraphNode {
   }
 
   // Unpacks arrays and nested arrays of children
-  add(...children: ScenegraphNode[]): this {
+  add(...children: (ScenegraphNode | ScenegraphNode[])[]): this {
     for (const child of children) {
       if (Array.isArray(child)) {
         this.add(...child);

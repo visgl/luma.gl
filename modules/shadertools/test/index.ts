@@ -1,5 +1,3 @@
-import './utils/is-old-ie.spec';
-
 import './lib/glsl-utils/get-shader-info.spec';
 import './lib/glsl-utils/shader-utils.spec';
 

@@ -1,26 +1,34 @@
+import {RenderLoop} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/webgl';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
 const examples = {
+  // getting started
   helloTriangle: require('../../examples/getting-started/hello-triangle/app').default,
-  helloInstancingHigh: require('../../examples/getting-started/hello-instancing-high/app').default,
-  helloInstancingMid: require('../../examples/getting-started/hello-instancing-mid/app').default,
+  helloInstancing: require('../../examples/getting-started/hello-instancing/app').default,
   shaderModules: require('../../examples/getting-started/shader-modules/app').default,
   shaderHooks: require('../../examples/getting-started/shader-hooks/app').default,
-  shaderModulesLow: require('../../examples/getting-started/shader-modules-low/app').default,
   transformFeedback: require('../../examples/getting-started/transform-feedback/app').default,
-  instancing: require('../../examples/showcase/instancing/app').default,
-  persistence: require('../../examples/showcase/persistence/app').default,
-  wandering: require('../../examples/showcase/wandering/app').default,
+
+  // API
   animation: require('../../examples/api/animation/app').default,
-  programManagement: require('../../examples/api/program-management/app').default
   // texture3d: require('../../examples/api/texture-3d/app').default
+  programManagement: require('../../examples/api-advanced/program-management/app').default,
+
+  // showcases
+  // instancing: require('../../examples/showcase/instancing/app').default,
+  persistence: require('../../examples/showcase/persistence/app').default,
+  wandering: require('../../examples/showcase/wandering/app').default
+
+  // webgl
+  // helloInstancingWebGLMid: require('../../examples/webgl/hello-instancing-webgl-mid/app').default
+  // shaderModulesWebGL: require('../../examples/webgl/shader-modules-webgl/app').default,
 };
 
 export default Object.keys(examples).map((name) => {
-  const AppAnimationLoop = examples[name];
-  const animationLoop = new AppAnimationLoop();
+  const AppRenderLoop = examples[name];
+  const animationLoop = RenderLoop.getAnimationLoop(AppRenderLoop);
   return {
     name,
     onInitialize: (params) => {

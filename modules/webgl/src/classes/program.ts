@@ -1,5 +1,6 @@
+import {log, assert, uid} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-
+import WebGLDevice from '../device/webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
@@ -8,10 +9,10 @@ import {VertexShader, FragmentShader} from './webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
-import {getKey} from '../webgl-utils';
+import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
+import {withParameters} from '../context/state-tracker/with-parameters';
+import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {uid, assert} from '../utils';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -59,7 +60,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: Record<string, Function>;
   
   constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
-    super(gl, props, {} as any);
+    super(WebGLDevice.attach(gl), props, {} as any);
 
 
     this.initialize(props);

@@ -1,10 +1,10 @@
 // luma.gl, MIT license
+import {log, assert, uid, Shader as ShaderAPI, ShaderProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGLContext, log} from '@luma.gl/gltools';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
-import {Shader as ShaderAPI, ShaderProps} from '@luma.gl/api';
+import {assertWebGLContext} from '../context/context/webgl-checks';
 import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
-import {uid, assert} from '../utils';
+import WebGLDevice from '../device/webgl-device';
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
@@ -12,13 +12,15 @@ const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 export type {ShaderProps};
 
 export class WEBGLShader extends ShaderAPI {
+  readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly handle: WebGLShader;
 
   readonly stage: 'vertex' | 'fragment';
 
   constructor(gl: WebGLRenderingContext, props: ShaderProps) {
-    super(gl as any, {id: getShaderIdFromProps(props), ...props});
+    super(WebGLDevice.attach(gl), {id: getShaderIdFromProps(props), ...props});
+    this.device = WebGLDevice.attach(gl);
     this.gl = gl;
     switch (this.props.stage) {
       case 'vertex':
