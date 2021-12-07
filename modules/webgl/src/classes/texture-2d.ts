@@ -7,7 +7,7 @@ export type Texture2DProps = TextureProps & {
 };
 
 export default class Texture2D extends Texture {
-  static isSupported(device: Device | WebGLRenderingContext, opts?: object): boolean {
+  static isSupported(device: Device | WebGLRenderingContext, opts?: TextureSupportOptions): boolean {
     return Texture.isSupported(device, opts);
   }
 
