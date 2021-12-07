@@ -17,8 +17,8 @@ import {
 export type {TextureProps};
 
 export type TextureSupportOptions = {
-  format: any;
-  linearFiltering: any;
+  format?: any;
+  linearFiltering?: any;
 };
 
 // Supported min filters for NPOT texture.

@@ -85,16 +85,23 @@ export type AnimationProps = {
   height: number
   aspect: number
 
+  timeline: Timeline
+  animationLoop: AnimationLoop
+
   // Experimental
-  _timeline: Timeline
-  _loop: AnimationLoop
-  _animationLoop: AnimationLoop
   _mousePosition?: [number, number] // [offsetX, offsetY],
 
-  /** @deprecated Will be removed */
+  /** @deprecated Will be removed, create your own Framebuffer */
   framebuffer: Framebuffer
   /** @deprecated Use .device */
   gl: WebGLRenderingContext
+
+  /** @deprecated Use .timeline */
+  _timeline: Timeline
+  /** @deprecated Use .animationLoop */
+  _loop: AnimationLoop
+  /** @deprecated Use .animationLoop */
+  _animationLoop: AnimationLoop
 }
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
@@ -507,17 +514,20 @@ export default class AnimationLoop {
       tick: 0,
       tock: 0,
 
+      timeline: this.timeline,
+      animationLoop: this,
+
       // Timeline time for back compatibility
       time: 0,
 
       // Experimental
-      _timeline: this.timeline,
-      _loop: this,
-      _animationLoop: this,
       _mousePosition: null, // Event props
 
       // Deprecated
       framebuffer: this.framebuffer,
+      _timeline: this.timeline,
+      _loop: this,
+      _animationLoop: this
     };
   }
 

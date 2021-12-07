@@ -140,10 +140,11 @@ export default class AppRenderLoop extends RenderLoop {
   static props = {createFramebuffer: true, debug: true};
 
   cube: InstancedCube;
+  timeline: Timeline;
   timelineChannels: Record<string, number>;
 
-  constructor({device, gl, _animationLoop}: AnimationProps) {
-    super({_animationLoop});
+  constructor({device, gl, animationLoop}: AnimationProps) {
+    super();
   
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -152,7 +153,9 @@ export default class AppRenderLoop extends RenderLoop {
       depthFunc: gl.LEQUAL
     });
 
-    this.attachTimeline(new Timeline());
+    
+    this.timeline = new Timeline();
+    animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
 
     this.timelineChannels = {

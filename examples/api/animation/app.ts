@@ -49,6 +49,7 @@ void main(void) {
 export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
+  timeline: Timeline;
   timeSlider;
 
   cubes: {
@@ -58,8 +59,8 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
-  constructor({gl, aspect, _animationLoop}: AnimationProps) {
-    super({_animationLoop});
+  constructor({gl, aspect, animationLoop}: AnimationProps) {
+    super();
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
@@ -70,7 +71,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     const playButton = document.getElementById('play');
     const pauseButton = document.getElementById('pause');
-    const timeSlider = document.getElementById('time');
+    this.timeSlider = document.getElementById('time');
 
     if (playButton) {
       playButton.addEventListener('click', () => {
@@ -81,7 +82,7 @@ export default class AppRenderLoop extends RenderLoop {
         this.timeline.pause();
       });
 
-      timeSlider.addEventListener('input', (event) => {
+      this.timeSlider.addEventListener('input', (event) => {
         // @ts-ignore
         this.timeline.setTime(parseFloat(event.target.value));
       });
@@ -108,7 +109,8 @@ export default class AppRenderLoop extends RenderLoop {
       [1, 1, 0]
     ];
 
-    this.attachTimeline(new Timeline());
+    this.timeline = new Timeline();
+    animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
 
     const channels = [
@@ -181,17 +183,15 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
-  onFinalize({gl}) {
+  onFinalize() {
     for (let i = 0; i < 4; ++i) {
       this.cubes[i].model.delete();
     }
   }
 
-  onRender(animationProps) {
-    const {gl, timeSlider} = animationProps;
-
-    if (timeSlider) {
-      timeSlider.value = this.timeline.getTime();
+  onRender(gl) {
+    if (this.timeSlider) {
+      this.timeSlider.value = this.timeline.getTime();
     }
 
     const modelMatrix = new Matrix4();

@@ -8,27 +8,13 @@ import {Timeline} from '../animation/timeline'
  * Simplifying type management
  */
 export abstract class RenderLoop {
-  _animationLoop: AnimationLoop;
-
-  // Forward animation loop methods
-  get timeline() {
-    return this._animationLoop.timeline;
-  }
-  attachTimeline(timeline: Timeline) {
-    this._animationLoop.attachTimeline(timeline);
-  }
-  get stats(): Stats {
-    return this._animationLoop.stats;
-  }
-
-  // renderloop methods
-
-  constructor(animationProps?: {_animationLoop: AnimationLoop}) {
-    this._animationLoop = animationProps?._animationLoop;
-  }
+  constructor(animationProps?: AnimationProps) {}
   onRender(animationProps: AnimationProps) {}
   onFinalize(animationProps: AnimationProps) {}
 
+  static getAnimationLoop(RenderLoopConstructor: typeof RenderLoop) {
+    return new WrappedAnimationLoop(RenderLoopConstructor);
+  }
 
   /** Instantiates and runs the render loop */
   static run(RenderLoopConstructor: typeof RenderLoop, options?: {start?: boolean}): WrappedAnimationLoop {
@@ -37,10 +23,6 @@ export abstract class RenderLoop {
       animationLoop.start();
     }
     return animationLoop;
-  }
-
-  static getAnimationLoop(RenderLoopConstructor: typeof RenderLoop) {
-    return new WrappedAnimationLoop(RenderLoopConstructor);
   }
 }
 

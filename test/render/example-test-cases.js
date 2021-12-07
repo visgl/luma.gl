@@ -19,7 +19,7 @@ const examples = {
   // showcases
   instancing: require('../../examples/showcase/instancing/app').default,
   persistence: require('../../examples/showcase/persistence/app').default,
-  wandering: require('../../examples/showcase/wandering/app').default,
+  wandering: require('../../examples/showcase/wandering/app').default
 
   // webgl
   // helloInstancingWebGLMid: require('../../examples/webgl/hello-instancing-webgl-mid/app').default

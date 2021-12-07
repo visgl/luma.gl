@@ -197,6 +197,7 @@ export default class AppRenderLoop extends RenderLoop {
   u_ScaleDiffBaseMR = [0, 0, 0, 0];
   u_ScaleFGDSpec = [0, 0, 0, 0];
 
+  timeline: Timeline;
   timelineChannel;
   animationHandle;
   gltf;
@@ -207,8 +208,8 @@ export default class AppRenderLoop extends RenderLoop {
 
   light;
 
-  constructor(props: AnimationProps) {
-    super(props);
+  constructor({animationLoop}: AnimationProps) {
+    super();
 
     // @ts-expect-error TODO - where are these opts coming
     const {modelFile = null, initialZoom = 2} = opts;
@@ -216,7 +217,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.modelFile = modelFile;
     this.translate = initialZoom;
 
-    this.attachTimeline(new Timeline());
+    this.timeline = new Timeline();
+    animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
     this.timelineChannel = this.timeline.addChannel({
       rate: 0.5
