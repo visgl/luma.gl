@@ -1,9 +1,8 @@
-import {Device} from '@luma.gl/api';
+import {Device, getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, Model, ModelProps, ProgramManager} from '@luma.gl/engine';
 import {WebGLDevice, readPixelsToArray, Buffer, cssToDevicePixels, setParameters} from '@luma.gl/webgl';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-import {getRandom} from '../../utils';
 
 const INFO_HTML = `
 <p>
@@ -16,27 +15,23 @@ single GPU draw call using instanced vertex attributes.
 const random = getRandom();
 
 // Add injections to shader modules
-const picking = Object.assign(
-  {
-    inject: {
-      'vs:MY_SHADER_HOOK_pickColor': 'picking_setPickingColor(color.rgb);',
-      'fs:MY_SHADER_HOOK_fragmentColor': {
-        injection: 'color = picking_filterColor(color);',
-        order: Number.POSITIVE_INFINITY
-      }
+const picking = {
+  inject: {
+    'vs:MY_SHADER_HOOK_pickColor': 'picking_setPickingColor(color.rgb);',
+    'fs:MY_SHADER_HOOK_fragmentColor': {
+      injection: 'color = picking_filterColor(color);',
+      order: Number.POSITIVE_INFINITY
     }
   },
-  pickingBase
-);
+  ...pickingBase
+};
 
-const dirlight = Object.assign(
-  {
-    inject: {
-      'fs:MY_SHADER_HOOK_fragmentColor': 'color = dirlight_filterColor(color);'
-    }
+const dirlight = {
+  inject: {
+    'fs:MY_SHADER_HOOK_fragmentColor': 'color = dirlight_filterColor(color);'
   },
-  dirlightBase
-);
+  ...dirlightBase
+};
 
 const SIDE = 256;
 
