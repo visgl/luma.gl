@@ -185,11 +185,11 @@ export default class AppRenderLoop extends RenderLoop {
 
   onFinalize() {
     for (let i = 0; i < 4; ++i) {
-      this.cubes[i].model.delete();
+      this.cubes[i].model.destroy();
     }
   }
 
-  onRender(gl) {
+  onRender({gl}) {
     if (this.timeSlider) {
       this.timeSlider.value = this.timeline.getTime();
     }
