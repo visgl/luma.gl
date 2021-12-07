@@ -17,7 +17,7 @@ const examples = {
   programManagement: require('../../examples/api-advanced/program-management/app').default,
 
   // showcases
-  instancing: require('../../examples/showcase/instancing/app').default,
+  // instancing: require('../../examples/showcase/instancing/app').default,
   persistence: require('../../examples/showcase/persistence/app').default,
   wandering: require('../../examples/showcase/wandering/app').default
 
