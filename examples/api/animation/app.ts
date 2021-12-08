@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/engine';
-import {setParameters} from '@luma.gl/webgl';
+import {setDeviceParameters, setParameters} from '@luma.gl/webgl';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -59,14 +59,16 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
-  constructor({gl, aspect, animationLoop}: AnimationProps) {
+  constructor({device, gl, aspect, animationLoop}: AnimationProps) {
     super();
 
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
+    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+      clearDepth: 1
     });
 
     const playButton = document.getElementById('play');
@@ -165,7 +167,7 @@ export default class AppRenderLoop extends RenderLoop {
         rotation: rotations[i],
         // @ts-expect-error
         keyFrames: keyFrames[i],
-        model: new Model(gl, {
+        model: new Model(device, {
           vs,
           fs,
           modules: [dirlight],

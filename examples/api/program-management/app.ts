@@ -1,5 +1,5 @@
 import {getRandom} from '@luma.gl/api';
-import {setParameters} from '@luma.gl/webgl';
+import {setDeviceParameters, setParameters} from '@luma.gl/webgl';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {RenderLoop, Model, ProgramManager, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
@@ -62,11 +62,13 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl, aspect}: AnimationProps) {
     super();
 
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
+    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+      clearDepth: 1
     });
 
     this.programManager = new ProgramManager(device);

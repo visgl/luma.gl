@@ -24,6 +24,7 @@ export {default as RenderPipeline} from './adapter/resources/render-pipeline';
 
 // API TYPES
 export type {Accessor, InterleavedAccessors} from './adapter/types/accessor';
+// export {Accessor, BufferAccessors} from './adapter/accessor';
 export type {
   Parameters,
   PrimitiveTopology,

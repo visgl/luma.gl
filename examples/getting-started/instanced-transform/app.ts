@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, Texture2D, clear, isWebGL2, setParameters} from '@luma.gl/webgl';
+import {Buffer, Texture2D, clear, isWebGL2, setDeviceParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -100,9 +100,9 @@ export default class AppRenderLoop extends RenderLoop {
       throw new Error(ALT_TEXT);
     }
 
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
     });
 
     const offsetBuffer = device.createBuffer(new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
@@ -127,9 +127,7 @@ export default class AppRenderLoop extends RenderLoop {
       new Float32Array([Math.random() * PI2, Math.random() * PI2, Math.random() * PI2, Math.random() * PI2])
     );
 
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     const eyePosition = [0, 0, 10];
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});

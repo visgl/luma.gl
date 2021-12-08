@@ -15,7 +15,7 @@ import {
   UniformBufferLayout,
   Buffer,
   isWebGL2,
-  setParameters
+  setDeviceParameters
 } from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -261,9 +261,9 @@ export default class AppRenderLoop extends RenderLoop {
       throw new Error(ALT_TEXT);
     }
 
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: GL.LEQUAL
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
     });
 
     // Create postprocessing pass program.
@@ -300,7 +300,7 @@ export default class AppRenderLoop extends RenderLoop {
       width: gl.drawingBufferWidth,
       height: gl.drawingBufferHeight,
       attachments: {
-        [GL.COLOR_ATTACHMENT0]: new Texture2D(gl, {
+        [GL.COLOR_ATTACHMENT0]: device.createTexture({
           format: GL.RGBA,
           type: GL.UNSIGNED_BYTE,
           width: gl.drawingBufferWidth,
@@ -313,7 +313,7 @@ export default class AppRenderLoop extends RenderLoop {
             [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
           }
         }),
-        [GL.DEPTH_ATTACHMENT]: new Texture2D(gl, {
+        [GL.DEPTH_ATTACHMENT]: device.createTexture({
           format: GL.DEPTH_COMPONENT16,
           type: GL.UNSIGNED_SHORT,
           dataFormat: GL.DEPTH_COMPONENT,
@@ -366,7 +366,7 @@ export default class AppRenderLoop extends RenderLoop {
       });
     }
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture(gl, {
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {

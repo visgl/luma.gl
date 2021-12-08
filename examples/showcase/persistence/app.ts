@@ -1,6 +1,6 @@
 import {getRandom} from '@luma.gl/api';
 import {RenderLoop, Model, Geometry, SphereGeometry} from '@luma.gl/engine';
-import {clear, Framebuffer, Program, setParameters} from '@luma.gl/webgl';
+import {clear, Framebuffer, Program, setDeviceParameters} from '@luma.gl/webgl';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -96,16 +96,17 @@ export default class AppRenderLoop extends RenderLoop {
   persistenceQuad;
   sphere;
   
-  constructor({gl, width, height}) {
+  constructor({device, gl, width, height}) {
     super();
 
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal',
+      cullMode: 'back',
+    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL,
-      cull: true,
-      cullFace: gl.BACK
     });
 
     this.mainFramebuffer = new Framebuffer(gl, {width, height});

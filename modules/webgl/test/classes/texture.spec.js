@@ -6,11 +6,6 @@ import {isWebGL2} from '@luma.gl/webgl';
 import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';
-import {
-  testSamplerParameters,
-  SAMPLER_PARAMETERS,
-  SAMPLER_PARAMETERS_WEBGL2
-} from './sampler.utils';
 
 import {fixture} from 'test/setup';
 

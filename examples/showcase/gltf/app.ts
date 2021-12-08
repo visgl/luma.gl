@@ -4,7 +4,7 @@ import {Device} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
-import {clear, log, lumaStats, setParameters} from '@luma.gl/webgl';
+import {clear, log, lumaStats, setDeviceParameters} from '@luma.gl/webgl';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Matrix4, radians} from '@math.gl/core';
@@ -232,9 +232,10 @@ export default class AppRenderLoop extends RenderLoop {
     // @ts-ignore
     // this._setDisplay(new VRDisplay());
 
-    setParameters(gl, {
-      depthTest: true,
-      blend: false
+ onInitialize({gl, canvas}) {
+    setDeviceParameters(gl, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
     });
 
     this.environment = new GLTFEnvironment(device, {

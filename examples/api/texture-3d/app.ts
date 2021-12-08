@@ -3,9 +3,9 @@
 */
 
 import {getRandom} from '@luma.gl/api';
-import {Texture3D, Buffer, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
+import {Texture3D, Buffer, isWebGL2, setDeviceParameters, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -68,10 +68,13 @@ export default class AppRenderLoop extends RenderLoop {
       permutation: shuffle(range(0, 255), random)
     });
 
+    setDeviceParameters(device, {
+      blendColorOperation: 'add',
+      blendColorSrcFactor: 'one',
+      blendColorDstFactor: 'one-minus-src-alpha'
+    });
     setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      blend: true,
-      blendFunc: [gl.ONE, gl.ONE_MINUS_SRC_ALPHA]
+      clearColor: [0, 0, 0, 1]
     });
 
     // CREATE POINT CLOUD

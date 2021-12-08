@@ -40,7 +40,9 @@ export function initializeGL(canvas) {
   const gl = createTestContext(canvas);
   setParameters(gl, {
     viewport: [0, 0, canvas.width, canvas.height],
-    clearColor: [0, 0, 0, 1],
+  });
+  setParameters(gl, {
+  clearColor: [0, 0, 0, 1],
     clearDepth: 1
   });
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

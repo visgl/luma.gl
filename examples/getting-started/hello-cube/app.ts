@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
+import {Texture2D, clear, setDeviceParameters} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -41,15 +41,15 @@ export default class AppRenderLoop extends RenderLoop {
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   model: Model;
 
-  constructor({device}) {
+  constructor({device}: AnimationProps) {
     super();
-    const {gl} = device;
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: gl.LEQUAL,
+
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal',
     });
 
-    const texture = new Texture2D(gl, {data: 'vis-logo.png'});
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     this.model = new Model(device, {
       vs,

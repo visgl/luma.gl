@@ -1,7 +1,7 @@
 import {Device} from '@luma.gl/api';
 import {RenderLoop, Model, ModelProps, CubeGeometry, AnimationProps} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube, loadImage, setParameters} from '@luma.gl/webgl';
+import {Texture2D, TextureCube, loadImage, setDeviceParameters, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -97,11 +97,13 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl}: AnimationProps) {
     super();
 
+    setDeviceParameters(device, {
+      depthWriteEnabled: true,
+      depthCompare: 'less-equal'
+    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: GL.LEQUAL
+      clearDepth: 1
     });
 
     const cubemap = new TextureCube(gl, {
@@ -115,7 +117,7 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
