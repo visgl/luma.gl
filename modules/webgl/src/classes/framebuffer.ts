@@ -1,6 +1,6 @@
 import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import Resource, {ResourceProps} from './webgl-resource';

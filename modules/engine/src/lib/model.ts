@@ -36,8 +36,8 @@ export type ModelProps = ProgramProps & {
   // program props
   // vs,
   // fs,
-  // varyings,
-  // bufferMode,
+  varyings?: string[];
+  bufferMode?;
 
   program?: Program;
   modules?: any[];
@@ -543,7 +543,9 @@ export default class Model {
       const {vs, fs, modules, inject, defines, varyings, bufferMode, transpileToGLSL100} =
         this.programProps;
       program = this.programManager.get({
+        // @ts-expect-error
         vs,
+        // @ts-expect-error
         fs,
         modules,
         inject,

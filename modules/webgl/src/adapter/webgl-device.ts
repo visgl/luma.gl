@@ -7,14 +7,14 @@ import {getDevicePixelRatio, setDevicePixelRatio} from '../context/context/devic
 import {createBrowserContext} from '../context/context/create-context';
 import {getCanvas} from '../context/context/get-canvas';
 import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
-import {getDeviceInfo} from './get-device-info';
-import {getDeviceFeatures, Feature} from './device-features';
-import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-limits';
+import {getDeviceInfo} from './device-helpers/get-device-info';
+import {getDeviceFeatures, Feature} from './device-helpers/device-features';
+import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 
 // WebGL classes
 import type {BufferProps, ShaderProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
-import {WEBGLShader} from '../classes/webgl-shader';
+import {WEBGLShader} from '../adapter/webgl-shader';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
@@ -111,7 +111,7 @@ export default class WebGLDevice extends Device implements ContextState {
   _polyfilled: boolean = false;
 
   /**
-   * 
+   *
    */
   static fromContext(gl: WebGLRenderingContext): WebGLDevice {
     // @ts-expect-error
@@ -130,7 +130,7 @@ export default class WebGLDevice extends Device implements ContextState {
   ): WebGLDevice {
     if (gl instanceof WebGLDevice) {
       return gl;
-    }  
+    }
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGLRenderingContext');
     }
@@ -140,7 +140,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
   constructor(props: WebGLDeviceProps) {
     super();
-    
+
     this.props = {...DEFAULT_DEVICE_PROPS, ...props};
 
     // If attaching to an already attached context, return the attached device
@@ -275,11 +275,11 @@ export default class WebGLDevice extends Device implements ContextState {
   }
 
   createTexture(props: Texture2DProps): Texture2D {
-    return new Texture2D(this.gl, props);
+    return new Texture2D(this, props);
   }
 
   createShader(props: ShaderProps): WEBGLShader {
-    return new WEBGLShader(this.gl, props);
+    return new WEBGLShader(this, props);
   }
 
   /**

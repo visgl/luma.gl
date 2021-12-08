@@ -1,82 +1,18 @@
 // luma.gl, MIT license
-import {log, assert, uid, Shader as ShaderAPI, ShaderProps} from '@luma.gl/api';
+import {assert, uid, ShaderProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
+import {getShaderInfo} from '@luma.gl/shadertools';
 import {assertWebGLContext} from '../context/context/webgl-checks';
-import {parseShaderCompilerLog} from '../webgl-utils/parse-shader-compiler-log';
-import WebGLDevice from '../device/webgl-device';
+import {WEBGLShader} from '../adapter/webgl-shader'
+import WebGLDevice from '../adapter/webgl-device'
 
 const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
-
 export type {ShaderProps};
 
-export class WEBGLShader extends ShaderAPI {
-  readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
-  readonly handle: WebGLShader;
-
-  readonly stage: 'vertex' | 'fragment';
-
-  constructor(gl: WebGLRenderingContext, props: ShaderProps) {
-    super(WebGLDevice.attach(gl), {id: getShaderIdFromProps(props), ...props});
-    this.device = WebGLDevice.attach(gl);
-    this.gl = gl;
-    switch (this.props.stage) {
-      case 'vertex':
-        this.handle = this.props.handle || this.gl.createShader(GL.VERTEX_SHADER);
-        break;
-      case 'fragment':
-        this.handle = this.props.handle || this.gl.createShader(GL.FRAGMENT_SHADER);
-        break;
-      default:
-        throw new Error(this.props.stage);
-    }
-    this.stage = this.props.stage;
-    this._compile(props.source);
-  }
-
-  destroy(): void {
-    if (this.handle) {
-      this.removeStats();
-      this.gl.deleteShader(this.handle);
-      // @ts-expect-error
-      this.handle = null;
-    }
-  }  
-  
-  async compilationInfo(): Promise<readonly CompilerMessage[]> {
-    const log = this.gl.getShaderInfoLog(this.handle);
-    return parseShaderCompilerLog(log);
-  }
-
-  // PRIVATE METHODS
-  _compile(source) {
-    if (!source.startsWith('#version ')) {
-      source = `#version 100\n${source}`;
-    }
-    this.gl.shaderSource(this.handle, source);
-    this.gl.compileShader(this.handle);
-
-    // TODO - For performance reasons, avoid checking shader compilation errors on production?
-    // TODO - Load log even when no error reported, to catch warnings?
-    // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-    const compileStatus = this.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
-    if (!compileStatus) {
-      const shaderLog = this.gl.getShaderInfoLog(this.handle);
-      const messages = parseShaderCompilerLog(shaderLog).filter(message => message.type === 'error');
-      const formattedLog = formatCompilerLog(messages, source);
-      const shaderName: string = getShaderInfo(source).name;
-      const shaderDescription = `${this.stage} shader ${shaderName}`;
-      log.error(`GLSL compilation errors in ${shaderName}\n${formattedLog}`)();
-      throw new Error(`GLSL compilation errors in ${shaderName}`);
-    }
-  }
-}
- 
 /**
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
- * For now this is an internal class
+ * This is an internal class, use FragmentShader or VertexShader
  */
 export class Shader extends WEBGLShader {
   shaderType: GL.FRAGMENT_SHADER | GL.VERTEX_SHADER;
@@ -97,9 +33,7 @@ export class Shader extends WEBGLShader {
   constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'>) {
     assertWebGLContext(gl);
     assert(typeof props.source === 'string', ERR_SOURCE);
-
-    // @ts-expect-error
-    super(gl, {...props, id: getShaderIdFromProps(props), stage: props.shaderType === GL.VERTEX_SHADER ? 'vertex' : 'fragment'});
+    super(WebGLDevice.attach(gl), {...props, stage: props.shaderType === GL.VERTEX_SHADER ? 'vertex' : 'fragment'});
 
     this.shaderType = props.shaderType;
     this.source = props.source;
@@ -192,11 +126,4 @@ function getShaderProps(props: Omit<ShaderProps, 'stage'> | string, shaderType: 
     return {source: props, shaderType};
   }
   return {...props, shaderType};
-}
-
-/** Deduce an id, from shader source, or supplied id, or shader type */
-function getShaderIdFromProps(props: ShaderProps): string {
-  return getShaderInfo(props.source).name ||
-    props.id ||
-    uid(`unnamed ${props.stage || Shader.getTypeName(props.shaderType)}`);
 }

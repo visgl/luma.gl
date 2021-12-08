@@ -1,6 +1,6 @@
 import {Device, log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import {assertWebGLContext} from '../context/context/webgl-checks';
 import Texture, {TextureProps} from './texture';
 

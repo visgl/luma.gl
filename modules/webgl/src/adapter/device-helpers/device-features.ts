@@ -3,10 +3,10 @@
 // available in an WebGL1 or WebGL2 environment.
 
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../context/context/webgl-checks';
-import {isOldIE} from '../webgl-utils/is-old-ie';
+import {isWebGL2} from '../../context/context/webgl-checks';
+import {isOldIE} from './is-old-ie';
 
-export type DeviceFeature = 
+export type DeviceFeature =
   'depth-clamping' |
   'depth24unorm-stencil8' |
   'depth32float-stencil8' |
@@ -15,7 +15,7 @@ export type DeviceFeature =
   'texture-compression-bc';
 
 // TODO - this should be the default export, test cases need updating
-export type WebGLFeature = 
+export type WebGLFeature =
   'webgl2' |
 
   // api support (unify with WebGPU timestamp-query?)

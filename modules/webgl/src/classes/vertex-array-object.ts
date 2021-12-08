@@ -1,7 +1,7 @@
 import {assert, getScratchArray, fillArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
 import Program from './program';
 import WebGLResource, {ResourceProps} from './webgl-resource';

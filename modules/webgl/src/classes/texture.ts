@@ -4,7 +4,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import Buffer from './webgl-buffer';
 import {
   TEXTURE_FORMATS,

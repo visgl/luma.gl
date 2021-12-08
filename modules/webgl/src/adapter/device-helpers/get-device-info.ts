@@ -1,7 +1,7 @@
 import {DeviceInfo} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../context/context/webgl-checks';
-  
+import {isWebGL2} from '../../context/context/webgl-checks';
+
 /** @returns strings identifying the GPU vendor and driver. */
 export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   const vendorMasked = gl.getParameter(GL.VENDOR);

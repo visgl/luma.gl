@@ -27,5 +27,5 @@ export function createTestDevice(props: WebGLDeviceProps = {}): WebGLDevice | nu
   }
 }
 
-export const webgl1TestDevice = createTestDevice({webgl1: true, webgl2: false});
-export const webgl2TestDevice = createTestDevice({webgl1: false, webgl2: true});
+export const webgl1TestDevice: WebGLDevice = createTestDevice({webgl1: true, webgl2: false});
+export const webgl2TestDevice: WebGLDevice = createTestDevice({webgl1: false, webgl2: true});

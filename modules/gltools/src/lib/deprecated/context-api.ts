@@ -4,7 +4,6 @@
 /* eslint-disable quotes */
 import GL from '@luma.gl/constants';
 import {WebGLDevice, WebGLDeviceProps} from '@luma.gl/webgl';
-import {getDeviceFeatures} from '@luma.gl/webgl/device/device-features';
 import {FEATURES} from './features';
 
 export type GLContextOptions = WebGLDeviceProps & {
