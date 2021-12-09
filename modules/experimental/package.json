@@ -35,11 +35,11 @@
     "earcut": "^2.0.6"
   },
   "peerDependencies": {
-    "@loaders.gl/gltf": "^3.0.0",
-    "@loaders.gl/images": "^3.0.0",
-    "@luma.gl/engine": "^8.4.0",
-    "@luma.gl/shadertools": "^8.4.0",
-    "@luma.gl/webgl": "^8.4.0"
+    "@loaders.gl/gltf": "^3.1.0",
+    "@loaders.gl/images": "^3.1.0",
+    "@luma.gl/engine": "8.6.0-alpha.1",
+    "@luma.gl/shadertools": "8.6.0-alpha.1",
+    "@luma.gl/webgl": "8.6.0-alpha.1"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }
