@@ -1,17 +1,18 @@
 // import {Device} from '@luma.gl/api';
-import {WebGLDevice, Texture2D, log} from '@luma.gl/webgl';
+import {WebGLDevice, log} from '@luma.gl/webgl';
+import GL from '@luma.gl/constants';
+import GLTFEnvironment from './gltf-environment';
 
 export type GLTFMaterialParserProps = {
   attributes: any;
   material: any;
   pbrDebug?: boolean;
-  imageBasedLightingEnvironment: any;
+  imageBasedLightingEnvironment?: GLTFEnvironment;
   lights: any;
   useTangents?: boolean;
 };
 export default class GLTFMaterialParser {
   readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext
 
   readonly defines: Record<string, number | boolean>;
   readonly uniforms: Record<string, any>;
@@ -21,7 +22,6 @@ export default class GLTFMaterialParser {
   constructor(device: WebGLDevice, props: GLTFMaterialParserProps) {
     const {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents} = props;
     this.device = device;
-    this.gl = device.gl;
 
     this.defines = {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
@@ -89,22 +89,22 @@ export default class GLTFMaterialParser {
     if (image.compressed) {
       textureOptions = image;
       specialTextureParameters = {
-        [this.gl.TEXTURE_MIN_FILTER]:
-          image.data.length > 1 ? this.gl.LINEAR_MIPMAP_NEAREST : this.gl.LINEAR
+        [GL.TEXTURE_MIN_FILTER]:
+          image.data.length > 1 ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR
       };
     } else {
       // Texture2D accepts a promise that returns an image as data (Async Textures)
       textureOptions = {data: image};
     }
 
-    const texture = new Texture2D(this.gl, {
+    const texture = this.device.createTexture({
       id: gltfTexture.name || gltfTexture.id,
       parameters: {
         ...parameters,
         ...specialTextureParameters
       },
       pixelStore: {
-        [this.gl.UNPACK_FLIP_Y_WEBGL]: false
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
       },
       ...textureOptions
     });
@@ -164,12 +164,12 @@ export default class GLTFMaterialParser {
       log.warn('BLEND alphaMode might not work well because it requires mesh sorting')();
       Object.assign(this.parameters, {
         blend: true,
-        blendEquation: this.gl.FUNC_ADD,
+        blendEquation: GL.FUNC_ADD,
         blendFunc: [
-          this.gl.SRC_ALPHA,
-          this.gl.ONE_MINUS_SRC_ALPHA,
-          this.gl.ONE,
-          this.gl.ONE_MINUS_SRC_ALPHA
+          GL.SRC_ALPHA,
+          GL.ONE_MINUS_SRC_ALPHA,
+          GL.ONE,
+          GL.ONE_MINUS_SRC_ALPHA
         ]
       });
     }
