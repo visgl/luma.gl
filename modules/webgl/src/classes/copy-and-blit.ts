@@ -278,7 +278,7 @@ export function copyToTexture(
       0 /* border must be 0 */
     );
   } else {
-    switch (target) {
+    switch (textureTarget) {
       case GL.TEXTURE_2D:
       case GL.TEXTURE_CUBE_MAP:
         gl.copyTexSubImage2D(
