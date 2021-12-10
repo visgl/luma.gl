@@ -5,7 +5,7 @@ import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-ch
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 
 const DEBUG_DATA_LENGTH = 10;
 

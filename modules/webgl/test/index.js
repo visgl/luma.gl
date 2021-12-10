@@ -16,8 +16,9 @@ import './context/state-tracker/track-context-state.spec';
 import './context/state-tracker/context-state.spec';
 
 // WebGLDevice, features & limits
-import './device/webgl-device.spec';
-import './device/device-features.spec';
-import './device/device-limits.spec';
+import './adapter/webgl-device.spec';
+import './adapter/device-info.spec';
+import './adapter/device-features.spec';
+import './adapter/device-limits.spec';
 
 import './classes';

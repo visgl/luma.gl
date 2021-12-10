@@ -8,8 +8,8 @@
 import './init';
 
 // export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
-export type {WebGLDeviceProps} from './device/webgl-device';
-export {default as WebGLDevice, getWebGLDevice} from './device/webgl-device';
+export type {WebGLDeviceProps} from './adapter/webgl-device';
+export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
@@ -29,14 +29,16 @@ export {default as Texture2D} from './classes/texture-2d';
 export type {TextureCubeProps} from './classes/texture-cube';
 export {default as TextureCube} from './classes/texture-cube';
 
-export type {ShaderProps} from './classes/webgl-shader';
-export {Shader, VertexShader, FragmentShader} from './classes/webgl-shader';
 export type {ProgramProps} from './classes/program';
 export {default as Program} from './classes/program';
 export type {FramebufferProps} from './classes/framebuffer';
 export {default as Framebuffer} from './classes/framebuffer';
 export type {RenderbufferProps} from './classes/renderbuffer';
 export {default as Renderbuffer} from './classes/renderbuffer';
+
+// Classic luma.gl classes (For backwards compatibility)
+export type {ShaderProps} from './classes/shader';
+export {Shader, VertexShader, FragmentShader} from './classes/shader';
 
 export {clear, clearBuffer} from './classes/clear';
 

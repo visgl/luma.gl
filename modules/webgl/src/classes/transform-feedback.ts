@@ -1,6 +1,6 @@
 import {log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Buffer from './webgl-buffer';

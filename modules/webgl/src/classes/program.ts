@@ -1,11 +1,11 @@
-import {log, assert, uid} from '@luma.gl/api';
+import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../device/webgl-device';
+import WebGLDevice from '../adapter/webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
-import {VertexShader, FragmentShader} from './webgl-shader';
+import {WEBGLShader} from '../adapter/webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
@@ -19,38 +19,38 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
 export type ProgramProps = ResourceProps & {
-  hash?;
-  vs?; 
-  fs?;
-  varyings?; 
+  hash?: string;
+  vs?: string | Shader;
+  fs?: string | Shader;
+  varyings?: string[];
   bufferMode?: number;
-}
+};
 
 export type ProgramDrawOptions = {
-  logPriority?: any;
-  drawMode?: any;
+  logPriority?: number;
+  drawMode?: number;
   vertexCount: any;
   offset?: number;
-  start?: any;
-  end?: any;
+  start?: number;
+  end?: number;
   isIndexed?: boolean;
   indexType?: any;
   instanceCount?: number;
   isInstanced?: boolean;
   vertexArray?: any;
-  transformFeedback?: any;
-  framebuffer?: any;
+  transformFeedback?: any; // TransformFeedback;
+  framebuffer?: Framebuffer;
   parameters?: {};
-  uniforms?: any;
+  uniforms?: Record<string, any>;
   samplers?: any;
 };
 
 export default class Program extends WebGLResource<ProgramProps> {
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
-  hash: string;; // Used by ProgramManager
-  vs;
-  fs;
+  hash: string; // Used by ProgramManager
+  vs: WEBGLShader;
+  fs: WEBGLShader;
   uniforms: Record<string, any>;
   varyings: Record<string, any>;
   _textureUniforms: Record<string, any>;
@@ -58,16 +58,28 @@ export default class Program extends WebGLResource<ProgramProps> {
   _textureIndexCounter: number = 0;
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function>;
-  
-  constructor(gl: WebGLRenderingContext, props: ProgramProps = {}) {
-    super(WebGLDevice.attach(gl), props, {} as any);
 
-
+  constructor(device: WebGLDevice | WebGLRenderingContext, props: ProgramProps = {}) {
+    super(WebGLDevice.attach(device), props, {} as any);
     this.initialize(props);
-
     Object.seal(this);
-
     this._setId(props.id);
+  }
+
+  destroy(options = {}) {
+    if (this._isCached) {
+      // This object is cached, do not delete
+      return this;
+    }
+    return super.delete(options);
+  }
+
+  delete(options = {}) {
+    if (this._isCached) {
+      // This object is cached, do not delete
+      return this;
+    }
+    return super.delete(options);
   }
 
   initialize(props: ProgramProps = {}) {
@@ -77,15 +89,18 @@ export default class Program extends WebGLResource<ProgramProps> {
 
     // Create shaders if needed
     this.vs =
-      typeof vs === 'string' ? new VertexShader(this.gl, {id: `${props.id}-vs`, source: vs}) : vs;
+      typeof vs === 'string'
+        ? this.device.createShader({id: `${props.id}-vs`, source: vs, stage: 'vertex'})
+        : cast<WEBGLShader>(vs);
     this.fs =
-      typeof fs === 'string' ? new FragmentShader(this.gl, {id: `${props.id}-fs`, source: fs}) : fs;
-    assert(this.vs instanceof VertexShader);
-    assert(this.fs instanceof FragmentShader);
+      typeof fs === 'string'
+        ? this.device.createShader({id: `${props.id}-fs`, source: fs, stage: 'fragment'})
+        : cast<WEBGLShader>(fs);
+    assert(this.vs.stage === 'vertex');
+    assert(this.fs.stage === 'fragment');
 
     // uniforms
     this.uniforms = {};
-
     this._textureUniforms = {};
 
     // Setup varyings if supplied
@@ -102,14 +117,6 @@ export default class Program extends WebGLResource<ProgramProps> {
     return this.setProps(props);
   }
 
-  delete(options = {}) {
-    if (this._isCached) {
-      // This object is cached, do not delete
-      return this;
-    }
-    return super.delete(options);
-  }
-
   setProps(props) {
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms);
@@ -121,30 +128,30 @@ export default class Program extends WebGLResource<ProgramProps> {
   // This function unifies those ways into a single call using common parameters with sane defaults
   draw(options: ProgramDrawOptions): boolean {
     const {
-    logPriority, // Probe log priority, enables Model to do more integrated logging
+      logPriority, // Probe log priority, enables Model to do more integrated logging
 
-    drawMode = GL.TRIANGLES,
-    vertexCount,
-    offset = 0,
-    start,
-    end,
-    isIndexed = false,
-    indexType = GL.UNSIGNED_SHORT,
-    instanceCount = 0,
-    isInstanced = instanceCount > 0,
+      drawMode = GL.TRIANGLES,
+      vertexCount,
+      offset = 0,
+      start,
+      end,
+      isIndexed = false,
+      indexType = GL.UNSIGNED_SHORT,
+      instanceCount = 0,
+      isInstanced = instanceCount > 0,
 
-    vertexArray = null,
-    transformFeedback,
-    framebuffer,
+      vertexArray = null,
+      transformFeedback,
+      framebuffer,
 
-    // Deprecated
-    uniforms,
-    samplers
-  } = options;
+      // Deprecated
+      uniforms,
+      samplers
+    } = options;
 
-  let {parameters = {}} = options;
+    let {parameters = {}} = options;
 
-  if (uniforms || samplers) {
+    if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
       this.setUniforms(uniforms || {});
@@ -342,7 +349,8 @@ export default class Program extends WebGLResource<ProgramProps> {
 
   // Generate a default name for the program based on names of the shaders
   _getName() {
-    let programName = this.vs.getName() || this.fs.getName();
+    // let programName = this.vs.getName() || this.fs.getName();
+    let programName = this.vs.id || this.fs.id;
     programName = programName.replace(/shader/i, '');
     programName = programName ? `${programName}-program` : 'program';
     return programName;

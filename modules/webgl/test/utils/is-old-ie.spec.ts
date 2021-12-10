@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import {isOldIE} from '@luma.gl/webgl/webgl-utils/is-old-ie';
+import {isOldIE} from '@luma.gl/webgl/adapter/device-helpers/is-old-ie';
 import test from 'tape-promise/tape';
 
 test('isOldIE', (t) => {

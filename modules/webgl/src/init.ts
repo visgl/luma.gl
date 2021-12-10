@@ -1,7 +1,7 @@
 import {log} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {luma, lumaStats} from '@luma.gl/api';
-import WebGLDevice from './device/webgl-device';
+import WebGLDevice from './adapter/webgl-device';
 
 // Version detection using babel plugin
 // @ts-expect-error
