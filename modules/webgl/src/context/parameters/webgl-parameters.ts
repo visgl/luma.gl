@@ -59,139 +59,139 @@ type GL_STENCIL_OP =
   GL.INVERT;
 
 export type GLValueParameters = {
-   [GL.BLEND]?: boolean;
-   [GL.BLEND_COLOR]?: [number, number, number, number] | NumberArray;
-   [GL.BLEND_EQUATION_RGB]?: GL_BLEND_EQUATION;
-   [GL.BLEND_EQUATION_ALPHA]?: GL_BLEND_EQUATION;
-   [GL.BLEND_SRC_RGB]?: GL_BLEND_FUNCTION;
-   [GL.BLEND_DST_RGB]?: GL_BLEND_FUNCTION;
-   [GL.BLEND_SRC_ALPHA]?: GL_BLEND_FUNCTION;
-   [GL.BLEND_DST_ALPHA]?: GL_BLEND_FUNCTION;
-   [GL.COLOR_CLEAR_VALUE]?: [number, number, number, number] | NumberArray;
-   [GL.COLOR_WRITEMASK]?: [boolean, boolean, boolean, boolean] | boolean[];
-   [GL.CULL_FACE]?: boolean;
-   [GL.CULL_FACE_MODE]?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
-   [GL.DEPTH_TEST]?: boolean;
-   [GL.DEPTH_CLEAR_VALUE]?: number;
-   [GL.DEPTH_FUNC]?: GL_FUNCTION;
-   [GL.DEPTH_RANGE]?: [number, number] | NumberArray;
-   [GL.DEPTH_WRITEMASK]?: boolean;
-   [GL.DITHER]?: boolean;
-   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
-   [GL.CURRENT_PROGRAM]?: WebGLProgram | null,
-   [GL.FRAMEBUFFER_BINDING]?: WebGLFramebuffer | null;
-   [GL.RENDERBUFFER_BINDING]?: WebGLRenderbuffer | null,
-   [GL.TRANSFORM_FEEDBACK_BINDING]?: WebGLTransformFeedback | null,
-   [GL.VERTEX_ARRAY_BINDING]?: WebGLVertexArrayObject | null,
-   [GL.ARRAY_BUFFER_BINDING]?: WebGLBuffer | null,
-   [GL.COPY_READ_BUFFER_BINDING]?: WebGLBuffer | null,
-   [GL.COPY_WRITE_BUFFER_BINDING]?: WebGLBuffer | null,
-   [GL.PIXEL_PACK_BUFFER_BINDING]?: WebGLBuffer | null,
-   [GL.PIXEL_UNPACK_BUFFER_BINDING]?: WebGLBuffer | null,
-   [GL.TEXTURE_BINDING_2D]?: WebGLTexture | null,
-   [GL.TEXTURE_BINDING_2D_ARRAY]?: WebGLTexture | null,
-   [GL.TEXTURE_BINDING_3D]?: WebGLTexture | null,
-   [GL.TEXTURE_BINDING_CUBE_MAP]?: WebGLTexture | null,
-   [GL.FRONT_FACE]?: GL.CW | GL.CCW;
-   [GL.GENERATE_MIPMAP_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
-   [GL.LINE_WIDTH]?: number;
-   [GL.POLYGON_OFFSET_FILL]?: boolean;
-   [GL.POLYGON_OFFSET_FACTOR]?: number;
-   [GL.POLYGON_OFFSET_UNITS]?: number;
-   [GL.SAMPLE_ALPHA_TO_COVERAGE]?: boolean,
-   [GL.SAMPLE_COVERAGE]?: boolean,
-   [GL.RASTERIZER_DISCARD]?: boolean;
-   [GL.SAMPLE_COVERAGE_VALUE]?: number;
-   [GL.SAMPLE_COVERAGE_INVERT]?: boolean;
-   [GL.SCISSOR_TEST]?: boolean;
-   [GL.SCISSOR_BOX]?: [number, number, number, number] | NumberArray;
-   [GL.STENCIL_TEST]?: boolean;
-   [GL.STENCIL_CLEAR_VALUE]?: number;
-   [GL.STENCIL_WRITEMASK]?: number;
-   [GL.STENCIL_BACK_WRITEMASK]?: number;
-   [GL.STENCIL_FUNC]?: GL_FUNCTION;
-   [GL.STENCIL_REF]?: GL_FUNCTION;
-   [GL.STENCIL_VALUE_MASK]?: GL_FUNCTION;
-   [GL.STENCIL_BACK_FUNC]?: GL_FUNCTION;
-   [GL.STENCIL_BACK_REF]?: GL_FUNCTION;
-   [GL.STENCIL_BACK_VALUE_MASK]?: GL_FUNCTION;
-   [GL.STENCIL_FAIL]?: GL_STENCIL_OP;
-   [GL.STENCIL_PASS_DEPTH_FAIL]?: GL_STENCIL_OP;
-   [GL.STENCIL_PASS_DEPTH_PASS]?: GL_STENCIL_OP;
-   [GL.STENCIL_BACK_FAIL]?: GL_STENCIL_OP;
-   [GL.STENCIL_BACK_PASS_DEPTH_FAIL]?: GL_STENCIL_OP;
-   [GL.STENCIL_BACK_PASS_DEPTH_PASS]?: GL_STENCIL_OP;
-   [GL.VIEWPORT]?: [number, number, number, number] | NumberArray;
+  [GL.BLEND]?: boolean;
+  [GL.BLEND_COLOR]?: [number, number, number, number] | NumberArray;
+  [GL.BLEND_EQUATION_RGB]?: GL_BLEND_EQUATION;
+  [GL.BLEND_EQUATION_ALPHA]?: GL_BLEND_EQUATION;
+  [GL.BLEND_SRC_RGB]?: GL_BLEND_FUNCTION;
+  [GL.BLEND_DST_RGB]?: GL_BLEND_FUNCTION;
+  [GL.BLEND_SRC_ALPHA]?: GL_BLEND_FUNCTION;
+  [GL.BLEND_DST_ALPHA]?: GL_BLEND_FUNCTION;
+  [GL.COLOR_CLEAR_VALUE]?: [number, number, number, number] | NumberArray;
+  [GL.COLOR_WRITEMASK]?: [boolean, boolean, boolean, boolean] | boolean[];
+  [GL.CULL_FACE]?: boolean;
+  [GL.CULL_FACE_MODE]?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
+  [GL.DEPTH_TEST]?: boolean;
+  [GL.DEPTH_CLEAR_VALUE]?: number;
+  [GL.DEPTH_FUNC]?: GL_FUNCTION;
+  [GL.DEPTH_RANGE]?: [number, number] | NumberArray;
+  [GL.DEPTH_WRITEMASK]?: boolean;
+  [GL.DITHER]?: boolean;
+  [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
+  [GL.CURRENT_PROGRAM]?: WebGLProgram | null,
+  [GL.FRAMEBUFFER_BINDING]?: WebGLFramebuffer | null;
+  [GL.RENDERBUFFER_BINDING]?: WebGLRenderbuffer | null,
+  [GL.TRANSFORM_FEEDBACK_BINDING]?: WebGLTransformFeedback | null,
+  [GL.VERTEX_ARRAY_BINDING]?: WebGLVertexArrayObject | null,
+  [GL.ARRAY_BUFFER_BINDING]?: WebGLBuffer | null,
+  [GL.COPY_READ_BUFFER_BINDING]?: WebGLBuffer | null,
+  [GL.COPY_WRITE_BUFFER_BINDING]?: WebGLBuffer | null,
+  [GL.PIXEL_PACK_BUFFER_BINDING]?: WebGLBuffer | null,
+  [GL.PIXEL_UNPACK_BUFFER_BINDING]?: WebGLBuffer | null,
+  [GL.TEXTURE_BINDING_2D]?: WebGLTexture | null,
+  [GL.TEXTURE_BINDING_2D_ARRAY]?: WebGLTexture | null,
+  [GL.TEXTURE_BINDING_3D]?: WebGLTexture | null,
+  [GL.TEXTURE_BINDING_CUBE_MAP]?: WebGLTexture | null,
+  [GL.FRONT_FACE]?: GL.CW | GL.CCW;
+  [GL.GENERATE_MIPMAP_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
+  [GL.LINE_WIDTH]?: number;
+  [GL.POLYGON_OFFSET_FILL]?: boolean;
+  [GL.POLYGON_OFFSET_FACTOR]?: number;
+  [GL.POLYGON_OFFSET_UNITS]?: number;
+  [GL.SAMPLE_ALPHA_TO_COVERAGE]?: boolean,
+  [GL.SAMPLE_COVERAGE]?: boolean,
+  [GL.RASTERIZER_DISCARD]?: boolean;
+  [GL.SAMPLE_COVERAGE_VALUE]?: number;
+  [GL.SAMPLE_COVERAGE_INVERT]?: boolean;
+  [GL.SCISSOR_TEST]?: boolean;
+  [GL.SCISSOR_BOX]?: [number, number, number, number] | NumberArray;
+  [GL.STENCIL_TEST]?: boolean;
+  [GL.STENCIL_CLEAR_VALUE]?: number;
+  [GL.STENCIL_WRITEMASK]?: number;
+  [GL.STENCIL_BACK_WRITEMASK]?: number;
+  [GL.STENCIL_FUNC]?: GL_FUNCTION;
+  [GL.STENCIL_REF]?: GL_FUNCTION;
+  [GL.STENCIL_VALUE_MASK]?: GL_FUNCTION;
+  [GL.STENCIL_BACK_FUNC]?: GL_FUNCTION;
+  [GL.STENCIL_BACK_REF]?: GL_FUNCTION;
+  [GL.STENCIL_BACK_VALUE_MASK]?: GL_FUNCTION;
+  [GL.STENCIL_FAIL]?: GL_STENCIL_OP;
+  [GL.STENCIL_PASS_DEPTH_FAIL]?: GL_STENCIL_OP;
+  [GL.STENCIL_PASS_DEPTH_PASS]?: GL_STENCIL_OP;
+  [GL.STENCIL_BACK_FAIL]?: GL_STENCIL_OP;
+  [GL.STENCIL_BACK_PASS_DEPTH_FAIL]?: GL_STENCIL_OP;
+  [GL.STENCIL_BACK_PASS_DEPTH_PASS]?: GL_STENCIL_OP;
+  [GL.VIEWPORT]?: [number, number, number, number] | NumberArray;
 
-   // WEBGL1 PIXEL PACK/UNPACK MODES
-   [GL.PACK_ALIGNMENT]?: number;
-   [GL.UNPACK_ALIGNMENT]?: number;
-   [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
-   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
-   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
+  // WEBGL1 PIXEL PACK/UNPACK MODES
+  [GL.PACK_ALIGNMENT]?: number;
+  [GL.UNPACK_ALIGNMENT]?: number;
+  [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
+  [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
+  [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
 
-   // WEBGL2 PIXEL PACK/UNPACK MODES
-   // RASTERIZER_DISCARD ...
-   [GL.PACK_ROW_LENGTH]?: number;
-   [GL.PACK_SKIP_PIXELS]?: number;
-   [GL.PACK_SKIP_ROWS]?: number;
-   [GL.READ_FRAMEBUFFER_BINDING]?: Framebuffer | null;
-   [GL.UNPACK_ROW_LENGTH]?: number;
-   [GL.UNPACK_IMAGE_HEIGHT]?: number;
-   [GL.UNPACK_SKIP_PIXELS]?: number;
-   [GL.UNPACK_SKIP_ROWS]?: number;
-   [GL.UNPACK_SKIP_IMAGES]?: number;
+  // WEBGL2 PIXEL PACK/UNPACK MODES
+  // RASTERIZER_DISCARD ...
+  [GL.PACK_ROW_LENGTH]?: number;
+  [GL.PACK_SKIP_PIXELS]?: number;
+  [GL.PACK_SKIP_ROWS]?: number;
+  [GL.READ_FRAMEBUFFER_BINDING]?: Framebuffer | null;
+  [GL.UNPACK_ROW_LENGTH]?: number;
+  [GL.UNPACK_IMAGE_HEIGHT]?: number;
+  [GL.UNPACK_SKIP_PIXELS]?: number;
+  [GL.UNPACK_SKIP_ROWS]?: number;
+  [GL.UNPACK_SKIP_IMAGES]?: number;
 };
 
 export type GLFunctionStyleParameters = {
-   // Function-style setters
-   framebuffer?: Framebuffer | null;
-   blend?: boolean;
-   blendColor?: [number, number, number, number] | NumberArray;
-   blendEquation?: GL_BLEND_EQUATION | [GL_BLEND_EQUATION, GL_BLEND_EQUATION];
-   blendFunc?:
+  // Function-style setters
+  framebuffer?: Framebuffer | null;
+  blend?: boolean;
+  blendColor?: [number, number, number, number] | NumberArray;
+  blendEquation?: GL_BLEND_EQUATION | [GL_BLEND_EQUATION, GL_BLEND_EQUATION];
+  blendFunc?:
     [GL_BLEND_FUNCTION, GL_BLEND_FUNCTION] |
     [GL_BLEND_FUNCTION, GL_BLEND_FUNCTION, GL_BLEND_FUNCTION, GL_BLEND_FUNCTION];
 
-   clearColor?: [number, number, number, number] | NumberArray;
-   clearDepth?: number;
-   clearStencil?: number;
+  clearColor?: [number, number, number, number] | NumberArray;
+  clearDepth?: number;
+  clearStencil?: number;
 
-   colorMask?: [boolean, boolean, boolean, boolean];
+  colorMask?: [boolean, boolean, boolean, boolean];
 
-   cull?: boolean;
-   cullFace?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
+  cull?: boolean;
+  cullFace?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
 
-   depthTest?: boolean;
-   depthFunc?: GL_FUNCTION;
-   depthMask?: boolean;
-   depthRange?: [number, number] | NumberArray;
+  depthTest?: boolean;
+  depthFunc?: GL_FUNCTION;
+  depthMask?: boolean;
+  depthRange?: [number, number] | NumberArray;
 
-   dither?: boolean;
+  dither?: boolean;
 
-   derivativeHint?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
+  derivativeHint?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
 
-   frontFace?: GL.CW | GL.CCW;
+  frontFace?: GL.CW | GL.CCW;
 
-   mipmapHint?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
+  mipmapHint?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
 
-   lineWidth?: number;
+  lineWidth?: number;
 
-   polygonOffsetFill?: boolean;
-   polygonOffset?: [number, number];
+  polygonOffsetFill?: boolean;
+  polygonOffset?: [number, number];
 
-   sampleCoverage?: [number, boolean];
+  sampleCoverage?: [number, boolean];
 
-   scissorTest?: boolean;
-   scissor?: [number, number, number, number] | NumberArray;
+  scissorTest?: boolean;
+  scissor?: [number, number, number, number] | NumberArray;
 
-   stencilTest?: boolean;
-   stencilMask?: number | [number, number];
-   stencilFunc?: [GL_FUNCTION, number, number] | [GL_FUNCTION, number, number, GL_FUNCTION, number, number];
-   stencilOp?:
+  stencilTest?: boolean;
+  stencilMask?: number | [number, number];
+  stencilFunc?: [GL_FUNCTION, number, number] | [GL_FUNCTION, number, number, GL_FUNCTION, number, number];
+  stencilOp?:
     [GL_STENCIL_OP, GL_STENCIL_OP, GL_STENCIL_OP] |
     [GL_STENCIL_OP, GL_STENCIL_OP, GL_STENCIL_OP, GL_STENCIL_OP, GL_STENCIL_OP, GL_STENCIL_OP];
-   viewport?: [number, number, number, number] | NumberArray;
- };
+  viewport?: [number, number, number, number] | NumberArray;
+};
 
- export type GLParameters = GLValueParameters | GLFunctionStyleParameters;
+export type GLParameters = GLValueParameters | GLFunctionStyleParameters;

@@ -14,12 +14,31 @@ export type {ShaderProps, CompilerMessage} from './adapter/shader';
 export {default as Shader} from './adapter/shader';
 
 // API TYPES
-export type {Accessor, BufferAccessors} from './adapter/accessor';
-export {cast} from './adapter/types';
+export {Accessor, BufferAccessors} from './adapter/accessor';
+export type {
+  Parameters,
+  PrimitiveTopology,
+  IndexFormat,
+  CullMode,
+  FrontFace,
+  RasterizationParameters,
+  CompareFunction,
+  StencilOperation,
+  DepthStencilParameters,
+  BlendFactor,
+  BlendOperation,
+  ColorParameters,
+  MultisampleParameters,
+  RenderPassParameters,
+  RenderPipelineParameters
+} from './adapter/parameters';
+
+export {BindingLayout, Binding, ColorAttachment, DepthStencilAttachment} from './adapter/types';
 
 // UTILS
 export {default as StatsManager, lumaStats} from './utils/stats-manager';
 export {assert} from './utils/assert';
+export {cast} from './utils/cast';
 export {log} from './utils/log';
 export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
 export {formatValue} from './utils/format-value';

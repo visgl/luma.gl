@@ -21,4 +21,36 @@ import './adapter/device-info.spec';
 import './adapter/device-features.spec';
 import './adapter/device-limits.spec';
 
-import './classes';
+import './adapter/set-device-parameters.spec';
+
+// Note that we do two test runs on luma.gl, with and without headless-gl
+// This file imports tests that should run *with* headless-gl included
+
+// helpers
+import './classes/accessor.spec';
+
+// webgl
+import './classes/buffer.spec';
+import './classes/vertex-array-object.spec';
+import './classes/vertex-array.spec';
+import './classes/uniforms.spec';
+
+import './classes/texture.spec';
+import './classes/texture-2d.spec';
+import './classes/texture-3d.spec';
+
+import './classes/renderbuffer.spec';
+import './classes/framebuffer.spec';
+
+import './classes/program.spec';
+import './classes/program-configuration.spec';
+import './classes/draw.spec';
+
+import './classes/copy-and-blit.spec';
+
+// Extensions / webgl2
+import './classes/query.spec';
+
+// webgl2
+import './classes/uniform-buffer-layout.spec';
+import './classes/transform-feedback.spec';
