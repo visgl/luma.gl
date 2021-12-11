@@ -65,6 +65,8 @@ export type {VertexArrayProps} from './classes/vertex-array';
 export {default as VertexArray} from './classes/vertex-array';
 export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
+export {setDeviceParameters} from './adapter/converters/set-device-parameters';
+
 // experimental WebGL exports
 
 // UTILS

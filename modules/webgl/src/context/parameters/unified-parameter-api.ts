@@ -81,8 +81,9 @@ export function setParameters(gl: WebGLRenderingContext, parameters: GLParameter
  * considered a very slow operation, to be used only if/when a context already manipulated
  * by external code needs to be synchronized for the first time
  */
- export function getParameters(gl: WebGLRenderingContext, parameters?: Record<keyof GLParameters, any>): GLParameters;
- export function getParameters(gl: WebGLRenderingContext, parameters: number): any;
+export function getParameters(gl: WebGLRenderingContext, parameters?: Record<keyof GLParameters, any>): GLParameters;
+export function getParameters(gl: WebGLRenderingContext, parameters?: (keyof GLParameters)[]): GLParameters;
+export function getParameters(gl: WebGLRenderingContext, parameters: keyof GLParameters): GLParameters;
 
 export function getParameters(gl, parameters) {
   // default to querying all parameters
