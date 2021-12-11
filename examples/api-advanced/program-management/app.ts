@@ -1,8 +1,8 @@
+import {getRandom} from '@luma.gl/api';
 import {setParameters} from '@luma.gl/webgl';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {RenderLoop, Model, ProgramManager, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
-import {getRandom} from '../../utils';
 
 const random = getRandom();
 

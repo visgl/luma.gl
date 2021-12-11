@@ -1,5 +1,7 @@
+import {getRandom} from '@luma.gl/api';
+import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 import {assembleShaders} from '@luma.gl/shadertools';
-import {MiniAnimationLoop} from '../../utils';
+import {WebGLDeviceProps} from '@luma.gl/webgl';
 
 const INFO_HTML = `
 Shader Modules using luma.gl's low-level API
@@ -35,14 +37,18 @@ const offsetRightModule = {
   }
 };
 
-export default class AppAnimationLoop extends MiniAnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static info = INFO_HTML;
 
-  start(props) {
-    const canvas = this._getCanvas(props);
+  resources;
+
+  onCreateContext({canvas}: WebGLDeviceProps): WebGLRenderingContext {
     /** @type {WebGLRenderingContext} */
     // @ts-ignore
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  }
+
+  onInitialize({gl}: AnimationProps) {
     gl.clearColor(0, 0, 0, 1);
 
     // Program 1
@@ -111,37 +117,30 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
     gl.vertexAttribPointer(positionLocation2, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(positionLocation2);
 
-    const resources = {
+    this.resources = {
       gl,
       positionBuffer,
       program1,
       program2
     };
-
-    resources.rafHandle = requestAnimationFrame(function draw() {
-      resources.rafHandle = requestAnimationFrame(draw);
-
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.useProgram(program1);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      gl.useProgram(program2);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    });
-
-    gl.deleteShader(vShader1);
-    gl.deleteShader(fShader1);
-    gl.deleteShader(vShader2);
-    gl.deleteShader(fShader2);
-
-    this.resources = resources;
   }
 
-  stop() {
-    cancelAnimationFrame(this.resources.rafHandle);
+  onRender({gl}: AnimationProps) {
+    const {program1, program2} = this.resources;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.useProgram(program2);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // gl.deleteShader(vShader1);
+    // gl.deleteShader(fShader1);
+    // gl.deleteShader(vShader2);
+    // gl.deleteShader(fShader2);
   }
 
-  delete() {
-    const {gl, positionBuffer, program1, program2} = this.resources;
+  onFinalize({gl}: AnimationProps): void {
+    const {positionBuffer, program1, program2} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);
     gl.deleteProgram(program2);

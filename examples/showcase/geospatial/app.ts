@@ -1,8 +1,7 @@
 import mapboxgl from 'mapbox-gl';
 import {Buffer} from '@luma.gl/webgl';
 // import {instrumentGLContext} from '@luma.gl/webgl';
-import {Model} from '@luma.gl/engine';
-import {MiniAnimationLoop} from '../../utils';
+import {AnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
 
 const INFO_HTML = `
 <p>A triangle connecting Times Square, Rockafeller Center, and Columbus Circle in Manhattan, NYC on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the
@@ -99,19 +98,19 @@ class CustomLayer {
 }
 
 //
-export default class AppAnimationLoop extends MiniAnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static info = INFO_HTML;
 
   map: mapboxgl.Map;
 
-  start(props?) {
+  onInitialize(animationProps: AnimationProps) {
     let bearing = -10;
     let vb = 0.1;
     let pitch = 40;
     let vp = 0.01;
 
     this.map = new mapboxgl.Map({
-      container: this._getContainer(props),
+      container: this._getContainer(animationProps),
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
       center: [-73.98213, 40.762896],
       zoom: 14,
@@ -153,6 +152,65 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
   delete() {
     this.map.remove();
     this._removeContainer();
+  }
+
+  _getCanvas(props = {}) {
+    /** @type {HTMLCanvasElement} */
+    let canvas;
+    // @ts-ignore
+    if (props.canvas) {
+      // @ts-ignore
+      canvas = props.canvas; // document.getElementById(props.canvas);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.height = canvas.clientHeight * dpr;
+      canvas.width = canvas.clientWidth * dpr;
+    } else {
+      canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 600;
+      document.body.appendChild(canvas);
+    }
+    
+    return canvas;
+  }
+  
+  container;
+  parent;
+
+  _getContainer(props = {}) {
+    if (this.container) {
+      return this.container;
+    }
+    
+    let width;
+    let height;
+    
+    this.container = document.createElement('div');
+    
+    // @ts-expect-error
+    if (props.canvas) {
+      // @ts-expect-error
+      const canvas = props.canvas; // document.getElementById(props.canvas);
+      this.parent = canvas.parentElement;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      this.container.style.position = 'relative';
+      this.container.style.top = `-${height}px`;
+    } else {
+      this.parent = document.body;
+      width = 800;
+      height = 800;
+    }
+    
+    this.container.style.width = `${width}px`;
+    this.container.style.height = `${height}px`;
+    this.parent.appendChild(this.container);
+    
+    return this.container;
+  }
+
+  _removeContainer(props = {}) {
+    this.parent.removeChild(this.container);
   }
 }
 
