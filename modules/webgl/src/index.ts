@@ -117,7 +117,6 @@ export {lumaStats} from './init';
 export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
 export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
 
-
 // export {
 //   getContextInfo, getGLContextInfo, getContextLimits,
 //   FEATURES,
@@ -125,7 +124,10 @@ export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
 //   canCompileGLGSExtension
 // } from '@luma.gl/gltools';
 
-// REMOVED in v8.6
+// HELPERS - EXPERIMENTAL
+export {getProgramBindings} from './helpers/get-program-bindings';
+
+// REMOVED in v8.7
 // getShaderInfo,
 // getShaderName
 // getShaderVersion

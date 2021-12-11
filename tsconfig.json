@@ -34,6 +34,8 @@
       "@luma.gl/test-utils/test/*": ["modules/test-utils/test/*"],
       "@luma.gl/webgl/*": ["modules/webgl/src/*"],
       "@luma.gl/webgl/test/*": ["modules/webgl/test/*"],
+      "@luma.gl/webgpu/*": ["modules/webpu/src/*"],
+      "@luma.gl/webgpu/test/*": ["modules/webgpu/test/*"],
       "test/*": ["test/*"]
     }
   },
@@ -50,7 +52,7 @@
     "modules/webgl/src/classes/uniforms.js",
     "modules/webgl/src/classes/vertex-array.js",
 
-    "modules/**/dist",
+    "modules/**/dist/**/*.js",
     "modules-wip",
 
     "website",

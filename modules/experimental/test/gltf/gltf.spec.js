@@ -7,18 +7,15 @@ import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 
-test('gltf#loading', (t) => {
+test('gltf#loading', async (t) => {
   // TODO - is gl argument used?
-  load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl})
-    .then((gltf) => {
-      const result = createGLTFObjects(webgl1TestDevice, gltf);
+  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl});
+  const result = createGLTFObjects(webgl1TestDevice, gltf);
 
-      t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
-      t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
+  t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
 
-      t.end();
-    })
-    .catch((e) => t.fail(e));
+  t.end();
 });
 
 test('gltf#environment', (t) => {
