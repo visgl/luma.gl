@@ -31,7 +31,9 @@ const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
   mipmapFilter: 'nearest',
   lodMinClamp: 0,
   lodMaxClamp: 32, // Per WebGPU spec
-  compare: 'always', // TBD
+  // Avoid setting compare default value:
+  // Per WebGPU spec: If `compare` is provided, the sampler will be a "comparison sampler" with the specified GPUCompareFunction.
+  compare: undefined,
   maxAnisotropy: 1
 };
 

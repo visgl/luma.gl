@@ -12,9 +12,10 @@ import {getDeviceFeatures, Feature} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 
 // WebGL classes
-import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps} from '@luma.gl/api';
+import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps, Sampler, SamplerProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
-import {WEBGLShader} from '../adapter/webgl-shader';
+import WEBGLShader from '../adapter/resources/webgl-shader';
+import WEBGLSampler from '../adapter/resources/webgl-sampler';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
@@ -94,11 +95,12 @@ export default class WebGLDevice extends Device implements ContextState {
   // Common API
   props: Required<DeviceProps>;
   userData: {[key: string]: any};
+  readonly handle: WebGLRenderingContext;
 
   // WebGL specific API
-  readonly isWebGL2: boolean;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;
+  readonly isWebGL2: boolean;
   /** Is this device attached to an offscreen context */
   readonly offScreen: boolean = false;
 
@@ -170,7 +172,8 @@ export default class WebGLDevice extends Device implements ContextState {
     }
 
     // Create an instrument context
-    this.gl = (props.gl || this._createContext(props)) as WebGLRenderingContext;
+    this.handle = (props.gl || this._createContext(props)) as WebGLRenderingContext
+    this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
     this._state = 'initializing';
@@ -299,6 +302,10 @@ export default class WebGLDevice extends Device implements ContextState {
 
   createTexture(props: Texture2DProps): Texture2D {
     return new Texture2D(this, props);
+  }
+
+  createSampler(props: SamplerProps): Sampler {
+    return new WEBGLSampler(this, props);
   }
 
   createShader(props: ShaderProps): WEBGLShader {

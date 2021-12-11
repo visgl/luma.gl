@@ -1,5 +1,5 @@
 import type {TextureFormat, CanvasContextProps} from '@luma.gl/api';
-import {CanvasContext} from '@luma.gl/api';
+import {CanvasContext, log} from '@luma.gl/api';
 
 /** 
  * Holds a WebGPU Canvas Context which handles resizing etc 
@@ -46,12 +46,14 @@ export default class WebGPUCanvasContext extends CanvasContext {
       });
 
       // Destroy any previous render targets
-      if (this.renderTarget !== undefined) {
+      if (this.renderTarget) {
         this.renderTarget.destroy();
+        this.renderTarget = undefined;
       }
 
-      if (this.depthStencilTarget !== undefined) {
-        this.renderTarget.destroy();
+      if (this.depthStencilTarget) {
+        this.depthStencilTarget.destroy();
+        this.depthStencilTarget = undefined;
       }
     }
   }
@@ -60,6 +62,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   // WebGPU specific API
   /** Return fresh texture views */
   getRenderTargets() {
+    this.update();
     this._createRenderTargets();
     return {
       colorAttachment: this.context.getCurrentTexture().createView(),
@@ -69,7 +72,8 @@ export default class WebGPUCanvasContext extends CanvasContext {
   
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
   _createRenderTargets(): void {
-    if (!this.renderTarget) {
+    if (!this.renderTarget || !this.depthStencilTarget) {
+      log.log(1, `resizing to ${this.presentationSize}`)();
       this.renderTarget = this.device.createTexture({
         label: 'render-target',
         size: this.presentationSize,
@@ -77,9 +81,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
         format: this.presentationFormat,
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
-    }
 
-    if (!this.depthStencilTarget) {
       this.depthStencilTarget = this.device.createTexture({
         label: 'depth-stencil-target',
         size: this.presentationSize,

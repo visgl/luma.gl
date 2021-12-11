@@ -7,12 +7,24 @@ import {isWebGL2} from '../../context/context/webgl-checks';
 import {isOldIE} from './is-old-ie';
 
 export type DeviceFeature =
-  'depth-clamping' |
+  'depth-clip-control' |
   'depth24unorm-stencil8' |
   'depth32float-stencil8' |
-  'pipeline-statistics-query' |
   'timestamp-query' |
-  'texture-compression-bc';
+  'indirect-first-instance' |
+
+  'texture-compression-bc' |
+  'texture-compression-etc2' |
+  'texture-compression-astc'
+
+  // obsolete...
+  // 'depth-clamping' |
+  // 'depth24unorm-stencil8' |
+  // 'depth32float-stencil8' |
+  // 'pipeline-statistics-query' |
+  // 'timestamp-query' |
+  // 'texture-compression-bc'
+  ;
 
 // TODO - this should be the default export, test cases need updating
 export type WebGLFeature =

@@ -5,7 +5,7 @@ import WebGLResource, {ResourceProps} from './webgl-resource';
 import Texture from './texture';
 import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
-import {WEBGLShader} from '../adapter/webgl-shader';
+import WEBGLShader from '../adapter/resources/webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
