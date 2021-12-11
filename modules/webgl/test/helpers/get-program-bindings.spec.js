@@ -22,7 +22,7 @@ void main(void) {
 }
 `;
 
-test('WebGL2#ProgramConfiguration#varyings', (t) => {
+test('WebGL2#getProgramBindings#varyings', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -36,9 +36,10 @@ test('WebGL2#ProgramConfiguration#varyings', (t) => {
 
   t.equals(bindings.varyings[0].name, 'vPosition');
   t.equals(bindings.varyings[1].name, 'gl_Position');
+  t.end();
 });
 
-test('WebGL2#ProgramConfiguration#varyings', (t) => {
+test('WebGL2#getProgramBindings#varyings', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
