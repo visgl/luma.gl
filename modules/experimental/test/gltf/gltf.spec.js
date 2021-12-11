@@ -9,7 +9,7 @@ import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 
 test('gltf#loading', async (t) => {
   // TODO - is gl argument used?
-  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl})
+  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl});
   const result = createGLTFObjects(webgl1TestDevice, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
