@@ -1,9 +1,16 @@
+Copyright (c) 2020 Urban Computing Foundation
+
+This software includes parts initially developed by Uber and open sourced under MIT license.
 Copyright (c) 2015 Uber Technologies, Inc.
 
 This software includes parts of PhiloGL (https://github.com/philogb/philogl)
 under MIT license. PhiloGL parts Copyright © 2013 Sencha Labs.
 
-This software includes adaptations of postprocessing code from THREE.js (https://github.com/mrdoob/three.js/) under MIT license. Additional attribution given in specific source files. THREE.js parts Copyright © 2010-2018 three.js authors.
+This software includes adaptations of some postprocessing code from 
+THREE.js (https://github.com/mrdoob/three.js/) under MIT license. 
+THREE.js parts Copyright © 2010-2018 three.js authors. 
+
+Additional attribution given in specific source files. 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

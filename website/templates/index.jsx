@@ -33,7 +33,7 @@ export default class IndexPage extends React.Component {
           <h2>High-performance toolkit for WebGL-based data visualization.</h2>
           <ul>
             <Bullet>
-              The core 3D rendering technology behind Uber's suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
+              The core 3D rendering technology behind the vis.gl suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
             </Bullet>
             <Bullet>
               Provides simplified abstractions for high-performance data visualizaton APIs like instanced rendering and transform feedback.

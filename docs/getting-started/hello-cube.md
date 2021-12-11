@@ -106,7 +106,7 @@ We use `Matrix4`'s matrix operations to create our final transformation matrix, 
 - `aspect` is the aspect ratio of the canvas and is used to set up the perspective projection.
 - `tick` is simply a counter that increments each frame. We use it to drive the rotation animation.
 
-If all went well, you should see a rotating cube with the Uber Visualization logo painted on each side. The live demo is available [here](/examples/getting-started/hello-cube), and the full source code is listed below for reference:
+If all went well, you should see a rotating cube with the vis.gl logo painted on each side. The live demo is available [here](/examples/getting-started/hello-cube), and the full source code is listed below for reference:
 
 ```js
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
