@@ -1,5 +1,6 @@
 // luma.gl, MIT license
-// LEGACY v8 API for WebGLRendering context
+// LEGACY luma.gl v8 API for WebGLRendering context
+// DEPRECATED API - may be removed in luma.gl v9 or v10.
 
 /* eslint-disable quotes */
 import GL from '@luma.gl/constants';
@@ -10,12 +11,14 @@ export type GLContextOptions = WebGLDeviceProps & {
   throwOnError?: boolean; // If set to false, return `null` if context creation fails.
 };
 
+/** @deprecated Use `new WebGLDevice()` or `luma.createDevice()` */
 export function createGLContext(options?: GLContextOptions): WebGLRenderingContext | null {
   const webglDevice = new WebGLDevice(options);
   // Note: OK to return the context, it holds on to the device
   return webglDevice.gl;
 }
 
+/** @deprecated Use `WebGLDevice.attach()` */
 export function instrumentGLContext(
   gl: WebGLRenderingContext | WebGL2RenderingContext,
   options?: GLContextOptions
@@ -37,6 +40,7 @@ export function instrumentGLContext(
  * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
  *
  * resizeGLContext(gl, {width, height, useDevicePixels})
+ * @deprecated Use WebGLDevice.resize()
  */
 export function resizeGLContext(
   gl: WebGLRenderingContext,
@@ -50,7 +54,10 @@ export function resizeGLContext(
   webglDevice.resize(options);
 }
 
-/** Check one or more features */
+/** 
+ * Check one or more features
+ * @deprecated Use `WebGLDevice.features.has()`
+*/
 export function hasFeatures(gl: WebGLRenderingContext, features: string | string[]): boolean {
   const webglDevice = WebGLDevice.attach(gl);
   const normalizedFeatures = Array.isArray(features) ? features : [features];
@@ -62,11 +69,9 @@ function getDeviceFeature(feature) {
   return feature.toLowerCase().replace('webgl-', '').replace('-', '_');
 }
 
-// DEPRECATED API
-
 /**
  * Check one feature
- * @deprecated Use `WebGLDevice.webglFeatures` or `getFeatures()`
+ * @deprecated Use `WebGLDevice.features`
  */
 export function hasFeature(gl: WebGLRenderingContext, feature: string): boolean {
   return hasFeatures(gl, feature);
@@ -74,7 +79,7 @@ export function hasFeature(gl: WebGLRenderingContext, feature: string): boolean 
 
 /**
  * Return a map of supported features
- * @deprecated Use `WebGLDevice.webglFeatures`
+ * @deprecated Use `WebGLDevice.features`
  */
 export function getFeatures(gl: WebGLRenderingContext): Record<string, boolean>  {
   const webglDevice = WebGLDevice.attach(gl);
