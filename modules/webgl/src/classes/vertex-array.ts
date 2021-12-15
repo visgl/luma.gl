@@ -3,6 +3,7 @@ import GL from '@luma.gl/constants';
 import Accessor from './accessor';
 import Buffer from './webgl-buffer';
 import Program from './program'; 
+import type {AttributeBinding} from '../helpers/program-bindings'
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
 
@@ -165,7 +166,7 @@ export default class VertexArray {
   }
 
   // Set a location in vertex attributes array to a buffer
-  setBuffer(locationOrName, buffer: Buffer, appAccessor = {}): this {
+  setBuffer(locationOrName: number | string, buffer: Buffer, appAccessor = {}): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       this.setElementBuffer(buffer, appAccessor);
@@ -317,18 +318,18 @@ export default class VertexArray {
     return {location, accessor};
   }
 
-  _getAttributeInfo(attributeName) {
+  _getAttributeInfo(attributeName: string | number): AttributeBinding {
     return this.configuration && this.configuration.getAttributeInfo(attributeName);
   }
 
-  _getAttributeIndex(locationOrName) {
+  _getAttributeIndex(locationOrName: number | string): {location: number, name?: string} {
     const location = Number(locationOrName);
     if (Number.isFinite(location)) {
       return {location};
     }
 
-    const multiLocation = MULTI_LOCATION_ATTRIBUTE_REGEXP.exec(locationOrName);
-    const name = multiLocation ? multiLocation[1] : locationOrName;
+    const multiLocation = MULTI_LOCATION_ATTRIBUTE_REGEXP.exec(String(locationOrName));
+    const name = multiLocation ? multiLocation[1] : String(locationOrName);
     const locationOffset = multiLocation ? Number(multiLocation[2]) : 0;
 
     if (this.configuration) {
@@ -341,7 +342,12 @@ export default class VertexArray {
     return {location: -1};
   }
 
-  _setAttribute(locationOrName, value): void {
+  _setAttribute(locationOrName: number | string, value: Buffer): void;
+  _setAttribute(locationOrName: number | string, value: [Buffer, any]): void;
+  _setAttribute(locationOrName: number | string, value: ArrayBuffer | any[]): void;
+  _setAttribute(locationOrName: number | string, value: {value: Buffer}): void;
+
+  _setAttribute(locationOrName: number | string, value): void {
     if (value instanceof Buffer) {
       //  Signature: {attributeName: Buffer}
       this.setBuffer(locationOrName, value);
@@ -368,7 +374,7 @@ export default class VertexArray {
   // Updates all constant attribute values (constants are used when vertex attributes are disabled).
   // This needs to be done repeatedly since in contrast to buffer bindings,
   // constants are stored on the WebGL context, not the VAO
-  _setConstantAttributes(vertexCount, instanceCount): void {
+  _setConstantAttributes(vertexCount: number, instanceCount: number): void {
     // TODO - use accessor to determine what length to use
     const elementCount = Math.max(vertexCount | 0, instanceCount | 0);
     let constant = this.values[0];
@@ -397,7 +403,7 @@ export default class VertexArray {
     this.vertexArrayObject.setBuffer(0, buffer, this.accessors[0]);
   }
 
-  _setConstantAttribute(location, constant): void {
+  _setConstantAttribute(location: number | string, constant): void {
     VertexArrayObject.setConstant(this.gl, location, constant);
   }
 

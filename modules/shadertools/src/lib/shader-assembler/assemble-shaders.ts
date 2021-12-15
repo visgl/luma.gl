@@ -47,7 +47,7 @@ export type AssembleShaderOptions = {
  * Inject a list of shader modules into shader sources
  */
 export function assembleShaders(
-  device: Device,
+  device: Device | WebGLRenderingContext,
   options: AssembleShaderOptions
 ): {
   vs: string;
@@ -57,7 +57,9 @@ export function assembleShaders(
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
   return {
+    // @ts-expect-error
     vs: assembleShader(device, {...options, source: vs, type: 'vs', modules}),
+    // @ts-expect-error
     fs: assembleShader(device, {...options, source: fs, type: 'fs', modules}),
     getUniforms: assembleGetUniforms(modules)
   };

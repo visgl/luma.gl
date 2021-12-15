@@ -14,7 +14,7 @@ export type {ShaderProps, CompilerMessage} from './adapter/shader';
 export {default as Shader} from './adapter/shader';
 
 // API TYPES
-export {Accessor, BufferAccessors} from './adapter/accessor';
+export type {Accessor, BufferAccessors} from './adapter/accessor';
 export type {
   Parameters,
   PrimitiveTopology,
@@ -33,9 +33,11 @@ export type {
   RenderPipelineParameters
 } from './adapter/parameters';
 
-export {BindingLayout, Binding, ColorAttachment, DepthStencilAttachment} from './adapter/types';
+export type {BindingLayout, Binding, ColorAttachment, DepthStencilAttachment} from './adapter/types';
 
 // UTILS
+export type {TypedArray, NumberArray} from './types';
+
 export {default as StatsManager, lumaStats} from './utils/stats-manager';
 export {assert} from './utils/assert';
 export {cast} from './utils/cast';
