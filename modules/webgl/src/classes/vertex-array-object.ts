@@ -1,3 +1,4 @@
+import type {NumberArray} from '@luma.gl/api';
 import {assert, getScratchArray, fillArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
@@ -83,13 +84,13 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   private isDefaultArray: boolean = false;
 
   // Create a VertexArray
-  constructor(gl: WebGLRenderingContext, opts?: VertexArrayObjectProps) {
+  constructor(gl: WebGLRenderingContext, props?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
-    super(WebGLDevice.attach(gl), {...opts, id: opts?.id || (opts?.program && opts?.program.id)}, {} as any);
+    super(WebGLDevice.attach(gl), {...props, id: props?.id || (props?.program && props?.program.id)}, {} as any);
 
     this.buffer = null;
     this.bufferValue = null;
-    this.isDefaultArray = opts?.isDefaultArray || false;
+    this.isDefaultArray = props?.isDefaultArray || false;
 
     Object.seal(this);
   }
@@ -108,7 +109,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
 
   // Set (bind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
-  setElementBuffer(elementBuffer = null, opts = {}) {
+  setElementBuffer(elementBuffer: Buffer = null, opts = {}) {
     assert(!elementBuffer || elementBuffer.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
     // The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject...
@@ -120,7 +121,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
-  setBuffer(location, buffer, accessor): this {
+  setBuffer(location: number, buffer: Buffer, accessor: any): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       return this.setElementBuffer(buffer, accessor);
@@ -158,7 +159,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
    * TODO - handle single values for size 1 attributes?
    * TODO - convert classic arrays based on known type?
    */ 
-  enable(location, enable = true): this {
+  enable(location: number, enable = true): this {
     // Attribute 0 cannot be disabled in most desktop OpenGL based browsers
     const disablingAttributeZero =
       !enable &&
@@ -227,7 +228,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
 
   // TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
   // TODO - handle single values for size 1 attributes?
-  _normalizeConstantArrayValue(arrayValue) {
+  _normalizeConstantArrayValue(arrayValue: NumberArray) {
     if (Array.isArray(arrayValue)) {
       return new Float32Array(arrayValue);
     }
