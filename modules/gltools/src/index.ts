@@ -41,7 +41,7 @@ export {polyfillContext} from '@luma.gl/webgl';
 
 // DEPRECATED
 
-export type {GLContextOptions} from './lib/deprecated/context-api';
+export type {GLContextOptions} from '@luma.gl/webgl';
 export {
   createGLContext,
   instrumentGLContext,
@@ -53,7 +53,7 @@ export {
   getGLContextInfo,
   getContextLimits,
   getContextDebugInfo
-} from './lib/deprecated/context-api';
+} from '@luma.gl/webgl';
 
 // Features
-export {FEATURES} from './lib/deprecated/features';
+export {FEATURES} from '@luma.gl/webgl';

@@ -34,6 +34,7 @@
     "@luma.gl/constants": "8.6.0-alpha.3",
     "@luma.gl/engine": "8.6.0-alpha.3",
     "@luma.gl/shadertools": "8.6.0-alpha.3",
+    "@luma.gl/gltools": "8.6.0-alpha.3",
     "@luma.gl/webgl": "8.6.0-alpha.3"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"

@@ -143,4 +143,4 @@ export {
   FEATURES,
   hasFeature,
   hasFeatures
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl';
