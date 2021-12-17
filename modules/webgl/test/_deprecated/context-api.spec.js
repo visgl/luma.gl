@@ -36,18 +36,18 @@ test('WebGL#isWebGL1', (t) => {
   t.end();
 });
 
-// test('WebGL#isWebGL2', (t) => {
-//   t.notOk(isWebGL2(gl1), 'isWebGL2 should return false WebGL context');
-//   // t.notOk(isWebGL2(gl1Debug), 'isWebGL2 should return false on WebGL debug context');
+test.skip('WebGL#isWebGL2', (t) => {
+  t.notOk(isWebGL2(gl1), 'isWebGL2 should return false WebGL context');
+  // t.notOk(isWebGL2(gl1Debug), 'isWebGL2 should return false on WebGL debug context');
 
-//   if (gl2) {
-//     t.ok(isWebGL2(gl2), 'isWebGL2 should return true WebGL2 context');
-//     // t.ok(isWebGL2(gl2Debug), 'isWebGL2 should return true on WebGL2 debug context');
-//     return;
-//   }
+  if (gl2) {
+    t.ok(isWebGL2(gl2), 'isWebGL2 should return true WebGL2 context');
+    // t.ok(isWebGL2(gl2Debug), 'isWebGL2 should return true on WebGL2 debug context');
+    return;
+  }
 
-//   t.end();
-// });
+  t.end();
+});
 
 // TODO - device new tests for context resize
 test.skip('WebGL#resizeGLContext', (t) => {
