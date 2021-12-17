@@ -66,6 +66,8 @@ const DEFAULT_DEVICE_PROPS: Required<WebGLDeviceProps> = {
   failIfMajorPerformanceCaveat: undefined
 };
 
+const LOG_LEVEL = 1;
+
 // TODO use weakmap instead of modifying context
 const glToContextMap = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, WebGLDevice>();
 
@@ -98,7 +100,6 @@ export default class WebGLDevice extends Device implements ContextState {
   /** Is this device attached to an offscreen context */
   readonly offScreen: boolean = false;
 
-  readonly webglFeatures: Set<string>;
   readonly webglLimits: WebGLLimits;
 
   defaultFramebuffer?: Framebuffer;
@@ -182,29 +183,29 @@ export default class WebGLDevice extends Device implements ContextState {
     // @ts-expect-error device is attached to context
     const debug = this.gl.debug ? ' debug' : '';
     const webGL = isWebGL2(this.gl) ? 'WebGL2' : 'WebGL1';
-    log.group(0, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
+    log.groupCollapsed(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
 
     polyfillContext(this.gl);
-    log.probe(0, 'polyfilled context')();
+    log.probe(LOG_LEVEL, 'polyfilled context')();
 
     // Install context state tracking
     trackContextState(this.gl, {
       copyState: false,
       log: (...args) => log.log(1, ...args)()
     });
-    log.probe(0, 'instrumented context')();
+    log.probe(LOG_LEVEL, 'instrumented context')();
 
     // WebGPU Device fields
     this.features = getDeviceFeatures(this.gl);
-    log.probe(0, `queried device features ${counter}`)();
+    log.probe(LOG_LEVEL, `queried device features ${counter}`)();
     this.limits = getDeviceLimits(this.gl);
-    log.probe(0, 'queried device limits')();
+    log.probe(LOG_LEVEL, 'queried device limits')();
 
     // Add seer integration - TODO - currently removed
 
     // WEBGL specific fields
     this.webglLimits = getWebGLLimits(this.gl);
-    log.probe(0, 'queried webgl limits')();
+    log.probe(LOG_LEVEL, 'queried webgl limits')();
 
     // Add debug instrumentation to the context
     // if (isBrowser() && props.debug) {
@@ -221,7 +222,7 @@ export default class WebGLDevice extends Device implements ContextState {
     //   }
     // }
 
-    log.groupEnd(0)();
+    log.groupEnd(LOG_LEVEL)();
     this._state = 'initialized';
   }
 
