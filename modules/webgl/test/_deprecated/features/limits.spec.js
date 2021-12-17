@@ -1,5 +1,5 @@
 import {getKey, getContextInfo} from '@luma.gl/webgl';
-import {WEBGL_LIMITS} from '@luma.gl/webgl/_deprecated/features/get-webgl-limits';
+import {WEBGL_LIMITS} from '../../adapter/device-limits.spec';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
@@ -38,7 +38,7 @@ test('WebGL2#getContextInfo#limits', (t) => {
 
     for (const limit in WEBGL_LIMITS) {
       const actual = info.limits[limit];
-      t.ok(actual !== undefined, `${getKey(gl, limit)}: limit ${actual}`);
+      t.ok(actual !== undefined, `${getKey(gl2, limit)}: limit ${actual}`);
     }
   }
 

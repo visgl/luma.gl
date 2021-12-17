@@ -57,7 +57,6 @@ import './classes/query.spec';
 import './classes/uniform-buffer-layout.spec';
 import './classes/transform-feedback.spec';
 
-
 // features
 import './_deprecated/features/features.spec';
 // import './_deprecated/features/limits.spec';

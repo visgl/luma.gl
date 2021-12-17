@@ -140,4 +140,3 @@ test.skip('WebGL#resizeGLContext', (t) => {
 
   t.end();
 });
-
