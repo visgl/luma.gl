@@ -1,3 +1,4 @@
+import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLDevice, Texture2D, TextureCube} from '@luma.gl/webgl';
 import {loadImage} from '@loaders.gl/images';
@@ -10,6 +11,7 @@ export type GLTFEnvironmentProps = {
 }
 
 export default class GLTFEnvironment {
+  // TODO - Use Device
   device: WebGLDevice;
   brdfLutUrl: any;
   getTexUrl: any;
@@ -20,17 +22,39 @@ export default class GLTFEnvironment {
   _BrdfTexture;
 
   constructor(
-    device: WebGLDevice,
+    device: Device,
     props: {
       brdfLutUrl: any;
       getTexUrl: any;
       specularMipLevels?: number;
     }
   ) {
-    this.device = device;
+    this.device = WebGLDevice.attach(device);
     this.brdfLutUrl = props.brdfLutUrl;
     this.getTexUrl = props.getTexUrl;
     this.specularMipLevels = props.specularMipLevels || 10;
+  }
+
+  destroy() {
+    if (this._DiffuseEnvSampler) {
+      this._DiffuseEnvSampler.delete();
+      this._DiffuseEnvSampler = null;
+    }
+
+    if (this._SpecularEnvSampler) {
+      this._SpecularEnvSampler.delete();
+      this._SpecularEnvSampler = null;
+    }
+
+    if (this._BrdfTexture) {
+      this._BrdfTexture.delete();
+      this._BrdfTexture = null;
+    }
+  }
+
+  /** @deprecated */
+  delete() {
+    this.destroy();
   }
 
   makeCube({id, getTextureForFace, parameters}) {
@@ -38,7 +62,7 @@ export default class GLTFEnvironment {
     TextureCube.FACES.forEach((face) => {
       pixels[face] = getTextureForFace(face);
     });
-    return new TextureCube(this.device.gl, {
+    return new TextureCube(this.device, {
       id,
       mipmaps: false,
       parameters,
@@ -88,7 +112,7 @@ export default class GLTFEnvironment {
 
   getBrdfTexture() {
     if (!this._BrdfTexture) {
-      this._BrdfTexture = new Texture2D(this.device.gl, {
+      this._BrdfTexture = new Texture2D(this.device, {
         id: 'brdfLUT',
         parameters: {
           [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
@@ -102,27 +126,5 @@ export default class GLTFEnvironment {
     }
 
     return this._BrdfTexture;
-  }
-
-  destroy() {
-    if (this._DiffuseEnvSampler) {
-      this._DiffuseEnvSampler.delete();
-      this._DiffuseEnvSampler = null;
-    }
-
-    if (this._SpecularEnvSampler) {
-      this._SpecularEnvSampler.delete();
-      this._SpecularEnvSampler = null;
-    }
-
-    if (this._BrdfTexture) {
-      this._BrdfTexture.delete();
-      this._BrdfTexture = null;
-    }
-  }
-
-  /** @deprecated */
-  delete() {
-    this.destroy();
   }
 }

@@ -1,20 +1,18 @@
-import { defineConfig } from 'vite'
-
-const alias = {
-  '@luma.gl/api': `${__dirname}/../../../modules/api/src`,
-  '@luma.gl/constants': `${__dirname}/../../../modules/constants/src`,
-  '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
-  '@luma.gl/debug': `${__dirname}/../../../modules/debug/src`,
-  '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
-  '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
-  '@luma.gl/gltools': `${__dirname}/../../../modules/gltools/src`,
-  '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
-  '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
-  '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`
-}
+import { defineConfig } from 'vite';
+import fs from 'fs';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  resolve: {alias},
+export default defineConfig(async () => ({
+  resolve: {alias: await getAliases('@luma.gl', `${__dirname}/../../..`)},
   server: {open: true}
-})
+}));
+
+/** Run against local source */
+const getAliases = async (frameworkName, frameworkRootDir) => {
+  const modules = await fs.promises.readdir(`${frameworkRootDir}/modules`)
+  const aliases = {}
+  modules.forEach(module => {
+    aliases[`${frameworkName}/${module}`] = `${frameworkRootDir}/modules/${module}/src`;
+  })
+  return aliases
+}

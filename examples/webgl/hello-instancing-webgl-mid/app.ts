@@ -75,9 +75,9 @@ export default class AppRenderLoop extends RenderLoop {
     this.vertexArray = new VertexArray(gl, {
       program: this.program,
       attributes: {
-        position: positionBuffer,
-        color: [colorBuffer, {divisor: 1}],
-        offset: [offsetBuffer, {divisor: 1}]
+        position: this.positionBuffer,
+        color: [this.colorBuffer, {divisor: 1}],
+        offset: [this.offsetBuffer, {divisor: 1}]
       }
     });
   }

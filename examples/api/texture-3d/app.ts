@@ -2,12 +2,12 @@
   Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 */
 
+import {getRandom} from '@luma.gl/api';
+import {Texture3D, Buffer, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture3D, Buffer, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
-import {getRandom} from '../../utils';
 
 const random = getRandom();
 

@@ -1,3 +1,4 @@
+import {Device} from '@luma.gl/api';
 import {Model, ModelProps} from '@luma.gl/engine';
 import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
 
@@ -15,15 +16,17 @@ export default class ModelNode extends ScenegraphNode {
   onBeforeRender = null;
   onAfterRender = null;
 
-  constructor(gl: Model | WebGLRenderingContext, props: ModelNodeProps = {}) {
+  constructor(deviceOrModel: Model | Device | WebGLRenderingContext, props: ModelNodeProps = {}) {
     super(props);
 
     // Create new Model or used supplied Model
-    if (gl instanceof Model) {
-      this.model = gl;
+    if (deviceOrModel instanceof Model) {
+      this.model = deviceOrModel;
       this._setModelNodeProps(props);
+    } else if (deviceOrModel instanceof Device) {
+      this.model = new Model(deviceOrModel, props);
     } else {
-      this.model = new Model(gl, props);
+      this.model = new Model(deviceOrModel, props);
     }
 
     this.managedResources = props.managedResources || [];

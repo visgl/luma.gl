@@ -1,7 +1,8 @@
-import {log} from '@luma.gl/api';
+import {Device, log} from '@luma.gl/api';
 import {WebGLDevice, Buffer, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 import GroupNode from '../scenegraph/group-node';
+import ModelNode from '../scenegraph/model-node';
 
 import GLTFAnimator from './gltf-animator';
 import createGLTFModel from './create-gltf-model';
@@ -28,22 +29,23 @@ const DEFAULT_OPTIONS = {
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
 export default class GLTFInstantiator {
+  // TODO - replace with Device
   device: WebGLDevice;
   options;
   gltf;
 
-  constructor(device: WebGLDevice, options = {}) {
-    this.device = device;
-    this.options = Object.assign({}, DEFAULT_OPTIONS, options);
+  constructor(device: Device, options = {}) {
+    this.device = WebGLDevice.attach(device);
+    this.options = {...DEFAULT_OPTIONS, ...options};
   }
 
-  instantiate(gltf) {
+  instantiate(gltf: any): any {
     this.gltf = gltf;
     const scenes = (gltf.scenes || []).map((scene) => this.createScene(scene));
     return scenes;
   }
 
-  createAnimator() {
+  createAnimator(): GLTFAnimator {
     if (Array.isArray(this.gltf.animations)) {
       return new GLTFAnimator(this.gltf);
     }
@@ -51,7 +53,7 @@ export default class GLTFInstantiator {
     return null;
   }
 
-  createScene(gltfScene) {
+  createScene(gltfScene: any): GroupNode {
     const gltfNodes = gltfScene.nodes || [];
     const nodes = gltfNodes.map((node) => this.createNode(node));
     const scene = new GroupNode({
@@ -117,45 +119,40 @@ export default class GLTFInstantiator {
     return gltfMesh._mesh;
   }
 
-  getVertexCount(attributes) {
-    // TODO: implement this
-    log.warn('getVertexCount() not found')();
-  }
+  createPrimitive(gltfPrimitive: any, i: number, gltfMesh): ModelNode {
+    const vertexCount = gltfPrimitive.indices
+      ? gltfPrimitive.indices.count
+      : this.getVertexCount(gltfPrimitive.attributes);
 
-  createPrimitive(gltfPrimitive, i, gltfMesh) {
     return createGLTFModel(
       this.device,
-      Object.assign(
-        {
-          id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-          drawMode: gltfPrimitive.mode || 4,
-          vertexCount: gltfPrimitive.indices
-            ? gltfPrimitive.indices.count
-            : this.getVertexCount(gltfPrimitive.attributes),
-          attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-          material: gltfPrimitive.material
-        },
-        this.options
-      )
+      {
+        id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
+        drawMode: gltfPrimitive.mode || 4,
+        vertexCount,
+        attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+        material: gltfPrimitive.material,
+        ...this.options
+      }
     );
+  }
+
+  getVertexCount(attributes: any) {
+    throw new Error('getVertexCount not implemented');
   }
 
   createAttributes(attributes, indices) {
     const loadedAttributes = {};
 
-    Object.keys(attributes).forEach((attrName) => {
-      loadedAttributes[attrName] = this.createAccessor(
-        attributes[attrName],
-        this.createBuffer(attributes[attrName], this.device.gl.ARRAY_BUFFER)
-      );
-    });
+    for (const [attrName, attribute] of Object.entries(attributes)) {
+      const buffer = this.createBuffer(attribute, this.device.gl.ARRAY_BUFFER);
+      loadedAttributes[attrName] = this.createAccessor(attribute, buffer);
+    }
 
     if (indices) {
+      const buffer = this.createBuffer(indices, this.device.gl.ELEMENT_ARRAY_BUFFER)
       // @ts-expect-error
-      loadedAttributes.indices = this.createAccessor(
-        indices,
-        this.createBuffer(indices, this.device.gl.ELEMENT_ARRAY_BUFFER)
-      );
+      loadedAttributes.indices = this.createAccessor(indices, buffer);
     }
 
     log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
@@ -203,7 +200,7 @@ export default class GLTFInstantiator {
 
   // Helper methods (move to GLTFLoader.resolve...?)
 
-  needsPOT() {
+  needsPOT(): boolean {
     // Has a wrapping mode (either wrapS or wrapT) equal to REPEAT or MIRRORED_REPEAT, or
     // Has a minification filter (minFilter) that uses mipmapping
     // (NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR,

@@ -1,6 +1,6 @@
-import {isWebGL2, WebGLDevice} from '@luma.gl/webgl';
-import {log} from '@luma.gl/webgl';
+import {Device, log} from '@luma.gl/api';
 import {pbr} from '@luma.gl/shadertools';
+import {isWebGL2, WebGLDevice} from '@luma.gl/webgl';
 import ModelNode from '../scenegraph/model-node';
 import GLTFMaterialParser from './gltf-material-parser';
 
@@ -61,7 +61,7 @@ const fs = `
   }
 `;
 
-export default function createGLTFModel(device: WebGLDevice, options: any): ModelNode {
+export default function createGLTFModel(device: Device, options: any): ModelNode {
   const {id, drawMode, vertexCount, attributes, modelOptions} = options;
   const materialParser = new GLTFMaterialParser(device, options);
 
@@ -76,21 +76,19 @@ export default function createGLTFModel(device: WebGLDevice, options: any): Mode
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   const model = new ModelNode(
-    device.gl,
-    Object.assign(
-      {
-        id,
-        drawMode,
-        vertexCount,
-        modules: [pbr],
-        defines: materialParser.defines,
-        parameters: materialParser.parameters,
-        vs: addVersionToShader(device, vs),
-        fs: addVersionToShader(device, fs),
-        managedResources
-      },
-      modelOptions
-    )
+    device,
+    {
+      id,
+      drawMode,
+      vertexCount,
+      modules: [pbr],
+      defines: materialParser.defines,
+      parameters: materialParser.parameters,
+      vs: addVersionToShader(device, vs),
+      fs: addVersionToShader(device, fs),
+      managedResources,
+      ...modelOptions
+    }
   );
 
   model.setProps({attributes});
@@ -99,6 +97,7 @@ export default function createGLTFModel(device: WebGLDevice, options: any): Mode
   return model;
 }
 
-function addVersionToShader(device: WebGLDevice, source: string): string {
+function addVersionToShader(device: Device, source: string): string {
+  // @ts-expect-error TODO
   return isWebGL2(device.gl) ? `#version 300 es\n${source}` : source;
 }

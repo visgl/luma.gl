@@ -1,5 +1,4 @@
-// import {Device} from '@luma.gl/api';
-import {WebGLDevice, log} from '@luma.gl/webgl';
+import {Device, log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import GLTFEnvironment from './gltf-environment';
 
@@ -12,14 +11,14 @@ export type GLTFMaterialParserProps = {
   useTangents?: boolean;
 };
 export default class GLTFMaterialParser {
-  readonly device: WebGLDevice;
+  readonly device: Device;
 
   readonly defines: Record<string, number | boolean>;
   readonly uniforms: Record<string, any>;
   readonly parameters: Record<string, any>;
   readonly generatedTextures: object[];
 
-  constructor(device: WebGLDevice, props: GLTFMaterialParserProps) {
+  constructor(device: Device, props: GLTFMaterialParserProps) {
     const {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents} = props;
     this.device = device;
 

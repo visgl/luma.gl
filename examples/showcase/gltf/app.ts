@@ -1,5 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 // import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
+import {Device} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
@@ -155,13 +156,14 @@ const DEFAULT_OPTIONS = {
   lights: false
 };
 
-async function loadGLTF(urlOrPromise, gl, options) {
+async function loadGLTF(urlOrPromise, device: Device, options) {
   const data = typeof urlOrPromise === 'string' ? window.fetch(urlOrPromise) : urlOrPromise;
   const gltf = await parse(data, GLTFLoader, {
     ...options,
-    gl
+    // @ts-expect-error
+    gl: device.gl
   });
-  const {scenes, animator} = createGLTFObjects(gl, gltf, options);
+  const {scenes, animator} = createGLTFObjects(device, gltf, options);
 
   scenes[0].traverse((node, {worldMatrix}) => log.info(4, 'Using model: ', node)());
   return {scenes, animator, gltf};
@@ -181,7 +183,6 @@ export default class AppRenderLoop extends RenderLoop {
 
   scenes = [];
   animator = null;
-  gl = null;
   modelFile;
   loadOptions = DEFAULT_OPTIONS;
 
@@ -197,57 +198,52 @@ export default class AppRenderLoop extends RenderLoop {
   u_ScaleDiffBaseMR = [0, 0, 0, 0];
   u_ScaleFGDSpec = [0, 0, 0, 0];
 
-  timeline: Timeline;
+  timeline: Timeline = new Timeline();
   timelineChannel;
-  animationHandle;
+  animationHandle: number;
   gltf;
-  environment;
+  environment: GLTFEnvironment;
 
   viewMatrix; 
   projectionMatrix;
 
   light;
 
-  constructor({animationLoop}: AnimationProps) {
+  device: Device;
+  
+  constructor({animationLoop, device, gl, canvas}: AnimationProps) {
     super();
 
-    // @ts-expect-error TODO - where are these opts coming
-    const {modelFile = null, initialZoom = 2} = opts;
+    this.device = device; // for onDrop
+
+    const {modelFile = null, initialZoom = 2} = {};
 
     this.modelFile = modelFile;
     this.translate = initialZoom;
 
-    this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
-    this.timelineChannel = this.timeline.addChannel({
-      rate: 0.5
-    });
+    this.timelineChannel = this.timeline.addChannel({rate: 0.5});
     this.animationHandle = null;
 
-    this.onInitialize = this.onInitialize.bind(this);
-    this.onRender = this.onRender.bind(this);
 
     this.gltf = null;
 
     // @ts-ignore
-    this._setDisplay(new VRDisplay());
-  }
+    // this._setDisplay(new VRDisplay());
 
- onInitialize({gl, canvas}) {
     setParameters(gl, {
       depthTest: true,
       blend: false
     });
 
-    this.environment = new GLTFEnvironment(gl, {
+    this.environment = new GLTFEnvironment(device, {
       brdfLutUrl: `${GLTF_BASE_URL}/brdfLUT.png`,
       getTexUrl: (type, dir, mipLevel) =>
         `${GLTF_BASE_URL}/papermill/${type}/${type}_${CUBE_FACE_TO_DIRECTION[dir]}_${mipLevel}.jpg`
     });
     this.loadOptions.imageBasedLightingEnvironment = this.environment;
 
-    this.gl = gl;
     if (this.modelFile) {
       // options for unit testing
       const options = {
@@ -255,10 +251,10 @@ export default class AppRenderLoop extends RenderLoop {
         imageBasedLightingEnvironment: null,
         lights: true
       };
-      loadGLTF(this.modelFile, this.gl, options).then((result) => this._fileLoaded(result));
+      loadGLTF(this.modelFile, device, options).then((result) => this._fileLoaded(result));
     } else {
       const modelUrl = GLTF_DEFAULT_MODEL;
-      loadGLTF(GLTF_BASE_URL + modelUrl, this.gl, this.loadOptions).then((result) =>
+      loadGLTF(GLTF_BASE_URL + modelUrl, device, this.loadOptions).then((result) =>
         this._fileLoaded(result)
       );
     }
@@ -286,7 +282,7 @@ export default class AppRenderLoop extends RenderLoop {
       iblSelector.onchange = (event) => {
         // @ts-ignore
         this._updateLightSettings(iblSelector.value);
-        this._rebuildModel();
+        this._rebuildModel(device);
       };
     }
 
@@ -381,7 +377,7 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
-  _rebuildModel() {
+  _rebuildModel(device: Device) {
     // Clean and regenerate model so we have new "#defines"
     // TODO: Find better way to do this
     (this.gltf.meshes || []).forEach((mesh) => delete mesh._mesh);
@@ -389,7 +385,7 @@ export default class AppRenderLoop extends RenderLoop {
     (this.gltf.bufferViews || []).forEach((bufferView) => delete bufferView.lumaBuffers);
 
     this._deleteScenes();
-    Object.assign(this, createGLTFObjects(this.gl, this.gltf, this.loadOptions));
+    Object.assign(this, createGLTFObjects(device, this.gltf, this.loadOptions));
   }
 
   _deleteScenes() {
@@ -486,7 +482,7 @@ export default class AppRenderLoop extends RenderLoop {
           reader.readAsArrayBuffer(e.dataTransfer.files[0]);
         });
 
-        loadGLTF(readPromise, this.gl, this.loadOptions).then((result) => this._fileLoaded(result));
+        loadGLTF(readPromise, this.device, this.loadOptions).then((result) => this._fileLoaded(result));
       }
     });
   }

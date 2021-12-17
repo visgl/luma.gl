@@ -1,11 +1,10 @@
-import {Device} from '@luma.gl/api';
+import {Device, getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Model, ModelProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {clear, Texture2D, Buffer, withParameters, isWebGL2} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
-import {getRandom} from '../../utils';
 
 const INFO_HTML = `
 <p>

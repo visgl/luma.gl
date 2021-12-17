@@ -1,5 +1,5 @@
-import {polyfillContext} from '@luma.gl/webgl';
-import {MiniAnimationLoop} from '../../utils';
+import {polyfillContext, WebGLDeviceProps} from '@luma.gl/webgl';
+import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's low-level API
@@ -7,17 +7,18 @@ Instanced triangles using luma.gl's low-level API
 
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-export default class AppAnimationLoop extends MiniAnimationLoop {
+export default class AppAnimationLoop extends AnimationLoop {
   static info = INFO_HTML;
 
-  start(props) {
-    const canvas = this._getCanvas(props);
-
-    if (!canvas.getContext('webgl')) {
+  onCreateContext(props: WebGLDeviceProps): WebGLRenderingContext {
+    const gl = props.canvas.getContext('webgl');
+    if (!gl) {
       throw new Error(ALT_TEXT);
     }
+    return polyfillContext(props.canvas.getContext('webgl'));
+  }
 
-    const gl = polyfillContext(canvas.getContext('webgl'));
+  onInitialize({gl}: AnimationProps): void {
     gl.clearColor(0, 0, 0, 1);
 
     const vs = `
@@ -98,8 +99,7 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
 
     gl.bindVertexArray(null);
 
-    const resources = {
-      gl,
+    this.resources = {
       positionBuffer,
       colorBuffer,
       offsetBuffer,
@@ -107,32 +107,19 @@ export default class AppAnimationLoop extends MiniAnimationLoop {
       vertexArray
     };
 
-    resources.rafHandle = requestAnimationFrame(function draw() {
-      resources.rafHandle = requestAnimationFrame(draw);
-
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.bindVertexArray(vertexArray);
-      gl.useProgram(program);
-      gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, 4);
-    });
-
-    gl.deleteShader(vShader);
-    gl.deleteShader(fShader);
+    // gl.deleteShader(vShader);
+    // gl.deleteShader(fShader);
   }
 
-  stop() {
-    if (this.demoNotSupported) {
-      return;
-    }
-    cancelAnimationFrame(this.resources.rafHandle);
+  onRender({gl}: AnimationProps): void {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindVertexArray(this.resources.vertexArray);
+    gl.useProgram(this.resources.program);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, 4);
   }
 
-  delete() {
-    if (this.demoNotSupported) {
-      return;
-    }
-
-    const {gl, positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
+  onFinalize({gl}: AnimationProps) {
+    const {positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteBuffer(colorBuffer);
     gl.deleteBuffer(offsetBuffer);
