@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-shader-modules",
-  "version": "8.6.0-alpha.2",
+  "version": "8.6.0-alpha.3",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.6.0-alpha.2",
-    "@luma.gl/webgl": "8.6.0-alpha.2"
+    "@luma.gl/engine": "8.6.0-alpha.3",
+    "@luma.gl/webgl": "8.6.0-alpha.3"
   },
   "devDependencies": {
     "typescript": "^4.3.2",
