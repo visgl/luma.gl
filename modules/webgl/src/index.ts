@@ -110,6 +110,9 @@ export {getDebugTableForUniforms} from './debug/debug-uniforms';
 export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
 
+// HELPERS - EXPERIMENTAL
+export {getProgramBindings} from './helpers/get-program-bindings';
+
 // DEPRECATED
 
 // Deprecated re-exports
@@ -117,15 +120,23 @@ export {lumaStats} from './init';
 export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
 export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
 
-// export {
-//   getContextInfo, getGLContextInfo, getContextLimits,
-//   FEATURES,
-//   getFeatures,
-//   canCompileGLGSExtension
-// } from '@luma.gl/gltools';
+// GLTOOLS
+export type {GLContextOptions} from './_deprecated/context-api';
+export {
+  createGLContext,
+  instrumentGLContext,
+  resizeGLContext,
+  hasFeature,
+  hasFeatures,
+  getFeatures,
+  getContextInfo,
+  getGLContextInfo,
+  getContextLimits,
+  getContextDebugInfo
+} from './_deprecated/context-api';
 
-// HELPERS - EXPERIMENTAL
-export {getProgramBindings} from './helpers/get-program-bindings';
+// Features
+export {FEATURES} from './_deprecated/features';
 
 // REMOVED in v8.7
 // getShaderInfo,
