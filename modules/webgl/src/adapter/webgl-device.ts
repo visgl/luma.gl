@@ -311,14 +311,6 @@ export default class WebGLDevice extends Device implements ContextState {
 }
 
 /*
-import {
-  isWebGL, isWebGL2,
-  createGLContext,
-  instrumentGLContext,
-  getContextDebugInfo,
-  resizeGLContext
-} from '@luma.gl/gltools';
-
 // prettier-ignore
 import {
   Device, DeviceInfo, DeviceLimits,

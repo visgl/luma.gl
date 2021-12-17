@@ -4,7 +4,7 @@ import {
   hasFeatures,
   getFeatures,
   FEATURES
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl';
 import test from 'tape-promise/tape';
 // import {makeSpy} from '@probe.gl/test-utils';
 

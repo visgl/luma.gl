@@ -1,5 +1,5 @@
-import {getKey, getContextInfo} from '@luma.gl/gltools';
-import {WEBGL_LIMITS} from '@luma.gl/gltools/lib/device/get-webgl-limits';
+import {getKey, getContextInfo} from '@luma.gl/webgl';
+import {WEBGL_LIMITS} from '@luma.gl/webgl/_deprecated/features/get-webgl-limits';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';

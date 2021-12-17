@@ -1,4 +1,4 @@
-import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/gltools';
+import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/webgl';
 import {getDevicePixelRatio} from '@luma.gl/webgl/context/context/device-pixels';
 
 import test from 'tape-promise/tape';
