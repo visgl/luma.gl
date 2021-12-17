@@ -1,12 +1,24 @@
 # What's New
 
-## Version 9.0
+## Version 8.7
 
-Date: TBD
+Target Date: Early Q1, 2022
+
+The 8.7 release represents a major internal refactor of luma.gl to prepare for WebGPU introduction.
+While it should remain highly compatible with 8.X, a range of APIs are now deprecated and it is a good
+time to consult the upgrade guide to start updating your code in anticipation of the upcoming 9.0 release.
 
 ### `@luma.gl/shadertools`
 
 - New `CompilerMessage` type and `formatCompilerLog` function for platform and shader language independent handling of shader logs.
+
+### `@luma.gl/gltools`
+
+- The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module to facilitate creating a WebGL driver.
+
+## Version 8.6
+
+No change from 8.5
 
 ## Version 8.5
 

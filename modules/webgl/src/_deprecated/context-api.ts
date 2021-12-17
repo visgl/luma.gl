@@ -5,7 +5,7 @@
 /* eslint-disable quotes */
 import GL from '@luma.gl/constants';
 import {WebGLDevice, WebGLDeviceProps} from '@luma.gl/webgl';
-import {FEATURES} from './features';
+import {DEPRECATED_FEATURES} from './features';
 
 export type GLContextOptions = WebGLDeviceProps & {
   throwOnError?: boolean; // If set to false, return `null` if context creation fails.
@@ -61,12 +61,17 @@ export function resizeGLContext(
 export function hasFeatures(gl: WebGLRenderingContext, features: string | string[]): boolean {
   const webglDevice = WebGLDevice.attach(gl);
   const normalizedFeatures = Array.isArray(features) ? features : [features];
-  const deviceFeatures = normalizedFeatures.map(feature => getDeviceFeature(feature));
-  return deviceFeatures.every((feature) => webglDevice.webglFeatures.has(feature));
+  const deviceFeatures = normalizedFeatures.map(feature => classicToDeviceFeature(feature));
+  // @ts-expect-error Feature is a string enum
+  return deviceFeatures.every((feature) => webglDevice.features.has(feature));
 }
 
-function getDeviceFeature(feature) {
-  return feature.toLowerCase().replace('webgl-', '').replace('-', '_');
+function classicToDeviceFeature(feature: string): string {
+  const deviceFeature = feature.toLowerCase().replace(/\_/g, '-');
+  if (deviceFeature.startsWith('webgl2') || deviceFeature.startsWith('glsl-')) {
+    return deviceFeature;
+  }
+  return `webgl-${deviceFeature}`;
 }
 
 /**
@@ -84,8 +89,9 @@ export function hasFeature(gl: WebGLRenderingContext, feature: string): boolean 
 export function getFeatures(gl: WebGLRenderingContext): Record<string, boolean>  {
   const webglDevice = WebGLDevice.attach(gl);
   const featureMap: Record<string, boolean> = {};
-  for (const feature in FEATURES) {
-    featureMap[feature] = webglDevice.webglFeatures.has(feature);
+  for (const feature in DEPRECATED_FEATURES) {
+    // @ts-expect-error Feature is a string enum
+    featureMap[feature] = webglDevice.features.has(classicToDeviceFeature(feature));
   }
   return featureMap;
 }

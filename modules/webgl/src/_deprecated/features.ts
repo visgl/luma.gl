@@ -7,7 +7,7 @@ import {isWebGL2} from '@luma.gl/webgl';
 import {assert} from '@luma.gl/api';
 
 // TODO - this should be the default export, test cases need updating
-export const FEATURES = {
+export const DEPRECATED_FEATURES = {
   WEBGL2: 'WEBGL2',
 
   // API SUPPORT
@@ -72,7 +72,7 @@ function isFeatureSupported(gl: WebGLRenderingContext, cap: string): boolean {
   // Get extension name from table
   const featureDefinition = isWebGL2(gl) ? webgl2Feature : webgl1Feature;
 
-  if (cap === FEATURES.COLOR_ATTACHMENT_RGBA32F && !isWebGL2(gl)) {
+  if (cap === DEPRECATED_FEATURES.COLOR_ATTACHMENT_RGBA32F && !isWebGL2(gl)) {
     return checkFloat32ColorAttachment(gl);
   }
 
@@ -119,41 +119,41 @@ function checkFloat32ColorAttachment(gl: WebGLRenderingContext) {
 // Defines luma.gl "feature" names and semantics
 // Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
 const WEBGL_FEATURES: Record<string, [boolean | string, boolean | string]> = {
-  [FEATURES.WEBGL2]: [false, true],
+  [DEPRECATED_FEATURES.WEBGL2]: [false, true],
 
   // API SUPPORT
-  [FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
-  [FEATURES.TIMER_QUERY]: ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
-  [FEATURES.INSTANCED_RENDERING]: ['ANGLE_instanced_arrays', true],
-  [FEATURES.MULTIPLE_RENDER_TARGETS]: ['WEBGL_draw_buffers', true],
+  [DEPRECATED_FEATURES.VERTEX_ARRAY_OBJECT]: ['OES_vertex_array_object', true],
+  [DEPRECATED_FEATURES.TIMER_QUERY]: ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
+  [DEPRECATED_FEATURES.INSTANCED_RENDERING]: ['ANGLE_instanced_arrays', true],
+  [DEPRECATED_FEATURES.MULTIPLE_RENDER_TARGETS]: ['WEBGL_draw_buffers', true],
 
   // FEATURES
-  [FEATURES.ELEMENT_INDEX_UINT32]: ['OES_element_index_uint', true],
+  [DEPRECATED_FEATURES.ELEMENT_INDEX_UINT32]: ['OES_element_index_uint', true],
 
   // BLENDING
-  [FEATURES.BLEND_EQUATION_MINMAX]: ['EXT_blend_minmax', true],
-  [FEATURES.FLOAT_BLEND]: ['EXT_float_blend', 'EXT_float_blend'],
+  [DEPRECATED_FEATURES.BLEND_EQUATION_MINMAX]: ['EXT_blend_minmax', true],
+  [DEPRECATED_FEATURES.FLOAT_BLEND]: ['EXT_float_blend', 'EXT_float_blend'],
 
   // TEXTURES, RENDERBUFFERS
-  [FEATURES.COLOR_ENCODING_SRGB]: ['EXT_sRGB', true],
+  [DEPRECATED_FEATURES.COLOR_ENCODING_SRGB]: ['EXT_sRGB', true],
 
   // TEXTURES
-  [FEATURES.TEXTURE_DEPTH]: ['WEBGL_depth_texture', true],
-  [FEATURES.TEXTURE_FLOAT]: ['OES_texture_float', true],
-  [FEATURES.TEXTURE_HALF_FLOAT]: ['OES_texture_half_float', true],
+  [DEPRECATED_FEATURES.TEXTURE_DEPTH]: ['WEBGL_depth_texture', true],
+  [DEPRECATED_FEATURES.TEXTURE_FLOAT]: ['OES_texture_float', true],
+  [DEPRECATED_FEATURES.TEXTURE_HALF_FLOAT]: ['OES_texture_half_float', true],
 
-  [FEATURES.TEXTURE_FILTER_LINEAR_FLOAT]: ['OES_texture_float_linear', 'OES_texture_float_linear'],
-  [FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT]: ['OES_texture_half_float_linear', 'OES_texture_half_float_linear'],
-  [FEATURES.TEXTURE_FILTER_ANISOTROPIC]: ['EXT_texture_filter_anisotropic', 'EXT_texture_filter_anisotropic'],
+  [DEPRECATED_FEATURES.TEXTURE_FILTER_LINEAR_FLOAT]: ['OES_texture_float_linear', 'OES_texture_float_linear'],
+  [DEPRECATED_FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT]: ['OES_texture_half_float_linear', 'OES_texture_half_float_linear'],
+  [DEPRECATED_FEATURES.TEXTURE_FILTER_ANISOTROPIC]: ['EXT_texture_filter_anisotropic', 'EXT_texture_filter_anisotropic'],
 
   // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-  [FEATURES.COLOR_ATTACHMENT_RGBA32F]: [false, 'EXT_color_buffer_float'], // Note override check
-  [FEATURES.COLOR_ATTACHMENT_FLOAT]: [false, 'EXT_color_buffer_float'],
-  [FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: ['EXT_color_buffer_half_float', 'EXT_color_buffer_half_float'],
+  [DEPRECATED_FEATURES.COLOR_ATTACHMENT_RGBA32F]: [false, 'EXT_color_buffer_float'], // Note override check
+  [DEPRECATED_FEATURES.COLOR_ATTACHMENT_FLOAT]: [false, 'EXT_color_buffer_float'],
+  [DEPRECATED_FEATURES.COLOR_ATTACHMENT_HALF_FLOAT]: ['EXT_color_buffer_half_float', 'EXT_color_buffer_half_float'],
 
   // GLSL extensions
-  [FEATURES.GLSL_FRAG_DATA]: ['WEBGL_draw_buffers', true],
-  [FEATURES.GLSL_FRAG_DEPTH]: ['EXT_frag_depth', true],
-  [FEATURES.GLSL_DERIVATIVES]: ['OES_standard_derivatives', true],
-  [FEATURES.GLSL_TEXTURE_LOD]: ['EXT_shader_texture_lod', true]
+  [DEPRECATED_FEATURES.GLSL_FRAG_DATA]: ['WEBGL_draw_buffers', true],
+  [DEPRECATED_FEATURES.GLSL_FRAG_DEPTH]: ['EXT_frag_depth', true],
+  [DEPRECATED_FEATURES.GLSL_DERIVATIVES]: ['OES_standard_derivatives', true],
+  [DEPRECATED_FEATURES.GLSL_TEXTURE_LOD]: ['EXT_shader_texture_lod', true]
 };

@@ -4,7 +4,7 @@ import {
   hasFeatures,
   getFeatures,
   FEATURES
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl';
 import test from 'tape-promise/tape';
 // import {makeSpy} from '@probe.gl/test-utils';
 
@@ -15,20 +15,20 @@ const WEBGL_FEATURES = {
   WEBGL2: true,
 
   // API SUPPORT
-  VERTEX_ARRAY_OBJECT: true,
-  INSTANCED_RENDERING: true,
-  MULTIPLE_RENDER_TARGETS: true,
+  // VERTEX_ARRAY_OBJECT: true,
+  // INSTANCED_RENDERING: true,
+  // MULTIPLE_RENDER_TARGETS: true,
 
-  // FEATURES
-  ELEMENT_INDEX_UINT32: true,
-  BLEND_EQUATION_MINMAX: true,
-  COLOR_ENCODING_SRGB: true,
+  // // FEATURES
+  // ELEMENT_INDEX_UINT32: true,
+  // BLEND_EQUATION_MINMAX: true,
+  // COLOR_ENCODING_SRGB: true,
 
-  TEXTURE_DEPTH: true,
-  TEXTURE_FLOAT: true,
-  TEXTURE_HALF_FLOAT: true,
+  // TEXTURE_DEPTH: true,
+  // TEXTURE_FLOAT: true,
+  // TEXTURE_HALF_FLOAT: true,
 
-  COLOR_ATTACHMENT_FLOAT: false,
+  // COLOR_ATTACHMENT_FLOAT: false,
 
   // GLSL extensions
   GLSL_FRAG_DATA: true,

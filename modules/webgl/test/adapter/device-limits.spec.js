@@ -33,7 +33,7 @@ const DEVICE_LIMITS = {
 };
 
 /** WebGL context limits */
-const WEBGL_LIMITS = {
+export const WEBGL_LIMITS = {
   [GL.ALIASED_LINE_WIDTH_RANGE]: false,
   [GL.ALIASED_POINT_SIZE_RANGE]: false,
   [GL.MAX_TEXTURE_SIZE]: true,

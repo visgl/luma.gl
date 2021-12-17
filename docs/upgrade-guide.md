@@ -1,5 +1,16 @@
 # Upgrade Guide
 
+## Upgrading from v8.5 to v8.7
+
+v8.7 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
+
+### `luma.gl/gltools` module is deprecated
+
+The module still exists, but is now just re-exporting the functions which have been moved to `@luma.gl/webgl`. 
+In v9.0 the `@luma.gl/gltools` module will be removed, and the context functions will be replaced by the new experimental `WebGLDevice` class.
+
+Recommended changes:
+- Change any imports from `@luma.gl/gltools` to `@luma.gl/webgl`. 
 
 ## Upgrading from v8.4 to v8.5
 

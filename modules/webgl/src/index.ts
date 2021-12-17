@@ -136,7 +136,7 @@ export {
 } from './_deprecated/context-api';
 
 // Features
-export {FEATURES} from './_deprecated/features';
+export {DEPRECATED_FEATURES as FEATURES} from './_deprecated/features';
 
 // REMOVED in v8.7
 // getShaderInfo,
