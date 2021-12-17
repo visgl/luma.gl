@@ -24,17 +24,17 @@ test('WebGL#headless context creation', (t) => {
   t.end();
 });
 
-// test('WebGL#isWebGL1', (t) => {
-//   t.ok(isWebGL(gl1), 'isWebGL should return true WebGL context');
-//   // t.ok(isWebGL(gl1Debug), 'isWebGL should return true on WebGL debug context');
+test('WebGL#isWebGL1', (t) => {
+  t.ok(isWebGL(gl1), 'isWebGL should return true WebGL context');
+  // t.ok(isWebGL(gl1Debug), 'isWebGL should return true on WebGL debug context');
 
-//   if (gl2) {
-//     t.ok(isWebGL(gl2), 'isWebGL2 should return true for WebGL2 context');
-//     // t.ok(isWebGL(gl2Debug), 'isWebGL2 should return true for WebGL2 debug context');
-//   }
+  if (gl2) {
+    t.ok(isWebGL(gl2), 'isWebGL2 should return true for WebGL2 context');
+    // t.ok(isWebGL(gl2Debug), 'isWebGL2 should return true for WebGL2 debug context');
+  }
 
-//   t.end();
-// });
+  t.end();
+});
 
 // test('WebGL#isWebGL2', (t) => {
 //   t.notOk(isWebGL2(gl1), 'isWebGL2 should return false WebGL context');
