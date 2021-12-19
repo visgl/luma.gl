@@ -77,12 +77,12 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       vertex,
       fragment,
       primitive: {
-        topology: this.props.primitiveTopology
+        topology: this.props.topology
       }
 
       // WebGPU spec seems updated
       // primitive: {
-      //   topology: this.props.primitiveTopology
+      //   topology: this.props.topology
       // },
 
     };
@@ -123,14 +123,14 @@ export class WebGPUPipeline<Props> extends WebGPUResource<Props> implements Pipe
     const {
       vs,
       fs,
-      primitiveTopology,
+      topology,
       parameters,
       bufferAccessors
     } = this.props;
 
     // this.vs = vs;
     // this.fs = fs;
-    // this.drawMode = primitiveTopology;
+    // this.drawMode = topology;
     // this.parameters = parameters;
     // this.bufferAccessors = bufferAccessors;
 
@@ -161,7 +161,7 @@ export class WebGPUPipeline<Props> extends WebGPUResource<Props> implements Pipe
   }
 
   _createPipeline(): GPUPipelineBase {
-    primitiveTopology: "triangle-list",
+    topology: "triangle-list",
 
     colorStates: [
       {

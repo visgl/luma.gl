@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
 export const description = 'Shows rendering a basic triangle.';
@@ -49,22 +49,16 @@ fn main() -> [[location(0)]] vec4<f32> {
 export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl') {
   const device = await WebGPUDevice.create({canvas});
 
-  const vertexShader = device.createShader({stage: 'vertex', source: SHADERS[language].vertex, language});
-  const fragmentShader = device.createShader({stage: 'fragment', source: SHADERS[language].fragment, language});
-
-  const pipeline = device.createRenderPipeline({
-    vertexShader,
-    fragmentShader,
-    primitiveTopology: "triangle-list"
-    // Geometry in the vertex shader!
+  const model = new Model(device, {
+    vs: SHADERS[language].vertex,
+    fs: SHADERS[language].fragment,
+    topology: "triangle-list",
+    vertexCount: 3
   });
 
   function frame() {
-    const renderPass = device.beginRenderPass();
-
-    renderPass.setPipeline(pipeline.handle);
-    renderPass.draw(3, 1, 0, 0);
-
+    device.beginRenderPass();
+    model.draw();
     device.submit();
     requestAnimationFrame(frame);
   }

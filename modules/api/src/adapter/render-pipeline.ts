@@ -14,7 +14,7 @@ export type RenderPipelineProps = ResourceProps & {
   fragmentShaderEntryPoint?: string; // WGSL only
   fragmentShaderConstants?: Record<string, number>; // WGSL only
 
-  primitiveTopology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   parameters?: RenderPipelineParameters;
   layout?: BindingLayout[];
 };

@@ -47,6 +47,9 @@ export default class WebGPUDevice extends Device {
   }
 
   static async create(props) {
+    if (!navigator.gpu) {
+      throw new Error('WebGPU not available');
+    }
     const adapter = await navigator.gpu.requestAdapter({
       powerPreference: "high-performance"
     });

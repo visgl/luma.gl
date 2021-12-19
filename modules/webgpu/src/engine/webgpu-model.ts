@@ -1,40 +1,83 @@
 
-import type {Shader, RenderPipeline} from '@luma.gl/api';
+import {Shader, RenderPipeline, PrimitiveTopology, assert} from '@luma.gl/api';
 import {cast} from '@luma.gl/api';
+import {VertexShader} from '@luma.gl/webgl/';
+import {WebGPUShader} from '..';
 import WebGPUDevice from '../adapter/webgpu-device';
 import WebGPURenderPipeline from '../adapter/webgpu-render-pipeline';
 // import glslangModule from '../glslang';
 
 export type ModelProps = {
+  id?: string;
+  pipeline?: RenderPipeline;
+  vertex?: string | Shader;
+  fragment?: string | Shader;
+  topology: PrimitiveTopology;
+  vertexCount: number;
+  instanceCount?: number;
+
+  // backwards compatibility
   vs?: string | Shader;
   fs?: string | Shader;
-  pipeline?: RenderPipeline;
 }
+
+const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
+  id: 'unnamed',
+  vertex: undefined,
+  fragment: undefined,
+  pipeline: undefined,
+  topology: 'triangle-list',
+  vertexCount: 0,
+  instanceCount: 1,
+  vs: undefined,
+  fs: undefined,
+};
+
 export default class Model {
   device: WebGPUDevice;
   pipeline: WebGPURenderPipeline;
+  vertex: WebGPUShader;
+  fragment: WebGPUShader | undefined;
+  props: Required<ModelProps>;
 
   constructor(device: WebGPUDevice, props: ModelProps) {
+    this.props = {...DEFAULT_MODEL_PROPS, ...props};
+    props = this.props;
+
     this.device = device;
-    this.pipeline = cast<WebGPURenderPipeline>(props.pipeline);
-    // this.vsModule = createShaderModule(device, SingleShaderStage::Vertex, options.vs.c_str());
-    // this.fsModule = createShaderModule(device, SingleShaderStage::Fragment, options.fs.c_str());
-    // this.primitiveTopology = "triangle-list";
-  }
+    if (props.pipeline) {
+      this.pipeline = cast<WebGPURenderPipeline>(props.pipeline);
+    } else {
+      const vertex = props.vertex || props.vs;
+      const fragment = props.fragment || props.fs;
 
-  draw(vertexCount: number, instanceCount: number = 1, firstVertex: number = 0, firstInstance: number = 0) {
-    const renderPass = this.device.getActiveRenderPass();
+      assert(vertex);
+      this.vertex = (typeof vertex === 'string')
+        ? new WebGPUShader(device, {stage: 'vertex', source: vertex})
+        : cast<WebGPUShader>(vertex);
+      
+      if (fragment) {
+        this.fragment = (typeof fragment === 'string')
+          ? new WebGPUShader(device, {stage: 'fragment', source: fragment})
+          : cast<WebGPUShader>(fragment);
+      }
+
+      this.pipeline = device.createRenderPipeline({
+        vertexShader: this.vertex, 
+        fragmentShader: this.fragment, 
+        topology: props.topology
+        // Geometry in the vertex shader!
+      });
+    }
+  }
+    
+  draw(renderPass?: GPURenderPassEncoder) {
+    renderPass = renderPass || this.device.getActiveRenderPass();
     renderPass.setPipeline(this.pipeline.handle);
-    renderPass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    // renderPass.setBindGroup(0, this.uniformBindGroup);
+    // renderPass.setVertexBuffer(0, this.verticesBuffer);
+    renderPass.draw(this.props.vertexCount, this.props.instanceCount, 0, 0); // firstVertex, firstInstance);
   }
-
-  // draw(passEncoder) {
-  //   passEncoder.setPipeline(this.pipeline);
-  //   passEncoder.setBindGroup(0, this.uniformBindGroup);
-  //   passEncoder.setVertexBuffer(0, this.verticesBuffer);
-  //   passEncoder.draw(36, 1, 0, 0);
-  // };
-
 
   /*
   setIndices(indices) {
