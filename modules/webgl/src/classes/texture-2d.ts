@@ -4,6 +4,7 @@ import Texture, {TextureProps, TextureSupportOptions} from './texture';
 
 
 export type Texture2DProps = TextureProps & {
+  format?: number;
 };
 
 export default class Texture2D extends Texture {

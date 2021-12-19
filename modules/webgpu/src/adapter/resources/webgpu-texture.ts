@@ -1,17 +1,9 @@
 // Inspired by webgpu samples at https://github.com/austinEng/webgpu-samples/blob/master/src/glslang.ts
 // under BSD 3-clause license
 /// <reference types="@webgpu/types" />
-import {Resource, Texture, TextureProps, Device, Sampler, SamplerProps} from '@luma.gl/api';
-import type WebGPUDevice from './webgpu-device';
+import {Texture, TextureProps, Sampler, SamplerProps, assert} from '@luma.gl/api';
+import type WebGPUDevice from '../webgpu-device';
 import WebGPUSampler from './webgpu-sampler';
-
-// const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
-//   handle: undefined,
-//   id: undefined,
-//   depth: 1,
-//   format: 'rgba8unorm',
-//   usage: GPUTextureUsage.COPY_DST
-// };
 
 export default class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
@@ -28,26 +20,26 @@ export default class WebGPUTexture extends Texture {
   // static createFromImage(img, usage = 0) {
   //   return new WebGPUTexture({width: img.width, height:img.height, usage}).setImage(image, usage);
   // }
+
   constructor(device: WebGPUDevice, props: TextureProps) {
     super(device, props);
-
     this.device = device;
     this.handle = this.props.handle || this.createHandle();
-
     this.sampler = null;
   }
 
   protected createHandle(): GPUTexture {
+    if (typeof this.props.format === 'number') {
+      throw new Error('number format');
+    }
     return this.device.handle.createTexture({
       size: {
         width: this.props.width,
         height: this.props.height,
         depthOrArrayLayers: this.props.depth
       },
-      // @ts-expect-error
       format: this.props.format,
-      // @ts-expect-error
-      usage: GPUTextureUsage.COPY_DST | this.props.usage
+      usage: this.props.usage
     });
   }
 

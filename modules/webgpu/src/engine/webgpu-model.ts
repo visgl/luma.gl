@@ -1,81 +1,112 @@
-
-import {Shader, RenderPipeline, PrimitiveTopology, assert} from '@luma.gl/api';
+import {
+  Buffer,
+  Shader,
+  RenderPipeline,
+  RenderPipelineParameters,
+  PrimitiveTopology,
+  assert,
+  AttributeBinding,
+  Binding
+} from '@luma.gl/api';
 import {cast} from '@luma.gl/api';
-import {VertexShader} from '@luma.gl/webgl/';
 import {WebGPUShader} from '..';
 import WebGPUDevice from '../adapter/webgpu-device';
-import WebGPURenderPipeline from '../adapter/webgpu-render-pipeline';
-// import glslangModule from '../glslang';
+import WebGPUBuffer from '../adapter/resources/webgpu-buffer';
+import WebGPURenderPipeline from '../adapter/resources/webgpu-render-pipeline';
+import {makeBindGroup} from '../adapter/helpers/make-bind-group';
 
 export type ModelProps = {
   id?: string;
   pipeline?: RenderPipeline;
-  vertex?: string | Shader;
-  fragment?: string | Shader;
-  topology: PrimitiveTopology;
-  vertexCount: number;
-  instanceCount?: number;
-
-  // backwards compatibility
   vs?: string | Shader;
   fs?: string | Shader;
-}
+  topology: PrimitiveTopology;
+  attributeLayouts?: AttributeBinding[];
+  vertexCount: number;
+  instanceCount?: number;
+  parameters?: RenderPipelineParameters;
+
+  attributeBuffers?: Buffer[]; // | Record<string, Buffer>
+  bindings?: Binding[];
+};
 
 const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
   id: 'unnamed',
-  vertex: undefined,
-  fragment: undefined,
-  pipeline: undefined,
-  topology: 'triangle-list',
-  vertexCount: 0,
-  instanceCount: 1,
   vs: undefined,
   fs: undefined,
+  pipeline: undefined,
+  topology: 'triangle-list',
+  attributeLayouts: [],
+  vertexCount: 0,
+  instanceCount: 1,
+  parameters: {},
+
+  attributeBuffers: [],
+  bindings: []
 };
 
 export default class Model {
   device: WebGPUDevice;
   pipeline: WebGPURenderPipeline;
-  vertex: WebGPUShader;
-  fragment: WebGPUShader | undefined;
+  vs: WebGPUShader;
+  fs: WebGPUShader | undefined;
   props: Required<ModelProps>;
+
+  _bindGroup: GPUBindGroup;
 
   constructor(device: WebGPUDevice, props: ModelProps) {
     this.props = {...DEFAULT_MODEL_PROPS, ...props};
     props = this.props;
-
     this.device = device;
+
+    // Create the pipeline
     if (props.pipeline) {
       this.pipeline = cast<WebGPURenderPipeline>(props.pipeline);
     } else {
-      const vertex = props.vertex || props.vs;
-      const fragment = props.fragment || props.fs;
+      const vertex = props.vs;
+      const fragment = props.fs;
 
       assert(vertex);
-      this.vertex = (typeof vertex === 'string')
-        ? new WebGPUShader(device, {stage: 'vertex', source: vertex})
-        : cast<WebGPUShader>(vertex);
-      
-      if (fragment) {
-        this.fragment = (typeof fragment === 'string')
-          ? new WebGPUShader(device, {stage: 'fragment', source: fragment})
-          : cast<WebGPUShader>(fragment);
-      }
+      this.vs =
+        typeof vertex === 'string'
+          ? new WebGPUShader(device, {stage: 'vertex', source: vertex})
+          : cast<WebGPUShader>(vertex);
 
+      if (fragment) {
+        this.fs =
+          typeof fragment === 'string'
+            ? new WebGPUShader(device, {stage: 'fragment', source: fragment})
+            : cast<WebGPUShader>(fragment);
+      }
+      
       this.pipeline = device.createRenderPipeline({
-        vertexShader: this.vertex, 
-        fragmentShader: this.fragment, 
-        topology: props.topology
+        vertexShader: this.vs,
+        fragmentShader: this.fs,
+        topology: props.topology,
+        parameters: props.parameters,
         // Geometry in the vertex shader!
+        attributeLayouts: props.attributeLayouts
       });
     }
+
+    // Set up the bindings
+    this._bindGroup = makeBindGroup(this.device.handle, this.pipeline._getBindGroupLayout(), this.props.bindings);
   }
-    
+
   draw(renderPass?: GPURenderPassEncoder) {
     renderPass = renderPass || this.device.getActiveRenderPass();
     renderPass.setPipeline(this.pipeline.handle);
-    // renderPass.setBindGroup(0, this.uniformBindGroup);
-    // renderPass.setVertexBuffer(0, this.verticesBuffer);
+
+    // Set up attributes
+    for (let i = 0; i < this.props.attributeBuffers.length; ++i) {
+      const buffer = cast<WebGPUBuffer>(this.props.attributeBuffers[i]);
+      const location = this.props.attributeLayouts[i].location;
+      renderPass.setVertexBuffer(location, buffer.handle);
+    }
+
+    // Set up bindings (uniform buffers, textures etc)
+    renderPass.setBindGroup(0, this._bindGroup);
+
     renderPass.draw(this.props.vertexCount, this.props.instanceCount, 0, 0); // firstVertex, firstInstance);
   }
 
@@ -225,10 +256,7 @@ export default class Model {
     });
   }
     */
-
 }
-
-
 
 /*
  private:
@@ -444,7 +472,7 @@ export default class Model {
     this.userData = {};
     this.needsRedraw = true;
 
-    // Attributes and buffers
+    // Attributes and attributeBuffers
     // Model manages auto Buffer creation from typed arrays
     this._attributes = {}; // All attributes
     this.attributes = {}; // User defined attributes
@@ -467,7 +495,7 @@ export default class Model {
     this.drawMode = props.drawMode !== undefined ? props.drawMode : GL.TRIANGLES;
     this.vertexCount = props.vertexCount || 0;
 
-    // Track buffers created by setGeometry
+    // Track attributeBuffers created by setGeometry
     this.geometryBuffers = {};
 
     // geometry might have set drawMode and vertexCount

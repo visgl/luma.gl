@@ -1,6 +1,7 @@
 // luma.gl, MIT license
+import type Device from '../device';
+import type {TextureFormat} from '../types/types';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import type Device from './device';
 
 // required GPUExtent3D size;
 // GPUIntegerCoordinate mipLevelCount = 1;
@@ -11,35 +12,42 @@ import type Device from './device';
 
 /** Abstract Texture interface */
 export type TextureProps = ResourceProps & {
-  data?: any;
+  format?: TextureFormat | number;
+  dimension?: '1d' | '2d' | '3d';
   width?: number;
   height?: number;
   depth?: number;
+  usage?: number;
 
-  pixels?: any;
-  format?: number;
-  dataFormat?: number;
-  border?: number;
-  recreate?: boolean;
+  data?: any;
+  mipmaps?: boolean;
+  parameters?: object;
+
   type?: number;
   compressed?: boolean;
-  mipmaps?: boolean;
 
-  parameters?: object;
+  /** @deprecated use data */
+  pixels?: any;
+  /** @deprecated use format */
+  dataFormat?: number;
+  /** @deprecated rarely supported */
+  border?: number;
+  /** @deprecated WebGL only. */
   pixelStore?: object;
+  /** @deprecated WebGL only. */
   textureUnit?: number;
-
+  /** @deprecated WebGL only. Use dimension. */
   target?: number;
+  /** @deprecated not supported */
+  recreate?: boolean;
 };
 
 export type WebGPUTextureProps = ResourceProps & {
-  dimension?: '1d' | '2d' | '3d';
   width: number;
   height: number;
   depth?: number;
   mipLevels?: number;
   format?: string;
-  usage?: number;
 };
 
 export type TextureViewProps = {
@@ -48,21 +56,34 @@ export type TextureViewProps = {
   aspect?: 'all', 'stencil-only', 'depth-only';
   arrayLayerCount: number;
   baseArrayLayer?: number;
-  mipLevelCount: number;
+  mipLevels?: number;
   baseMipLevel?: number;
 };
 
+// @ts-expect-error
 const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   ...DEFAULT_RESOURCE_PROPS,
+  data: undefined,
   dimension: '2d',
   width: 1,
   height: 1,
   depth: 1,
-  mipLevels: 1,
-  // @ts-expect-error
-  format: 'unorm8',
+  mipmaps: false,
+  parameters: {},
+  type: undefined,
+  compressed: false,
+  // mipLevels: 1,
+  format: 'rgba8unorm',
   usage: 0
 };
+
+// const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
+//   handle: undefined,
+//   id: undefined,
+//   depth: 1,
+//   format: 'rgba8unorm',
+//   usage: GPUTextureUsage.COPY_DST
+// };
 
 /**
  * Abstract Texture interface

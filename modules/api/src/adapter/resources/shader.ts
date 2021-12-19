@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type Device from './device';
+import type Device from '../device';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type CompilerMessageType = 'error' | 'warning' | 'info';

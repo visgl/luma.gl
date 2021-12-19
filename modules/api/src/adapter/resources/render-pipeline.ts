@@ -1,9 +1,10 @@
 // luma.gl, MIT license
-import type Device from './device';
+import type Device from '../device';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import type {default as Shader} from './shader';
-import {RenderPipelineParameters} from './parameters';
-import type {BindingLayout} from './types';
+import type {RenderPipelineParameters} from '../types/parameters';
+import type {BindingLayout} from '../types/types';
+import type {AttributeBinding} from '../types/program-bindings';
 
 export type RenderPipelineProps = ResourceProps & {
   vertexShader: Shader;
@@ -16,6 +17,7 @@ export type RenderPipelineProps = ResourceProps & {
 
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   parameters?: RenderPipelineParameters;
+  attributeLayouts?: AttributeBinding[];
   layout?: BindingLayout[];
 };
 

@@ -1,8 +1,8 @@
 //
 import {Binding, Buffer, Sampler, Texture, cast} from '@luma.gl/api';
-import type WebGPUBuffer from '../webgpu-buffer';
-import type WebGPUSampler from '../webgpu-sampler';
-import type WebGPUTexture from '../webgpu-texture';
+import type WebGPUBuffer from '../resources/webgpu-buffer';
+import type WebGPUSampler from '../resources/webgpu-sampler';
+import type WebGPUTexture from '../resources/webgpu-texture';
 
 /**
  * Create a WebGPU bind group from an array of luma.gl bindings

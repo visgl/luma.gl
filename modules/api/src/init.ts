@@ -1,7 +1,6 @@
-import {log} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
-import {luma, lumaStats} from '@luma.gl/api';
-import WebGLDevice from './adapter/webgl-device';
+import {log} from './utils/log';
+import {lumaStats} from './utils/stats-manager';
 
 // Version detection using babel plugin
 // @ts-expect-error
@@ -17,8 +16,6 @@ if (globalThis.luma && globalThis.luma.VERSION !== VERSION) {
 }
 
 if (!globalThis.luma) {
-  luma.registerDevices([WebGLDevice]);
-
   if (isBrowser()) {
     log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }
@@ -31,16 +28,6 @@ if (!globalThis.luma) {
     // A global stats object that various components can add information to
     // E.g. see webgl/resource.js
     stats: lumaStats,
-
-    // Keep some luma globals in a sub-object
-    // This allows us to dynamically detect if certain modules have been
-    // included (such as IO and headless) and enable related functionality,
-    // without unconditionally requiring and thus bundling big dependencies
-    // into the app.
-    globals: {
-      modules: {},
-      nodeIO: {}
-    }
   };
 }
 

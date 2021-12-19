@@ -1,3 +1,5 @@
+import {DepthOrStencilTextureFormat} from './types';
+
 export type CompareFunction =
   'never' |
   'less' |
@@ -53,6 +55,7 @@ export type StencilOperation =
 export type DepthStencilParameters = {
   depthWriteEnabled?: boolean;
   depthCompare?: CompareFunction;
+  depthFormat?: DepthOrStencilTextureFormat;
 
   stencilReadMask?: number;
   stencilWriteMask?: number;
@@ -156,8 +159,8 @@ export type RenderPipelineParameters =
 export type Parameters =
   _RenderParameters &
   DepthStencilParameters &
-  ColorParameters;
-  // MultisampleParameters;
+  ColorParameters &
+  MultisampleParameters;
 
 // export const DEFAULT_PARAMETERS: Parameters;
 
@@ -167,15 +170,19 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
 
   cullMode: 'none',
   frontFace: 'ccw',
+
+  // Depth Parameters
+
+  depthWriteEnabled: false,
+  depthCompare: 'always',
+  depthFormat: 'depth24plus',
+
   depthClamp: false,
   depthBias: 0,
   depthBiasSlopeScale: 0,
   depthBiasClamp: 0,
 
-  // Depth Stencil Parameters
-
-  depthWriteEnabled: false,
-  depthCompare: 'always',
+  // Stencil parameters
 
   stencilReadMask: 0xFFFFFFFF,
   stencilWriteMask: 0xFFFFFFFF,
@@ -184,6 +191,11 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   stencilPassOperation: 'keep',
   stencilFailOperation: 'keep',
   stencilDepthFailOperation: 'keep',
+
+  // Multisample parameters
+  sampleCount: 0,
+  sampleMask: 0xFFFFFFFF,
+  sampleAlphaToCoverageEnabled: false,
 
   // Color and blend parameters
 

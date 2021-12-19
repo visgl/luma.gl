@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type Device from './device';
+import type Device from '../device';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type BufferProps = ResourceProps & {
@@ -30,7 +30,7 @@ const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
   byteLength: 0,
   data: undefined,
   usage: undefined, // GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
-  mappedAtCreation: true
+  mappedAtCreation: false
 };
 
 /** Abstract GPU buffer */
@@ -53,16 +53,7 @@ export default abstract class Buffer extends Resource<BufferProps> {
     super(device, props, DEFAULT_BUFFER_PROPS);
   }
 
-  // Mapped API (WebGPU)
-
-  /** Maps the memory so that it can be read */
-  // abstract mapAsync(mode, byteOffset, byteLength): Promise<void>
-
-  /** Get the mapped range of data for reading or writing */
-  // abstract getMappedRange(byteOffset, byteLength): ArrayBuffer;
-
-  /** unmap makes the contents of the buffer available to the GPU again */
-  // abstract unmap(): void;
+  write(data: ArrayBufferView, byteOffset: number = 0): void { throw new Error('not implemented'); }
 
   // Convenience API
 
@@ -103,4 +94,15 @@ export default abstract class Buffer extends Resource<BufferProps> {
     }
   }
   */
+
+  // Mapped API (WebGPU)
+
+  /** Maps the memory so that it can be read */
+  // abstract mapAsync(mode, byteOffset, byteLength): Promise<void>
+
+  /** Get the mapped range of data for reading or writing */
+  // abstract getMappedRange(byteOffset, byteLength): ArrayBuffer;
+
+  /** unmap makes the contents of the buffer available to the GPU again */
+  // abstract unmap(): void;
 }

@@ -1,9 +1,8 @@
-import {log, assert} from '@luma.gl/api';
+import {log, assert, AttributeBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import Accessor from './accessor';
 import Buffer from './webgl-buffer';
 import Program from './program'; 
-import type {AttributeBinding} from '../helpers/program-bindings'
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
 
