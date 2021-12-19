@@ -70,7 +70,7 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
 export default abstract class Texture extends Resource<TextureProps> {
-  readonly [Symbol.toStringTag]: string = 'Texture';
+  get [Symbol.toStringTag](): string { return 'Texture'; }
 
   constructor(device: Device, props: TextureProps) {
     super(device, props, DEFAULT_TEXTURE_PROPS);

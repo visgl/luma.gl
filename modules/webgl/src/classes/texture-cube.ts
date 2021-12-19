@@ -19,8 +19,6 @@ export default class TextureCube extends Texture {
 
   props;
 
-  readonly [Symbol.toStringTag]: string = 'TextureCube';
-
   constructor(device: Device | WebGLRenderingContext, props?: TextureCubeProps) {
     super(device, Object.assign({}, props, {target: GL.TEXTURE_CUBE_MAP}));
 

@@ -46,6 +46,8 @@ export type ProgramDrawOptions = {
 };
 
 export default class Program extends WebGLResource<ProgramProps> {
+  get [Symbol.toStringTag](): string { return 'Program'; }
+
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
   hash: string; // Used by ProgramManager

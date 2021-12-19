@@ -27,7 +27,7 @@ const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
 /**
  */
 export default abstract class RenderPipeline extends Resource<RenderPipelineProps> {
-  readonly [Symbol.toStringTag]: string = 'RenderPipeline';
+  get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, DEFAULT_RENDER_PIPELINE_PROPS);

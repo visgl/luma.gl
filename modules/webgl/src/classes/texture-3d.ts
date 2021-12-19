@@ -38,8 +38,6 @@ export default class Texture3D extends Texture {
     }
   }
 
-  readonly [Symbol.toStringTag]: string = 'Texture3D';
-
   constructor(device: Device | WebGL2RenderingContext, props: Texture3DProps = {}) {
     super(device, {...props, target: GL.TEXTURE_3D});
     assertWebGL2Context(this.gl2);

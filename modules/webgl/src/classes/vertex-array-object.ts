@@ -22,6 +22,8 @@ export type VertexArrayObjectProps = ResourceProps & {
 };
 
 export default class VertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
+  get [Symbol.toStringTag](): string { return 'VertexArrayObject'; }
+
   private static MAX_ATTRIBUTES: number;
 
   static isSupported(gl: WebGLRenderingContext | WebGL2RenderingContext, options?: VertexArrayObjectProps): boolean {

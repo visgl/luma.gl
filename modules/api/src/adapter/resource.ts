@@ -17,7 +17,9 @@ export const DEFAULT_RESOURCE_PROPS: Required<ResourceProps> = {
 /**
  * Base class for GPU (WebGPU/WebGL) Resources
  */
- export default abstract class Resource<Props extends ResourceProps> {
+export default abstract class Resource<Props extends ResourceProps> {
+  abstract get [Symbol.toStringTag](): string;
+
   /** props.id, for debugging. */
   id: string;
   readonly props: Required<Props>;

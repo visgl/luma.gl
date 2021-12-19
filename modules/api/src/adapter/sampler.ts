@@ -1,4 +1,4 @@
-import { CompareFunction } from './parameters';
+import {CompareFunction} from './parameters';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import type Device from './device';
 
@@ -19,25 +19,27 @@ export type SamplerProps = ResourceProps & {
   lodMaxClamp?: number;
   compare?: CompareFunction;
   maxAnisotropy?: number;
-}
+};
 
 const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
   ...DEFAULT_RESOURCE_PROPS,
-  addressModeU: "clamp-to-edge",
-  addressModeV: "clamp-to-edge",
-  addressModeW: "clamp-to-edge",
-  magFilter: "nearest",
-  minFilter: "nearest",
-  mipmapFilter: "nearest",
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge',
+  addressModeW: 'clamp-to-edge',
+  magFilter: 'nearest',
+  minFilter: 'nearest',
+  mipmapFilter: 'nearest',
   lodMinClamp: 0,
   lodMaxClamp: 32, // Per WebGPU spec
   compare: 'always', // TBD
   maxAnisotropy: 1
-}
+};
 
 /** Immutable Sampler object */
 export default abstract class Sampler extends Resource<SamplerProps> {
-  readonly [Symbol.toStringTag]: string = 'Sampler';
+  get [Symbol.toStringTag](): string {
+    return 'Sampler';
+  }
 
   constructor(device: Device, props: SamplerProps) {
     super(device, props, DEFAULT_SAMPLER_PROPS);

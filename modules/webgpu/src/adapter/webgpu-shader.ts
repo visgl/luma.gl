@@ -25,8 +25,6 @@ export default class WebGPUShader extends Shader {
     // this.handle.destroy();
   }
 
-  readonly [Symbol.toStringTag]: string = 'WebGPUShader';
-
   protected createHandle(): GPUShaderModule {
     const {source} = this.props;
 

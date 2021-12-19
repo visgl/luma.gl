@@ -28,9 +28,6 @@ export default class WebGPUTexture extends Texture {
   // static createFromImage(img, usage = 0) {
   //   return new WebGPUTexture({width: img.width, height:img.height, usage}).setImage(image, usage);
   // }
-
-  readonly [Symbol.toStringTag]: string = 'WebGPUTexture';
-
   constructor(device: WebGPUDevice, props: TextureProps) {
     super(device, props);
 

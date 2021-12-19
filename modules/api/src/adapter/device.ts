@@ -60,7 +60,8 @@ export type DeviceProps = {};
  * WebGPU Device/WebGL context abstraction
  */
 export default abstract class Device {
-  readonly [Symbol.toStringTag]: string = 'Device';
+  get [Symbol.toStringTag](): string { return 'Device'; }
+
   readonly statsManager: StatsManager = lumaStats;
 
   abstract info: DeviceInfo;

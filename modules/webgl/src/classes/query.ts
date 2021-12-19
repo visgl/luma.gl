@@ -21,6 +21,8 @@ export type QueryProps = ResourceProps & {
  * Asynchronous queries for different kinds of information
  */
 export default class Query extends WebGLResource<QueryProps> {
+  get [Symbol.toStringTag](): string { return 'Query'; }
+
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
   static isSupported(gl: WebGLRenderingContext, options: string[] = []): boolean {

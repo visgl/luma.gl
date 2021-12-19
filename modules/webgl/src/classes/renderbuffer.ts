@@ -34,6 +34,8 @@ const DEFAULT_RENDERBUFFER_PROPS: Required<RenderbufferProps> = {
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
 export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
+  get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
+
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
     return !options.format || isRenderbufferFormatSupported(gl, options.format);
   }
