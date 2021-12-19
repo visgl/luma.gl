@@ -2434,7 +2434,7 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-"@probe.gl/stats@^3.5.0":
+"@probe.gl/stats@3.5.0", "@probe.gl/stats@^3.5.0":
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/@probe.gl/stats/-/stats-3.5.0.tgz#774495772f06e898aae28c1d315c9edac07f3425"
   integrity sha512-IH2M+F3c8HR1DTroBARePUFG7wIewumtKA0UFqx51Z7S4hKrD60wFbpMmg0AcF4FvHAXMBoC+kYi1UKW9XbAOw==
@@ -2800,6 +2800,11 @@
     "@webassemblyjs/ast" "1.9.0"
     "@webassemblyjs/wast-parser" "1.9.0"
     "@xtuc/long" "4.2.2"
+
+"@webgpu/types@^0.1.9":
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.9.tgz#4df7aa2112e9b9e77139e32736fe9cbab44e308c"
+  integrity sha512-CGG93bZ4znugJ7KWdvWYGTemt7rUmdpzt1BOMCHI/5Kgt08tOtnn9sFmk4ZT26aGgwxBT5iC/djCxzbfxVdldA==
 
 "@xmldom/xmldom@^0.7.5":
   version "0.7.5"
@@ -9745,6 +9750,16 @@ probe.gl@3.4.0, probe.gl@^3.4.0:
   dependencies:
     "@babel/runtime" "^7.0.0"
     "@probe.gl/stats" "3.4.0"
+
+probe.gl@^3.2.1:
+  version "3.5.0"
+  resolved "https://registry.yarnpkg.com/probe.gl/-/probe.gl-3.5.0.tgz#084c0ef3a233e1c055cd8a88efb67abb11eba483"
+  integrity sha512-KWj8u0PNytr/rVwcQFcN7O8SK7n/ITOsUZ91l4fSX95oHhKvVCI7eadrzFUzFRlXkFfBWpMWZXFHITsHHHUctw==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/env" "3.5.0"
+    "@probe.gl/log" "3.5.0"
+    "@probe.gl/stats" "3.5.0"
 
 process-nextick-args@~2.0.0:
   version "2.0.1"

@@ -114,7 +114,6 @@ export const TEXTURE_FORMAT_DEFINITIONS = {
   'bc7-rgba-unorm-srgb': {}
 };
 
-////////////////////////////////////////////////////
 // Compressed formats
 
 // WEBGL_compressed_texture_s3tc

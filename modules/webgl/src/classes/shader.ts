@@ -56,7 +56,7 @@ export class Shader extends WEBGLShader {
   // Accessors
 
   getParameter(pname: number): any {
-    return this.gl.getShaderParameter(this.handle, pname);
+    return this.device.gl.getShaderParameter(this.handle, pname);
   }
 
   toString(): string {
@@ -68,12 +68,12 @@ export class Shader extends WEBGLShader {
   }
 
   getSource(): string {
-    return this.gl.getShaderSource(this.handle);
+    return this.device.gl.getShaderSource(this.handle);
   }
 
   /** Debug method - Returns translated source if available */
   getTranslatedSource(): string {
-    const extension = this.gl.getExtension('WEBGL_debug_shaders');
+    const extension = this.device.gl.getExtension('WEBGL_debug_shaders');
     return extension
       ? extension.getTranslatedShaderSource(this.handle)
       : 'No translated source available. WEBGL_debug_shaders not implemented';
@@ -100,7 +100,7 @@ export class Shader extends WEBGLShader {
 
   // PRIVATE METHODS
   _createHandle() {
-    return this.gl.createShader(GL.VERTEX_SHADER);
+    return this.device.gl.createShader(GL.VERTEX_SHADER);
   }
 }
 
@@ -115,7 +115,7 @@ export class Shader extends WEBGLShader {
 
   // PRIVATE METHODS
   _createHandle() {
-    return this.gl.createShader(GL.FRAGMENT_SHADER);
+    return this.device.gl.createShader(GL.FRAGMENT_SHADER);
   }
 }
 

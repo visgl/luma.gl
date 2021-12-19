@@ -57,9 +57,7 @@ const offsetRightModule = {
 We then create two programs by first assembling our base shaders with the desired modules and shader hooks, and then using them to create WebGL program objects:
 
 ```js
-//////////////
 // Program 1
-//////////////
 
 // Call assembleShaders to combine base source with modules.
 const assembledShaders1 = assembleShaders(gl, {
@@ -86,9 +84,7 @@ gl.useProgram(program1);
 const colorLocation1 = gl.getUniformLocation(program1, 'color');
 gl.uniform3fv(colorLocation1, new Float32Array([1.0, 0.0, 0.0]));
 
-//////////////
 // Program 2
-//////////////
 
 // Call assembleShaders to combine base source with modules.
 const assembledShaders2 = assembleShaders(gl, {

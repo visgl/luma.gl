@@ -369,11 +369,9 @@ export enum GL {
   UNPACK_PREMULTIPLY_ALPHA_WEBGL = 0x9241,
   UNPACK_COLORSPACE_CONVERSION_WEBGL = 0x9243,
 
-  // /////////////////////////////////////////////////////
   // Additional constants defined WebGL 2
   // These constants are defined on the WebGL2RenderingContext interface.
   // All WebGL 1 constants are also available in a WebGL 2 context.
-  // /////////////////////////////////////////////////////
 
   // Getting GL parameter information
   // Constants passed to getParameter()

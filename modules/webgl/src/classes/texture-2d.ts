@@ -11,25 +11,27 @@ export default class Texture2D extends Texture {
     return Texture.isSupported(device, opts);
   }
 
+  readonly [Symbol.toStringTag]: string = 'Texture2D';
+
   constructor(device: Device | WebGLRenderingContext, props?: Texture2DProps | Promise<Texture2DProps>) {
-    // Signature: new Texture2D(gl, url | Promise)
-    if (props instanceof Promise || typeof props === 'string') {
-      props = {data: props};
-    }
+    super(device, {...getProps(props), target: GL.TEXTURE_2D});
 
-    // Signature: new Texture2D(gl, {data: url})
-    if (typeof props?.data === 'string') {
-      props = Object.assign({}, props, {data: loadImage(props.data)});
-    }
-
-    super(device, Object.assign({}, props, {target: GL.TEXTURE_2D}));
-
-    this.initialize(props);
+    this.initialize(this.props);
 
     Object.seal(this);
   }
+}
 
-  get [Symbol.toStringTag](): string {
-    return 'Texture2D';
+function getProps(props?: Texture2DProps | Promise<Texture2DProps>) {
+  // Signature: new Texture2D(gl, url | Promise)
+  if (props instanceof Promise || typeof props === 'string') {
+    return {data: props};
   }
+
+  // Signature: new Texture2D(gl, {data: url})
+  if (typeof props?.data === 'string') {
+    return Object.assign({}, props, {data: loadImage(props.data)});
+  }
+
+  return props;
 }

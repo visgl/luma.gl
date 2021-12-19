@@ -266,9 +266,7 @@ export default class AppRenderLoop extends RenderLoop {
       depthFunc: GL.LEQUAL
     });
 
-    ///////////////////////////////////////
     // Create postprocessing pass program.
-    ///////////////////////////////////////
 
     this.dofUniformsLayout = new UniformBufferLayout({
       uDepthRange: gl.FLOAT_VEC2,
@@ -295,9 +293,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.dofProgram.uniformBlockBinding(this.dofProgram.getUniformBlockIndex('DOFUniforms'), 0);
 
-    //////////////////////
     // Set up frambuffers.
-    //////////////////////
 
     // Need to ensure both color and depth targets can be sampled.
     this.sceneFramebuffer = new Framebuffer(gl, {
@@ -341,9 +337,7 @@ export default class AppRenderLoop extends RenderLoop {
       depth: false
     });
 
-    /////////////////////
     // Input handlers.
-    /////////////////////
 
     const focalLengthInput = document.getElementById('focal-length');
     const focusDistanceInput = document.getElementById('focus-distance');
@@ -381,9 +375,7 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    /////////////////////////////////////////////////////
     // Create instanced model and initialize transform matrices.
-    /////////////////////////////////////////////////////
 
     this.instancedCubes = new InstancedCube(gl, {
       count: NUM_CUBES,
@@ -413,10 +405,8 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.instancedCubes.updateMatrixBuffer();
 
-    /////////////////////////////////////////////
     // Full-screen quad VAO for postprocessing
     // passes.
-    /////////////////////////////////////////////
 
     this.quadVertexArray = new VertexArray(gl, {
       program: this.dofProgram,
@@ -452,10 +442,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.projMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
     this.viewMat.lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
 
-    ////////////////////////////////////////
     // Update model matrix data and then
-    // update the attribute buffer.
-    ////////////////////////////////////////
+    // update the attribute buffer./
 
     for (let i = 0; i < NUM_CUBES; ++i) {
       const box = this.instancedCubeTransforms[i];
@@ -467,9 +455,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.instancedCubes.updateMatrixBuffer();
 
-    ////////////////////////////////////
     // Draw cubes to scene framebuffer.
-    ////////////////////////////////////
 
     this.instancedCubes.draw({
       uniforms: {
@@ -479,9 +465,7 @@ export default class AppRenderLoop extends RenderLoop {
       framebuffer: this.sceneFramebuffer
     });
 
-    /////////////////
     // Apply DOF
-    /////////////////
 
     // Horizontal DOF blur
     clear(device, {color: [0, 0, 0, 1], framebuffer: this.dofFramebuffer});

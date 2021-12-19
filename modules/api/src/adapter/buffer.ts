@@ -35,15 +35,22 @@ const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
 
 /** Abstract GPU buffer */
 export default abstract class Buffer extends Resource<BufferProps> {
+  // Usage Flags
   static MAP_READ = 0x01;
   static MAP_WRITE = 0x02;
+  static COPY_SRC = 0x0004;
+  static COPY_DST = 0x0008;
+  static INDEX = 0x0010;
+  static VERTEX = 0x0020;
+  static UNIFORM = 0x0040;
+  static STORAGE = 0x0080;
+  static INDIRECT = 0x0100;
+  static QUERY_RESOLVE = 0x0200;
+
+  readonly [Symbol.toStringTag]: string = 'Buffer';
 
   constructor(device: Device, props: BufferProps) {
     super(device, props, DEFAULT_BUFFER_PROPS);
-  }
-
-  get [Symbol.toStringTag](): string {
-    return 'Buffer';
   }
 
   // Mapped API (WebGPU)
