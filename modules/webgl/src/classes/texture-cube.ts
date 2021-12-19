@@ -27,10 +27,6 @@ export default class TextureCube extends Texture {
     Object.seal(this);
   }
 
-  get [Symbol.toStringTag](): string {
-    return 'TextureCube';
-  }
-
   initialize(props?: TextureCubeProps): this {
     const {mipmaps = true, parameters = {}} = props;
 

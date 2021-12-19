@@ -46,10 +46,6 @@ export default class Texture3D extends Texture {
     Object.seal(this);
   }
 
-  get [Symbol.toStringTag](): string {
-    return 'Texture3D';
-  }
-
   /** Image 3D copies from Typed Array or WebGLBuffer */
   setImageData({
     level = 0,

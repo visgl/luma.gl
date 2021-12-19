@@ -37,6 +37,8 @@ export type FramebufferProps = ImmutableFramebufferProps & {
 type colorBufferFloatOptions = {colorBufferFloat?: boolean; colorBufferHalfFloat?: boolean};
 
 export class ImmutableFramebuffer extends Resource<FramebufferProps> {
+  get [Symbol.toStringTag](): string { return 'Framebuffer'; }
+
   constructor(gl: WebGLRenderingContext, props?: FramebufferProps) {
     super(WebGLDevice.attach(gl), props, {} as any);
     this._initialize({

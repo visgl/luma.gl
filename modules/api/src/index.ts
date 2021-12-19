@@ -12,6 +12,10 @@ export type {TextureProps} from './adapter/texture';
 export {default as Texture} from './adapter/texture';
 export type {ShaderProps, CompilerMessage} from './adapter/shader';
 export {default as Shader} from './adapter/shader';
+export type {SamplerProps} from './adapter/sampler';
+export {default as Sampler} from './adapter/sampler';
+export type {RenderPipelineProps} from './adapter/render-pipeline';
+export {default as RenderPipeline} from './adapter/render-pipeline';
 
 // API TYPES
 export type {Accessor, BufferAccessors} from './adapter/accessor';

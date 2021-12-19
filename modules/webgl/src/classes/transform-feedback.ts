@@ -10,6 +10,8 @@ export type TransformFeedbackProps = ResourceProps & {
 };
 
 export default class TransformFeedback extends WebGLResource<TransformFeedbackProps> {
+  get [Symbol.toStringTag](): string { return 'TransformFeedback'; }
+
   buffers = {};
   unused = {};
   configuration = null;

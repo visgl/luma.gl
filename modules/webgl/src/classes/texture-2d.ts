@@ -7,6 +7,10 @@ export type Texture2DProps = TextureProps & {
 };
 
 export default class Texture2D extends Texture {
+  // get [Symbol.toStringTag](): string {
+  //   return 'Texture2D';
+  // }
+
   static isSupported(device: Device | WebGLRenderingContext, opts?: TextureSupportOptions): boolean {
     return Texture.isSupported(device, opts);
   }
@@ -27,9 +31,5 @@ export default class Texture2D extends Texture {
     this.initialize(props);
 
     Object.seal(this);
-  }
-
-  get [Symbol.toStringTag](): string {
-    return 'Texture2D';
   }
 }
