@@ -1,16 +1,43 @@
 # @luma.gl/api
 
-luma.gl provides an abstract API for writing code that works with both WebGPU and WebGL.
+The `@luma.gl/api` module provides an abstract API for writing application code 
+that works with both WebGPU and WebGL.
 
-The API is modeled after the WebGPU API but is stream-lined to be less cumbersome to use.
+This module cannot be used on its own: it relies on being backed up by another module that implements its
+api. luma.gl provides the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
+
+## A WebGPU-style API
+
+From a high level, the luma.gl API is similar to the WebGPU API in a number of ways:
+- the application must first obtain a "device" and then uses methods on this device to create GPU resource classes such as buffers, textures, shaders and pipelines.
+- the API uses string constants and parameter option names that mirror those in the WebGPU API.
+
+The similarities are intentional. The idea is to let knowledge of the WebGPU API carry over to the luma.gl API and vice versa,
+rather than asking developers to learn another set of arbitrary abstractions.
+
+While it has similarities to WebGPU, the luma.gl API is streamlined to be less cumbersome to use and also has to make
+the necessary allowances to still support WebGL.
 
 ## Installing adapters
 
-The `@luma.gl/api` module is not usable on its own. A device adapter must be registered.
+The `@luma.gl/api` module is not usable on its own. A device adapter module must be registered. 
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import {WebGPUDevice} from '@luma.gl/webput';
+import {WebGPUDevice} from '@luma.gl/webgpu';
+
+luma.registerDevices([WEBGPUDevice]);
+
+const device = luma.createDevice({device: 'webpu', canvas: ...});
+
+...
+```
+
+It is possible to register more than one device adapter to create an application that can work in both WebGL and WebGPU environments.
+
+```typescript
+import {luma} from '@luma.gl/api';
+import {WebGPUDevice} from '@luma.gl/webgpu';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 luma.registerDevices([WEBGPUDevice, WebGLDevice]);

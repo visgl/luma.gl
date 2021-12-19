@@ -1,6 +1,6 @@
 # @luma.gl/shadertools
 
-The shadertools module provides a framework-independent API for describing and composing shaders.
+The shadertools module provides an API for describing and composing shaders.
 
 The current focus is on GLSL however the design should allow for WGSL support to eventually be included.
 
