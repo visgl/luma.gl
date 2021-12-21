@@ -6,6 +6,7 @@
 
 // Initialize any global state
 import '@luma.gl/api';
+import './init'
 
 // export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
 export type {WebGLDeviceProps} from './adapter/webgl-device';

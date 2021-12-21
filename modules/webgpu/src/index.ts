@@ -1,3 +1,8 @@
+
+// Initialize any global state
+import '@luma.gl/api';
+import './init'
+
 // WEBGPU ADAPTER
 export {default as WebGPUDevice} from './adapter/webgpu-device';
 
