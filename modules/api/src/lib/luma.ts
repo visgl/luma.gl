@@ -4,8 +4,9 @@ import StatsManager from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import type {Log} from '@probe.gl/log';
 import {log} from '../utils/log';
+import {assert} from '..';
 
-const deviceList = new Set<Device>();
+const deviceList = new Map<string, typeof Device>();
 
 /**
  * Entry point to the luma.gl GPU abstraction
@@ -13,33 +14,56 @@ const deviceList = new Set<Device>();
  * Run-time selection of the first available Device
  */
 export default class luma {
-  static registerDevices(deviceClasses: any[] /*: typeof Device */): void {
-    for (const deviceClass of deviceClasses) {
-      deviceList.add(deviceClass);
-    }
-  }
-
-  static getDeviceNames(): string[] {
-    // @ts-expect-error
-    return Array.from(deviceList).map(Device => Device.name || 'device');
-  }
-
-  static async createDevice(props: DeviceProps): Promise<Device> {
-    for (const DeviceConstructor of deviceList) {
-      // @ts-expect-error No typings for the static methods
-      const create: (props: DeviceProps) => Promise<Device> = DeviceConstructor.create;
-      const isSelected = Boolean(create); // !name || (name ===)
-      if (isSelected) { // } && DeviceConstructor?.isSupported?.()) {
-        return await create(props);
-      }
-    }
-
-    throw new Error('No GPU Device found');
-  }
-
   /** Global stats for all devices */
   static stats: StatsManager = lumaStats;
 
   /** Global log */
   static log: Log = log;
+
+  static registerDevices(deviceClasses: any[] /*: typeof Device */): void {
+    for (const deviceClass of deviceClasses) {
+      assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
+      deviceList.set(deviceClass.type, deviceClass);
+    }
+  }
+
+  static getAvailableDevices(): string[] {
+    // @ts-expect-error
+    return Array.from(deviceList).map(Device => Device.type);
+  }
+
+  static getSupportedDevices(): string[] {
+    // @ts-expect-error
+    return Array.from(deviceList).filter(Device => Device.isSupported()).map(Device => Device.type);
+  }
+
+  static async createDevice(props: DeviceProps): Promise<Device> {
+    const type = props.type || 'best-available';
+    let Device: any;
+    switch (type) {
+      case 'webgpu':
+        Device = deviceList.get('webgpu');
+        if (Device) {
+          return await Device.create(props);
+        }
+        break;
+      case 'webgl':
+        Device = deviceList.get('webl');
+        if (Device) {
+          return await Device.create(props);
+        }
+        break;
+      case 'best-available':
+        Device = deviceList.get('webgpu');
+        if (Device && Device.isSupported()) {
+          return await Device.create(props);
+        }
+        Device = deviceList.get('webgl');
+        if (Device && Device.isSupported()) {
+          return await Device.create(props);
+        }
+        break;
+    }
+    throw new Error('No matching device found');
+  }
 }

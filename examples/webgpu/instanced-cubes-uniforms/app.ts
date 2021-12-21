@@ -148,4 +148,4 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
 }
 
 // Create device and run
-(async () => init(await luma.createDevice({canvas: 'canvas'}), 'wgsl'))();
+(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();

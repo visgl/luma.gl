@@ -1,12 +1,10 @@
-import {luma, Device} from '@luma.gl/api';
+import {luma, Device, DeviceProps} from '@luma.gl/api';
 import {
   lumaStats,
   // TODO - remove dependency on framebuffer (bundle size impact)
   log,
   assert
 } from '@luma.gl/api';
-import type {WebGLDeviceProps} from '@luma.gl/webgl'
-import {WebGLDevice} from '@luma.gl/webgl';
 import {
   isWebGL,
   // createGLContext,
@@ -30,8 +28,7 @@ import {isBrowser} from '@probe.gl/env';
 import { Timeline } from '../animation/timeline'
 
 
-type DeviceProps = WebGLDeviceProps;
-type ContextProps = WebGLDeviceProps;
+type ContextProps = DeviceProps;
 
 const isPage = isBrowser() && typeof document !== 'undefined';
 

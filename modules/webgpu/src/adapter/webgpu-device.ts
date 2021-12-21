@@ -2,7 +2,6 @@ import type {
   DeviceProps,
   DeviceInfo,
   DeviceLimits,
-  CanvasContext,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
@@ -10,7 +9,7 @@ import type {
   TextureProps,
   RenderPipelineProps
 } from '@luma.gl/api';
-import {Device, log, cast} from '@luma.gl/api';
+import {Device, CanvasContext, log, cast} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
 import WebGPUTexture from './resources/webgpu-texture';
 import WebGPUSampler from './resources/webgpu-sampler';
@@ -47,13 +46,18 @@ export default class WebGPUDevice extends Device {
     if (!navigator.gpu) {
       throw new Error('WebGPU not available. Use Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
     }
-    log.groupCollapsed(1, 'Creating device')();
+    log.groupCollapsed(1, 'WebGPUDevice created')();
     const adapter = await navigator.gpu.requestAdapter({
       powerPreference: "high-performance"
+      // forceSoftware: false
     });
-    log.log(1, "Adapter available")();
+    log.probe(1, "Adapter available")();
     const gpuDevice = await adapter.requestDevice();
-    log.log(1, "GPUDevice available")();
+    log.probe(1, "GPUDevice available")();
+    if (typeof props.canvas === 'string') {
+      await CanvasContext.pageLoaded;
+    }
+    log.probe(1, "DOM is loaded")();
     const device = new WebGPUDevice(gpuDevice, adapter, props);
     log.probe(1, "Device created", device.info)();
     log.table(1, device.info)();

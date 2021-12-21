@@ -80,7 +80,7 @@ class RenderLoop {
 }
 
 async function main() {
-  const device = await luma.createDevice({canvas: 'canvas'});
+  const device = await luma.createDevice({type: 'webgpu', canvas: 'canvas'});
   const loop = new RenderLoop(device, 'wgsl');
   loop.start();
 }

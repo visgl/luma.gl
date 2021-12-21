@@ -3,11 +3,12 @@
 // DEPRECATED API - may be removed in luma.gl v9 or v10.
 
 /* eslint-disable quotes */
+import type {DeviceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {WebGLDevice, WebGLDeviceProps} from '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
 import {DEPRECATED_FEATURES} from './features';
 
-export type GLContextOptions = WebGLDeviceProps & {
+export type GLContextOptions = DeviceProps & {
   throwOnError?: boolean; // If set to false, return `null` if context creation fails.
 };
 

@@ -106,4 +106,4 @@ function init(device: Device, language: 'glsl' | 'wgsl') {
 }
 
 // Create device and run
-(async () => init(await luma.createDevice({canvas: 'canvas'}), 'wgsl'))();
+(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();
