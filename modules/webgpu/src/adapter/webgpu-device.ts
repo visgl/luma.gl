@@ -1,49 +1,50 @@
-import {
-  Device,
+import type {
   DeviceProps,
   DeviceInfo,
   DeviceLimits,
+  CanvasContextProps,
   BufferProps,
   SamplerProps,
   ShaderProps,
   TextureProps,
-  RenderPipelineProps,
+  RenderPipelineProps
   // ComputePipelineProps,
-  assert,
-  log
 } from '@luma.gl/api';
-// import type {
-//   CopyBufferToBufferOptions,
-//   CopyBufferToTextureOptions,
-//   CopyTextureToBufferOptions,
-//   CopyTextureToTextureOptions
-// } from '@luma.gl/api';
+import {Device, log} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
 import WebGPUTexture from './resources/webgpu-texture';
 import WebGPUSampler from './resources/webgpu-sampler';
 import WebGPUShader from './resources/webgpu-shader';
 import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
-// import WebGPUComputePipeline from './webgpu-compute-pipeline';
+
+import WebGPUCanvasContext from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
 
 type Feature = string;
 
-/** WebGPU device */
+/** WebGPU Device implementation
+export default class WebGPUDevice2 {
+  static async create(props = {}) {
+    return new WebGPUDevice(device, props);
+  }
+}
+*/
 export default class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
-  readonly context: GPUCanvasContext;
-  // readonly swapChain: GPUSwapChain;
-  readonly presentationFormat: GPUTextureFormat;
   readonly lost: Promise<{reason: 'destroyed', message: string}>;
+  canvasContext: WebGPUCanvasContext | undefined;
 
-  presentationSize = [1, 1];
+  commandEncoder: GPUCommandEncoder;
+  renderPass: GPURenderPassEncoder;
+
   private _renderPassDescriptor: GPURenderPassDescriptor;
   private _info: DeviceInfo;
-  private _isContextLost: boolean = false;
+  private _isLost: boolean = false;
 
+  /** Check if WebGPU is available */
   static isSupported(): boolean {
-    return true;
+    return Boolean(typeof navigator !== 'undefined' && navigator.gpu);
   }
 
   static async create(props) {
@@ -85,30 +86,20 @@ export default class WebGPUDevice extends Device {
 
     this.lost = this.handle.lost;
     this.lost.then(_ => {
-      this._isContextLost = true;
+      this._isLost = true;
     });
 
-    // Configure swap chain
-    if (!(props.canvas instanceof HTMLCanvasElement)) {
-      throw new Error('canvas');
+    // Note: WebGPU devices can be created without a canvas, for compute shader purposes
+    if (props.canvas) {
+      this.canvasContext = new WebGPUCanvasContext(this.handle, this.adapter, {canvas: props.canvas});
+      // TODO - handle offscreen canvas?
+      this.canvas = this.canvasContext.canvas as HTMLCanvasElement;
     }
-    this.canvas = props.canvas;
-
-    this.context = this.canvas.getContext('webgpu') as GPUCanvasContext;
-    this.presentationFormat = this.context.getPreferredFormat(this.adapter);
-
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    this.presentationSize = [
-      this.canvas.clientWidth * devicePixelRatio,
-      this.canvas.clientHeight * devicePixelRatio,
-    ];
-
-    this.context.configure({
-      device,
-      format: this.presentationFormat,
-      size: this.presentationSize,
-    });
   }
+
+  // Load the glslang module now so that it is available synchronously when compiling shaders
+  // const {glsl = true} = props;
+  // this.glslang = glsl && await loadGlslangModule();
 
   destroy() {
     this.handle.destroy();
@@ -127,11 +118,13 @@ export default class WebGPUDevice extends Device {
     return this.handle.limits;
   }
 
-  get isContextLost(): boolean {
-    return this._isContextLost;
+  get isLost(): boolean {
+    return this._isLost;
   }
 
-  resize(options: any): void {}
+  resize(options: any): void {
+    this.canvasContext.update();
+  }
 
   _createBuffer(props: BufferProps): WebGPUBuffer {
     return new WebGPUBuffer(this, props);
@@ -152,12 +145,6 @@ export default class WebGPUDevice extends Device {
   createRenderPipeline(props: RenderPipelineProps): WebGPURenderPipeline {
     return new WebGPURenderPipeline(this, props);
   }
-  // createComputePipeline(props: ComputePipelineProps): WebGPUComputePipeline {
-  //   return new WebGPUComputePipeline(this, props);
-  // }
-
-  commandEncoder: GPUCommandEncoder;
-  renderPass: GPURenderPassEncoder;
 
   beginRenderPass(): GPURenderPassEncoder {
     if (!this.renderPass) {
@@ -175,23 +162,17 @@ export default class WebGPUDevice extends Device {
     this.renderPass = null;
   }
 
+  // WebGPU specifics
+
+  createCanvasContext(props?: CanvasContextProps) {
+    return new WebGPUCanvasContext(this.handle, this.adapter, props);
+  }
+
   getActiveRenderPass(): GPURenderPassEncoder {
     return this.beginRenderPass()
   }
 
-  // TODO: Possible to support multiple canvases with one device?
   _initializeRenderPassDescriptor() {
-    const depthTexture = this.createTexture({
-      width: this.presentationSize[0],
-      height: this.presentationSize[1],
-      depth: 1,
-      format: "depth24plus",
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
-    });
-
-    const depthStencilAttachment = depthTexture.handle.createView();
-    depthStencilAttachment.label = 'depth-stencil-attachment';
-
     this._renderPassDescriptor = {
       colorAttachments: [{
         view: undefined, // Assigned later
@@ -200,7 +181,7 @@ export default class WebGPUDevice extends Device {
       }],
 
       depthStencilAttachment: {
-        view: depthStencilAttachment,
+        view: undefined, // Assigned later
         depthLoadValue: 1.0,
         depthStoreOp: "store",
         stencilLoadValue: 0,
@@ -217,92 +198,9 @@ export default class WebGPUDevice extends Device {
     if (!this._renderPassDescriptor) {
       this._initializeRenderPassDescriptor();
     }
-    const textureView = this.context.getCurrentTexture().createView();
-    this._renderPassDescriptor.colorAttachments[0].view = textureView;
+    const {colorAttachment, depthStencil} = this.canvasContext.getRenderTargets();;
+    this._renderPassDescriptor.colorAttachments[0].view = colorAttachment;
+    this._renderPassDescriptor.depthStencilAttachment.view = depthStencil;
     return this._renderPassDescriptor;
   }
 }
-
-/** WebGPU Device implementation
-export default class WebGPUDevice2 {
-  static isSupported() {
-    // Node.js
-    if (typeof navigator === 'undefined') {
-      return false;
-    }
-
-    // @ts-ignore
-    const {gpu} = navigator;
-
-    return Boolean(gpu);
-  }
-
-  static async create(props = {}) {
-    const {glsl = true} = props;
-
-    // @ts-ignore
-    const {gpu} = navigator;
-
-    const adapter = await gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-
-    // Load the glslang module now so that it is available synchronously when compiling shaders
-    this.glslang = glsl && await loadGlslangModule();
-
-    return new WebGPUDevice(device, props);
-  }
-
-  static attach(device, props = {}) {
-    return new WebGPUDevice(device, props);
-  }
-
-  constructor(device, props = {}) {
-    const {presentation = "bgra8unorm"} = props;
-
-    this.device = device;
-
-    // TODO should we maintain the swapchain here or in the AnimationLoop?
-    this.canvas = canvas;
-    this.context = this.canvas.getContext("gpupresent");
-    this.swapChain = this.context.configureSwapChain({
-      device: this.device,
-      presentation,
-    });
-  }
-
-  resize(width, height) {
-    console.warn('WebGPUDevice::resize() not implemented');
-  }
-
-  // PRIVATE
-
-  // Support for animationLoop / model
-  _startFrame() {
-    this.commandEncoder = this.device.createCommandEncoder();
-    const textureView = this.swapChain.getCurrentTexture().createView();
-
-    /* @type {GPURenderPassDescriptor} *
-    const renderPassDescriptor = {
-      colorAttachments: [
-        {
-          attachment: textureView,
-          // TODO - is this clear color?
-          loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-        },
-      ],
-    };
-
-    this.passEncoder = this.commandEncoder.beginRenderPass(renderPassDescriptor);
-  }
-
-  _draw(pipeline) {
-    this.passEncoder.setPipeline(pipeline);
-    this.passEncoder.draw(3, 1, 0, 0);
-  }
-
-  _endFrame() {
-    this.passEncoder.endPass();
-    this.device.defaultQueue.submit([this.commandEncoder.finish()]);
-  }
-}
-*/

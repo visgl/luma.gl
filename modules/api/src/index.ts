@@ -5,6 +5,8 @@ import './init';
 export {default as luma} from './lib/luma';
 export type {DeviceProps, DeviceLimits, DeviceInfo} from './adapter/device';
 export {default as Device} from './adapter/device';
+export type {CanvasContextProps} from './adapter/canvas-context';
+export {default as CanvasContext} from './adapter/canvas-context';
 
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resources/resource';

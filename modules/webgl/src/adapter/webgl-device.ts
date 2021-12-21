@@ -243,7 +243,7 @@ export default class WebGLDevice extends Device implements ContextState {
     // }
   }
 
-  get isContextLost(): boolean {
+  get isLost(): boolean {
     return this.gl.isContextLost();
   }
 

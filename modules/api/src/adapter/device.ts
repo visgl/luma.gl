@@ -126,8 +126,8 @@ export default abstract class Device {
   /** Optional capability discovery */
   abstract features: Set<string>;
 
-  /** Check if context is lost */
-  abstract get isContextLost(): boolean;
+  /** True context is already lost */
+  abstract get isLost(): boolean;
 
   /** Promise that resolves when context is lost */
   abstract readonly lost: Promise<{reason: 'destroyed', message: string}>;
