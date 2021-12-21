@@ -71,7 +71,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   function frame() {
     device.beginRenderPass();
     model.draw();
-    device.submit();
+    device.commit();
     requestAnimationFrame(frame);
   }
 

@@ -1,5 +1,5 @@
-import type {AnimationProps} from './animation-loop';
-import AnimationLoop from './animation-loop';
+import type {AnimationProps} from './webgpu-animation-loop';
+import AnimationLoop from './webgpu-animation-loop';
 
 /**
  * Minimal animation loop that initializes models in constructor

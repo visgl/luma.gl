@@ -1,6 +1,6 @@
 import {
   Device,
-  // DeviceProps,
+  DeviceProps,
   DeviceInfo,
   DeviceLimits,
   BufferProps,
@@ -24,25 +24,23 @@ import WebGPUSampler from './resources/webgpu-sampler';
 import WebGPUShader from './resources/webgpu-shader';
 import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
 // import WebGPUComputePipeline from './webgpu-compute-pipeline';
-
 // import {loadGlslangModule} from '../glsl/glslang';
 
 type Feature = string;
 
-type DeviceProps = {
-  canvas: HTMLCanvasElement
-};
-
-/** */
+/** WebGPU device */
 export default class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
   readonly context: GPUCanvasContext;
   // readonly swapChain: GPUSwapChain;
   readonly presentationFormat: GPUTextureFormat;
+  readonly lost: Promise<{reason: 'destroyed', message: string}>;
+
   presentationSize = [1, 1];
   private _renderPassDescriptor: GPURenderPassDescriptor;
   private _info: DeviceInfo;
+  private _isContextLost: boolean = false;
 
   static isSupported(): boolean {
     return true;
@@ -85,15 +83,24 @@ export default class WebGPUDevice extends Device {
       rendererMasked: ''
     };
 
+    this.lost = this.handle.lost;
+    this.lost.then(_ => {
+      this._isContextLost = true;
+    });
+
     // Configure swap chain
-    assert(props.canvas);
-    this.context = props.canvas.getContext('webgpu') as GPUCanvasContext;
+    if (!(props.canvas instanceof HTMLCanvasElement)) {
+      throw new Error('canvas');
+    }
+    this.canvas = props.canvas;
+
+    this.context = this.canvas.getContext('webgpu') as GPUCanvasContext;
     this.presentationFormat = this.context.getPreferredFormat(this.adapter);
 
     const devicePixelRatio = window.devicePixelRatio || 1;
     this.presentationSize = [
-      props.canvas.clientWidth * devicePixelRatio,
-      props.canvas.clientHeight * devicePixelRatio,
+      this.canvas.clientWidth * devicePixelRatio,
+      this.canvas.clientHeight * devicePixelRatio,
     ];
 
     this.context.configure({
@@ -120,18 +127,28 @@ export default class WebGPUDevice extends Device {
     return this.handle.limits;
   }
 
+  get isContextLost(): boolean {
+    return this._isContextLost;
+  }
+
+  resize(options: any): void {}
+
   _createBuffer(props: BufferProps): WebGPUBuffer {
     return new WebGPUBuffer(this, props);
   }
+
   createTexture(props: TextureProps): WebGPUTexture {
     return new WebGPUTexture(this, props);
   }
+
   createShader(props: ShaderProps): WebGPUShader {
     return new WebGPUShader(this, props);
   }
+
   createSampler(props: SamplerProps): WebGPUSampler {
     return new WebGPUSampler(this, props);
   }
+
   createRenderPipeline(props: RenderPipelineProps): WebGPURenderPipeline {
     return new WebGPURenderPipeline(this, props);
   }
@@ -151,7 +168,7 @@ export default class WebGPUDevice extends Device {
     return this.renderPass;
   }
 
-  submit(): void {
+  commit(): void {
     this.renderPass.endPass();
     const commandBuffer = this.commandEncoder.finish();
     this.handle.queue.submit([commandBuffer]);

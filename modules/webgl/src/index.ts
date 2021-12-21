@@ -13,7 +13,7 @@ export type {WebGLDeviceProps} from './adapter/webgl-device';
 export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
 
 // UTILS
-export {requestAnimationFrame, cancelAnimationFrame} from './webgl-utils/request-animation-frame';
+export {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
 
 // WebGL Functions
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
