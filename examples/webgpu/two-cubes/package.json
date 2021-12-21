@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-webgpu-two-cubes",
+  "name": "luma.gl-examples-webgpu-two-cubes-shared",
   "version": "1.0.0",
   "private": true,
   "scripts": {

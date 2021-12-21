@@ -20,8 +20,9 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
 };
 
 /**
- * Manages an HTML or offscreen canvas
- * - Waits for page to be ready when 
+ * Manages a canvas. Supports both HTML or offscreen canvas
+ * - Creates a new canvas or looks up a canvas from the DOM
+ * - Provides check for DOM loaded
  * @todo commit(): https://github.com/w3ctag/design-reviews/issues/288
  * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
