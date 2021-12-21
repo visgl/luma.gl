@@ -24,12 +24,13 @@ export default class luma {
     return Array.from(deviceList).map(Device => Device.name || 'device');
   }
 
-  static createDevice(props: DeviceProps): Device {
+  static async createDevice(props: DeviceProps): Promise<Device> {
     for (const DeviceConstructor of deviceList) {
-      const isSelected =  true; // !name || (name ===)
+      // @ts-expect-error No typings for the static methods
+      const create: (props: DeviceProps) => Promise<Device> = DeviceConstructor.create;
+      const isSelected = Boolean(create); // !name || (name ===)
       if (isSelected) { // } && DeviceConstructor?.isSupported?.()) {
-        // @ts-expect-error
-        return new DeviceConstructor(props);
+        return await create(props);
       }
     }
 

@@ -39,7 +39,7 @@ let statIdCounter = 0;
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
-  onCreateDevice?: (props: DeviceProps) => Device;
+  onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => {} | void;
@@ -232,10 +232,8 @@ export default class AnimationLoop {
     return this;
   }
 
-  /** Starts a render loop if not already running
-   * @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
-   */
-  async _start(opts) {
+  /** Starts a render loop if not already running */
+  async _start(props) {
     if (this._running) {
       return this;
     }
@@ -254,7 +252,9 @@ export default class AnimationLoop {
       let appContext;
       if (!this._initialized) {
         this._initialized = true;
-        this._initialize(opts);
+        // Create the WebGL context
+        await this._createDevice(props);
+        this._initialize(props);
 
         // Note: onIntialize can return a promise (in case app needs to load resources)
         appContext = await this.onInitialize(this.animationProps);
@@ -353,7 +353,7 @@ export default class AnimationLoop {
     return this.gl.isContextLost();
   }
 
-  onCreateDevice(deviceProps: DeviceProps) {
+  onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
     return this.props.onCreateDevice(deviceProps);
   }
 
@@ -386,8 +386,6 @@ export default class AnimationLoop {
   // PRIVATE METHODS
 
   _initialize(props: AnimationLoopProps) {
-    // Create the WebGL context
-    this._createDevice(props);
     this._createFramebuffer();
     this._startEventHandling();
 
@@ -577,14 +575,14 @@ export default class AnimationLoop {
   }
 
   /** Either uses supplied or existing context, or calls provided callback to create one */
-  _createDevice(props: DeviceProps) {
+  async _createDevice(props: DeviceProps) {
     const deviceProps = {...this.props, ...props, ...this.props.glOptions};
 
     // TODO - support this.onCreateContext
     // Create the WebGL context if necessary
     // this.gl = this.props.gl ? instrumentGLContext(this.props.gl, deviceProps) : this.onCreateContext(deviceProps);
 
-    this.device = this.onCreateDevice(deviceProps);
+    this.device = await this.onCreateDevice(deviceProps);
     // @ts-expect-error
     this.gl = this.device.gl;
 

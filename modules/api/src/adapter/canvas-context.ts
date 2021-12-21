@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 import {isBrowser} from 'probe.gl/env';
 
-const isPage = isBrowser() && typeof document !== 'undefined';
-const isPageLoaded = () => isPageLoaded();
+const isPage: boolean = isBrowser() && typeof document !== 'undefined';
+const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
 
 export type CanvasContextProps = {
   canvas?: HTMLCanvasElement | OffscreenCanvas | string;

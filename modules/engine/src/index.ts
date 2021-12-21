@@ -27,6 +27,9 @@ export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
+export type {_NonIndexedCubeGeometryProps} from './geometries/non-indexed-cube-geometry';
+export {_NonIndexedCubeGeometry} from './geometries/non-indexed-cube-geometry';
+
 // Animation
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';

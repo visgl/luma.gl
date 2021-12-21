@@ -36,6 +36,8 @@ export default class WebGPUDevice extends Device {
   private _info: DeviceInfo;
   private _isLost: boolean = false;
 
+  static type: string = 'webgpu';
+
   /** Check if WebGPU is available */
   static isSupported(): boolean {
     return Boolean(typeof navigator !== 'undefined' && navigator.gpu);
@@ -53,7 +55,8 @@ export default class WebGPUDevice extends Device {
     const gpuDevice = await adapter.requestDevice();
     log.log(1, "GPUDevice available")();
     const device = new WebGPUDevice(gpuDevice, adapter, props);
-    log.log(1, "Device created", device.info)();
+    log.probe(1, "Device created", device.info)();
+    log.table(1, device.info)();
     log.groupEnd(1)();
     return device;
   }
@@ -195,7 +198,7 @@ export default class WebGPUDevice extends Device {
     };
 
     log.groupCollapsed(1, 'Device.GPURenderPassDescriptor')();
-    log.log(1, JSON.stringify(this._renderPassDescriptor, null, 2))();
+    log.probe(1, JSON.stringify(this._renderPassDescriptor, null, 2))();
     log.groupEnd(1)();
   }
 

@@ -1,6 +1,7 @@
 // luma.gl, MIT license
+import type {TypedArray} from '@luma.gl/api';
+import {uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {uid, assert} from '@luma.gl/webgl';
 
 /**
  * Rendering primitives - "opology" specifies how to extract primitives from vertices.
@@ -39,7 +40,12 @@ export default class Geometry {
   readonly drawMode: Topology = GL.TRIANGLES;
 
   vertexCount: number;
-  attributes = {};
+  attributes: {
+    POSITION: {size: number, value: TypedArray, [key: string]: any},
+    NORMAL: {size: number, value: TypedArray, [key: string]: any},
+    TEXCOORD_0: {size: number, value: TypedArray, [key: string]: any},
+    COLOR_0?: {size: number, value: TypedArray, [key: string]: any},
+  };
   indices;
   userData: Record<string, any> = {};
 
@@ -88,6 +94,9 @@ export default class Geometry {
     if (indices) {
       this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
     }
+
+    // @ts-expect-error
+    this.attributes = {};
 
     for (const attributeName in attributes) {
       let attribute = attributes[attributeName];

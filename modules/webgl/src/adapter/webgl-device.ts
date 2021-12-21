@@ -111,6 +111,8 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly _extensions: Record<string, any> = {};
   _polyfilled: boolean = false;
 
+  static type: string = 'webgl';
+
   /**
    *
    */

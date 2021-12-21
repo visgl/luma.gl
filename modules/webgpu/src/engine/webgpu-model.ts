@@ -1,4 +1,5 @@
 import {
+  Device,
   Buffer,
   Shader,
   RenderPipeline,
@@ -54,10 +55,10 @@ export default class Model {
 
   _bindGroup: GPUBindGroup;
 
-  constructor(device: WebGPUDevice, props: ModelProps) {
+  constructor(device: Device, props: ModelProps) {
     this.props = {...DEFAULT_MODEL_PROPS, ...props};
     props = this.props;
-    this.device = device;
+    this.device = cast<WebGPUDevice>(device);
 
     // Create the pipeline
     if (props.pipeline) {
@@ -69,17 +70,17 @@ export default class Model {
       assert(vertex);
       this.vs =
         typeof vertex === 'string'
-          ? new WebGPUShader(device, {stage: 'vertex', source: vertex})
+          ? new WebGPUShader(this.device, {stage: 'vertex', source: vertex})
           : cast<WebGPUShader>(vertex);
 
       if (fragment) {
         this.fs =
           typeof fragment === 'string'
-            ? new WebGPUShader(device, {stage: 'fragment', source: fragment})
+            ? new WebGPUShader(this.device, {stage: 'fragment', source: fragment})
             : cast<WebGPUShader>(fragment);
       }
       
-      this.pipeline = device.createRenderPipeline({
+      this.pipeline = this.device.createRenderPipeline({
         vertexShader: this.vs,
         fragmentShader: this.fs,
         topology: props.topology,
@@ -94,6 +95,10 @@ export default class Model {
     }
   }
 
+  destroy(): void {
+    // this.pipeline.destroy();
+  }
+
   draw(renderPass?: GPURenderPassEncoder) {
     renderPass = renderPass || this.device.getActiveRenderPass();
     renderPass.setPipeline(this.pipeline.handle);
@@ -106,7 +111,9 @@ export default class Model {
     }
 
     // Set up bindings (uniform buffers, textures etc)
-    renderPass.setBindGroup(0, this._bindGroup);
+    if (this._bindGroup) {
+      renderPass.setBindGroup(0, this._bindGroup);
+    }
 
     renderPass.draw(this.props.vertexCount, this.props.instanceCount, 0, 0); // firstVertex, firstInstance);
   }
