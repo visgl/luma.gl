@@ -130,7 +130,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     device.beginRenderPass();
     cubeModel1.draw();
     cubeModel2.draw();
-    device.submit();
+    device.commit();
 
     requestAnimationFrame(frame);
   }

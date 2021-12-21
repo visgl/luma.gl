@@ -95,7 +95,6 @@ export default class AnimationLoop {
   _initialized: boolean = false;
   _running: boolean = false;
   _animationFrameId = null;
-  _pageLoadPromise: Promise<{}> | null = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
@@ -150,6 +149,7 @@ export default class AnimationLoop {
     return this;
   }
 
+  // TODO - move to CanvasContext
   setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport;
@@ -164,14 +164,12 @@ export default class AnimationLoop {
   }
 
   start(opts = {}) {
-    this._start(opts);
+    this._start();
     return this;
   }
 
-  /** Starts a render loop if not already running
-   * @param {Object} context - contains frame specific info (E.g. tick, width, height, etc)
-   */
-  async _start(opts) {
+  /** Starts a render loop if not already running */
+  async _start() {
     if (this._running) {
       return this;
     }
@@ -180,7 +178,8 @@ export default class AnimationLoop {
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
     try {
-      await this._getPageLoadPromise();
+      // TODO rely on CanvasContext...
+      // await this._getPageLoadPromise();
 
       // check that we haven't been stopped
       if (!this._running) {
@@ -190,7 +189,7 @@ export default class AnimationLoop {
       let appContext;
       if (!this._initialized) {
         this._initialized = true;
-        this._initialize(opts);
+        this._initialize();
 
         // Note: onIntialize can return a promise (in case app needs to load resources)
         appContext = await this.onInitialize(this.animationProps);
@@ -219,7 +218,7 @@ export default class AnimationLoop {
 
   /** Explicitly draw a frame */
   redraw(): this {
-    if (this.device.isContextLost) {
+    if (this.device.isLost) {
       return this;
     }
 
@@ -301,9 +300,9 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
-  _initialize(props: AnimationLoopProps) {
+  _initialize() {
     // Create the WebGL context
-    this._createDevice(props);
+    this._createDevice();
     this._startEventHandling();
 
     // Initialize the callback data
@@ -315,23 +314,6 @@ export default class AnimationLoop {
     this._resizeViewport();
 
     // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
-  }
-
-  _getPageLoadPromise() {
-    if (!this._pageLoadPromise) {
-      this._pageLoadPromise = isPage
-        ? new Promise((resolve, reject) => {
-            if (isPage && document.readyState === 'complete') {
-              resolve(document);
-              return;
-            }
-            window.addEventListener('load', () => {
-              resolve(document);
-            });
-          })
-        : Promise.resolve({});
-    }
-    return this._pageLoadPromise;
   }
 
   _setDisplay(display) {
@@ -483,8 +465,8 @@ export default class AnimationLoop {
   }
 
   /** Either uses supplied or existing context, or calls provided callback to create one */
-  _createDevice(props: DeviceProps) {
-    const deviceProps = {...this.props, ...props, ...this.props.deviceProps};
+  _createDevice() {
+    const deviceProps = {...this.props, ...this.props.deviceProps};
     this.device = this.onCreateDevice(deviceProps);
     this.canvas = this.device.canvas;
     this._createInfoDiv();

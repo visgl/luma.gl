@@ -69,7 +69,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         entryPoint: this.props.fragmentShaderEntryPoint || 'main',
         targets: [
           {
-            format: this.device.presentationFormat,
+            format: this.device.canvasContext.presentationFormat,
           }
         ]
       };

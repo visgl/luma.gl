@@ -89,8 +89,9 @@ export default class Model {
       });
     }
 
-    // Set up the bindings
-    this._bindGroup = makeBindGroup(this.device.handle, this.pipeline._getBindGroupLayout(), this.props.bindings);
+    if (this.props.bindings.length > 0) {
+      this.setBindings(this.props.bindings);
+    }
   }
 
   draw(renderPass?: GPURenderPassEncoder) {
@@ -122,11 +123,15 @@ export default class Model {
   setInstancedAttributes(attributes) {
     this._instancedAttributeTable = attributes;
   }
+  */
 
-  setBindings(bindings: []) {
-
+  /** Set the bindings */
+  setBindings(bindings: Binding[]): void {
+    // Set up the bindings
+    this._bindGroup = makeBindGroup(this.device.handle, this.pipeline._getBindGroupLayout(), bindings);
   }
 
+  /*
   setUniformBuffer(binding, buffer, byteOffset, byteLength) {
     this._bindings[binding] = {binding, resource: {buffer, offset: byteOffset, size: byteLength}};
   }
