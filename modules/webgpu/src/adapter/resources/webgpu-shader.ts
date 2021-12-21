@@ -1,5 +1,5 @@
 import {Shader, ShaderProps, CompilerMessage} from '@luma.gl/api';
-import type WebGPUDevice from './webgpu-device';
+import type WebGPUDevice from '../webgpu-device';
 
 export type WebGPUShaderProps = ShaderProps & {
   handle?: GPUShaderModule;
@@ -14,7 +14,6 @@ export default class WebGPUShader extends Shader {
 
   constructor(device: WebGPUDevice, props: WebGPUShaderProps) {
     super(device, props);
-
     this.device = device;
 
     this.handle = this.props.handle || this.createHandle();

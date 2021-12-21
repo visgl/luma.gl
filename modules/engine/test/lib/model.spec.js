@@ -2,7 +2,7 @@ import test from 'tape-promise/tape';
 import {webgl1TestDevice} from '@luma.gl/test-utils';
 
 import GL from '@luma.gl/constants';
-import luma from '@luma.gl/webgl/init';
+import {luma} from '@luma.gl/api';
 // TODO - Model test should not depend on Cube
 import {Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer} from '@luma.gl/webgl';

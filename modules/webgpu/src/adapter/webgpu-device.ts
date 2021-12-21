@@ -9,7 +9,8 @@ import {
   TextureProps,
   RenderPipelineProps,
   // ComputePipelineProps,
-  assert
+  assert,
+  log
 } from '@luma.gl/api';
 // import type {
 //   CopyBufferToBufferOptions,
@@ -17,11 +18,11 @@ import {
 //   CopyTextureToBufferOptions,
 //   CopyTextureToTextureOptions
 // } from '@luma.gl/api';
-import WebGPUBuffer from './webgpu-buffer';
-import WebGPUTexture from './webgpu-texture';
-import WebGPUSampler from './webgpu-sampler';
-import WebGPUShader from './webgpu-shader';
-import WebGPURenderPipeline from './webgpu-render-pipeline';
+import WebGPUBuffer from './resources/webgpu-buffer';
+import WebGPUTexture from './resources/webgpu-texture';
+import WebGPUSampler from './resources/webgpu-sampler';
+import WebGPUShader from './resources/webgpu-shader';
+import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
 // import WebGPUComputePipeline from './webgpu-compute-pipeline';
 
 // import {loadGlslangModule} from '../glsl/glslang';
@@ -41,6 +42,7 @@ export default class WebGPUDevice extends Device {
   readonly presentationFormat: GPUTextureFormat;
   presentationSize = [1, 1];
   private _renderPassDescriptor: GPURenderPassDescriptor;
+  private _info: DeviceInfo;
 
   static isSupported(): boolean {
     return true;
@@ -48,19 +50,40 @@ export default class WebGPUDevice extends Device {
 
   static async create(props) {
     if (!navigator.gpu) {
-      throw new Error('WebGPU not available');
+      throw new Error('WebGPU not available. Use Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
     }
+    log.groupCollapsed(1, 'Creating device')();
     const adapter = await navigator.gpu.requestAdapter({
       powerPreference: "high-performance"
     });
-    const device = await adapter.requestDevice();
-    return new WebGPUDevice(device, adapter, props);
+    log.log(1, "Adapter available")();
+    const gpuDevice = await adapter.requestDevice();
+    log.log(1, "GPUDevice available")();
+    const device = new WebGPUDevice(gpuDevice, adapter, props);
+    log.log(1, "Device created", device.info)();
+    log.groupEnd(1)();
+    return device;
   }
 
   constructor(device: GPUDevice, adapter: GPUAdapter, props: DeviceProps) {
     super();
     this.handle = device;
     this.adapter = adapter;
+
+    this._info = {
+      type: 'webgpu',
+      vendor: this.adapter.name,
+      renderer: '',
+      version: '',
+      gpuVendor: 'UNKNOWN', // 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN',
+      shadingLanguages: ['glsl', 'wgsl'],
+      shadingLanguageVersions: {
+        glsl: '450',
+        wgsl: '100'
+      },
+      vendorMasked: '',
+      rendererMasked: ''
+    };
 
     // Configure swap chain
     assert(props.canvas);
@@ -78,7 +101,6 @@ export default class WebGPUDevice extends Device {
       format: this.presentationFormat,
       size: this.presentationSize,
     });
-    this._initializeRenderPassDescriptor(props.canvas)
   }
 
   destroy() {
@@ -86,20 +108,7 @@ export default class WebGPUDevice extends Device {
   }
 
   get info(): DeviceInfo {
-    return {
-      type: 'webgpu',
-      vendor: '',
-      renderer: '',
-      version: '',
-      gpuVendor: 'UNKNOWN', // 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN',
-      shadingLanguages: ['glsl', 'wgsl'],
-      shadingLanguageVersions: {
-        glsl: '450',
-        wgsl: '100'
-      },
-      vendorMasked: '',
-      rendererMasked: ''
-    };
+    return this._info;
   }
 
   get features(): Set<Feature> {
@@ -136,18 +145,7 @@ export default class WebGPUDevice extends Device {
   beginRenderPass(): GPURenderPassEncoder {
     if (!this.renderPass) {
       this.commandEncoder = this.handle.createCommandEncoder();
-
-      const textureView = this.context.getCurrentTexture().createView();
-      const renderPassDescriptor: GPURenderPassDescriptor = {
-        colorAttachments: [
-          {
-            view: textureView,
-            loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-            storeOp: 'store',
-          },
-        ],
-      };
-
+      const renderPassDescriptor = this._updateRenderPassDescriptor();
       this.renderPass = this.commandEncoder.beginRenderPass(renderPassDescriptor);
     }
     return this.renderPass;
@@ -165,25 +163,27 @@ export default class WebGPUDevice extends Device {
   }
 
   // TODO: Possible to support multiple canvases with one device?
-  _initializeRenderPassDescriptor(canvas) {
+  _initializeRenderPassDescriptor() {
     const depthTexture = this.createTexture({
-      width: canvas.width,
-      height: canvas.height,
+      width: this.presentationSize[0],
+      height: this.presentationSize[1],
       depth: 1,
-      // @ts-expect-error
-      format: "depth24plus-stencil8",
+      format: "depth24plus",
       usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    const renderPassDescriptor: GPURenderPassDescriptor = {
+    const depthStencilAttachment = depthTexture.handle.createView();
+    depthStencilAttachment.label = 'depth-stencil-attachment';
+
+    this._renderPassDescriptor = {
       colorAttachments: [{
-        // @ts-expect-error
-        attachment: undefined, // Assigned later
+        view: undefined, // Assigned later
         loadValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+        storeOp: 'store'
       }],
 
-      depthStencil: {
-        attachment: depthTexture.handle.createView(),
+      depthStencilAttachment: {
+        view: depthStencilAttachment,
         depthLoadValue: 1.0,
         depthStoreOp: "store",
         stencilLoadValue: 0,
@@ -191,7 +191,18 @@ export default class WebGPUDevice extends Device {
       }
     };
 
-    this._renderPassDescriptor = renderPassDescriptor;
+    log.groupCollapsed(1, 'Device.GPURenderPassDescriptor')();
+    log.log(1, JSON.stringify(this._renderPassDescriptor, null, 2))();
+    log.groupEnd(1)();
+  }
+
+  _updateRenderPassDescriptor() {
+    if (!this._renderPassDescriptor) {
+      this._initializeRenderPassDescriptor();
+    }
+    const textureView = this.context.getCurrentTexture().createView();
+    this._renderPassDescriptor.colorAttachments[0].view = textureView;
+    return this._renderPassDescriptor;
   }
 }
 

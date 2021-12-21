@@ -1,6 +1,6 @@
-//
-import Device from './device';
-// import {uid} from '../utils';
+// luma.gl, MIT license
+import type Device from '../device';
+import {uid} from '../../utils/utils';
 
 export type ResourceProps = {
   id?: string;
@@ -38,8 +38,10 @@ export default abstract class Resource<Props extends ResourceProps> {
       throw new Error('no device');
     }
     this._device = device;
-    this.props = this.initializeProps(props, defaultProps);
-    this.id = this.props.id || 'no-id'; // TODO uid(this[Symbol.toStringTag] || this.constructor.name);
+    this.props = selectivelyMerge<Props>(props, defaultProps);
+    this.props.id = this.props.id || uid(this[Symbol.toStringTag]);
+
+    this.id = this.props.id;
     this.userData = this.props.userData || {};
     this.addStats();
   }
@@ -105,19 +107,20 @@ export default abstract class Resource<Props extends ResourceProps> {
     stats.get(`${name}s Active`).incrementCount();
   }
 
-  /**
-   * Combines a map of user props and default props, only including props from defaultProps
-   * @param props
-   * @param defaultProps
-   * @returns returns a map of overridden default props
-   */
-   private initializeProps(props: Props, defaultProps: Required<Props>): Required<Props> {
-    const mergedProps = {...defaultProps};
-    for (const key in props) {
-      if (props[key] !== undefined) {
-        mergedProps[key] = props[key];
-      }
+}
+
+/**
+ * Combines a map of user props and default props, only including props from defaultProps
+ * @param props
+ * @param defaultProps
+ * @returns returns a map of overridden default props
+ */
+  function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): Required<Props> {
+  const mergedProps = {...defaultProps};
+  for (const key in props) {
+    if (props[key] !== undefined) {
+      mergedProps[key] = props[key];
     }
-    return mergedProps;
   }
+  return mergedProps;
 }

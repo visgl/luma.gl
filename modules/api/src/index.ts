@@ -1,24 +1,27 @@
+// Initialize any global state
+import './init';
+
 // MAIN API ACCESS POINTS
 export {default as luma} from './lib/luma';
 export type {DeviceLimits, DeviceInfo} from './adapter/device';
 export {default as Device} from './adapter/device';
 
 // GPU RESOURCES
-export type {ResourceProps} from './adapter/resource';
-export {default as Resource} from './adapter/resource';
-export type {BufferProps} from './adapter/buffer';
-export {default as Buffer} from './adapter/buffer';
-export type {TextureProps} from './adapter/texture';
-export {default as Texture} from './adapter/texture';
-export type {ShaderProps, CompilerMessage} from './adapter/shader';
-export {default as Shader} from './adapter/shader';
-export type {SamplerProps} from './adapter/sampler';
-export {default as Sampler} from './adapter/sampler';
-export type {RenderPipelineProps} from './adapter/render-pipeline';
-export {default as RenderPipeline} from './adapter/render-pipeline';
+export type {ResourceProps} from './adapter/resources/resource';
+export {default as Resource} from './adapter/resources/resource';
+export type {BufferProps} from './adapter/resources/buffer';
+export {default as Buffer} from './adapter/resources/buffer';
+export type {TextureProps} from './adapter/resources/texture';
+export {default as Texture} from './adapter/resources/texture';
+export type {ShaderProps, CompilerMessage} from './adapter/resources/shader';
+export {default as Shader} from './adapter/resources/shader';
+export type {SamplerProps} from './adapter/resources/sampler';
+export {default as Sampler} from './adapter/resources/sampler';
+export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
+export {default as RenderPipeline} from './adapter/resources/render-pipeline';
 
 // API TYPES
-export type {Accessor, BufferAccessors} from './adapter/accessor';
+export type {Accessor, InterleavedAccessors} from './adapter/types/accessor';
 export type {
   Parameters,
   PrimitiveTopology,
@@ -35,9 +38,24 @@ export type {
   MultisampleParameters,
   RenderPassParameters,
   RenderPipelineParameters
-} from './adapter/parameters';
+} from './adapter/types/parameters';
 
-export type {BindingLayout, Binding, ColorAttachment, DepthStencilAttachment} from './adapter/types';
+export type {
+  TextureFormat,
+  VertexFormat,
+  BindingLayout,
+  Binding,
+  ColorAttachment,
+  DepthStencilAttachment
+} from './adapter/types/types';
+
+export type {
+  ProgramBindings,
+  AttributeBinding,
+  UniformBinding,
+  UniformBlockBinding,
+  VaryingBinding
+} from './adapter/types/program-bindings';
 
 // UTILS
 export type {TypedArray, NumberArray} from './types';

@@ -5,7 +5,8 @@
 // Higher level abstractions can be built on these classes
 
 // Initialize any global state
-import './init';
+import '@luma.gl/api';
+import './init'
 
 // export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
 export type {WebGLDeviceProps} from './adapter/webgl-device';
@@ -116,7 +117,7 @@ export {getProgramBindings} from './helpers/get-program-bindings';
 // DEPRECATED
 
 // Deprecated re-exports
-export {lumaStats} from './init';
+export {lumaStats} from '@luma.gl/api';
 export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
 export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
 

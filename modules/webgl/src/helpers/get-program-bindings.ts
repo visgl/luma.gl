@@ -1,6 +1,6 @@
+import {ProgramBindings, AttributeBinding, UniformBinding, UniformBlockBinding, VaryingBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../context/context/webgl-checks';
-import {ProgramBindings, AttributeBinding, UniformBinding, UniformBlockBinding, VaryingBinding} from './program-bindings'
 import Accessor from '../classes/accessor';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 
@@ -44,6 +44,7 @@ function readAttributeBindings(gl: WebGL2RenderingContext, program: WebGLProgram
       inferProperties(location, name, accessor);
     
       const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
+      // @ts-expect-error
       attributes.push(attributeInfo);
     }
   }

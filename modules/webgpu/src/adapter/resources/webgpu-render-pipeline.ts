@@ -1,12 +1,13 @@
 /// <reference types="@webgpu/types" />
 
-import {RenderPipeline, RenderPipelineProps, cast } from '@luma.gl/api';
+import {RenderPipeline, RenderPipelineProps, cast, log} from '@luma.gl/api';
 
-import WebGPUDevice from './webgpu-device';
+import type WebGPUDevice from '../webgpu-device';
 
-import {getRenderPipelineDescriptor} from './helpers/webgpu-parameters';
+import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
+import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 // import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
-import {WebGPUShader} from '..';
+import WebGPUShader from './webgpu-shader';
 // import type {BufferAccessors} from './webgpu-pipeline';
 
 // BIND GROUP LAYOUTS
@@ -57,7 +58,8 @@ export default class WebGPURenderPipeline extends RenderPipeline {
 
     const vertex: GPUVertexState = {
       module: cast<WebGPUShader>(this.props.vertexShader).handle,
-      entryPoint: this.props.vertexShaderEntryPoint || 'main'
+      entryPoint: this.props.vertexShaderEntryPoint || 'main',
+      buffers: convertAttributesVertexBufferToLayout(this.props.attributeLayouts)
     };
 
     let fragment: GPUFragmentState | undefined;
@@ -73,27 +75,19 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       };
     }
 
-    const descriptor: GPURenderPipelineDescriptor = {
+    let descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
       primitive: {
         topology: this.props.topology
       }
-
-      // WebGPU spec seems updated
-      // primitive: {
-      //   topology: this.props.topology
-      // },
-
     };
 
-    // const ceDescriptor: GPUCommandEncoderDescriptor;
-    // const commandEncoder = this.device.handle.createCommandEncoder({
-    //   // label
-    //   // measureExecutionTime
-    // });
+    descriptor = applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
 
-    getRenderPipelineDescriptor(this.props.parameters, descriptor);
+    log.groupCollapsed(1, 'RenderPipeline.GPURenderPipelineDescriptor')();
+    log.log(1, JSON.stringify(descriptor, null, 2))();
+    log.groupEnd(1)();
 
     const renderPipeline = this.device.handle.createRenderPipeline(descriptor);
     return renderPipeline;

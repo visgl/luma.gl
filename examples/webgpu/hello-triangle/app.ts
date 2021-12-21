@@ -1,4 +1,4 @@
-/// <reference types="@webgpu/types" />
+/// <reference types='@webgpu/types' />
 
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 
@@ -16,7 +16,7 @@ void main() {
 }
 `,
 
-  fragment: `#version 450
+    fragment: `#version 450
 layout(location = 0) out vec4 outColor;
 
 void main() {
@@ -52,8 +52,20 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   const model = new Model(device, {
     vs: SHADERS[language].vertex,
     fs: SHADERS[language].fragment,
-    topology: "triangle-list",
-    vertexCount: 3
+    topology: 'triangle-list',
+    vertexCount: 3,
+    parameters: {
+      // Enable depth testing so that the fragment closest to the camera
+      // is rendered in front.
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      depthFormat: 'depth24plus',
+
+      // Backface culling since the cube is solid piece of geometry.
+      // Faces pointing away from the camera will be occluded by faces
+      // pointing toward the camera.
+      cullMode: 'back',
+    }
   });
 
   function frame() {

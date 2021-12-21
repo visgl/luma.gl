@@ -102,7 +102,7 @@ const config = {
   externals: getExternals(PACKAGE_INFO),
 
   plugins: [
-    // This is used to define the __VERSION__ constant in core/lib/init.js
+    // This is used to define the __VERSION__ constant in api/src/init.js
     // babel-plugin-version-inline uses the package version from the working directory
     // Therefore we need to manually import the correct version from the core
     // This is called in prepublishOnly, after lerna bumps the package versions

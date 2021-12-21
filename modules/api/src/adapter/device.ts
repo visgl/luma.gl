@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 import StatsManager, {lumaStats} from '../utils/stats-manager';
-import type {default as Buffer, BufferProps} from './buffer';
-import type {default as Texture, TextureProps} from './texture';
-import type {default as Shader, ShaderProps} from './shader';
+import type {default as Buffer, BufferProps} from './resources/buffer';
+import type {default as Texture, TextureProps} from './resources/texture';
+import type {default as Shader, ShaderProps} from './resources/shader';
 // import type {RenderPipeline, RenderPipelineProps, ComputePipeline, ComputePipelineProps} from './pipeline';
 
 export type ShadingLanguage = 'glsl' | 'wgsl';

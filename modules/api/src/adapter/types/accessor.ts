@@ -1,30 +1,38 @@
 // luma.gl, MIT license
+import type {VertexFormat} from './types';
+
 // ACCESSORS
 
 /**
  * Attribute descriptor object
  */
 export type Accessor = {
-  format?: string;
+  format: VertexFormat;
   offset?: number;
-  location?: number;
-
   // can now be described with single WebGPU-style `format` string
-  type?: number;
-  size?: number;
-  normalized?: boolean;
-  integer?: boolean;
 
-  // deprecated - now shared between accessors in the surrounding BufferAccessor object
+  // 
   stride?: number;
+  stepMode?: 'vertex' | 'instance';
+
+  /** @deprecated - Use accessor.stepMode */
   divisor?: number;
+
+  /** @deprecated - Infer from format */
+  type?: number;
+  /** @deprecated - Infer from format */
+  size?: number;
+  /** @deprecated - Infer from format */
+  normalized?: boolean;
+  /** @deprecated - Infer from format */
+  integer?: boolean;
 };
 
 /**
  * List of attribute descriptors for one interleaved buffer
  */
-export type BufferAccessors = {
+export type InterleavedAccessors = {
   stride?: number;
   stepMode?: 'vertex' | 'instance';
   attributes: Accessor[];
-}
+};

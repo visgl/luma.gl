@@ -1,6 +1,6 @@
-import {CompareFunction} from './parameters';
+import type Device from '../device';
+import {CompareFunction} from '../types/parameters';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import type Device from './device';
 
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 export type SamplerFilterMode = 'nearest' | 'linear';

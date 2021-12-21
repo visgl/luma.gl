@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-webgpu-hello-triangle",
+  "name": "luma.gl-examples-webgpu-rotating-cube",
   "version": "1.0.0",
   "private": true,
   "scripts": {
