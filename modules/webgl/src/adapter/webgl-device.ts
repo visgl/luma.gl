@@ -12,7 +12,7 @@ import {getDeviceFeatures, Feature} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 
 // WebGL classes
-import type {BufferProps, ShaderProps} from '@luma.gl/api';
+import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
 import {WEBGLShader} from '../adapter/webgl-shader';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
@@ -87,7 +87,7 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly info: DeviceInfo;
 
   /** Promise that rejects when context is lost */
-  readonly lost: Promise<string>;
+  readonly lost: Promise<{reason: 'destroyed', message: string}>;
 
   // Common API
   props: Required<WebGLDeviceProps>;
@@ -138,7 +138,6 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WebGLDevice({...props, gl: gl as WebGLRenderingContext});
   }
 
-
   constructor(props: WebGLDeviceProps) {
     super();
 
@@ -155,9 +154,11 @@ export default class WebGLDevice extends Device implements ContextState {
       return device;
     }
 
-    this.offScreen =
-      typeof OffscreenCanvas !== 'undefined' &&
-      props.canvas instanceof OffscreenCanvas;
+    // TODO
+    this.canvas = props.canvas as HTMLCanvasElement;
+    if (typeof OffscreenCanvas !== 'undefined' && props.canvas instanceof OffscreenCanvas) {
+      this.offscreenCanvas = props.canvas;
+    }
 
     // Create an instrument context
     this.gl = (this.props.gl || this._createContext(props)) as WebGLRenderingContext;
@@ -242,6 +243,14 @@ export default class WebGLDevice extends Device implements ContextState {
     // }
   }
 
+  get isContextLost(): boolean {
+    return this.gl.isContextLost();
+  }
+
+  getSize(): [number, number] {
+    return [this.gl.drawingBufferWidth, this.gl.drawingBufferHeight];
+  }
+
   // WEBGL SPECIFIC METHODS
 
   /**
@@ -281,6 +290,10 @@ export default class WebGLDevice extends Device implements ContextState {
 
   createShader(props: ShaderProps): WEBGLShader {
     return new WEBGLShader(this, props);
+  }
+
+  createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
+    throw new Error('not implemented'); // return new Program(props);
   }
 
   /**

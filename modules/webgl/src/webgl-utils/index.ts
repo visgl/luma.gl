@@ -1,5 +1,3 @@
-export {requestAnimationFrame, cancelAnimationFrame} from './request-animation-frame';
-
 export {
   getGLTypeFromTypedArray,
   getTypedArrayFromGLType,
