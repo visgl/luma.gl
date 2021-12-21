@@ -12,6 +12,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   depthStencilFormat: TextureFormat = 'depth24plus';
   sampleCount: number = 1;
 
+  /** Prepare render pass attachments for this context */
   renderTarget: GPUTexture;
   depthStencilTarget: GPUTexture
   depthStencilView: GPUTextureView;
@@ -25,14 +26,6 @@ export default class WebGPUCanvasContext extends CanvasContext {
     this.update();
   }
 
-  /**  */
-  getRenderTargets() {
-    return {
-      colorAttachment: this.context.getCurrentTexture().createView(),
-      depthStencil: this.depthStencilView
-    };
-  }
-
   /** Resizes and updates render targets if necessary */
   update() {
     const size = this.getPixelSize();
@@ -43,13 +36,16 @@ export default class WebGPUCanvasContext extends CanvasContext {
       this.presentationSize = size;
 
       // Reconfigure the canvas size.
+      // https://www.w3.org/TR/webgpu/#canvas-configuration
       this.context.configure({
         device: this.device,
         format: this.presentationFormat,
         size: this.presentationSize,
+        // colorSpace: "srgb"; // GPUPredefinedColorSpace 
+        // compositingAlphaMode = "opaque"; | 'premultiplied'
       });
 
-      // Destroy the previous render targets
+      // Destroy any previous render targets
       if (this.renderTarget !== undefined) {
         this.renderTarget.destroy();
       }
@@ -57,22 +53,43 @@ export default class WebGPUCanvasContext extends CanvasContext {
       if (this.depthStencilTarget !== undefined) {
         this.renderTarget.destroy();
       }
+    }
+  }
 
+
+  // WebGPU specific API
+  /** Return fresh texture views */
+  getRenderTargets() {
+    this._createRenderTargets();
+    return {
+      colorAttachment: this.context.getCurrentTexture().createView(),
+      depthStencil: this.depthStencilView
+    };
+  }
+  
+  /** We build render targets on demand (i.e. not when size changes but when about to render) */
+  _createRenderTargets(): void {
+    if (!this.renderTarget) {
       this.renderTarget = this.device.createTexture({
+        label: 'render-target',
         size: this.presentationSize,
         sampleCount: this.sampleCount,
         format: this.presentationFormat,
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
+    }
 
+    if (!this.depthStencilTarget) {
       this.depthStencilTarget = this.device.createTexture({
+        label: 'depth-stencil-target',
         size: this.presentationSize,
         format: this.depthStencilFormat,
         usage: GPUTextureUsage.RENDER_ATTACHMENT
       });
-  
-      this.depthStencilView = this.depthStencilTarget.createView();
-      this.depthStencilView.label = 'depth-stencil-attachment';  
+
+      this.depthStencilView = this.depthStencilTarget.createView({
+        label: 'depth-stencil-attachment'
+      });
     }
   }
 }

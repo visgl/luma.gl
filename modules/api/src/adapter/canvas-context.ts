@@ -8,8 +8,11 @@ export type CanvasContextProps = {
   canvas?: HTMLCanvasElement | OffscreenCanvas | string;
   width?: number;
   height?: number;
-  useDevicePixels?: boolean
+  useDevicePixels?: boolean | number;
   autoResize?: boolean;
+  // WebGPU https://www.w3.org/TR/webgpu/#canvas-configuration
+  // colorSpace: "srgb"; // GPUPredefinedColorSpace 
+  // compositingAlphaMode = "opaque"; | 'premultiplied'
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
@@ -70,6 +73,9 @@ export default abstract class CanvasContext {
   getDevicePixelRatio(): number {
     if (this.canvas instanceof OffscreenCanvas) {
       return 1;
+    }
+    if (typeof this.props.useDevicePixels === 'number') {
+      return this.props.useDevicePixels;
     }
     return this.props.useDevicePixels ? window.devicePixelRatio || 1 : 1;
   }

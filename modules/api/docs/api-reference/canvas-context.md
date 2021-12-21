@@ -2,8 +2,15 @@
 
 A `CanvasContext` holds a connection between the GPU Device and a canvas into which it can render.
 
+The CanvasContext handles the following responsibilities:
+- manages the "swap chain" (provides fresh texture view every frame on WebGPU)
+- manages canvas resizing
+- manages device pixel ratio
+- can look up canvas elements in DOM, or create a new canvas elements if needed
+
+Note that:
 - A `WebGPUDevice` can have multiple associated `CanvasContext` instances, or none, if only used for compute.
-- A `WebGLDevice` always has exactly one `CanvasContext` (and can thus only render into a single canvas). This is a fundamental limitation of the WebGL API. 
+- A `WebGLDevice` always has exactly one `CanvasContext` (and can thus only render into a single canvas). This is due to fundamental limitations of the WebGL API. 
 
 ## CanvasContextProps
 
@@ -12,7 +19,7 @@ A `CanvasContext` holds a connection between the GPU Device and a canvas into wh
 | `canvas?` | HTMLCanvasElement \| OffscreenCanvas \| string |
 | `width?` | number |
 | `height?` | number |
-| `useDevicePixels?` | boolean |
+| `useDevicePixels?` | boolean | number |
 | `autoResize?` | boolean |
 
 Remarks:

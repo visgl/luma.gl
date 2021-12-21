@@ -4,7 +4,7 @@ import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as Texture, TextureProps} from './resources/texture';
 import type {default as Shader, ShaderProps} from './resources/shader';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
-// import type {omputePipeline, ComputePipelineProps} from './pipeline';
+import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
 
 /** Device properties */
 export type DeviceProps = {
@@ -64,6 +64,7 @@ export type ShadingLanguage = 'glsl' | 'wgsl';
 /**
  * Identifies the GPU vendor and driver.
  * @see https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
+ * @note Current WebGPU support is very limited
  */
 export type DeviceInfo = {
   type: 'webgl' | 'webgl2' | 'webgpu';
@@ -142,6 +143,9 @@ export default abstract class Device {
 
   /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
   abstract commit(): void;
+
+  /** */
+  abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 
   // Resource creation
 

@@ -2,15 +2,15 @@ import type {
   DeviceProps,
   DeviceInfo,
   DeviceLimits,
+  CanvasContext,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
   ShaderProps,
   TextureProps,
   RenderPipelineProps
-  // ComputePipelineProps,
 } from '@luma.gl/api';
-import {Device, log} from '@luma.gl/api';
+import {Device, log, cast} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
 import WebGPUTexture from './resources/webgpu-texture';
 import WebGPUSampler from './resources/webgpu-sampler';
@@ -22,13 +22,7 @@ import WebGPUCanvasContext from './webgpu-canvas-context';
 
 type Feature = string;
 
-/** WebGPU Device implementation
-export default class WebGPUDevice2 {
-  static async create(props = {}) {
-    return new WebGPUDevice(device, props);
-  }
-}
-*/
+/** WebGPU Device implementation */
 export default class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
@@ -97,6 +91,7 @@ export default class WebGPUDevice extends Device {
     }
   }
 
+  // TODO
   // Load the glslang module now so that it is available synchronously when compiling shaders
   // const {glsl = true} = props;
   // this.glslang = glsl && await loadGlslangModule();
@@ -146,15 +141,6 @@ export default class WebGPUDevice extends Device {
     return new WebGPURenderPipeline(this, props);
   }
 
-  beginRenderPass(): GPURenderPassEncoder {
-    if (!this.renderPass) {
-      this.commandEncoder = this.handle.createCommandEncoder();
-      const renderPassDescriptor = this._updateRenderPassDescriptor();
-      this.renderPass = this.commandEncoder.beginRenderPass(renderPassDescriptor);
-    }
-    return this.renderPass;
-  }
-
   commit(): void {
     this.renderPass.endPass();
     const commandBuffer = this.commandEncoder.finish();
@@ -164,14 +150,33 @@ export default class WebGPUDevice extends Device {
 
   // WebGPU specifics
 
-  createCanvasContext(props?: CanvasContextProps) {
+  /** 
+   * Allows a render pass to begin against a canvas context
+   * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
+   */
+  beginRenderPass(canvasContext?: CanvasContext): void {
+    if (!this.renderPass) {
+      this.commandEncoder = this.handle.createCommandEncoder();
+      const renderPassDescriptor = this._updateRenderPassDescriptor(canvasContext || this.canvasContext);
+      this.renderPass = this.commandEncoder.beginRenderPass(renderPassDescriptor);
+    }
+  }
+
+  createCanvasContext(props?: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this.handle, this.adapter, props);
   }
 
+  /** 
+   * Gets active renderpass encoder. 
+   * Creates a new encoder against default canvasContext if not already created 
+   * @note Called internally by Model.
+   */
   getActiveRenderPass(): GPURenderPassEncoder {
-    return this.beginRenderPass()
+    this.beginRenderPass();
+    return this.renderPass;
   }
 
+  /** Initialize a dummy "framebuffer" */
   _initializeRenderPassDescriptor() {
     this._renderPassDescriptor = {
       colorAttachments: [{
@@ -194,11 +199,13 @@ export default class WebGPUDevice extends Device {
     log.groupEnd(1)();
   }
 
-  _updateRenderPassDescriptor() {
+  /** Update framebuffer with properly resized "swap chain" texture views */
+  _updateRenderPassDescriptor(canvasContext: CanvasContext) {
+    const webgpuCanvasContext = cast<WebGPUCanvasContext>(canvasContext);
     if (!this._renderPassDescriptor) {
       this._initializeRenderPassDescriptor();
     }
-    const {colorAttachment, depthStencil} = this.canvasContext.getRenderTargets();;
+    const {colorAttachment, depthStencil} = webgpuCanvasContext.getRenderTargets();;
     this._renderPassDescriptor.colorAttachments[0].view = colorAttachment;
     this._renderPassDescriptor.depthStencilAttachment.view = depthStencil;
     return this._renderPassDescriptor;

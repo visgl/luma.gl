@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Device, DeviceInfo, DeviceLimits, log} from '@luma.gl/api';
+import {Device, DeviceInfo, DeviceLimits, CanvasContext, CanvasContextProps, log} from '@luma.gl/api';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import { ContextState } from '../context/context/context-state';
@@ -278,6 +278,10 @@ export default class WebGLDevice extends Device implements ContextState {
     if (ext && options && `width` in options && `height` in options) {
       ext.resize(options.width, options.height);
     }
+  }
+
+  createCanvasContext(props?: CanvasContextProps): CanvasContext {
+    throw new Error('WebGL only supports a single canvas');
   }
 
   _createBuffer(props: BufferProps): WEBGLBuffer {
