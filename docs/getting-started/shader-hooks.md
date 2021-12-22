@@ -3,7 +3,7 @@
 In the [previous tutorial](/docs/getting-started/shader-hooks), we used shader modules to insert re-usable functions into the shaders that use them. In this tutorial, we'll focus on another feature of shader modules: the ability to modify the behavior of shaders that use them via **shader hooks**. A shader hook is simply a function inserted into a vertex or fragment shader. By default, these functions will be no-ops, but they define entry points into which shader modules can inject code. For high-level API usage, shader hooks are exposed via [ProgramManagers](/docs/api-reference/engine/program-manager) (we'll look at low-level shader hooks later):
 
 ```js
-const pm = new ProgramManager(gl);
+const pm = new ProgramManager(device);
 pm.addShaderHook('vs:MY_SHADER_HOOK(inout vec4 position)');
 
 const vs = `
@@ -31,7 +31,9 @@ We'll start by setting up our imports and defining our base vertex and fragment 
 
 ```js
 import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+
+import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 
 const vs = `
   attribute vec2 position;
@@ -74,8 +76,8 @@ These shader modules inject code into the shader hook that will modify the x-coo
 The `onInitialize` method of our `AnimationLoop` will be somewhat different from the previous example. To create a shader hook, we need access to a `ProgramManager` instance:
 
 ```js
-  onInitialize({gl}) {
-    const programManager = new ProgramManager(gl);
+  onInitialize({device}) {
+    const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     // ...
@@ -86,16 +88,16 @@ The shader hook definition is the function signature with a prefix indicating wh
 
 ```js
   onInitialize({gl}) {
-    const programManager = new ProgramManager(gl);
+    const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-    const positionBuffer = new Buffer(gl, new Float32Array([
+    const positionBuffer = device.createBuffer(new Float32Array([
       -0.3, -0.5,
       0.3, -0.5,
       0.0, 0.5
     ]));
 
-    const model1 = new Model(gl, {
+    const model1 = new Model(device, {
       vs,
       fs,
       programManager,
@@ -109,7 +111,7 @@ The shader hook definition is the function signature with a prefix indicating wh
       vertexCount: 3
     });
 
-    const model2 = new Model(gl, {
+    const model2 = new Model(device, {
       vs,
       fs,
       programManager,
@@ -135,7 +137,7 @@ The entire application should look like the following:
 
 ```js
 import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const vs = `
   attribute vec2 position;
@@ -169,13 +171,13 @@ const offsetRightModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    const programManager = new ProgramManager(gl);
+  onInitialize({device}) {
+    const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+    const positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    const model1 = new Model(gl, {
+    const model1 = new Model(device, {
       vs,
       fs,
       programManager,
@@ -189,7 +191,7 @@ const loop = new AnimationLoop({
       vertexCount: 3
     });
 
-    const model2 = new Model(gl, {
+    const model2 = new Model(device, {
       vs,
       fs,
       programManager,
@@ -206,7 +208,7 @@ const loop = new AnimationLoop({
     return {model1, model2};
   },
 
-  onRender({gl, model}) {
+  onRender({device, model}) {
     clear(gl, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();

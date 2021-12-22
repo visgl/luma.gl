@@ -1,16 +1,37 @@
 # Upgrade Guide
 
+## Upgrading from v8.X to v9.0 (Forward-Looking Changes)
+
+luma.gl v9 needs major API changes to be able to incorporate WebGPU in a natural way.
+WebGPU is a more performant API and it does not make sense to try to hide it under a legacy API.
+
+Development of luma.gl v9.0 is still ongoing however a number of expected changes are already clear:
+
+- APIs will no longer accept `WebGLRenderingContext` directly. All APIs will require a `Device`.
+- Parameters can no longer be set on the context.
+- `clear` can no longer be called directly. Clear colors must be set on framebuffers.
+- Uniform buffers are required, at least if WebGPU support is desired.
+
 ## Upgrading from v8.5 to v8.7
 
 v8.7 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
 
-### `luma.gl/gltools` module is deprecated
+- `@luma.gl/gltools` module is deprecated. 
+    - The module still exists, but is now just re-exporting the functions which have been moved to `@luma.gl/webgl`. 
+    - In v9.0 the `@luma.gl/gltools` module will be removed, and the context functions will be replaced by the new experimental `WebGLDevice` class.
+- `@luma.gl/core` module is being trimmed. 
+    - WebGL module re-exports are deprecated and should be imported directly from `@luma.gl/webgl`.
+    - gltools module re-exports are deprecated and should be imported directly from `@luma.gl/webgl`.
+- `@luma.gl/constants` module is no longer recommended. 
+    - The luma.gl API is moving towards using WebGPU-style string constants instead of numeric enums, which works very well with the strict typescript typings. This means that WebGL-style numeric constants are being phased out of the luma.gl API. 
 
-The module still exists, but is now just re-exporting the functions which have been moved to `@luma.gl/webgl`. 
-In v9.0 the `@luma.gl/gltools` module will be removed, and the context functions will be replaced by the new experimental `WebGLDevice` class.
+Required changes:
+- N/A
 
 Recommended changes:
-- Change any imports from `@luma.gl/gltools` to `@luma.gl/webgl`. 
+- Change imports from `@luma.gl/gltools` to `@luma.gl/webgl`. 
+- Change imports from `@luma.gl/core` to `@luma.gl/webgl`. 
+- Gradually revise use of `@luma.gl/constants` and start adopting string constants.
 
 ## Upgrading from v8.4 to v8.5
 

@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/webgl",
   "version": "8.6.0-alpha.5",
-  "description": "WebGL2 Classes",
+  "description": "WebGL2 adapter for the luma.gl API",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

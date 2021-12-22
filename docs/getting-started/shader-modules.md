@@ -6,7 +6,7 @@ We'll start by setting up our imports and defining our base vertex and fragment 
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const vs1 = `
   attribute vec2 position;
@@ -65,14 +65,14 @@ Shader modules are simply JavaScript objects that contain at least a name and so
 In the `onInitialize` method of our `AnimationLoop`, we create two models with different vertex and fragment shader sources, but both including the our `colorModule`.
 
 ```js
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([
+  onInitialize({device}) {
+    const positionBuffer = new Buffer(device, new Float32Array([
       -0.3, -0.5,
       0.3, -0.5,
       0.0, 0.5
     ]));
 
-    const model1 = new Model(gl, {
+    const model1 = new Model(device, {
       vs: vs1,
       fs: fs1,
       modules: [colorModule],
@@ -85,7 +85,7 @@ In the `onInitialize` method of our `AnimationLoop`, we create two models with d
       vertexCount: 3
     });
 
-    const model2 = new Model(gl, {
+    const model2 = new Model(device, {
       vs: vs2,
       fs: fs2,
       modules: [colorModule],
@@ -105,8 +105,8 @@ In the `onInitialize` method of our `AnimationLoop`, we create two models with d
 In `onRender`, we simply draw both models:
 
 ```js
-  onRender({gl, model1, model2}) {
-    clear(gl, {color: [0, 0, 0, 1]});
+  onRender({device, model1, model2}) {
+    clear(device, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();
   }
@@ -120,7 +120,7 @@ The entire application should look like the following:
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const vs1 = `
   attribute vec2 position;
@@ -163,10 +163,10 @@ const colorModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+  onInitialize({device}) {
+    const positionBuffer = new Buffer(device, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    const model1 = new Model(gl, {
+    const model1 = new Model(device, {
       vs: vs1,
       fs: fs1,
       modules: [colorModule],
@@ -176,7 +176,7 @@ const loop = new AnimationLoop({
       vertexCount: 3
     });
 
-    const model2 = new Model(gl, {
+    const model2 = new Model(device, {
       vs: vs2,
       fs: fs2,
       modules: [colorModule],
@@ -189,8 +189,8 @@ const loop = new AnimationLoop({
     return {model1, model2};
   },
 
-  onRender({gl, model}) {
-    clear(gl, {color: [0, 0, 0, 1]});
+  onRender({device, model}) {
+    clear(device, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();
   }

@@ -10,11 +10,15 @@ time to consult the upgrade guide to start updating your code in anticipation of
 
 ### `@luma.gl/shadertools`
 
-- New `CompilerMessage` type and `formatCompilerLog` function for platform and shader language independent handling of shader logs.
+- New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
 
-### `@luma.gl/gltools`
+### `@luma.gl/gltools` (Deprecated)
 
-- The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module to facilitate creating a WebGL driver.
+- The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module to facilitate refactoring the WebGL API to match the new `@luma.gl/api`.
+
+### `@luma.gl/api` (NEW, Experimental)
+
+- The next generation, cross-platform luma.gl API (supporting both WebGPU and WebGL2)is being prototyped in the `@luma.gl/api` module. While not yet official, it is possible to start experimenting with this API.
 
 ## Version 8.6
 

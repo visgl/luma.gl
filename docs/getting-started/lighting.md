@@ -6,8 +6,7 @@ To start, we'll add the `phongLighting` module from **@luma.gl/shadertools** to 
 
 ```js
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 ```
@@ -63,22 +62,20 @@ const fs = `\
 Our `onInitialize` method needs a few significant updates:
 
 ```js
-  onInitialize({gl}) {
-    setParameters(gl, {
+  onInitialize({device}) {
+    setParameters(device, {
       depthTest: true,
       depthFunc: gl.LEQUAL
     });
 
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     const eyePosition = [0, 0, 5];
     const modelMatrix = new Matrix4();
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
     const mvpMatrix = new Matrix4();
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -119,7 +116,7 @@ We're splitting the model matrix out on its own so we can use it in our shaders 
 Our `onRender` doesn't change much except to set up the model matrix separately from the MVP matrix and pass it as a uniform:
 
 ```js
-  onRender({gl, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     modelMatrix
       .identity()
       .rotateX(tick * 0.01)
@@ -130,7 +127,7 @@ Our `onRender` doesn't change much except to set up the model matrix separately 
       .multiplyRight(viewMatrix)
       .multiplyRight(modelMatrix);
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     model.setUniforms({uMVP: mvpMatrix, uModel: modelMatrix}).draw();
   }
@@ -140,8 +137,7 @@ If all went well, you should see a scene almost identical to the one from the [p
 
 ```js
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -184,22 +180,20 @@ const fs = `\
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    setParameters(gl, {
+  onInitialize({device}) {
+    setParameters(device, {
       depthTest: true,
       depthFunc: gl.LEQUAL
     });
 
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     const eyePosition = [0, 0, 5];
     const modelMatrix = new Matrix4();
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
     const mvpMatrix = new Matrix4();
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -234,7 +228,7 @@ const loop = new AnimationLoop({
     };
   },
 
-  onRender({gl, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     modelMatrix
       .identity()
       .rotateX(tick * 0.01)
@@ -245,7 +239,7 @@ const loop = new AnimationLoop({
       .multiplyRight(viewMatrix)
       .multiplyRight(modelMatrix);
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     model.setUniforms({uMVP: mvpMatrix, uModel: modelMatrix}).draw();
   }

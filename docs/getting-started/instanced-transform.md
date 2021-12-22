@@ -8,8 +8,7 @@ The `Transform` class is the only addition we need for our imports:
 
 ```js
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters, isWebGL2} from '@luma.gl/gltools';
+import {Buffer, Texture2D, clear, setParameters, isWebGL2} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 ```
@@ -104,7 +103,7 @@ const fs = `\
 Our `onInitialize` method will need several updates. First we create buffers for our instanced data:
 
 ```js
-const offsetBuffer = new Buffer(gl, new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
+const offsetBuffer = device.createBuffer(new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
 const axisBufferData = new Float32Array(12);
 for (let i = 0; i < 4; ++i) {
@@ -118,10 +117,9 @@ for (let i = 0; i < 4; ++i) {
   axisBufferData[vi + 1] = y / l;
   axisBufferData[vi + 2] = z / l;
 }
-const axisBuffer = new Buffer(gl, axisBufferData);
+const axisBuffer = device.createBuffer(axisBufferData);
 
-const rotationBuffer = new Buffer(
-  gl,
+const rotationBuffer = device.createBuffer(
   new Float32Array([
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2,
@@ -136,7 +134,7 @@ The `offsetBuffer` sets positions so the cubes will be in a square formation. Th
 The `Transform` is straightforward to set up, simply taking the `rotationBuffer` and our vertex shader as input:
 
 ```js
-const transform = new Transform(gl, {
+const transform = new Transform(device, {
   vs: transformVs,
   sourceBuffers: {
     rotations: rotationBuffer
@@ -151,7 +149,7 @@ const transform = new Transform(gl, {
 And the `Model` needs to be updated to take the instanced attributes and `instanceCount`:
 
 ```js
-const model = new Model(gl, {
+const model = new Model(device, {
   vs,
   fs,
   geometry: new CubeGeometry(),
@@ -189,12 +187,12 @@ const model = new Model(gl, {
 Our `onRender` needs an update to perform the transform feedback and pass the transformed rotation buffer to the `Model`:
 
 ```js
-  onRender({gl, aspect, model, transform, projectionMatrix}) {
+  onRender({device, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     transform.run();
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(device, {color: [0, 0, 0, 1], depth: true});
     model
       .setAttributes({rotations: [transform.getBuffer('vRotation'), {divisor: 1}]})
       .setUniforms({uProjection: projectionMatrix})
@@ -208,8 +206,7 @@ If all went well, you should see 4 rotating cubes. This scene is significantly m
 
 ```js
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters, isWebGL2} from '@luma.gl/gltools';
+import {Buffer, Texture2D, clear, setParameters, isWebGL2} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -294,7 +291,7 @@ const loop = new AnimationLoop({
       depthFunc: gl.LEQUAL
     });
 
-    const offsetBuffer = new Buffer(gl, new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
+    const offsetBuffer = device.createBuffer(new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
     const axisBufferData = new Float32Array(12);
     for (let i = 0; i < 4; ++i) {
@@ -308,10 +305,9 @@ const loop = new AnimationLoop({
       axisBufferData[vi + 1] = y / l;
       axisBufferData[vi + 2] = z / l;
     }
-    const axisBuffer = new Buffer(gl, axisBufferData);
+    const axisBuffer = device.createBuffer(axisBufferData);
 
-    const rotationBuffer = new Buffer(
-      gl,
+    const rotationBuffer = device.createBuffer(
       new Float32Array([
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2,
@@ -320,15 +316,13 @@ const loop = new AnimationLoop({
       ])
     );
 
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     const eyePosition = [0, 0, 10];
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
     const projectionMatrix = new Matrix4();
 
-    const transform = new Transform(gl, {
+    const transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
         rotations: rotationBuffer
@@ -339,7 +333,7 @@ const loop = new AnimationLoop({
       elementCount: 4
     });
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -380,12 +374,12 @@ const loop = new AnimationLoop({
     };
   },
 
-  onRender({gl, aspect, model, transform, projectionMatrix}) {
+  onRender({device, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     transform.run();
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(device, {color: [0, 0, 0, 1], depth: true});
     model
       .setAttributes({rotations: [transform.getBuffer('vRotation'), {divisor: 1}]})
       .setUniforms({uProjection: projectionMatrix})
