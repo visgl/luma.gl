@@ -4,7 +4,6 @@ import {fixture} from 'test/setup';
 
 test('core#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
-
   const {gl} = fixture;
   const animationLoop = new AnimationLoop({gl});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');

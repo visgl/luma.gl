@@ -1,32 +1,11 @@
-import {luma, Device, DeviceProps} from '@luma.gl/api';
-import {
-  lumaStats,
-  // TODO - remove dependency on framebuffer (bundle size impact)
-  log,
-  assert
-} from '@luma.gl/api';
-import {
-  isWebGL,
-  // createGLContext,
-  // instrumentGLContext,
-  // resizeGLContext,
-  resetParameters
-} from '@luma.gl/webgl';
-
-
-import {
-  requestAnimationFrame,
-  cancelAnimationFrame,
-  Query,
-  // TODO - remove dependency on framebuffer (bundle size impact)
-  Framebuffer
-} from '@luma.gl/webgl';
-
+// TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
+// TODO - remove dependency on framebuffer (bundle size impact)
+import {luma, Device, DeviceProps, log} from '@luma.gl/api';
+import {isWebGL, resetParameters} from '@luma.gl/webgl';
+import {requestAnimationFrame, cancelAnimationFrame, Query, Framebuffer} from '@luma.gl/webgl';
 import { Stats, Stat } from '@probe.gl/stats'
 import {isBrowser} from '@probe.gl/env';
-
-import { Timeline } from '../animation/timeline'
-
+import {Timeline} from '../animation/timeline'
 
 type ContextProps = DeviceProps;
 
@@ -117,7 +96,7 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   useDevicePixels: true,
   autoResizeViewport: true,
   autoResizeDrawingBuffer: true,
-  stats: lumaStats.get(`animation-loop-${statIdCounter++}`),
+  stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
 
   // deprecated
   // onCreateContext: (opts) => createGLContext(opts),

@@ -1,5 +1,5 @@
 import {isBrowser} from 'probe.gl/env';
-import type { DeviceProps} from '@luma.gl/api';
+import type {DeviceProps} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {createHeadlessContext} from './create-headless-context';
 

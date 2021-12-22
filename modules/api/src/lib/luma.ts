@@ -38,7 +38,10 @@ export default class luma {
   }
 
   static async createDevice(props: DeviceProps): Promise<Device> {
-    const type = props.type || 'best-available';
+    let type = props.type || 'best-available';
+    if (props.gl) {
+      type = 'webgl';
+    }
     let Device: any;
     switch (type) {
       case 'webgpu':
@@ -48,7 +51,7 @@ export default class luma {
         }
         break;
       case 'webgl':
-        Device = deviceList.get('webl');
+        Device = deviceList.get('webgl');
         if (Device) {
           return await Device.create(props);
         }
