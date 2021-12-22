@@ -20,11 +20,8 @@ export function createGLContext(options?: GLContextOptions): WebGLRenderingConte
 }
 
 /** @deprecated Use `WebGLDevice.attach()` */
-export function instrumentGLContext(
-  gl: WebGLRenderingContext | WebGL2RenderingContext,
-  options?: GLContextOptions
-): WebGLRenderingContext {
-  const webglDevice = WebGLDevice.attach(gl, options);
+export function instrumentGLContext(gl: WebGLRenderingContext | WebGL2RenderingContext, options?: GLContextOptions): WebGLRenderingContext {
+  const webglDevice = WebGLDevice.attach(gl);
   return webglDevice.gl;
 }
 
