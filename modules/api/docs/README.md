@@ -3,8 +3,9 @@
 The `@luma.gl/api` module provides an abstract API for writing application code 
 that works with both WebGPU and WebGL.
 
-This module cannot be used on its own: it relies on being backed up by another module that implements its
-api. luma.gl provides the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
+This module cannot be used on its own: it relies on being backed up by another module 
+that implements its API. luma.gl provides adapters (implementations of the abstract API)
+through the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
 
 ## A WebGPU-style API
 
@@ -20,29 +21,23 @@ the necessary allowances to still support WebGL.
 
 ## Installing adapters
 
-The `@luma.gl/api` module is not usable on its own. A device adapter module must be registered. 
+The `@luma.gl/api` module is not usable on its own. A device adapter module must 
+be imported (it self registers on import). 
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import '@luma.gl/webgpu';
 
-luma.registerDevices([WEBGPUDevice]);
-
-const device = luma.createDevice({device: 'webpu', canvas: ...});
-
-...
+const device = await luma.createDevice({type: 'webgpu', canvas: ...});
 ```
 
-It is possible to register more than one device adapter to create an application that can work in both WebGL and WebGPU environments.
+It is possible to register more than one device adapter to create an application
+that can work in both WebGL and WebGPU environments.
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import {WebGPUDevice} from '@luma.gl/webgpu';
-import {WebGLDevice} from '@luma.gl/webgl';
+import '@luma.gl/webgpu';
+import '@luma.gl/webgl';
 
-luma.registerDevices([WEBGPUDevice, WebGLDevice]);
-
-const device = luma.createDevice({device: 'webpu', canvas: ...});
-
-...
+const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 ```

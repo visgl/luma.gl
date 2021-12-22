@@ -4,7 +4,6 @@
 
 - `engine`: High-level constructs such as `Model`, `AnimationLoop` and `Geometry` that allow a developer to work without worrying about rendering pipeline details.
 - `webgl`: Wrapper classes around WebGL objects such as `Program`, `Buffer`, `VertexArray` that allow a developer to manager the rendering pipeline directly but with a more convenient API.
-- `gltools`: A set of helper functions for instrumenting and managing state on an WebGL context. This allows developers to program directly against the WebGL API with some helpful polyfilling and state tracking.
 - `shadertools`: A system for modularizing and composing GLSL shader code.
 - `debug`: Tooling to aid in debugging.
 
@@ -12,7 +11,7 @@
 
 | Module      | Exports                                                                                                                                                                                                                       |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| engine      | AnimationLoop, Model, Transform, ProgramManager, Timeline, Geometry, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry                         |
+| `@luma.gl/engine`      | `AnimationLoop`, `Model`, `Transform`, `ProgramManager`, Timeline, Geometry, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry                         |
 | webgl       | lumaStats, FEATURES, hasFeature, hasFeatures, Buffer, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, readPixelsToArray, readPixelsToBuffer, cloneTextureFrom, copyToTexture, Texture3D, TransformFeedback |
 | gltools     | createGLContext, instrumentGLContext, isWebGL, isWebGL2, getParameters, setParameters, withParameters, resetParameters, cssToDeviceRatio, cssToDevicePixels                                                                   |
 | shadertools | normalizeShaderModule, fp32, fp64, project, dirlight, picking, gouraudLighting, phongLighting, pbr                                                                                                                            |

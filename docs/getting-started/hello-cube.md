@@ -6,8 +6,7 @@ As always, we'll start with our imports:
 
 ```js
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {clear, setParameters} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 ```
 
@@ -47,13 +46,13 @@ The two biggest additions to the shaders we've seen before are transforming the 
 The set up to render in 3D involves a few extra steps compared to the triangles we've been drawing so far:
 
 ```js
-  onInitialize({gl}) {
-    setParameters(gl, {
+  onInitialize({device}) {
+    setParameters(device, {
       depthTest: true,
-      depthFunc: gl.LEQUAL
+      depthFunc: GL.LEQUAL
     });
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture({
       data: 'vis-logo.png'
     });
 
@@ -61,7 +60,7 @@ The set up to render in 3D involves a few extra steps compared to the triangles 
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
     const mvpMatrix = new Matrix4();
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -81,20 +80,20 @@ The set up to render in 3D involves a few extra steps compared to the triangles 
 Some of the new techniques we're leveraging here are:
 
 - Using `setParameters` to set up depth testing and ensure surfaces occlude each other properly. Compared to setting these parameters directly, the `setParameters` function has the advantage of tracking state and preventing redundant WebGL calls.
-- Creating a texture using the `Texture2D` class. For our purposes, this is as simple as passing a URL to the image location (the image used in this tutorial is available [here](https://github.com/visgl/luma.gl/tree/master/examples/api/cubemap/vis-logo.png), but any JPEG or PNG image will do).
+- Creating a texture using the `device.createTexture` method. For our purposes, this is as simple as passing a URL to the image location (the image used in this tutorial is available [here](https://github.com/visgl/luma.device/tree/master/examples/api/cubemap/vis-logo.png), but any JPEG or PNG image will do).
 - Creating view and MVP matrices using **math.gl**'s `Matrix4` class to store the matrices we'll pass to our shaders to perform the animation and perspective projection.
 - Generating attribute data using the `CubeGeometry` class and passing it to our `Model` using the `geometry` property. The geometry will automatically feed vertex position data into the `positions` attribute and texture coordinates (or UV coordinates) into the `texCoords` attribute.
 
 Our `onRender` is similar to what we've seen before with the extra step of setting up the transform matrix and passing it as a uniform to the `Model`:
 
 ```js
-  onRender({gl, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     mvpMatrix.perspective({fov: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
 
     model.setUniforms({uMVP: mvpMatrix})
       .draw();
@@ -110,8 +109,7 @@ If all went well, you should see a rotating cube with the vis.gl logo painted on
 
 ```js
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear} from '@luma.gl/webgl';
-import {setParameters} from '@luma.gl/gltools';
+import {clear, setParameters} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
 const vs = `\
@@ -142,21 +140,19 @@ const fs = `\
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    setParameters(gl, {
+  onInitialize({device}) {
+    setParameters(device, {
       depthTest: true,
-      depthFunc: gl.LEQUAL
+      depthFunc: GL.LEQUAL
     });
 
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     const eyePosition = [0, 0, 5];
     const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
     const mvpMatrix = new Matrix4();
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
@@ -172,14 +168,14 @@ const loop = new AnimationLoop({
     };
   },
 
-  onRender({gl, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     mvpMatrix
       .perspective({fov: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
 
     model.setUniforms({uMVP: mvpMatrix}).draw();
   }

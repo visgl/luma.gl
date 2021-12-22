@@ -58,15 +58,10 @@
             { "entry": "modules/webgl/docs/api-reference/resource" },
             { "entry": "modules/webgl/docs/api-reference/context/feature-checking" },
             { "entry": "modules/webgl/docs/api-reference/context/context-properties" },
-            { "entry": "modules/webgl/docs/api-reference/moving-data" }
-          ]
-        },
-        {
-          "title": "@luma.gl/gltools",
-          "entries": [
-            { "entry": "modules/gltools/docs/api-reference/context" },
-            { "entry": "modules/gltools/docs/api-reference/parameter-setting" },
-            { "entry": "modules/gltools/docs/api-reference/device-pixels" }
+            { "entry": "modules/webgl/docs/api-reference/moving-data" },
+            { "entry": "modules/webgl/docs/api-reference/context" },
+            { "entry": "modules/webgl/docs/api-reference/parameter-setting" },
+            { "entry": "modules/webgl/docs/api-reference/device-pixels" }
           ]
         },
         {

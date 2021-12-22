@@ -1,6 +1,6 @@
 # Context Management
 
-**gltools** provides functions to initialize, instrument and manipulate WebGL contexts.
+Functions to initialize, instrument and manipulate WebGL contexts.
 
 ## Usage
 

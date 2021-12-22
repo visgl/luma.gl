@@ -7,13 +7,13 @@ import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Setup logic goes here
   },
 
-  onRender({gl}) {
+  onRender({device}) {
     // Drawing logic goes here
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
   }
 });
 
@@ -24,21 +24,21 @@ First, we'll need to update our imports with the classes we'll be using, `Buffer
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 ```
 
 Now let's create some buffers in the `onInitialize` method to hold our attribute data:
 
 ```js
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Setup logic goes here
-    const positionBuffer = new Buffer(gl, new Float32Array([
+    const positionBuffer = device.createBuffer(new Float32Array([
       -0.5, -0.5,
       0.5, -0.5,
       0.0, 0.5
     ]));
 
-    const colorBuffer = new Buffer(gl, new Float32Array([
+    const colorBuffer = device.createBuffer(new Float32Array([
       1.0, 0.0, 0.0,
       0.0, 1.0, 0.0,
       0.0, 0.0, 1.0
@@ -49,7 +49,7 @@ Now let's create some buffers in the `onInitialize` method to hold our attribute
 Next let's add the vertex and fragment shader code we'll be using to draw:
 
 ```js
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Setup logic goes here
 
     // Buffers...
@@ -80,14 +80,14 @@ Next let's add the vertex and fragment shader code we'll be using to draw:
 As a final step in our initialization, we'll create a `Model` and return it from `onInitialize`:
 
 ```js
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Setup logic goes here
 
     // Buffers...
 
     // Shaders...
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       attributes: {
@@ -106,8 +106,8 @@ A `Model` can be thought of as gathering all the WebGL pieces necessary for a si
 Our `onRender` method is comparitavely much simpler:
 
 ```js
-  onRender({gl, model}) {
-    clear(gl, {color: [0, 0, 0, 1]});
+  onRender({device, model}) {
+    clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }
 ```
@@ -118,16 +118,13 @@ The entire application should look like the following:
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+  onInitialize({device}) {
+    const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-    );
+    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
     const vs = `
       attribute vec2 position;
@@ -149,7 +146,7 @@ const loop = new AnimationLoop({
       }
     `;
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs,
       fs,
       attributes: {
@@ -162,8 +159,8 @@ const loop = new AnimationLoop({
     return {model};
   },
 
-  onRender({gl, model}) {
-    clear(gl, {color: [0, 0, 0, 1]});
+  onRender({device, model}) {
+    clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }
 });

@@ -4,7 +4,7 @@ In this tutorial, we'll work through how to do instanced drawing with luma.gl's 
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const colorShaderModule = {
   name: 'color',
@@ -67,14 +67,11 @@ If you rerun the app, it should render as it did before.
 Now let's add some instancing to this scene! First we'll modify the position and color buffers we created before, and add an offset buffer to set the position of each instance:
 
 ```js
-const positionBuffer = new Buffer(gl, new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
+const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
 
-const colorBuffer = new Buffer(
-  gl,
-  new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
-);
+const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
 
-const offsetBuffer = new Buffer(gl, new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
+const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
 ```
 
 For this scene, the positions are vertex attributes, while the colors and offsets are instance attributes.
@@ -97,7 +94,7 @@ const vs = `
 Finally, we need to add the new buffer to the `Model`, and describe the parameters of the instanced draw:
 
 ```js
-const model = new Model(gl, {
+const model = new Model(device, {
   vs,
   fs,
   modules: [colorShaderModule],
@@ -119,7 +116,7 @@ For reference the complete code is provided below:
 
 ```js
 import {AnimationLoop, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 
 const colorShaderModule = {
   name: 'color',
@@ -140,20 +137,12 @@ const colorShaderModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
+  onInitialize({device}) {
+    const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
+    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
+    const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
-    );
-
-    const offsetBuffer = new Buffer(
-      gl,
-      new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5])
-    );
-
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs: `
         attribute vec2 position;
         attribute vec3 color;
@@ -183,8 +172,8 @@ const loop = new AnimationLoop({
     return {model};
   },
 
-  onRender({gl, model}) {
-    clear(gl, {color: [0, 0, 0, 1]});
+  onRender({device, model}) {
+    clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }
 });

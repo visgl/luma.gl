@@ -1,11 +1,9 @@
 {
   "name": "@luma.gl/webgpu",
   "version": "8.6.0-alpha.5",
-  "description": "WebGPU Classes",
+  "description": "WebGPU adapter for the luma.gl API",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"

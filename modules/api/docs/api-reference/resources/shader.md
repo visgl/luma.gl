@@ -1,23 +1,25 @@
 # Shader
 
-The `Shader` class are the base class for `VertexShader` class and `FragmentShader` class
+The `Shader` class 
 
 ## Usage
 
 Create a pair of shaders
 
 ```js
-const fs = new VertexShader(gl, source);
-const fs = new FragmentShader(gl, source);
+const vs = device.createShader({stage: 'vertex', source});
+const fs = device.createShader({stage: 'fragment', source});
 ```
 
 ## Members
 
 - `handle` - holds the underlying `WebGLShader` object
 
-## Constructor
 
-### Shader(gl : WebGLRenderingContext, source : String)
+## Methods
+
+### constructor
+
 
 - `source` - string containing shader instructions.
 

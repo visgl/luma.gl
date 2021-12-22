@@ -62,14 +62,14 @@ Internally, we'll be using two separate programs, one for transform feedback and
 In `onInitialize`, we create our `Transform` instance:
 
 ```js
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([
+  onInitialize({device}) {
+    const positionBuffer = device.createBuffer(new Float32Array([
       -0.5, -0.5,
       0.5, -0.5,
       0.0, 0.5
     ]));
 
-    const transform = new Transform(gl, {
+    const transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
         position: positionBuffer
@@ -90,16 +90,16 @@ We pass the vertex shader we defined, as well as the initial input buffer in the
 Finally, we create a model instance to perform the rendering:
 
 ```js
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Transform setup...
 
-    const colorBuffer = new Buffer(gl, new Float32Array([
+    const colorBuffer = device.createBuffer(new Float32Array([
       1.0, 0.0, 0.0,
       0.0, 1.0, 0.0,
       0.0, 0.0, 1.0
     ]));
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs: renderVs,
       fs: renderFs,
       attributes: {
@@ -118,10 +118,10 @@ We set up the `Model` similarly to how we've done in other tutorials, with the e
 Our `onRender` involves a few additional steps compared to what we've seen before:
 
 ```js
-  onRender({gl, transform, model}) {
+  onRender({device, transform, model}) {
     transform.run();
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
     model
       .setAttributes({
         position: transform.getBuffer('vPosition')
@@ -183,10 +183,10 @@ void main() {
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
-    const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+  onInitialize({device}) {
+    const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
-    const transform = new Transform(gl, {
+    const transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
         position: positionBuffer
@@ -197,12 +197,9 @@ const loop = new AnimationLoop({
       elementCount: 3
     });
 
-    const colorBuffer = new Buffer(
-      gl,
-      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
-    );
+    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
-    const model = new Model(gl, {
+    const model = new Model(device, {
       vs: renderVs,
       fs: renderFs,
       attributes: {
@@ -215,10 +212,10 @@ const loop = new AnimationLoop({
     return {transform, model};
   },
 
-  onRender({gl, transform, model}) {
+  onRender({device, transform, model}) {
     transform.run();
 
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
     model.setAttributes({position: transform.getBuffer('vPosition')}).draw();
 
     transform.swap();

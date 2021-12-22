@@ -19,14 +19,13 @@
 
 ## Overview
 
-luma.gl is a WebGL toolkit focused primarily on data visualization use cases. luma.gl aims to provide support for GPU programmers whether they wish to work directly with the WebGL API or at a higher level through convenient wrapper classes. Some features of luma.gl include:
+luma.gl is a GPU toolkit for the Web focused primarily on data visualization use cases. luma.gl aims to provide support for GPU programmers that need to work directly with shaders and want a low abstraction API that remains conceptually close to the WebGPU and WebGL APIs. Some features of luma.gl include:
 
-- Polyfilling WebGL 2 functionality into a WebGL 1 context.
 - A robust GLSL shader module system.
 - A convenient object-oriented API wrapping most WebGL objects
 - Higher-level engine constructs to manage the animation loop, drawing and resource management
 
-Unlike many other WebGL APIs, however, the developer can choose to use the parts of luma.gl that support their use case and leave the others behind.
+Unlike other common WebGL APIs, the developer can choose to use the parts of luma.gl that support their use case and leave the others behind.
 
 While generic enough to be used for general 3D rendering, luma.gl's mandate is primarily to support GPU needs of data visualization frameworks in the vis.gl suite, such as:
 
