@@ -125,22 +125,19 @@ export default class WebGLDevice extends Device implements ContextState {
    * @param gl
    * @returns
    */
-  static attach(
-    gl: Device | WebGLRenderingContext | WebGL2RenderingContext,
-    props?: DeviceProps
-  ): WebGLDevice {
+  static attach(gl: Device | WebGLRenderingContext | WebGL2RenderingContext): WebGLDevice {
     if (gl instanceof WebGLDevice) {
       return gl;
     }
     // @ts-expect-error
-    if (gl.device instanceof Device) {
+    if (gl && gl.device instanceof Device) {
       // @ts-expect-error
       return gl.device as WebGLDevice;
     }
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGLRenderingContext');
     }
-    return new WebGLDevice({...props, gl: gl as WebGLRenderingContext});
+    return new WebGLDevice({gl: gl as WebGLRenderingContext});
   }
 
   static async create(props?: DeviceProps): Promise<WebGLDevice> {
