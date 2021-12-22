@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Device, DeviceInfo, DeviceLimits, CanvasContext, CanvasContextProps, log} from '@luma.gl/api';
+import {Device, DeviceProps, DeviceInfo, DeviceLimits, CanvasContext, CanvasContextProps, log} from '@luma.gl/api';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import { ContextState } from '../context/context/context-state';
@@ -18,12 +18,13 @@ import {WEBGLShader} from '../adapter/webgl-shader';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
+import WebGLCanvasContext from './webgl-canvas-context';
 
-/** WebGLDevice options */
-export type WebGLDeviceProps = {
+/** WebGLDevice options *
+export type DeviceProps = {
   canvas?: HTMLCanvasElement | OffscreenCanvas | string; // A canvas element or a canvas string id
-  width?: number /** width is only used when creating a new canvas */;
-  height?: number /** height is only used when creating a new canvas */;
+  width?: number // width is only used when creating a new canvas
+  height?: number // height is only used when creating a new canvas
   // Attach to existing context
   gl?: WebGLRenderingContext | WebGL2RenderingContext;
   // COMMON CONTEXT PARAMETERS
@@ -44,7 +45,7 @@ export type WebGLDeviceProps = {
   failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
 };
 
-const DEFAULT_DEVICE_PROPS: Required<WebGLDeviceProps> = {
+const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
   webgl2: true, // Attempt to create a WebGL2 context
@@ -65,6 +66,7 @@ const DEFAULT_DEVICE_PROPS: Required<WebGLDeviceProps> = {
   preserveDrawingBuffer: undefined,
   failIfMajorPerformanceCaveat: undefined
 };
+*/
 
 const LOG_LEVEL = 1;
 
@@ -90,7 +92,7 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly lost: Promise<{reason: 'destroyed', message: string}>;
 
   // Common API
-  props: Required<WebGLDeviceProps>;
+  props: Required<DeviceProps>;
   userData: {[key: string]: any};
 
   // WebGL specific API
@@ -111,12 +113,10 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly _extensions: Record<string, any> = {};
   _polyfilled: boolean = false;
 
-  /**
-   *
-   */
-  static fromContext(gl: WebGLRenderingContext): WebGLDevice {
-    // @ts-expect-error
-    return gl.device as WebGLDevice;
+  static type: string = 'webgl';
+
+  static isSupported(): boolean {
+    return typeof WebGLRenderingContext !== 'undefined';
   }
 
   /**
@@ -125,27 +125,36 @@ export default class WebGLDevice extends Device implements ContextState {
    * @param gl
    * @returns
    */
-  static attach(
-    gl: Device | WebGLRenderingContext | WebGL2RenderingContext,
-    props?: WebGLDeviceProps
-  ): WebGLDevice {
+  static attach(gl: Device | WebGLRenderingContext | WebGL2RenderingContext): WebGLDevice {
     if (gl instanceof WebGLDevice) {
       return gl;
+    }
+    // @ts-expect-error
+    if (gl && gl.device instanceof Device) {
+      // @ts-expect-error
+      return gl.device as WebGLDevice;
     }
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGLRenderingContext');
     }
-    return new WebGLDevice({...props, gl: gl as WebGLRenderingContext});
+    return new WebGLDevice({gl: gl as WebGLRenderingContext});
   }
 
-  constructor(props: WebGLDeviceProps) {
-    super();
+  static async create(props?: DeviceProps): Promise<WebGLDevice> {
+    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created');
+    if (typeof props.canvas === 'string') {
+      await CanvasContext.pageLoaded;
+    }
+    log.probe(LOG_LEVEL, "DOM is loaded")();
+    return new WebGLDevice(props);
+  }
 
-    this.props = {...DEFAULT_DEVICE_PROPS, ...props};
+  constructor(props: DeviceProps) {
+    super();
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
-    const device: WebGLDevice | undefined = this.props.gl?.device;
+    const device: WebGLDevice | undefined = props.gl?.device;
     if (device) {
       if (device._state !== 'initialized') {
         log.error('recursive context');
@@ -161,7 +170,7 @@ export default class WebGLDevice extends Device implements ContextState {
     }
 
     // Create an instrument context
-    this.gl = (this.props.gl || this._createContext(props)) as WebGLRenderingContext;
+    this.gl = (props.gl || this._createContext(props)) as WebGLRenderingContext;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
     this._state = 'initializing';
@@ -184,7 +193,7 @@ export default class WebGLDevice extends Device implements ContextState {
     // @ts-expect-error device is attached to context
     const debug = this.gl.debug ? ' debug' : '';
     const webGL = isWebGL2(this.gl) ? 'WebGL2' : 'WebGL1';
-    log.groupCollapsed(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
+    log.probe(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
 
     polyfillContext(this.gl);
     log.probe(LOG_LEVEL, 'polyfilled context')();
@@ -318,12 +327,12 @@ export default class WebGLDevice extends Device implements ContextState {
   /**
    * Creates a context giving access to the WebGL API
    */
-  _createContext(options?: WebGLDeviceProps): WebGLRenderingContext {
-    const {width, height, canvas} = this.props;
+  _createContext(props: DeviceProps): WebGLRenderingContext {
+    const {width, height, canvas} = props;
     // Get or create a canvas
     const targetCanvas = getCanvas({canvas, width, height});
     // Create a WebGL context in the canvas
-    return createBrowserContext(targetCanvas, options);
+    return createBrowserContext(targetCanvas, props);
   }
 }
 

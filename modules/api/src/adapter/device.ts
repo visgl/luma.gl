@@ -8,6 +8,8 @@ import type {default as CanvasContext, CanvasContextProps} from './canvas-contex
 
 /** Device properties */
 export type DeviceProps = {
+  type?: 'webgl' | 'webgpu' | 'best-available';
+
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string; // A canvas element or a canvas string id
   width?: number /** width is only used when creating a new canvas */;
@@ -38,6 +40,7 @@ export type DeviceProps = {
 };
 
 const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
+  type: 'best-available',
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
   webgl2: true, // Attempt to create a WebGL2 context
@@ -115,7 +118,7 @@ export default abstract class Device {
   get [Symbol.toStringTag](): string {
     return 'Device';
   }
-  
+
   readonly statsManager: StatsManager = lumaStats;
 
   canvas: HTMLCanvasElement;

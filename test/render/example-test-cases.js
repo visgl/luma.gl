@@ -14,7 +14,7 @@ const examples = {
   // API
   animation: require('../../examples/api/animation/app').default,
   // texture3d: require('../../examples/api/texture-3d/app').default
-  programManagement: require('../../examples/api-advanced/program-management/app').default,
+  programManagement: require('../../examples/api/program-management/app').default,
 
   // showcases
   // instancing: require('../../examples/showcase/instancing/app').default,

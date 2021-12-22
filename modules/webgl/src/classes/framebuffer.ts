@@ -281,7 +281,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
    * Creates a Framebuffer object wrapper for the default WebGL framebuffer (target === null)
    */
   static getDefaultFramebuffer(gl: WebGLRenderingContext): Framebuffer {
-    const webglDevice = WebGLDevice.fromContext(gl);
+    const webglDevice = WebGLDevice.attach(gl);
     webglDevice.defaultFramebuffer =
       webglDevice.defaultFramebuffer ||
       new Framebuffer(gl, {
@@ -682,7 +682,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
    */
   // eslint-disable-next-line complexity
   _getAttachmentParameterFallback(pname) {
-    const webglDevice = WebGLDevice.fromContext(this.gl);
+    const webglDevice = WebGLDevice.attach(this.gl);
     const features = webglDevice.features;
 
     switch (pname) {

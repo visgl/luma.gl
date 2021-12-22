@@ -12,7 +12,7 @@ type ContextProps = DeviceProps;
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
-  onCreateDevice?: (props: DeviceProps) => Device;
+  onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => {} | void;
   onRender?: (animationProps: AnimationProps) => void;
@@ -31,7 +31,7 @@ export type AnimationLoopProps = {
 };
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
-  onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
+  onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
   onAddHTML: undefined,
   onInitialize: () => ({}),
   onRender: () => {},
@@ -189,6 +189,8 @@ export default class AnimationLoop {
       let appContext;
       if (!this._initialized) {
         this._initialized = true;
+        // Create the WebGL context
+        await this._createDevice();
         this._initialize();
 
         // Note: onIntialize can return a promise (in case app needs to load resources)
@@ -282,7 +284,7 @@ export default class AnimationLoop {
     return this.canvas.toDataURL();
   }
 
-  onCreateDevice(deviceProps: DeviceProps) {
+  onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
     return this.props.onCreateDevice(deviceProps);
   }
 
@@ -301,8 +303,6 @@ export default class AnimationLoop {
   // PRIVATE METHODS
 
   _initialize() {
-    // Create the WebGL context
-    this._createDevice();
     this._startEventHandling();
 
     // Initialize the callback data
@@ -465,9 +465,9 @@ export default class AnimationLoop {
   }
 
   /** Either uses supplied or existing context, or calls provided callback to create one */
-  _createDevice() {
+  async _createDevice() {
     const deviceProps = {...this.props, ...this.props.deviceProps};
-    this.device = this.onCreateDevice(deviceProps);
+    this.device = await this.onCreateDevice(deviceProps);
     this.canvas = this.device.canvas;
     this._createInfoDiv();
   }

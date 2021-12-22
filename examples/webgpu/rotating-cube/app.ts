@@ -1,16 +1,12 @@
-import {Model, WebGPUDevice} from '@luma.gl/webgpu';
+import {luma, Device} from '@luma.gl/api';
+import {_NonIndexedCubeGeometry} from '@luma.gl/engine';
+import {Model} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
-
-import {
-  cubePositions,
-  cubeUVs,
-  cubeVertexCount
-} from './cube';
 
 export const title = 'Rotating Cube';
 export const description = 'Shows rendering a basic triangle.';
 
-/** Provide both GLSL and WGSL shaders */
+/** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
   wgsl: {
     vertex: `
@@ -47,12 +43,11 @@ fn main([[location(0)]] fragUV: vec2<f32>,
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl') {
-  const device = await WebGPUDevice.create({canvas});
-
-  // Create a vertex buffer from the cube data.
-  const positionBuffer = device.createBuffer({id: 'cube-positions', data: cubePositions});
-  const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cubeUVs});
+function init(device: Device, language: 'glsl' | 'wgsl') {
+  // Create vertex buffers for the cube data.
+  const cube = new _NonIndexedCubeGeometry();
+  const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
+  const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
 
   const uniformBuffer = device.createBuffer({
     id: 'uniforms', 
@@ -72,7 +67,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     ],
     attributeBuffers: [positionBuffer, uvBuffer],
     bindings: [uniformBuffer],
-    vertexCount: cubeVertexCount,
+    vertexCount: cube.vertexCount,
     parameters: {
       // Enable depth testing so that the fragment closest to the camera
       // is rendered in front.
@@ -92,7 +87,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   const modelViewProjectionMatrix = new Matrix4();
 
   function frame() {
-    const aspect = canvas.width / canvas.height;
+    const aspect = device.canvas.width / device.canvas.height;
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
@@ -100,7 +95,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
   
-    device.beginRenderPass();
+    // device.beginRenderPass();
     model.draw();
     device.commit();
     
@@ -110,4 +105,5 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   requestAnimationFrame(frame);
 }
 
-init(document.getElementById('canvas') as HTMLCanvasElement, 'wgsl');
+// Create device and run
+(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();

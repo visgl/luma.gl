@@ -29,7 +29,7 @@ export default class Query extends WebGLResource<QueryProps> {
     const webgl2 = isWebGL2(gl);
 
     // Initial value
-    const webglDevice = WebGLDevice.fromContext(gl);
+    const webglDevice = WebGLDevice.attach(gl);
     const hasTimerQuery = webglDevice.features.has('webgl-timer-query');
     let supported = webgl2 || hasTimerQuery;
 

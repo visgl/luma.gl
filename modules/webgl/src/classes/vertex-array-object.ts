@@ -40,7 +40,7 @@ export default class VertexArrayObject extends WebGLResource<VertexArrayObjectPr
    * @todo (Tarek): VAOs are now polyfilled. Deprecate this in 9.0
    */
   static getDefaultArray(gl: WebGLRenderingContext): VertexArrayObject {
-    const webglDevice = WebGLDevice.fromContext(gl);
+    const webglDevice = WebGLDevice.attach(gl);
     webglDevice.defaultVertexArray = webglDevice.defaultVertexArray || 
       new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
     return webglDevice.defaultVertexArray;

@@ -9,7 +9,6 @@ import '@luma.gl/api';
 import './init'
 
 // export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
-export type {WebGLDeviceProps} from './adapter/webgl-device';
 export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
 
 // UTILS

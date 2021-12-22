@@ -1,10 +1,6 @@
 // Utils
 export {log} from '@luma.gl/api';
 
-// export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
-export type {WebGLDeviceProps} from '@luma.gl/webgl';
-export {WebGLDevice, getWebGLDevice} from '@luma.gl/webgl';
-
 export {
   isWebGL,
   isWebGL2,

@@ -1,6 +1,5 @@
-/// <reference types='@webgpu/types' />
-
-import {Model, WebGPUDevice} from '@luma.gl/webgpu';
+import {luma, Device, log} from '@luma.gl/api';
+import {Model} from '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
 export const description = 'Shows rendering a basic triangle.';
@@ -46,36 +45,44 @@ fn main() -> [[location(0)]] vec4<f32> {
   }
 };
 
-export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl') {
-  const device = await WebGPUDevice.create({canvas});
+class RenderLoop {
+  device: Device;
+  model: Model;
 
-  const model = new Model(device, {
-    vs: SHADERS[language].vertex,
-    fs: SHADERS[language].fragment,
-    topology: 'triangle-list',
-    vertexCount: 3,
-    parameters: {
-      // Enable depth testing so that the fragment closest to the camera
-      // is rendered in front.
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-      depthFormat: 'depth24plus',
-
-      // Backface culling since the cube is solid piece of geometry.
-      // Faces pointing away from the camera will be occluded by faces
-      // pointing toward the camera.
-      cullMode: 'back',
-    }
-  });
-
-  function frame() {
-    device.beginRenderPass();
-    model.draw();
-    device.commit();
-    requestAnimationFrame(frame);
+  constructor(device: Device, language: 'glsl' | 'wgsl') {
+    this.device = device;
+    this.model = new Model(device, {
+      vs: SHADERS[language].vertex,
+      fs: SHADERS[language].fragment,
+      topology: 'triangle-list',
+      vertexCount: 3,
+      parameters: {
+        depthFormat: 'depth24plus',
+      }
+    });
   }
 
-  requestAnimationFrame(frame);
+  destroy() {
+    this.model.destroy();
+  }
+
+  frame() {
+    log.probe('frame')();
+    // device.beginRenderPass();
+    this.model.draw();
+    this.device.commit();
+    requestAnimationFrame(this.frame.bind(this));
+  }
+
+  start() {
+    requestAnimationFrame(this.frame.bind(this));
+  }
 }
 
-init(document.getElementById('canvas') as HTMLCanvasElement, 'wgsl');
+async function main() {
+  const device = await luma.createDevice({type: 'webgpu', canvas: 'canvas'});
+  const loop = new RenderLoop(device, 'wgsl');
+  loop.start();
+}
+
+main();
