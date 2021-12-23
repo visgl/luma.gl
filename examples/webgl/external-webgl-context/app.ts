@@ -13,7 +13,9 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   // Supply our own context
   onCreateContext(props: GLContextOptions): WebGLRenderingContext {
-    return instrumentGLContext(props.canvas.getContext('webgl'));
+    const canvas = props.canvas as HTMLCanvasElement;
+    const gl = canvas.getContext('webgl');
+    return instrumentGLContext(gl);
   }
 
   onInitialize({gl}: AnimationProps) {

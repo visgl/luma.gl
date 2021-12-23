@@ -1,4 +1,5 @@
 import test from 'tape-promise/tape';
+import {TypedArrayConstructor} from '@luma.gl/api';
 import {
   ConeGeometry,
   CubeGeometry,
@@ -38,7 +39,7 @@ const GEOMETRY_TESTS = [
   {name: 'TruncatedConeGeometry', Geometry: TruncatedConeGeometry}
 ];
 
-function checkAttribute(attribute, type = [Float32Array]) {
+function checkAttribute(attribute, type: TypedArrayConstructor[] = [Float32Array]) {
   return (
     attribute &&
     attribute.value &&

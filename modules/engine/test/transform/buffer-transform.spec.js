@@ -23,6 +23,7 @@ void main(void) {
 test('WebGL#BufferTransform construct', (t) => {
   const gl = fixture.gl;
 
+  // @ts-expect-error
   const bt = new BufferTransform(gl, {
     sourceBuffers: {
       input: new Buffer(gl, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
@@ -34,11 +35,12 @@ test('WebGL#BufferTransform construct', (t) => {
 });
 
 test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
-  let gl = fixture.gl;
+  const gl = fixture.gl;
   let source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
   let feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
   t.throws(
     () =>
+      // @ts-expect-error
       new BufferTransform(gl, {
         sourceBuffers: {
           source
@@ -50,15 +52,15 @@ test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
     'should throw under WebGL1'
   );
 
-  gl = fixture.gl2;
-  if (!gl) {
+  const gl2 = fixture.gl2;
+  if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
-  source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
-  const bt = new BufferTransform(gl, {
+  source = new Buffer(gl2, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  feedback = new Buffer(gl2, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
+  const bt = new BufferTransform(gl2, {
     sourceBuffers: {
       source
     },

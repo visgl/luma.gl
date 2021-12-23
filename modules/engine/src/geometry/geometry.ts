@@ -24,6 +24,14 @@ export type GeometryProps = {
   vertexCount?: number
 };
 
+type GeometryAttributes = {
+  POSITION: {size: number, value: TypedArray, [key: string]: any},
+  NORMAL: {size: number, value: TypedArray, [key: string]: any},
+  TEXCOORD_0: {size: number, value: TypedArray, [key: string]: any},
+  COLOR_0?: {size: number, value: TypedArray, [key: string]: any},
+  indices?: {size?: number, value: Uint32Array | Uint16Array};
+};
+
 export default class Geometry {
   /** @deprecated */
   static DRAW_MODE = {
@@ -75,7 +83,7 @@ export default class Geometry {
   }
 
   // Return an object with all attributes plus indices added as a field.
-  getAttributes() {
+  getAttributes(): GeometryAttributes {
     return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
   }
 

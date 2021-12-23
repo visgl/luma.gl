@@ -26,12 +26,13 @@ export type TransformProps = {
 /** Options that can be provided when running a Transform */
 export type TransformRunOptions = {
   clearRenderTarget?: boolean;
-  uniforms: Record<string, any>;
+  uniforms?: Record<string, any>;
+  parameters?: Record<string, any>;
 };
 
 /** Options that control drawing a Transform. Used by subclasses to return draw parameters */
 export type TransformDrawOptions = {
-  attributes?: object;
+  attributes?: Record<string, any>;
   framebuffer?: any;
   uniforms?: object;
   discard?: boolean;

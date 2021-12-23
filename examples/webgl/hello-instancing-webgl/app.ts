@@ -1,4 +1,5 @@
-import {polyfillContext, WebGLDeviceProps} from '@luma.gl/webgl';
+import {DeviceProps} from '@luma.gl/api';
+import {polyfillContext} from '@luma.gl/webgl';
 import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 
 const INFO_HTML = `
@@ -10,12 +11,13 @@ const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER D
 export default class AppAnimationLoop extends AnimationLoop {
   static info = INFO_HTML;
 
-  onCreateContext(props: WebGLDeviceProps): WebGLRenderingContext {
-    const gl = props.canvas.getContext('webgl');
+  onCreateContext(props: DeviceProps): WebGLRenderingContext {
+    const canvas = props.canvas as HTMLCanvasElement;
+    const gl = canvas.getContext('webgl');
     if (!gl) {
       throw new Error(ALT_TEXT);
     }
-    return polyfillContext(props.canvas.getContext('webgl'));
+    return polyfillContext(gl);
   }
 
   onInitialize({gl}: AnimationProps): void {
@@ -56,7 +58,9 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.attachShader(program, fShader);
     gl.linkProgram(program);
 
+    // @ts-expect-error WebGL2
     const vertexArray = gl.createVertexArray();
+    // @ts-expect-error WebGL2
     gl.bindVertexArray(vertexArray);
 
     const positionBuffer = gl.createBuffer();
@@ -81,6 +85,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const colorLocation = gl.getAttribLocation(program, 'color');
     gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+    // @ts-expect-error WebGL2
     gl.vertexAttribDivisor(colorLocation, 1);
     gl.enableVertexAttribArray(colorLocation);
 
@@ -94,11 +99,14 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const offsetLocation = gl.getAttribLocation(program, 'offset');
     gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 0, 0);
+    // @ts-expect-error WebGL2
     gl.vertexAttribDivisor(offsetLocation, 1);
     gl.enableVertexAttribArray(offsetLocation);
 
+    // @ts-expect-error WebGL2
     gl.bindVertexArray(null);
 
+    // @ts-expect-error
     this.resources = {
       positionBuffer,
       colorBuffer,
@@ -106,24 +114,26 @@ export default class AppAnimationLoop extends AnimationLoop {
       program,
       vertexArray
     };
-
-    // gl.deleteShader(vShader);
-    // gl.deleteShader(fShader);
   }
 
   onRender({gl}: AnimationProps): void {
     gl.clear(gl.COLOR_BUFFER_BIT);
+    // @ts-expect-error WebGL2
     gl.bindVertexArray(this.resources.vertexArray);
+    // @ts-expect-error WebGL2
     gl.useProgram(this.resources.program);
+    // @ts-expect-error WebGL2
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, 4);
   }
 
   onFinalize({gl}: AnimationProps) {
+    // @ts-expect-error
     const {positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteBuffer(colorBuffer);
     gl.deleteBuffer(offsetBuffer);
     gl.deleteProgram(program);
+    // @ts-expect-error WebGL2
     gl.deleteVertexArray(vertexArray);
   }
 }

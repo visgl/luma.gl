@@ -371,6 +371,7 @@ test('Model#transpileToGLSL100', (t) => {
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
+  // @ts-expect-error object possibly undefined
   t.ok(model.program, 'Created a program');
   t.end();
 });

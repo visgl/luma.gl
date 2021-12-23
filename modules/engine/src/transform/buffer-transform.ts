@@ -42,7 +42,6 @@ export default class BufferTransform {
     return props;
   }
 
-  // @ts-expect-error
   getDrawOptions(opts: TransformRunOptions = {}): TransformDrawOptions {
     const binding = this.bindings[this.currentIndex];
     const {sourceBuffers, transformFeedback} = binding;

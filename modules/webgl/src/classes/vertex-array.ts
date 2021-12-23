@@ -37,6 +37,8 @@ export type DrawParams = {
 export default class VertexArray {
   id: string;
   gl: WebGLRenderingContext;
+  handle: WebGLVertexArrayObject;
+
   readonly attributes: object = {};
 
   vertexArrayObject: VertexArrayObject;
@@ -59,6 +61,7 @@ export default class VertexArray {
     // super(gl, Object.assign({}, props, {id}));
 
     this.vertexArrayObject = new VertexArrayObject(gl);
+    this.handle = this.vertexArrayObject.handle;
 
     this.id = id;
     this.gl = gl;
@@ -73,7 +76,10 @@ export default class VertexArray {
       this.buffer.delete();
     }
 
-    this.vertexArrayObject.delete();
+    if (this.handle) {
+      this.vertexArrayObject.delete();
+      this.handle = null;
+    }
   }
 
   initialize(props?: VertexArrayProps) {

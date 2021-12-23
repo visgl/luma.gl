@@ -11,8 +11,8 @@ const VS_POS_VARIABLE = 'transform_position';
 export function updateForTextures(options: {
   vs: any;
   sourceTextureMap: any;
-  targetTextureVarying: any;
-  targetTexture: any;
+  targetTextureVarying?: any;
+  targetTexture?: any;
 }): {
   vs: any;
   targetTextureType: any;

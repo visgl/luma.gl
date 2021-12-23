@@ -1,7 +1,6 @@
-import {getRandom} from '@luma.gl/api';
+import {DeviceProps} from '@luma.gl/api';
 import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 import {assembleShaders} from '@luma.gl/shadertools';
-import {WebGLDeviceProps} from '@luma.gl/webgl';
 
 const INFO_HTML = `
 Shader Modules using luma.gl's low-level API
@@ -42,7 +41,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   resources;
 
-  onCreateContext({canvas}: WebGLDeviceProps): WebGLRenderingContext {
+  onCreateContext({canvas}: DeviceProps): WebGLRenderingContext {
     /** @type {WebGLRenderingContext} */
     // @ts-ignore
     return canvas.getContext('webgl') || canvas.getContext('experimental-webgl');

@@ -124,7 +124,7 @@ export class Timeline {
     this.setTime(0);
   }
 
-  attachAnimation(animation: AnimationOptions, channelHandle: number): number {
+  attachAnimation(animation: AnimationOptions, channelHandle?: number): number {
     const animationHandle = animationHandles++;
 
     this.animations.set(animationHandle, {
