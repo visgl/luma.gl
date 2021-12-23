@@ -2,6 +2,7 @@
 import type Device from '../device';
 import type {TextureFormat} from '../types/types';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import Sampler, {SamplerProps} from './sampler';
 
 // required GPUExtent3D size;
 // GPUIntegerCoordinate mipLevelCount = 1;
@@ -13,7 +14,7 @@ import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 /** Abstract Texture interface */
 export type TextureProps = ResourceProps & {
   format?: TextureFormat | number;
-  dimension?: '1d' | '2d' | '3d';
+  dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   width?: number;
   height?: number;
   depth?: number;
@@ -21,11 +22,15 @@ export type TextureProps = ResourceProps & {
 
   data?: any;
   mipmaps?: boolean;
-  parameters?: object;
+  sampler?: Sampler | SamplerProps;
 
+  mipLevels?: number;
+  samples?: number;
   type?: number;
   compressed?: boolean;
 
+  /** @deprecated use sampler */
+  parameters?: object;
   /** @deprecated use data */
   pixels?: any;
   /** @deprecated use format */
@@ -52,8 +57,8 @@ export type WebGPUTextureProps = ResourceProps & {
 
 export type TextureViewProps = {
   format: string;
-  dimension: '1d', '2d', '2d-array', 'cube', 'cube-array', '3d';
-  aspect?: 'all', 'stencil-only', 'depth-only';
+  dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
   arrayLayerCount: number;
   baseArrayLayer?: number;
   mipLevels?: number;
@@ -65,8 +70,8 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   data: undefined,
   dimension: '2d',
-  width: 1,
-  height: 1,
+  width: undefined,
+  height: undefined,
   depth: 1,
   mipmaps: false,
   parameters: {},

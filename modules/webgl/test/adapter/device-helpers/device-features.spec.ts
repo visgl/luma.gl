@@ -1,9 +1,10 @@
 import test from 'tape-promise/tape';
 import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {DeviceFeature} from '@luma.gl/api';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
 /** @type {import('../../src/adapter/device-helpers/device-features').Feature[]} */
-const WEBGL2_ALWAYS_FEATURES = [
+const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
   'webgl2',
 
   // api support
@@ -27,8 +28,7 @@ const WEBGL2_ALWAYS_FEATURES = [
   'glsl-texture-lod'
 ];
 
-/** @type {import('../../src/adapter/device-helpers/device-features').Feature[]} */
-const WEBGL2_ONLY_FEATURES = ['webgl2', 'webgl-color-attachment-float'];
+const WEBGL2_ONLY_FEATURES: DeviceFeature[] = ['webgl2', 'webgl-color-attachment-float'];
 
 test('WebGLDevice#features (unknown)', (t) => {
   // @ts-expect-error

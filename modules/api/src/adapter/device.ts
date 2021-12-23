@@ -1,10 +1,11 @@
 // luma.gl, MIT license
 import StatsManager, {lumaStats} from '../utils/stats-manager';
-import type {default as Buffer, BufferProps} from './resources/buffer';
-import type {default as Texture, TextureProps} from './resources/texture';
-import type {default as Shader, ShaderProps} from './resources/shader';
-import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
+import type {default as Buffer, BufferProps} from './resources/buffer';
+import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
+import type {default as Sampler, SamplerProps} from './resources/sampler';
+import type {default as Shader, ShaderProps} from './resources/shader';
+import type {default as Texture, TextureProps} from './resources/texture';
 
 /** Device properties */
 export type DeviceProps = {
@@ -111,6 +112,77 @@ export type DeviceLimits = {
   readonly maxComputeWorkgroupsPerDimension?: number;
 };
 
+export type WebGPUDeviceFeature =
+  'depth-clip-control' |
+  'depth24unorm-stencil8' |
+  'depth32float-stencil8' |
+  'timestamp-query' |
+  'indirect-first-instance' |
+
+  'texture-compression-bc' |
+  'texture-compression-etc2' |
+  'texture-compression-astc'
+
+  // obsolete...
+  // 'depth-clamping' |
+  // 'depth24unorm-stencil8' |
+  // 'depth32float-stencil8' |
+  // 'pipeline-statistics-query' |
+  // 'timestamp-query' |
+  // 'texture-compression-bc'
+  ;
+
+export type WebGLDeviceFeature =
+  'webgl2' |
+
+  // api support (unify with WebGPU timestamp-query?)
+  'webgl-timer-query' |
+
+  // api support
+  'webgl-vertex-array-object' |
+  'webgl-instanced-rendering' |
+  'webgl-multiple-render-targets' |
+
+  // features
+  'webgl-element-index-uint32' |
+
+  // blending
+  'webgl-blend-equation-minmax' |
+  'webgl-float-blend' |
+
+  // textures | renderbuffers
+  'webgl-color-encoding-srgb' |
+
+  // textures
+  'webgl-texture-depth' |
+  'webgl-texture-float' |
+  'webgl-texture-half-float' |
+
+  'webgl-texture-filter-linear-float' |
+  'webgl-texture-filter-linear-half-float' |
+  'webgl-texture-filter-anisotropic' |
+
+  // framebuffers | textures and renderbuffers
+  'webgl-color-attachment-rgba32f' |
+  'webgl-color-attachment-float' |
+  'webgl-color-attachment-half-float' |
+
+  // glsl extensions
+  'glsl-frag-data' |
+  'glsl-frag-depth' |
+  'glsl-derivatives' |
+  'glsl-texture-lod'
+  ;
+
+type WebGLCompressedTextureFeatures =
+  'webgl-texture-compression-etc1' |
+  'webgl-texture-compression-pvrtc' |
+  'webgl-texture-compression-atc'
+  ;
+
+/** Valid feature strings */
+export type DeviceFeature= WebGPUDeviceFeature | WebGLDeviceFeature | WebGLCompressedTextureFeatures;
+
 /**
  * WebGPU Device/WebGL context abstraction
  */
@@ -162,14 +234,17 @@ export default abstract class Device {
       : this._createBuffer(props);
   }
 
-  /** Create a texture */
-  abstract createTexture(props: TextureProps): Texture;
+  /** Create a render pipeline (aka program) */
+  abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
+
+  /** Create a sampler */
+  abstract createSampler(props: SamplerProps): Sampler;
 
   /** Create a shader */
   abstract createShader(props: ShaderProps): Shader;
 
-  /** Create a render pipeline (aka program) */
-  abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
+  /** Create a texture */
+  abstract createTexture(props: TextureProps): Texture;
 
   // Implementation
 

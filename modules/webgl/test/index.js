@@ -17,13 +17,16 @@ import './context/state-tracker/set-parameters.spec';
 import './context/state-tracker/track-context-state.spec';
 import './context/state-tracker/context-state.spec';
 
-// WebGLDevice, features & limits
-import './adapter/webgl-device.spec';
-import './adapter/device-info.spec';
-import './adapter/device-features.spec';
-import './adapter/device-limits.spec';
+// Converters
+import './adapter/converters/sampler.spec';
 
-import './adapter/set-device-parameters.spec';
+// WebGLDevice, features & limits
+import './adapter/device-helpers/device-info.spec';
+import './adapter/device-helpers/device-features.spec';
+import './adapter/device-helpers/device-limits.spec';
+import './adapter/device-helpers/set-device-parameters.spec';
+
+import './adapter/webgl-device.spec';
 
 // Note that we do two test runs on luma.gl, with and without headless-gl
 // This file imports tests that should run *with* headless-gl included

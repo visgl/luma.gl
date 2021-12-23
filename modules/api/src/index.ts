@@ -3,7 +3,7 @@ import './init';
 
 // MAIN API ACCESS POINTS
 export {default as luma} from './lib/luma';
-export type {DeviceProps, DeviceLimits, DeviceInfo} from './adapter/device';
+export type {DeviceProps, DeviceLimits, DeviceInfo, DeviceFeature} from './adapter/device';
 export {default as Device} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {default as CanvasContext} from './adapter/canvas-context';

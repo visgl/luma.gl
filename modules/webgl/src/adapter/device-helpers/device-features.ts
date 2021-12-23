@@ -2,94 +2,51 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
+import {DeviceFeature} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {isOldIE} from './is-old-ie';
-
-export type DeviceFeature =
-  'depth-clamping' |
-  'depth24unorm-stencil8' |
-  'depth32float-stencil8' |
-  'pipeline-statistics-query' |
-  'timestamp-query' |
-  'texture-compression-bc';
-
-// TODO - this should be the default export, test cases need updating
-export type WebGLFeature =
-  'webgl2' |
-
-  // api support (unify with WebGPU timestamp-query?)
-  'webgl-timer-query' |
-
-  // api support
-  'webgl-vertex-array-object' |
-  'webgl-instanced-rendering' |
-  'webgl-multiple-render-targets' |
-
-  // features
-  'webgl-element-index-uint32' |
-
-  // blending
-  'webgl-blend-equation-minmax' |
-  'webgl-float-blend' |
-
-  // textures | renderbuffers
-  'webgl-color-encoding-srgb' |
-
-  // textures
-  'webgl-texture-depth' |
-  'webgl-texture-float' |
-  'webgl-texture-half-float' |
-
-  'webgl-texture-filter-linear-float' |
-  'webgl-texture-filter-linear-half-float' |
-  'webgl-texture-filter-anisotropic' |
-
-  // framebuffers | textures and renderbuffers
-  'webgl-color-attachment-rgba32f' |
-  'webgl-color-attachment-float' |
-  'webgl-color-attachment-half-float' |
-
-  // glsl extensions
-  'glsl-frag-data' |
-  'glsl-frag-depth' |
-  'glsl-derivatives' |
-  'glsl-texture-lod';
-
-/** Valid feature strings */
-export type Feature = DeviceFeature | WebGLFeature;
+import {getTextureFeatures} from '../converters/webgpu-texture-formats';
 
 /** Get WebGPU style feature strings */
-export function getDeviceFeatures(gl: WebGLRenderingContext): Set<DeviceFeature | WebGLFeature> {
+export function getDeviceFeatures(gl: WebGLRenderingContext): Set<DeviceFeature> {
   const features = getWebGLFeatures(gl);
+
+  // TODO
+  // features.add('texture-compression-bc'); //  GPUQueryType "timestamp"
+  for (const compressedTextureFeature of getTextureFeatures(gl)) {
+    features.add(compressedTextureFeature);
+  }
+
+  // TODO
   // features.add('depth-clamping'); // GPUPrimitiveState.clampDepth
   // features.add('depth24unorm-stencil8'); // GPUTextureFormat 'depth24unorm-stencil8'.
   // features.add('depth32float-stencil8'); // GPUTextureFormat 'depth32float-stencil8'.
   // features.add('pipeline-statistics-query'); // GPUQueryType "pipeline-statistics"
   // features.add('timestamp-query'); // GPUQueryType "timestamp-query"
-  // TODO
-  // features.add('texture-compression-bc'); //  GPUQueryType "timestamp"
-  // TODO
+
   return features;
 }
 
 /** Extract all WebGL features */
-export function getWebGLFeatures(gl: WebGLRenderingContext): Set<WebGLFeature> {
+export function getWebGLFeatures(gl: WebGLRenderingContext): Set<DeviceFeature> {
   // Enable EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
   gl.getExtension('EXT_color_buffer_float');
   gl.getExtension('WEBGL_color_buffer_float');
   gl.getExtension('EXT_float_blend');
 
-  const features = new Set<WebGLFeature>();
-  for (const feature in WEBGL_FEATURES) {
-    if (isFeatureSupported(gl, feature as WebGLFeature)) {
-      features.add(feature as WebGLFeature );
+  const features = new Set<DeviceFeature>();
+  for (const feature of Object.keys(WEBGL_FEATURES)) {
+    // @ts-expect-error
+    if (isFeatureSupported(gl, feature)) {
+      // @ts-expect-error
+      features.add(feature);
     }
   }
   return features;
 }
 
-function isFeatureSupported(gl: WebGLRenderingContext, feature: WebGLFeature): boolean {
+function isFeatureSupported(gl: WebGLRenderingContext, feature: DeviceFeature): boolean {
   const [webgl1Feature, webgl2Feature] = WEBGL_FEATURES[feature];;
 
   // Get extension name from table
@@ -186,7 +143,7 @@ export function canCompileGLSLExtension(gl: WebGLRenderingContext, extensionName
 /** Defines luma.gl "feature" names and semantics
  * Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
  */
-const WEBGL_FEATURES: Record<WebGLFeature, [boolean | string, boolean | string]> = {
+const WEBGL_FEATURES: Partial<Record<DeviceFeature, [boolean | string, boolean | string]>> = {
   'webgl2': [false, true],
 
   // API SUPPORT

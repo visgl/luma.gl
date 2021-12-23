@@ -8,8 +8,8 @@
 import '@luma.gl/api';
 import './init'
 
-// export type {WebGLDeviceProps, WebGLDeviceInfo, WebGPUDeviceLimits} from './lib/webgl-device';
 export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
+export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
 // UTILS
 export {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
