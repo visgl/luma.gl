@@ -19,7 +19,7 @@ Note that:
 | `canvas?` | HTMLCanvasElement \| OffscreenCanvas \| string |
 | `width?` | number |
 | `height?` | number |
-| `useDevicePixels?` | boolean | number |
+| `useDevicePixels?` | boolean \| number |
 | `autoResize?` | boolean |
 
 Remarks:
@@ -48,4 +48,3 @@ Returns the size in pixels required to cover the canvas at the current device pi
 ### `canvas: HMTLCanvas | OffscreenCanvas`
 
 ### `useDevicePixels: boolean | number`
-
