@@ -43,18 +43,7 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "exclude":[
-    "examples/webgl",
-
-    "modules/debug",
-    "modules/engine/test",
-    "modules/webgl/src/classes/program.js",
-    "modules/webgl/src/classes/buffer.js",
-    "modules/webgl/src/classes/uniforms.js",
-    "modules/webgl/src/classes/vertex-array.js",
-
     "modules/**/dist/**/*.js",
-    "modules-wip",
-
     "website",
     "test/apps",
     "test/**/*",

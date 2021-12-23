@@ -22,6 +22,7 @@ test.skip('WebGL#makeDebugContext', (t) => {
     'The default context does not throw on validation error'
   );
 
+  // @ts-expect-error
   const debugContext = makeDebugContext(gl, {throwOnError: true, break: ['createProgram']});
 
   t.ok(debugContext, 'debug context is returned');

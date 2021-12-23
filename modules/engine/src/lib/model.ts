@@ -58,6 +58,8 @@ export type ModelProps = ProgramProps & {
   onAfterRender?: () => void
   _feedbackBuffers?: object; // FeedbackBuffers
 
+  timerQueryEnabled?: boolean;
+
   // Deprecated?
   isIndexed?: boolean;
   indexType?;

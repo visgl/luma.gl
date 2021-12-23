@@ -66,8 +66,10 @@ const TEST_CASES = [
 test('Geometry#constructor', (t) => {
   for (const testCase of TEST_CASES) {
     if (testCase.shouldThrow) {
+      // @ts-expect-error TODO fix
       t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);
     } else {
+      // @ts-expect-error TODO fix
       const geometry = new Geometry(testCase.props);
 
       t.is(geometry.mode, testCase.drawMode, `${testCase.title}: drawMode is correct`);

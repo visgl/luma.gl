@@ -60,7 +60,7 @@ export type {
 } from './adapter/types/program-bindings';
 
 // UTILS
-export type {TypedArray, NumberArray} from './types';
+export type {TypedArray, TypedArrayConstructor, NumberArray} from './types';
 
 export {default as StatsManager, lumaStats} from './utils/stats-manager';
 export {assert} from './utils/assert';
