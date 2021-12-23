@@ -76,7 +76,10 @@ export default class VertexArray {
       this.buffer.delete();
     }
 
-    this.vertexArrayObject.delete();
+    if (this.handle) {
+      this.vertexArrayObject.delete();
+      this.handle = null;
+    }
   }
 
   initialize(props?: VertexArrayProps) {

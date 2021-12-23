@@ -21,11 +21,12 @@ void main(void) {
 `;
 
 test('WebGL#BufferTransform construct', (t) => {
-  const gl2 = fixture.gl2;
+  const gl = fixture.gl;
 
-  const bt = new BufferTransform(gl2, {
+  // @ts-expect-error
+  const bt = new BufferTransform(gl, {
     sourceBuffers: {
-      input: new Buffer(gl2, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
+      input: new Buffer(gl, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
     }
   });
   t.ok(bt instanceof BufferTransform, 'should construct with only sourceBuffers');
