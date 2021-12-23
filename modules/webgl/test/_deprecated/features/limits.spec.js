@@ -1,5 +1,5 @@
 import {getKey, getContextInfo} from '@luma.gl/webgl';
-import {WEBGL_LIMITS} from '../../adapter/device-limits.spec';
+import {WEBGL_LIMITS} from '../../adapter/device-helpers/device-limits.spec';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';

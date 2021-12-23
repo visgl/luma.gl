@@ -1,4 +1,4 @@
-import type {TextureFormat} from '@luma.gl/api';
+import type {TextureFormat, DeviceFeature} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
 // Define local extension strings to optimize minification
@@ -22,26 +22,14 @@ const X_ETC1 = 'WEBGL_compressed_texture_etc1';
 const X_PVRTC = 'WEBGL_compressed_texture_pvrtc';
 const X_ATC = 'WEBGL_compressed_texture_atc';
 
-const TEXTURE_FEATURES = {
-  'texture-compression-bc': [X_S3TC, X_S3TC_SRGB, X_BPTC],
-  'texture-compression-etc2': [X_ETC2],
-  'texture-compression-astc': [X_ASTC],
-
-  'webgl-texture-compression-etc1': [X_ETC1],
-  'webgl-texture-compression-pvrtc': [X_PVRTC],
-  'webgl-texture-compression-atc': [X_ATC]
-};
-
-/** Return a list of compressed textures */
-export function getTextureFeatures(gl: WebGLRenderingContext) {
-  const features: string[] = [];
-  for (const [feature, extensions] of Object.entries(TEXTURE_FEATURES)) {
-    if (extensions.every(extension => gl.getExtension(extension))) {
-      features.push(feature);
-    }
-  }
-  return features;
-}
+const TEXTURE_FEATURES: [DeviceFeature, string[]][] = [
+  ['texture-compression-bc', [X_S3TC, X_S3TC_SRGB, X_BPTC]],
+  ['texture-compression-etc2', [X_ETC2]],
+  ['texture-compression-astc', [X_ASTC]],
+  ['webgl-texture-compression-etc1', [X_ETC1]],
+  ['webgl-texture-compression-pvrtc', [X_PVRTC]],
+  ['webgl-texture-compression-atc', [X_ATC]]
+];
 
 /** Map a format to webgl and constants */
 type Format = {
@@ -218,3 +206,14 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'webgl-atc-rgba-unorm': {gl: GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL, x: X_ETC1},
   'webgl-atc-rgbai-unorm': {gl: GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL, x: X_ETC1}
 };
+
+/** Return a list of compressed texture features */
+export function getTextureFeatures(gl: WebGLRenderingContext): DeviceFeature[] {
+  const features: DeviceFeature[] = [];
+  for (const [feature, extensions] of TEXTURE_FEATURES) {
+    if (extensions.every(extension => gl.getExtension(extension))) {
+      features.push(feature);
+    }
+  }
+  return features;
+}

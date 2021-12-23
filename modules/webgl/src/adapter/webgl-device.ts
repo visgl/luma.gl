@@ -1,5 +1,6 @@
 // luma.gl, MIT license
-import {Device, DeviceProps, DeviceInfo, DeviceLimits, CanvasContext, CanvasContextProps, log} from '@luma.gl/api';
+import type {DeviceProps, DeviceInfo, DeviceLimits, DeviceFeature, CanvasContextProps} from '@luma.gl/api';
+import {Device, CanvasContext, log} from '@luma.gl/api';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import { ContextState } from '../context/context/context-state';
@@ -8,8 +9,9 @@ import {createBrowserContext} from '../context/context/create-context';
 import {getCanvas} from '../context/context/get-canvas';
 import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
 import {getDeviceInfo} from './device-helpers/get-device-info';
-import {getDeviceFeatures, Feature} from './device-helpers/device-features';
+import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
+// import WebGLCanvasContext from './webgl-canvas-context';
 
 // WebGL classes
 import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps, Sampler, SamplerProps} from '@luma.gl/api';
@@ -19,55 +21,6 @@ import WEBGLSampler from '../adapter/resources/webgl-sampler';
 import Texture2D, {Texture2DProps} from '../classes/texture-2d';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
-import WebGLCanvasContext from './webgl-canvas-context';
-
-/** WebGLDevice options *
-export type DeviceProps = {
-  canvas?: HTMLCanvasElement | OffscreenCanvas | string; // A canvas element or a canvas string id
-  width?: number // width is only used when creating a new canvas
-  height?: number // height is only used when creating a new canvas
-  // Attach to existing context
-  gl?: WebGLRenderingContext | WebGL2RenderingContext;
-  // COMMON CONTEXT PARAMETERS
-  webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
-  webgl1?: boolean; // set to false to not create a WebGL1 context (fails if webgl2 not available)
-  manageState?: boolean; // Set to false to disable WebGL state management instrumentation
-  debug?: boolean; // Instrument context (at the expense of performance)
-  break?: Array<any>; // TODO: types
-  onContextLost?: (event: Event) => void;
-  onContextRestored?: (event: Event) => void;
-  // BROWSER CONTEXT PARAMETERS
-  alpha?: boolean; // Default render target has an alpha buffer.
-  depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
-  stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
-  antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
-  premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
-  preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
-  failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
-};
-
-const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
-  canvas: undefined, // A canvas element or a canvas string id
-  gl: undefined,
-  webgl2: true, // Attempt to create a WebGL2 context
-  webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  manageState: true,
-  width: 800, // width are height are only used by headless gl
-  height: 600,
-  debug: false, // Instrument context (at the expense of performance)
-  break: undefined,
-  onContextLost: () => console.error('WebGL context lost'),
-  onContextRestored: () => console.info('WebGL context restored'),
-
-  alpha: undefined,
-  depth: undefined,
-  stencil: undefined,
-  antialias: undefined,
-  premultipliedAlpha: undefined,
-  preserveDrawingBuffer: undefined,
-  failIfMajorPerformanceCaveat: undefined
-};
-*/
 
 const LOG_LEVEL = 1;
 
@@ -85,7 +38,7 @@ export default class WebGLDevice extends Device implements ContextState {
   // WebGPU style API
 
   /** A set like interface to test features */
-  readonly features: Set<Feature>;
+  readonly features: Set<DeviceFeature>;
   readonly limits: DeviceLimits;
   readonly info: DeviceInfo;
 
@@ -342,91 +295,3 @@ export default class WebGLDevice extends Device implements ContextState {
     return createBrowserContext(targetCanvas, props);
   }
 }
-
-/*
-// prettier-ignore
-import {
-  Device, DeviceInfo, DeviceLimits,
-  Buffer, BufferProps
-} from '@luma.gl/api';
-
-import {getWebGLDeviceInfo} from '../converters/webgl-device-info';
-import {getWebGLLimits} from '../converters/webgl-limits';
-import {getWebGLFeatures} from '../converters/webgl-features';
-
-export default class WEBGLDevice implements Device {
-  readonly handle: WebGLRenderingContext;
-  readonly gl: WebGLRenderingContext;
-  readonly gl2: WebGL2RenderingContext | null;
-  readonly canvas: HTMLCanvasElement;
-
-  static isSupported(options: {canvas?: HTMLCanvasElement}): boolean {
-    const {canvas} = options;
-    let gl;
-    try {
-      gl = canvas && canvas.getContext("webgl");
-      gl = gl && canvas && canvas.getContext("experimental-webgl");
-    } catch (x) {
-      gl = null;
-    }
-    return Boolean(gl);
-  }
-
-  constructor(props = {}) {
-    const {canvas, swapChainFormat = "bgra8unorm"} = props;
-
-    const gl = createGLContext(props);
-    this.handle =
-    this.gl = gl;
-    this.gl2 = gl instanceof WebGL2RenderingContext ? gl : null;
-    this.canvas = canvas;
-  }
-
-  resize(width, height) {
-    resizeGLContext(this.gl);
-  }
-
-  getInfo(): DeviceInfo {
-    return getWebGLDeviceInfo(this.gl);
-  }
-
-  getLimits(): DeviceLimits {
-    return getWebGLLimits(this.gl, this.gl2);
-  }
-
-  getFeatures(): string[] {
-    return getWebGLFeatures(this.gl);
-  }
-
-  createBuffer(props: WebGPUBufferProps): WEBGLBuffer {
-    return new WEBGLBuffer(this.gl2 || this.gl, props);
-  }
-
-  createTexture(props: WebGPUTextureProps): WEBGLTexture {
-    return new WEBGLTexture(this, props);
-  }
-
-  createSampler(props: WebGPUSamplerProps): WEBGLSampler {
-    return new WEBGLSampler(this, props);
-  }
-
-  createShader(props: WebGPUShaderProps): WEBGLShader {
-    return new WEBGLShader(this, props);
-  }
-
-  createRenderPipeline(props: WebGPURenderPipelineProps): WEBGLPipeline {
-    return new WEBGLRenderPipeline(this, props);
-  }
-
-  createComputePipeline(props: WebGPUComputePipelineProps): WebGPUPipeline {
-    return new WebGPUComputePipeline(this, props);
-  }
-
-
-  // PRIVATE
-
-  _startFrame() {}
-
-  _endFrame() {}
-}
-*/
