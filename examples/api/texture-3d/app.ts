@@ -5,7 +5,7 @@
 import {getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture3D, Buffer, isWebGL2, setDeviceParameters, setParameters} from '@luma.gl/webgl';
+import {Texture3D, isWebGL2, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -68,11 +68,6 @@ export default class AppRenderLoop extends RenderLoop {
       permutation: shuffle(range(0, 255), random)
     });
 
-    setDeviceParameters(device, {
-      blendColorOperation: 'add',
-      blendColorSrcFactor: 'one',
-      blendColorDstFactor: 'one-minus-src-alpha'
-    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1]
     });
@@ -138,6 +133,11 @@ export default class AppRenderLoop extends RenderLoop {
       uniforms: {
         uTexture: texture,
         uView: this.viewMat
+      },
+      parameters: {
+        blendColorOperation: 'add',
+        blendColorSrcFactor: 'one',
+        blendColorDstFactor: 'one-minus-src-alpha'
       }
     });
   }

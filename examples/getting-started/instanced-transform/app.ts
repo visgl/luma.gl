@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, Texture2D, clear, isWebGL2, setDeviceParameters} from '@luma.gl/webgl';
+import {Buffer, clear, isWebGL2} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -100,11 +100,6 @@ export default class AppRenderLoop extends RenderLoop {
       throw new Error(ALT_TEXT);
     }
 
-    setDeviceParameters(device, {
-      depthWriteEnabled: true,
-      depthCompare: 'less-equal'
-    });
-
     const offsetBuffer = device.createBuffer(new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
     // Create a buffer consisting of 4 normalized vectors
@@ -174,7 +169,11 @@ export default class AppRenderLoop extends RenderLoop {
           }
         ]
       },
-      instanceCount: 4
+      instanceCount: 4,
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
+      }    
     });
   }
 

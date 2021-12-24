@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/engine';
-import {setDeviceParameters, setParameters} from '@luma.gl/webgl';
+import {setParameters} from '@luma.gl/webgl';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -62,10 +62,6 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl, aspect, animationLoop}: AnimationProps) {
     super();
 
-    setDeviceParameters(device, {
-      depthWriteEnabled: true,
-      depthCompare: 'less-equal'
-    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1
@@ -172,6 +168,10 @@ export default class AppRenderLoop extends RenderLoop {
           fs,
           modules: [dirlight],
           geometry: new CubeGeometry(),
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal'
+          },
           uniforms: {
             uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
             uView: new Matrix4().lookAt({

@@ -1,3 +1,4 @@
+import type {RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../adapter/webgl-device';
@@ -13,6 +14,7 @@ import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
+import {withDeviceParameters} from '../adapter/converters/set-device-parameters';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -24,6 +26,7 @@ export type ProgramProps = ResourceProps & {
   fs?: string | Shader;
   varyings?: string[];
   bufferMode?: number;
+  parameters?: RenderPipelineParameters;
 };
 
 export type ProgramDrawOptions = {
@@ -60,9 +63,11 @@ export default class Program extends WebGLResource<ProgramProps> {
   _textureIndexCounter: number = 0;
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function>;
+  private _parameters: RenderPipelineParameters;
 
   constructor(device: WebGLDevice | WebGLRenderingContext, props: ProgramProps = {}) {
     super(WebGLDevice.attach(device), props, {} as any);
+    this._parameters;
     this.initialize(props);
     Object.seal(this);
     this._setId(props.id);
@@ -153,6 +158,8 @@ export default class Program extends WebGLResource<ProgramProps> {
 
     let {parameters = {}} = options;
 
+
+
     if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
@@ -198,19 +205,22 @@ export default class Program extends WebGLResource<ProgramProps> {
 
       this._bindTextures();
 
-      withParameters(this.gl, parameters, () => {
-        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-        if (isIndexed && isInstanced) {
-          this.gl2.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
-        } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
-          this.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-        } else if (isIndexed) {
-          this.gl.drawElements(drawMode, vertexCount, indexType, offset);
-        } else if (isInstanced) {
-          this.gl2.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
-        } else {
-          this.gl.drawArrays(drawMode, offset, vertexCount);
-        }
+      // TODO - double context push/pop
+      withDeviceParameters(this.device, this._parameters, () => {
+        withParameters(this.gl, parameters, () => {
+          // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+          if (isIndexed && isInstanced) {
+            this.gl2.drawElementsInstanced(drawMode, vertexCount, indexType, offset, instanceCount);
+          } else if (isIndexed && isWebGL2(this.gl) && !isNaN(start) && !isNaN(end)) {
+            this.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+          } else if (isIndexed) {
+            this.gl.drawElements(drawMode, vertexCount, indexType, offset);
+          } else if (isInstanced) {
+            this.gl2.drawArraysInstanced(drawMode, offset, vertexCount, instanceCount);
+          } else {
+            this.gl.drawArrays(drawMode, offset, vertexCount);
+          }
+        });
       });
 
       if (transformFeedback) {

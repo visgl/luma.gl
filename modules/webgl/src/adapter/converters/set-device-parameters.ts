@@ -1,6 +1,34 @@
-import {Device, Parameters, CompareFunction, StencilOperation, log} from '@luma.gl/api';
+import {Device, Parameters, CompareFunction, StencilOperation, log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
+import WebGLDevice from '../webgl-device';
+
+/**
+ * Execute a function with a set of temporary WebGL parameter overrides
+ * - Saves current "global" WebGL context settings
+ * - Sets the supplies WebGL context parameters,
+ * - Executes supplied function
+ * - Restores parameters
+ * - Returns the return value of the supplied function
+ */
+ export function withDeviceParameters<T = unknown>(device: Device, parameters: Parameters, func: (device?: Device) => T): T {
+  if (isObjectEmpty(parameters)) {
+    // Avoid setting state if no parameters provided. Just call and return
+    return func(device);
+  }
+
+  // Wrap in a try-catch to ensure that parameters are restored on exceptions
+  // @ts-expect-error
+  pushContextState(device.gl);
+  try {
+    setDeviceParameters(device, parameters);
+    return func(device);
+  } finally {
+    // @ts-expect-error
+    popContextState(device.gl);
+  }
+}
+
 
 /** Set WebGPU Style Parameters */
 export function setDeviceParameters(device: Device, parameters: Parameters) {
@@ -46,7 +74,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
  if (parameters.depthCompare) {
-    parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST),
+    parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST);
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }
 
@@ -65,7 +93,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     const mask = parameters.stencilReadMask || 0xffffffff;
     const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
     // TODO - ensure back doesn't overwrite
-    parameters.stencilCompare !== 'always' ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST),
+    parameters.stencilCompare !== 'always' ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST);
     gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
     gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
   }

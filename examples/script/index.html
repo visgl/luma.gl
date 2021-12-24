@@ -115,6 +115,10 @@
                 instanceOffsets: [offsetsBuffer, {divisor: 1}],
                 instanceColors: [colorsBuffer, {divisor: 1}],
                 instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
+              },
+              parameters: {
+                depthWriteEnabled: true,
+                depthCompare: 'less-equal',
               }
             })
           );
@@ -130,11 +134,7 @@
           return INFO_HTML;
         }
 
-        onInitialize({device, gl, _animationLoop}) {
-          setDeviceParameters(device, {
-            depthWriteEnabled: true,
-            depthCompare: 'less-equal',
-          });
+        onInitialize({device, gl, _animationLoop}) {      
           setParameters(gl, {
             clearColor: [0, 0, 0, 1],
             clearDepth: 1

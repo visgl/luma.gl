@@ -10,12 +10,10 @@ import {
   Framebuffer,
   clear,
   Program,
-  Texture2D,
   VertexArray,
   UniformBufferLayout,
   Buffer,
   isWebGL2,
-  setDeviceParameters
 } from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -47,19 +45,7 @@ const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
 const NEAR = 0.1;
 const FAR = 30.0;
 
-class InstancedCube extends Model {
-  count: number;
-  xforms: any[];
-  matrices: Float32Array;
-  matrixBuffer: Buffer;
-
-  constructor(gl, props) {
-    const count = props.count;
-    const xforms = new Array(count);
-    const matrices = new Float32Array(count * 16);
-    const matrixBuffer = new Buffer(gl, matrices.byteLength);
-
-    const vs = `\
+const vs = `\
 #version 300 es
 #define SHADER_NAME scene.vs
 
@@ -88,7 +74,8 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-    const fs = `\
+
+const fs = `\
 #version 300 es
 precision highp float;
 #define SHADER_NAME scene.fs
@@ -104,6 +91,18 @@ void main(void) {
   fragColor.a = 1.0;
 }
 `;
+
+class InstancedCube extends Model {
+  count: number;
+  xforms: any[];
+  matrices: Float32Array;
+  matrixBuffer: Buffer;
+
+  constructor(gl, props) {
+    const count = props.count;
+    const xforms = new Array(count);
+    const matrices = new Float32Array(count * 16);
+    const matrixBuffer = new Buffer(gl, matrices.byteLength);
 
     super(
       gl,
@@ -261,11 +260,6 @@ export default class AppRenderLoop extends RenderLoop {
       throw new Error(ALT_TEXT);
     }
 
-    setDeviceParameters(device, {
-      depthWriteEnabled: true,
-      depthCompare: 'less-equal'
-    });
-
     // Create postprocessing pass program.
 
     this.dofUniformsLayout = new UniformBufferLayout({
@@ -288,7 +282,11 @@ export default class AppRenderLoop extends RenderLoop {
     this.dofProgram = new Program(gl, {
       id: 'DOF_PROGRAM',
       vs: DOF_VERTEX,
-      fs: DOF_FRAGMENT
+      fs: DOF_FRAGMENT,
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
+      }
     });
 
     this.dofProgram.uniformBlockBinding(this.dofProgram.getUniformBlockIndex('DOFUniforms'), 0);

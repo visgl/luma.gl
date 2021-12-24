@@ -1,7 +1,7 @@
 import {Device} from '@luma.gl/api';
 import {RenderLoop, Model, ModelProps, CubeGeometry, AnimationProps} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube, loadImage, setDeviceParameters, setParameters} from '@luma.gl/webgl';
+import {Texture2D, TextureCube, loadImage, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -97,10 +97,6 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl}: AnimationProps) {
     super();
 
-    setDeviceParameters(device, {
-      depthWriteEnabled: true,
-      depthCompare: 'less-equal'
-    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1
@@ -130,6 +126,10 @@ export default class AppRenderLoop extends RenderLoop {
       uniforms: {
         uTextureCube: cubemap,
         uModel: new Matrix4().scale([20, 20, 20])
+      },
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'  
       }
     });
     this.prism = new Prism(device, {

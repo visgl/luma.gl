@@ -1,6 +1,6 @@
 import {getRandom} from '@luma.gl/api';
 import {RenderLoop, Model, Geometry, SphereGeometry} from '@luma.gl/engine';
-import {clear, Framebuffer, Program, setDeviceParameters} from '@luma.gl/webgl';
+import {clear, Framebuffer, Program, setParameters} from '@luma.gl/webgl';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -99,11 +99,6 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl, width, height}) {
     super();
 
-    setDeviceParameters(device, {
-      depthWriteEnabled: true,
-      depthCompare: 'less-equal',
-      cullMode: 'back',
-    });
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
@@ -131,22 +126,34 @@ export default class AppRenderLoop extends RenderLoop {
     this.quad = new Model(gl, {
       id: 'quad',
       program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
-      geometry: quadGeometry
+      geometry: quadGeometry,
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
+        cullMode: 'back',
+      }
     });
 
     this.persistenceQuad = new Model(gl, {
       id: 'persistence-quad',
       program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
-      geometry: quadGeometry
+      geometry: quadGeometry,
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
+        cullMode: 'back',
+      }
     });
 
     this.sphere = new Model(gl, {
       id: 'electron',
-      geometry: new SphereGeometry({
-        nlat: 20,
-        nlong: 30 // To test that sphere generation is working properly.
-      }),
-      program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS})
+      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
+      program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS}),
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
+        cullMode: 'back',
+      }
     });
 
     const dt = 0.0125;
