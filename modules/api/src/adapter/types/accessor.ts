@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type {VertexFormat} from './types';
+import type {VertexFormat} from './formats';
 
 // ACCESSORS
 

@@ -21,10 +21,12 @@ export type {SamplerProps} from './adapter/resources/sampler';
 export {default as Sampler} from './adapter/resources/sampler';
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
 export {default as RenderPipeline} from './adapter/resources/render-pipeline';
+export type {FramebufferProps} from './adapter/resources/framebuffer';
+export {default as Framebuffer} from './adapter/resources/framebuffer';
 
 // API TYPES
-export type {Accessor, InterleavedAccessors} from './adapter/types/accessor';
-// export {Accessor, BufferAccessors} from './adapter/accessor';
+export type {Accessor} from './adapter/types/accessor';
+
 export type {
   Parameters,
   PrimitiveTopology,
@@ -45,14 +47,15 @@ export type {
 
 export type {
   TextureFormat,
+  DepthStencilTextureFormat,
   VertexFormat,
 } from './adapter/types/formats';
 
 export type {
   BindingLayout,
   Binding,
-  ColorAttachment,
-  DepthStencilAttachment
+  // ColorAttachment,
+  // DepthStencilAttachment
 } from './adapter/types/types';
 
 // API UTILS

@@ -6,6 +6,7 @@ import type {default as RenderPipeline, RenderPipelineProps} from './resources/r
 import type {default as Sampler, SamplerProps} from './resources/sampler';
 import type {default as Shader, ShaderProps} from './resources/shader';
 import type {default as Texture, TextureProps} from './resources/texture';
+import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
 
 /** Device properties */
 export type DeviceProps = {
@@ -245,6 +246,10 @@ export default abstract class Device {
 
   /** Create a texture */
   abstract createTexture(props: TextureProps): Texture;
+
+  createFramebuffer(props: FramebufferProps): Framebuffer {
+    throw new Error('Not implemented');
+  }
 
   // Implementation
 

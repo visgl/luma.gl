@@ -1,4 +1,4 @@
-import {DepthOrStencilTextureFormat} from './types';
+import {DepthStencilTextureFormat} from './formats';
 
 export type CompareFunction =
   'never' |
@@ -55,7 +55,7 @@ export type StencilOperation =
 export type DepthStencilParameters = {
   depthWriteEnabled?: boolean;
   depthCompare?: CompareFunction;
-  depthFormat?: DepthOrStencilTextureFormat;
+  depthFormat?: DepthStencilTextureFormat;
 
   stencilReadMask?: number;
   stencilWriteMask?: number;
