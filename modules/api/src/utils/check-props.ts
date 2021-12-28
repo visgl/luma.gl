@@ -1,4 +1,4 @@
-import {log} from '@luma.gl/api';
+import {log} from './log';
 
 /* Use as
 import {checkProps} from '../util/check-props;'

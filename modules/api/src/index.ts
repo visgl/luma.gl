@@ -46,11 +46,17 @@ export type {
 export type {
   TextureFormat,
   VertexFormat,
+} from './adapter/types/formats';
+
+export type {
   BindingLayout,
   Binding,
   ColorAttachment,
   DepthStencilAttachment
 } from './adapter/types/types';
+
+// API UTILS
+export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
 
 export type {
   ProgramBindings,
