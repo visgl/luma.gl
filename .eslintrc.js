@@ -118,7 +118,9 @@ module.exports = {
     node: true
   },
   globals: {
-    globalThis: 'readonly'
+    globalThis: 'readonly',
+    GPUBufferUsage: 'readonly',
+    GPUTextureUsage: 'readonly'
   },
   extends: ['uber-es2015', 'prettier', 'plugin:import/errors'],
   parser: '@typescript-eslint/parser',

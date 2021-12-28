@@ -1,6 +1,5 @@
 # @luma.gl/api
 
-
 <h1 align="center">luma.gl | <a href="https://luma.gl">Docs</a></h1>
 
 <h5 align="center">luma.gl: WebGPU and WebGL2 Components for GPU Visualization and Compute</h5>

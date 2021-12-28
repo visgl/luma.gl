@@ -1,4 +1,4 @@
-import {Stats} from 'probe.gl';
+import {Stats} from '@probe.gl/stats';
 
 /** 
  * Helper class managing a collection of probe.gl stats objects 

@@ -7,6 +7,9 @@ module.exports = (api) => {
     plugins: [
       // inject __VERSION__ from package.json
       // 'version-inline',
+      // NOTE: To debug our babel plugins, just reference the local modules
+      // './dev-modules/babel-plugin-inline-gl-constants',
+      // 'babel-plugin-inline-webgl-constants',
       // TODO - Restore. Some import issue....
       // 'babel-plugin-inline-webgl-constants',
       // [
