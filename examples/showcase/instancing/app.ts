@@ -1,6 +1,6 @@
 import {Device, getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, Model, ModelProps, ProgramManager} from '@luma.gl/engine';
-import {WebGLDevice, readPixelsToArray, Buffer, cssToDevicePixels, setParameters} from '@luma.gl/webgl';
+import {readPixelsToArray, cssToDevicePixels, setParameters} from '@luma.gl/webgl';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -33,12 +33,7 @@ const dirlight = {
   ...dirlightBase
 };
 
-const SIDE = 256;
-
-// Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends Model {
-  constructor(device: Device, props: ModelProps = {}) {
-    const vs = `\
+const vs = `\
 attribute float instanceSizes;
 attribute vec3 positions;
 attribute vec3 normals;
@@ -68,7 +63,8 @@ void main(void) {
   gl_Position = uProjection * uView * (uModel * vec4(positions * instanceSizes, 1.0) + offset);
 }
 `;
-    const fs = `\
+
+const fs = `\
 precision highp float;
 
 varying vec3 color;
@@ -78,6 +74,13 @@ void main(void) {
   MY_SHADER_HOOK_fragmentColor(gl_FragColor);
 }
 `;
+
+
+const SIDE = 256;
+
+// Make a cube with 65K instances and attributes to control offset and color of each instance
+class InstancedCube extends Model {
+  constructor(device: Device, props: ModelProps = {}) {
     const offsets = [];
     for (let i = 0; i < SIDE; i++) {
       const x = ((-SIDE + 1) * 3) / 2 + i * 3;
@@ -124,6 +127,10 @@ void main(void) {
           instanceOffsets: [offsetsBuffer, {divisor: 1}],
           instanceColors: [colorsBuffer, {divisor: 1}],
           instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
+        },
+        parameters: {
+          depthWriteEnabled: true,
+          depthCompare: 'less-equal',
         }
       }
     );
@@ -143,9 +150,7 @@ export default class AppRenderLoop extends RenderLoop {
   
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+      clearDepth: 1
     });
 
     

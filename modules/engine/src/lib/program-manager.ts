@@ -1,3 +1,4 @@
+import type {RenderPipelineParameters} from '@luma.gl/api';
 import {Device} from '@luma.gl/api/';
 import {assembleShaders} from '@luma.gl/shadertools';
 import {Program} from '@luma.gl/webgl';
@@ -12,7 +13,8 @@ type GetProgramOptions = {
   varyings?: string[],
   bufferMode?: number,
   modules?: Module[];
-  transpileToGLSL100?: boolean
+  transpileToGLSL100?: boolean;
+  parameters?: RenderPipelineParameters;
 };
 
 export default class ProgramManager {
@@ -72,7 +74,8 @@ export default class ProgramManager {
       inject = {},
       varyings = [],
       bufferMode = 0x8c8d,
-      transpileToGLSL100 = false
+      transpileToGLSL100 = false,
+      parameters // TODO - need to cache!
     } = props; // varyings/bufferMode for xform feedback, 0x8c8d = SEPARATE_ATTRIBS
 
     const modules = this._getModuleList(props.modules); // Combine with default modules
@@ -121,7 +124,8 @@ export default class ProgramManager {
         vs: assembled.vs,
         fs: assembled.fs,
         varyings,
-        bufferMode
+        bufferMode,
+        parameters
       });
 
       this._getUniforms[hash] = assembled.getUniforms || ((x) => {});

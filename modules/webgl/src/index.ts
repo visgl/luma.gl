@@ -65,8 +65,6 @@ export type {VertexArrayProps} from './classes/vertex-array';
 export {default as VertexArray} from './classes/vertex-array';
 export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
 
-export {setDeviceParameters} from './adapter/converters/set-device-parameters';
-
 // experimental WebGL exports
 
 // UTILS
@@ -83,7 +81,9 @@ export {cssToDeviceRatio, cssToDevicePixels} from './context/context/device-pixe
 
 // Unified parameter API
 
-export type {GLParameters} from './context/parameters/webgl-parameters';
+export {setDeviceParameters, withDeviceParameters} from './adapter/converters/set-device-parameters';
+
+export type {GLParameters} from './types/webgl';
 export {
   getParameters,
   setParameters,

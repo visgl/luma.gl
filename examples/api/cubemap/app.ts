@@ -99,9 +99,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: GL.LEQUAL
+      clearDepth: 1
     });
 
     const cubemap = new TextureCube(gl, {
@@ -115,7 +113,7 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
@@ -128,6 +126,10 @@ export default class AppRenderLoop extends RenderLoop {
       uniforms: {
         uTextureCube: cubemap,
         uModel: new Matrix4().scale([20, 20, 20])
+      },
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'  
       }
     });
     this.prism = new Prism(device, {

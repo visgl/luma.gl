@@ -39,7 +39,9 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
 export function initializeGL(canvas) {
   const gl = createTestContext(canvas);
   setParameters(gl, {
-    viewport: [0, 0, canvas.width, canvas.height],
+    viewport: [0, 0, canvas.width, canvas.height]
+  });
+  setParameters(gl, {
     clearColor: [0, 0, 0, 1],
     clearDepth: 1
   });

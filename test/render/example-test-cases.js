@@ -13,17 +13,17 @@ const examples = {
 
   // API
   animation: require('../../examples/api/animation/app').default,
-  // texture3d: require('../../examples/api/texture-3d/app').default
+  // texture3d: require('../../examples/api/texture-3d/app').default,
   programManagement: require('../../examples/api/program-management/app').default,
 
   // showcases
-  // instancing: require('../../examples/showcase/instancing/app').default,
+  instancing: require('../../examples/showcase/instancing/app').default,
   persistence: require('../../examples/showcase/persistence/app').default,
-  wandering: require('../../examples/showcase/wandering/app').default
+  wandering: require('../../examples/showcase/wandering/app').default,
 
   // webgl
-  // helloInstancingWebGLMid: require('../../examples/webgl/hello-instancing-webgl-mid/app').default
-  // shaderModulesWebGL: require('../../examples/webgl/shader-modules-webgl/app').default,
+  helloInstancingWebGLMid: require('../../examples/webgl/hello-instancing-webgl-mid/app').default
+  // shaderModulesWebGL: require('../../examples/webgl/shader-modules-webgl/app').default
 };
 
 export default Object.keys(examples).map((name) => {

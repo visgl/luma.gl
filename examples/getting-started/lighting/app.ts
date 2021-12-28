@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -60,23 +60,12 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device, gl}: AnimationProps) {
     super();
 
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: gl.LEQUAL
-    });
-
-    const texture = new Texture2D(gl, {
-      data: 'vis-logo.png'
-    });
+    const texture = device.createTexture({data: 'vis-logo.png'});
 
     this.model = new Model(device, {
       vs,
       fs,
       geometry: new CubeGeometry(),
-      uniforms: {
-        uTexture: texture,
-        uEyePosition: eyePosition
-      },
       modules: [phongLighting],
       moduleSettings: {
         material: {
@@ -93,6 +82,14 @@ export default class AppRenderLoop extends RenderLoop {
             position: [1, 2, 1]
           }
         ]
+      },
+      uniforms: {
+        uTexture: texture,
+        uEyePosition: eyePosition
+      },
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'  
       }
     });
   }

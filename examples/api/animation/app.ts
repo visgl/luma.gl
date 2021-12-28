@@ -59,14 +59,12 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
-  constructor({gl, aspect, animationLoop}: AnimationProps) {
+  constructor({device, gl, aspect, animationLoop}: AnimationProps) {
     super();
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+      clearDepth: 1
     });
 
     const playButton = document.getElementById('play');
@@ -165,11 +163,15 @@ export default class AppRenderLoop extends RenderLoop {
         rotation: rotations[i],
         // @ts-expect-error
         keyFrames: keyFrames[i],
-        model: new Model(gl, {
+        model: new Model(device, {
           vs,
           fs,
           modules: [dirlight],
           geometry: new CubeGeometry(),
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal'
+          },
           uniforms: {
             uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
             uView: new Matrix4().lookAt({

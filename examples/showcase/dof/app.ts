@@ -10,12 +10,10 @@ import {
   Framebuffer,
   clear,
   Program,
-  Texture2D,
   VertexArray,
   UniformBufferLayout,
   Buffer,
   isWebGL2,
-  setParameters
 } from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -47,19 +45,7 @@ const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
 const NEAR = 0.1;
 const FAR = 30.0;
 
-class InstancedCube extends Model {
-  count: number;
-  xforms: any[];
-  matrices: Float32Array;
-  matrixBuffer: Buffer;
-
-  constructor(gl, props) {
-    const count = props.count;
-    const xforms = new Array(count);
-    const matrices = new Float32Array(count * 16);
-    const matrixBuffer = new Buffer(gl, matrices.byteLength);
-
-    const vs = `\
+const vs = `\
 #version 300 es
 #define SHADER_NAME scene.vs
 
@@ -88,7 +74,8 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-    const fs = `\
+
+const fs = `\
 #version 300 es
 precision highp float;
 #define SHADER_NAME scene.fs
@@ -104,6 +91,18 @@ void main(void) {
   fragColor.a = 1.0;
 }
 `;
+
+class InstancedCube extends Model {
+  count: number;
+  xforms: any[];
+  matrices: Float32Array;
+  matrixBuffer: Buffer;
+
+  constructor(gl, props) {
+    const count = props.count;
+    const xforms = new Array(count);
+    const matrices = new Float32Array(count * 16);
+    const matrixBuffer = new Buffer(gl, matrices.byteLength);
 
     super(
       gl,
@@ -261,11 +260,6 @@ export default class AppRenderLoop extends RenderLoop {
       throw new Error(ALT_TEXT);
     }
 
-    setParameters(gl, {
-      depthTest: true,
-      depthFunc: GL.LEQUAL
-    });
-
     // Create postprocessing pass program.
 
     this.dofUniformsLayout = new UniformBufferLayout({
@@ -288,7 +282,11 @@ export default class AppRenderLoop extends RenderLoop {
     this.dofProgram = new Program(gl, {
       id: 'DOF_PROGRAM',
       vs: DOF_VERTEX,
-      fs: DOF_FRAGMENT
+      fs: DOF_FRAGMENT,
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
+      }
     });
 
     this.dofProgram.uniformBlockBinding(this.dofProgram.getUniformBlockIndex('DOFUniforms'), 0);
@@ -300,7 +298,7 @@ export default class AppRenderLoop extends RenderLoop {
       width: gl.drawingBufferWidth,
       height: gl.drawingBufferHeight,
       attachments: {
-        [GL.COLOR_ATTACHMENT0]: new Texture2D(gl, {
+        [GL.COLOR_ATTACHMENT0]: device.createTexture({
           format: GL.RGBA,
           type: GL.UNSIGNED_BYTE,
           width: gl.drawingBufferWidth,
@@ -313,7 +311,7 @@ export default class AppRenderLoop extends RenderLoop {
             [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
           }
         }),
-        [GL.DEPTH_ATTACHMENT]: new Texture2D(gl, {
+        [GL.DEPTH_ATTACHMENT]: device.createTexture({
           format: GL.DEPTH_COMPONENT16,
           type: GL.UNSIGNED_SHORT,
           dataFormat: GL.DEPTH_COMPONENT,
@@ -366,7 +364,7 @@ export default class AppRenderLoop extends RenderLoop {
       });
     }
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture(gl, {
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {

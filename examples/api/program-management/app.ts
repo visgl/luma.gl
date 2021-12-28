@@ -64,9 +64,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     setParameters(gl, {
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      depthTest: true,
-      depthFunc: gl.LEQUAL
+      clearDepth: 1
     });
 
     this.programManager = new ProgramManager(device);
@@ -113,6 +111,10 @@ export default class AppRenderLoop extends RenderLoop {
               eye: [0, 0, -8]
             }),
             uColor: colors[i]
+          },
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal'
           }
         })
       };

@@ -104,7 +104,7 @@ export default class AppRenderLoop extends RenderLoop {
   
   rotationAngle = 0;
 
-  constructor({gl, framebuffer}: AnimationProps) {
+  constructor({device, gl}: AnimationProps) {
     super();
     if (!isWebGL2(gl)) {
       throw new Error(ALT_TEXT);
@@ -113,7 +113,7 @@ export default class AppRenderLoop extends RenderLoop {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
-    const texture = new Texture2D(gl, {
+    const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
