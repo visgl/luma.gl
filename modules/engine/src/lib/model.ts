@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import type {RenderPipelineParameters} from '@luma.gl/api';
 import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {ProgramProps} from '@luma.gl/webgl';
@@ -12,7 +13,8 @@ import {
   log,
   isObjectEmpty,
   uid,
-  assert
+  assert,
+  withDeviceParameters
 } from '@luma.gl/webgl';
 import {
   getDebugTableForUniforms,
@@ -38,6 +40,8 @@ export type ModelProps = ProgramProps & {
   // fs,
   varyings?: string[];
   bufferMode?;
+
+  parameters?: RenderPipelineParameters;
 
   program?: Program;
   modules?: any[];
@@ -126,6 +130,7 @@ export default class Model {
 
   readonly id: string;
   readonly animated: boolean = false;
+
   programManager: ProgramManager;
   vertexCount: number;
 
@@ -187,7 +192,8 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileToGLSL100
+      transpileToGLSL100,
+      parameters
     } = props;
 
     this.programProps = {
@@ -199,7 +205,8 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileToGLSL100
+      transpileToGLSL100,
+      parameters
     };
     this.program = null;
     this.vertexArray = null;
@@ -298,7 +305,7 @@ export default class Model {
   }
 
   setProgram(props): void {
-    const {program, vs, fs, modules, defines, inject, varyings, bufferMode, transpileToGLSL100} =
+    const {program, vs, fs, modules, defines, inject, varyings, bufferMode, transpileToGLSL100, parameters} =
       props;
     this.programProps = {
       program,
@@ -309,7 +316,9 @@ export default class Model {
       inject,
       varyings,
       bufferMode,
-      transpileToGLSL100
+      transpileToGLSL100,
+      // TODO hack. 
+      parameters: parameters || this.programProps?.parameters
     };
     this._programDirty = true;
   }
@@ -542,7 +551,7 @@ export default class Model {
     if (program) {
       this._managedProgram = false;
     } else {
-      const {vs, fs, modules, inject, defines, varyings, bufferMode, transpileToGLSL100} =
+      const {vs, fs, modules, inject, defines, varyings, bufferMode, transpileToGLSL100, parameters} =
         this.programProps;
       program = this.programManager.get({
         // @ts-expect-error
@@ -554,7 +563,8 @@ export default class Model {
         defines,
         varyings,
         bufferMode,
-        transpileToGLSL100
+        transpileToGLSL100,
+        parameters
       });
       if (this.program && this._managedProgram) {
         this.programManager.release(this.program);

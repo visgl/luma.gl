@@ -194,4 +194,5 @@ export type GLFunctionParameters = {
   viewport?: [number, number, number, number] | NumberArray;
 };
 
+/** WebGL style parameters object (with both GL constants and function style fields) */
 export type GLParameters = GLValueParameters | GLFunctionParameters;

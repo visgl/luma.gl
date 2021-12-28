@@ -67,7 +67,7 @@ export default class Program extends WebGLResource<ProgramProps> {
 
   constructor(device: WebGLDevice | WebGLRenderingContext, props: ProgramProps = {}) {
     super(WebGLDevice.attach(device), props, {} as any);
-    this._parameters;
+    this._parameters = props.parameters;
     this.initialize(props);
     Object.seal(this);
     this._setId(props.id);
