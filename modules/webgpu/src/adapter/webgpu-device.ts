@@ -7,7 +7,8 @@ import type {
   SamplerProps,
   ShaderProps,
   TextureProps,
-  RenderPipelineProps
+  RenderPipelineProps,
+  FramebufferProps
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, cast} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
@@ -15,6 +16,7 @@ import WebGPUTexture from './resources/webgpu-texture';
 import WebGPUSampler from './resources/webgpu-sampler';
 import WebGPUShader from './resources/webgpu-shader';
 import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
+import WebGPUFramebuffer from './resources/webgpu-framebuffer';
 
 import WebGPUCanvasContext from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
@@ -146,6 +148,10 @@ export default class WebGPUDevice extends Device {
 
   createRenderPipeline(props: RenderPipelineProps): WebGPURenderPipeline {
     return new WebGPURenderPipeline(this, props);
+  }
+
+  createFramebuffer(props: FramebufferProps): WebGPUFramebuffer {
+    throw new Error('Not implemented');
   }
 
   commit(): void {

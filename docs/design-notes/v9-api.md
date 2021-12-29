@@ -1,10 +1,20 @@
-# luma.gl v9 API
+# luma.gl API
 
 > This section describes the experimental, work-in-progress v9 luma.gl API.
 
-Starting with v9, the luma.gl API is designed to expose the capabilities and performance of the WebGPU API to shader programmers while providing good backwards WebGL compatibility.
+The luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 
-This represents a break with luma.gl v8 and earlier, which was designed around a set of classes for the WebGL2 API.
+Naturally, core responsibilities for any GPU library:
+
+- GPU resource management (create and destroy GPU resources like Buffers, Textures etc)
+- GPU Bindings (making attribute buffers, uniform buffers, textures, samplers etc available to GPU shaders.
+- Shader execution (draw, compute)
+- Shader composition
+- Cross platform support: backwards compatibility with WebGL 2 (WebGL on a "best effort" basis).
+
+## v9 API notes
+
+The v9 API represents a break with luma.gl v8 and earlier, which was designed around providing a set of classes explicitly designed for working with the WebGL2 API.
 
 Many key concepts have carried forward from the v8 API to the v9 API, and programmers should find themselves working on the same abstraction level as before with similar classes, such as `Model`, `AnimationLoop`, `Buffer`, `Texture` etc. But there are a number of important differences, more on that below.
 

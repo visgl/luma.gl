@@ -132,10 +132,15 @@ export default class AppRenderLoop extends RenderLoop {
         depthCompare: 'less-equal'  
       }
     });
+
     this.prism = new Prism(device, {
       uniforms: {
         uTextureCube: cubemap,
         uTexture: texture
+      },
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
       }
     });
   }

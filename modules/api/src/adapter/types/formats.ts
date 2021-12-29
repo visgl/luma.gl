@@ -48,7 +48,7 @@ export type VertexType =
   ;
 
 /** Depth and stencil texture formats */
-export type DepthOrStencilTextureFormat =
+export type DepthStencilTextureFormat =
   'stencil8' |
   'depth16unorm' |
   'depth24plus' |
@@ -60,7 +60,7 @@ export type DepthOrStencilTextureFormat =
   'depth32float-stencil8';
 
 /** Texture formats */
-export type TextureFormat = DepthOrStencilTextureFormat |
+export type TextureFormat = DepthStencilTextureFormat |
   // 8-bit formats
   'r8unorm' |
   'r8snorm' |

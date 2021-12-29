@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type Device from '../device';
-import type {TextureFormat} from '../types/types';
+import type {TextureFormat} from '../types/formats';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import Sampler, {SamplerProps} from './sampler';
 
