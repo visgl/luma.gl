@@ -66,7 +66,7 @@ Setting a set of attributes and an elements array
 const vertexArray = new VertexArray(gl, {
   attributes: {
     elements: new Buffer(gl, {target: GL.ELEMENT_ARRAY_BUFFER, data: new Uint32Array([...])}),
-  	positions: new Buffer(gl, {data: new Float32Array([...])})
+	positions: new Buffer(gl, {data: new Float32Array([...])})
   }
 }
 
