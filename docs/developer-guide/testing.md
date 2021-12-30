@@ -1,12 +1,13 @@
 # Testing
 
-Testing GPU programs can be tricky, and ...
+Testing webgl programs can be tricky...
 
 - test-utils
 - probe
 - headless gl
 - puppeteer
 - ...
+<<<<<<< HEAD
 
 ## Test device creation
 
@@ -42,7 +43,7 @@ This class is intended to be used with `BrowserTestDriver` from `@probe.gl/test-
 
 In your node.js start script:
 
-```js
+```typescript
 // This is the script that runs in Node.js and starts the browser
 const {BrowserTestDriver} = require('@probe.gl/test-utils');
 new BrowserTestDriver().run({
@@ -57,7 +58,7 @@ new BrowserTestDriver().run({
 
 In your script that is run on the browser:
 
-```js
+```typescript
 const {SnapshotTestRunner} = require('@luma.gl/test-utils');
 const {Cube} = require('@luma.gl/core');
 
@@ -82,4 +83,3 @@ new TestRender({width: 800, height: 600})
   })
   .then(window.browserTestDriver_finish);
 ```
-

@@ -200,5 +200,5 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
 
 // Create device and run
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
+  makeAnimationLoop(AppRenderLoop, {canvas: 'canvas'}).start();
 }

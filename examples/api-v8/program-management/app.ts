@@ -1,6 +1,6 @@
 import {getRandom} from '@luma.gl/api';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
-import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, makeAnimationLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {ClassicModel as Model, ProgramManager} from '@luma.gl/gltools';
 import {clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -168,5 +168,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

@@ -3,7 +3,7 @@
 */
 
 import {getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, makeAnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import {setParameters, clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -172,5 +172,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

@@ -1,18 +1,15 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {GeospatialExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
 
 # External Contexts
 
 > This page applies to WebGL only
 
-<DeviceTabs />
-<GeospatialExample />
 
-This tutorial will be a simple demonstration of how to use an externally created WebGL context with luma.gl's higher-level APIs. So far, we have either created a WebGL context ourselves to use with low-level APIs, or allowed the the `AnimationLoop` class to create a WebGL context for us. luma.gl's higher-level APIs expect some instrumentation on the WebGL context, so we can't just use a context we create ourselves with classes like `Model` and `Buffer`. The `AnimationLoop` class performs this instrumentation for us using the `instrumentGLContext` function from **@luma.gl/gltools**, and we can use this function directly if we want to control creation of the context or use a context passed to us by another framework (e.g. the [GeoSpatial](/examples/showcase/geospatial) example uses this technique with a WebGL context created by [MapboxGL](https://docs.mapbox.com/mapbox-gl-js/api/)).
+This tutorial will be a simple demonstration of how to use an externally created WebGL context with luma.gl's higher-level APIs. So far, we have either created a WebGL context ourselves to use with low-level APIs, or allowed the the `AnimationLoop` class to create a WebGL context for us. luma.gl's higher-level APIs expect some instrumentation on the WebGL context, so we can't just use a context we create ourselves with classes like `Model` and `Buffer`. The `AnimationLoop` class performs this instrumentation for us using the `instrumentGLContext` function from **@luma.gl/gltools**, and we can use this function directly if we want to control creation of the context or use a context passed to us by another framework (e.g. the GeoSpatial example uses this technique with a WebGL context created by [MapboxGL](https://docs.mapbox.com/mapbox-gl-js/api/)).
 
 We'll create a modified version of the [Hello Triangle](/docs/getting-started/hello-triangle) tutorial that creates a WebGL context manually rather than using the `AnimationLoop` class. To start with, we'll modify our imports:
 
-```js
+```typescript
 import {Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 import {instrumentGLContext} from '@luma.gl/gltools';
@@ -20,7 +17,7 @@ import {instrumentGLContext} from '@luma.gl/gltools';
 
 We then create our context and pass it to `instrumentGLContext`:
 
-```js
+```typescript
 const canvas = document.createElement('canvas');
 canvas.width = 800;
 canvas.height = 600;
@@ -29,9 +26,9 @@ document.body.appendChild(canvas);
 const gl = instrumentGLContext(canvas.getContext('webgl'));
 ```
 
-This performs some polyfilling (done by `polyfillContext`, which we saw in the [Hello Instancing Low-level tutorial](/docs/getting-started/hello-instancing-low)) and tracks some additional metadata on the context, ensuring it will work properly with the rest of luma.gl. With that done, we simply create our luma.gl objects and draw as we did in the original example, with the sole difference being we create our own render loop using `requestAnimationFrame` rather than using the `AnimationLoop` callbacks.
+This performs some polyfilling (done by `polyfillContext`, and we create our own render loop using `requestAnimationFrame` rather than using the `AnimationLoop` callbacks.
 
-```js
+```typescript
 const gl = instrumentGLContext(canvas.getContext('webgl'));
 gl.clearColor(0, 0, 0, 1);
 
@@ -59,9 +56,9 @@ requestAnimationFrame(function draw() {
 });
 ```
 
-If all went well, a tri-color triangle should render as it did in the **Hello Triangle** example. A live version is available [here](/examples/getting-started/external-context), and the full source code is listed below for reference:
+If all went well, a tri-color triangle should render as it did in the **Hello Triangle** example. The full source code is listed below for reference:
 
-```js
+```typescript
 import {Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 import {instrumentGLContext} from '@luma.gl/gltools';

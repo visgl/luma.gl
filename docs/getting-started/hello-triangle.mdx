@@ -1,16 +1,17 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {HelloTriangleExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {HelloTriangleExample} from '@site';
 
 # Hello Triangle
+
+This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs.
 
 <DeviceTabs />
 <HelloTriangleExample />
 
-This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs.
 It is assumed you've set up your development environment as described in
 [Getting Started](/docs/getting-started). Your `index.js` file should look like the following:
 
-```js
+```typescript
 import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
@@ -31,14 +32,14 @@ loop.start();
 
 First, we'll need to update our imports with the classes we'll be using, `Buffer` and `Model`:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 ```
 
 Now let's create some buffers in the `onInitialize` method to hold our attribute data:
 
-```js
+```typescript
   onInitialize({device}) {
     // Setup logic goes here
     const positionBuffer = device.createBuffer(new Float32Array([
@@ -57,7 +58,7 @@ Now let's create some buffers in the `onInitialize` method to hold our attribute
 
 Next let's add the vertex and fragment shader code we'll be using to draw:
 
-```js
+```typescript
   onInitialize({device}) {
     // Setup logic goes here
 
@@ -88,7 +89,7 @@ Next let's add the vertex and fragment shader code we'll be using to draw:
 
 As a final step in our initialization, we'll create a `Model` in `onInitialize`:
 
-```js
+```typescript
   onInitialize({device}) {
     // Setup logic goes here
 
@@ -114,18 +115,18 @@ A `Model` can be thought of as gathering all the WebGL pieces necessary for a si
 
 Our `onRender` method is comparitavely much simpler:
 
-```js
+```typescript
   onRender({device}) {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }
 ```
 
-This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background. See the live demo [here](../../../examples/getting-started/hello-triangle).
+This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background.
 
 The entire application should look like the following:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 

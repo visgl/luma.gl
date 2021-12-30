@@ -314,5 +314,5 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

@@ -1,12 +1,20 @@
-# Transforms
+# Using Transforms
 
 > Note this documentation has not yet been updated to the luma.gl v9 API
 
-Transform Feedback operations represent a GPGPU/GPU compute technique where GPU draw calls are configured so that they write some specified outputs from the vertex shaders to (one or more) GPU memory buffers that have been provided by the application. Applications use transform feedback to data processing from CPU to GPU, where multiple parallel execution units will be used for processing. Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory.
+Transform  operations represent a GPGPU/GPU compute technique where GPU draw calls are configured 
+so that they write some specified outputs from the vertex shaders to (one or more) GPU memory buffers 
+that have been provided by the application.
 
-Transform Feedback operations write their output into `Buffer` instances. These buffers can then be directly set as attributes on `Model` or `VertexArray` for regular rendering operations.
+ Applications use transform feedback to data processing from CPU to GPU, where multiple 
+ parallel execution units will be used for processing. 
+ Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory.
 
-Buffers can be read back to the CPU, but this has a high performance penaltyh. Ideally, the application's logic can be designed so that CPU access is not required which avoids expensive CPU and GPU sync.
+Transform Feedback operations write their output into `Buffer` instances. 
+These buffers can then be directly set as attributes on `Model` or `VertexArray` for regular rendering operations.
+
+Buffers can be read back to the CPU, but this has a high performance penalty. 
+Ideally, the application's logic can be designed so that CPU access is not required which avoids expensive CPU and GPU sync.
 
 To run a single transform feedback operation:
 
@@ -18,7 +26,7 @@ Alternatively, the more powerful `Transform` class is preferable if you don't wa
 
 ## Usage
 
-```js
+```typescript
 import {Transform} from '@luma.gl/core';
 ```
 
@@ -26,7 +34,7 @@ import {Transform} from '@luma.gl/core';
 
 Create a `Transform` object by passing, vs (vertex shader), source buffer(s), varyings (output variable names in vertex shader) and destination buffers. Then call `run` to perform one transform feedback iteration.
 
-```js
+```typescript
 const VS = `\
 #version 300 es
 attribute float inValue;
@@ -64,7 +72,7 @@ transform.run();
 
 `Transform` can internally create destination buffers (i.e. feedback buffers), when `feedbackMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `feedbackMap`.
 
-```js
+```typescript
 const transform = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
@@ -82,7 +90,7 @@ const transform = new Transform(gl2, {
 
 When `feedbackMap` is specified buffers can be swapped using a single call to `swap()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
-```js
+```typescript
 // Setup Transform with `souceDestinationMap` as above
 
 transform.run();
@@ -105,7 +113,7 @@ bufferWithNewValues = transform.getBuffer('outValue');
 
 Once `Transform` object is constructed and used, one or more source or destination buffers can be updated using `update`.
 
-```js
+```typescript
 // transform is set up as above
 ...
 

@@ -17,7 +17,7 @@ import {RenderLoop} from `@luma.gl/engine`;
 
 Autocreates a canvas/context
 
-```js
+```typescript
 import {RenderLoop, ClipSpace} from '@luma.gl/engine';
 
 class AppRenderLoop extends RenderLoop {
@@ -44,7 +44,7 @@ new AppRenderLoop().start();
 
 Use a canvas in the existing DOM through its HTML id
 
-```js
+```typescript
 new AppRenderLoop({canvas: 'my-canvas'}).start();
 ```
 
@@ -55,7 +55,7 @@ new AppRenderLoop({canvas: 'my-canvas'}).start();
 | Parameter                        | Type                    | Description                                                                                                                                                                 |
 | -------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `device?`                            | `Device` | If supplied, will render into this external context instead of creating a new one.                                                                                          |
-| `glOptions`=`{}` (object)        |                         | Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context).                                                                        |
+| `glOptions`=`{}` (object)        |                         | Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context/context-api).                                                                        |
 | `onCreateContext?`               | (callback)              | function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.                                   |
 | `onInitialize`                   | (callback)              | if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.                                           |
 | `onRender?`                      | (callback)              | Called on every animation frame.                                                                                                                                            |
@@ -89,7 +89,7 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 
 ### constructor(props : Object)
 
-```js
+```typescript
 new RenderLoop({
   onCreateContext,
   onInitialize,
@@ -106,7 +106,7 @@ Restarts the animation
 
 `animationLoop.start(options)`
 
-- `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context).
+- `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context/context-api).
 
 ### stop() : RenderLoop
 
@@ -118,7 +118,7 @@ Stops the animation
 
 Returns a promise which resolves in the next frame after rendering and the `onRender` callback have completed.
 
-```js
+```typescript
 const loop = await animationLoop.waitForRender()
 // can now read pixels from webgl context
 loop.gl.readPixels(...)
@@ -174,14 +174,14 @@ Returns the current state of the WebGL context used by the animation loop.
 
 ## Experimental API (`useDevicePixels`)
 
-`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).
+`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference/gltools/context/device-pixels).
 
 ## Remarks
 
 - You can instantiate multiple `RenderLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 - Works both in browser and under Node.js.
 - All `RenderLoop` methods can be chained.
-- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference/gltools/context).
+- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference/gltools/context/context-api).
 - The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 - This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the RenderLoop constructor.
 

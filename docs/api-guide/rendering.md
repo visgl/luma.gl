@@ -1,4 +1,4 @@
-# Rendering
+# How Rendering Works
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
@@ -74,10 +74,10 @@ A default Framebuffer should not be manually resized.
 
 ### Reading, copying or blitting data from a Framebuffer attachment.
 
-- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/moving-data)
-- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/moving-data)
-- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/moving-data)
-- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/moving-data)
+- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/gltools/classes/moving-data)
+- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/gltools/classes/moving-data)
+- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/gltools/classes/moving-data)
+- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/gltools/classes/moving-data)
 
 ### Framebuffer Attachment Values (TBD)
 
@@ -214,7 +214,7 @@ framebuffer.clear({
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
-A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
+A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
 A RenderPipeline controls the vertex and fragment shader stages, and can be used in GPURenderPassEncoder as well as GPURenderBundleEncoder.
 
@@ -245,7 +245,7 @@ A render pipeline is comprised of the following render stages:
 
 Creating a pipeline
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({
   id: 'my-pipeline',
   vs: vertexShaderSourceString,
@@ -255,7 +255,7 @@ const pipeline = device.createRenderPipeline({
 
 Set or update uniforms, in this case world and projection matrices
 
-```js
+```typescript
 pipeline.setUniforms({
   uMVMatrix: view,
   uPMatrix: projection
@@ -264,7 +264,7 @@ pipeline.setUniforms({
 
 Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({vs, fs});
 
 const vertexArray = new VertexArray(gl, {pipeline});
@@ -278,7 +278,7 @@ pipeline.draw({vertexArray, ...});
 
 Creating a pipeline for transform feedback, specifying which varyings to use
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']});
 ```
 
@@ -294,7 +294,7 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 
 Creates a new pipeline using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({
   id: 'my-identifier',
   vs: vertexShaderSource,
@@ -339,7 +339,7 @@ Sets named uniforms from a map, ignoring names
 
 `RenderPipeline.draw` is the entry point for running shaders, rendering and (optionally calculating data using transform feedback techniques).
 
-```js
+```typescript
   RenderPipeline.draw({
     vertexArray,
 
@@ -441,13 +441,13 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
-A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/webgl/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
+A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
 ## Usage
 
 Creating a pipeline
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({
   id: 'my-pipeline',
   vs: vertexShaderSourceString,
@@ -457,7 +457,7 @@ const pipeline = device.createRenderPipeline({
 
 Set or update uniforms, in this case world and projection matrices
 
-```js
+```typescript
 pipeline.setUniforms({
   uMVMatrix: view,
   uPMatrix: projection
@@ -466,7 +466,7 @@ pipeline.setUniforms({
 
 Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({vs, fs});
 
 const vertexArray = new VertexArray(gl, {pipeline});
@@ -480,7 +480,7 @@ pipeline.draw({vertexArray, ...});
 
 Creating a pipeline for transform feedback, specifying which varyings to use
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']});
 ```
 
@@ -512,7 +512,7 @@ Free up any GPU resources associated with this buffer immediately (instead of wa
 
 Creates a new pipeline using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
-```js
+```typescript
 const pipeline = device.createRenderPipeline({
   id: 'my-identifier',
   vs: vertexShaderSource,
@@ -557,7 +557,7 @@ Sets named uniforms from a map, ignoring names
 
 `RenderPipeline.draw` is the entry point for running shaders, rendering and (optionally calculating data using transform feedback techniques).
 
-```js
+```typescript
   RenderPipeline.draw({
     vertexArray,
 

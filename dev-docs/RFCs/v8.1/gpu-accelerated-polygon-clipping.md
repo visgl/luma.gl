@@ -85,7 +85,7 @@ Constructor has following arguments, it constructs required objects such as `Tex
 * Deletes all owned resources.
 
 Example :
-```js
+```typescript
 // Initialize
 
 const polygonFilter = new GPUPolygonFilter(gl);

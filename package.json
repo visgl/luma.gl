@@ -15,7 +15,9 @@
   ],
   "workspaces": [
     "examples/**",
-    "modules/*"
+    "modules/*",
+    "website-modules/*",
+    "website"
   ],
   "browser": {
     "fs": false

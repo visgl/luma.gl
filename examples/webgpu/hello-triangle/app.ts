@@ -71,5 +71,5 @@ export default class AppRenderLoop extends RenderLoop {
 }
 
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
+  makeAnimationLoop(AppRenderLoop, {canvas: 'canvas'}).start();
 }

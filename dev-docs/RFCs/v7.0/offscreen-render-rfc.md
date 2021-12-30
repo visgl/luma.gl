@@ -55,7 +55,7 @@ Methods:
 
 Render on main thread:
 
-```js
+```typescript
 // app.js
 import animationLoopOptions from './animation';
 import {AnimationLoop} from 'luma.gl';
@@ -68,7 +68,7 @@ animationLoop.start({canvas: 'lumagl-canvas'});
 
 Render on worker thread:
 
-```js
+```typescript
 // app.js
 import animationLoopOptions from './animation';
 import {OffscreenAnimationLoop} from 'luma.gl';

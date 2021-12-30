@@ -198,8 +198,3 @@ export default class AppRenderLoop extends RenderLoop {
     this.transform.swap();
   }
 }
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
-}

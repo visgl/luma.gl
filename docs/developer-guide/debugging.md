@@ -20,7 +20,7 @@ Most classes in luma.gl allow you to supply an optional `id` string to their con
 This allows you to later easily check in the debugger which object 
 (which specific instance of that class) you are looking at when debugging code.
 
-```js
+```typescript
 const program = device.createRenderPipeline({id: 'cube-program', ...});
 const program = device.createRenderPipeline({id: 'pyramid-program', ...});
 ```
@@ -38,7 +38,7 @@ luma.gl logs its activities.
 
 Set the global variable `luma.log.level` (this can be done in the browser console at any time) 
 
-```js
+```typescript
 luma.log.level=1 
 ```
 
@@ -79,9 +79,9 @@ Note that the developer tools module is loaded dynamically when a device is crea
 
 and then reloading the browser tab.
 
-While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
+While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context/context-api) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
 
-```js
+```typescript
 import {luma} from '@luma.gl/core';
 import '@luma.gl/debug';
 const device = luma.createDevice({type: 'webgl', debug: true});

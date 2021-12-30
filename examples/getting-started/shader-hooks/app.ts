@@ -94,8 +94,3 @@ export default class AppRenderLoop extends RenderLoop {
     this.model2.draw();
   }
 }
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
-}

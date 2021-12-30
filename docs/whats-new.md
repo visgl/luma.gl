@@ -2,7 +2,7 @@
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
-## Version 9.0
+## Version 9.0 (In Development)
 
 Target Date: Q1, 2022
 
@@ -173,7 +173,7 @@ Date: September 19, 2019
 
 ### Program Management
 
-luma.gl introduces the [ProgramManager](/docs/api-reference/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
+luma.gl introduces the [ProgramManager](/docs/api-reference/gltools/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
 
 - Redundant shader compilation and linking is avoided.
 - Redundant program switching (among the [most expensive](https://computergraphics.stackexchange.com/a/46) GPU state changes) while rendering is avoided.
@@ -222,15 +222,15 @@ the shader injection system now supports:
 - Automatic injection by shader modules into hook functions or pre-defined shader hooks
 
 The combination of these features allows the behavior of the same shader code to be modified depending on included shader modules or other
-requirements of the application. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md) documentation for more details.
+requirements of the application. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders) documentation for more details.
 
 ### Animation Support
 
 More robust animations are now supported via the `Timeline` and `KeyFrames` classes.
 
-The `Timeline` class supports easily managing a timeline with multiple channels elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be attached to an `AnimationLoop` and then queried for time values, which can be used in animations. See [Timeline](/docs/api-reference/addons/animation/timeline.md) documentation for more details.
+The `Timeline` class supports easily managing a timeline with multiple channels elapsing at different rates, as well as orchestrating playing, pausing, and rewinding behavior between them. A timeline can be attached to an `AnimationLoop` and then queried for time values, which can be used in animations. See [Timeline](/docs/api-reference/engine/animation/timeline) documentation for more details.
 
-The `KeyFrames` class allows arbitrary data to be associated with time points. The time value of the key frames can be set and the current key frames and interpolation factor can be queried and used in calculating animated values. See [KeyFrames](/docs/api-reference/addons/animation/key-frames.md) documentation for more details.
+The `KeyFrames` class allows arbitrary data to be associated with time points. The time value of the key frames can be set and the current key frames and interpolation factor can be queried and used in calculating animated values. See [KeyFrames](/docs/api-reference/engine/animation/key-frames) documentation for more details.
 
 ## Version 7.0
 
@@ -257,7 +257,7 @@ Date: April 19, 2019
 <!--
 <img height="100" src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
 -->
-luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
+luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
 - **Physically-based Material Support**: Ensures that PBR models display as intended.
 - **Scenegraph Improvements**: The Scenegraph classes have been refactored to ensure support for glTF objects.
@@ -279,7 +279,7 @@ loaders.gl output can now be passed directly into luma.gl classes like `Geometry
 
 Image data for `Texture` classes can now be supplied using URLs or `Promise`s, making it unnecessary for applications to handle image loading themselves.
 
-```js
+```typescript
 new Texture2D(gl, 'path/to/my/image.png'); // Texture2D will load the image and becomes 'renderable' once it loads
 // or
 new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a promise
@@ -348,7 +348,7 @@ Uniforms are now cached at `Program` object, which improves performance by elimi
 
 ### Offscreen Rendering (Experimental)
 
-A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see [API documentation](/docs/api-reference/core/animation-loop-proxy.md) and [example app](https://github.com/visgl/luma.gl/tree/master/test/apps/wip/worker).
+A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see the [example app](https://github.com/visgl/luma.gl/tree/master/test/apps/wip/worker).
 
 ## Version 6.2
 
@@ -416,7 +416,7 @@ A selection of open source 3D loaders have been ported to a new submodule `loade
 
 ### Transform Class now supports Shader Modules
 
-The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders.md)), enabling the use of shader modules in transform feedback operations.
+The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders](/docs/api-reference/shadertools/assemble-shaders)), enabling the use of shader modules in transform feedback operations.
 
 ### Documentation Search
 
@@ -457,7 +457,7 @@ A new method `Model.transform` makes it easier to run basic transform feedback o
 
 ### Transform class (WebGL 2)
 
-[`Transform`](/docs/api-reference/core/transform.md) is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
+[`Transform`](/docs/api-reference/engine/transform) is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
 
 ## Shader Module System Improvements
 
@@ -508,23 +508,23 @@ Date: Apr 24, 2018
 
 ## Transform class (WebGL 2, Experimental)
 
-The new experimental [`Transform`](/docs/api-reference/core/transform.md) class provides an easy-to-use interface to perform Transform Feedback operations.
+The new experimental [`Transform`](/docs/api-reference/engine/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
 ## Framebuffer Class
 
-**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/webgl/framebuffer.md) is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/gltools/classes/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 ## Bundle Size Reduction
 
-The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/docs/developer-guide/building-apps.md) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
+The impact of importing luma.gl on production application bundle sizes has been reduced, in particular when using webpack 4 with appropriate configuration. A new article about [bundling and tree shaking](/docs/developer-guide/bundling) has been added to the Developer Guide, providing in-depth information and guidance on what numbers to expect.
 
 ## Running luma.gl in Node.js
 
-Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/docs/get-started/README.md) and the Upgrade Guide.
+Running of luma.gl under Node.js is now easier than ever. luma.gl v5.2 automatically loads headless-gl if installed on the system, avoiding the need for the app to import special files or add other conditional logic. See [Using with Node](/docs/getting-started) and the Upgrade Guide.
 
 ## Debug Mode Changes
 
-To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/docs/developer-guide/debugging.md) and the Upgrade Guide.
+To further reduce production application bundle sizes, luma.gl no longer support WebGL debug contexts by default, as this requires including the Khronos [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools) into the bundle. WebGL debug contexts are still available, but needs to be explicitly enabled. To understand how to use WebGL debug contexts in v5.2, please refer to the article on [Debugging](/docs/developer-guide/debugging) and the Upgrade Guide.
 
 ## Examples
 
@@ -544,7 +544,7 @@ Two improvements Performing Transform Feedback operations has gotten easier, mai
 
 `Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
-For more details check [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md) and [`Model`](/docs/api-reference/core/model.md) documentation.
+For more details check [`TransformFeedback`](/docs/api-reference/gltools/classes/transform-feedback) and [`Model`](/docs/api-reference/engine/model) documentation.
 
 ## Version 5.0
 
@@ -577,7 +577,7 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 ### Shader Modules
 
 - `fp64` - fp64 module works under more platforms/GPUs/drivers
-- [`picking`](/docs/api-reference/shadertools/shader-module-picking.md) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
+- [`picking`](/docs/api-reference/shadertools/core-shader-modules) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
 
 ## Version 4.0
 
@@ -602,7 +602,7 @@ A major release that brings full WebGL 2 support to luma.gl, as well as adding s
 
 luma.gl now exposes the complete WebGL 2 APIs:
 
-- New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference/webgl/query.md), [`Texture3D`](/docs/api-reference/webgl/texture-3d.md), and [`TransformFeedback`](/docs/api-reference/webgl/transform-feedback.md)), together with a new [`UniformBufferLayout`](/docs/api-reference/webgl/uniform-buffer-layout.md) helper class to make uniform buffers easy to use.
+- New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference/gltools/classes/query), [`Texture3D`](/docs/api-reference/gltools/classes/texture-3d), and [`TransformFeedback`](/docs/api-reference/gltools/classes/transform-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference/gltools/classes/uniform-buffer-layout) helper class to make uniform buffers easy to use.
 - Other existing WebGL classes with new functionalites under WebGL 2 have been updated.
 - Add new WebGL 2 texture formats and types support, including floating point textures, and multiple render targets.
 

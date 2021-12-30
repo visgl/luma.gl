@@ -1,0 +1,136 @@
+import {
+  DeviceTabs,
+  Feature as F,
+  Limit as L,
+  WebGLLimit as WL,
+} from '@site/src/react-luma';
+
+# DeviceLimits
+
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
+
+The `device.limits` field contains limits object that indicates what the current platform supports.
+
+## Usage
+
+```typescript
+import type {DeviceLimits} from '@luma.gl/api';
+import {Device} from '@luma.gl/api';
+
+const limits: DeviceLimits = device.limits;
+console.log(limits);
+if (limits.maxTextureDimension2D > 2048) {
+   ...
+}
+```
+
+## DeviceLimits
+
+<DeviceTabs />
+
+| Limit                                       | Value                                               | Comments                               |
+| ------------------------------------------- | --------------------------------------------------- | -------------------------------------- |
+| `maxTextureDimension1D`                     | <L f="maxTextureDimension1D" />                     | WebGL does not support 1D textures     |
+| `maxTextureDimension2D`                     | <L f="maxTextureDimension2D" />                     | `GL.MAX_TEXTURE_SIZE`                  |
+| `maxTextureDimension3D`                     | <L f="maxTextureDimension3D" />                     | `GL.MAX_3D_TEXTURE_SIZE`               |
+| `maxTextureArrayLayers`                     | <L f="maxTextureArrayLayers" />                     | `GL.MAX_ARRAY_TEXTURE_LAYERS`          |
+| `maxBindGroups`                             | <L f="maxBindGroups" />                             | WebGPU only                            |
+| `maxDynamicUniformBuffersPerPipelineLayout` | <L f="maxDynamicUniformBuffersPerPipelineLayout" /> | WebGPU only                            |
+| `maxDynamicStorageBuffersPerPipelineLayout` | <L f="maxDynamicStorageBuffersPerPipelineLayout" /> | WebGPU only                            |
+| `maxSampledTexturesPerShaderStage`          | <L f="maxSampledTexturesPerShaderStage" />          | `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`    |
+| `maxSamplersPerShaderStage`                 | <L f="maxSamplersPerShaderStage" />                 | `GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS`  |
+| `maxStorageBuffersPerShaderStage`           | <L f="maxStorageBuffersPerShaderStage" />           | WebGPU only                            |
+| `maxStorageTexturesPerShaderStage`          | <L f="maxStorageTexturesPerShaderStage" />          | WebGPU only                            |
+| `maxUniformBuffersPerShaderStage`           | <L f="maxUniformBuffersPerShaderStage" />           | `GL.MAX_UNIFORM_BUFFER_BINDINGS`       |
+| `maxUniformBufferBindingSize`               | <L f="maxUniformBufferBindingSize" />               | `GL.MAX_UNIFORM_BLOCK_SIZE`            |
+| `maxStorageBufferBindingSize`               | <L f="maxStorageBufferBindingSize" />               | WebGPU only                            |
+| `minUniformBufferOffsetAlignment`           | <L f="minUniformBufferOffsetAlignment" />           | `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`   |
+| `minStorageBufferOffsetAlignment`           | <L f="minStorageBufferOffsetAlignment" />           | WebGPU only                            |
+| `maxVertexBuffers`                          | <L f="maxVertexBuffers" />                          |                                        |
+| `maxVertexAttributes`                       | <L f="maxVertexAttributes" />                       | `GL.MAX_VERTEX_ATTRIBS`                |
+| `maxVertexBufferArrayStride`                | <L f="maxVertexBufferArrayStride" />                | Cant be reliably determined on WebGL   |
+| `maxInterStageShaderComponents`             | <L f="maxInterStageShaderComponents" />             | `GL.MAX_VARYING_COMPONENTS`            |
+| `maxComputeWorkgroupStorageSize`            | <L f="maxComputeWorkgroupStorageSize" />            | WebGL does not support compute shaders |
+| `maxComputeInvocationsPerWorkgroup`         | <L f="maxComputeInvocationsPerWorkgroup" />         | WebGL does not support compute shaders |
+| `maxComputeWorkgroupSizeX`                  | <L f="maxComputeWorkgroupSizeX" />                  | WebGL does not support compute shaders |
+| `maxComputeWorkgroupSizeY`                  | <L f="maxComputeWorkgroupSizeY" />                  | WebGL does not support compute shaders |
+| `maxComputeWorkgroupSizeZ`                  | <L f="maxComputeWorkgroupSizeZ" />                  | WebGL does not support compute shaders |
+| `maxComputeWorkgroupsPerDimension`          | <L f="maxComputeWorkgroupsPerDimension" />          | WebGL does not support compute shaders |
+
+## WebGL
+
+If you know that you are running on WebGL, you don't need to go through
+the luma.gl Device APIs. You can access "raw" WebGL extensions and limits directly.
+
+### Device.webglLimits
+
+A luma.gl `WebGLDevice` extracts an object that contains all "raw" WebGL limits.
+
+```typescript
+import GL from '@luma.gl/constants';
+import {WebGLDevice} from '@luma.gl/webgl';
+
+const webglDevice = device instanceof WebGLDevice ? device as WebGLDevice: null;
+console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
+```
+
+<DeviceTabs />
+
+| Limits                                             | This <br/> Browser                                       | Description                          |
+| -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------ |
+| **WebGL 1**                                        |                                                          |                                      |
+| `GL.ALIASED_LINE_WIDTH_RANGE`                      | <WL f="ALIASED_LINE_WIDTH_RANGE" />                      | Width !== 1 are no longer supported. |
+| `GL.ALIASED_POINT_SIZE_RANGE`                      | <WL f="ALIASED_POINT_SIZE_RANGE" />                      | `topology`: `'point'`                |
+| `GL.MAX_TEXTURE_SIZE`                              | <WL f="MAX_TEXTURE_SIZE" />                              | Max width/height of texture          |
+| `GL.MAX_CUBE_MAP_TEXTURE_SIZE`                     | <WL f="MAX_CUBE_MAP_TEXTURE_SIZE" />                     | Max width/height of cube texture     |
+| `GL.MAX_TEXTURE_IMAGE_UNITS`                       | <WL f="MAX_TEXTURE_IMAGE_UNITS" />                       |                                      |
+| `GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS`              | <WL f="MAX_COMBINED_TEXTURE_IMAGE_UNITS" />              |                                      |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`                | <WL f="MAX_VERTEX_TEXTURE_IMAGE_UNITS" />                |                                      |
+| `GL.MAX_RENDERBUFFER_SIZE`                         | <WL f="MAX_RENDERBUFFER_SIZE" />                         |                                      |
+| `GL.MAX_VARYING_VECTORS`                           | <WL f="MAX_VARYING_VECTORS" />                           |                                      |
+| `GL.MAX_VERTEX_ATTRIBS`                            | <WL f="MAX_VERTEX_ATTRIBS" />                            |                                      |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`                    | <WL f="MAX_VERTEX_UNIFORM_VECTORS" />                    |                                      |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`                  | <WL f="MAX_FRAGMENT_UNIFORM_VECTORS" />                  |                                      |
+| `GL.MAX_VIEWPORT_DIMS`                             | <WL f="MAX_VIEWPORT_DIMS" />                             |                                      |
+| `GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT`                | <WL f="MAX_TEXTURE_MAX_ANISOTROPY_EXT" />                |                                      |
+| **WebGL 2**                                        |                                                          |                                      |
+| `GL.MAX_3D_TEXTURE_SIZE`                           | <WL f="MAX_3D_TEXTURE_SIZE" />                           |                                      |
+| `GL.MAX_ARRAY_TEXTURE_LAYERS`                      | <WL f="MAX_ARRAY_TEXTURE_LAYERS" />                      |                                      |
+| `GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL`                 | <WL f="MAX_CLIENT_WAIT_TIMEOUT_WEBGL" />                 |                                      |
+| `GL.MAX_COLOR_ATTACHMENTS`                         | <WL f="MAX_COLOR_ATTACHMENTS" />                         |                                      |
+| `GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS`      | <WL f="MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS" />      |                                      |
+| `GL.MAX_COMBINED_UNIFORM_BLOCKS`                   | <WL f="MAX_COMBINED_UNIFORM_BLOCKS" />                   |                                      |
+| `GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS`        | <WL f="MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS" />        |                                      |
+| `GL.MAX_DRAW_BUFFERS`                              | <WL f="MAX_DRAW_BUFFERS" />                              |                                      |
+| `GL.MAX_ELEMENT_INDEX`                             | <WL f="MAX_ELEMENT_INDEX" />                             |                                      |
+| `GL.MAX_ELEMENTS_INDICES`                          | <WL f="MAX_ELEMENTS_INDICES" />                          |                                      |
+| `GL.MAX_ELEMENTS_VERTICES`                         | <WL f="MAX_ELEMENTS_VERTICES" />                         |                                      |
+| `GL.MAX_FRAGMENT_INPUT_COMPONENTS`                 | <WL f="MAX_FRAGMENT_INPUT_COMPONENTS" />                 |                                      |
+| `GL.MAX_FRAGMENT_UNIFORM_BLOCKS`                   | <WL f="MAX_FRAGMENT_UNIFORM_BLOCKS" />                   |                                      |
+| `GL.MAX_FRAGMENT_UNIFORM_COMPONENTS`               | <WL f="MAX_FRAGMENT_UNIFORM_COMPONENTS" />               |                                      |
+| `GL.MAX_PROGRAM_TEXEL_OFFSET`                      | <WL f="MAX_PROGRAM_TEXEL_OFFSET" />                      |                                      |
+| `GL.MAX_SAMPLES`                                   | <WL f="MAX_SAMPLES" />                                   |                                      |
+| `GL.MAX_SERVER_WAIT_TIMEOUT`                       | <WL f="MAX_SERVER_WAIT_TIMEOUT" />                       |                                      |
+| `GL.MAX_TEXTURE_LOD_BIAS`                          | <WL f="MAX_TEXTURE_LOD_BIAS" />                          |                                      |
+| `GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS` | <WL f="MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS" /> |                                      |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS`       | <WL f="MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS" />       |                                      |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS`    | <WL f="MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS" />    |                                      |
+| `GL.MAX_UNIFORM_BLOCK_SIZE`                        | <WL f="MAX_UNIFORM_BLOCK_SIZE" />                        |                                      |
+| `GL.MAX_UNIFORM_BUFFER_BINDINGS`                   | <WL f="MAX_UNIFORM_BUFFER_BINDINGS" />                   |                                      |
+| `GL.MAX_VARYING_COMPONENTS`                        | <WL f="MAX_VARYING_COMPONENTS" />                        |                                      |
+| `GL.MAX_VERTEX_OUTPUT_COMPONENTS`                  | <WL f="MAX_VERTEX_OUTPUT_COMPONENTS" />                  |                                      |
+| `GL.MAX_VERTEX_UNIFORM_BLOCKS`                     | <WL f="MAX_VERTEX_UNIFORM_BLOCKS" />                     |                                      |
+| `GL.MAX_VERTEX_UNIFORM_COMPONENTS`                 | <WL f="MAX_VERTEX_UNIFORM_COMPONENTS" />                 |                                      |
+| `GL.MIN_PROGRAM_TEXEL_OFFSET`                      | <WL f="MIN_PROGRAM_TEXEL_OFFSET" />                      |                                      |
+| `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`               | <WL f="UNIFORM_BUFFER_OFFSET_ALIGNMENT" />               |                                      |
+
+## Remarks
+
+- WebGL 1 only supports one color buffer format (RBG32F is deprecated)
+- WebGL 2 supports multiple color buffer formats
+- Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
+- The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
+- Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
+
+['ext_texture_filter_anisotropic']: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
+

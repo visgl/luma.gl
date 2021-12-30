@@ -1,4 +1,4 @@
-# Bindings
+# Understanding Bindings
 
 luma.gl offers support for setting up ("binding") data required by the GPU during shader execution, including: 
 - attribute buffers

@@ -1,16 +1,16 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {LightingExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {LightingExample} from '@site';
 
 # Lighting
 
 <DeviceTabs />
 <LightingExample />
 
-This tutorial will expand on the [previous one](/examples/getting-started/hello-cube), but we'll add some lighting to enhance the feeling of 3D in the scene. To accomplish this, we'll use one of **luma.gl**'s built-in shader modules for the first time.
+This tutorial will expand on the previous one, but we'll add some lighting to enhance the feeling of 3D in the scene. To accomplish this, we'll use one of **luma.gl**'s built-in shader modules for the first time.
 
 To start, we'll add the `phongLighting` module from **@luma.gl/shadertools** to our imports:
 
-```js
+```typescript
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
@@ -25,7 +25,7 @@ We'll modify our shaders to perform our lighting calculations in the following w
 - We'll pass the world positions and normals to the fragment shader in `varying`s
 - We'll call `lighting_getLightColor`, which will be added to our fragment shader by the `phongLighting` module, to calculate the final fragment color.
 
-```js
+```typescript
 const vs = `\
   attribute vec3 positions;
   attribute vec3 normals;
@@ -67,7 +67,7 @@ const fs = `\
 
 Our `onInitialize` method needs a few significant updates:
 
-```js
+```typescript
   onInitialize({device}) {
     setParameters(device, {
       depthTest: true,
@@ -121,7 +121,7 @@ We're splitting the model matrix out on its own so we can use it in our shaders 
 
 Our `onRender` doesn't change much except to set up the model matrix separately from the MVP matrix and pass it as a uniform:
 
-```js
+```typescript
   onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     modelMatrix
       .identity()
@@ -139,9 +139,9 @@ Our `onRender` doesn't change much except to set up the model matrix separately 
   }
 ```
 
-If all went well, you should see a scene almost identical to the one from the [previous tutorial](/examples/getting-started/hello-cube) but with some white light reflecting off the cube. The live demo is available [here](/examples/getting-started/lighting), and the full source code is listed below for reference:
+If all went well, you should see a scene almost identical to the one from the previous "hello cube" tutorial but with some white light reflecting off the cube.
 
-```js
+```typescript
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {Texture2D, clear, setParameters} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';

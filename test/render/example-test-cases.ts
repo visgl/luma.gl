@@ -68,7 +68,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // Construct the renderloop, but don't start it. Manually call its OnInitialize
       onInitialize: (params) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        animationLoop = RenderLoop.run(ExampleRenderLoop);
+        animationLoop = makeAnimationLoop(ExampleRenderLoop);
         return animationLoop.props?.onInitialize(params);
       },
 

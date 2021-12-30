@@ -1,5 +1,5 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {ShaderModulesExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {ShaderModulesExample} from '@site';
 
 # Shader Modules
 
@@ -12,7 +12,7 @@ Most of this will be fairly similar to the [Hello Triangle](/docs/getting-starte
 
 We'll start by setting up our imports and defining our base vertex and fragment shaders:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
@@ -53,7 +53,7 @@ We have two vertex and fragment shader pairs: one will move vertices to the left
 
 We define `color_hsv2rgb` in a shader module:
 
-```js
+```typescript
 // Taken from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
 const colorModule = {
   name: 'color',
@@ -72,7 +72,7 @@ Shader modules are simply JavaScript objects that contain at least a name and so
 
 In the `onInitialize` method of our `AnimationLoop`, we create two models with different vertex and fragment shader sources, but both including the our `colorModule`.
 
-```js
+```typescript
   onInitialize({device}) {
     const positionBuffer = new Buffer(device, new Float32Array([
       -0.3, -0.5,
@@ -112,7 +112,7 @@ In the `onInitialize` method of our `AnimationLoop`, we create two models with d
 
 In `onRender`, we simply draw both models:
 
-```js
+```typescript
   onRender({device, model1, model2}) {
     clear(device, {color: [0, 0, 0, 1]});
     model1.draw();
@@ -120,13 +120,13 @@ In `onRender`, we simply draw both models:
   }
 ```
 
-If all went well, a blue trangle and a red triangle should be drawn side-by-side on the canvas. See the live demo [here](/examples/getting-started/shader-modules).
+If all went well, a blue trangle and a red triangle should be drawn side-by-side on the canvas.
 
 Shader modules allowed us to define our HSL to RGB conversion function once and use it across multiple programs.
 
 The entire application should look like the following:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 

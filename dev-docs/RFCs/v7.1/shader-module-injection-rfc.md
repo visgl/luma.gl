@@ -61,14 +61,14 @@ be injected first
 
 Setting the picking color of a fragment simply involves replacing the calculated fragment color with a provided picking color, if picking is enabled. Currently, this is done by including the picking module and directly calling the `picking_filterColor` function it provides as the final operation on the fragment color. This could be done automatically by defining a hook function `MYHOOK_fragmentColor` to indicate that the fragment color has been finalized. The application would define the hook as follows:
 
-```js
+```typescript
 setShaderHook('fs', {
   signature: 'MYHOOK_fragmentColor(inout vec4 color)'
 });
 ```
 
 In the fragment shader `main` function, the new lifecycle function would appear as follows:
-```js
+```typescript
 void main() {
   //...
   MYHOOK_fragmentColor(gl_FragColor)
@@ -77,7 +77,7 @@ void main() {
 
 And the injection for the picking module would be defined as follows:
 
-```js
+```typescript
 setModuleInjection('fs', 'picking', {
   shaderHook: 'MYHOOK_fragmentColor',
   injection: 'color = picking_filterColor(color)',

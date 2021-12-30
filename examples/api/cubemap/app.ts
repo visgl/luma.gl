@@ -1,5 +1,5 @@
 import {Device, loadImage} from '@luma.gl/api';
-import {RenderLoop, CubeGeometry, AnimationProps, Model, ModelProps} from '@luma.gl/engine';
+import {RenderLoop, makeAnimationLoop, CubeGeometry, AnimationProps, Model, ModelProps} from '@luma.gl/engine';
 import {clear, ClassicModel, ClassicModelProps} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
@@ -175,5 +175,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

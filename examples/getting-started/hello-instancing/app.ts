@@ -1,5 +1,5 @@
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, makeAnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -77,9 +77,4 @@ export default class AppRenderLoop extends RenderLoop {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }
-}
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
 }

@@ -1,6 +1,9 @@
 <!doctype html>
 <script type="module">
-  import './app.ts';
+  import RenderLoop from './app.ts';
+  import {luma} from '@luma.gl/api';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  makeAnimationLoop(RenderLoop, {device: luma.createDevice()}).start();
 </script>
 <body>
 </body>

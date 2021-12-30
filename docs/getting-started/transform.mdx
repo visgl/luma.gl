@@ -1,10 +1,8 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {TransformExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
 
 # Transform
 
 <DeviceTabs />
-<TransformExample />
 
 In this tutorial, we'll learn how to use [transform feedback](https://www.khronos.org/opengl/wiki/Transform_Feedback) using luma.gl's high-level API. Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parrallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.
 
@@ -12,14 +10,14 @@ In luma.gl, transform feedback is primarily exposed via the [Transform](/docs/ap
 
 To start, we'll modify our imports to include `Transform` from **@luma.gl/engine**:
 
-```js
+```typescript
 import {AnimationLoop, Transform, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 ```
 
 Then we'll define our shaders, which we'll write in GLSL ES 3.0 since we're using WebGL 2:
 
-```js
+```typescript
 const transformVs = `\
 #version 300 es
 #define SIN2 0.03489949
@@ -67,7 +65,7 @@ Internally, we'll be using two separate programs, one for transform feedback and
 
 In `onInitialize`, we create our `Transform` instance:
 
-```js
+```typescript
   onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([
       -0.5, -0.5,
@@ -95,7 +93,7 @@ We pass the vertex shader we defined, as well as the initial input buffer in the
 
 Finally, we create a model instance to perform the rendering:
 
-```js
+```typescript
   onInitialize({device}) {
     // Transform setup...
 
@@ -123,7 +121,7 @@ We set up the `Model` similarly to how we've done in other tutorials, with the e
 
 Our `onRender` involves a few additional steps compared to what we've seen before:
 
-```js
+```typescript
   onRender({device, transform, model}) {
     transform.run();
 
@@ -140,9 +138,9 @@ Our `onRender` involves a few additional steps compared to what we've seen befor
 
 First, we run the transform feedback to write the rotated positions to the `vPosition` output buffer. We then bind the `Model`'s `position` attribute to the `vPosition` output buffer from the last transform pass and draw. Finally, we swap the input and output buffers in the transform so that the newly rotated positions will be used as input for the next pass, allowing the animation to continue.
 
-If all went well, you should see a tri-color triangle rotating on the screen. A live demo is available [here](/examples/getting-started/transform-feedback), and the complete application is listed below for reference:
+If all went well, you should see a tri-color triangle rotating on the screen. The complete application is listed below for reference:
 
-```js
+```typescript
 import {AnimationLoop, Transform, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 

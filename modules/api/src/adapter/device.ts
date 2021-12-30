@@ -24,6 +24,7 @@ export type DeviceProps = {
 
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
+  container?: HTMLElement | string | null;
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
 
@@ -45,15 +46,15 @@ export type DeviceProps = {
   manageState?: boolean; // Set to false to disable WebGL state management instrumentation
   break?: string[]; // TODO: types
 
-  // Attach to existing context
+  // @deprecated Attach to existing context
   gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
 };
 
 export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
-  id: 'undefined',
+  id: null!,
   type: 'best-available',
-  canvas: null, // A canvas element or a canvas string id
-  gl: null,
+  canvas: null,
+  container: null, 
   webgl2: true, // Attempt to create a WebGL2 context
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   manageState: true,
@@ -69,6 +70,7 @@ export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   // premultipliedAlpha: undefined,
   // preserveDrawingBuffer: undefined,
   // failIfMajorPerformanceCaveat: undefined
+  gl: null
 };
 
 export type ShadingLanguage = 'glsl' | 'wgsl';
@@ -203,8 +205,8 @@ export default abstract class Device {
   }
 
   constructor(props: DeviceProps) {
-    this.props = {...DEFAULT_DEVICE_PROPS, id: uid(this[Symbol.toStringTag]), ...props};
-    this.id = this.props.id;
+    this.props = {...DEFAULT_DEVICE_PROPS, ...props};
+    this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
   readonly id: string;

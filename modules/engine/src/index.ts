@@ -1,16 +1,22 @@
 // luma.gl Engine API
-export type {AnimationProps} from './lib/animation-props';
-export type {AnimationLoopProps} from './lib/animation-loop';
-export {AnimationLoop} from './lib/animation-loop';
-export {RenderLoop} from './lib/render-loop';
-export type {ModelProps} from './lib/model';
-export {default as Model} from './lib/model';
-
-export {PipelineFactory} from './lib/pipeline-factory';
 
 // Animation
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
+export type {AnimationProps} from './lib/animation-props';
+
+export type {AnimationLoopProps} from './lib/animation-loop';
+export {AnimationLoop} from './lib/animation-loop';
+
+export type {RenderLoopProps} from './lib/render-loop';
+export {RenderLoop} from './lib/render-loop';
+export {makeAnimationLoop} from './lib/render-loop';
+
+export type {ModelProps} from './lib/model';
+export {Model} from './lib/model';
+
+export {PipelineFactory} from './lib/pipeline-factory';
+
 
 // Utils
 // export {default as ClipSpace} from './lib/clip-space';

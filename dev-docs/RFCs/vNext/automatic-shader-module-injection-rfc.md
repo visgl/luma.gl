@@ -26,7 +26,7 @@ Now that we have developed a number of shader modules, we are starting to see th
 
 ## Proposal
 
-```js
+```typescript
 new Model(gl, {
   vs, fs,
   modules: [

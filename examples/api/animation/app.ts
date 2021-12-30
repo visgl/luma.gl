@@ -1,4 +1,4 @@
-import {RenderLoop, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, makeAnimationLoop, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
 import {clear, ClassicModel} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -209,5 +209,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

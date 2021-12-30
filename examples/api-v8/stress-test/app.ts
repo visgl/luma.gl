@@ -1,5 +1,5 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, makeAnimationLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {clear, withParameters, Model, ModelProps} from '@luma.gl/gltools';
@@ -250,5 +250,5 @@ function createDrawcall(gl, offsets, texture, alpha) {
 if (typeof window !== 'undefined' && !window.website) {
   document.body.style.overflow = 'hidden';
   document.body.style.margin = '0';
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppRenderLoop).start();
 }

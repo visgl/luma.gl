@@ -182,6 +182,6 @@ export default class AppRenderLoop extends RenderLoop {
 }
 
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
+  makeAnimationLoop(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
 }
 
