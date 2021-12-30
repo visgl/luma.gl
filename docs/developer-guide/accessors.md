@@ -82,4 +82,6 @@ It is possible to use different size memory attributes than specified by the GLS
 
 [glTF formatted files](https://www.khronos.org/gltf/). glTF files contain two JSON object arrays ("bufferViews" and "accessors") that describe how raw memory buffers are organized and should be interpreted.
 
-The `Accessor` and `Buffer` class APIs have intentionally been designed to be a close representation when converting "accessors" and "bufferViews" stored in glTF files. Each glTF `accessor` can be mapped to a luma.gl `Accessor` and each glTF `bufferView` can be mapped to a luma.gl `Buffer`. For more details see [glTF mapping]().
+The `Accessor` and `Buffer` class APIs have intentionally been designed to be a close representation when converting "accessors" and "bufferViews" stored in glTF files. Each glTF `accessor` can be mapped to a luma.gl `Accessor` and each glTF `bufferView` can be mapped to a luma.gl `Buffer`.
+
+`For more details see [glTF mapping]().`

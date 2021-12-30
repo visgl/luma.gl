@@ -13,81 +13,12 @@
       "title": "Developer Guide",
       "entries": [
         { "entry": "docs/developer-guide" },
-        { "entry": "docs/developer-guide/accessors" },
-        { "entry": "docs/developer-guide/transform-feedback" },
-        { "entry": "docs/developer-guide/shader-modules" },
-        { "entry": "docs/developer-guide/debugging" },
         { "entry": "docs/developer-guide/bundling" },
-        { "entry": "docs/developer-guide/contributing" }
-      ]
-    },
-    {
-      "title": "API Reference",
-      "chapters": [
-        {
-          "title": "@luma.gl/engine",
-          "entries": [
-            { "entry": "modules/engine/docs/api-reference/model" },
-            { "entry": "modules/engine/docs/api-reference/animation-loop" },
-            { "entry": "modules/engine/docs/api-reference/transform" },
-            { "entry": "modules/engine/docs/api-reference/geometry" },
-            { "entry": "modules/engine/docs/api-reference/geometries" },
-            { "entry": "modules/engine/docs/api-reference/program-manager" },
-            { "entry": "modules/engine/docs/api-reference/animation/timeline" },
-            { "entry": "modules/engine/docs/api-reference/animation/key-frames" }
-          ]
-        },
-        {
-          "title": "@luma.gl/webgl",
-          "entries": [
-            { "entry": "modules/webgl/docs/api-reference/accessor" },
-            { "entry": "modules/webgl/docs/api-reference/buffer" },
-            { "entry": "modules/webgl/docs/api-reference/framebuffer" },
-            { "entry": "modules/webgl/docs/api-reference/program" },
-            { "entry": "modules/webgl/docs/api-reference/query" },
-            { "entry": "modules/webgl/docs/api-reference/renderbuffer" },
-            { "entry": "modules/webgl/docs/api-reference/shader" },
-            { "entry": "modules/webgl/docs/api-reference/texture" },
-            { "entry": "modules/webgl/docs/api-reference/texture-2d" },
-            { "entry": "modules/webgl/docs/api-reference/texture-3d" },
-            { "entry": "modules/webgl/docs/api-reference/texture-cube" },
-            { "entry": "modules/webgl/docs/api-reference/transform-feedback" },
-            { "entry": "modules/webgl/docs/api-reference/uniform-buffer-layout" },
-            { "entry": "modules/webgl/docs/api-reference/vertex-array" },
-            { "entry": "modules/webgl/docs/api-reference/vertex-array-object" },
-            { "entry": "modules/webgl/docs/api-reference/resource" },
-            { "entry": "modules/webgl/docs/api-reference/context/feature-checking" },
-            { "entry": "modules/webgl/docs/api-reference/context/context-properties" },
-            { "entry": "modules/webgl/docs/api-reference/moving-data" },
-            { "entry": "modules/webgl/docs/api-reference/context" },
-            { "entry": "modules/webgl/docs/api-reference/parameter-setting" },
-            { "entry": "modules/webgl/docs/api-reference/device-pixels" }
-          ]
-        },
-        {
-          "title": "@luma.gl/shadertools",
-          "entries": [
-            { "entry": "modules/shadertools/docs/api-reference/assemble-shaders" },
-            { "entry": "modules/shadertools/docs/api-reference/core-shader-modules" },
-            { "entry": "modules/shadertools/docs/api-reference/effects-shader-modules" },
-            { "entry": "modules/shadertools/docs/api-reference/shader-logs" }
-          ]
-        },
-        {
-          "title": "@luma.gl/experimental",
-          "entries": [
-            { "entry": "modules/experimental/docs/api-reference/warning" },
-            { "entry": "modules/experimental/docs/api-reference/scenegraph/scenegraph-node" },
-            { "entry": "modules/experimental/docs/api-reference/scenegraph/model-node" },
-            { "entry": "modules/experimental/docs/api-reference/scenegraph/group-node" }
-          ]
-        },
-        {
-          "title": "@luma.gl/debug",
-          "entries": [
-            { "entry": "modules/debug/docs" }
-          ]
-        }
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/accessors" },
+        { "entry": "docs/developer-guide/contributing" },
+        { "entry": "docs/developer-guide/transform-feedback" },
+        { "entry": "docs/developer-guide/shader-modules" }
       ]
     },
     {
@@ -108,6 +39,117 @@
         { "entry": "docs/getting-started/lighting" },
         { "entry": "docs/getting-started/instanced-transform" },
         { "entry": "docs/getting-started/whats-next" }
+      ]
+    },
+    {
+      "title": "API Reference",
+      "chapters": [
+        {
+          "title": "@luma.gl/core",
+          "entries": [
+            { "entry": "docs/modules/core" }
+          ]
+        },
+        {
+          "title": "@luma.gl/api",
+          "entries": [
+            { "entry": "docs/modules/api" },
+            { "entry": "docs/modules/api/resources/buffer" },
+            { "entry": "docs/modules/api/resources/compute-pipeline" },
+            { "entry": "docs/modules/api/resources/framebuffer" },
+            { "entry": "docs/modules/api/resources/pipeline" },
+            { "entry": "docs/modules/api/resources/render-pipeline" },
+            { "entry": "docs/modules/api/resources/sampler" },
+            { "entry": "docs/modules/api/resources/shader" },
+            { "entry": "docs/modules/api/resources/texture" },
+            { "entry": "docs/modules/api/types/shader-layout" },
+            { "entry": "docs/modules/api/context/feature-checking" },
+            { "entry": "docs/modules/api/canvas-context" },
+            { "entry": "docs/modules/api/device" },
+            { "entry": "docs/modules/api/features" },
+            { "entry": "docs/modules/api/parameters" },
+            { "entry": "docs/modules/api/texture-formats" }
+          ]
+        },
+        {
+          "title": "@luma.gl/engine",
+          "entries": [
+            { "entry": "docs/modules/engine" },
+            { "entry": "docs/modules/engine/model" },
+            { "entry": "docs/modules/engine/animation-loop" },
+            { "entry": "docs/modules/engine/transform" },
+            { "entry": "docs/modules/engine/geometry" },
+            { "entry": "docs/modules/engine/geometries" },
+            { "entry": "docs/modules/engine/program-manager" },
+            { "entry": "docs/modules/engine/animation/timeline" },
+            { "entry": "docs/modules/engine/animation/key-frames" }
+          ]
+        },
+        {
+          "title": "@luma.gl/shadertools",
+          "entries": [
+            { "entry": "docs/modules/shadertools/assemble-shaders" },
+            { "entry": "docs/modules/shadertools/core-shader-modules" },
+            { "entry": "docs/modules/shadertools/effects-shader-modules" },
+            { "entry": "docs/modules/shadertools/shader-logs" }
+          ]
+        },
+        {
+          "title": "@luma.gl/experimental",
+          "entries": [
+            { "entry": "docs/modules/experimental/warning" },
+            { "entry": "docs/modules/experimental/scenegraph/scenegraph-node" },
+            { "entry": "docs/modules/experimental/scenegraph/model-node" },
+            { "entry": "docs/modules/experimental/scenegraph/group-node" }
+          ]
+        },
+        {
+          "title": "@luma.gl/debug",
+          "entries": [
+            { "entry": "docs/modules/debug" }
+          ]
+        },
+        {
+          "title": "@luma.gl/webgl",
+          "entries": [
+            { "entry": "docs/modules/webgl" },
+            { "entry": "docs/modules/webgl/legacy/accessor" },
+            { "entry": "docs/modules/webgl/legacy/buffer" },
+            { "entry": "docs/modules/webgl/legacy/framebuffer" },
+            { "entry": "docs/modules/webgl/legacy/program" },
+            { "entry": "docs/modules/webgl/legacy/query" },
+            { "entry": "docs/modules/webgl/legacy/renderbuffer" },
+            { "entry": "docs/modules/webgl/legacy/shader" },
+            { "entry": "docs/modules/webgl/legacy/texture" },
+            { "entry": "docs/modules/webgl/legacy/texture-2d" },
+            { "entry": "docs/modules/webgl/legacy/texture-3d" },
+            { "entry": "docs/modules/webgl/legacy/texture-cube" },
+            { "entry": "docs/modules/webgl/legacy/transform-feedback" },
+            { "entry": "docs/modules/webgl/legacy/uniform-buffer-layout" },
+            { "entry": "docs/modules/webgl/legacy/vertex-array" },
+            { "entry": "docs/modules/webgl/legacy/vertex-array-object" },
+            { "entry": "docs/modules/webgl/legacy/resource" },
+            { "entry": "docs/modules/webgl/legacy/context/feature-checking" },
+            { "entry": "docs/modules/webgl/legacy/context/context-properties" },
+            { "entry": "docs/modules/webgl/legacy/moving-data" },
+            { "entry": "docs/modules/webgl/legacy/context" },
+            { "entry": "docs/modules/webgl/legacy/parameter-setting" },
+            { "entry": "docs/modules/webgl/legacy/device-pixels" }
+          ]
+        },
+        {
+          "title": "@luma.gl/webgpu",
+          "entries": [
+            { "entry": "docs/modules/webgpu" }
+          ]
+        },
+        {
+          "title": "@luma.gl/test-utils",
+          "entries": [
+            { "entry": "docs/modules/test-utils" },
+            { "entry": "docs/modules/test-utils/snapshot-test-runner" }
+          ]
+        }
       ]
     }
   ]

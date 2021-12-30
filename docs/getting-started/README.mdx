@@ -1,0 +1,152 @@
+# Getting Started
+
+This tutorial will walk you through setting up a basic development project for luma.gl applications using [Vite](https://vitejs.dev/) tooling. Later tutorials will build on this one, so we recommend going through it first.
+
+**Note:** It is assumed for these tutorials that you have some knowledge of GPU APIs. If you are unfamiliar with how to draw with WebGL, we recommend the excellent [WebGL 2 Fundamentals](https://webgl2fundamentals.org/).
+
+```
+- package.json
+- vite.config.ts
+- app.ts
+- index.html
+```
+
+From the command line, first run
+
+```bash
+mkdir luma-demo
+cd luma-demo
+npm init -y
+```
+
+to set up our project directory and initialize npm.
+
+Next run
+
+```bash
+npm i @luma.gl/engine @luma.gl/webgl
+npm i -D vite typescript
+```
+
+to install our dependencies.
+
+Open the file `package.json` (created when we initialized npm), and add the following to the `scripts` block:
+
+```json
+{
+  "scripts": {
+    "start": "vite",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/engine": "8.6.0-alpha.5",
+    "@luma.gl/webgl": "8.6.0-alpha.5",
+  },
+  "devDependencies": {
+    "typescript": "^4.3.2",
+    "vite": "^2.6.4"
+  }
+}
+```
+
+The full contents of the `package.json` should be the following (dependency version numbers might differ):
+
+```json
+{
+  "name": "luma-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "vite",
+    "serve": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@luma.gl/engine": "8.6.0-alpha.5",
+    "@luma.gl/webgl": "8.6.0-alpha.5",
+  },
+  "devDependencies": {
+    "typescript": "^4.3.2",
+    "vite": "^2.6.4"
+  }
+}
+}
+```
+
+Create a file [`vite.config.js`](https://vitejs.dev/config/) in the project root and add the following to it:
+
+```js
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  resolve: {alias},
+  server: {open: true}
+})
+```
+
+Create a minimal `index.html` web page to start the app:
+
+```html
+<!doctype html>
+<script type="module">
+  import './app.ts';
+</script>
+<body style="margin: 0;">
+  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+</body>
+```
+
+
+Now create a file `app.ts` in the project root and add the following to it:
+
+```js
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoop} from '@luma.gl/engine';
+
+const loop = new AnimationLoop({
+  onInitialize({device}: AnimationProps) {
+    // Setup logic goes here
+  },
+
+  onFinalize({device}: AnimationProps) {
+    // Setup logic goes here
+  },
+
+  onRender({device}: AnimationProps) {
+    // Drawing logic goes here
+  }
+});
+
+loop.start();
+```
+
+This will be the basic structure of most luma.gl applications. To make sure everything works, let's add a draw command:
+
+```js
+import {AnimationLoop} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
+
+const loop = new AnimationLoop({
+  onInitialize({device}) {
+    // Setup logic goes here
+  },
+
+  onRender({device}) {
+    // Drawing logic goes here
+    clear(gl, {color: [0, 0, 0, 1]});
+  }
+});
+
+loop.start();
+```
+
+and run
+
+```bash
+npm start
+```
+
+from the command line. If all went well, a tab should open in your default browser, and you should see a black rectangle at the top left of your screen.

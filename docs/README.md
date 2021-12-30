@@ -2,6 +2,7 @@
 
 luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.gl is the core 3D rendering library in the [vis.gl](http://vis.gl/) framework suite.
 
+<!--
 ## Versions
 
 These docs are for
@@ -18,6 +19,7 @@ These docs are for
 <a href="https://github.com/visgl/luma.gl/blob/6.4-release/docs">
   <img src="https://img.shields.io/badge/v-6.4-green.svg?style=flat-square" />
 </a>
+ -->
 
 luma.gl is a GPU toolkit for the Web focused primarily on data visualization use cases. luma.gl aims to provide support for GPU programmers that need to work directly with shaders and want a low abstraction API that remains conceptually close to the WebGPU and WebGL APIs. Some features of luma.gl include:
 
