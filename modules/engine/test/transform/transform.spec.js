@@ -814,7 +814,7 @@ test('WebGL#Transform run (source&destination texture)', (t) => {
 });
 
 /*
-test.only('WebGL#Transform update (source&destination texture)', t => {
+test('WebGL#Transform update (source&destination texture)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {

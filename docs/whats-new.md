@@ -8,6 +8,10 @@ The 8.7 release represents a major internal refactor of luma.gl to prepare for W
 While it should remain highly compatible with 8.X, a range of APIs are now deprecated and it is a good
 time to consult the upgrade guide to start updating your code in anticipation of the upcoming 9.0 release.
 
+### '@luma.gl/webgl`
+
+- [Spector.js](https://spector.babylonjs.com/) integration. If a `WebGLDevice` is created with `debug: true` or URL parameter `?debug`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
+
 ### `@luma.gl/shadertools`
 
 - New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
@@ -19,6 +23,7 @@ time to consult the upgrade guide to start updating your code in anticipation of
 ### `@luma.gl/api` (NEW, Experimental)
 
 - The next generation, cross-platform luma.gl API (supporting both WebGPU and WebGL2)is being prototyped in the `@luma.gl/api` module. While not yet official, it is possible to start experimenting with this API.
+
 
 ## Version 8.6
 
