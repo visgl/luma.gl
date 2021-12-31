@@ -1,7 +1,7 @@
 import {Device} from '@luma.gl/api';
 import {RenderLoop, Model, ModelProps, CubeGeometry, AnimationProps} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture2D, TextureCube, loadImage, setParameters} from '@luma.gl/webgl';
+import {TextureCube, loadImage, setParameters} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -102,7 +102,9 @@ export default class AppRenderLoop extends RenderLoop {
       clearDepth: 1
     });
 
-    const cubemap = new TextureCube(gl, {
+    const cubemap = device.createTexture({
+      dimension: 'cube',
+      mipmaps: true,
       data: {
         [gl.TEXTURE_CUBE_MAP_POSITIVE_X]: loadImage('sky-posx.png'),
         [gl.TEXTURE_CUBE_MAP_NEGATIVE_X]: loadImage('sky-negx.png'),

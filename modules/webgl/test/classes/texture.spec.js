@@ -390,6 +390,7 @@ test('WebGL2#Texture2D NPOT Workaround: texture creation', (t) => {
     return;
   }
 
+  debugger
   // Create NPOT texture with no parameters
   let texture = new Texture2D(gl2, {data: null, width: 500, height: 512});
   t.ok(texture instanceof Texture2D, 'Texture2D construction successful');

@@ -26,7 +26,6 @@ export type {BufferProps} from '@luma.gl/api';
 export {default as Buffer} from './classes/webgl-buffer';
 export type {Texture2DProps} from './classes/texture-2d';
 export {default as Texture2D} from './classes/texture-2d';
-export type {TextureCubeProps} from './classes/texture-cube';
 export {default as TextureCube} from './classes/texture-cube';
 
 export type {ProgramProps} from './classes/program';
@@ -55,7 +54,6 @@ export {
 // WebGL2 classes & Extensions
 export type {QueryProps} from './classes/query';
 export {default as Query} from './classes/query';
-export type {Texture3DProps} from './classes/texture-3d';
 export {default as Texture3D} from './classes/texture-3d';
 export type {TransformFeedbackProps} from './classes/transform-feedback';
 export {default as TransformFeedback} from './classes/transform-feedback';

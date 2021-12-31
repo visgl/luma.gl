@@ -73,12 +73,13 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   width: undefined,
   height: undefined,
   depth: 1,
-  mipmaps: false,
+  mipmaps: true,
   parameters: {},
   type: undefined,
   compressed: false,
   // mipLevels: 1,
-  format: 'rgba8unorm',
+  format: 0x1908, // GL.RGBA,
+  // format: 'rgba8unorm',
   usage: 0
 };
 
