@@ -12,13 +12,14 @@ import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 // import WebGLCanvasContext from './webgl-canvas-context';
+import {loadSpector, initializeSpector} from './helpers/spector';
 
 // WebGL classes
-import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps, Sampler, SamplerProps} from '@luma.gl/api';
+import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps, Sampler, SamplerProps, TextureProps} from '@luma.gl/api';
 import WEBGLBuffer from '../classes/webgl-buffer';
 import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLSampler from '../adapter/resources/webgl-sampler';
-import Texture2D, {Texture2DProps} from '../classes/texture-2d';
+import WEBGLTexture from '../classes/texture';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
 
@@ -70,6 +71,8 @@ export default class WebGLDevice extends Device implements ContextState {
 
   static type: string = 'webgl';
 
+  spector;
+
   static isSupported(): boolean {
     return typeof WebGLRenderingContext !== 'undefined';
   }
@@ -97,9 +100,16 @@ export default class WebGLDevice extends Device implements ContextState {
 
   static async create(props?: DeviceProps): Promise<WebGLDevice> {
     log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created');
+
+    // Wait for page to load. Only wait when props. canvas is string
+    // to avoid setting page onload callback unless necessary
     if (typeof props.canvas === 'string') {
       await CanvasContext.pageLoaded;
     }
+
+    // Load spector CDN script if appropriate
+    await loadSpector({...props, canvas: undefined});
+
     log.probe(LOG_LEVEL, "DOM is loaded")();
     return new WebGLDevice(props);
   }
@@ -118,24 +128,28 @@ export default class WebGLDevice extends Device implements ContextState {
       return device;
     }
 
-    // TODO
-    this.canvas = props.canvas as HTMLCanvasElement;
+    // Create and instrument context
+    this.handle = (props.gl || this._createContext(props)) as WebGLRenderingContext;
+
+    this.canvas = this.handle.canvas || props.canvas as HTMLCanvasElement;
     if (typeof OffscreenCanvas !== 'undefined' && props.canvas instanceof OffscreenCanvas) {
       this.offscreenCanvas = props.canvas;
     }
 
-    // Create an instrument context
-    this.handle = (props.gl || this._createContext(props)) as WebGLRenderingContext
+    this.spector = initializeSpector({canvas: this.canvas});
+    
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
     this._state = 'initializing';
+
     // Avoid multiple instrumentations
     // @ts-expect-error
     if (this.gl.device) {
       log.error('device already created');
       throw new Error('device already created'); // ASSERT this device;
     }
+
     // @ts-expect-error
     this.gl.device = this;
     // @ts-ignore
@@ -150,7 +164,7 @@ export default class WebGLDevice extends Device implements ContextState {
     const debug = this.gl.debug ? ' debug' : '';
     const webGL = isWebGL2(this.gl) ? 'WebGL2' : 'WebGL1';
     log.probe(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
-
+  
     polyfillContext(this.gl);
     log.probe(LOG_LEVEL, 'polyfilled context')();
 
@@ -253,8 +267,8 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WEBGLBuffer(this.gl, props);
   }
 
-  createTexture(props: Texture2DProps): Texture2D {
-    return new Texture2D(this, props);
+  createTexture(props: TextureProps): WEBGLTexture {
+    return new WEBGLTexture(this, props);
   }
 
   createSampler(props: SamplerProps): Sampler {

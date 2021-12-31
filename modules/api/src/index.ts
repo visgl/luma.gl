@@ -80,7 +80,7 @@ export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
 export {formatValue} from './utils/format-value';
 export {stubRemovedMethods} from './utils/stub-methods';
 export {checkProps} from './utils/check-props';
-export {setPathPrefix, loadFile, loadImage} from './utils/load-file';
+export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {getRandom, random} from './utils/random';
 
