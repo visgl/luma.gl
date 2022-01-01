@@ -1,5 +1,5 @@
 import {getRandom} from '@luma.gl/api';
-import {RenderLoop, Model, Geometry, SphereGeometry} from '@luma.gl/engine';
+import {RenderLoop, Model, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
 import {clear, Framebuffer, Program, setParameters} from '@luma.gl/webgl';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -96,19 +96,19 @@ export default class AppRenderLoop extends RenderLoop {
   persistenceQuad;
   sphere;
   
-  constructor({device, gl, width, height}) {
+  constructor({device, gl, width, height}: AnimationProps) {
     super();
 
-    setParameters(gl, {
+    setParameters(device, {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1,
     });
 
-    this.mainFramebuffer = new Framebuffer(gl, {width, height});
+    this.mainFramebuffer = new Framebuffer(device, {width, height});
 
     this.pingpongFramebuffers = [
-      new Framebuffer(gl, {width, height}),
-      new Framebuffer(gl, {width, height})
+      new Framebuffer(device, {width, height}),
+      new Framebuffer(device, {width, height})
     ];
 
     const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
@@ -123,9 +123,9 @@ export default class AppRenderLoop extends RenderLoop {
       vertexCount: 6
     });
 
-    this.quad = new Model(gl, {
+    this.quad = new Model(device, {
       id: 'quad',
-      program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
+      program: new Program(device, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
       geometry: quadGeometry,
       parameters: {
         depthWriteEnabled: true,
@@ -134,9 +134,9 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    this.persistenceQuad = new Model(gl, {
+    this.persistenceQuad = new Model(device, {
       id: 'persistence-quad',
-      program: new Program(gl, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
+      program: new Program(device, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
       geometry: quadGeometry,
       parameters: {
         depthWriteEnabled: true,
@@ -145,10 +145,10 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    this.sphere = new Model(gl, {
+    this.sphere = new Model(device, {
       id: 'electron',
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
-      program: new Program(gl, {vs: SPHERE_VS, fs: SPHERE_FS}),
+      program: new Program(device, {vs: SPHERE_VS, fs: SPHERE_FS}),
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
@@ -185,7 +185,7 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
-  onRender({device, tick, width, height, aspect}) {
+  onRender({device, tick, width, height, aspect}: AnimationProps) {
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});

@@ -1,4 +1,4 @@
-import type {RenderPipelineParameters} from '@luma.gl/api';
+import type {Device, RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../adapter/webgl-device';
@@ -14,7 +14,7 @@ import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
 import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {withDeviceParameters} from '../adapter/converters/set-device-parameters';
+import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -65,7 +65,7 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: Record<string, Function>;
   private _parameters: RenderPipelineParameters;
 
-  constructor(device: WebGLDevice | WebGLRenderingContext, props: ProgramProps = {}) {
+  constructor(device: Device | WebGLRenderingContext, props: ProgramProps = {}) {
     super(WebGLDevice.attach(device), props, {} as any);
     this._parameters = props.parameters;
     this.initialize(props);

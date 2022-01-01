@@ -1,4 +1,4 @@
-import {log, assert} from '@luma.gl/api';
+import {Device, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../adapter/webgl-device';
 import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
@@ -39,8 +39,8 @@ type colorBufferFloatOptions = {colorBufferFloat?: boolean; colorBufferHalfFloat
 export class ImmutableFramebuffer extends Resource<FramebufferProps> {
   get [Symbol.toStringTag](): string { return 'Framebuffer'; }
 
-  constructor(gl: WebGLRenderingContext, props?: FramebufferProps) {
-    super(WebGLDevice.attach(gl), props, {} as any);
+  constructor(device: WebGLDevice, props?: FramebufferProps) {
+    super(device, props, {} as any);
     this._initialize({
       attachments: props?.attachments || {},
       readBuffer: props?.readBuffer,
@@ -303,8 +303,8 @@ export default class Framebuffer extends ImmutableFramebuffer {
     return gl2.getParameter(gl2.MAX_DRAW_BUFFERS);
   }
 
-  constructor(gl: WebGLRenderingContext, props?: FramebufferProps) {
-    super(gl, props);
+  constructor(gl: Device | WebGLRenderingContext, props?: FramebufferProps) {
+    super(WebGLDevice.attach(gl), props);
     this.initialize(props);
     Object.seal(this);
   }

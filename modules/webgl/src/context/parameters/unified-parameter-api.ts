@@ -1,7 +1,7 @@
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
-import {assert} from '@luma.gl/api';
+import {Device} from '@luma.gl/api';
 import type {GLParameters} from '../../types/webgl';
 import {
   GL_PARAMETER_DEFAULTS,
@@ -11,6 +11,7 @@ import {
 } from './webgl-parameter-tables';
 
 import {isWebGL} from '../context/webgl-checks';
+import WebGLDevice from '../../adapter/webgl-device';
 
 export type {GLParameters};
 
@@ -20,8 +21,9 @@ export type {GLParameters};
  * @note requires a `cache` object to be set on the context (gl.state.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
-export function setParameters(gl: WebGLRenderingContext, parameters: GLParameters): void {
-  assert(isWebGL(gl), 'setParameters requires a WebGL context');
+export function setParameters(device: Device | WebGLRenderingContext, parameters: GLParameters): void {
+  const webglDevice = WebGLDevice.attach(device);
+  const gl = webglDevice.gl;
 
   if (isObjectEmpty(parameters)) {
     return;

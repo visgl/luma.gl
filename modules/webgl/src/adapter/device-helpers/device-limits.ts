@@ -53,7 +53,7 @@ export type WebGLLimits = {
   [GL.MAX_VIEWPORT_DIMS]: [number, number];
 
   // Extensions
-  // [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: number;
+  [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: number;
 
   // WebGL2 Limits
   [GL.MAX_3D_TEXTURE_SIZE]: number;
@@ -98,6 +98,9 @@ export function getWebGLLimits(gl: WebGLRenderingContext): WebGLLimits {
   function get2<T>(pname: number, defaultValue: T): T {
     return gl2 ? gl2.getParameter(pname) as T : (defaultValue || 0) as T;
   }
+  // function getMaxAnistropy() {
+  //   const extension = gl.getExtension('EXT_texture_filter_anisotropic');
+  // }
   return {
     [GL.ALIASED_LINE_WIDTH_RANGE]: get(GL.ALIASED_LINE_WIDTH_RANGE),
     [GL.ALIASED_POINT_SIZE_RANGE]: get(GL.ALIASED_POINT_SIZE_RANGE),
@@ -114,7 +117,7 @@ export function getWebGLLimits(gl: WebGLRenderingContext): WebGLLimits {
     [GL.MAX_VIEWPORT_DIMS]: get(GL.MAX_VIEWPORT_DIMS),
 
     // Extensions
-    // [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: {gl1: 1.0, extension: 'EXT_texture_filter_anisotropic'},
+    [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: get(GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT), // getMaxAnistropy(),
 
     // WebGL2 Limits
     [GL.MAX_3D_TEXTURE_SIZE]: get2(GL.MAX_3D_TEXTURE_SIZE), //  GLint

@@ -10,7 +10,7 @@ import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import WEBGLTexture from '@luma.gl/webgl/adapter/resources/webgl-texture';
-import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/convert-sampler-parameters';
+import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
 test('WebGL#Texture construct/delete', (t) => {
   t.throws(

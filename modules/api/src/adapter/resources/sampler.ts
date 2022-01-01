@@ -5,10 +5,7 @@ import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 export type SamplerFilterMode = 'nearest' | 'linear';
 
-/**
- * Properties for initializing a sampler
- */
-export type SamplerProps = ResourceProps & {
+export type SamplerParameters = {
   addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
   addressModeV?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
   addressModeW?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
@@ -20,6 +17,11 @@ export type SamplerProps = ResourceProps & {
   compare?: CompareFunction;
   maxAnisotropy?: number;
 };
+
+/**
+ * Properties for initializing a sampler
+ */
+export type SamplerProps = ResourceProps & SamplerParameters;
 
 const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
   ...DEFAULT_RESOURCE_PROPS,

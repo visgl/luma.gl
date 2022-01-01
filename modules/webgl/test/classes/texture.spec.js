@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
@@ -6,7 +7,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/webgl';
 import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl';
 
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';
+import {WEBGL_TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 
 export const SAMPLER_PARAMETERS = {
   [GL.TEXTURE_MIN_FILTER]: {
@@ -90,7 +91,7 @@ test('WebGL#Texture2D construct/delete', (t) => {
 
 function isFormatSupported(format, glContext) {
   format = Number(format);
-  const opts = Object.assign({format}, TEXTURE_FORMATS[format]);
+  const opts = Object.assign({format}, WEBGL_TEXTURE_FORMATS[format]);
   if (!Texture2D.isSupported(glContext, {format}) || (!isWebGL2(glContext) && opts.compressed)) {
     return false;
   }
@@ -151,8 +152,8 @@ const TEXTURE_DATA = {
 // };
 
 function testFormatCreation(t, glContext, withData = false) {
-  for (const formatName in TEXTURE_FORMATS) {
-    const formatInfo = TEXTURE_FORMATS[formatName];
+  for (const formatName in WEBGL_TEXTURE_FORMATS) {
+    const formatInfo = WEBGL_TEXTURE_FORMATS[formatName];
     for (let type of formatInfo.types) {
       const format = Number(formatName);
       type = Number(type);
@@ -182,8 +183,8 @@ function testFormatCreation(t, glContext, withData = false) {
 }
 
 function testFormatDeduction(t, glContext) {
-  for (const format in TEXTURE_FORMATS) {
-    const formatInfo = TEXTURE_FORMATS[format];
+  for (const format in WEBGL_TEXTURE_FORMATS) {
+    const formatInfo = WEBGL_TEXTURE_FORMATS[format];
     const expectedType = formatInfo.types[0];
     const expectedDataFormat = formatInfo.dataFormat;
     const options = {
@@ -240,7 +241,7 @@ test('WebGL#Texture2D format creation with data', (t) => {
 test('WebGL#Texture2D WebGL1 extension format creation', t => {
   const {gl} = fixture;
 
-  for (const format of TEXTURE_FORMATS) {
+  for (const format of WEBGL_TEXTURE_FORMATS) {
   }
   let texture = new Texture2D(gl, {});
   t.ok(texture instanceof Texture2D, 'Texture2D construction successful');
@@ -254,7 +255,7 @@ test('WebGL#Texture2D WebGL1 extension format creation', t => {
 test('WebGL#Texture2D WebGL2 format creation', t => {
   const {gl} = fixture;
 
-  for (const format in TEXTURE_FORMATS) {
+  for (const format in WEBGL_TEXTURE_FORMATS) {
     if (!WEBGL1_FORMATS.indexOf(format)) {
     }
 

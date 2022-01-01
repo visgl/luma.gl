@@ -79,7 +79,7 @@ export {cssToDeviceRatio, cssToDevicePixels} from './context/context/device-pixe
 
 // Unified parameter API
 
-export {setDeviceParameters, withDeviceParameters} from './adapter/converters/set-device-parameters';
+export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
 export type {GLParameters} from './types/webgl';
 export {

@@ -6,7 +6,7 @@ import {DeviceFeature} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {isOldIE} from './is-old-ie';
-import {getTextureFeatures} from '../converters/webgpu-texture-formats';
+import {getTextureFeatures} from '../converters/texture-formats';
 
 /** Get WebGPU style feature strings */
 export function getDeviceFeatures(gl: WebGLRenderingContext): Set<DeviceFeature> {

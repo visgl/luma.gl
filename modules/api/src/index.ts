@@ -17,7 +17,7 @@ export type {TextureProps, TextureData} from './adapter/resources/texture';
 export {default as Texture} from './adapter/resources/texture';
 export type {ShaderProps, CompilerMessage} from './adapter/resources/shader';
 export {default as Shader} from './adapter/resources/shader';
-export type {SamplerProps} from './adapter/resources/sampler';
+export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
 export {default as Sampler} from './adapter/resources/sampler';
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
 export {default as RenderPipeline} from './adapter/resources/render-pipeline';

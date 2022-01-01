@@ -27,7 +27,7 @@ export type AnimationLoopProps = {
 
   device?: Device;
   glOptions?: ContextProps; // createGLContext options
-  debug?: boolean;
+  // debug?: boolean;
 
   // view parameters
   autoResizeViewport?: boolean;
@@ -90,7 +90,7 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
   device: null,
-  debug: false,
+  // debug: true,
 
   // view parameters
   useDevicePixels: true,

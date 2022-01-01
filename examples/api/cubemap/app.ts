@@ -1,7 +1,7 @@
-import {Device} from '@luma.gl/api';
+import {Device, loadImage} from '@luma.gl/api';
 import {RenderLoop, Model, ModelProps, CubeGeometry, AnimationProps} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {TextureCube, loadImage, setParameters} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -94,24 +94,19 @@ export default class AppRenderLoop extends RenderLoop {
   cube: RoomCube;
   prism: Prism;
 
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
-
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    });
 
     const cubemap = device.createTexture({
       dimension: 'cube',
       mipmaps: true,
       data: {
-        [gl.TEXTURE_CUBE_MAP_POSITIVE_X]: loadImage('sky-posx.png'),
-        [gl.TEXTURE_CUBE_MAP_NEGATIVE_X]: loadImage('sky-negx.png'),
-        [gl.TEXTURE_CUBE_MAP_POSITIVE_Y]: loadImage('sky-posy.png'),
-        [gl.TEXTURE_CUBE_MAP_NEGATIVE_Y]: loadImage('sky-negy.png'),
-        [gl.TEXTURE_CUBE_MAP_POSITIVE_Z]: loadImage('sky-posz.png'),
-        [gl.TEXTURE_CUBE_MAP_NEGATIVE_Z]: loadImage('sky-negz.png')
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: loadImage('sky-posx.png'),
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: loadImage('sky-negx.png'),
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: loadImage('sky-posy.png'),
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: loadImage('sky-negy.png'),
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: loadImage('sky-posz.png'),
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: loadImage('sky-negz.png')
       }
     });
 
@@ -119,8 +114,8 @@ export default class AppRenderLoop extends RenderLoop {
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
+        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST
       }
     });
 
@@ -152,12 +147,12 @@ export default class AppRenderLoop extends RenderLoop {
     this.cube.destroy();  
   }
 
-  onRender({gl, aspect, tick}: AnimationProps): void {
+  onRender({device, aspect, tick}: AnimationProps): void {
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({fov: radians(75), aspect});
 
-    gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     this.cube.draw({
       uniforms: {

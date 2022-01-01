@@ -2,7 +2,7 @@ import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/classes/texture-formats';
+import {WEBGL_TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {readPixelsToArray, readPixelsToBuffer, copyToTexture, blit} from '@luma.gl/webgl';
 
 const EPSILON = 1e-6;
@@ -50,7 +50,7 @@ function testCopyToArray(t, gl) {
     for (const testCase of FB_READPIXELS_TEST_CASES) {
       const format = testCase.format;
       if (Texture2D.isSupported(gl, {format})) {
-        const formatInfo = TEXTURE_FORMATS[format];
+        const formatInfo = WEBGL_TEXTURE_FORMATS[format];
         const type = formatInfo.types[0]; // TODO : test all other types
         const dataFormat = formatInfo.dataFormat;
         const texOptions = Object.assign({}, formatInfo, {
