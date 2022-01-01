@@ -128,6 +128,9 @@ function readUniformBindings(gl: WebGL2RenderingContext, program: WebGLProgram):
  * optimized away during linking)
  */
 function readUniformBlocks(gl: WebGL2RenderingContext, program: WebGLProgram): UniformBlockBinding[] {
+  if (!isWebGL2(gl)) {
+    return [];
+  }
   const getBlockParameter = (blockIndex, pname) => gl.getActiveUniformBlockParameter(program, blockIndex, pname);
 
   const uniformBlocks: UniformBlockBinding[] = [];

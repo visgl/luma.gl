@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import StatsManager, {lumaStats} from '../utils/stats-manager';
+import {log} from '../utils/log';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
 import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
@@ -50,7 +51,7 @@ const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   manageState: true,
   width: 800, // width are height are only used by headless gl
   height: 600,
-  debug: false, // Instrument context (at the expense of performance)
+  debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
   break: undefined,
   onContextLost: () => console.error('WebGL context lost'),
   onContextRestored: () => console.info('WebGL context restored'),

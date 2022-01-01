@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 import type {DeviceProps, DeviceInfo, DeviceLimits, DeviceFeature, CanvasContextProps} from '@luma.gl/api';
 import {Device, CanvasContext, log} from '@luma.gl/api';
+import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import { ContextState } from '../context/context/context-state';
@@ -107,7 +108,7 @@ export default class WebGLDevice extends Device implements ContextState {
       await CanvasContext.pageLoaded;
     }
 
-    // Load spector CDN script if appropriate
+    // Load Spector.js CDN script if requested
     await loadSpector({...props, canvas: undefined});
 
     log.probe(LOG_LEVEL, "DOM is loaded")();
@@ -137,7 +138,6 @@ export default class WebGLDevice extends Device implements ContextState {
     }
 
     this.spector = initializeSpector({canvas: this.canvas});
-    
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
@@ -187,20 +187,23 @@ export default class WebGLDevice extends Device implements ContextState {
     this.webglLimits = getWebGLLimits(this.gl);
     log.probe(LOG_LEVEL, 'queried webgl limits')();
 
-    // Add debug instrumentation to the context
-    // if (isBrowser() && props.debug) {
-    //   // @ts-ignore
-    //   const {makeDebugContext} = global;
-    //   if (!makeDebugContext) {
-    //     log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
-    //   } else {
-    //     // @ts-ignore
-    //     this.gl = global.makeDebugContext(this.gl, props);
-    //     this.gl2 = this.gl as WebGL2RenderingContext;
-    //     // Debug forces log level to at least 1
-    //     log.level = Math.max(log.level, 1);
-    //   }
-    // }
+    // DEBUG contexts:  Add debug instrumentation to the context
+    if (isBrowser() && props.debug) {
+      // @ts-ignore
+      const {makeDebugContext} = globalThis;
+      if (!makeDebugContext) {
+        log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
+      } else {
+        // @ts-ignore
+        this.gl = makeDebugContext(this.gl, props);
+        if (this.gl2) {
+          this.gl2 = this.gl as WebGL2RenderingContext;
+        }
+        // Debug forces log level to at least 1
+        log.level = Math.max(log.level, 1);
+        log.info('WebGL debug mode activated. Performance reduced.')();
+      }
+    }
 
     log.groupEnd(LOG_LEVEL)();
     this._state = 'initialized';
