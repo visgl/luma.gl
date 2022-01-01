@@ -1,15 +1,15 @@
 // WEBGL-INDEPENDENT TESTS
 // Imports tests for all modules that do not depend on WebGL
 
+// Import luma debug module to assist with debugging test failures
+import '@luma.gl/debug';
+
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies
 import '../modules/shadertools/test';
 
 import '../modules/api/test';
 
 // WEBGL-DEPENDENT TESTS
-
-// Import luma debug module to assist with debugging test failures
-import '@luma.gl/debug';
 
 // Generic webgl helper modules
 import '../modules/constants/test';
