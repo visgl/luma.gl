@@ -60,7 +60,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
   protected _resize(width: number, height: number): void {
     for (let i = 0; i < MAX_COLOR_ATTACHMENTS; ++i) {
       if (this.colorTextures[i]) {
-        const resizedTexture = this.device.createTexture({...this.colorTextures[i].props, width, height})
+        const resizedTexture = this.device._createTexture({...this.colorTextures[i].props, width, height})
         this.colorTextures[i].destroy();
         this.colorTextures[i] = resizedTexture;
         this.renderPassDescriptor.colorAttachments[i].view = resizedTexture.handle.createView();
@@ -68,7 +68,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
     }
 
     if (this.depthStencilTexture) {
-       const resizedTexture = this.device.createTexture({...this.depthStencilTexture.props, width, height})
+       const resizedTexture = this.device._createTexture({...this.depthStencilTexture.props, width, height})
        this.depthStencilTexture.destroy();
        this.depthStencilTexture = resizedTexture;
        this.renderPassDescriptor.depthStencilAttachment.view = resizedTexture.handle.createView();
@@ -88,7 +88,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
       format = DEFAULT_DEPTH_STENCIL_FORMAT;
     }
 
-    const depthTexture = this.device.createTexture({
+    const depthTexture = this.device._createTexture({
       id: 'depth-stencil',
       width: props.width,
       height: props.height,
@@ -101,7 +101,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
   }
 
   private createDefaultAttachments(props: FramebufferProps) {
-    const depthTexture = this.device.createTexture({
+    const depthTexture = this.device._createTexture({
       id: 'depth-stencil',
       width: props.width,
       height: props.height,

@@ -1,4 +1,4 @@
-import {Device, log, assert, uid, isPowerOfTwo} from '@luma.gl/api';
+import {Device, log, assert, uid, isPowerOfTwo, loadImage} from '@luma.gl/api';
 import {Texture, TextureProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
@@ -21,11 +21,35 @@ export type TextureSupportOptions = {
   linearFiltering?: any;
 };
 
+type SetImageData3DOptions = {
+  level?: number;
+  dataFormat?: any;
+  width: any;
+  height: any;
+  depth?: number;
+  border?: number;
+  format: any;
+  type?: any;
+  offset?: number;
+  data: any;
+  parameters?: {};
+};
+
 // Supported min filters for NPOT texture.
 const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
 // Polyfill
 export default class WEBGLTexture extends Texture {
+  // TODO - remove?
+  static FACES: number[] = [
+    GL.TEXTURE_CUBE_MAP_POSITIVE_X,
+    GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
+    GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
+    GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+    GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
+    GL.TEXTURE_CUBE_MAP_NEGATIVE_Z
+  ];
+
   readonly MAX_ATTRIBUTES: number;
   readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
@@ -34,9 +58,9 @@ export default class WEBGLTexture extends Texture {
 
   data;
 
-  width: number;
-  height: number;
-  depth: number;
+  width: number = undefined;
+  height: number = undefined;
+  depth: number = undefined;
 
   format = undefined;
   type = undefined;
@@ -62,7 +86,8 @@ export default class WEBGLTexture extends Texture {
     let supported = true;
     if (format) {
       supported = supported && isFormatSupported(webglDevice.gl, format);
-      supported = supported && (!linearFiltering || isLinearFilteringSupported(webglDevice.gl, format));
+      supported =
+        supported && (!linearFiltering || isLinearFilteringSupported(webglDevice.gl, format));
     }
     return supported;
   }
@@ -80,37 +105,33 @@ export default class WEBGLTexture extends Texture {
   constructor(device: Device | WebGLRenderingContext, props: TextureProps) {
     super(WebGLDevice.attach(device), props);
 
-    const {
-      id = uid('texture'),
-      handle,
-      target
-      // , magFilter, minFilter, wrapS, wrapT
-    } = props;
+    this.device = WebGLDevice.attach(device);
+    this.gl = this.device.gl;
+    this.gl2 = this.device.gl2;
+    this.handle = this.props.handle || this.gl.createTexture();
+    // @ts-expect-error
+    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
 
-    this.target = target;
-    this.textureUnit = undefined;
+    this.target = getWebGLTextureTarget(this.props);
 
     // Program.draw() checks the loaded flag of all textures to avoid
     // Textures that are still loading from promises
     // Set to true as soon as texture has been initialized with valid data
     this.loaded = false;
 
-    this.width = undefined;
-    this.height = undefined;
-    this.depth = undefined;
-    this.format = undefined;
-    this.type = undefined;
-    this.dataFormat = undefined;
-    this.border = undefined;
-    this.textureUnit = undefined;
-    this.mipmaps = undefined;
+    // Signature: new Texture2D(gl, url | Promise)
+    //  if (props instanceof Promise || typeof props === 'string') {
+    //   props = {data: props};
+    // }
 
-    this.device = WebGLDevice.attach(device);
-    this.gl = this.device.gl;
-    this.gl2 = this.device.gl2;
-    this.handle = this.props.handle || this.gl.createTexture();
-    // @ts-expect-error Annotate handle for spector.js debugging
-    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data};
+    // Signature: new Texture2D(gl, {data: url})
+    if (typeof this.props?.data === 'string') {
+      Object.assign(this.props, {data: loadImage(this.props.data)});
+    }
+
+    this.initialize(this.props);
+
+    Object.seal(this);
   }
 
   destroy(): void {
@@ -129,6 +150,11 @@ export default class WEBGLTexture extends Texture {
 
   // eslint-disable-next-line max-statements
   initialize(props: TextureProps = {}): this {
+    // Cube textures
+    if (this.props.dimension === 'cube') {
+      return this.initializeCube(props);
+    }
+
     let data = props.data;
 
     if (data instanceof Promise) {
@@ -142,20 +168,25 @@ export default class WEBGLTexture extends Texture {
       );
       return this;
     }
+    
     const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
     // @ts-expect-error
     if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
       this._video = null; // Declare member before the object is sealed
+      // @ts-expect-error
       data.addEventListener('loadeddata', () => this.initialize(props));
       return this;
     }
+
+    let {
+      parameters = {}
+    } = props;
 
     const {
       pixels = null,
       format = GL.RGBA,
       border = 0,
       recreate = false,
-      parameters = {},
       pixelStore = {},
       textureUnit = undefined
     } = props;
@@ -201,7 +232,7 @@ export default class WEBGLTexture extends Texture {
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
 
-      this._updateForNPOT(parameters);
+      parameters = this._updateForNPOT(parameters);
     }
 
     this.mipmaps = mipmaps;
@@ -240,6 +271,27 @@ export default class WEBGLTexture extends Texture {
       };
     }
 
+    return this;
+  }
+
+  initializeCube(props?: TextureProps): this {
+    const {mipmaps = true, parameters = {}} = props;
+
+    // Store props for accessors
+    // this.props = props;
+
+    // @ts-expect-error
+    this.setCubeMapImageData(props).then(() => {
+      this.loaded = true;
+
+      // TODO - should genMipmap() be called on the cubemap or on the faces?
+      // TODO - without generateMipmap() cube textures do not work at all!!! Why?
+      if (mipmaps) {
+        this.generateMipmap(props);
+      }
+
+      this.setParameters(parameters);
+    });
     return this;
   }
 
@@ -318,6 +370,10 @@ export default class WEBGLTexture extends Texture {
    */
   // eslint-disable-next-line max-statements, complexity
   setImageData(options) {
+    if (this.props.dimension === '3d') {
+      return this.setImageData3D(options);
+    }
+
     this.trackDeallocatedMemory('Texture');
 
     const {
@@ -431,7 +487,7 @@ export default class WEBGLTexture extends Texture {
 
     return this;
   }
-  
+
   /**
    * Redefines an area of an existing texture
    * Note: does not allocate storage
@@ -487,7 +543,7 @@ export default class WEBGLTexture extends Texture {
       height
     }));
 
-    assert(this.depth === 0, 'texSubImage not supported for 3D textures');
+    assert(this.depth === 1, 'texSubImage not supported for 3D textures');
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
@@ -537,7 +593,7 @@ export default class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.target, null);
   }
-  
+
   /**
    * Defines a two-dimensional texture image or cube-map texture image with
    * pixels from the current framebuffer (rather than from client memory).
@@ -709,7 +765,7 @@ export default class WEBGLTexture extends Texture {
   }
 
   // eslint-disable-next-line complexity
-  _deduceImageSize(data, width, height): {width: number, height: number} {
+  _deduceImageSize(data, width, height): {width: number; height: number} {
     let size;
 
     if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
@@ -741,136 +797,311 @@ export default class WEBGLTexture extends Texture {
     return size;
   }
 
+  // CUBE MAP METHODS
+
+  /* eslint-disable max-statements, max-len */
+  async setCubeMapImageData(options: {
+    width: any;
+    height: any;
+    pixels: any;
+    data: any;
+    border?: number;
+    format?: any;
+    type?: any;
+  }): Promise<void> {
+    const {gl} = this;
+
+    const {
+      width,
+      height,
+      pixels,
+      data,
+      border = 0,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE
+    } = options;
+    const imageDataMap = pixels || data;
+
+    // pixel data (imageDataMap) is an Object from Face to Image or Promise.
+    // For example:
+    // {
+    // GL.TEXTURE_CUBE_MAP_POSITIVE_X : Image-or-Promise,
+    // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : Image-or-Promise,
+    // ... }
+    // To provide multiple level-of-details (LODs) this can be Face to Array
+    // of Image or Promise, like this
+    // {
+    // GL.TEXTURE_CUBE_MAP_POSITIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+    // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+    // ... }
+
+    const resolvedFaces = await Promise.all(
+      WEBGLTexture.FACES.map((face) => {
+        const facePixels = imageDataMap[face];
+        return Promise.all(Array.isArray(facePixels) ? facePixels : [facePixels]);
+      })
+    );
+
+    this.bind();
+
+    WEBGLTexture.FACES.forEach((face, index) => {
+      if (resolvedFaces[index].length > 1 && this.props.mipmaps !== false) {
+        // If the user provides multiple LODs, then automatic mipmap
+        // generation generateMipmap() should be disabled to avoid overwritting them.
+        log.warn(`${this.id} has mipmap and multiple LODs.`)();
+      }
+      resolvedFaces[index].forEach((image, lodLevel) => {
+        // TODO: adjust width & height for LOD!
+        if (width && height) {
+          gl.texImage2D(face, lodLevel, format, width, height, border, format, type, image);
+        } else {
+          gl.texImage2D(face, lodLevel, format, format, type, image);
+        }
+      });
+    });
+
+    this.unbind();
+  }
+
+  // TODO: update this method to accept LODs
+  setImageDataForFace(options) {
+    const {
+      face,
+      width,
+      height,
+      pixels,
+      data,
+      border = 0,
+      format = GL.RGBA,
+      type = GL.UNSIGNED_BYTE
+      // generateMipmap = false // TODO
+    } = options;
+
+    const {gl} = this;
+
+    const imageData = pixels || data;
+
+    this.bind();
+    if (imageData instanceof Promise) {
+      imageData.then((resolvedImageData) =>
+        this.setImageDataForFace(
+          Object.assign({}, options, {
+            face,
+            data: resolvedImageData,
+            pixels: resolvedImageData
+          })
+        )
+      );
+    } else if (this.width || this.height) {
+      gl.texImage2D(face, 0, format, width, height, border, format, type, imageData);
+    } else {
+      gl.texImage2D(face, 0, format, format, type, imageData);
+    }
+
+    return this;
+  }
+
+  /** Image 3D copies from Typed Array or WebGLBuffer */
+  setImageData3D({
+    level = 0,
+    dataFormat = GL.RGBA,
+    width,
+    height,
+    depth = 1,
+    border = 0,
+    format,
+    type = GL.UNSIGNED_BYTE,
+    offset = 0,
+    data,
+    parameters = {}
+  }: SetImageData3DOptions) {
+    this.trackDeallocatedMemory('Texture');
+
+    this.gl.bindTexture(this.target, this.handle);
+
+    withParameters(this.gl, parameters, () => {
+      if (ArrayBuffer.isView(data)) {
+        // @ts-expect-error
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          data
+        );
+      }
+
+      if (data instanceof Buffer) {
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
+        // @ts-expect-error
+        this.gl.texImage3D(
+          this.target,
+          level,
+          dataFormat,
+          width,
+          height,
+          depth,
+          border,
+          format,
+          type,
+          offset
+        );
+      }
+    });
+
+    if (data && data.byteLength) {
+      this.trackAllocatedMemory(data.byteLength, 'Texture');
+    } else {
+      // NOTE(Tarek): Default to RGBA bytes
+      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
+      const channelSize = TYPE_SIZES[this.type] || 1;
+
+      this.trackAllocatedMemory(
+        this.width * this.height * this.depth * channels * channelSize,
+        'Texture'
+      );
+    }
+
+    this.loaded = true;
+
+    return this;
+  }
+
   // RESOURCE METHODS
 
-    /**
+  /**
    * Query a Resource parameter
    *
    * @param name
    * @return param
    */
-     getParameter(pname: number, props = {}): any {
-      pname = getKeyValue(this.gl, pname);
-      assert(pname);
-  
-      // @ts-expect-error
-      const parameters = this.constructor.PARAMETERS || {};
-  
-      // Use parameter definitions to handle unsupported parameters
-      const parameter = parameters[pname];
-      if (parameter) {
-        const isWebgl2 = isWebGL2(this.gl);
-  
-        // Check if we can query for this parameter
-        const parameterAvailable =
-          (!('webgl2' in parameter) || isWebgl2) &&
-          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-  
-        if (!parameterAvailable) {
-          const webgl1Default = parameter.webgl1;
-          const webgl2Default = 'webgl2' in parameter ? parameter.webgl2 : parameter.webgl1;
-          const defaultValue = isWebgl2 ? webgl2Default : webgl1Default;
-          return defaultValue;
-        }
-      }
-  
-      // If unknown parameter - Could be a valid parameter not covered by PARAMS
-      // Attempt to query for it and let WebGL report errors
-      return this._getParameter(pname, props);
-    }
-  
-    // Many resources support a getParameter call -
-    // getParameters will get all parameters - slow but useful for debugging
-    // eslint-disable-next-line complexity
-    getParameters(options: {parameters?, keys?} = {}) {
-      const {parameters, keys} = options;
-  
-      // Get parameter definitions for this Resource
-      // @ts-expect-error
-      const PARAMETERS = this.constructor.PARAMETERS || {};
-  
+  getParameter(pname: number, props = {}): any {
+    pname = getKeyValue(this.gl, pname);
+    assert(pname);
+
+    // @ts-expect-error
+    const parameters = this.constructor.PARAMETERS || {};
+
+    // Use parameter definitions to handle unsupported parameters
+    const parameter = parameters[pname];
+    if (parameter) {
       const isWebgl2 = isWebGL2(this.gl);
-  
-      const values = {};
-  
-      // Query all parameters if no list provided
-      const parameterKeys = parameters || Object.keys(PARAMETERS);
-  
-      // WEBGL limits
-      for (const pname of parameterKeys) {
-        const parameter = PARAMETERS[pname];
-  
-        // Check if this parameter is available on this platform
-        const parameterAvailable =
-          parameter &&
-          (!('webgl2' in parameter) || isWebgl2) &&
-          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-  
-        if (parameterAvailable) {
-          const key = keys ? getKey(this.gl, pname) : pname;
-          values[key] = this.getParameter(pname, options);
-          if (keys && parameter.type === 'GLenum') {
-            values[key] = getKey(this.gl, values[key]);
-          }
+
+      // Check if we can query for this parameter
+      const parameterAvailable =
+        (!('webgl2' in parameter) || isWebgl2) &&
+        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+
+      if (!parameterAvailable) {
+        const webgl1Default = parameter.webgl1;
+        const webgl2Default = 'webgl2' in parameter ? parameter.webgl2 : parameter.webgl1;
+        const defaultValue = isWebgl2 ? webgl2Default : webgl1Default;
+        return defaultValue;
+      }
+    }
+
+    // If unknown parameter - Could be a valid parameter not covered by PARAMS
+    // Attempt to query for it and let WebGL report errors
+    return this._getParameter(pname, props);
+  }
+
+  // Many resources support a getParameter call -
+  // getParameters will get all parameters - slow but useful for debugging
+  // eslint-disable-next-line complexity
+  getParameters(options: {parameters?; keys?} = {}) {
+    const {parameters, keys} = options;
+
+    // Get parameter definitions for this Resource
+    // @ts-expect-error
+    const PARAMETERS = this.constructor.PARAMETERS || {};
+
+    const isWebgl2 = isWebGL2(this.gl);
+
+    const values = {};
+
+    // Query all parameters if no list provided
+    const parameterKeys = parameters || Object.keys(PARAMETERS);
+
+    // WEBGL limits
+    for (const pname of parameterKeys) {
+      const parameter = PARAMETERS[pname];
+
+      // Check if this parameter is available on this platform
+      const parameterAvailable =
+        parameter &&
+        (!('webgl2' in parameter) || isWebgl2) &&
+        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+
+      if (parameterAvailable) {
+        const key = keys ? getKey(this.gl, pname) : pname;
+        values[key] = this.getParameter(pname, options);
+        if (keys && parameter.type === 'GLenum') {
+          values[key] = getKey(this.gl, values[key]);
         }
       }
-  
-      return values;
     }
-  
-    /**
-     * Update a Resource setting
-     *
-     * @todo - cache parameter to avoid issuing WebGL calls?
-     *
-     * @param {string} pname - parameter (GL constant, value or key)
-     * @param {GLint|GLfloat|GLenum} value
-     * @return {Resource} returns self to enable chaining
-     */
-    setParameter(pname, value) {
-      pname = getKeyValue(this.gl, pname);
-      assert(pname);
-  
-      // @ts-expect-error
-      const parameters = this.constructor.PARAMETERS || {};
-  
-      const parameter = parameters[pname];
-      if (parameter) {
-        const isWebgl2 = isWebGL2(this.gl);
-  
-        // Check if this parameter is available on this platform
-        const parameterAvailable =
-          (!('webgl2' in parameter) || isWebgl2) &&
-          (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-  
-        if (!parameterAvailable) {
-          throw new Error('Parameter not available on this platform');
-        }
-  
-        // Handle string keys
-        if (parameter.type === 'GLenum') {
-          // @ts-expect-error
-          value = getKeyValue(value);
-        }
+
+    return values;
+  }
+
+  /**
+   * Update a Resource setting
+   *
+   * @todo - cache parameter to avoid issuing WebGL calls?
+   *
+   * @param {string} pname - parameter (GL constant, value or key)
+   * @param {GLint|GLfloat|GLenum} value
+   * @return {Resource} returns self to enable chaining
+   */
+  setParameter(pname, value) {
+    pname = getKeyValue(this.gl, pname);
+    assert(pname);
+
+    // @ts-expect-error
+    const parameters = this.constructor.PARAMETERS || {};
+
+    const parameter = parameters[pname];
+    if (parameter) {
+      const isWebgl2 = isWebGL2(this.gl);
+
+      // Check if this parameter is available on this platform
+      const parameterAvailable =
+        (!('webgl2' in parameter) || isWebgl2) &&
+        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
+
+      if (!parameterAvailable) {
+        throw new Error('Parameter not available on this platform');
       }
-  
-      // If unknown parameter - Could be a valid parameter not covered by PARAMS
-      // attempt to set it and let WebGL report errors
-      this._setParameter(pname, value);
-      return this;
-    }
-  
-    /*
-     * Batch update resource parameters
-     * Assumes the subclass supports a setParameter call
-     */
-    setParameters(parameters) {
-      for (const pname in parameters) {
-        this.setParameter(pname, parameters[pname]);
+
+      // Handle string keys
+      if (parameter.type === 'GLenum') {
+        // @ts-expect-error
+        value = getKeyValue(value);
       }
-      return this;
     }
-  
+
+    // If unknown parameter - Could be a valid parameter not covered by PARAMS
+    // attempt to set it and let WebGL report errors
+    this._setParameter(pname, value);
+    return this;
+  }
+
+  /*
+   * Batch update resource parameters
+   * Assumes the subclass supports a setParameter call
+   */
+  setParameters(parameters) {
+    for (const pname in parameters) {
+      this.setParameter(pname, parameters[pname]);
+    }
+    return this;
+  }
+
   _getParameter(pname: number, props?): any {
     switch (pname) {
       case GL.TEXTURE_WIDTH:
@@ -928,18 +1159,20 @@ export default class WEBGLTexture extends Texture {
 
   // Update default settings which are not supported by NPOT textures.
   _updateForNPOT(parameters) {
+    const newParameters = {...parameters};
     if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
-      parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
+      newParameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
     }
     if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`)();
-      parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
+      newParameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
     }
     if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE`)();
-      parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
+      newParameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
     }
+    return newParameters;
   }
 
   _getNPOTParam(pname: number, param: number): number {
@@ -963,5 +1196,27 @@ export default class WEBGLTexture extends Texture {
       }
     }
     return param;
+  }
+}
+
+// HELPERS
+
+function getWebGLTextureTarget(props: TextureProps) {
+  switch (props.dimension) {
+    // supported in WebGL
+    case '2d':
+      return GL.TEXTURE_2D;
+    case 'cube':
+      return GL.TEXTURE_CUBE_MAP;
+    // supported in WebGL2
+    case '2d-array':
+      return GL.TEXTURE_2D_ARRAY;
+    case '3d':
+      return GL.TEXTURE_3D;
+    // not supported in any WebGL version
+    case '1d':
+    case 'cube-array':
+    default:
+      throw new Error(props.dimension);
   }
 }

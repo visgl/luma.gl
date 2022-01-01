@@ -7,22 +7,6 @@ import Texture, {TextureProps} from './texture';
 import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
 import Buffer from './webgl-buffer';
 
-export type Texture3DProps = TextureProps & {
-};
-
-type SetImageDataOptions = {
-  level?: number;
-  dataFormat?: any;
-  width: any;
-  height: any;
-  depth?: number;
-  border?: number;
-  format: any;
-  type?: any;
-  offset?: number;
-  data: any;
-  parameters?: {};
-};
 
 /**
  * Textures that have 3 dimensions: width, height, and depth.
@@ -38,15 +22,14 @@ export default class Texture3D extends Texture {
     }
   }
 
-  constructor(device: Device | WebGL2RenderingContext, props: Texture3DProps = {}) {
-    super(device, {...props, target: GL.TEXTURE_3D});
+  constructor(device: Device | WebGL2RenderingContext, props: TextureProps = {}) {
+    // @ts-expect-error
+    super(device, {depth: 1, ...props, dimension: '3d', unpackFlipY: false}); // target: GL.TEXTURE_3D});
     assertWebGL2Context(this.gl2);
-    props = Object.assign({depth: 1}, props, {target: GL.TEXTURE_3D, unpackFlipY: false});
-    this.initialize(props);
     Object.seal(this);
   }
 
-  /** Image 3D copies from Typed Array or WebGLBuffer */
+  /** Image 3D copies from Typed Array or WebGLBuffer *
   setImageData({
     level = 0,
     dataFormat = GL.RGBA,
@@ -116,4 +99,5 @@ export default class Texture3D extends Texture {
 
     return this;
   }
+  */
 }

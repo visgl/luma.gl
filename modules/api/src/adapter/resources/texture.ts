@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import type Device from '../device';
+import type {TypedArray} from '../../types';
 import type {TextureFormat} from '../types/formats';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import Sampler, {SamplerProps} from './sampler';
@@ -11,6 +12,18 @@ import Sampler, {SamplerProps} from './sampler';
 // required GPUTextureFormat format;
 // required GPUTextureUsageFlags usage;
 
+/** Data types that can be used to initialize textures */
+export type TextureData = 
+  TypedArray | ArrayBuffer | Buffer | ImageBitmap | HTMLImageElement
+  ;
+
+export type CubeTextureData = 
+  Record<string, TextureData> |
+  Record<string, Promise<TextureData>>
+  ;
+
+export type ExternalTextureData = HTMLVideoElement;
+
 /** Abstract Texture interface */
 export type TextureProps = ResourceProps & {
   format?: TextureFormat | number;
@@ -20,7 +33,7 @@ export type TextureProps = ResourceProps & {
   depth?: number;
   usage?: number;
 
-  data?: any;
+  data?: TextureData | Promise<TextureData> | CubeTextureData | string | HTMLVideoElement;
   mipmaps?: boolean;
   sampler?: Sampler | SamplerProps;
 
@@ -73,12 +86,13 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   width: undefined,
   height: undefined,
   depth: 1,
-  mipmaps: false,
+  mipmaps: true,
   parameters: {},
   type: undefined,
   compressed: false,
   // mipLevels: 1,
-  format: 'rgba8unorm',
+  format: 0x1908, // GL.RGBA,
+  // format: 'rgba8unorm',
   usage: 0
 };
 

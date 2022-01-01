@@ -60,8 +60,10 @@ export default class WebGPUTexture extends Texture {
       throw new Error('number format');
     }
 
-    // Deduce size from data
+    // Deduce size from data - TODO this is a hack
+    // @ts-expect-error
     const width = this.props.width || this.props.data?.width || 1;
+    // @ts-expect-error
     const height = this.props.height || this.props.data?.height || 1;
 
     return this.device.handle.createTexture({

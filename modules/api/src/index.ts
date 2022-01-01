@@ -13,7 +13,7 @@ export type {ResourceProps} from './adapter/resources/resource';
 export {default as Resource} from './adapter/resources/resource';
 export type {BufferProps} from './adapter/resources/buffer';
 export {default as Buffer} from './adapter/resources/buffer';
-export type {TextureProps} from './adapter/resources/texture';
+export type {TextureProps, TextureData} from './adapter/resources/texture';
 export {default as Texture} from './adapter/resources/texture';
 export type {ShaderProps, CompilerMessage} from './adapter/resources/shader';
 export {default as Shader} from './adapter/resources/shader';
