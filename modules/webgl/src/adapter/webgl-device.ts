@@ -270,7 +270,7 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WEBGLBuffer(this.gl, props);
   }
 
-  createTexture(props: TextureProps): WEBGLTexture {
+  _createTexture(props: TextureProps): WEBGLTexture {
     return new WEBGLTexture(this, props);
   }
 

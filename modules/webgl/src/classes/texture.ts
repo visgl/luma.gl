@@ -168,20 +168,25 @@ export default class WEBGLTexture extends Texture {
       );
       return this;
     }
+    
     const isVideo = typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement;
     // @ts-expect-error
     if (isVideo && data.readyState < HTMLVideoElement.HAVE_METADATA) {
       this._video = null; // Declare member before the object is sealed
+      // @ts-expect-error
       data.addEventListener('loadeddata', () => this.initialize(props));
       return this;
     }
+
+    let {
+      parameters = {}
+    } = props;
 
     const {
       pixels = null,
       format = GL.RGBA,
       border = 0,
       recreate = false,
-      parameters = {},
       pixelStore = {},
       textureUnit = undefined
     } = props;
@@ -227,7 +232,7 @@ export default class WEBGLTexture extends Texture {
       log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
       mipmaps = false;
 
-      this._updateForNPOT(parameters);
+      parameters = this._updateForNPOT(parameters);
     }
 
     this.mipmaps = mipmaps;
@@ -1154,18 +1159,20 @@ export default class WEBGLTexture extends Texture {
 
   // Update default settings which are not supported by NPOT textures.
   _updateForNPOT(parameters) {
+    const newParameters = {...parameters};
     if (parameters[this.gl.TEXTURE_MIN_FILTER] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
-      parameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
+      newParameters[this.gl.TEXTURE_MIN_FILTER] = this.gl.LINEAR;
     }
     if (parameters[this.gl.TEXTURE_WRAP_S] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`)();
-      parameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
+      newParameters[this.gl.TEXTURE_WRAP_S] = this.gl.CLAMP_TO_EDGE;
     }
     if (parameters[this.gl.TEXTURE_WRAP_T] === undefined) {
       // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_T to CLAMP_TO_EDGE`)();
-      parameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
+      newParameters[this.gl.TEXTURE_WRAP_T] = this.gl.CLAMP_TO_EDGE;
     }
+    return newParameters;
   }
 
   _getNPOTParam(pname: number, param: number): number {

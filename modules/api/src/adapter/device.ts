@@ -6,7 +6,7 @@ import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {default as Sampler, SamplerProps} from './resources/sampler';
 import type {default as Shader, ShaderProps} from './resources/shader';
-import type {default as Texture, TextureProps} from './resources/texture';
+import type {default as Texture, TextureProps, TextureData} from './resources/texture';
 import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
 
 /** Device properties */
@@ -236,6 +236,19 @@ export default abstract class Device {
       : this._createBuffer(props);
   }
 
+  /** Create a texture */
+  createTexture(props: TextureProps): Texture;
+  createTexture(data: Promise<TextureData>): Texture;
+  createTexture(url: string): Texture;
+
+  createTexture(props: TextureProps | Promise<TextureData> | string): Texture {
+    // Signature: new Texture2D(gl, url | Promise)
+    if (props instanceof Promise || typeof props === 'string') {
+      props = {data: props};
+    }
+    return this._createTexture(props);
+  }
+
   /** Create a render pipeline (aka program) */
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
@@ -245,8 +258,6 @@ export default abstract class Device {
   /** Create a shader */
   abstract createShader(props: ShaderProps): Shader;
 
-  /** Create a texture */
-  abstract createTexture(props: TextureProps): Texture;
 
   createFramebuffer(props: FramebufferProps): Framebuffer {
     throw new Error('Not implemented');
@@ -255,4 +266,5 @@ export default abstract class Device {
   // Implementation
 
   protected abstract _createBuffer(props: BufferProps): Buffer;
+  protected abstract _createTexture(props: TextureProps): Texture;
 }
