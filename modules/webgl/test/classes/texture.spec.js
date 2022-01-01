@@ -190,7 +190,7 @@ function testFormatDeduction(t, glContext) {
       format: Number(format),
       height: 1,
       width: 1,
-      mipmaps: format !== GL.RGB32F
+      mipmaps: Number(format) !== GL.RGB32F
     };
     if (Texture2D.isSupported(glContext, {format})) {
       const texture = new Texture2D(glContext, options);
