@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 import StatsManager, {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
+import {TextureFormat} from './types/formats';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
 import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
@@ -193,7 +194,12 @@ export default abstract class Device {
     return 'Device';
   }
 
+  constructor(props: DeviceProps) {
+    this.props = {...DEFAULT_DEVICE_PROPS, ...props};
+  }
+
   readonly statsManager: StatsManager = lumaStats;
+  readonly props: DeviceProps;
 
   canvas: HTMLCanvasElement;
   offscreenCanvas: OffscreenCanvas | undefined;
@@ -203,6 +209,12 @@ export default abstract class Device {
 
   /** Optional capability discovery */
   abstract features: Set<string>;
+
+  /** Check if device supports a specific texture format */
+  abstract isTextureFormatSupported(format: TextureFormat): boolean;
+
+  /** Check if linear filtering (sampler interpolation) is supported for a specific floating point texture format */
+  abstract isLinearFilteringSupported(format: TextureFormat): boolean;
 
   /** True context is already lost */
   abstract get isLost(): boolean;

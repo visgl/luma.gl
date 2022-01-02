@@ -3,7 +3,9 @@ import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../adapter/webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
-import {isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel} from './renderbuffer-formats';
+import {
+  isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel
+} from '../adapter/converters/renderbuffer-formats';
 import {isWebGL2} from '../context/context/webgl-checks';
 
 export type RenderbufferProps = ResourceProps & {

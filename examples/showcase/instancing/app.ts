@@ -1,7 +1,7 @@
 import {Device, getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, Model, ModelProps, ProgramManager} from '@luma.gl/engine';
-import {readPixelsToArray, cssToDevicePixels, setParameters} from '@luma.gl/webgl';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
+import {readPixelsToArray, cssToDevicePixels, clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -145,15 +145,9 @@ export default class AppRenderLoop extends RenderLoop {
   timeline: Timeline;
   timelineChannels: Record<string, number>;
 
-  constructor({device, gl, animationLoop}: AnimationProps) {
+  constructor({device, animationLoop}: AnimationProps) {
     super();
   
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    });
-
-    
     this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
@@ -169,7 +163,7 @@ export default class AppRenderLoop extends RenderLoop {
   }
 
   onRender(animationProps) {
-    const {gl, aspect, tick} = animationProps;
+    const {device, gl, aspect, tick} = animationProps;
     const {framebuffer, _mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
@@ -183,7 +177,7 @@ export default class AppRenderLoop extends RenderLoop {
     }
 
     // Draw the cubes
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clear(device, {color: [0, 0, 0, 1], depth: true});
     this.cube.setUniforms({
       uTime: this.timeline.getTime(timeChannel),
       // Basic projection matrix

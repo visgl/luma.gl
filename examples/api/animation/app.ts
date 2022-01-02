@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames, Model} from '@luma.gl/engine';
-import {setParameters} from '@luma.gl/webgl';
+import {setParameters, clear} from '@luma.gl/webgl';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -59,13 +59,8 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
-  constructor({device, gl, aspect, animationLoop}: AnimationProps) {
+  constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
-
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    });
 
     const playButton = document.getElementById('play');
     const pauseButton = document.getElementById('pause');
@@ -191,7 +186,7 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
-  onRender({gl}) {
+  onRender({device}) {
     if (this.timeSlider) {
       this.timeSlider.value = this.timeline.getTime();
     }
@@ -199,7 +194,7 @@ export default class AppRenderLoop extends RenderLoop {
     const modelMatrix = new Matrix4();
 
     // Draw the cubes
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     for (let i = 0; i < 4; ++i) {
       const cube = this.cubes[i];

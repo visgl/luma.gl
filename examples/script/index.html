@@ -134,12 +134,7 @@
           return INFO_HTML;
         }
 
-        onInitialize({device, gl, _animationLoop}) {      
-          setParameters(gl, {
-            clearColor: [0, 0, 0, 1],
-            clearDepth: 1
-          });
-
+        onInitialize({device, _animationLoop}) {
           this.attachTimeline(new Timeline());
           this.timeline.play();
 
@@ -161,7 +156,7 @@
             })
           };
 
-          this.cube = new InstancedCube(gl);
+          this.cube = new InstancedCube(device);
 
           const modelMatrix = mat4.create();
           const viewMatix = mat4.create();
@@ -171,7 +166,7 @@
         }
 
         onRender(animationProps) {
-          const {gl, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
+          const {device, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
           const {framebuffer, _mousePosition} = animationProps;
           const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
 
@@ -189,7 +184,7 @@
           mat4.rotateY(modelMatrix, modelMatrix, tick * 0.013);
 
           // Draw the cubes
-          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          clear(device, {color: [0, 0, 0, 1], depth: true});
           this.cube.setUniforms({
             uTime: this.timeline.getTime(timeChannel),
             uProjection: mat4.perspective(projMatrix, Math.PI / 3, aspect, 1, 2048.0),

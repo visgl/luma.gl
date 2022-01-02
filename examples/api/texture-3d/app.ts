@@ -5,7 +5,7 @@
 import {getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {Texture3D, isWebGL2, setParameters} from '@luma.gl/webgl';
+import {setParameters, clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -56,10 +56,10 @@ export default class AppRenderLoop extends RenderLoop {
   viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
   cloud: Model;
 
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
     
-    if (!isWebGL2(gl)) {
+    if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
 
@@ -67,9 +67,10 @@ export default class AppRenderLoop extends RenderLoop {
       interpolation: lerp,
       permutation: shuffle(range(0, 255), random)
     });
-
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1]
+    setParameters(device, {
+      // TODO these should be set on the model, but doesn't work...
+      blend: true,
+      blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
     });
 
     // CREATE POINT CLOUD
@@ -113,19 +114,25 @@ export default class AppRenderLoop extends RenderLoop {
       }
     }
 
-    const texture = new Texture3D(device, {
+    const texture = device.createTexture({
+      dimension: '3d',
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       data: textureData,
       format: GL.RED,
-      dataFormat: GL.R8
+      dataFormat: GL.R8,
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'linear'
+      }
     });
 
     this.cloud = new Model(device, {
       vs,
       fs,
-      drawMode: gl.POINTS,
+      drawMode: GL.POINTS,
       vertexCount: positionData.length / 3,
       attributes: {
         position: positionBuffer
@@ -146,11 +153,11 @@ export default class AppRenderLoop extends RenderLoop {
     this.cloud.destroy();
   }
 
-  onRender({gl, tick, aspect}: AnimationProps) {
+  onRender({device, tick, aspect}: AnimationProps) {
     this.mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
 
     // Draw the cubes
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    clear(device, {color: [0, 0, 0, 1], depth: true});
     this.cloud.draw({
       uniforms: {
         uTime: tick / 100,

@@ -42,11 +42,11 @@ export type TextureProps = ResourceProps & {
   type?: number;
   compressed?: boolean;
 
-  /** @deprecated use sampler */
-  parameters?: object;
-  /** @deprecated use data */
+  /** @deprecated use props.sampler */
+  parameters?: Record<number, number>;
+  /** @deprecated use props.data */
   pixels?: any;
-  /** @deprecated use format */
+  /** @deprecated use props.format */
   dataFormat?: number;
   /** @deprecated rarely supported */
   border?: number;
@@ -83,16 +83,16 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   data: undefined,
   dimension: '2d',
+  format: 'rgba8unorm',
   width: undefined,
   height: undefined,
   depth: 1,
   mipmaps: true,
+  sampler: {},
   parameters: {},
   type: undefined,
   compressed: false,
   // mipLevels: 1,
-  format: 0x1908, // GL.RGBA,
-  // format: 'rgba8unorm',
   usage: 0
 };
 

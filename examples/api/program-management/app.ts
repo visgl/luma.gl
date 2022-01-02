@@ -1,7 +1,7 @@
 import {getRandom} from '@luma.gl/api';
-import {setParameters} from '@luma.gl/webgl';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {RenderLoop, Model, ProgramManager, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const random = getRandom();
@@ -59,13 +59,8 @@ export default class AppRenderLoop extends RenderLoop {
   programManager: ProgramManager;
   cubes: {translation: number[], rotation: number[], model: Model}[];
 
-  constructor({device, gl, aspect}: AnimationProps) {
+  constructor({device, aspect}: AnimationProps) {
     super();
-
-    setParameters(gl, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
-    });
 
     this.programManager = new ProgramManager(device);
     this.programManager.addShaderHook('vs:LUMAGL_normal(inout vec3 normal)');
@@ -127,7 +122,7 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
-  onRender({gl, tick}: AnimationProps) {
+  onRender({device, tick}: AnimationProps) {
     if (tick % 240 === 0) {
       if (tick % 480 === 0) {
         this.programManager.removeDefaultModule(dirlight);
@@ -150,7 +145,7 @@ export default class AppRenderLoop extends RenderLoop {
     const modelMatrix = new Matrix4();
 
     // Draw the cubes
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     for (let i = 0; i < 4; ++i) {
       const cube = this.cubes[i];

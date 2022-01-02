@@ -49,14 +49,29 @@ export function initializeSpector(props?: SpectorProps) {
   }
 
   if (spector) {
-    // Question - does this call add anything beyond explicit captureCanvas call?
+    // enables recording some extra information merged in the capture like texture memory sizes and formats
     spector.spyCanvases();
-    spector?.onCapture.add((capture) => log.info(`Spector:`, capture)()); 
+    // A callback when results are ready
+    spector?.onCaptureStarted.add((capture) => log.info(`Spector started:`, capture)());
+    spector?.onCapture.add((capture) => {
+      log.info(`Spector:`, capture)();
+      // Use undocumented Spector API to open the UI with our capture
+      // See https://github.com/BabylonJS/Spector.js/blob/767ad1195a25b85a85c381f400eb50a979239eca/src/spector.ts#L124
+      spector?.getResultUI()
+      spector?.resultView.display();
+      spector?.resultView.addCapture(capture)
+    });
   }
 
   if (spector && props?.canvas) {
-    spector?.captureCanvas(props?.canvas);
-    // spector.displayUI()    
+    // capture startup
+    // spector?.captureCanvas(props?.canvas);
+    spector?.startCapture(props?.canvas, 500); // 500 commands
+    spector?.displayUI();
+    // new Promise(resolve => setTimeout(resolve, 1000)).then(_ => {
+    //   debugger
+    //   spector?.stopCapture();
+    // });
   }
 
   return spector;

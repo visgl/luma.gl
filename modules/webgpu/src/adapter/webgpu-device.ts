@@ -8,7 +8,8 @@ import type {
   ShaderProps,
   TextureProps,
   RenderPipelineProps,
-  FramebufferProps
+  FramebufferProps,
+  TextureFormat
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, cast} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
@@ -68,7 +69,7 @@ export default class WebGPUDevice extends Device {
   }
 
   constructor(device: GPUDevice, adapter: GPUAdapter, props: DeviceProps) {
-    super();
+    super(props);
     this.handle = device;
     this.adapter = adapter;
 
@@ -120,6 +121,14 @@ export default class WebGPUDevice extends Device {
 
   get limits(): DeviceLimits {
     return this.handle.limits;
+  }
+
+  isTextureFormatSupported(format: TextureFormat): boolean {
+    return !format.startsWith('webgl');
+  }
+
+  isLinearFilteringSupported(format: TextureFormat): boolean {
+    return true; // TODO proper check?
   }
 
   get isLost(): boolean {
