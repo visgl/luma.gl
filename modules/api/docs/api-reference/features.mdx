@@ -28,9 +28,11 @@ if (webglDevice.gl.getExtension('EXT_disjoint_timer_query') || webglDevice.gl.ge
 }
 ```
 
-##
+## Alternative APIs
 
-There are a few additional capability query functions in the luma.gl API. In particular, WebGL 2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
+There are a few additional capability query functions in the luma.gl API. In particular,
+some classes have a static `isSupported()` method that you can call instead of checking
+for specific features.
 
 ```typescript
 import {Query} from '@luma.gl/webgl';
@@ -38,47 +40,6 @@ if (Query.isSupported(gl)) {
   ...
 }
 ```
-
-## WebGL Feature Detection
-
-### WebGL 2 Classes with some WebGL 1 support
-
-Note that luma has a few WebGL 2 classes that **can** be instantiated under WebGL 1
-
-- `VertexAttributeObject`. Can be instanitated under WebGL 1 if the commonly supported extension is available. Also, luma.gl treats the global vertex array as a "default" VertexArrayObject, so that can always be accessed.
-- `Query` objects use GPU timing extensions if available. They can always be created but obviously queries will fail if capabilities are not present.
-- `UniformBufferLayout` - this class does not create any WebGL resources, it just helps the application access memory in the layout format expected by WebGL 2 uniform buffers.
-
-`VertexAttributeObject` and `Query` have a static `isSupported()` method that you can call instead of checking for WebGL 2.
-
-### WebGL 2 Classes that only work in WebGL 2
-
-A list of luma classes that can only be instantiated under WebGL 2:
-
-- `Texture3D` - e.g for volumetric rendering
-- `Texture2DArray` - an array of textures, e.g. a texture atlas
-- `Sampler` - holds a separate set of texture sampler parameters
-- `TransformFeedback` - holds a list of output buffers for shaders to write to.
-- `Sync` -
-
-Each of these classes has a static `isSupported()` method that you can call instead of checking for WebGL 2.
-
-### WebGL 2-only Features
-
-A partial list of features that are only available in WebGL 2:
-
-- Non-power-of-2 textures - non-POT textures can have mipmaps in WebGL 2
-- Sized texture formats -
-- Integer based texture formats and attributes -
-- Multi-Sampled renderbuffers -
-- Guaranteed texture access in vertex shaders - WebGL 1 is not required to support this (although it often does)
-
-### GLSL 3.00
-
-- `textureSize` - query **size of texture** from within shaders
-- `texelFetch` - access textures by **pixel** coordinates (0-width, 0-height) instead of **texel** coordinates (0-1)
-- `inverse` and `transpose` Matrix operations available in GLSL
-- loop restrictions removed
 
 ### Optional Feature Detection
 
@@ -92,7 +53,7 @@ Parameters to `hasFeatures`:
 | `webgl2`                                 | N      | Y      | N     | Device is using WebGL2.                                |
 | `webgl`                                  | N      | Y      | Y     | Device is using WebGL or WebGL2.                       |
 | `depth-clip-control` (WebGPU)            | \*     | N      | N     |                                                        |
-| `depth24unorm-stencil8` (WebGPU)                   | \*     | Y      | -     | `UNSIGNED_INT_24_8_WEBGL`                              |
+| `depth24unorm-stencil8` (WebGPU)         | \*     | Y      | -     | `UNSIGNED_INT_24_8_WEBGL`                              |
 | `depth32float-stencil8`                  | \*     | N      | N     |                                                        |
 | `timestamp-query`                        | \*     | N      | N     |                                                        |
 | `indirect-first-instance`                | \*     | N      | N     |                                                        |
@@ -102,7 +63,7 @@ Parameters to `hasFeatures`:
 | `webgl-texture-compression-etc1`         | \*     | \*     | \*    | ASTC compressed textures. Qualcomm Snapdragon Android. |
 | `webgl-texture-compression-pvrtc`        | \*     | \*     | \*    | PVRTC compressed textures. iOS devices.                |
 | `webgl-texture-compression-atc`          | \*     | \*     | \*    | ASTC compressed textures. .                            |
-| `webgl-timer-query`                      | N      | \*     | \*    | GPU timer support (cf WebGPU timestamp-query?)       |
+| `webgl-timer-query`                      | N      | \*     | \*    | GPU timer support (cf WebGPU timestamp-query?)         |
 | `webgl-vertex-array-object`              | N      | Y      | Y     |
 | `webgl-instanced-rendering`              | Y      | Y      | \*    |
 | `webgl-multiple-render-targets`          | Y      | Y      | \*    |
@@ -178,3 +139,44 @@ To simplify detecting and working with conditionally available capabilities (or 
 - A set of functions that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL 2 or a WebGL 1 extension).
 
 In addition, luma.gl's WebGL classes transparently use WebGL extensions or WebGL 2 APIs as appropriate, meaning that the amount of conditional logic in application code can be kept to a minimum. Once you have established that a capability exists, luma.gl offers you one unified way to use it.
+
+---
+
+### WebGL 2-only Features
+
+A partial list of features that are only available in WebGL 2:
+
+- Non-power-of-2 textures - non-POT textures can have mipmaps in WebGL 2
+- Sized texture formats -
+- Integer based texture formats and attributes -
+- Multi-Sampled renderbuffers -
+- Guaranteed texture access in vertex shaders - WebGL 1 is not required to support this (although it often does)
+
+### GLSL 3.00
+
+- `textureSize` - query **size of texture** from within shaders
+- `texelFetch` - access textures by **pixel** coordinates (0-width, 0-height) instead of **texel** coordinates (0-1)
+- `inverse` and `transpose` Matrix operations available in GLSL
+- loop restrictions removed
+
+## WebGL Notes
+
+### WebGL 2 Classes with some WebGL 1 support
+
+Note that luma has a few WebGL 2 classes that **can** be instantiated under WebGL 1
+
+- `VertexAttributeObject`. Can be instanitated under WebGL 1 if the commonly supported extension is available. Also, luma.gl treats the global vertex array as a "default" VertexArrayObject, so that can always be accessed.
+- `Query` objects use GPU timing extensions if available. They can always be created but obviously queries will fail if capabilities are not present.
+- `UniformBufferLayout` - this class does not create any WebGL resources, it just helps the application access memory in the layout format expected by WebGL 2 uniform buffers.
+
+`VertexAttributeObject` and `Query` have a static `isSupported()` method that you can call instead of checking for WebGL 2.
+
+### WebGL 2 Classes that only work in WebGL 2
+
+A list of luma classes that can only be instantiated under WebGL 2:
+
+- `Texture3D` - e.g for volumetric rendering
+- `Texture2DArray` - an array of textures, e.g. a texture atlas
+- `Sampler` - holds a separate set of texture sampler parameters
+- `TransformFeedback` - holds a list of output buffers for shaders to write to.
+- `Sync` -
