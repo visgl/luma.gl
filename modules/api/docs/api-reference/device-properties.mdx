@@ -1,0 +1,149 @@
+# Device Properties
+
+> This functionality is still experimental
+
+luma.gl provides several helper functions for testing properties of a WebGL context:
+
+### Device.info
+
+Returns an object with following parameters as keys and corresponding value for each key.
+
+| parameter                     | Description | 
+| ----------------------------- | --- |
+| 'GL.VENDOR'                   | 
+| 'GL.RENDERER'                 |
+| 'GL.UNMASKED_VENDOR_WEBGL'    |
+| 'GL.UNMASKED_RENDERER_WEBGL'  |
+| 'GL.VERSION'                  |
+| 'GL.SHADING_LANGUAGE_VERSION' |
+
+### getContextInfo(gl)
+
+Returns an object containing following details.
+
+- `vendor`: info[GL.UNMASKED_VENDOR_WEBGL] || info[GL.VENDOR],
+- `renderer`: info[GL.UNMASKED_RENDERER_WEBGL] || info[GL.RENDERER],
+- `version`: info[GL.VERSION],
+- `shadingLanguageVersion`: info[GL.SHADING_LANGUAGE_VERSION],
+- `info`,
+- `limits`,
+
+- `getContextLimits`: get resource limits for a context
+- `getGLContextInfo`: get various properties of a gl context (using WebGL enums as keys)
+- `getContextInfo`: get various properties of a gl context (using strings as keys)
+
+## Usage
+
+Check a certain limit (whether through an extension under WebGL 1 or through WebGL 2)
+
+```typescript
+import GL from '@luma.gl/constants';
+import {getContextLimits} from '@luma.gl/webgl';
+const limits = getContextLimits(gl);
+if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL 1
+   ...
+}
+```
+
+There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL 2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
+
+```typescript
+import {Query} from '@luma.gl/webgl';
+if (Query.isSupported(gl)) {
+  ...
+}
+```
+
+## Fields
+
+### Device.limits
+
+| Limit                                       | Value | Description                                                    |
+| ------------------------------------------- | ----- | -------------------------------------------------------------- |
+| `maxTextureDimension1D`                     | 0     | WebGL does not support 1D textures                        |
+| `maxTextureDimension2D`                     | g     | l.getParameter(GL.MAX_TEXTURE_SIZE),                           |
+| `maxTextureDimension3D`                     | g     | l2 ? gl2.getParameter(GL.MAX_3D_TEXTURE_SIZE) : 0,             |
+| `maxTextureArrayLayers`                     | g     | l2 ? gl2.getParameter(GL.MAX_ARRAY_TEXTURE_LAYERS) : 0,        |
+| `maxBindGroups`                             | 1     | TBD                                                       |
+| `maxDynamicUniformBuffersPerPipelineLayout` | 0     | TBD                                                       |
+| `maxDynamicStorageBuffersPerPipelineLayout` | 0     | TBD                                                       |
+| `maxSampledTexturesPerShaderStage`          | g     | l.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS)TBD      |
+| `maxSamplersPerShaderStage`                 | g     | l.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS),           |
+| `maxStorageBuffersPerShaderStage`           | 0     | TBD                                                       |
+| `maxStorageTexturesPerShaderStage`          | 0     | TBD                                                       |
+| `maxUniformBuffersPerShaderStage`           | g     | l2 ? gl2.getParameter(GL.MAX_UNIFORM_BUFFER_BINDINGS) : 0,     |
+| `maxUniformBufferBindingSize`               | g     | l2 ? gl2.getParameter(GL.MAX_UNIFORM_BLOCK_SIZE) : 0,          |
+| `maxStorageBufferBindingSize`               | 0     | ,                                                              |
+| `minUniformBufferOffsetAlignment`           | g     | l2 ? gl2.getParameter(GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT) : 0, |
+| `minStorageBufferOffsetAlignment`           | 0     | TBD                                                       |
+| `maxVertexBuffers`                          | 0     | ,                                                              |
+| `maxVertexAttributes`                       | g     | l.getParameter(GL.MAX_VERTEX_ATTRIBS),                         |
+| `maxVertexBufferArrayStride`                | 2     | 048TBD, this is just the default value from WebGPU        |
+| `maxInterStageShaderComponents`             | g     | l2 ? gl2.getParameter(GL.MAX_VARYING_COMPONENTS) : 0,          |
+| `maxComputeWorkgroupStorageSize`            | 0     | WebGL does not support compute shaders                    |
+| `maxComputeInvocationsPerWorkgroup`         | 0     | WebGL does not support compute shaders                    |
+| `maxComputeWorkgroupSizeX`                  | 0     | WebGL does not support compute shaders                    |
+| `maxComputeWorkgroupSizeY`                  | 0     | WebGL does not support compute shaders                    |
+| `maxComputeWorkgroupSizeZ`                  | 0     | WebGL does not support compute shaders                    |
+| `maxComputeWorkgroupsPerDimension`          | 0     | WebGL does not support compute shaders                    |
+
+### Device.webglLimits
+
+In addition to capabilities, luma.gl can return all limits for a context.
+
+| Limits                                | WebGL 2 | WebGL 1 | Description                                                                                                         |
+| ------------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `GL.ALIASED_LINE_WIDTH_RANGE`         |         | [1, 1]  |                                                                                                                     |
+| `GL.ALIASED_POINT_SIZE_RANGE`         |         | [1, 1]  |                                                                                                                     |
+| `GL.MAX_TEXTURE_SIZE`                 | 2048    | 64      |                                                                                                                     |
+| `GL.MAX_CUBE_MAP_TEXTURE_SIZE`        |         | 16      |                                                                                                                     |
+| `GL.MAX_TEXTURE_IMAGE_UNITS`          |         | 8       |                                                                                                                     |
+| `GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS` |         | 8       |                                                                                                                     |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`   |         | 0       |                                                                                                                     |
+| `GL.MAX_RENDERBUFFER_SIZE`            |         | 1       |                                                                                                                     |
+| `GL.MAX_VARYING_VECTORS`              |         | 8       |                                                                                                                     |
+| `GL.MAX_VERTEX_ATTRIBS`               |         | 8       |                                                                                                                     |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`       |         | 128     |                                                                                                                     |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`     |         | 16      |                                                                                                                     |
+| `GL.MAX_VIEWPORT_DIMS`                |         | [0, 0]  |                                                                                                                     |
+| `GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT`   | 1.0     | 1.0     | ['EXT_texture_filter_anisotropic'](https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic) |
+
+| WebGL 2 Limits                                     | WebGL 2 | WebGL 1 (mock) | Description |
+| -------------------------------------------------- | ------- | -------------- | ----------- |
+| `GL.MAX_3D_TEXTURE_SIZE`                           | `256`   | `0`            |             |
+| `GL.MAX_ARRAY_TEXTURE_LAYERS`                      | `256`   | `0`            |             |
+| `GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL`                 | `0`     | `0`            |             |
+| `GL.MAX_COLOR_ATTACHMENTS`                         | `4`     | `0`            |             |
+| `GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS`      | `0`     | `0`            |             |
+| `GL.MAX_COMBINED_UNIFORM_BLOCKS`                   | `0`     | `0`            |             |
+| `GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS`        | `0`     | `0`            |             |
+| `GL.MAX_DRAW_BUFFERS`                              | `4`     | `0`            |             |
+| `GL.MAX_ELEMENT_INDEX`                             | `0`     | `0`            |             |
+| `GL.MAX_ELEMENTS_INDICES`                          | `0`     | `0`            |             |
+| `GL.MAX_ELEMENTS_VERTICES`                         | `0`     | `0`            |             |
+| `GL.MAX_FRAGMENT_INPUT_COMPONENTS`                 | `0`     | `0`            |             |
+| `GL.MAX_FRAGMENT_UNIFORM_BLOCKS`                   | `0`     | `0`            |             |
+| `GL.MAX_FRAGMENT_UNIFORM_COMPONENTS`               | `0`     | `0`            |             |
+| `GL.MAX_PROGRAM_TEXEL_OFFSET`                      | `0`     | `0`            |             |
+| `GL.MAX_SAMPLES`                                   | `0`     | `0`            |             |
+| `GL.MAX_SERVER_WAIT_TIMEOUT`                       | `0`     | `0`            |             |
+| `GL.MAX_TEXTURE_LOD_BIAS`                          | `0`     | `0`            |             |
+| `GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS` | `0`     | `0`            |             |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS`       | `0`     | `0`            |             |
+| `GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS`    | `0`     | `0`            |             |
+| `GL.MAX_UNIFORM_BLOCK_SIZE`                        | `0`     | `0`            |             |
+| `GL.MAX_UNIFORM_BUFFER_BINDINGS`                   | `0`     | `0`            |             |
+| `GL.MAX_VARYING_COMPONENTS`                        | `0`     | `0`            |             |
+| `GL.MAX_VERTEX_OUTPUT_COMPONENTS`                  | `0`     | `0`            |             |
+| `GL.MAX_VERTEX_UNIFORM_BLOCKS`                     | `0`     | `0`            |             |
+| `GL.MAX_VERTEX_UNIFORM_COMPONENTS`                 | `0`     | `0`            |             |
+| `GL.MIN_PROGRAM_TEXEL_OFFSET`                      | `0`     | `0`            |             |
+| `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`               | `0`     | `0`            |             |
+
+## Remarks
+
+- WebGL 1 only supports one color buffer format (RBG32F is deprecated)
+- WebGL 2 supports multiple color buffer formats
+- Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
+- The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
+- Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.

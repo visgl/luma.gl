@@ -1,5 +1,69 @@
-# Legacy Parameters (TODO delete)
+## v8 to v9 API Mapping
 
+- Parameters are set on `Pipeline`/`Program` creation. They can not be modified, or passed in draw calls.
+- Parameters can only be set, not queried. luma.gl longer provides a way to query parameters.
+
+
+| WebGL Function  | luma.gl parameter counterparts   |
+| --------- | ---------------------------------- |
+| [polygonOffset](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset) | `depthBias`, `depthBiasSlopeScale` |
+| [depthRange](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange) | N/A |
+| [clearDepth](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth) | |
+
+
+## Depth testing
+
+To set up depth testing
+
+```js
+const value = model.setParameters({
+  depthWriteEnabled: true,
+  depthCompare: 'less-equal'
+});
+```
+
+## Parameters
+
+Describes luma.gl setting names and values
+
+### Rasterization Parameters
+
+These parameters control the rasterization stage (which happens before fragment shader runs).
+
+| Function     | Description                              | Values                  | WebGL counterpart |
+| ---------    | ----------------------------------       | ---                     | --- |
+| `cullMode`   | Which face to cull                       | **`'none'`**, `'front'`, `'back'` | [`gl.cullFace`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace) |
+| `frontFace`  | Which triangle winding order is front    | **`ccw`**, `cw`             | [`gl.frontFace`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/frontFace) |
+| `depthBias`           | Small depth offset for polygons             | `float`                 | `gl.polygonOffset` |
+| `depthBiasSlopeScale` | Small depth factor for polygons              | `float`                 | `gl.polygonOffset` |
+| `depthBiasClamp`      | Max depth offset for polygons                | `float`                 |
+
+- **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
+
+
+## Stencil Parameters
+
+After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
+
+| Function                | Description                              | Values                  |
+| ---------               | ----------------------------------       | ---                     |
+| `stencilReadMask`       | Binary mask for reading stencil values   | `number` (**`0xffffffff`**) |
+| `stencilWriteMask`      | Binary mask for writing stencil values   | `number` (**`0xffffffff`**) | `gl.frontFace` |
+| `stencilCompare`        | How the mask is compared           | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
+| `stencilPassOperation`  |               | **`'keep'`**                 | `gl.stencilOp` |
+| `stencilDepthFailOperation` |               | **`'keep'`**                 | `gl.stencilOp` |
+| `stencilFailOperation`  |               | **`'keep'`**                 | `gl.stencilOp` |
+
+
+
+Action when the stencil test fails
+* stencil test fail action,
+* depth test fail action,
+* pass action
+
+Remarks:
+- By using binary masks, an 8 bit stencil buffer can effectively contain 8 separate masks or stencils
+- The luma.gl API currently does not support setting stencil operations separately for front and back faces.
 
 
 | WebGL Function | WebGL Parameters | luma.gl v9 counterpart |
@@ -32,15 +96,6 @@
 | `GL.STENCIL_BACK_FAIL`            | GLenum    | `GL.KEEP`    | stencil test fail action, back |
 | `GL.STENCIL_BACK_PASS_DEPTH_FAIL` | GLenum    | `GL.KEEP`    | depth test fail action, back |
 | `GL.STENCIL_BACK_PASS_DEPTH_PASS` | GLenum    | `GL.KEEP`    | depth test pass action, back |
-
-## Depth Test Parameters
-
-After stencil tests, depth tests and writes are done, controlled by the following parameters:
-
-| Function     | Description                              | Values                  | WebGL counterpart |
-| ---------    | ----------------------------------       | ---                     | --- |
-| `depthWriteEnabled`   | Whether depth buffer is updated | `boolean` **`true`**        | `gl.depthMask` |
-| `depthCompare`        | If and how depth testing is done | **`always`**, `less-equal`, ...  | `gl.depthFunc` |
 
 
 ### Blending
@@ -188,3 +243,5 @@ GPU State Management can be quite complicated.
 * Reading values from WebGL can be very slow if it requires a GPU roundtrip. To get around this, luma.gl reads values once, caches them and tracks them as they are changed through luma functions. The cached values can get out of sync if the context is shared outside of luma.gl.
 * luma.gl's state management enables "conflict-free" programming, so that even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
 * Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
+
+

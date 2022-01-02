@@ -1,13 +1,8 @@
 // luma.gl, MIT license
 // Texture class.
 // @todo
-// - [ ] `compare` sampler params
-// - [ ] `anisotropy` sampler param
-// - [ ] 3d texture example broken
 // - [ ] cube texture init params
 // - [ ] video (external) textures
-// - [ ] renderbuffers
-// - [ ] https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_norm16
 
 import {Device, TextureProps, Sampler, SamplerProps, SamplerParameters, isObjectEmpty} from '@luma.gl/api';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';

@@ -2,19 +2,30 @@
 
 > This section describes the experimental, work-in-progress v9 luma.gl API.
 
-GPUs can be controlled through a range of parameters.
-The luma.gl API proves a unified key/value style API enabling applications to set all WebGPU or WebGL parameters with a single plain, non-nested JavaScript object.
+The luma.gl API provides a unified key/value API for GPU parameters enabling applications to control GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 
-## Overview of Parameters
+1. Vertex Shader
+2. Primitive assembly (`topology`)
+3. Rasterization (multisampling parameters)
+4. Fragment shader `Framebuffer`
+5. Stencil test and operation (stencil parameters)
+6. Depth test and write (depth parameters)
+7. Output merging, controlled by `Framebuffer`
 
-- A number of parameters are fixed when a RenderPipeline is created. They cannot be changed without creating a new RenderPass.
-- An additional set of parameters are fixed when a RenderPass is created, and thus applies to all RenderPipelines rendered with that RenderPass. To vary these parameters, additional RenderPasses would need to be created.
-- A small set of parameters can be changed dynamically on a RenderPass between draw calls.
+A number of parameters are set when certain GPU objects are created, and cannot be changed without creating a new object.
 
-For completeness, there are certain types of parameters that are not
-- Sampler parameters - How to sample from textures is controlled by `Sampler` objects.
+| Parameter "Type" | Comments                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `RenderPipeline` | `RenderPipeline` is created.                                                                                  |
+| `RenderPass`     | Render targets, clear colors etc. To vary these parameters, additional RenderPasses would need to be created. |
+| Dynamic          | (`viewport`, `scissor` and `blendConstant`) can be changed dynamically on a RenderPass between draw calls.    |
 
-Also note that  luma.gl uses Framebuffer objects to collect render targets and also certain per-render-target settings, such as clearColors.
+For completeness, there are certain types of parameters affecting GPU operation that are not
+
+| Parameters    | Comments                                                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `Sampler`     | How to sample from textures is controlled by `Sampler` objects.                                                              |
+| `Framebuffer` | luma.gl uses Framebuffer objects to collect render targets and also certain per-render-target settings, such as clearColors. |
 
 ## Dynamic Parameters
 
@@ -26,7 +37,6 @@ The only parameters that can be changed at any time are viewport parameters, ble
 | `scissor`          | Specifyi                                                                                       | `number` (**`0xffffffff`**) | `gl.frontFace` |
 | `blendConstant`    | Sets color referenced by pipeline targets using blend factors `constant`, `one-minus-constant` |
 | `stencilReference` |                                                                                                |
-
 
 ## Usage
 
@@ -71,40 +81,30 @@ renderPass.setParameters({viewport: MINI_MAP})
 renderPass.draw();
 ```
 
-## Parameters
+## Parameters by GPU Pipeline Stages
 
 Describes luma.gl setting names and values
 
-### Rasterization Parameters
+### Primitive Assembly Parameters (RenderPipeline)
 
-These parameters control the rasterization stage (which happens before fragment shader runs).
+Note: `topology` must be specified on a `RenderPipeline` to describe the layout of vertex buffers.
 
-| Function         | How to set               | Description                                                           | Values                            | WebGL counterpart |
-| ---------------- | ------------------------ | --------------------------------------------------------------------- | --------------------------------- | ----------------- |
-| `cullMode`       | `createRenderPipeline()` | Which face to cull                                                    | **`'none'`**, `'front'`, `'back'` |
-| `frontFace`      | `createRenderPipeline()` | Which triangle winding order is front                                 | **`ccw`**, `cw`                   |
-| `unclippedDepth` | `createRenderPipeline()` | Disable depth value clipping to [0, 1]. Requires `depth-clip-control` | **false** boolean                 |
+### Rasterization Parameters (RenderPipeline)
 
-### Depth Buffer Parameters
+These parameters control the primitive assembly stage (which happens before fragment shader runs).
 
-| `depthBias` | `createRenderPipeline()` | Small depth offset for polygons | `float` | `gl.polygonOffset` |
-| `depthBiasSlopeScale` | `createRenderPipeline()` | Small depth factor for polygons | `float` | `gl.polygonOffset` |
-| `depthBiasClamp` | `createRenderPipeline()` | Max depth offset for polygons | `float` |
+| Function    | How to set                            | Description                       | Values | WebGL counterpart |
+| ----------- | ------------------------------------- | --------------------------------- | ------ | ----------------- |
+| `cullMode`  | Which face to cull                    | **`'none'`**, `'front'`, `'back'` |
+| `frontFace` | Which triangle winding order is front | **`ccw`**, `cw`                   |
 
-- **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
+## Multisample Parameters (RenderPipeline)
 
-### Stencil Buffer
-
-After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
-
-| Function                    | Description              | Values                                 |
-| --------------------------- | ------------------------ | -------------------------------------- | ------------------------------ | ---------------- |
-| `stencilReadMask`           | `createRenderPipeline()` | Binary mask for reading stencil values | `number` (**`0xffffffff`**)    |
-| `stencilWriteMask`          | `createRenderPipeline()` | Binary mask for writing stencil values | `number` (**`0xffffffff`**)    | `gl.frontFace`   |
-| `stencilCompare`            | `createRenderPipeline()` | How the mask is compared               | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
-| `stencilPassOperation`      | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
-| `stencilDepthFailOperation` | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
-| `stencilFailOperation`      | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+| Function                 | Description | Values     |
+| ------------------------ | ----------- | ---------- |
+| `sampleCount`            |             | 1          |
+| `sampleMask`             |             | 0xFFFFFFFF |
+| `alphaToCoverageEnabled` |             | false      |
 
 ### Blending
 
@@ -116,16 +116,20 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 | `blendSrcFactor` | `createRenderPipeline({targets}).`     |
 | `blendDstFactor` | `createRenderPipeline({targets}).`     |
 
-
 [color_blending]: https://csawesome.runestone.academy/runestone/books/published/learnwebgl2/12_advanced_rendering/05_color_blending.html
 
-### Clear Color
+### Stencil Test (RenderPipeline)
 
-| Function                                                                                        | Sets parameters      |
-| ----------------------------------------------------------------------------------------------- | -------------------- |
-| clearColor | `createRenderPass({colorAttachments})` |
+After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
 
-## Values
+| Function                    | Description              | Values                                 |
+| --------------------------- | ------------------------ | -------------------------------------- | ------------------------------ | ---------------- |
+| `stencilReadMask`           | `createRenderPipeline()` | Binary mask for reading stencil values | `number` (**`0xffffffff`**)    |
+| `stencilWriteMask`          | `createRenderPipeline()` | Binary mask for writing stencil values | `number` (**`0xffffffff`**)    | `gl.frontFace`   |
+| `stencilCompare`            | `createRenderPipeline()` | How the mask is compared               | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
+| `stencilPassOperation`      | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+| `stencilDepthFailOperation` | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+| `stencilFailOperation`      | `createRenderPipeline()` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
 
 #### Stencil Test Functions
 
@@ -140,18 +144,18 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 | `'notequal'`           | Pass if (ref & mask) != (stencil & mask) |
 | `'gequal'`             | Pass if (ref & mask) >= (stencil & mask) |
 
-#### Stencil Operations
+#### Stencil Operations (RenderPipeline)
 
-| `stencil<>Operation` Value | Description                                                                                                           |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `'keep'`                   | Keeps the current value                                                                                               |
-| `'zero'`                   | Sets the stencil buffer value to 0                                                                                    |
-| `'replace'`                | Sets the stencil buffer value to the reference value as specified by `stencilFunc`                                    |
-| `'invert'`                 | Inverts the current stencil buffer value bitwise                                                                      |
-| `'increment-clamp'`        | Increments the current stencil buffer value. Clamps to the maximum representable unsigned value                       |
-| `'increment-wrap'`         | Increments the current stencil buffer value. Wraps to zero when incrementing the maximum representable unsigned value |
-| `'decrement-clamp'`        | Decrements current stencil buffer value. Clamps to 0                                                                  |
-| `'decrement-wrap'`         | Decrements current stencil buffer value, wraps to maximum unsigned value when decrementing 0                          |
+| `stencil<>Operation` | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `'keep'`             | Keeps current value                                            |
+| `'zero'`             | Sets stencil buffer value to 0                                 |
+| `'replace'`          | Sets stencil buffer value to reference value per `stencilFunc` |
+| `'invert'`           | Inverts stencil buffer value bitwise                           |
+| `'increment-clamp'`  | Increments stencil buffer value. Clamps to max value           |
+| `'increment-wrap'`   | Increments stencil buffer value. Wraps to zero                 |
+| `'decrement-clamp'`  | Decrements stencil buffer value. Clamps to 0                   |
+| `'decrement-wrap'`   | Decrements stencil buffer value, wraps to max unsigned value   |
 
 Action when the stencil test fails
 
@@ -164,13 +168,26 @@ Remarks:
 - By using binary masks, an 8 bit stencil buffer can effectively contain 8 separate masks or stencils
 - The luma.gl API currently does not support setting stencil operations separately for front and back faces.
 
-## v8 to v9 API Mapping
+## Depth Test Parameters (RenderPipeline)
 
-- Parameters are set on `Pipeline`/`Program` creation. They can not be modified, or passed in draw calls.
-- Parameters can only be set, not queried. luma.gl longer provides a way to query parameters.
+After the GPU completes stencil tests, depth tests and writes are performed. These can be controlled by the following parameters:
 
-| WebGL Function                                                                                        | luma.gl parameter counterparts     |
-| ----------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| [polygonOffset](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset) | `depthBias`, `depthBiasSlopeScale` |
-| [depthRange](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange)       | N/A                                |
-| [clearDepth](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth)       |                                    |
+| Function              | Description                            | Values               | WebGL counterpart                   |
+| --------------------- | -------------------------------------- | -------------------- | ----------------------------------- | --- |
+| `depthWriteEnabled`   | Whether depth buffer is updated        | `boolean` **`true`** | `gl.depthMask`                      |
+| `depthCompare`        | If and how depth testing is done       | **`always`**, ...    | `gl.depthFunc`                      |
+| `depthBias`           | Small depth offset for polygons        | `float`              | `gl.polygonOffset`                  |
+| `depthBiasSlopeScale` | Small depth factor for polygons        | `float`              | `gl.polygonOffset`                  |
+| `depthBiasClamp`      | Max depth offset for polygons          | `float`              | N/A                                 |
+| `unclippedDepth`      | Disable depth value clipping to [0, 1] | **false** boolean    | N/A - Requires `depth-clip-control` |     |
+
+- **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
+
+
+## Render Targets (Framebuffers)
+
+### Clear Color
+
+| Function   | Sets parameters                        |
+| ---------- | -------------------------------------- |
+| clearColor | `createRenderPass({colorAttachments})` |
