@@ -20,6 +20,7 @@ import type {BufferProps, ShaderProps, RenderPipeline, RenderPipelineProps, Samp
 import WEBGLBuffer from '../classes/webgl-buffer';
 import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLSampler from '../adapter/resources/webgl-sampler';
+// import WEBGLTexture from '../adapter/resources/webgl-texture';
 import WEBGLTexture from '../classes/texture';
 import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
@@ -274,7 +275,7 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WEBGLTexture(this, props);
   }
 
-  createSampler(props: SamplerProps): Sampler {
+  createSampler(props: SamplerProps): WEBGLSampler {
     return new WEBGLSampler(this, props);
   }
 

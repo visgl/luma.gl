@@ -1,6 +1,8 @@
 import test from 'tape-promise/tape';
-import {Device, Sampler} from '@luma.gl/api';
 import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+
+import {Device, Sampler} from '@luma.gl/api';
+import GL from '@luma.gl/constants';
 
 // Sampler Parameters
 
@@ -78,4 +80,3 @@ function testSampler(t, device: Device): void {
     }
   }
 }
-
