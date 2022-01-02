@@ -9,6 +9,7 @@ By using samplers an application can render the same texture with different
 parameters without duplicating the texture, or modifying the texture parameters.
 
 References:
+
 - [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).
 
 ## Usage
@@ -45,6 +46,7 @@ Sampler inherits from [Resource](/docs/modules/api/api-reference/resources/resou
 ### Base Class
 
 `Sampler` inherits methods and members from [Resource](/docs/modules/api/api-reference/resources/resource.md):
+
 ### constructor
 
 ```js
@@ -59,18 +61,18 @@ Frees the underlying WebGL resource
 
 ## Sampler Parameters
 
-| Sampler Parameter                | Values                                               | Description                                             |
-| -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
-| `addressModeU?`                  | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `u` (`s`)       |
-| `addressModeV?`                  | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `v` (`t`)       |
-| `addressModeW?`                  | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `w` (`r`)       |
-| `magFilter?`                     | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels      |
-| `minFilter?`                     | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels      |
-| `mipmapFilter?`                  | `'nearest'` \| `'linear'`                            | sample closest mipmap or interpolate two closest mipmaps |
-| `lodMinClamp?`                   | `number`                                             | minimum level of detail when sampling
-| `lodMaxClamp?`                   | `number`                                             | maximum level of detail when sampling
-| `compare?`                       | `CompareFunction`                                    | creates "comparison sampler" with specified compare function
-| `maxAnisotropy?`                 | `number`                                             | maximum anisotropy value clamp used by the sampler      |
+| Sampler Parameter | Values                                               | Description                                                  |
+| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `addressModeU?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `u` (`s`)            |
+| `addressModeV?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `v` (`t`)            |
+| `addressModeW?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `w` (`r`)            |
+| `magFilter?`      | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels           |
+| `minFilter?`      | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels           |
+| `mipmapFilter?`   | `'nearest'` \| `'linear'`                            | sample closest mipmap or interpolate two closest mipmaps     |
+| `lodMinClamp?`    | `number`                                             | minimum level of detail when sampling                        |
+| `lodMaxClamp?`    | `number`                                             | Maximum level of detail when sampling                        |
+| `compare?`        | `CompareFunction`                                    | Creates "comparison sampler" with specified compare function |
+| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate.        |
 
 ### Texture Magnification Filter
 
@@ -81,7 +83,7 @@ Parameter: `texture_mag_filter`
 | Value               | Description        |
 | ------------------- | ------------------ |
 | `linear`            | interpolated texel |
-| `nearest` (default)          | nearest texel      |
+| `nearest` (default) | nearest texel      |
 
 - `nearest` is faster than `linear`, but is not as smooth.
 
@@ -91,11 +93,10 @@ Controls how a pixel is textured maps to more than one texel.
 
 ParameterL `texture_min_filter`
 
-| Value                             | Description                                 |
-| --------------------------------- | ------------------------------------------- |
-| `linear`                          | interpolated texel                          |
-| `nearest`                         | nearest texel                               |
-
+| Value     | Description        |
+| --------- | ------------------ |
+| `linear`  | interpolated texel |
+| `nearest` | nearest texel      |
 
 ### Texture Minification Filter
 
@@ -103,10 +104,10 @@ Controls how a pixel is textured maps to more than one texel.
 
 ParameterL `texture_min_filter`
 
-| Value                             | Description                                 |
-| --------------------------------- | ------------------------------------------- |
-| `linear`                          | interpolated texel                          |
-| `nearest`                         | nearest texel                               |
+| Value     | Description        |
+| --------- | ------------------ |
+| `linear`  | interpolated texel |
+| `nearest` | nearest texel      |
 
 ### Texture Wrapping
 
@@ -120,7 +121,7 @@ Controls how texture coordinates outside of the [0, 1] range are sampled.
 | `clamp-to-edge`    | clamp texture coordinates                                                              |
 | `mirrored-repeat`  | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
 
-### Texture Comparison Mode
+### Texture Comparison
 
 Specifies the texture comparison mode for currently bound depth textures (i.e. textures whose internal format is `depth_component_*`)
 

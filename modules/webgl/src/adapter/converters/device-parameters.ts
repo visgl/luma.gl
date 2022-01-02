@@ -156,8 +156,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     });
 */
 
-
-export function convertCompareFunction(parameter, value: CompareFunction): number {
+export function convertCompareFunction(parameter: string, value: CompareFunction): GL {
   return map(parameter, value, {
     'never': GL.NEVER,
     'less': GL.LESS,
@@ -170,7 +169,20 @@ export function convertCompareFunction(parameter, value: CompareFunction): numbe
   });
 }
 
-function convertStencilOperation(parameter, value: StencilOperation): number {
+export function convertToCompareFunction(parameter: string, value: GL): CompareFunction {
+  return map(parameter, value, {
+    [GL.NEVER]: 'never',
+    [GL.LESS]: 'less',
+    [GL.EQUAL]: 'equal',
+    [GL.LEQUAL]: 'less-equal',
+    [GL.GREATER]: 'greater',
+    [GL.NOTEQUAL]: 'not-equal',
+    [GL.GEQUAL]: 'greater-equal',
+    [GL.ALWAYS]: 'always'
+  });
+}
+
+function convertStencilOperation(parameter: string, value: StencilOperation): GL {
   return map(parameter, value, {
     'keep': GL.KEEP,
     'zero': GL.ZERO,
