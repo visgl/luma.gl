@@ -1,8 +1,10 @@
 # CanvasContext 
 
-A `CanvasContext` holds a connection between the GPU Device and a canvas into which it can render.
+> This class is still experimental
 
-The CanvasContext handles the following responsibilities:
+A `CanvasContext` holds a connection between the GPU `Device` and an HTML `canvas` into which it can render.
+
+A `CanvasContext` handles the following responsibilities:
 - manages the "swap chain" (provides fresh texture view every frame on WebGPU)
 - manages canvas resizing
 - manages device pixel ratio

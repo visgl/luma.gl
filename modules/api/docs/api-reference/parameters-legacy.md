@@ -1,7 +1,5 @@
 # Legacy Parameters (TODO delete)
 
-
-
 | WebGL Function | WebGL Parameters | luma.gl v9 counterpart |
 | -------- | -------------- |
 | [`clearStencil`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil) | `GL.STENCIL_CLEAR_VALUE` | |
