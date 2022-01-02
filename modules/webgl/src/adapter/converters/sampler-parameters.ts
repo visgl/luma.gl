@@ -2,10 +2,7 @@
 import {SamplerParameters} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLSamplerParameters} from '../../types/webgl';
-import {convertCompareFunction} from './device-parameters';
-
-// TODO depends on extension
-// props[GL.TEXTURE_MAX_ANISOTROPY] = props.maxAnisotropy;
+import {convertCompareFunction, convertToCompareFunction} from './device-parameters';
 
 /**
  * Convert WebGPU-style sampler props to WebGL
@@ -36,9 +33,10 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGL
   if (props.lodMaxClamp !== undefined) {
     params[GL.TEXTURE_MAX_LOD] = props.lodMaxClamp;
   }
-  // TODO - not fully treated
   if (props.compare) {
-    params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('', props.compare);
+    // Setting prop.compare turns this into a comparison sampler
+    params[GL.TEXTURE_COMPARE_MODE] = GL.COMPARE_REF_TO_TEXTURE;
+    params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('compare', props.compare);
   }
   // Note depends on WebGL extension
   if (props.maxAnisotropy) {
@@ -104,9 +102,13 @@ function convertMinFilterMode(filterMode: 'nearest' | 'linear', mipmapFilterMode
   if (params[GL.TEXTURE_MAX_LOD]) {
     props.lodMaxClamp = params[GL.TEXTURE_MAX_LOD];
   }
-  // props = convertToCompareFunction('', params[GL.TEXTURE_COMPARE_FUNC]);
-  // TODO depends on extension
-  // props[GL.TEXTURE_MAX_ANISOTROPY] = props.maxAnisotropy;
+  if (params[GL.TEXTURE_COMPARE_MODE] === GL.COMPARE_REF_TO_TEXTURE) {
+    props.compare = convertToCompareFunction('compare', params[GL.TEXTURE_COMPARE_FUNC]);
+  }
+  // NOTE depends on extension (very common)
+  if (params[GL.TEXTURE_MAX_ANISOTROPY_EXT]) {
+    props.maxAnisotropy = params[GL.TEXTURE_MAX_ANISOTROPY_EXT];
+  }
   return props;
 }
 
