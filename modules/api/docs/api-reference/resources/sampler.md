@@ -16,7 +16,7 @@ References:
 
 Create a new `Sampler`
 
-```js
+```typescript
 import {luma} from '@luma.gl/api';
 const device = await luma.createDevice();
 const sampler = device.createSampler(gl, {
@@ -49,7 +49,7 @@ Sampler inherits from [Resource](/docs/modules/api/api-reference/resources/resou
 
 ### constructor
 
-```js
+```typescript
 device.createSampler({...})
 ```
 
@@ -61,18 +61,18 @@ Frees the underlying WebGL resource
 
 ## Sampler Parameters
 
-| Sampler Parameter | Values                                               | Description                                                  |
-| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
-| `addressModeU?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `u` (`s`)            |
-| `addressModeV?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `v` (`t`)            |
-| `addressModeW?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | texture wrapping for texture coordinate `w` (`r`)            |
-| `magFilter?`      | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels           |
-| `minFilter?`      | `'nearest'` \| `'linear'`                            | sample nearest texel or interpolate closest texels           |
-| `mipmapFilter?`   | `'nearest'` \| `'linear'`                            | sample closest mipmap or interpolate two closest mipmaps     |
-| `lodMinClamp?`    | `number`                                             | minimum level of detail when sampling                        |
-| `lodMaxClamp?`    | `number`                                             | Maximum level of detail when sampling                        |
-| `compare?`        | `CompareFunction`                                    | Creates "comparison sampler" with specified compare function |
-| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate.        |
+| Sampler Parameter | Values                                               | Description                                                         |
+| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| `addressModeU?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`)                   |
+| `addressModeV?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`)                   |
+| `addressModeW?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
+| `magFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
+| `minFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
+| `mipmapFilter?`   | `'nearest'` \| `'linear'`                            | Sample closest mipmap, or interpolate two closest mipmaps           |
+| `lodMinClamp?`    | `number`                                             | Minimum level of detail to use when sampling                        |
+| `lodMaxClamp?`    | `number`                                             | Maximum level of detail to use when sampling                        |
+| `compare?`        | `lequal` etc (see below)                             | Create a depth "comparison sampler" with specified compare function |
+| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate        |
 
 ### Texture Magnification Filter
 
@@ -121,16 +121,22 @@ Controls how texture coordinates outside of the [0, 1] range are sampled.
 | `clamp-to-edge`    | clamp texture coordinates                                                              |
 | `mirrored-repeat`  | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
 
-### Texture Comparison
+### Comparison Samplers
 
-Specifies the texture comparison mode for currently bound depth textures (i.e. textures whose internal format is `depth_component_*`)
+Specifying the `compare` sampler property creates a comparison sampler.
+Comparison samplers are special samplers that compare against the depth buffer.
 
-- Parameters `texture_compare_mode`
+In other words, specifies the texture comparison mode for currently bound depth textures
+(i.e. textures whose internal format is `depth_component_*`).
 
-| Value                    | Description                                                                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `none` (default)         | no comparison of `r` coordinate is performed                                                                                        |
-| `compare_ref_to_texture` | interpolated and clamped `r` texture coordinate is compared to currently bound depth texture, result is assigned to the red channel |
+```typescript
+const sampler = device.createSampler(gl, {
+  compare: 'lequal'
+});
+```
+
+During sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
+and the result of the comparison (`0` or `1`) is assigned to the red channel.
 
 ### Texture Comparison Function
 
