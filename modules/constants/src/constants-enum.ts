@@ -711,6 +711,24 @@ export enum GL {
   MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84ff,
   TEXTURE_MAX_ANISOTROPY_EXT = 0x84fe,
 
+  // EXT_sRGB
+
+  SRGB_EXT = 0x8c40,
+  SRGB_ALPHA_EXT = 0x8c42,
+  SRGB8_ALPHA8_EXT = 0x8c43,
+  FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT = 0x8210,
+
+  // EXT_texture_norm16 - https://khronos.org/registry/webgl/extensions/EXT_texture_norm16/
+
+  R16_EXT = 0x822A,
+  RG16_EXT = 0x822C,
+  RGB16_EXT = 0x8054,
+  RGBA16_EXT = 0x805B,
+  R16_SNORM_EXT = 0x8F98,
+  RG16_SNORM_EXT = 0x8F99,
+  RGB16_SNORM_EXT = 0x8F9A,
+  RGBA16_SNORM_EXT = 0x8F9B,
+
   // WEBGL_compressed_texture_s3tc (BC1, BC2, BC3)
 
   COMPRESSED_RGB_S3TC_DXT1_EXT = 0x83f0,
@@ -819,13 +837,6 @@ export enum GL {
 
   MIN_EXT = 0x8007,
   MAX_EXT = 0x8008,
-
-  // EXT_sRGB
-
-  SRGB_EXT = 0x8c40,
-  SRGB_ALPHA_EXT = 0x8c42,
-  SRGB8_ALPHA8_EXT = 0x8c43,
-  FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT = 0x8210,
 
   // OES_standard_derivatives
 

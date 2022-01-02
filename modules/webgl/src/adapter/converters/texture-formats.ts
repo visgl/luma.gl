@@ -4,10 +4,11 @@ import {isWebGL2} from '../../context/context/webgl-checks';
 
 // Define local extension strings to optimize minification
 const SRGB = 'EXT_sRGB';
-const EXT_FLOAT_WEBGL1 = 'WEBGL.color_buffer_float';
+const EXT_TEXTURE_NORM16 = 'EXT_texture_norm16';
+const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_WEBGL2 = 'EXT_color_buffer_float';
-const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
-const DEPTH = 'WEBGL_depth_texture';
+const EXT_HALF_FLOAT_WEBGL1 = 'WEBGL_color_buffer_half_float';
+// const DEPTH = 'WEBGL_depth_texture';
 
 // DXT
 const X_S3TC = 'WEBGL_compressed_texture_s3tc'; // BC1, BC2, BC3
@@ -67,13 +68,15 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'r16uint': {gl: GL.R16UI, b: 2, c: 1, gl2: true},
   'r16sint': {gl: GL.R16I, b: 2, c: 1, gl2: true},
   'r16float': {gl: GL.R16F, b: 2, c: 1, gl2: EXT_FLOAT_WEBGL2},
+  // @ts-expect-error not exposed by WebGPU)
+  'webgl-r16unorm': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
+  'webgl-r16snorm': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
   'rg8unorm': {gl: GL.RG8, b: 2, c: 2, gl2: true},
   'rg8snorm': {b: 2, c: 2},
   'rg8uint': {gl: GL.RG8UI, b: 2, c: 2, gl2: true},
   'rg8sint': {gl: GL.RG8I, b: 2, c: 2, gl2: true},
 
   // Packed 16-bit formats
-  // @ts-expect-error not exposed by WebGPU)
   'webgl-rgba4norm': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false},
   'webgl-rgb565norm': {gl: GL.RGB565, b: 2, c: 4, wgpu: false},
   'webgl-rgb5a1norm': {gl: GL.RGB5_A1, b: 2, c: 4, wgpu: false},
@@ -85,11 +88,14 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'r32uint': {gl: GL.R32UI, b: 4, c: 1, gl2: true, bpp: 4},
   'r32sint': {gl: GL.R32I, b: 4, c: 1, gl2: true, bpp: 4},
   'r32float': {gl: GL.R32F, b: 4, c: 1, gl2: EXT_FLOAT_WEBGL2, bpp: 4},
+
   'rg16uint': {gl: GL.RG16UI, b: 4, c: 1, gl2: true, bpp: 4},
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, gl2: true, bpp: 4},
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
   'rg16float': {gl: GL.RG16F, b: 4, c: 2, gl2: EXT_FLOAT_WEBGL2, bpp: 4},
-
+  'webgl-rg16unorm': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
+  'webgl-rg16snorm': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
+  
   'rgba8unorm': {gl: GL.RGBA8, b: 4, c: 2, gl2: true, bpp: 4},
   'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8, b: 4, c: 4, gl2: true, gl1: SRGB, bpp: 4},
   'rgba8snorm': {b: 4, c: 4},
@@ -107,11 +113,15 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   // ext.SRGB_ALPHA_EXT - Unsized sRGB format with unsized alpha component.
 
   // Packed 32-bit formats
-  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, gl2: true, gl1: 'WEBGL_color_buffer_half_float'},
+  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1, gl2: EXT_FLOAT_WEBGL2},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, gl2: true},
   // webgl2 only
   'webgl-rgb10a2unorm': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, webgpu: false, gl2: true, bpp: 4},
+
+  // 48-bit formats
+  'webgl-rgb16unorm': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
+  'webgl-rgb16snorm': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
 
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, gl2: true},
@@ -120,10 +130,12 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, gl2: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, gl2: true},
   'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, gl2: EXT_FLOAT_WEBGL2},
+  'webgl-rgba16unorm': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
+  'webgl-rgba16snorm': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
 
   // 96-bit formats
   'webgl-rgb32float': {gl: GL.RGB32F, dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
-
+  
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, gl2: true},
   'rgba32sint': {gl: GL.RGBA32I, b: 16, c: 4, gl2: true},
@@ -230,7 +242,7 @@ type WebGLTextureInfo = {
   dataFormat: number;
   types: number[];
   gl2?: boolean;
-  gl1?: boolean;
+  gl1?: boolean | string;
   compressed?: boolean;
 }
 
@@ -252,35 +264,35 @@ export const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
   [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
   [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
   [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
-  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
+  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true},
 
   // [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8], gl1: DEPTH},
   // [GL.DEPTH_STENCIL]: {gl1: DEPTH},
 
   // Sized texture format - more performance
   // R
-  // [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
-  // [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
-  // [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.R8UI]: {dataFormat: GL.RED_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RG
-  // [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE], gl2: true},
-  // [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
-  // [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.RG8]: {dataFormat: GL.RG, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGB
-  // [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
-  // [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
-  // [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
-  // [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
-  // [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_half_float'},
-  // [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: 'WEBGL_color_buffer_float'},
-  // [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
+  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
+  [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
+  [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_FLOAT_WEBGL1},
+  [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGBA
-  // [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
-  // [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
-  // [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
-  // [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
-  // [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
-  // [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
+  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
+  [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
+  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
 };
 
 // legacy
