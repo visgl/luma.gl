@@ -8,21 +8,27 @@ The 8.7 release represents a major internal refactor of luma.gl to prepare for W
 While it should remain highly compatible with 8.X, a range of APIs are now deprecated and it is a good
 time to consult the upgrade guide to start updating your code in anticipation of the upcoming 9.0 release.
 
-### '@luma.gl/webgl`
+#### `@luma.gl/api` (NEW)
 
+- The next generation, cross-platform luma.gl API (supporting both WebGPU and WebGL2) is being prototyped in the `@luma.gl/api` module. The API is not frozen and some smaller changes are expected, however it is possible for early adopters to start using the new API.
+
+#### `@luma.gl/webgpu` (NEW)
+
+- A partial implementation of the new luma.gl API (`@luma.gl/api`).
+
+#### `@luma.gl/webgl`
+
+- WebGL classes can now be created through the `@luma.gl/api` `Device` interface.
 - [Spector.js](https://spector.babylonjs.com/) integration. If a `WebGLDevice` is created with `debug: true` or URL parameter `?debug`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
+- Incremental TypeScript improvements.
 
-### `@luma.gl/shadertools`
+#### `@luma.gl/shadertools`
 
 - New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
 
-### `@luma.gl/gltools` (Deprecated)
+#### `@luma.gl/gltools` (Deprecated)
 
 - The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module to facilitate refactoring the WebGL API to match the new `@luma.gl/api`.
-
-### `@luma.gl/api` (NEW, Experimental)
-
-- The next generation, cross-platform luma.gl API (supporting both WebGPU and WebGL2)is being prototyped in the `@luma.gl/api` module. While not yet official, it is possible to start experimenting with this API.
 
 
 ## Version 8.6
@@ -35,7 +41,7 @@ Date: Jul 15, 2021
 
 ### `@luma.gl/shadertools`
 
-- GLSL transpiler now handles `gl_FragColor` in fragment shader when transpliting from ES 1.00 to 3.00
+- GLSL transpiler now handles `gl_FragColor` in fragment shader when transpiling from ES 1.00 to 3.00
 - New `magnify` effect
 
 ### `@luma.gl/experimental`

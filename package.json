@@ -2,7 +2,7 @@
   "name": "luma.gl-monorepo",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
-  "private": "true",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"

@@ -1,0 +1,7 @@
+{
+  "name": "@prism-react-renderer/duotoneLight",
+  "private": true,
+  "sideEffects": false,
+  "main": "index.js",
+  "license": "MIT"
+}

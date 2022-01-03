@@ -10,35 +10,43 @@
       ]
     },
     {
-      "title": "Developer Guide",
-      "entries": [
-        { "entry": "docs/developer-guide" },
-        { "entry": "docs/developer-guide/bundling" },
-        { "entry": "docs/developer-guide/debugging" },
-        { "entry": "docs/developer-guide/accessors" },
-        { "entry": "docs/developer-guide/contributing" },
-        { "entry": "docs/developer-guide/transform-feedback" },
-        { "entry": "docs/developer-guide/shader-modules" }
-      ]
-    },
-    {
       "title": "Tutorials",
       "entries": [
         { "entry": "docs/getting-started" },
         { "entry": "docs/getting-started/hello-triangle" },
-        { "entry": "docs/getting-started/high-medium-low" },
-        { "entry": "docs/getting-started/hello-instancing-high" },
-        { "entry": "docs/getting-started/hello-instancing-mid" },
-        { "entry": "docs/getting-started/hello-instancing-low" },
-        { "entry": "docs/getting-started/shader-modules" },
-        { "entry": "docs/getting-started/shader-hooks" },
-        { "entry": "docs/getting-started/shader-modules-low" },
-        { "entry": "docs/getting-started/transform-feedback" },
-        { "entry": "docs/getting-started/external-context" },
+        { "entry": "docs/getting-started/hello-instancing" },
         { "entry": "docs/getting-started/hello-cube" },
         { "entry": "docs/getting-started/lighting" },
+        { "entry": "docs/getting-started/shader-modules" },
+        { "entry": "docs/getting-started/shader-hooks" },
+        { "entry": "docs/getting-started/shader-modules" },
+        { "entry": "docs/getting-started/transform-feedback" },
         { "entry": "docs/getting-started/instanced-transform" },
+        { "entry": "docs/getting-started/external-context" },
         { "entry": "docs/getting-started/whats-next" }
+      ]
+    },
+    {
+      "title": "Developer Guide",
+      "entries": [
+        { "entry": "docs/developer-guide" },
+        { "entry": "docs/developer-guide/installing" },
+        { "entry": "docs/developer-guide/bundling" },
+        { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/testing" },
+        { "entry": "docs/developer-guide/contributing" }
+      ]
+    },
+    {
+      "title": "API Guide",
+      "entries": [
+        { "entry": "docs/developer-guide/api/device-properties" },
+        { "entry": "docs/developer-guide/api/features" },
+        { "entry": "docs/developer-guide/api/parameters" },
+        { "entry": "docs/developer-guide/api/texture-formats" },
+        { "entry": "docs/developer-guide/api/accessors" },
+        { "entry": "docs/developer-guide/api/transform-feedback" },
+        { "entry": "docs/developer-guide/api/shader-modules" }
       ]
     },
     {
@@ -54,6 +62,7 @@
           "title": "@luma.gl/api",
           "entries": [
             { "entry": "docs/modules/api" },
+            { "entry": "docs/modules/api/types/shader-layout" },
             { "entry": "docs/modules/api/resources/buffer" },
             { "entry": "docs/modules/api/resources/compute-pipeline" },
             { "entry": "docs/modules/api/resources/framebuffer" },
@@ -62,13 +71,8 @@
             { "entry": "docs/modules/api/resources/sampler" },
             { "entry": "docs/modules/api/resources/shader" },
             { "entry": "docs/modules/api/resources/texture" },
-            { "entry": "docs/modules/api/types/shader-layout" },
-            { "entry": "docs/modules/api/context/feature-checking" },
             { "entry": "docs/modules/api/canvas-context" },
-            { "entry": "docs/modules/api/device" },
-            { "entry": "docs/modules/api/features" },
-            { "entry": "docs/modules/api/parameters" },
-            { "entry": "docs/modules/api/texture-formats" }
+            { "entry": "docs/modules/api/device" }
           ]
         },
         {
