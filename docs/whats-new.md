@@ -208,6 +208,7 @@ The `KeyFrames` class allows arbitrary data to be associated with time points. T
 
 Date: April 19, 2019
 
+<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -222,11 +223,12 @@ Date: April 19, 2019
     </tr>
   </tbody>
 </table>
-
+-->
 ### glTF Support
 
+<!--
 <img height="100" src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
-
+-->
 luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
 - **Physically-based Material Support**: Ensures that PBR models display as intended.
@@ -324,6 +326,7 @@ A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop
 
 Date: September 12, 2018
 
+<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -338,6 +341,7 @@ Date: September 12, 2018
     </tr>
   </tbody>
 </table>
+-->
 
 ### ShaderModulePass (Experimental)
 
@@ -351,6 +355,7 @@ Shader modules that expose "standard" filtering and sampling functions can be gi
 
 Date: Target August 31, 2018
 
+<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -365,6 +370,7 @@ Date: Target August 31, 2018
     </tr>
   </tbody>
 </table>
+-->
 
 luma.gl 6.1 is a minor release that introduces a number of new experimental capabilities that are expected to be built out and become official over the next few releases.
 
@@ -392,6 +398,7 @@ luma.gl is now using the [ocular](https://github.com/uber-web/ocular) document g
 
 Date: July 18, 2018
 
+<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -402,6 +409,7 @@ Date: July 18, 2018
     </tr>
   </tbody>
 </table>
+-->
 
 A major release that as always focuses on WebGL performance and code size optimizations, better support for shader/GLSL programming, improved documentation and API cleanup.
 
@@ -547,6 +555,7 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 
 Release date: July 27th, 2017
 
+<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -557,6 +566,7 @@ Release date: July 27th, 2017
     </tr>
   </tbody>
 </table>
+-->
 
 A major release that brings full WebGL 2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 
