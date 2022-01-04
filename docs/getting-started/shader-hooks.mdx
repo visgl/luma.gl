@@ -1,4 +1,8 @@
+import {ShaderHooksExample} from '../../website';
+
 # Shader Hooks
+
+<ShaderHooksExample />
 
 In the [previous tutorial](/docs/getting-started/shader-hooks), we used shader modules to insert re-usable functions into the shaders that use them. In this tutorial, we'll focus on another feature of shader modules: the ability to modify the behavior of shaders that use them via **shader hooks**. A shader hook is simply a function inserted into a vertex or fragment shader. By default, these functions will be no-ops, but they define entry points into which shader modules can inject code. For high-level API usage, shader hooks are exposed via [ProgramManagers](/docs/api-reference/engine/program-manager) (we'll look at low-level shader hooks later):
 

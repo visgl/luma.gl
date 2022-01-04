@@ -1,10 +1,19 @@
 # Contributing
 
+luma.gl welcomes contributions from the community. Smaller fixes 
+
 In order to contribute to luma.gl you need to be able to build and test luma.gl itself.
 
 ## Development Environment
 
-To get started developing luma.gl, first make sure to install all dependancies from the repository root:
+To get started developing luma.gl, 
+first you will want to clone the github repository (or your fork of the repository).
+
+```
+git clone git@github.com:visgl/luma.gl.git
+```
+
+Make sure to install all dependencies from the repository root:
 
 `yarn bootstrap`
 
