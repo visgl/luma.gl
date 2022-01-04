@@ -1,4 +1,4 @@
-# Transform Feedback (WebGL 2)
+# Transform
 
 Transform Feedback operations represent a GPGPU/GPU compute technique where GPU draw calls are configured so that they write some specified outputs from the vertex shaders to (one or more) GPU memory buffers that have been provided by the application. Applications use transform feedback to data processing from CPU to GPU, where multiple parallel execution units will be used for processing. Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory.
 

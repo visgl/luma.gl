@@ -2,11 +2,14 @@
   "name": "ocular-website-gatsby",
   "version": "0.0.0",
   "description": "A website for Ocular, built with Ocular (Gatsby version)",
+  "private": true,
   "license": "MIT",
   "keywords": [
     "ocular"
   ],
-  "main": "index.js",
+  "workspaces": [
+    "react"
+  ],  "main": "index.js",
   "scripts": {
     "start": "yarn clean-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",

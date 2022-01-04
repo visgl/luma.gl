@@ -1,0 +1,7 @@
+{
+  "name": "@prism-react-renderer/github",
+  "private": true,
+  "sideEffects": false,
+  "main": "index.js",
+  "license": "MIT"
+}
