@@ -37,7 +37,8 @@ export default class luma {
     return Array.from(deviceList).filter(Device => Device.isSupported()).map(Device => Device.type);
   }
 
-  static async createDevice(props: DeviceProps): Promise<Device> {
+  /** Creates a device. Asynchronous. */
+  static async createDevice(props: DeviceProps = {}): Promise<Device> {
     let type = props.type || 'best-available';
     if (props.gl) {
       type = 'webgl';

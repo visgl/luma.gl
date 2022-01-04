@@ -21,7 +21,11 @@ import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 // import WebGLCanvasContext from './webgl-canvas-context';
 import {loadSpector, initializeSpector} from './helpers/spector';
-import {isTextureFormatSupported, isLinearFilteringSupported} from './converters/texture-formats';
+import {
+  isTextureFormatSupported,
+  isTextureFormatRenderable,
+  isLinearFilteringSupported
+} from './converters/texture-formats';
 
 // WebGL classes
 import type {
@@ -269,6 +273,22 @@ export default class WebGLDevice extends Device implements ContextState {
 
   isLinearFilteringSupported(format: TextureFormat): boolean {
     return isLinearFilteringSupported(this.gl, format);
+  }
+
+  /** @todo - move implementation back into texture-formats.ts */
+  isTextureFormatRenderable(format: TextureFormat): boolean {
+    if (!isTextureFormatRenderable(this.gl, format)) {
+      return false;
+    }
+    if (format === 'rgba32float') {
+      return this.features.has('texture-renderable-rgba32float-webgl');
+    }
+    if (format.endsWith('32float')) {
+      return this.features.has('texture-renderable-float32-webgl');
+    }
+    if (format.endsWith('16float')) {
+      return this.features.has('texture-renderable-float16-webgl');
+    }
   }
 
   // WEBGL SPECIFIC METHODS

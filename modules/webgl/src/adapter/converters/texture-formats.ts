@@ -49,12 +49,13 @@ type Format = {
 // TABLES
 
 const TEXTURE_FEATURES: [DeviceFeature, string[]][] = [
-  ['texture-compression-bc', [X_S3TC, X_S3TC_SRGB, X_BPTC]],
+  ['texture-compression-bc', [X_S3TC, X_S3TC_SRGB, X_RGTC, X_BPTC]],
+  ['texture-compression-bc5-webgl', [X_S3TC, X_S3TC_SRGB, X_RGTC]],
   ['texture-compression-etc2', [X_ETC2]],
   ['texture-compression-astc', [X_ASTC]],
-  ['webgl-texture-compression-etc1', [X_ETC1]],
-  ['webgl-texture-compression-pvrtc', [X_PVRTC]],
-  ['webgl-texture-compression-atc', [X_ATC]]
+  ['texture-compression-etc1-webgl', [X_ETC1]],
+  ['texture-compression-pvrtc-webgl', [X_PVRTC]],
+  ['texture-compression-atc-webgl', [X_ATC]]
 ];
 
 export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
@@ -69,20 +70,20 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'r16sint': {gl: GL.R16I, b: 2, c: 1, gl2: true},
   'r16float': {gl: GL.R16F, b: 2, c: 1, gl2: EXT_FLOAT_WEBGL2},
   // @ts-expect-error not exposed by WebGPU)
-  'webgl-r16unorm': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
-  'webgl-r16snorm': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
+  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
+  'r16snorm-webgl': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
   'rg8unorm': {gl: GL.RG8, b: 2, c: 2, gl2: true},
   'rg8snorm': {b: 2, c: 2},
   'rg8uint': {gl: GL.RG8UI, b: 2, c: 2, gl2: true},
   'rg8sint': {gl: GL.RG8I, b: 2, c: 2, gl2: true},
 
   // Packed 16-bit formats
-  'webgl-rgba4norm': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false},
-  'webgl-rgb565norm': {gl: GL.RGB565, b: 2, c: 4, wgpu: false},
-  'webgl-rgb5a1norm': {gl: GL.RGB5_A1, b: 2, c: 4, wgpu: false},
+  'rgba4norm-webgl': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false},
+  'rgb565norm-webgl': {gl: GL.RGB565, b: 2, c: 4, wgpu: false},
+  'rgb5a1norm-webgl': {gl: GL.RGB5_A1, b: 2, c: 4, wgpu: false},
 
   // 24-bit formats
-  'webgl-rbg8norm': {gl: GL.RGB8, b: 3, c: 3, gl2: true, wgpu: false},
+  'rbg8norm-webgl': {gl: GL.RGB8, b: 3, c: 3, gl2: true, wgpu: false},
 
   // 32-bit formats
   'r32uint': {gl: GL.R32UI, b: 4, c: 1, gl2: true, bpp: 4},
@@ -93,8 +94,8 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, gl2: true, bpp: 4},
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
   'rg16float': {gl: GL.RG16F, b: 4, c: 2, gl2: EXT_FLOAT_WEBGL2, bpp: 4},
-  'webgl-rg16unorm': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
-  'webgl-rg16snorm': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
+  'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
+  'rg16snorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, gl2: EXT_TEXTURE_NORM16},
   
   'rgba8unorm': {gl: GL.RGBA8, b: 4, c: 2, gl2: true, bpp: 4},
   'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8, b: 4, c: 4, gl2: true, gl1: SRGB, bpp: 4},
@@ -117,11 +118,11 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1, gl2: EXT_FLOAT_WEBGL2},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, gl2: true},
   // webgl2 only
-  'webgl-rgb10a2unorm': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, webgpu: false, gl2: true, bpp: 4},
+  'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, webgpu: false, gl2: true, bpp: 4},
 
   // 48-bit formats
-  'webgl-rgb16unorm': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
-  'webgl-rgb16snorm': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
+  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
+  'rgb16snorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
 
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, gl2: true},
@@ -130,11 +131,11 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, gl2: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, gl2: true},
   'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, gl2: EXT_FLOAT_WEBGL2},
-  'webgl-rgba16unorm': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
-  'webgl-rgba16snorm': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
+  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
+  'rgba16snorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, gl2: EXT_TEXTURE_NORM16},
 
   // 96-bit formats
-  'webgl-rgb32float': {gl: GL.RGB32F, dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
+  'rgb32float-webgl': {gl: GL.RGB32F, dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
   
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, gl2: true},
@@ -156,8 +157,8 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 
-  'webgl-bc1-rgb-unorm': {gl: GL.COMPRESSED_RGB_S3TC_DXT1_EXT, x: X_S3TC},
-  'webgl-bc1-rgb-unorm-srgb': {gl: GL.COMPRESSED_SRGB_S3TC_DXT1_EXT, x: X_S3TC_SRGB},
+  'bc1-rgb-unorm-webgl': {gl: GL.COMPRESSED_RGB_S3TC_DXT1_EXT, x: X_S3TC},
+  'bc1-rgb-unorm-srgb-webgl': {gl: GL.COMPRESSED_SRGB_S3TC_DXT1_EXT, x: X_S3TC_SRGB},
 
   'bc1-rgba-unorm': {gl: GL.COMPRESSED_RGBA_S3TC_DXT1_EXT, x: X_S3TC},
   'bc1-rgba-unorm-srgb': {gl: GL.COMPRESSED_SRGB_S3TC_DXT1_EXT, x: X_S3TC_SRGB},
@@ -222,20 +223,20 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
 
   // WEBGL_compressed_texture_pvrtc
 
-  'webgl-pvrtc-rgb4unorm': {gl: GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG, x: X_PVRTC},
-  'webgl-pvrtc-rgba4unorm': {gl: GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG, x: X_PVRTC},
-  'webgl-pvrtc-rbg2unorm': {gl: GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG, x: X_PVRTC},
-  'webgl-pvrtc-rgba2unorm': {gl: GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG, x: X_PVRTC},
+  'pvrtc-rgb4unorm-webgl': {gl: GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG, x: X_PVRTC},
+  'pvrtc-rgba4unorm-webgl': {gl: GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG, x: X_PVRTC},
+  'pvrtc-rbg2unorm-webgl': {gl: GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG, x: X_PVRTC},
+  'pvrtc-rgba2unorm-webgl': {gl: GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG, x: X_PVRTC},
 
   // WEBGL_compressed_texture_etc1
 
-  'webgl-etc1-rbg-unorm': {gl: GL.COMPRESSED_RGB_ETC1_WEBGL, x: X_ETC1},
+  'etc1-rbg-unorm-webgl': {gl: GL.COMPRESSED_RGB_ETC1_WEBGL, x: X_ETC1},
 
   // WEBGL_compressed_texture_atc
 
-  'webgl-atc-rgb-unorm': {gl: GL.COMPRESSED_RGB_ATC_WEBGL, x: X_ETC1},
-  'webgl-atc-rgba-unorm': {gl: GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL, x: X_ETC1},
-  'webgl-atc-rgbai-unorm': {gl: GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL, x: X_ETC1}
+  'atc-rgb-unorm-webgl': {gl: GL.COMPRESSED_RGB_ATC_WEBGL, x: X_ETC1},
+  'atc-rgba-unorm-webgl': {gl: GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL, x: X_ETC1},
+  'atc-rgbai-unorm-webgl': {gl: GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL, x: X_ETC1}
 };
 
 type WebGLTextureInfo = {
@@ -269,6 +270,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
   // [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8], gl1: DEPTH},
   // [GL.DEPTH_STENCIL]: {gl1: DEPTH},
 
+  /*
   // Sized texture format - more performance
   // R
   [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
@@ -279,20 +281,21 @@ export const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
   [GL.RG16F]: {dataFormat: GL.RG, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
   [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGB
-  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true},
   [GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
   [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
   [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
   [GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
-  [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_FLOAT_WEBGL1},
+  [GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
   [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
   // // RGBA
-  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
+  [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true},
   [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1: SRGB},
   [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
   [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
-  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
+  [GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
   [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
+  */
 };
 
 // legacy
@@ -361,6 +364,9 @@ export function isTextureFormatSupported(gl: WebGLRenderingContext, format: Text
   if (!info) {
     return false;
   }
+  if (info.x) {
+    return Boolean(gl.getExtension(info.x));
+  }
   if (info.gl1 === undefined && info.gl2 === undefined) {
     // No info - always supported
     return true;
@@ -371,6 +377,9 @@ export function isTextureFormatSupported(gl: WebGLRenderingContext, format: Text
 
 /** Checks whether linear filtering (interpolated sampling) is available for floating point textures */
 export function isLinearFilteringSupported(gl: WebGLRenderingContext, format: TextureFormat | GL): boolean {
+  if (!isTextureFormatSupported(gl, format)) {
+    return false;
+  }
   if (typeof format === 'number') {
     return isLinearFilteringSupportedWebGL(gl, format);
   }
@@ -380,6 +389,17 @@ export function isLinearFilteringSupported(gl: WebGLRenderingContext, format: Te
   if (format.endsWith('16float')) {
     return Boolean(gl.getExtension('OES_texture_half_float_linear'));
   }
+  return true;
+}
+
+export function isTextureFormatRenderable(gl: WebGLRenderingContext, format: TextureFormat | GL): boolean {
+  if (!isTextureFormatSupported(gl, format)) {
+    return false;
+  }
+  if (typeof format === 'number') {
+    return false; // isLinearFilteringSupportedWebGL(gl, format);
+  }
+  // TODO depends on device...
   return true;
 }
 
@@ -399,6 +419,9 @@ function isFormatSupportedWebGL(gl, format: GL): boolean {
 
 /** @deprecated */
 function isLinearFilteringSupportedWebGL(gl, format: GL): boolean {
+  if (!isFormatSupportedWebGL(gl, format)) {
+    return false;
+  }
   const info = WEBGL_TEXTURE_FORMATS[format];
   switch (info && info.types[0]) {
     // Both WebGL1 and WebGL2?

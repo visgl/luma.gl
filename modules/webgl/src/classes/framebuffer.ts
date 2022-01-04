@@ -698,7 +698,7 @@ export default class Framebuffer extends ImmutableFramebuffer {
       case GL.FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE: // GLenum
         return !features.has('webgl2') ? GL.UNSIGNED_INT : null;
       case GL.FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING:
-        return !features.has('webgl2') && !features.has('webgl-color-encoding-srgb') ? GL.LINEAR : null;
+        return !features.has('webgl2') && !features.has('texture-srgb-webgl1') ? GL.LINEAR : null;
       default:
         return null;
     }

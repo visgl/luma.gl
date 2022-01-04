@@ -1,5 +1,6 @@
 // Depends on Khronos Debug support module being imported via "luma.gl/debug"
 import {log} from '@luma.gl/core';
+import GL from '@luma.gl/constants';
 
 // Expose Khronos Debug support module on global context
 const WebGLDebug = require('webgl-debug');
@@ -40,6 +41,13 @@ function getDebugContext(gl, opts) {
     return data.debugContext;
   }
 
+  // Make sure we have all WebGL2 and extension constants (todo dynamic import to circumvent minification?)
+  for (const key in GL) {
+    if (!(key in gl) && typeof GL[key] === 'number') {
+      gl[key] = GL[key];
+    }
+  }
+
   // Create a new debug context
   class WebGLDebugContext {}
   const debugContext = WebGLDebug.makeDebugContext(
@@ -47,6 +55,7 @@ function getDebugContext(gl, opts) {
     onGLError.bind(null, opts),
     onValidateGLFunc.bind(null, opts)
   );
+  // Make sure we have all constants
   Object.assign(WebGLDebugContext.prototype, debugContext);
 
   // Store the debug context

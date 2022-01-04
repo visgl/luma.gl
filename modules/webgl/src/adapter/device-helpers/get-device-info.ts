@@ -13,10 +13,10 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   const rendererUnmasked = gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : GL.RENDERER);
   const vendor = vendorUnmasked || vendorMasked;
   const renderer = rendererUnmasked || rendererMasked;
-  const gpuVendor = identifyGPUVendor(vendor, renderer);
+  const gpu = identifyGPUVendor(vendor, renderer);
   return {
     type: isWebGL2(gl) ? 'webgl2' : 'webgl',
-    gpuVendor,
+    gpu,
     vendor: vendorUnmasked || vendorMasked,
     renderer: rendererUnmasked || rendererMasked,
     version: gl.getParameter(GL.VERSION),
@@ -27,15 +27,15 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   };
 }
 
-function identifyGPUVendor(vendor: string, renderer: string): 'NVIDIA' | 'INTEL' | 'APPLE' | 'AMD' | 'UNKNOWN' {
+function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel' | 'apple' | 'amd' | 'unknown' {
   if (vendor.match(/NVIDIA/i) || renderer.match(/NVIDIA/i)) {
-    return 'NVIDIA';
+    return 'nvidia';
   }
   if (vendor.match(/INTEL/i) || renderer.match(/INTEL/i)) {
-    return 'INTEL';
+    return 'intel';
   }
   if (vendor.match(/Apple/i) || renderer.match(/Apple/i)) {
-    return 'APPLE';
+    return 'apple';
   }
   if (
     vendor.match(/AMD/i) ||
@@ -43,7 +43,7 @@ function identifyGPUVendor(vendor: string, renderer: string): 'NVIDIA' | 'INTEL'
     vendor.match(/ATI/i) ||
     renderer.match(/ATI/i)
   ) {
-    return 'AMD';
+    return 'amd';
   }
-  return 'UNKNOWN';
+  return 'unknown';
 }

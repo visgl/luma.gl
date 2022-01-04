@@ -8,18 +8,18 @@ const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
   'webgl2',
 
   // api support
-  'webgl-vertex-array-object',
-  'webgl-instanced-rendering',
-  'webgl-multiple-render-targets',
+  'vertex-array-object-webgl1',
+  'instanced-rendering-webgl1',
+  'multiple-render-targets-webgl1',
 
   // features
-  'webgl-element-index-uint32',
-  'webgl-blend-equation-minmax',
-  'webgl-color-encoding-srgb',
+  'index-uint32-webgl1',
+  'blend-minmax-webgl1',
+  'texture-srgb-webgl1',
 
-  'webgl-texture-depth',
-  'webgl-texture-float',
-  'webgl-texture-half-float',
+  'texture-depth-webgl1',
+  'texture-float32-webgl1',
+  'texture-float16-webgl1',
 
   // glsl extensions
   'glsl-frag-data',
@@ -28,7 +28,7 @@ const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
   'glsl-texture-lod'
 ];
 
-const WEBGL2_ONLY_FEATURES: DeviceFeature[] = ['webgl2', 'webgl-color-attachment-float'];
+const WEBGL2_ONLY_FEATURES: DeviceFeature[] = ['webgl2', 'texture-renderable-float32-webgl'];
 
 test('WebGLDevice#features (unknown)', (t) => {
   // @ts-expect-error
@@ -41,7 +41,7 @@ test('WebGLDevice#features (unknown)', (t) => {
 test('WebGLDevice#features (WebGL1)', (t) => {
   t.notOk(webgl1TestDevice.features.has('webgl2'), 'features.has should return false');
   t.notOk(
-    webgl1TestDevice.features.has('webgl-color-attachment-float'),
+    webgl1TestDevice.features.has('texture-renderable-float32-webgl'),
     'features.has should return false'
   );
   t.end();
@@ -50,11 +50,11 @@ test('WebGLDevice#features (WebGL1)', (t) => {
 test('WebGLDevice#hasFeatures (WebGL2)', (t) => {
   if (webgl2TestDevice) {
     t.ok(
-      webgl2TestDevice.features.has('webgl-vertex-array-object'),
+      webgl2TestDevice.features.has('vertex-array-object-webgl1'),
       'features.has should return true'
     );
     t.ok(
-      webgl2TestDevice.features.has('webgl-instanced-rendering'),
+      webgl2TestDevice.features.has('instanced-rendering-webgl1'),
       'features.has should return true'
     );
   }

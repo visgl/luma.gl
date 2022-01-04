@@ -2,7 +2,7 @@ import {Device} from '@luma.gl/api';
 
 /** Adds defines to help identify GPU architecture / platform */
 export function getPlatformShaderDefines(device: Device): string {
-  switch (device.info?.gpuVendor.toLowerCase()) {
+  switch (device.info?.gpu.toLowerCase()) {
     case 'nvidia':
       return `\
 #define NVIDIA_GPU
