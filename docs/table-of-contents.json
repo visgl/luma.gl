@@ -17,11 +17,10 @@
         { "entry": "docs/getting-started/hello-instancing" },
         { "entry": "docs/getting-started/hello-cube" },
         { "entry": "docs/getting-started/lighting" },
+        { "entry": "docs/getting-started/transform" },
+        { "entry": "docs/getting-started/instanced-transform" },
         { "entry": "docs/getting-started/shader-modules" },
         { "entry": "docs/getting-started/shader-hooks" },
-        { "entry": "docs/getting-started/shader-modules" },
-        { "entry": "docs/getting-started/transform-feedback" },
-        { "entry": "docs/getting-started/instanced-transform" },
         { "entry": "docs/getting-started/external-context" },
         { "entry": "docs/getting-started/whats-next" }
       ]
@@ -41,11 +40,11 @@
       "title": "API Guide",
       "entries": [
         { "entry": "docs/developer-guide/api/device-properties" },
-        { "entry": "docs/developer-guide/api/features" },
+        { "entry": "docs/developer-guide/api/canvas-context" },
         { "entry": "docs/developer-guide/api/parameters" },
         { "entry": "docs/developer-guide/api/texture-formats" },
-        { "entry": "docs/developer-guide/api/accessors" },
-        { "entry": "docs/developer-guide/api/transform-feedback" },
+        { "entry": "docs/developer-guide/api/bindings" },
+        { "entry": "docs/developer-guide/api/transform" },
         { "entry": "docs/developer-guide/api/shader-modules" }
       ]
     },

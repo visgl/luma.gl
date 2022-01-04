@@ -191,7 +191,7 @@ export default class AnimationLoopExamplePage extends Component {
           style={{width: '100%', height: '100%'}}
         />
         {panel && (
-          <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`}>
+          <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`} style={{opacity: 0.6}}>
             <div dangerouslySetInnerHTML={{__html: controls}} />
           </InfoPanel>
         )}

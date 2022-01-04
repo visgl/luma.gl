@@ -1,7 +1,7 @@
 {
-  "name": "ocular-website-gatsby",
+  "name": "luma.gl-website",
   "version": "0.0.0",
-  "description": "A website for Ocular, built with Ocular (Gatsby version)",
+  "description": "A website for luma.gl built with Ocular (Gatsby version)",
   "private": true,
   "license": "MIT",
   "keywords": [
@@ -9,7 +9,8 @@
   ],
   "workspaces": [
     "react"
-  ],  "main": "index.js",
+  ],  
+  "main": "index.js",
   "scripts": {
     "start": "yarn clean-examples && yarn clean && yarn develop",
     "clean": "rm -rf ./.cache ./public",
