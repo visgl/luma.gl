@@ -78,7 +78,7 @@ export type DeviceInfo = {
   vendor: string;
   renderer: string;
   version: string;
-  gpuVendor: 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN';
+  gpu: 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown';
   shadingLanguages: ShadingLanguage[];
   shadingLanguageVersions: Record<string, string>;
   vendorMasked?: string;
@@ -136,39 +136,41 @@ export type WebGPUDeviceFeature =
   ;
 
 export type WebGLDeviceFeature =
+  'webgpu' |
   'webgl2' |
+  'webgl' |
 
   // api support (unify with WebGPU timestamp-query?)
-  'webgl-timer-query' |
+  'timer-query-webgl' |
 
   // api support
-  'webgl-vertex-array-object' |
-  'webgl-instanced-rendering' |
-  'webgl-multiple-render-targets' |
+  'vertex-array-object-webgl1' |
+  'instanced-rendering-webgl1' |
+  'multiple-render-targets-webgl1' |
 
   // features
-  'webgl-element-index-uint32' |
+  'index-uint32-webgl1' |
 
   // blending
-  'webgl-blend-equation-minmax' |
-  'webgl-float-blend' |
+  'blend-minmax-webgl1' |
+  'float-blend-webgl1' |
 
   // textures | renderbuffers
-  'webgl-color-encoding-srgb' |
+  'texture-srgb-webgl1' |
 
   // textures
-  'webgl-texture-depth' |
-  'webgl-texture-float' |
-  'webgl-texture-half-float' |
+  'texture-depth-webgl1' |
+  'texture-float32-webgl1' |
+  'texture-float16-webgl1' |
 
-  'webgl-texture-filter-linear-float' |
-  'webgl-texture-filter-linear-half-float' |
-  'webgl-texture-filter-anisotropic' |
+  'texture-filter-linear-float32-webgl' |
+  'texture-filter-linear-float16-webgl' |
+  'texture-filter-anisotropic-webgl' |
 
   // framebuffers | textures and renderbuffers
-  'webgl-color-attachment-rgba32f' |
-  'webgl-color-attachment-float' |
-  'webgl-color-attachment-half-float' |
+  'texture-renderable-rgba32float-webgl' |
+  'texture-renderable-float32-webgl' |
+  'texture-renderable-float16-webgl' |
 
   // glsl extensions
   'glsl-frag-data' |
@@ -178,9 +180,10 @@ export type WebGLDeviceFeature =
   ;
 
 type WebGLCompressedTextureFeatures =
-  'webgl-texture-compression-etc1' |
-  'webgl-texture-compression-pvrtc' |
-  'webgl-texture-compression-atc'
+  'texture-compression-bc5-webgl' |
+  'texture-compression-etc1-webgl' |
+  'texture-compression-pvrtc-webgl' |
+  'texture-compression-atc-webgl'
   ;
 
 /** Valid feature strings */
@@ -208,13 +211,19 @@ export default abstract class Device {
   abstract info: DeviceInfo;
 
   /** Optional capability discovery */
-  abstract features: Set<string>;
+  abstract features: Set<DeviceFeature>;
 
-  /** Check if device supports a specific texture format */
+  /** WebGPU style device limits */
+  abstract limits: DeviceLimits;
+
+  /** Check if device supports a specific texture format (creation and `nearest` sampling) */
   abstract isTextureFormatSupported(format: TextureFormat): boolean;
 
   /** Check if linear filtering (sampler interpolation) is supported for a specific floating point texture format */
   abstract isLinearFilteringSupported(format: TextureFormat): boolean;
+
+  /** Check if device supports rendering to a specific (floating point) texture format */
+  abstract isTextureFormatRenderable(format: TextureFormat): boolean;
 
   /** True context is already lost */
   abstract get isLost(): boolean;

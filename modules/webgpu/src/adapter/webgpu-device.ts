@@ -2,6 +2,7 @@ import type {
   DeviceProps,
   DeviceInfo,
   DeviceLimits,
+  DeviceFeature,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
@@ -21,8 +22,6 @@ import WebGPUFramebuffer from './resources/webgpu-framebuffer';
 
 import WebGPUCanvasContext from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
-
-type Feature = string;
 
 /** WebGPU Device implementation */
 export default class WebGPUDevice extends Device {
@@ -78,7 +77,7 @@ export default class WebGPUDevice extends Device {
       vendor: this.adapter.name,
       renderer: '',
       version: '',
-      gpuVendor: 'UNKNOWN', // 'NVIDIA' | 'AMD' | 'INTEL' | 'APPLE' | 'UNKNOWN',
+      gpu: 'unknown', // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
       shadingLanguages: ['glsl', 'wgsl'],
       shadingLanguageVersions: {
         glsl: '450',
@@ -114,9 +113,9 @@ export default class WebGPUDevice extends Device {
     return this._info;
   }
 
-  get features(): Set<Feature> {
+  get features(): Set<DeviceFeature> {
     // TODO not efficient
-    return new Set<Feature>(this.handle.features).add('webgpu');
+    return new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>).add('webgpu');
   }
 
   get limits(): DeviceLimits {
@@ -124,11 +123,17 @@ export default class WebGPUDevice extends Device {
   }
 
   isTextureFormatSupported(format: TextureFormat): boolean {
-    return !format.startsWith('webgl');
+    return !format.includes('webgl');
   }
 
+  /** @todo implement proper check? */
   isLinearFilteringSupported(format: TextureFormat): boolean {
-    return true; // TODO proper check?
+    return this.isTextureFormatSupported(format); 
+  }
+
+  /** @todo implement proper check? */
+  isTextureFormatRenderable(format: TextureFormat): boolean {
+    return this.isTextureFormatSupported(format); 
   }
 
   get isLost(): boolean {

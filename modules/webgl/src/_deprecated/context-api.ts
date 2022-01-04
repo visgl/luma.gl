@@ -6,7 +6,7 @@
 import type {DeviceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
-import {DEPRECATED_FEATURES} from './features';
+import {DEPRECATED_FEATURES, DEPRECATED_TO_CLASSIC_FEATURES} from './features';
 
 export type GLContextOptions = DeviceProps & {
   throwOnError?: boolean; // If set to false, return `null` if context creation fails.
@@ -65,11 +65,12 @@ export function hasFeatures(gl: WebGLRenderingContext, features: string | string
 }
 
 function classicToDeviceFeature(feature: string): string {
-  const deviceFeature = feature.toLowerCase().replace(/\_/g, '-');
-  if (deviceFeature.startsWith('webgl2') || deviceFeature.startsWith('glsl-')) {
-    return deviceFeature;
-  }
-  return `webgl-${deviceFeature}`;
+  return DEPRECATED_TO_CLASSIC_FEATURES[feature];
+  // const deviceFeature = feature.toLowerCase().replace(/\_/g, '-');
+  // if (deviceFeature.startsWith('webgl2') || deviceFeature.startsWith('glsl-')) {
+  //   return deviceFeature;
+  // }
+  // return `webgl-${deviceFeature}`;
 }
 
 /**

@@ -58,7 +58,7 @@ function isFeatureSupported(gl: WebGLRenderingContext, feature: DeviceFeature): 
   }
 
   switch (feature) {
-    case 'webgl-color-attachment-rgba32f':
+    case 'texture-renderable-rgba32float-webgl':
       return isWebGL2(gl) ? Boolean(gl.getExtension(featureDefinition)) :
         checkFloat32ColorAttachment(gl);
     case 'glsl-derivatives':
@@ -144,37 +144,35 @@ export function canCompileGLSLExtension(gl: WebGLRenderingContext, extensionName
  * Format: 'feature-name: [WebGL1 support, WebGL2 support] / [WebGL1 and WebGL2 support]', when support is 'string' it is the name of the extension
  */
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, [boolean | string, boolean | string]>> = {
+  'webgl': [true, true],
   'webgl2': [false, true],
 
-  // API SUPPORT
-  'webgl-vertex-array-object': ['OES_vertex_array_object', true],
-  'webgl-timer-query': ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
-  'webgl-instanced-rendering': ['ANGLE_instanced_arrays', true],
-  'webgl-multiple-render-targets': ['WEBGL_draw_buffers', true],
+  'timer-query-webgl': ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
 
-  // FEATURES
-  'webgl-element-index-uint32': ['OES_element_index_uint', true],
-
-  // BLENDING
-  'webgl-blend-equation-minmax': ['EXT_blend_minmax', true],
-  'webgl-float-blend': ['EXT_float_blend', 'EXT_float_blend'],
+  // WEBGL1 SUPPORT
+  'vertex-array-object-webgl1': ['OES_vertex_array_object', true],
+  'instanced-rendering-webgl1': ['ANGLE_instanced_arrays', true],
+  'multiple-render-targets-webgl1': ['WEBGL_draw_buffers', true],
+  'index-uint32-webgl1': ['OES_element_index_uint', true],
+  'blend-minmax-webgl1': ['EXT_blend_minmax', true],
+  'float-blend-webgl1': ['EXT_float_blend', 'EXT_float_blend'],
 
   // TEXTURES, RENDERBUFFERS
-  'webgl-color-encoding-srgb': ['EXT_sRGB', true],
+  'texture-srgb-webgl1': ['EXT_sRGB', true],
 
   // TEXTURES
-  'webgl-texture-depth': ['WEBGL_depth_texture', true],
-  'webgl-texture-float': ['OES_texture_float', true],
-  'webgl-texture-half-float': ['OES_texture_half_float', true],
+  'texture-depth-webgl1': ['WEBGL_depth_texture', true],
+  'texture-float32-webgl1': ['OES_texture_float', true],
+  'texture-float16-webgl1': ['OES_texture_half_float', true],
 
-  'webgl-texture-filter-linear-float': ['OES_texture_float_linear', 'OES_texture_float_linear'],
-  'webgl-texture-filter-linear-half-float': ['OES_texture_half_float_linear', 'OES_texture_half_float_linear'],
-  'webgl-texture-filter-anisotropic': ['EXT_texture_filter_anisotropic', 'EXT_texture_filter_anisotropic'],
+  'texture-filter-linear-float32-webgl': ['OES_texture_float_linear', 'OES_texture_float_linear'],
+  'texture-filter-linear-float16-webgl': ['OES_texture_half_float_linear', 'OES_texture_half_float_linear'],
+  'texture-filter-anisotropic-webgl': ['EXT_texture_filter_anisotropic', 'EXT_texture_filter_anisotropic'],
 
   // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-  'webgl-color-attachment-rgba32f': [false, 'EXT_color_buffer_float'], // Note override check
-  'webgl-color-attachment-float': [false, 'EXT_color_buffer_float'],
-  'webgl-color-attachment-half-float': ['EXT_color_buffer_half_float', 'EXT_color_buffer_half_float'],
+  'texture-renderable-rgba32float-webgl': [false, 'EXT_color_buffer_float'], // Note override check
+  'texture-renderable-float32-webgl': [false, 'EXT_color_buffer_float'],
+  'texture-renderable-float16-webgl': ['EXT_color_buffer_half_float', 'EXT_color_buffer_half_float'],
 
   // GLSL extensions
   'glsl-frag-data': ['WEBGL_draw_buffers', true],

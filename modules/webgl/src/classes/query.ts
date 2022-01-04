@@ -30,7 +30,7 @@ export default class Query extends WebGLResource<QueryProps> {
 
     // Initial value
     const webglDevice = WebGLDevice.attach(gl);
-    const hasTimerQuery = webglDevice.features.has('webgl-timer-query');
+    const hasTimerQuery = webglDevice.features.has('timer-query-webgl');
     let supported = webgl2 || hasTimerQuery;
 
     for (const key of options) {

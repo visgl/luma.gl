@@ -2,9 +2,9 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
+import {DeviceFeature, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/webgl';
-import {assert} from '@luma.gl/api';
 
 // TODO - this should be the default export, test cases need updating
 export const DEPRECATED_FEATURES = {
@@ -45,6 +45,47 @@ export const DEPRECATED_FEATURES = {
   GLSL_FRAG_DEPTH: 'GLSL_FRAG_DEPTH',
   GLSL_DERIVATIVES: 'GLSL_DERIVATIVES',
   GLSL_TEXTURE_LOD: 'GLSL_TEXTURE_LOD'
+};
+
+// TODO - this should be the default export, test cases need updating
+export const DEPRECATED_TO_CLASSIC_FEATURES: Record<string, DeviceFeature> = {
+  WEBGL2: 'webgl2',
+
+  // API SUPPORT
+  VERTEX_ARRAY_OBJECT: 'webgl',
+  TIMER_QUERY: 'timer-query-webgl',
+  INSTANCED_RENDERING: 'instanced-rendering-webgl1',
+  MULTIPLE_RENDER_TARGETS: 'multiple-render-targets-webgl1',
+
+  // FEATURES
+  ELEMENT_INDEX_UINT32: 'index-uint32-webgl1',
+
+  // BLENDING
+  BLEND_EQUATION_MINMAX: 'blend-minmax-webgl1',
+  FLOAT_BLEND: 'float-blend-webgl1',
+
+  // TEXTURES: '//_webgl1 TEXTURES', RENDERBUFFERS
+  COLOR_ENCODING_SRGB: 'texture-srgb-webgl1',
+
+  // TEXTURES
+  TEXTURE_DEPTH: 'texture-depth-webgl1',
+  TEXTURE_FLOAT: 'texture-float32-webgl1',
+  TEXTURE_HALF_FLOAT: 'texture-float16-webgl1',
+
+  TEXTURE_FILTER_LINEAR_FLOAT: 'texture-filter-linear-float32-webgl',
+  TEXTURE_FILTER_LINEAR_HALF_FLOAT: 'texture-filter-linear-float16-webgl',
+  TEXTURE_FILTER_ANISOTROPIC: 'texture-filter-anisotropic-webgl',
+
+  // FRAMEBUFFERS: '//_webgl1 FRAMEBUFFERS', TEXTURES AND RENDERBUFFERS
+  COLOR_ATTACHMENT_RGBA32F: 'texture-renderable-rgba32float-webgl',
+  COLOR_ATTACHMENT_FLOAT: 'texture-renderable-float32-webgl',
+  COLOR_ATTACHMENT_HALF_FLOAT: 'texture-renderable-float16-webgl',
+
+  // GLSL extensions
+  GLSL_FRAG_DATA: 'glsl-frag-data',
+  GLSL_FRAG_DEPTH: 'glsl-frag-depth',
+  GLSL_DERIVATIVES: 'glsl-derivatives',
+  GLSL_TEXTURE_LOD: 'glsl-texture-lod'
 };
 
 /** Extract all WebGL features */
