@@ -46,7 +46,7 @@ export default class WebGPUDevice extends Device {
 
   static async create(props) {
     if (!navigator.gpu) {
-      throw new Error('WebGPU not available. Use Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
+      throw new Error('WebGPU not available. Open in Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
     }
     log.groupCollapsed(1, 'WebGPUDevice created')();
     const adapter = await navigator.gpu.requestAdapter({
@@ -98,6 +98,8 @@ export default class WebGPUDevice extends Device {
       // TODO - handle offscreen canvas?
       this.canvas = this.canvasContext.canvas as HTMLCanvasElement;
     }
+
+    this.features = this._getFeatures();
   }
 
   // TODO
@@ -113,10 +115,7 @@ export default class WebGPUDevice extends Device {
     return this._info;
   }
 
-  get features(): Set<DeviceFeature> {
-    // TODO not efficient
-    return new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>).add('webgpu');
-  }
+  features: Set<DeviceFeature>;
 
   get limits(): DeviceLimits {
     return this.handle.limits;
@@ -236,5 +235,47 @@ export default class WebGPUDevice extends Device {
     this._renderPassDescriptor.colorAttachments[0].view = colorAttachment;
     this._renderPassDescriptor.depthStencilAttachment.view = depthStencil;
     return this._renderPassDescriptor;
+  }
+
+  _getFeatures() {
+    // WebGPU Features
+    const features = new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>);
+
+    features.add('webgpu');
+
+    features.add('timer-query-webgl');
+
+    // WEBGL1 SUPPORT
+    features.add('vertex-array-object-webgl1');
+    features.add('instanced-rendering-webgl1');
+    features.add('multiple-render-targets-webgl1');
+    features.add('index-uint32-webgl1');
+    features.add('blend-minmax-webgl1');
+    features.add('float-blend-webgl1');
+  
+    // TEXTURES, RENDERBUFFERS
+    features.add('texture-srgb-webgl1');
+  
+    // TEXTURES
+    features.add('texture-depth-webgl1');
+    features.add('texture-float32-webgl1');
+    features.add('texture-float16-webgl1');
+  
+    features.add('texture-filter-linear-float32-webgl');
+    features.add('texture-filter-linear-float16-webgl');
+    features.add('texture-filter-anisotropic-webgl');
+  
+    // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
+    features.add('texture-renderable-rgba32float-webgl');
+    features.add('texture-renderable-float32-webgl');
+    features.add('texture-renderable-float16-webgl');
+  
+    // GLSL extensions
+    features.add('glsl-frag-data');
+    features.add('glsl-frag-depth');
+    features.add('glsl-derivatives');
+    features.add('glsl-texture-lod');
+
+    return features;
   }
 }

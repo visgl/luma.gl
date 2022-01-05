@@ -12,7 +12,7 @@ import type {default as Framebuffer, FramebufferProps} from './resources/framebu
 
 /** Device properties */
 export type DeviceProps = {
-  type?: 'webgl' | 'webgpu' | 'best-available';
+  type?: 'webgl' | 'webgl1' | 'webgl2' | 'webgpu' | 'best-available';
 
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string; // A canvas element or a canvas string id

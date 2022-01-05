@@ -1,4 +1,4 @@
-import {Info, Feature as F, Limit as L, WebGLLimit as WL, WebGLExtensions} from '@luma.gl/react-website';
+import {DeviceTabs, Info, Feature as F, Limit as L, WebGLLimit as WL, WebGLExtensions} from '@luma.gl/react-website';
 
 # Device Properties
 
@@ -15,6 +15,8 @@ determine the capabilities of the underlying platform and API.
 ### Device.info
 
 A `DeviceInfo` object with fields that describe the devices.
+
+<DeviceTabs />
 
 | Field      | This Browser          | Description                           |
 | ---------- | --------------------- | ------------------------------------- |
@@ -38,6 +40,8 @@ if (device.features.has('instanced-rendering-webgl1')) {
    program.draw({instanceCount: ..., ....});
 }
 ```
+
+<DeviceTabs />
 
 | `luma.gl Feature`                      | This<br /> Browser                             | Description                    |
 | -------------------------------------- | ---------------------------------------------- | ------------------------------ |
@@ -96,6 +100,8 @@ if (device.limits.maxTextureDimension2D > 2048) {
 }
 ```
 
+<DeviceTabs />
+
 | Limit                                       | Value                                               | Comments                               |
 | ------------------------------------------- | --------------------------------------------------- | -------------------------------------- |
 | `maxTextureDimension1D`                     | <L f="maxTextureDimension1D" />                     | WebGL does not support 1D textures     |
@@ -135,12 +141,14 @@ the luma.gl Device APIs. You can access "raw" WebGL extensions and limits direct
 It is easy to get the list of actual WebGL extensions from `WebGLDevice`:
 
 ```typescript
-const webglDevice = cast<WebGLDevice>(device);
+const webglDevice = device instanceof WebGLDevice ? device as WebGLDevice: null;
 const extensions = webglDevice ? webglDevice.gl.getSupportedExtensions() : [];
 console.log(extensions);
 ```
 
 On your current browser, this would yield:
+
+<DeviceTabs />
 
 <WebGLExtensions />
 
@@ -153,13 +161,14 @@ On your current browser, this would yield:
 A luma.gl `WebGLDevice` extracts an object that contains all "raw" WebGL limits.
 
 ```typescript
-import {cast} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-const webglDevice = cast<WebGLDevice>(device);
+const webglDevice = device instanceof WebGLDevice ? device as WebGLDevice: null;
 console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 ```
+
+<DeviceTabs />
 
 | Limits                                             | This <br/> Browser                                       | Description                          |
 | -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------ |
@@ -209,8 +218,6 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 | `GL.MIN_PROGRAM_TEXEL_OFFSET`                      | <WL f="MIN_PROGRAM_TEXEL_OFFSET" />                      |                                      |
 | `GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT`               | <WL f="UNIFORM_BUFFER_OFFSET_ALIGNMENT" />               |                                      |
 
-- ['EXT_texture_filter_anisotropic'](https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic)
-
 ## Remarks
 
 - WebGL 1 only supports one color buffer format (RBG32F is deprecated)
@@ -218,3 +225,5 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 - Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
+
+['EXT_texture_filter_anisotropic']: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic

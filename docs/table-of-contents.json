@@ -39,13 +39,13 @@
     {
       "title": "API Guide",
       "entries": [
-        { "entry": "docs/developer-guide/api/device-properties" },
-        { "entry": "docs/developer-guide/api/canvas-context" },
-        { "entry": "docs/developer-guide/api/parameters" },
-        { "entry": "docs/developer-guide/api/texture-formats" },
-        { "entry": "docs/developer-guide/api/bindings" },
-        { "entry": "docs/developer-guide/api/transform" },
-        { "entry": "docs/developer-guide/api/shader-modules" }
+        { "entry": "docs/api-guide/device-properties" },
+        { "entry": "docs/api-guide/canvas-context" },
+        { "entry": "docs/api-guide/parameters" },
+        { "entry": "docs/api-guide/texture-formats" },
+        { "entry": "docs/api-guide/bindings" },
+        { "entry": "docs/api-guide/transform" },
+        { "entry": "docs/api-guide/shader-modules" }
       ]
     },
     {
