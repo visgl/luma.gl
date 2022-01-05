@@ -74,10 +74,12 @@ export default class AnimationLoopExamplePage extends Component {
 
     // Ensure the example can find its images
     // TODO - ideally gatsby-theme-ocular should extract images from example source?
+    const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/8.5-release';
     const {exampleConfig} = this.props;
     if (exampleConfig && exampleConfig.path) {
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/8.2-release';
       setPathPrefix(`${RAW_GITHUB}/${exampleConfig.path}`);
+    } else {
+      setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
     }
 
     // Start the actual example

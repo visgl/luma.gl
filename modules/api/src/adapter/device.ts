@@ -43,8 +43,8 @@ export type DeviceProps = {
   gl?: WebGLRenderingContext | WebGL2RenderingContext;
 };
 
-const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
-  type: 'best-available',
+export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
+  type: 'webgl', // 'best-available',
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
   webgl2: true, // Attempt to create a WebGL2 context
