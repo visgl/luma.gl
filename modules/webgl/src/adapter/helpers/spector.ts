@@ -69,7 +69,6 @@ export function initializeSpector(props?: SpectorProps) {
     spector?.startCapture(props?.canvas, 500); // 500 commands
     spector?.displayUI();
     // new Promise(resolve => setTimeout(resolve, 1000)).then(_ => {
-    //   debugger
     //   spector?.stopCapture();
     // });
   }

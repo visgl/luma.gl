@@ -79,7 +79,7 @@ export default class WEBGLTexture extends Texture {
   textureUnit: number = undefined;
 
   /** Sampler object (currently unused) */
-  sampler: WEBGLSampler;
+  sampler: WEBGLSampler = undefined;
 
   /**
    * Program.draw() checks the loaded flag of all textures to avoid

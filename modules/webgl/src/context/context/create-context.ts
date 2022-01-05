@@ -17,7 +17,6 @@
 * @param preserveDrawingBuffer Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
 * @param failIfMajorPerformanceCaveat Do not create if the system performance is low.
 */
-
 type ContextProps = {
   type?: 'webgl' | 'webgl1' | 'webgl2' | string;
   webgl1?: boolean;
@@ -89,3 +88,23 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
 
   return gl;
 }
+
+/* TODO - can we call this asynchronously to catch the error events?
+export async function createBrowserContextAsync(canvas: HTMLCanvasElement | OffscreenCanvas, props: ContextProps): Promise<WebGLRenderingContext> {
+  props = {...DEFAULT_CONTEXT_PROPS, ...props};
+
+ // Try to extract any extra information about why context creation failed
+ let errorMessage = null;
+ const onCreateError = (error) => (errorMessage = error.statusMessage || errorMessage);
+ canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+
+ const gl = createBrowserContext(canvas, props);
+
+ // Give the listener a chance to fire
+ await new Promise(resolve => setTimeout(resolve, 0));
+
+ canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+
+ return gl;
+}
+*/

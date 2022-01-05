@@ -1,5 +1,5 @@
-import type Device from '../adapter/device';
-import type {DeviceProps} from '../adapter/device';
+import type {default as Device, DeviceProps} from '../adapter/device';
+import {DEFAULT_DEVICE_PROPS} from '../adapter/device';
 import StatsManager from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import type {Log} from '@probe.gl/log';
@@ -39,12 +39,13 @@ export default class luma {
 
   /** Creates a device. Asynchronous. */
   static async createDevice(props: DeviceProps = {}): Promise<Device> {
-    let type = props.type || 'best-available';
+    props = {...DEFAULT_DEVICE_PROPS, ...props}
     if (props.gl) {
-      type = 'webgl';
+      props.type = 'webgl';
     }
+
     let Device: any;
-    switch (type) {
+    switch (props.type) {
       case 'webgpu':
         Device = deviceList.get('webgpu');
         if (Device) {
