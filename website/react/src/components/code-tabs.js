@@ -1,7 +1,7 @@
 import React, {Children, cloneElement} from 'react';
 import create from 'zustand';
-import Tabs, {Tab} from './Tabs';
-import Code from './Code';
+import Tabs, {Tab} from './tabs';
+import Code from './code';
 
 const CODE_LANGS = {
   // FRONT END

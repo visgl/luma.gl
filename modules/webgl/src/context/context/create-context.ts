@@ -19,6 +19,7 @@
 */
 
 type ContextProps = {
+  type?: 'webgl' | 'webgl1' | 'webgl2' | string;
   webgl1?: boolean;
   webgl2?: boolean;
   onContextLost?: (event: Event) => void;
@@ -56,6 +57,13 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
 
   // Create the desired context
   let gl = null;
+
+  if (props.type === 'webgl2') {
+    props = {...props, webgl1: false};
+  }
+  if (props.type === 'webgl1') {
+    props = {...props, webgl2: false};
+  }
 
   // Prefer webgl2 over webgl1 if both are acceptable
   if (props.webgl2) {

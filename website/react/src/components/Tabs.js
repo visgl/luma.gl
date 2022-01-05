@@ -36,11 +36,11 @@ const Body = styled.div`
 const Tabs = props => {
   const {children} = props;
   const tabs = Children.toArray(children);
-  const [selectedItem, setSelectedItem] = useState(tabs[0]?.props.title);
+  const [selectedItem, setSelectedItem] = useState(tabs[0]?.props.tag || tabs[0]?.props.title);
   let selected = props.selectedItem !== undefined ? props.selectedItem : selectedItem;
   const setSelected = props.setSelectedItem !== undefined ? props.setSelectedItem : setSelectedItem;
   // check if the selected tab even exists in the list
-  if (!tabs.some(e => e.props.title === selected)) {
+  if (!tabs.some(e => (e.props.tag || e.props.title) === selected)) {
     selected = selectedItem;
   }
   return (
@@ -49,14 +49,14 @@ const Tabs = props => {
         {tabs.map(tab => (
           <HeaderItem
             key={tab.props.title}
-            isSelected={tab.props.title === selected}
-            onClick={() => setSelected(tab.props.title)}
+            isSelected={(tab.props.tag || tab.props.title) === selected}
+            onClick={() => setSelected(tab.props.tag || tab.props.title)}
           >
             {tab.props.title}
           </HeaderItem>
         ))}
       </Header>
-      <Body>{tabs.find(tab => tab.props.title === selected)}</Body>
+      <Body>{tabs.find(tab => (tab.props.tag || tab.props.title) === selected)}</Body>
     </>
   );
 };
