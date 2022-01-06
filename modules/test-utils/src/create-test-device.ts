@@ -20,7 +20,8 @@ const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
     const gl = !isBrowser() ? createHeadlessContext(props) : undefined;
-    props = {...CONTEXT_DEFAULTS, ...props, gl};
+    props = {...CONTEXT_DEFAULTS, ...props, gl, debug: true};
+    // We dont use luma.createDevice since this tests current expect this context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
     console.error(error.message);

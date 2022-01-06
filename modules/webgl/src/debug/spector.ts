@@ -12,30 +12,29 @@ type SpectorProps = {
   spector?: boolean | String | object;
 };
 
+const DEFAULT_SPECTOR_PROPS: SpectorProps = {
+  spector: log.get('spector') || log.get('inspect')
+};
+
 // https://github.com/BabylonJS/Spector.js#basic-usage
 const SPECTOR_CDN_URL = 'https://spectorcdn.babylonjs.com/spector.bundle.js';
 const LOG_LEVEL = 1;
 
-const DEFAULT_SPECTOR_PROPS: SpectorProps = {
-  // If URL contains a debug parameter
-  debug: document?.location?.search?.includes('debug')
-};
-
 let spector = null;
 
 /** Loads spector from CDN if not already installed */
-export async function loadSpector(props?: SpectorProps) {
+export async function loadSpectorJS(props?: SpectorProps) {
   if (!globalThis.SPECTOR) {
     try {
-      const spectorScriptUrl = typeof props?.spector === 'string' ? props.spector : SPECTOR_CDN_URL;
-      await loadScript(spectorScriptUrl);
+      await loadScript(SPECTOR_CDN_URL);
     } catch(error) {
       log.warn(error)
     }
   }
 }
 
-export function initializeSpector(props?: SpectorProps) {
+export function initializeSpectorJS(props?: SpectorProps) {
+  props = {...DEFAULT_SPECTOR_PROPS, ...props};
   if (!props?.debug || props?.spector === false) {
     return null;
   }

@@ -14,17 +14,22 @@ time to consult the upgrade guide to start updating your code in anticipation of
 
 #### `@luma.gl/webgpu` (NEW)
 
-- A partial implementation of the new luma.gl API (`@luma.gl/api`).
+- A partial WebGPU implementation of the new luma.gl API (`@luma.gl/api`). For "early adopters" only. Still in development and not considered production ready.
 
 #### `@luma.gl/webgl`
 
 - WebGL classes can now be created through the `@luma.gl/api` `Device` interface.
-- [Spector.js](https://spector.babylonjs.com/) integration. If a `WebGLDevice` is created with `debug: true` or URL parameter `?debug`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
-- Incremental TypeScript improvements.
+- Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`. They no longer need to be bundled.
+- Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `inspect: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
+- TypeScript: the public API is more strongly typed.
 
 #### `@luma.gl/shadertools`
 
 - New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
+
+#### `@luma.gl/debug`
+
+- `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
 
 #### `@luma.gl/gltools` (Deprecated)
 
