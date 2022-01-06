@@ -4,8 +4,6 @@
 
 luma.gl and luma.gl provide a lot of functionality and the amount of code these libraries contain will of course impact the size of your application bundle and your startup load time.
 
-There are multiple techniques used in JavaScript.
-
 ### Choosing a dist folder
 
 When installed from npm, luma.gl and related libraries come with three separate `dist` sub folders.

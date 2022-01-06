@@ -20,7 +20,8 @@ import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 // import WebGLCanvasContext from './webgl-canvas-context';
-import {loadSpector, initializeSpector} from './helpers/spector';
+import {loadSpectorJS, initializeSpectorJS} from '../debug/spector';
+import {loadWebGLDeveloperTools, makeDebugContext} from '../debug/webgl-developer-tools';
 import {
   isTextureFormatSupported,
   isTextureFormatRenderable,
@@ -138,8 +139,12 @@ export default class WebGLDevice extends Device implements ContextState {
       await CanvasContext.pageLoaded;
     }
 
-    // Load Spector.js CDN script if requested
-    await loadSpector({...props, canvas: undefined});
+    if (props.debug) {
+      // Load webgl debug script if requested
+      await loadWebGLDeveloperTools();
+      // Load Spector.js CDN script if requested
+      await loadSpectorJS();
+    }
 
     log.probe(LOG_LEVEL, 'DOM is loaded')();
     return new WebGLDevice(props);
@@ -167,7 +172,7 @@ export default class WebGLDevice extends Device implements ContextState {
       this.offscreenCanvas = props.canvas;
     }
 
-    this.spector = initializeSpector({...this.props, canvas: this.canvas});
+    this.spector = initializeSpectorJS({...this.props, canvas: this.canvas});
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
@@ -223,20 +228,13 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // DEBUG contexts:  Add debug instrumentation to the context
     if (isBrowser() && props.debug) {
-      // @ts-ignore
-      const {makeDebugContext} = globalThis;
-      if (!makeDebugContext) {
-        log.warn('WebGL debug mode not activated. import "@luma.gl/debug" to enable.')();
-      } else {
-        // @ts-ignore
-        this.gl = makeDebugContext(this.gl, props);
-        if (this.gl2) {
-          this.gl2 = this.gl as WebGL2RenderingContext;
-        }
-        // Debug forces log level to at least 1
-        log.level = Math.max(log.level, 1);
-        log.info('WebGL debug mode activated. Performance reduced.')();
+      this.gl = makeDebugContext(this.gl, props);
+      if (this.gl2) {
+        this.gl2 = this.gl as WebGL2RenderingContext;
       }
+      // Debug forces log level to at least 1
+      log.level = Math.max(log.level, 1);
+      log.info('WebGL debug mode activated. Performance reduced.')();
     }
 
     log.groupEnd(LOG_LEVEL)();

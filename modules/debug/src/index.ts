@@ -15,5 +15,5 @@ export {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
 import {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
 globalThis.makeDebugContext = makeDebugContext;
 
-// Since debug support has been explicitly installed, no qualms about printing to console
+// Since debug support has been explicitly installed, printing to console is fair game
 log.info('@luma.gl/debug: WebGL debug support installed')();

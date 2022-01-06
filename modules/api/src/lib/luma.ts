@@ -37,6 +37,10 @@ export default class luma {
     return Array.from(deviceList).filter(Device => Device.isSupported()).map(Device => Device.type);
   }
 
+  static setDefaultDeviceProps(props: DeviceProps): void {
+    Object.assign(DEFAULT_DEVICE_PROPS, props);
+  }
+
   /** Creates a device. Asynchronous. */
   static async createDevice(props: DeviceProps = {}): Promise<Device> {
     props = {...DEFAULT_DEVICE_PROPS, ...props}

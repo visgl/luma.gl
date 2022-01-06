@@ -1,10 +1,20 @@
-// Depends on Khronos Debug support module being imported via "luma.gl/debug"
-// NOTE deprecated, this file has been copied into luma.gl/webgl
-import {log} from '@luma.gl/core';
+// luma.gl, MIT license
+import {log, loadScript} from '@luma.gl/api/';
 import GL from '@luma.gl/constants';
 
-// Expose Khronos Debug support module on global context
-const WebGLDebug = require('webgl-debug');
+const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
+
+type DebugContextProps = {
+  debug?: boolean;
+  throwOnError?: boolean;
+  break?: string[];
+};
+
+const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
+  debug: true,
+  throwOnError: false,
+  break: undefined
+}
 
 // Helper to get shared context data
 function getContextData(gl) {
@@ -12,20 +22,27 @@ function getContextData(gl) {
   return gl.luma;
 }
 
-/** Returns (a potentially new) context with debug instrumentation turned off or on.
- * Note that this actually returns a new context
- * @deprecated Use `makeDebugContext` in luma.gl/webgl
+/**
+ * Loads Khronos WebGLDeveloperTools from CDN if not already installed 
+ * const WebGLDebugUtils = require('webgl-debug');
+ * @see https://github.com/KhronosGroup/WebGLDeveloperTools
+ * @see https://github.com/vorg/webgl-debug
  */
-export function makeDebugContext(
-  gl,
-  {debug = true, throwOnError = false, break: breakpoints = false} = {}
-) {
+export async function loadWebGLDeveloperTools() {
+  if (!globalThis.WebGLDebugUtils) {
+    await loadScript(WEBGL_DEBUG_CDN_URL);
+  }
+}
+
+// Returns (a potentially new) context with debug instrumentation turned off or on.
+// Note that this actually returns a new context
+export function makeDebugContext(gl, props: DebugContextProps = {}) {
   if (!gl) {
-    // Return to ensure we don't create a context in this case.
+    // Return null to ensure we don't try to create a context in this case.
     return null;
   }
 
-  return debug ? getDebugContext(gl, {throwOnError, break: breakpoints}) : getRealContext(gl);
+  return props.debug ? getDebugContext(gl, props) : getRealContext(gl);
 }
 
 // Returns the real context from either of the real/debug contexts
@@ -36,7 +53,12 @@ function getRealContext(gl) {
 }
 
 // Returns the debug context from either of the real/debug contexts
-function getDebugContext(gl, opts) {
+function getDebugContext(gl, props: DebugContextProps) {
+  if (!globalThis.WebGLDebugUtils) {
+    log.warn('webgl-debug not loaded')();
+    return gl;
+  }
+
   const data = getContextData(gl);
 
   // If this already has a debug context, return it.
@@ -53,10 +75,10 @@ function getDebugContext(gl, opts) {
 
   // Create a new debug context
   class WebGLDebugContext {}
-  const debugContext = WebGLDebug.makeDebugContext(
+  const debugContext = globalThis.WebGLDebugUtils.makeDebugContext(
     gl,
-    onGLError.bind(null, opts),
-    onValidateGLFunc.bind(null, opts)
+    onGLError.bind(null, props),
+    onValidateGLFunc.bind(null, props)
   );
   // Make sure we have all constants
   Object.assign(WebGLDebugContext.prototype, debugContext);
@@ -74,17 +96,17 @@ function getDebugContext(gl, opts) {
 
 // DEBUG TRACING
 
-function getFunctionString(functionName, functionArgs) {
-  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
+function getFunctionString(functionName: string, functionArgs): string {
+  let args = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, functionArgs);
   args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
   return `gl.${functionName}(${args})`;
 }
 
-function onGLError(opts, err, functionName, args) {
-  const errorMessage = WebGLDebug.glEnumToString(err);
-  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+function onGLError(props: DebugContextProps, err, functionName: string, args): void {
+  const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
+  const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
-  if (opts.throwOnError) {
+  if (props.throwOnError) {
     throw new Error(message);
   } else {
     log.error(message)();
@@ -93,17 +115,17 @@ function onGLError(opts, err, functionName, args) {
 }
 
 // Don't generate function string until it is needed
-function onValidateGLFunc(opts, functionName, functionArgs) {
+function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs): void {
   let functionString;
   if (log.level >= 4) {
     functionString = getFunctionString(functionName, functionArgs);
     log.log(4, functionString)();
   }
 
-  if (opts.break) {
+  if (props.break) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
     const isBreakpoint =
-      opts.break && opts.break.every((breakOn) => functionString.indexOf(breakOn) !== -1);
+      props.break && props.break.every((breakOn) => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }
@@ -112,7 +134,7 @@ function onValidateGLFunc(opts, functionName, functionArgs) {
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-      if (opts.throwOnError) {
+      if (props.throwOnError) {
         throw new Error(`Undefined argument: ${functionString}`);
       } else {
         log.error(`Undefined argument: ${functionString}`)();

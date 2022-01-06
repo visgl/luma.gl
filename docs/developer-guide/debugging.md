@@ -1,6 +1,11 @@
 # Debugging
 
-luma.gl has a number of facilities for debugging designed to help you save time during development.
+Debugging GPU code can be quite tricky. It is not possible to put breakpoints in or 
+single step through GPU shaders, and when they fail, a black screen may not provide much
+information. The error can be in the shader, in the data that was provided to the GPU,
+or in one of the many GPU pipeline settings, or in the way the APIs were called.
+
+luma.gl provides a number of facilities for debugging your GPU code, to help you save time during development:
 
 - Object tracking via `id` fields.
 - Log levels, verbose logs display all values being passed to each draw call.
@@ -57,27 +62,39 @@ luma.gl runs checks on attributes and buffers when they are being set, catching 
 
 Buffers will also have their first values checked to ensure that they are not NaN. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
 
+## Khronos WebGL developer tools integration (WebGL only)
+
+luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and luma.gl use these tools to "instrument" the `WebGLRenderingContext` which enabled:
+
+- **Inline WebGL Error Detections** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, breaking the debugger at the correct place, and also extract helpful information about the error. 
+- **WebGL Parameters Checking** - Ensure that WebGL parameters are set to valid values.
+
+Note that the developer tools module is loaded dynamically when a device is created with the debug flag set, so the developer tools can be activated in production code by opening the browser console and typing:
+
+`luma.set('debug', true)`
+
+and then reloading the browser tab.
+
+While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
+
+```js
+import {luma} from '@luma.gl/core';
+import '@luma.gl/debug';
+const device = luma.createDevice({type: 'webgl', debug: true});
+```
+
+> Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.
+
 ## Spector.js integration (WebGL only)
 
 luma.gl integrates with [Spector.js](https://spector.babylonjs.com/), a powerful debug tool created by the BabylonJS team.
 
 To avoid performance impact, luma.gl doesn't load or start spector.js by default. 
 
-- Add a `debug` search parameter 
-- Add the `debug: true` option when creating a device.
+- Add the `spector: true` option when creating a device.
 
 To display Spector.js stats when loaded.
 
 ```
 luma.spector.displayUI()
-```
-
-## Debug Module (WebGL only)
-
-Importing `@luma.gl/debug` will enable creation of debug contexts for several **luma.gl** functions. See [@luma.gl/debug](/docs/api-reference/debug) for more information.
-
-```js
-import {createGLContext} from '@luma.gl/gltools';
-import '@luma.gl/debug';
-const gl = createGLContext(gl, {debug: true});
 ```

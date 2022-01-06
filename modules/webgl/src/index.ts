@@ -110,6 +110,7 @@ export {getDebugTableForProgramConfiguration} from './debug/debug-program-config
 
 // HELPERS - EXPERIMENTAL
 export {getProgramBindings} from './helpers/get-program-bindings';
+export {loadWebGLDeveloperTools} from './debug/webgl-developer-tools';
 
 // DEPRECATED
 
