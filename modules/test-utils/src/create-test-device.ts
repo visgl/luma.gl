@@ -1,6 +1,8 @@
 import {isBrowser} from 'probe.gl/env';
-import type {DeviceProps} from '@luma.gl/api';
+import type {Device, DeviceProps} from '@luma.gl/api';
+import {luma} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGPUDevice} from '@luma.gl/webgpu';
 import {createHeadlessContext} from './create-headless-context';
 
 const ERR_HEADLESSGL_FAILED =
@@ -31,3 +33,25 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
 
 export const webgl1TestDevice: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false});
 export const webgl2TestDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true});
+/** Only available after getTestDevices() has completed */
+export let webgpuTestDevice: Device;
+
+let webgpuCreated = false;
+
+/** Synchronously get test devices (only WebGLDevices) */
+export function getWebGLTestDevices(): WebGLDevice[] {
+  return [webgl2TestDevice, webgl1TestDevice].filter(Boolean);
+}
+
+/** Includes WebGPU device if available */
+export async function getTestDevices() : Promise<Device[]> {
+  if (!webgpuCreated) {
+    webgpuCreated = true;
+    try {
+      webgpuTestDevice = await luma.createDevice({id: 'webgpu-test-device', type: 'webgpu'});
+    } catch {
+      // ignore
+    }
+  }
+  return [webgpuTestDevice, webgl2TestDevice, webgl1TestDevice].filter(Boolean);
+}

@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {getKey} from '@luma.gl/webgl';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const DEVICE_LIMITS = {
   maxTextureDimension1D: true,
@@ -83,28 +83,32 @@ export const WEBGL_LIMITS = {
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: true
 };
 
-test('WebGLDevice#limits (WebGPU style limits)', (t) => {
-  for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
-    const actual = webgl1TestDevice.limits[limit];
-    if (numeric) {
-      t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
-    } else {
-      t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+test('WebGLDevice#limits (WebGPU style limits)', async (t) => {
+  for (const testDevice of await getTestDevices()) {
+    for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
+      const actual = testDevice.limits[limit];
+      if (numeric) {
+        t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
+      } else {
+        t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+      }
     }
   }
   t.end();
 });
 
-test('WebGLDevice#webglLimits (WebGL style limits)', (t) => {
-  for (const [limit, numeric] of Object.entries(WEBGL_LIMITS)) {
-    const actual = webgl1TestDevice.webglLimits[limit];
-    if (numeric) {
-      t.ok(
-        Number.isFinite(actual),
-        `device.limits[${getKey(webgl1TestDevice.gl, limit)}] returns a number: ${actual}`
-      );
-    } else {
-      t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+test('WebGLDevice#webglLimits (WebGL style limits)', async (t) => {
+  for (const testDevice of await getWebGLTestDevices()) {
+    for (const [limit, numeric] of Object.entries(WEBGL_LIMITS)) {
+      const actual = testDevice.webglLimits[limit];
+      if (numeric) {
+        t.ok(
+          Number.isFinite(actual),
+          `device.limits[${getKey(testDevice, limit)}] returns a number: ${actual}`
+        );
+      } else {
+        t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+      }
     }
   }
   t.end();
