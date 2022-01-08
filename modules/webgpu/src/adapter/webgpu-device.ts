@@ -1,3 +1,5 @@
+/// <reference types="@webgpu/types" />
+
 import type {
   DeviceProps,
   DeviceInfo,

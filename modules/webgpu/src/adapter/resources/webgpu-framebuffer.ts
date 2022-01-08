@@ -37,7 +37,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
   };
 
   constructor(device: WebGPUDevice, props: FramebufferProps) {
-    super(props);
+    super(device, props);
     this.device = device;
 
     if (props.depthStencilAttachment) {
@@ -53,11 +53,11 @@ export default class WebGPUFramebuffer extends Framebuffer {
     }
   }
 
-  /** 
-   * Create new textures with correct size for all attachments. 
-   * @note destroys existing textures. 
+  /**
+   * Create new textures with correct size for all attachments.
+   * @note destroys existing textures.
    */
-  protected _resize(width: number, height: number): void {
+  protected _resizeAttachments(width: number, height: number): void {
     for (let i = 0; i < MAX_COLOR_ATTACHMENTS; ++i) {
       if (this.colorTextures[i]) {
         const resizedTexture = this.device._createTexture({...this.colorTextures[i].props, width, height})
@@ -84,8 +84,8 @@ export default class WebGPUFramebuffer extends Framebuffer {
     let format;
     if (typeof props.depthStencilAttachment === 'string') {
       format = props.depthStencilAttachment;
-    } else if (props.depthStencilAttachment === true) {
-      format = DEFAULT_DEPTH_STENCIL_FORMAT;
+    // } else if (props.depthStencilAttachment === true) {
+    //   format = DEFAULT_DEPTH_STENCIL_FORMAT;
     }
 
     const depthTexture = this.device._createTexture({

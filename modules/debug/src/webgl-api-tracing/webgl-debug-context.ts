@@ -4,7 +4,8 @@ import {log} from '@luma.gl/core';
 import GL from '@luma.gl/constants';
 
 // Expose Khronos Debug support module on global context
-const WebGLDebug = require('webgl-debug');
+import WebGLDebug from 'webgl-debug';
+globalThis.WebGLDebugUtils = WebGLDebug;
 
 // Helper to get shared context data
 function getContextData(gl) {

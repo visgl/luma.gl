@@ -11,7 +11,7 @@ import type {WebGLSamplerParameters} from '../../types/webgl';
 import {withParameters} from '../../context/state-tracker/with-parameters';
 import {
   convertTextureFormatToWebGL,
-  WEBGL_TEXTURE_FORMATS,
+  getWebGLTextureParameters,
   DATA_FORMAT_CHANNELS,
   TYPE_SIZES
 } from '../converters/texture-formats';
@@ -662,12 +662,10 @@ export default class WEBGLTexture extends Texture {
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
-    const textureFormat = WEBGL_TEXTURE_FORMATS[format];
-    dataFormat = dataFormat || (textureFormat && textureFormat.dataFormat);
-    type = type || (textureFormat && textureFormat.types[0]);
-
-    // Deduce compression from format
-    compressed = compressed || (textureFormat && textureFormat.compressed);
+    const parameters = getWebGLTextureParameters(format);
+    dataFormat = dataFormat || parameters.dataFormat;
+    type = type || parameters.type;
+    compressed = compressed || parameters.compressed;
 
     ({width, height} = this._deduceImageSize(data, width, height));
 

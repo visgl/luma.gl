@@ -1,11 +1,10 @@
-/// <reference types="@webgpu/types" />
-
 import {RenderPipeline, RenderPipelineProps, cast, log} from '@luma.gl/api';
 
 import type WebGPUDevice from '../webgpu-device';
 
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
+import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 // import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
 import WebGPUShader from './webgpu-shader';
 // import type {BufferAccessors} from './webgpu-pipeline';
@@ -69,7 +68,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         entryPoint: this.props.fragmentShaderEntryPoint || 'main',
         targets: [
           {
-            format: this.device.canvasContext.presentationFormat,
+            format: getWebGPUTextureFormat(this.device.canvasContext.presentationFormat),
           }
         ]
       };

@@ -47,6 +47,21 @@ export type VertexType =
   'sint32'
   ;
 
+export type DataType =
+  'uint8' |
+  'sint8' |
+  'uint16' |
+  'sint16' |
+  'uint32' |
+  'sint32' |
+  'float16' |
+  'float32' |
+  'float64'
+  ;
+
+  /** Texture formats */
+export type TextureFormat = ColorTextureFormat | DepthStencilTextureFormat;
+
 /** Depth and stencil texture formats */
 export type DepthStencilTextureFormat =
   'stencil8' |
@@ -59,8 +74,10 @@ export type DepthStencilTextureFormat =
   // device.features.has('depth32float-stencil8')
   'depth32float-stencil8';
 
-/** Texture formats */
-export type TextureFormat = DepthStencilTextureFormat |
+/** Texture formats for color attachments */
+export type ColorTextureFormat = WebGPUColorTextureFormat | WebGL2ColorTextureFormat | WebGL1ColorTextureFormat;
+
+export type WebGPUColorTextureFormat =
   // 8-bit formats
   'r8unorm' |
   'r8snorm' |
@@ -169,3 +186,40 @@ export type TextureFormat = DepthStencilTextureFormat |
   'astc-12x12-unorm' |
   'astc-12x12-unorm-srgb'
   ;
+
+/** Unsized texture formats (the only formats supported by WebGL1_ */
+export type WebGL1ColorTextureFormat =
+  // 'r-unorm-webgl1' |
+  // 'ra-unorm-webgl1' |
+  'rgb-unorm-webgl1' |
+  'rgba-unorm-webgl1'
+  // 'rgb-unorm-srgb-webgl1' |
+  // 'rgba-unorm-srgb-webgl'
+  ;
+
+/** Sized formats unique to WebGL 2. Will perhaps be added to WebGPU? */
+export type WebGL2ColorTextureFormat =
+  'r16unorm-webgl' |
+  'r16snorm-webgl' |
+  'rgba4norm-webgl' |
+  'rgb565norm-webgl' |
+  'rgb5a1norm-webgl' |
+  'rbg8norm-webgl' |
+  'rg16unorm-webgl' |
+  'rg16snorm-webgl' |
+  'rgb10a2unorm-webgl' |
+  'rgb16unorm-webgl' |
+  'rgb16snorm-webgl' |
+  'rgba16unorm-webgl' |
+  'rgba16snorm-webgl' |
+  'rgb32float-webgl' |
+  'bc1-rgb-unorm-webgl' |
+  'bc1-rgb-unorm-srgb-webgl' |
+  'pvrtc-rgb4unorm-webgl' |
+  'pvrtc-rgba4unorm-webgl' |
+  'pvrtc-rbg2unorm-webgl' |
+  'pvrtc-rgba2unorm-webgl' |
+  'etc1-rbg-unorm-webgl' |
+  'atc-rgb-unorm-webgl' |
+  'atc-rgba-unorm-webgl' |
+  'atc-rgbai-unorm-webgl';

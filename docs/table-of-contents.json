@@ -33,7 +33,9 @@
         { "entry": "docs/developer-guide/bundling" },
         { "entry": "docs/developer-guide/debugging" },
         { "entry": "docs/developer-guide/testing" },
-        { "entry": "docs/developer-guide/contributing" }
+        { "entry": "docs/developer-guide/contributing" },
+        { "entry": "docs/design-notes/v9-api" },
+        { "entry": "docs/design-notes/webgpu-vs-webgl" }
       ]
     },
     {
@@ -52,6 +54,27 @@
       "title": "API Reference",
       "chapters": [
         {
+          "title": "API",
+          "entries": [
+            { "entry": "docs/api-reference/types/shader-layout" },
+            { "entry": "docs/api-reference/resources/buffer" },
+            { "entry": "docs/api-reference/resources/compute-pipeline" },
+            { "entry": "docs/api-reference/resources/framebuffer" },
+            { "entry": "docs/api-reference/resources/pipeline" },
+            { "entry": "docs/api-reference/resources/render-pipeline" },
+            { "entry": "docs/api-reference/resources/sampler" },
+            { "entry": "docs/api-reference/resources/shader" },
+            { "entry": "docs/api-reference/resources/texture" },
+            { "entry": "docs/api-reference/canvas-context" },
+            { "entry": "docs/api-reference/device" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Submodule Reference",
+      "chapters": [
+        {
           "title": "@luma.gl/core",
           "entries": [
             { "entry": "docs/modules/core" }
@@ -60,18 +83,7 @@
         {
           "title": "@luma.gl/api",
           "entries": [
-            { "entry": "docs/modules/api" },
-            { "entry": "docs/modules/api/types/shader-layout" },
-            { "entry": "docs/modules/api/resources/buffer" },
-            { "entry": "docs/modules/api/resources/compute-pipeline" },
-            { "entry": "docs/modules/api/resources/framebuffer" },
-            { "entry": "docs/modules/api/resources/pipeline" },
-            { "entry": "docs/modules/api/resources/render-pipeline" },
-            { "entry": "docs/modules/api/resources/sampler" },
-            { "entry": "docs/modules/api/resources/shader" },
-            { "entry": "docs/modules/api/resources/texture" },
-            { "entry": "docs/modules/api/canvas-context" },
-            { "entry": "docs/modules/api/device" }
+            { "entry": "docs/modules/api" }
           ]
         },
         {

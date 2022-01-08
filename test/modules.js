@@ -2,8 +2,8 @@
 // Imports tests for all modules that do not depend on WebGL
 
 // Make sure the WebGL developer tools are pre-loaded. Test contexts are created synchronously
-import {loadWebGLDeveloperTools} from '@luma.gl/webgl';
-loadWebGLDeveloperTools();
+import '@luma.gl/debug';
+// import {loadWebGLDeveloperTools} from '@luma.gl/webgl';
 // await loadWebGLDeveloperTools(); - Doesn't work in Node.js
 
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies

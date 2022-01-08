@@ -36,23 +36,38 @@ import type Texture from '../resources/texture'; // TextureView...
 
 export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
 
-// Attachments - see webgpu framebuffer
+// TEXTURE VIEWS
 
-// export type ColorAttachment = {
-//   attachment: GPUTextureView;
-//   resolveTarget?: GPUTextureView;
-//   loadValue: GPULoadOp | GPUColor;
-//   storeOp?: GPUStoreOp;
-// };
+export type TextureView = {
+  texture: WebGLTexture;
+  layer?: number; //  = 0
+  level?: number; // = 0
+};
 
-// export type DepthStencilAttachment = {
-//   attachment: GPUTextureView;
+// ATTACHMENTS (See Framebuffer)
 
-//   depthLoadValue: GPULoadOp | number;
-//   depthStoreOp: GPUStoreOp;
-//   depthReadOnly?: boolean;
+export type ColorAttachmentOptions = {
+  clearColor?: number[]; // GPUColor
+  storeOp: 'store' | 'discard';
+}
 
-//   stencilLoadValue: GPULoadOp | number;
-//   stencilStoreOp: GPUStoreOp;
-//   stencilReadOnly?: boolean;
-// };
+export type DepthStencilAttachmentOptions = {
+  depthClearValue?: number; // required (GPULoadOp or float) depthLoadValue;
+  depthStoreOp?: 'store' | 'discard'; // required GPUStoreOp depthStoreOp;
+  depthReadOnly?: boolean; // boolean depthReadOnly = false;
+
+  stencilClearValue?: 'load' | number; // required (GPULoadOp or GPUStencilValue) stencilLoadValue;
+  stencilStoreOp?: 'store' | 'discard'; // required GPUStoreOp stencilStoreOp;
+  stencilReadOnly?: boolean; // boolean stencilReadOnly = false;
+}
+
+/** @todo */
+export type ColorAttachment = ColorAttachmentOptions & {
+  texture: Texture | TextureView;  // required GPUTextureView view;
+  resolveTarget?: Texture; // GPUTextureView resolveTarget;
+}
+
+/** @todo */
+export type DepthStencilAttachment = DepthStencilAttachmentOptions & {
+  texture: Texture;  // required GPUTextureView view;
+}

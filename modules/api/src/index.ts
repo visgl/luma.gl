@@ -47,19 +47,17 @@ export type {
 
 export type {
   TextureFormat,
+  ColorTextureFormat,
   DepthStencilTextureFormat,
-  VertexFormat,
+  VertexFormat
 } from './adapter/types/formats';
 
 export type {
   BindingLayout,
   Binding,
-  // ColorAttachment,
-  // DepthStencilAttachment
+  ColorAttachment,
+  DepthStencilAttachment
 } from './adapter/types/types';
-
-// API UTILS
-export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
 
 export type {
   ProgramBindings,
@@ -68,6 +66,10 @@ export type {
   UniformBlockBinding,
   VaryingBinding
 } from './adapter/types/program-bindings';
+
+// API UTILS
+export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
+export {decodeTextureFormat} from './adapter/utils/decode-texture-format';
 
 // UTILS
 export type {TypedArray, TypedArrayConstructor, NumberArray} from './types';
