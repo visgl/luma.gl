@@ -225,10 +225,10 @@ export default abstract class Device {
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
   abstract isTextureFormatSupported(format: TextureFormat): boolean;
 
-  /** Check if linear filtering (sampler interpolation) is supported for a specific floating point texture format */
-  abstract isLinearFilteringSupported(format: TextureFormat): boolean;
+  /** Check if linear filtering (sampler interpolation) is supported for a specific texture format */
+  abstract isTextureFormatFilterable(format: TextureFormat): boolean;
 
-  /** Check if device supports rendering to a specific (floating point) texture format */
+  /** Check if device supports rendering to a specific texture format */
   abstract isTextureFormatRenderable(format: TextureFormat): boolean;
 
   /** True context is already lost */

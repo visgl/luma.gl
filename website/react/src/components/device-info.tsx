@@ -5,9 +5,6 @@ import {WebGLDevice} from '@luma.gl/webgl';
 
 import {useStore} from './device-store';
 
-function getInfo(device: Device, feature: keyof DeviceInfo): string {
-}
-
 function getLimit(device: Device, feature: keyof DeviceLimits): string {
   return device ? device.limits[feature] ? String(device.limits[feature]) : '0 ❌' : 'N/A';
 }
@@ -23,7 +20,7 @@ function getFormat(device: Device, format: TextureFormat): string {
 }
 
 function getFiltering(device: Device, format: TextureFormat): string {
-  const isSupported = device && device.isTextureFormatSupported(format) && device.isLinearFilteringSupported(format);
+  const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatFilterable(format);
   return device ? isSupported ? '✅' : '❌' : 'N/A';
 }
 
@@ -53,6 +50,13 @@ export const Format = ({f}) => {
 export const Filter = ({f}) => {
   const device = useStore(state => state.device);
   return <span>{getFiltering(device, f)}</span>;
+}
+
+export const Render = ({f}) => {
+  const device = useStore(state => state.device);
+  const format = f as TextureFormat;
+  const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatRenderable(format);
+  return device ? isSupported ? '✅' : '❌' : 'N/A';
 }
 
 // WebGL

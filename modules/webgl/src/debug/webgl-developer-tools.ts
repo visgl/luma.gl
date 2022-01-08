@@ -99,12 +99,16 @@ function getDebugContext(gl, props: DebugContextProps) {
 // DEBUG TRACING
 
 function getFunctionString(functionName: string, functionArgs): string {
+  // Cover bug in webgl-debug-tools
+  functionArgs = Array.from(functionArgs).map(arg => arg === undefined ? 'undefined' : arg);
   let args = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, functionArgs);
   args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
   return `gl.${functionName}(${args})`;
 }
 
 function onGLError(props: DebugContextProps, err, functionName: string, args): void {
+  // Cover bug in webgl-debug-tools
+  args = Array.from(args).map(arg => arg === undefined ? 'undefined' : arg);
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const glName = props.webgl2 ? 'gl1' : 'gl2';

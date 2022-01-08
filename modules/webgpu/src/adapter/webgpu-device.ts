@@ -46,7 +46,7 @@ export default class WebGPUDevice extends Device {
     return Boolean(typeof navigator !== 'undefined' && navigator.gpu);
   }
 
-  static async create(props) {
+  static async create(props: DeviceProps): Promise<WebGPUDevice> {
     if (!navigator.gpu) {
       throw new Error('WebGPU not available. Open in Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
     }
@@ -56,12 +56,19 @@ export default class WebGPUDevice extends Device {
       // forceSoftware: false
     });
     log.probe(1, "Adapter available")();
-    const gpuDevice = await adapter.requestDevice();
+
+    const gpuDevice = await adapter.requestDevice({
+      requiredFeatures: adapter.features as ReadonlySet<GPUFeatureName>,
+      // TODO ensure we obtain best limits
+      // requiredLimits: adapter.limits
+    });
     log.probe(1, "GPUDevice available")();
+
     if (typeof props.canvas === 'string') {
       await CanvasContext.pageLoaded;
+      log.probe(1, "DOM is loaded")();
     }
-    log.probe(1, "DOM is loaded")();
+
     const device = new WebGPUDevice(gpuDevice, adapter, props);
     log.probe(1, "Device created", device.info)();
     log.table(1, device.info)();
@@ -128,7 +135,7 @@ export default class WebGPUDevice extends Device {
   }
 
   /** @todo implement proper check? */
-  isLinearFilteringSupported(format: TextureFormat): boolean {
+  isTextureFormatFilterable(format: TextureFormat): boolean {
     return this.isTextureFormatSupported(format); 
   }
 
@@ -242,6 +249,19 @@ export default class WebGPUDevice extends Device {
   _getFeatures() {
     // WebGPU Features
     const features = new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>);
+
+    // Fixups for pre-standard names: https://github.com/webgpu-native/webgpu-headers/issues/133
+    // @ts-expect-error Chrome Canary v99
+    if (features.has('depth-clamping')) {
+      // @ts-expect-error Chrome Canary v99
+      features.delete('depth-clamping');
+      features.add('depth-clip-control');
+    }
+
+    // Add subsets
+    if (features.has('texture-compression-bc')) {
+      features.add('texture-compression-bc5-webgl');
+    }
 
     features.add('webgpu');
 

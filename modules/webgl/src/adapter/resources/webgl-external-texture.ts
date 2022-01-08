@@ -44,7 +44,7 @@ export default class WEBGLExternalTexture extends WEBGLTexture {
     let supported = true;
     if (format) {
       supported = supported && isFormatSupported(device.gl, format);
-      supported = supported && (!linearFiltering || isLinearFilteringSupported(device.gl, format));
+      supported = supported && (!linearFiltering || isTextureFormatFilterable(device.gl, format));
     }
     return supported;
   }

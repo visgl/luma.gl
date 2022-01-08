@@ -26,7 +26,7 @@ import {loadWebGLDeveloperTools, makeDebugContext} from '../debug/webgl-develope
 import {
   isTextureFormatSupported,
   isTextureFormatRenderable,
-  isLinearFilteringSupported
+  isTextureFormatFilterable
 } from './converters/texture-formats';
 
 // WebGL classes
@@ -275,24 +275,12 @@ export default class WebGLDevice extends Device implements ContextState {
     return isTextureFormatSupported(this.gl, format);
   }
 
-  isLinearFilteringSupported(format: TextureFormat): boolean {
-    return isLinearFilteringSupported(this.gl, format);
+  isTextureFormatFilterable(format: TextureFormat): boolean {
+    return isTextureFormatFilterable(this.gl, format);
   }
 
-  /** @todo - move implementation back into texture-formats.ts */
   isTextureFormatRenderable(format: TextureFormat): boolean {
-    if (!isTextureFormatRenderable(this.gl, format)) {
-      return false;
-    }
-    if (format === 'rgba32float') {
-      return this.features.has('texture-renderable-rgba32float-webgl');
-    }
-    if (format.endsWith('32float')) {
-      return this.features.has('texture-renderable-float32-webgl');
-    }
-    if (format.endsWith('16float')) {
-      return this.features.has('texture-renderable-float16-webgl');
-    }
+    return isTextureFormatRenderable(this.gl, format);
   }
 
   // WEBGL SPECIFIC METHODS
