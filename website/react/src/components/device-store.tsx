@@ -4,6 +4,13 @@ import {luma, Device} from '@luma.gl/api';
 import '@luma.gl/webgl';
 import '@luma.gl/webgpu';
 
+export type Store = {
+  device?: Device;
+  deviceType?: 'webgl' | 'webgl2' | 'webgpu';
+  deviceError?: any;
+  setDeviceType: (type: any) => Promise<void>;
+};
+
 let cachedDevice: Record<string, Promise<Device>> = {};
 
 export async function createDevice(deviceType: string): Promise<Device> {
@@ -13,7 +20,7 @@ export async function createDevice(deviceType: string): Promise<Device> {
   return await cachedDevice[type];
 }
 
-export const useStore = create(set => ({
+export const useStore = create<Store>(set => ({
   deviceType: undefined,
   deviceError: undefined,
   device: undefined,

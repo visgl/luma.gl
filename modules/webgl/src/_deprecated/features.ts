@@ -3,8 +3,7 @@
 // available in an WebGL1 or WebGL2 environment.
 
 import {DeviceFeature, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/webgl';
+import {isWebGL2, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
 
 // TODO - this should be the default export, test cases need updating
 export const DEPRECATED_FEATURES = {
@@ -114,7 +113,7 @@ function isFeatureSupported(gl: WebGLRenderingContext, cap: string): boolean {
   const featureDefinition = isWebGL2(gl) ? webgl2Feature : webgl1Feature;
 
   if (cap === DEPRECATED_FEATURES.COLOR_ATTACHMENT_RGBA32F && !isWebGL2(gl)) {
-    return checkFloat32ColorAttachment(gl);
+    return _checkFloat32ColorAttachment(gl);
   }
 
   // Check if the value is dependent on checking one or more extensions
@@ -123,38 +122,6 @@ function isFeatureSupported(gl: WebGLRenderingContext, cap: string): boolean {
   }
 
   return featureDefinition;
-}
-
-
-// function to test if Float 32 bit format texture can be bound as color attachment
-function checkFloat32ColorAttachment(gl: WebGLRenderingContext) {
-  let texture: WebGLTexture;
-  let framebuffer: WebGLFramebuffer;
-  try {
-    const texture = gl.createTexture();
-    gl.bindTexture(GL.TEXTURE_2D, texture);
-
-    const level = 0;
-    const internalFormat = gl.RGBA;
-    const width = 1;
-    const height = 1;
-    const border = 0;
-    const srcFormat = gl.RGBA;
-    const srcType = gl.UNSIGNED_BYTE;
-    const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                  width, height, border, srcFormat, srcType,
-                  pixel);
-
-    const framebuffer = gl.createFramebuffer();
-    gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer);
-    gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
-    const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER) === GL.FRAMEBUFFER_COMPLETE;
-    return status;
-  } finally {
-    gl.deleteTexture(texture);
-    gl.deleteFramebuffer(framebuffer);
-  }
 }
 
 // Defines luma.gl "feature" names and semantics

@@ -114,6 +114,8 @@ export {loadWebGLDeveloperTools} from './debug/webgl-developer-tools';
 
 // DEPRECATED
 
+export {_checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
+
 // Deprecated re-exports
 export {lumaStats} from '@luma.gl/api';
 export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';

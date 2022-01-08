@@ -1,4 +1,11 @@
-import {DeviceTabs, Info, Feature as F, Limit as L, WebGLLimit as WL, WebGLExtensions} from '@luma.gl/react-website';
+import {
+  DeviceTabs,
+  Info,
+  Feature as F,
+  Limit as L,
+  WebGLLimit as WL,
+  WebGLExtensions
+} from '@luma.gl/react-website';
 
 # Device Properties
 
@@ -24,7 +31,7 @@ A `DeviceInfo` object with fields that describe the devices.
 | `gpu`      | <Info f="gpu" />      | `intel`, `nvidia`, `amd` or `unknown` |
 | `renderer` | <Info f="renderer" /> | GPU Driver                            |
 | `vendor`   | <Info f="vendor" />   | GPU vendor                            |
-| `version`  | <Info f="version" />  | Driver version                         |
+| `version`  | <Info f="version" />  | Driver version                        |
 
 ### Device.features
 
@@ -45,10 +52,29 @@ if (device.features.has('instanced-rendering-webgl1')) {
 
 | `luma.gl Feature`                      | This<br /> Browser                             | Description                    |
 | -------------------------------------- | ---------------------------------------------- | ------------------------------ |
-| **Device Type**                        |
-| `webgpu`                               | <F f="webgpu"/>                                | Device is using WebGPU.        |
-| `webgl2`                               | <F f="webgl2"/>                                | Device is using WebGL2.        |
-| `webgl`                                | <F f="webgl"/>                                 | Device is using WebGL.         |
+| **Features**                             |
+| `depth-clip-control`                   | <F f="depth-clip-control"/>                    | Depth clamps instead of clips. |
+| `indirect-first-instance`              | <F f="indirect-first-instance"/>               | Specify via GPU buffer         |
+| `timestamp-query`                      | <F f="timestamp-query"/>                       |                                |
+| `timer-query-webgl`                    | <F f="timer-query-webgl"/>                     | GPU timer support              |
+| `instanced-rendering-webgl1`           | <F f="instanced-rendering-webgl1"/>            | Instanced rendering available  |
+| `multiple-render-targets-webgl1`       | <F f="multiple-render-targets-webgl1"/>        | Multiple render targets        |
+| `index-uint32-webgl1`                  | <F f="index-uint32-webgl1"/>                   | 32 bit indexing supported      |
+| `blend-minmax-webgl1`                  | <F f="blend-minmax-webgl1"/>                   | `min` and `max` blending       |
+| **Textures**                           |
+| `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                 | `UNSIGNED_INT_24_8_WEBGL`      |
+| `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                 | WebGPU only                    |
+| `texture-filter-anisotropic-webgl`     | <F f="texture-filter-anisotropic-webgl"/>      | anisotropic filtering          |
+| `texture-filter-linear-float32-webgl`  | <F f="texture-filter-linear-float32-webgl"/>   | float32 `linear` filtering     |
+| `texture-filter-linear-float16-webgl`  | <F f="texture-filter-linear-float16-webgl`" /> | float16 `linear` filtering     |
+| `texture-renderable-float32-webgl`     | <F f="texture-renderable-float32-webgl"/>      | float32 textures renderable    |
+| `texture-renderable-float16-webgl`     | <F f="texture-renderable-float16-webgl"/>      | float16 textures renderable    |
+| `texture-renderable-rgba32float-webgl` | <F f="texture-renderable-rgba32float-webgl"/>  | float32 textures renderable    |
+| `texture-float32-webgl1`               | <F f="texture-float32-webgl1"/>                | float32 texture support        |
+| `texture-float16-webgl1`               | <F f="texture-float16-webgl1"/>                | float16 texture support        |
+| `float-blend-webgl1`                   | <F f="float-blend-webgl1"/>                    | float texture blending         |
+| `texture-srgb-webgl1`                  | <F f="texture-srgb-webgl1"/>                   | SRGB format support            |
+| `texture-depth-webgl1`                 | <F f="texture-depth-webgl1"/>                  | depth texture supports         |
 | **Compressed Textures**                |
 | `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>         | DXT (BC1-BC5). Desktops.       |
 | `texture-compression-bc`               | <F f="texture-compression-bc"/>                | DXT (BC1-BC7). Desktops.       |
@@ -57,31 +83,6 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>        | Qualcomm Snapdragon. Android.  |
 | `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>       | PowerVR GPUs, iOS devices.     |
 | `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>         | Qualcomm Adreno GPUs. Android. |
-| **Textures**                           |
-| `float-blend-webgl1`                   | <F f="float-blend-webgl1"/>                    | blending                       |
-| `texture-srgb-webgl1`                  | <F f="texture-srgb-webgl1"/>                   | textures and renderbuffers     |
-| `texture-depth-webgl1`                 | <F f="texture-depth-webgl1"/>                  | textures                       |
-| `texture-float32-webgl1`               | <F f="texture-float32-webgl1"/>                | textures                       |
-| `texture-float16-webgl1`               | <F f="texture-float16-webgl1"/>                | textures                       |
-| `texture-filter-linear-float32-webgl`  | <F f="texture-filter-linear-float32-webgl"/>   |
-| `texture-filter-linear-float16-webgl`  | <F f="texture-filter-linear-float16-webgl`" /> |
-| `texture-filter-anisotropic-webgl`     | <F f="texture-filter-anisotropic-webgl"/>      |
-| `texture-renderable-rgba32float-webgl` | <F f="texture-renderable-rgba32float-webgl"/>  | textures and renderbuffers     |
-| `texture-renderable-float32-webgl`     | <F f="texture-renderable-float32-webgl"/>      | textures and renderbuffers     |
-| `texture-renderable-float16-webgl`     | <F f="texture-renderable-float16-webgl"/>      | textures and renderbuffers     |
-| **WebGPU**                             |
-| `depth-clip-control`                   | <F f="depth-clip-control"/>           |                                |
-| `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>        | `UNSIGNED_INT_24_8_WEBGL`      |
-| `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                 |                                |
-| `timestamp-query`                      | <F f="timestamp-query"/>                       |                                |
-| `indirect-first-instance`              | <F f="indirect-first-instance"/>               |                                |
-| **WebGL**                              |
-| `timer-query-webgl`                    | <F f="timer-query-webgl"/>                     | GPU timer support              |
-| **WebGL1**                             |
-| `instanced-rendering-webgl1`           | <F f="instanced-rendering-webgl1"/>            |
-| `multiple-render-targets-webgl1`       | <F f="multiple-render-targets-webgl1"/>        |
-| `index-uint32-webgl1`                  | <F f="index-uint32-webgl1"/>                   |
-| `blend-minmax-webgl1`                  | <F f="blend-minmax-webgl1"/>                   | blending                       |
 | **GLSL**                               |
 | `glsl-frag-data`                       | <F f="glsl-frag-data"/>                        |                                |
 | `glsl-frag-depth`                      | <F f="glsl-frag-depth"/>                       |                                |
@@ -141,7 +142,7 @@ the luma.gl Device APIs. You can access "raw" WebGL extensions and limits direct
 It is easy to get the list of actual WebGL extensions from `WebGLDevice`:
 
 ```typescript
-const webglDevice = device instanceof WebGLDevice ? device as WebGLDevice: null;
+const webglDevice = device instanceof WebGLDevice ? (device as WebGLDevice) : null;
 const extensions = webglDevice ? webglDevice.gl.getSupportedExtensions() : [];
 console.log(extensions);
 ```
@@ -226,4 +227,4 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
 
-['EXT_texture_filter_anisotropic']: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
+['ext_texture_filter_anisotropic']: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic

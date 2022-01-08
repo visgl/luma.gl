@@ -10,7 +10,7 @@ import GL from '@luma.gl/constants';
 import type {WebGLSamplerParameters} from '../../types/webgl';
 import {withParameters} from '../../context/state-tracker/with-parameters';
 import {
-  convertTextureFormatToWebGL,
+  getWebGLTextureFormat,
   getWebGLTextureParameters,
   DATA_FORMAT_CHANNELS,
   TYPE_SIZES
@@ -28,7 +28,6 @@ type SetImageData3DOptions = {
   width: number;
   height: number;
   depth?: number;
-  border?: number;
   format: any;
   type?: any;
   offset?: number;
@@ -63,7 +62,6 @@ export default class WEBGLTexture extends Texture {
   format = undefined;
   type = undefined;
   dataFormat = undefined;
-  border = undefined;
   mipmaps: boolean = undefined;
 
   /**
@@ -162,13 +160,10 @@ export default class WEBGLTexture extends Texture {
 
     const {
       pixels = null,
-      border = 0,
       recreate = false,
       pixelStore = {},
       textureUnit = undefined
     } = props;
-
-    const format = convertTextureFormatToWebGL(props.format);
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -183,7 +178,7 @@ export default class WEBGLTexture extends Texture {
 
     // Deduce width and height
     ({width, height, compressed, dataFormat, type} = this._deduceParameters({
-      format,
+      format: props.format,
       type,
       dataFormat,
       compressed,
@@ -192,6 +187,8 @@ export default class WEBGLTexture extends Texture {
       height
     }));
 
+    const format = getWebGLTextureFormat(props.format);
+
     // Store opts for accessors
     this.width = width;
     this.height = height;
@@ -199,7 +196,6 @@ export default class WEBGLTexture extends Texture {
     this.format = format;
     this.type = type;
     this.dataFormat = dataFormat;
-    this.border = border;
     this.textureUnit = textureUnit;
 
     if (Number.isFinite(this.textureUnit)) {
@@ -222,7 +218,6 @@ export default class WEBGLTexture extends Texture {
       format,
       type,
       dataFormat,
-      border,
       mipmaps,
       parameters: pixelStore,
       compressed
@@ -302,7 +297,6 @@ export default class WEBGLTexture extends Texture {
         format: this.format,
         type: this.type,
         dataFormat: this.dataFormat,
-        border: this.border,
         mipmaps
       });
     }
@@ -363,7 +357,6 @@ export default class WEBGLTexture extends Texture {
    *  - format of array (autodetect from type) or
    *  - (WEBGL2) format of buffer
    * @param {Number} offset - (WEBGL2) offset from start of buffer
-   * @param  border - must be 0.
    * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
    */
   // eslint-disable-next-line max-statements, complexity
@@ -379,7 +372,6 @@ export default class WEBGLTexture extends Texture {
       pixels = null,
       level = 0,
       format = this.format,
-      border = this.border,
       offset = 0,
       parameters = {}
     } = options;
@@ -399,7 +391,7 @@ export default class WEBGLTexture extends Texture {
     }
 
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-      format,
+      format: this.props.format,
       type,
       dataFormat,
       compressed,
@@ -419,7 +411,7 @@ export default class WEBGLTexture extends Texture {
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
-          gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+          gl.texImage2D(target, level, format, width, height, 0 /*border*/, dataFormat, type, data);
           break;
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
@@ -430,7 +422,7 @@ export default class WEBGLTexture extends Texture {
             format,
             width,
             height,
-            border,
+            0, // border (must be 0)
             dataFormat,
             type,
             data,
@@ -442,12 +434,12 @@ export default class WEBGLTexture extends Texture {
           // WebGL2 enables creating textures directly from a WebGL buffer
           gl2 = this.device.assertWebGL2();
           gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-          gl2.texImage2D(target, level, format, width, height, border, dataFormat, type, offset);
+          gl2.texImage2D(target, level, format, width, height, 0/*border*/, dataFormat, type, offset);
           gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
           break;
         case 'browser-object':
           if (this.device.isWebGL2) {
-            gl.texImage2D(target, level, format, width, height, border, dataFormat, type, data);
+            gl.texImage2D(target, level, format, width, height, 0/*border*/, dataFormat, type, data);
           } else {
             gl.texImage2D(target, level, format, dataFormat, type, data);
           }
@@ -460,7 +452,7 @@ export default class WEBGLTexture extends Texture {
               levelData.format,
               levelData.width,
               levelData.height,
-              border,
+              0, /* border, must be 0 */
               levelData.data
             );
           }
@@ -509,7 +501,6 @@ export default class WEBGLTexture extends Texture {
    *  - (WEBGL2) format of buffer or ArrayBufferView
    * @param {GLenum} dataFormat - format of image data.
    * @param {Number} offset - (WEBGL2) offset from start of buffer
-   * @param  border - must be 0.
    * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
    */
   setSubImageData({
@@ -526,11 +517,10 @@ export default class WEBGLTexture extends Texture {
     dataFormat = this.dataFormat,
     compressed = false,
     offset = 0,
-    border = this.border,
     parameters = {}
   }) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-      format,
+      format: this.props.format,
       type,
       dataFormat,
       compressed,
@@ -713,7 +703,6 @@ export default class WEBGLTexture extends Texture {
     height: any;
     pixels: any;
     data: any;
-    border?: number;
     format?: any;
     type?: any;
   }): Promise<void> {
@@ -724,7 +713,6 @@ export default class WEBGLTexture extends Texture {
       height,
       pixels,
       data,
-      border = 0,
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE
     } = options;
@@ -761,7 +749,7 @@ export default class WEBGLTexture extends Texture {
       resolvedFaces[index].forEach((image, lodLevel) => {
         // TODO: adjust width & height for LOD!
         if (width && height) {
-          gl.texImage2D(face, lodLevel, format, width, height, border, format, type, image);
+          gl.texImage2D(face, lodLevel, format, width, height, 0 /*border*/, format, type, image);
         } else {
           gl.texImage2D(face, lodLevel, format, format, type, image);
         }
@@ -779,7 +767,6 @@ export default class WEBGLTexture extends Texture {
       height,
       pixels,
       data,
-      border = 0,
       format = GL.RGBA,
       type = GL.UNSIGNED_BYTE
       // generateMipmap = false // TODO
@@ -801,7 +788,7 @@ export default class WEBGLTexture extends Texture {
         )
       );
     } else if (this.width || this.height) {
-      gl.texImage2D(face, 0, format, width, height, border, format, type, imageData);
+      gl.texImage2D(face, 0, format, width, height, 0 /*border*/, format, type, imageData);
     } else {
       gl.texImage2D(face, 0, format, format, type, imageData);
     }
@@ -816,7 +803,6 @@ export default class WEBGLTexture extends Texture {
     width,
     height,
     depth = 1,
-    border = 0,
     format,
     type = GL.UNSIGNED_BYTE,
     offset = 0,
@@ -837,7 +823,7 @@ export default class WEBGLTexture extends Texture {
           width,
           height,
           depth,
-          border,
+          0, /* border, must be 0 */
           format,
           type,
           data
@@ -854,7 +840,7 @@ export default class WEBGLTexture extends Texture {
           width,
           height,
           depth,
-          border,
+          0, /* border, must be 0 */
           format,
           type,
           offset

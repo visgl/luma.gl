@@ -19,20 +19,17 @@ export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides
 
   const TextureType = refTexture.constructor;
 
-  const {gl, width, height, format, type, dataFormat, border, mipmaps} = refTexture;
+  const {gl, width, height, format, type, dataFormat, mipmaps} = refTexture;
 
-  const textureOptions = Object.assign(
-    {
-      width,
-      height,
-      format,
-      type,
-      dataFormat,
-      border,
-      mipmaps
-    },
-    overrides
-  );
+  const textureOptions = {
+    width,
+    height,
+    format,
+    type,
+    dataFormat,
+    mipmaps,
+    ...overrides
+  };
 
   // TODO: move this to `Texture` class as instance method and use this.constructor
   // @ts-expect-error

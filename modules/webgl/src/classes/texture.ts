@@ -4,7 +4,7 @@ import {isWebGL2} from '../context/context/webgl-checks';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
 import WEBGLTexture from '../adapter/resources/webgl-texture';
 import WebGLDevice from '../adapter/webgl-device';
-import {isTextureFormatSupported, isLinearFilteringSupported} from '../adapter/converters/texture-formats';
+import {isTextureFormatSupported, isTextureFormatFilterable} from '../adapter/converters/texture-formats';
 
 export type {TextureProps};
 
@@ -19,7 +19,7 @@ export type TextureSupportOptions = {
  * @deprecated Use device.createTexture()
  */
 export default class ClassicTexture extends WEBGLTexture {
-  /** @deprecated Use device.isTextureFormatSupported() and device.isLinearFilteringSupported() */
+  /** @deprecated Use device.isTextureFormatSupported() and device.isTextureFormatFilterable() */
   static isSupported(
     device: Device | WebGLRenderingContext,
     options?: TextureSupportOptions
@@ -30,7 +30,7 @@ export default class ClassicTexture extends WEBGLTexture {
     if (format) {
       supported = supported && isTextureFormatSupported(webglDevice.gl, format);
       supported =
-        supported && (!linearFiltering || isLinearFilteringSupported(webglDevice.gl, format));
+        supported && (!linearFiltering || isTextureFormatFilterable(webglDevice.gl, format));
     }
     return supported;
   }

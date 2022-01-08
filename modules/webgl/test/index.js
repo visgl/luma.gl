@@ -27,7 +27,7 @@ import './adapter/webgl-device.spec';
 
 // Resources - TODO these tests only depend on Device and could move to API...
 import './adapter/resources/webgl-sampler.spec';
-// import './adapter/resources/webgl-texture.spec';
+import './adapter/resources/webgl-texture.spec';
 
 // Note that we do two test runs on luma.gl, with and without headless-gl
 // This file imports tests that should run *with* headless-gl included

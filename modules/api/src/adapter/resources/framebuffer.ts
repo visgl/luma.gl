@@ -16,7 +16,7 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   width: 1,
   height: 1,
   // colorAttachments: [],
-  colorAttachments: ['rgba-unorm-webgl1'],
+  colorAttachments: ['rgba8unorm-unsized'],
   depthStencilAttachment: 'depth24plus-stencil8'
 };
 
