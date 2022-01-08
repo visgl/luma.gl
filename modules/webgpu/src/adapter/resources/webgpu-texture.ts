@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import {Texture, TextureProps, Sampler, SamplerProps, assert} from '@luma.gl/api';
+import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type WebGPUDevice from '../webgpu-device';
 import WebGPUSampler from './webgpu-sampler';
 
@@ -73,7 +74,7 @@ export default class WebGPUTexture extends Texture {
         depthOrArrayLayers: this.props.depth
       },
       dimension: BASE_DIMENSIONS[this.props.dimension],
-      format: this.props.format,
+      format: getWebGPUTextureFormat(this.props.format),
       usage: this.props.usage,
       mipLevelCount: this.props.mipLevels,
       sampleCount: this.props.samples

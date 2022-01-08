@@ -5,7 +5,8 @@ import type {
   DeviceLimits,
   DeviceFeature,
   CanvasContextProps,
-  TextureFormat
+  TextureFormat,
+  Framebuffer
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
@@ -36,15 +37,20 @@ import type {
   RenderPipelineProps,
   Sampler,
   SamplerProps,
-  TextureProps
+  TextureProps,
+  FramebufferProps
 } from '@luma.gl/api';
+
+// Refactored, minimal classes
+import WEBGLShader from './resources/webgl-shader';
+import WEBGLSampler from './resources/webgl-sampler';
+import WEBGLTexture from './resources/webgl-texture';
+// import WEBGLFramebuffer from './resources/webgl-framebuffer';
+
+// Legacy classes
 import WEBGLBuffer from '../classes/webgl-buffer';
-import WEBGLShader from '../adapter/resources/webgl-shader';
-import WEBGLSampler from '../adapter/resources/webgl-sampler';
-// import WEBGLTexture from '../adapter/resources/webgl-texture';
-import WEBGLTexture from '../classes/texture';
-import type {default as Framebuffer} from '../classes/framebuffer';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
+import ClassicFramebuffer from '../classes/framebuffer';
 
 const LOG_LEVEL = 1;
 
@@ -90,7 +96,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
   readonly webglLimits: WebGLLimits;
 
-  defaultFramebuffer?: Framebuffer;
+  defaultFramebuffer?: ClassicFramebuffer;
   defaultVertexArray?: VertexArrayObject;
 
   // State used by luma.gl classes
@@ -228,7 +234,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // DEBUG contexts:  Add debug instrumentation to the context
     if (isBrowser() && props.debug) {
-      this.gl = makeDebugContext(this.gl, props);
+      this.gl = makeDebugContext(this.gl, {...props, gl: this.gl, webgl2: this.isWebGL2});
       if (this.gl2) {
         this.gl2 = this.gl as WebGL2RenderingContext;
       }
@@ -348,6 +354,11 @@ export default class WebGLDevice extends Device implements ContextState {
 
   createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
     throw new Error('not implemented'); // return new Program(props);
+  }
+
+  createFramebuffer(props: FramebufferProps): Framebuffer {
+    throw new Error
+    // return new WEBGLFramebuffer(this, props);
   }
 
   /**

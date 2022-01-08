@@ -8,12 +8,16 @@ type DebugContextProps = {
   debug?: boolean;
   throwOnError?: boolean;
   break?: string[];
+  webgl2?: boolean;
+  gl?: any;
 };
 
 const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
   debug: true,
   throwOnError: false,
-  break: undefined
+  break: undefined,
+  webgl2: false,
+  gl: undefined
 }
 
 // Helper to get shared context data
@@ -88,8 +92,6 @@ function getDebugContext(gl, props: DebugContextProps) {
   data.debugContext = debugContext;
   debugContext.debug = true;
 
-  log.info('debug context actived.')();
-
   // Return it
   return debugContext;
 }
@@ -105,7 +107,8 @@ function getFunctionString(functionName: string, functionArgs): string {
 function onGLError(props: DebugContextProps, err, functionName: string, args): void {
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
-  const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
+  const glName = props.webgl2 ? 'gl1' : 'gl2';
+  const message = `${errorMessage} in ${glName}.${functionName}(${functionArgs})`;
   if (props.throwOnError) {
     throw new Error(message);
   } else {

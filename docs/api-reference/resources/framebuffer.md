@@ -1,17 +1,32 @@
 # Framebuffer
 
-A `Framebuffer` is a container object that holds a number of textures
-the application can set up framebuffers backed by textures for use for "off screen" rendering.
+A `Framebuffer` is a container object that holds one or more textures
+that will be used as render targets and optionally a depth / stencil buffer
+for the GPU pipeline.
 
-A `Framebuffer` holds a list of `Texture` attachments that store data
-(one or more color `Texture`, plus an optional depth, stencil or depth-stencil `Texture`).
+An application can render into an (HTML or offscreen) canvas by obtaining a
+`Framebuffer` object from a `DeviceContext`.
+
+Alternatively an application can create custom framebuffers for rendering directly into textures.
+
+The application uses a `Framebuffer` by providing it as a parameter to a `RenderPass`.
+
+## Framebuffer Attachments
+
+A `Framebuffer` holds:
+
+- a list of `Texture` attachments that store data (one or more color `Texture`s)
+- plus an optional depth, stencil or combined depth-stencil `Texture`).
+
 Attachments must be in the form of `Texture`s.
 
-A `Framebuffer` is conceptually immutable (attachments cannot be changed), but it can be "resized".
-Resizing a framebuffer effectively destroys all current textures and creates new textures
-with otherwise similar properties. All data stored in the textures are lost. This data loss is usually a non-issue
-as resizes would be performed between render passes, typically to match the size of an off screen render buffer
-with the output canvas.
+## Resizing Framebuffers
+
+A `Framebuffer` is shallowly immutable (the list of attachments cannot be changed after creation),
+however a Framebuffer can be "resized". Resizing a framebuffer effectively destroys all current textures
+and creates new textures with otherwise similar properties. All data stored in the textures are lost.
+This data loss is usually a non-issue as resizes would be performed between render passes,
+typically to match the size of an off screen render buffer with the output canvas.
 
 To render into a canvas, a "device context" `Framebuffer` should be obtained from a `DeviceContext`.
 A device context `Framebuffer` and has a (single) special color attachment that is connected to the
@@ -19,6 +34,7 @@ current swap chain buffer. It updates every frame, and also automatically resize
 and should not be manually resized.
 
 Remarks:
+
 - WebGPU: The `Framebuffer` concept does not exist natively in WebGPU (this information has to be provided through the `GPURenderPassDescriptor` `colorAttachments` and the `depthStencilAttachment` fields every frame when a render pass is created).`.
 - WebGL: A native `WebGLFramebuffer` object exists that manages a set of attachments.
 - OpenGL Wiki [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)
@@ -28,7 +44,7 @@ Remarks:
 
 Creating a framebuffer with default color and depth attachments
 
-```js
+```typescript
 const framebuffer = device.createFramebuffer({
   width: window.innerWidth,
   height: window.innerHeight,
@@ -39,7 +55,7 @@ const framebuffer = device.createFramebuffer({
 
 Attaching textures and renderbuffers
 
-```js
+```typescript
 device.createFramebuffer({
   depthStencil: new Renderbuffer(gl, {...}),
   color0: new Texture(gl, {...}),
@@ -53,21 +69,21 @@ framebuffer.checkStatus(); // optional
 
 Resizing a framebuffer to the size of a window. Resizes all attachements with a single `framebuffer.resize()` call
 
-```js
+```typescript
 // Note: this resizes (and possibly clears) all attachments
 framebuffer.resize({width: window.innerWidth, height: window.innerHeight});
 ```
 
 Clearing a framebuffer
 
-```js
+```typescript
 framebuffer.clear();
 framebuffer.clear({color: [0, 0, 0, 0], depth: 1, stencil: 0});
 ```
 
 Specifying a framebuffer for rendering in each render calls
 
-```js
+```typescript
 const offScreenBuffer = new Framebuffer();
 program1.draw({
   framebuffer: offScreenBuffer,
@@ -81,35 +97,32 @@ model.draw({
 
 Binding a framebuffer for multiple render calls
 
-```js
-const framebuffer1 = ...;
-const framebuffer2 = ...;
-withParameters(gl, {framebuffer: framebuffer1}, () => {
-  // Any draw call that doesn't specify a framebuffer will now draw into framebuffer1
-  program1.draw({...}); // -> framebuffer1
-  program2.draw({...}); // -> framebuffer1
-  // Explicit specification of framebuffer overrides (for that call only)
-  program2.draw({framebuffer: framebuffer1, ...); // -> framebuffer2
-  program2.draw({...}); // -> framebuffer1
-});
-// framebuffer1 is not longer bound
+```typescript
+const framebuffer1 = device.createFramebuffer({...});
+const framebuffer2 = device.createFramebuffer({...});
+
+const renderPass1 = device.createRenderPass({framebuffer: framebuffer1});
+program.draw(renderPass1);
+renderPass1.endPass();
+
+const renderPass2 = device.createRenderPass({framebuffer: framebuffer1});
+program.draw(renderPass2);
+renderPass2.endPass();
+
 ```
 
 ### Reading, copying or blitting data from a Framebuffer attachment.
 
-For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/moving-data)
-
-For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/moving-data)
-
-For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/moving-data)
-
-For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/moving-data)
+- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/webgl/moving-data)
+- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/webgl/moving-data)
+- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/webgl/moving-data)
+- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/webgl/moving-data)
 
 ### Using Multiple Render Targets
 
 Specify which framebuffer attachments the fragment shader will be writing to when assigning to `gl_FragData[]`
 
-```js
+```typescript
 framebuffer.update({
   drawBuffers: [
     GL.COLOR_ATTACHMENT0, // gl_FragData[0]
@@ -135,7 +148,7 @@ void main(void) {
 
 Clearing a specific draw buffer in a framebuffer (WebGL 2)
 
-```js
+```typescript
 framebuffer.clear({
   [GL.COLOR]: [0, 0, 1, 1], // Blue
   [GL.COLOR]: new Float32Array([0, 0, 0, 0]), // Black/transparent
@@ -178,7 +191,8 @@ device.createFramebuffer(gl, {
 - `id`= - (_String_) - An optional name (id) of the buffer.
 - `width`=`1` - (_number_) The width of the framebuffer.
 - `height`=`1` - (_number_) The height of the framebuffer.
-- `attachments`={} - (_Object_, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
+- `colorAttachments`=[] - (_Object_, optional) - a map of Textures and/or Renderbuffers, keyed be "attachment points" (see below).
+- `depthStencilAttachment?`
 - `color` - shortcut to the attachment in `GL.COLOR_ATTACHMENT0`
 - `depth` - shortcut to the attachment in `GL.DEPTH_ATTACHMENT`
 - `stencil` - shortcut to the attachment in `GL.STENCIL_ATTACHMENT`
@@ -188,20 +202,18 @@ The luma.gl `Framebuffer` constructor enables the creation of a framebuffer with
 When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
 For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
 
-| Texture parameter       | Value              |
-| ----------------------- | ------------------ |
-| `minFilter` | `linear`        |
-| `magFilter` | `linear`        |
-| `addressModeU`     | `clamp-to-edge` |
-| `addressModeV`     | `clamp-to-edge` |
-
-- The set of available attachments is larger in WebGL 2, and also the extensions `WEBGL_draw_buffers` and `WEBGL_depth_texture` provide additional attachments that match or exceed the WebGL 2 set.
+| Texture parameter | Value           |
+| ----------------- | --------------- |
+| `minFilter`       | `linear`        |
+| `magFilter`       | `linear`        |
+| `addressModeU`    | `clamp-to-edge` |
+| `addressModeV`    | `clamp-to-edge` |
 
 ### destroy()
 
-Destroys the underlying GPU API object. When destroying `Framebuffer`s it can be important to consider that a `Framebuffer` can manage other objects that may also need to be destroyed.
+Destroys the underlying GPU object. When destroying `Framebuffer` will also destroy any `Texture` that was created automatically during Framebuffer creation. Supplied textures will not be destroyed (but will eventually be garbage collected and destroyed).
 
-### resize({width: number, height: number}): Framebuffer
+### resize(width: number, height: number): Framebuffer
 
 `Framebuffer.resize({width, height})`
 
@@ -214,7 +226,6 @@ Returns itself to enable chaining
 
 - Each attachment's `resize` method checks if `width` or `height` have actually changed before reinitializing their data store, so calling `resize` multiple times with the same `width` and `height` does not trigger multiple resizes.
 - If a resize happens, `resize` erases the current content of the attachment in question.
-
 
 ### clear(options: Object): Framebuffer
 
@@ -235,17 +246,17 @@ Notes:
 
 The following values can be provided for each attachment point
 
-- `null` - unattaches any current binding
-- `Texture2D` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
-- [`Texture2D`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D` (WebGL 2), or cubemap face. The second element in the array must be `0`. In WebGL 1, mipmapLevel must be 0.
-- [`TextureCube`, face (number), mipmapLevel=0 (number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level. In WebGL 1, mipmapLevel must be 0.
-- [`Texture2DArray`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
+- `Texture` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
+- [`Texture`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D` (WebGL 2), or cubemap face. The second element in the array must be `0`. In WebGL 1, mipmapLevel must be 0.
+- [`Texture` (cube), face (number), mipmapLevel=0 (number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level. In WebGL 1, mipmapLevel must be 0.
+- [`Texture`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
 - [`Texture3D`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
 
 ## Remarks
 
 - In the raw WebGL API, creating a set of properly configured and matching textures and renderbuffers can require a lot of careful coding and boilerplate.
 - This is further complicated by many capabilities (such as support for multiple color buffers and various image formats) depending on WebGL extensions or WebGL versions.
+
 ### WebGL Notes:
 
 This class makes calls to the following WebGL APIs:
@@ -256,7 +267,6 @@ This class makes calls to the following WebGL APIs:
 [`gl.framebufferTextureLayer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/framebufferTextureLayer),
 [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer) (This is for WebGL 2 only)
 [`gl.checkFramebufferStatus`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/checkFramebufferStatus), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
-
 
 [`gl.invalidateFramebuffer`](<WebGL2RenderingContext.invalidateFramebuffer()>), [`gl.invalidateSubFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/invalidateSubFramebuffer), [`gl.bindFramebuffer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindFramebuffer)
 

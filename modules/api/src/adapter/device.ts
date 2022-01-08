@@ -9,9 +9,12 @@ import type {default as Sampler, SamplerProps} from './resources/sampler';
 import type {default as Shader, ShaderProps} from './resources/shader';
 import type {default as Texture, TextureProps, TextureData} from './resources/texture';
 import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
+import {uid} from '..';
 
 /** Device properties */
 export type DeviceProps = {
+  id?: string;
+
   type?: 'webgl' | 'webgl1' | 'webgl2' | 'webgpu' | 'best-available';
 
   // Common parameters
@@ -44,6 +47,7 @@ export type DeviceProps = {
 };
 
 export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
+  id: undefined,
   type: 'webgl', // 'best-available',
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
@@ -187,7 +191,7 @@ type WebGLCompressedTextureFeatures =
   ;
 
 /** Valid feature strings */
-export type DeviceFeature= WebGPUDeviceFeature | WebGLDeviceFeature | WebGLCompressedTextureFeatures;
+export type DeviceFeature = WebGPUDeviceFeature | WebGLDeviceFeature | WebGLCompressedTextureFeatures;
 
 /**
  * WebGPU Device/WebGL context abstraction
@@ -198,9 +202,11 @@ export default abstract class Device {
   }
 
   constructor(props: DeviceProps) {
-    this.props = {...DEFAULT_DEVICE_PROPS, ...props};
+    this.props = {...DEFAULT_DEVICE_PROPS, id: uid(this[Symbol.toStringTag]), ...props};
+    this.id = this.props.id;
   }
 
+  readonly id: string;
   readonly statsManager: StatsManager = lumaStats;
   readonly props: DeviceProps;
 
@@ -278,7 +284,6 @@ export default abstract class Device {
 
   /** Create a shader */
   abstract createShader(props: ShaderProps): Shader;
-
 
   createFramebuffer(props: FramebufferProps): Framebuffer {
     throw new Error('Not implemented');

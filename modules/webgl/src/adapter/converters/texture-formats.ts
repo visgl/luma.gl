@@ -1,9 +1,10 @@
 import type {TextureFormat, DeviceFeature} from '@luma.gl/api';
+// import {decodeTextureFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 
 // Define local extension strings to optimize minification
-const SRGB = 'EXT_sRGB';
+const SRGB = 'EXT_sRGB';  // https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
 const EXT_TEXTURE_NORM16 = 'EXT_texture_norm16';
 const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_WEBGL2 = 'EXT_color_buffer_float';
@@ -44,6 +45,12 @@ type Format = {
 
   gl1?: string;
   gl2?: boolean | string; // format requires WebGL2, when using a WebGL 1 context, color renderbuffer formats are limited
+  wgpu?: false; // If not supported on WebGPU
+
+  types?: number[];
+
+  dataFormat?: GL;
+  attachment?: GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT;
 };
 
 // TABLES
@@ -59,6 +66,15 @@ const TEXTURE_FEATURES: [DeviceFeature, string[]][] = [
 ];
 
 export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
+  // Unsized formats that leave the precision up to the driver.
+  // TODO - Fix bpp constants
+  // 'r-unorm-webgl1': {gl: GL.LUMINANCE, b: 4, c: 2, gl2: true, bpp: 4},
+  // 'ra-unorm-webgl1': {gl: GL.LUMINANCE_ALPHA, b: 4, c: 2, gl2: true, bpp: 4},
+  'rgb-unorm-webgl1': {gl: GL.RGB, b: 4, c: 2, gl2: true, bpp: 4},
+  'rgba-unorm-webgl1': {gl: GL.RGBA, b: 4, c: 2, gl2: true, bpp: 4},
+  // 'rgb-unorm-srgb-webgl1': {gl: GL.SRGB_EXT, b: 4, c: 2, gl2: true, bpp: 4, x: SRGB},
+  // 'rgba-unorm-srgb-webgl': {gl: GL.SRGB_ALPHA_EXT, b: 4, c: 2, gl2: true, bpp: 4, x: SRGB},
+
   // 8-bit formats
   'r8unorm': {gl: GL.R8, b: 1, c: 1, gl2: true},
   'r8snorm': {b: 1, c: 1},
@@ -69,7 +85,6 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'r16uint': {gl: GL.R16UI, b: 2, c: 1, gl2: true},
   'r16sint': {gl: GL.R16I, b: 2, c: 1, gl2: true},
   'r16float': {gl: GL.R16F, b: 2, c: 1, gl2: EXT_FLOAT_WEBGL2},
-  // @ts-expect-error not exposed by WebGPU)
   'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
   'r16snorm-webgl': {gl: GL.R16_EXT, b:2, c:1, gl2: EXT_TEXTURE_NORM16},
   'rg8unorm': {gl: GL.RG8, b: 2, c: 2, gl2: true},
@@ -105,20 +120,12 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'bgra8unorm': {b: 4, c: 4},
   'bgra8unorm-srgb': {b: 4, c: 4},
 
-  // TODO - Unsized formats? (for WebGL1)
-  'unsized-rgb': {gl: GL.RGB, b: 4, c: 2, gl2: true, bpp: 4},
-  'unsized-rgba': {gl: GL.RGBA, b: 4, c: 2, gl2: true, bpp: 4},
-  // luminance, alpha, luminance-alpha
-  // https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
-  // ext.SRGB_EXT Unsized sRGB format that leaves the precision up to the driver.
-  // ext.SRGB_ALPHA_EXT - Unsized sRGB format with unsized alpha component.
-
   // Packed 32-bit formats
   'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, gl2: true, gl1: EXT_HALF_FLOAT_WEBGL1},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1, gl2: EXT_FLOAT_WEBGL2},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, gl2: true},
   // webgl2 only
-  'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, webgpu: false, gl2: true, bpp: 4},
+  'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, gl2: true, bpp: 4},
 
   // 48-bit formats
   'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, gl2: EXT_TEXTURE_NORM16},
@@ -143,17 +150,17 @@ export const TEXTURE_FORMAT_DEFINITIONS: Record<TextureFormat, Format> = {
   'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, gl2: EXT_FLOAT_WEBGL2}, // gl1: EXT_FLOAT_WEBGL1
 
   // Depth and stencil formats
-  'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1}, // 8 stencil bits
-  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1}, // 16 depth bits
-  'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, gl2: true},
-  'depth24plus-stencil8': {b: 4, gl: GL.DEPTH24_STENCIL8, c: 2, p: 1, gl2: true},
-  'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, gl2: true},
+  'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT}, // 8 stencil bits
 
+  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT}, // 16 depth bits
+  'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, gl2: true, attachment: GL.DEPTH_ATTACHMENT},
+  'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, gl2: true, attachment: GL.DEPTH_ATTACHMENT},
+
+  'depth24plus-stencil8': {b: 4, gl: GL.DEPTH_STENCIL, c: 2, p: 1, gl2: true, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
   // "depth24unorm-stencil8" feature
-  'depth24unorm-stencil8': {gl: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1},
-
+  'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
   // "depth32float-stencil8" feature
-  "depth32float-stencil8": {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, gl2: true},
+  "depth32float-stencil8": {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, gl2: true, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 
@@ -271,7 +278,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
   // [GL.DEPTH_STENCIL]: {gl1: DEPTH},
 
   /*
-  // Sized texture format - more performance
+  // Sized texture format
   // R
   [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
   [GL.R16F]: {dataFormat: GL.RED, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
@@ -329,7 +336,7 @@ export const TYPE_SIZES = {
 
 // FUNCTIONS
 
-/** Return a list of compressed texture features */
+/** Return a list of texture feature strings (for Device.features). Mainly compressed texture support */
 export function getTextureFeatures(gl: WebGLRenderingContext): DeviceFeature[] {
   const features: DeviceFeature[] = [];
   for (const [feature, extensions] of TEXTURE_FEATURES) {
@@ -353,6 +360,37 @@ export function convertTextureFormatToWebGL(format: TextureFormat | GL): GL | un
     throw new Error(`Unsupported texture format ${format}`);
   }
   return webglFormat;
+}
+
+export function getWebGLTextureParameters(format: TextureFormat | GL) {
+  if (typeof format !== 'number') {
+    format = convertTextureFormatToWebGL(format);
+  }
+  const textureFormat = WEBGL_TEXTURE_FORMATS[format];
+  if (!textureFormat) {
+    throw new Error(`Unsupported texture format ${format}`);
+  }
+  return {
+    dataFormat: textureFormat.dataFormat,
+    type: textureFormat.types[0],
+    compressed: textureFormat.compressed
+  };
+}
+
+export function getDepthStencilAttachment(
+  format: TextureFormat | GL
+): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT
+{
+  if (typeof format === 'number') {
+    // TODO
+    throw new Error('unsupported depth stencil format')
+  }
+  const info = TEXTURE_FORMAT_DEFINITIONS[format];
+  const attachment = info.attachment;
+  if (!attachment) {
+    throw new Error('not a depth stencil format')
+  }
+  return attachment;
 }
 
 /** Checks if a texture format is supported */

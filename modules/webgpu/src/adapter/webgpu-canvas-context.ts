@@ -1,5 +1,6 @@
 import type {TextureFormat, CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext, log} from '@luma.gl/api';
+import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 
 /** 
  * Holds a WebGPU Canvas Context which handles resizing etc 
@@ -39,7 +40,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
       // https://www.w3.org/TR/webgpu/#canvas-configuration
       this.context.configure({
         device: this.device,
-        format: this.presentationFormat,
+        format: getWebGPUTextureFormat(this.presentationFormat),
         size: this.presentationSize,
         // colorSpace: "srgb"; // GPUPredefinedColorSpace 
         // compositingAlphaMode = "opaque"; | 'premultiplied'
@@ -78,14 +79,14 @@ export default class WebGPUCanvasContext extends CanvasContext {
         label: 'render-target',
         size: this.presentationSize,
         sampleCount: this.sampleCount,
-        format: this.presentationFormat,
+        format: getWebGPUTextureFormat(this.presentationFormat),
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
 
       this.depthStencilTarget = this.device.createTexture({
         label: 'depth-stencil-target',
         size: this.presentationSize,
-        format: this.depthStencilFormat,
+        format: getWebGPUTextureFormat(this.depthStencilFormat),
         usage: GPUTextureUsage.RENDER_ATTACHMENT
       });
 
