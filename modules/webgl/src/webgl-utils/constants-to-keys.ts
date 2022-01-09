@@ -21,6 +21,7 @@ export function getKeyValue(gl, name) {
 }
 
 export function getKey(gl, value) {
+  gl = gl.gl || gl;
   value = Number(value);
   for (const key in gl) {
     if (gl[key] === value) {
