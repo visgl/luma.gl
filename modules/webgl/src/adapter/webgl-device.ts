@@ -234,7 +234,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // DEBUG contexts:  Add debug instrumentation to the context
     if (isBrowser() && props.debug) {
-      this.gl = makeDebugContext(this.gl, {...props, gl: this.gl, webgl2: this.isWebGL2});
+      this.gl = makeDebugContext(this.gl, {...props, gl: this.gl, webgl2: this.isWebGL2, throwOnError: true});
       if (this.gl2) {
         this.gl2 = this.gl as WebGL2RenderingContext;
       }

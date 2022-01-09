@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
-import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {webgl1TestDevice, webgl2TestDevice, getTestDevices} from '@luma.gl/test-utils';
 
 import {Device, Texture, TextureFormat, cast} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
@@ -13,40 +13,35 @@ import {SAMPLER_PARAMETERS} from './webgl-sampler.spec';
 import WEBGLTexture from '@luma.gl/webgl/adapter/resources/webgl-texture';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
-test('WebGL#Texture construct/delete', (t) => {
-  const texture = webgl1TestDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture repeated delete successful');
+test('WebGL#Texture construct/delete', async (t) => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({});
+    t.ok(texture instanceof Texture, 'Texture construction successful');
+    texture.destroy();
+    t.ok(texture instanceof Texture, 'Texture delete successful');
+    texture.destroy();
+    t.ok(texture instanceof Texture, 'Texture repeated delete successful');
+  }
   t.end();
 });
 
-test('WebGLDevice#isTextureFormatSupported()', (t) => {
-  const WEBGL1_FORMATS: TextureFormat[] = ['rgba8unorm', 'r8unorm'];
-  const WEBGL2_FORMATS: TextureFormat[] = ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'];
+test('WebGLDevice#isTextureFormatSupported()', async (t) => {
+  const FORMATS: Record<string, TextureFormat[]> = {
+    'webgl': ['rgba8unorm'],
+    'webgl2': ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float']
+  }
 
-  let unSupportedFormats = [];
-  WEBGL1_FORMATS.forEach((format) => {
-    if (!webgl1TestDevice.isTextureFormatSupported(format)) {
-      unSupportedFormats.push(format);
-    }
-  });
-
-  t.equal(unSupportedFormats.length, 0, 'All WebGL1 formats are supported');
-
-  if (webgl2TestDevice) {
-    const gl2Formats = WEBGL1_FORMATS.concat(WEBGL2_FORMATS);
-    unSupportedFormats = [];
-    gl2Formats.forEach((format) => {
-      if (!webgl2TestDevice.isTextureFormatSupported(format)) {
+  for (const device of await getTestDevices()) {
+    const unSupportedFormats = [];
+    FORMATS[device.info.type].forEach((format) => {
+      if (!device.isTextureFormatSupported(format)) {
         unSupportedFormats.push(format);
       }
     });
 
-    t.equal(unSupportedFormats.length, 0, 'All WebGL2 formats are supported');
+    t.deepEqual(unSupportedFormats, [], `All ${device.info.type} formats are supported`);
   }
+
   t.end();
 });
 

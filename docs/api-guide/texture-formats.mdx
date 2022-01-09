@@ -2,21 +2,29 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@luma.gl/react
 
 # Texture Formats
 
-GPUs support a wide range of texture formats. In luma.gl, 
+GPUs support a wide range of texture formats. In luma.gl,
 each format is identified with a string (the `TextureFormat` type).
- 
+
 Support for a specific format generally has three levels. luma provides `Device` functions to help
 applications determine the capabilities of a texture format.
 
-| Texture Format Capability | Check using |
-| --- | --- |
-| Can textures with the format be created and sampled using **nearest** filters? | `Device.isTextureFormatSupported(format)` |
-| Can textures with the format be sampled using **linear filtering**? | `Device.isTextureFormatFilterable(format)` |
-| Can textures with the format be rendered into? I.e used as render target / color attachments? | `Device.isTextureFormatRenderable(format)` |
+| Texture Format Capability                                                                      | Check using                                |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Can textures with the format be **created and sampled** (using `nearest` filters)?             | `Device.isTextureFormatSupported(format)`  |
+| Can textures with the format be sampled using **linear filtering**?                            | `Device.isTextureFormatFilterable(format)` |
+| Can textures with the format be rendered into? I.e used as render targets / color attachments? | `Device.isTextureFormatRenderable(format)` |
+| Can textures with the format be used for storage bindings?                                     | N/A                                        |
+| Can textures with the format be blended?                                                       | Yes if sampler type 1float` is supported   |
+| Do textures with the format support multisampling?                                             | N/A                                        |
 
 Remarks
+
 - Mipmaps can only be auto created for formats that are both filterable and renderable.
+- A renderable format is either a color renderable format, or a depth-or-stencil format
+- All depth/stencil formats are renderable.
+- Less than 4 components, sampler reads the missing red, green and blue components as 0.0, alpha is 1.0
 - The capabilities reported by luma.gl represent the minimal specification of the underlying API. Occasionally a driver may provide additional capabilities, such as a WebGL2 device running on top of an OpenGL ES 3.2 driver. Use of non-standard capabilities is enabled but not portable.
+- The WebGL 1 core does not provide sized formats. While sized formats offer more control, unsized formats do give the GPU freedom to select the most performant internal representation.
 
 ## Formats
 
@@ -77,19 +85,19 @@ Remarks
 | `rgba16snorm-webgl`                    | <Ft f="rgba16snorm-webgl" />        | <L f="rgba16snorm-webgl" />        | <R f="rgba16snorm-webgl" />        |                                                                                                                         |
 | `rgba16float`                          | <Ft f="rgba16float" />              | <L f="rgba16float" />              | <R f="rgba16float" />              | `GL.RGBA16F`                                                                                                            |
 | **96-bit formats**                     |                                     |                                    |                                    |
-| `rgb32float-webgl`                     | <Ft f="rgb32float-webgl" />         | <L f="rgb32float-webgl" />         | <R f="rgb32float-webgl" />         | `GL.RGB32F`, dataFormat: `GL.RGB`, types: [`GL.FLOAT`], gl2: true                                                       |
+| `rgb32float-webgl`                     | <Ft f="rgb32float-webgl" />         | <L f="rgb32float-webgl" />         | <R f="rgb32float-webgl" />         | Deprecated format.                                                                                                      |
 | **128-bit formats**                    |                                     |                                    |                                    |
-| `rgba32uint`                           | <Ft f="rgba32uint" />               | <L f="rgba32uint" />               | <R f="rgba32uint" />               | `GL.RGBA32UI`                                                                                                           |
-| `rgba32sint`                           | <Ft f="rgba32sint" />               | <L f="rgba32sint" />               | <R f="rgba32sint" />               | `GL.RGBA32I`                                                                                                            |
-| `rgba32float`                          | <Ft f="rgba32float" />              | <L f="rgba32float" />              | <R f="rgba32float" />              | `GL.RGBA32F`                                                                                                            |
+| `rgba32uint`                           | <Ft f="rgba32uint" />               | <L f="rgba32uint" />               | <R f="rgba32uint" />               |                                                                                                                         |
+| `rgba32sint`                           | <Ft f="rgba32sint" />               | <L f="rgba32sint" />               | <R f="rgba32sint" />               |                                                                                                                         |
+| `rgba32float`                          | <Ft f="rgba32float" />              | <L f="rgba32float" />              | <R f="rgba32float" />              |                                                                                                                         |
 | **Depth and stencil formats**          |                                     |
-| `stencil8`                             | <Ft f="stencil8" />                 | <L f="stencil8" />                 | <R f="stencil8" />                 | `GL.STENCIL_INDEX8`                                                                                                     |
-| `depth16unorm`                         | <Ft f="depth16unorm" />             | <L f="depth16unorm" />             | <R f="depth16unorm" />             | `GL.DEPTH_COMPONENT16`                                                                                                  |
-| `depth24plus`                          | <Ft f="depth24plus" />              | <L f="depth24plus" />              | <R f="depth24plus" />              | `GL.DEPTH_COMPONENT24`                                                                                                  |
-| `depth24plus-stencil81`                | <Ft f="depth24plus-stencil81" />    | <L f="depth24plus-stencil81" />    | <R f="depth24plus-stencil81" />    | b: 4, gl: `GL.DEPTH24_STENCIL8`                                                                                         |
-| `depth32float`                         | <Ft f="depth32float" />             | <L f="depth32float" />             | <R f="depth32float" />             | `GL.DEPTH_COMPONENT32F`                                                                                                 |
-| `depth24unorm-stencil8`                | <Ft f="depth24unorm-stencil8" />    | <L f="depth24unorm-stencil8" />    | <R f="depth24unorm-stencil8" />    | `GL.DEPTH_STENCIL`, `depth24unorm-stencil8` feature                                                                     |
-| `depth32float-stencil8`                | <Ft f="depth32float-stencil8" />    | <L f="depth32float-stencil8" />    | <R f="depth32float-stencil8" />    | `GL.DEPTH32F_STENCIL8`, `depth32float-stencil8` feature }                                                               |
+| `stencil8`                             | <Ft f="stencil8" />                 | <L f="stencil8" />                 | <R f="stencil8" />                 | Platform dependent: Might use `depth24stencil8` with hidden depth.                                                      |
+| `depth16unorm`                         | <Ft f="depth16unorm" />             | <L f="depth16unorm" />             | <R f="depth16unorm" />             |                                                                                                                         |
+| `depth24plus`                          | <Ft f="depth24plus" />              | <L f="depth24plus" />              | <R f="depth24plus" />              | Platform dependent: Maps to "`depth24unorm`" or `depth32float`.                                                         |
+| `depth24plus-stencil81`                | <Ft f="depth24plus-stencil8" />     | <L f="depth24plus-stencil8" />     | <R f="depth24plus-stencil8" />     | Platform dependent: Maps to "`depth24unorm`" or `depth32float`.                                                         |
+| `depth32float`                         | <Ft f="depth32float" />             | <L f="depth32float" />             | <R f="depth32float" />             | Higher precision than `depth24unorm` in representable range (0.0 to 1.0)                                                |
+| `depth24unorm-stencil8`                | <Ft f="depth24unorm-stencil8" />    | <L f="depth24unorm-stencil8" />    | <R f="depth24unorm-stencil8" />    | Platform dependent: Check via `depth24unorm-stencil8` feature.                                                          |
+| `depth32float-stencil8`                | <Ft f="depth32float-stencil8" />    | <L f="depth32float-stencil8" />    | <R f="depth32float-stencil8" />    | Platform dependent: Check via `depth32float-stencil8` feature.                                                          |
 | **`texture-compression-bc(5)`**        |                                     |                                    |                                    | _[S3 Texture Compression][s3tc_wiki], aka BC (Block Compression) using FourCC DXTn file identifiers. 4-6x compression._ |
 | `bc1-rgb-unorm-webgl`                  | <Ft f="bc1-rgb-unorm-webgl" />      | <L f="bc1-rgb-unorm-webgl" />      | <R f="bc1-rgb-unorm-webgl" />      | BC1 / DXT1: 16 input pixels in 64 bits.                                                                                 |
 | `bc1-rgb-unorm-srgb-webgl`             | <Ft f="bc1-rgb-unorm-srgb-webgl" /> | <L f="bc1-rgb-unorm-srgb-webgl" /> | <R f="bc1-rgb-unorm-srgb-webgl" /> |                                                                                                                         |
@@ -198,24 +206,14 @@ See [Compressed Textures in 2020](https://aras-p.info/blog/2020/12/08/Texture-Co
 ## WebGL notes
 
 On WebGL devices, luma.gl maps WebGPU style format strings to WebGL constants under the hood.
-The following tables provide some information about WebGL texture constants
+It is however possible to provide overrides for the WebGL constants. The following tables provide some information about WebGL texture constants
 
-If an application wants to store the texture at a certain resolution or in a certain format, it can request the resolution and format with `internalFormat`. WebGL will choose an internal representation with least the internal component sizes, and exactly the component types shown for that format, although it may not match exactly.
-
-WebGL 2 adds sized internal formats which enables the application to request
-specific components sizes and types (float and integer formats). While sized formats offer more control, unsized formats do give the GPU freedom to select the most performant internal representation.
+If an application wants to store the texture at a certain resolution or in a certain format, 
+it can request the resolution and format with `internalFormat`. 
+WebGL will choose an internal representation with least the internal component sizes, 
+and exactly the component types shown for that format, although it may not match exactly.
 
 ### Internal Formats
-
-| Unsized Internal Format | Components | Description                                                                                                   |
-| ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------------- |
-| `GL.RGB`                | 3          | sampler reads the red, green and blue components, alpha is 1.0                                                |
-| `GL.RGBA`               | 4          | Red, green, blue and alpha components are sampled from the color buffer.                                      |
-| `GL.LUMINANCE`          | 1          | Each color contains a single luminance value. When sampled, rgb are all set to this luminance, alpha is 1.0.  |
-| `GL.LUMINANCE_ALPHA`    | 2          | Each component is a luminance/alpha double. When sampled, rgb are all set to luminance, alpha from component. |
-| `GL.ALPHA`              | 1          | Discards the red, green and blue components and reads the alpha component.                                    |
-| `GL.DEPTH_COMPONENT`    | 1          | WebGL 2 or `WEBGL_depth_texture`                                                                              |
-| `GL.DEPTH_STENCIL`      | 2          | WebGL 2 or `WEBGL_depth_texture`                                                                              |
 
 | Sized Internal Format                | Comp. | Size     | Description                                                                                   |
 | ------------------------------------ | ----- | -------- | --------------------------------------------------------------------------------------------- |
@@ -280,9 +278,6 @@ For more details, see tables in:
 | -------------------- | -------------------- | -------------------------------------------------------------------------- |
 | `GL.RGB`             | `GL.RGB`             | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_5_6_5`                               |
 | `GL.RGBA`            | `GL.RGBA`            | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_4_4_4_4` `GL.UNSIGNED_SHORT_5_5_5_1` |
-| `GL.LUMINANCE_ALPHA` | `GL.LUMINANCE_ALPHA` | `GL.UNSIGNED_BYTE`                                                         |
-| `GL.LUMINANCE`       | `GL.LUMINANCE`       | `GL.UNSIGNED_BYTE`                                                         |
-| `GL.ALPHA`           | `GL.ALPHA`           | `GL.UNSIGNED_BYTE`                                                         |
 | `GL.R8`              | `GL.RED`             | `GL.UNSIGNED_BYTE`                                                         |
 | `GL.R16F`            | `GL.RED`             | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
 | `GL.R32F`            | `GL.RED`             | `GL.FLOAT`                                                                 |

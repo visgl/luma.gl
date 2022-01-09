@@ -151,30 +151,28 @@ export type WebGLDeviceFeature =
   'vertex-array-object-webgl1' |
   'instanced-rendering-webgl1' |
   'multiple-render-targets-webgl1' |
-
-  // features
   'index-uint32-webgl1' |
-
-  // blending
   'blend-minmax-webgl1' |
-  'float-blend-webgl1' |
 
-  // textures | renderbuffers
-  'texture-srgb-webgl1' |
+  // texture format support
+  'texture-formats-srgb-webgl1' |
+  'texture-formats-depth-webgl1' |
+  'texture-formats-float32-webgl1' |
+  'texture-formats-float16-webgl1' |
+  'texture-formats-norm16-webgl' |
 
-  // textures
-  'texture-depth-webgl1' |
-  'texture-float32-webgl1' |
-  'texture-float16-webgl1' |
+  // texture blending
+  'texture-blend-float-webgl1' |
 
+  // texture filtering
   'texture-filter-linear-float32-webgl' |
   'texture-filter-linear-float16-webgl' |
   'texture-filter-anisotropic-webgl' |
 
-  // framebuffers | textures and renderbuffers
-  'texture-renderable-rgba32float-webgl' |
+  // texture rendering
   'texture-renderable-float32-webgl' |
   'texture-renderable-float16-webgl' |
+  'texture-renderable-rgba32float-webgl' | // TODO - remove
 
   // glsl extensions
   'glsl-frag-data' |

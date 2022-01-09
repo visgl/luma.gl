@@ -273,15 +273,15 @@ export default class WebGPUDevice extends Device {
     features.add('multiple-render-targets-webgl1');
     features.add('index-uint32-webgl1');
     features.add('blend-minmax-webgl1');
-    features.add('float-blend-webgl1');
+    features.add('texture-blend-float-webgl1');
   
     // TEXTURES, RENDERBUFFERS
-    features.add('texture-srgb-webgl1');
+    features.add('texture-formats-srgb-webgl1');
   
     // TEXTURES
-    features.add('texture-depth-webgl1');
-    features.add('texture-float32-webgl1');
-    features.add('texture-float16-webgl1');
+    features.add('texture-formats-depth-webgl1');
+    features.add('texture-formats-float32-webgl1');
+    features.add('texture-formats-float16-webgl1');
   
     features.add('texture-filter-linear-float32-webgl');
     features.add('texture-filter-linear-float16-webgl');
