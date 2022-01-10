@@ -15,11 +15,11 @@ const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
   // features
   'index-uint32-webgl1',
   'blend-minmax-webgl1',
-  'texture-srgb-webgl1',
+  'texture-formats-srgb-webgl1',
 
-  'texture-depth-webgl1',
-  'texture-float32-webgl1',
-  'texture-float16-webgl1',
+  'texture-formats-depth-webgl1',
+  'texture-formats-float32-webgl1',
+  'texture-formats-float16-webgl1',
 
   // glsl extensions
   'glsl-frag-data',

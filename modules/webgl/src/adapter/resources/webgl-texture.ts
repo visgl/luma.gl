@@ -4,7 +4,14 @@
 // - [ ] cube texture init params
 // - [ ] video (external) textures
 
-import {Device, TextureProps, Sampler, SamplerProps, SamplerParameters, isObjectEmpty} from '@luma.gl/api';
+import {
+  Device,
+  TextureProps,
+  Sampler,
+  SamplerProps,
+  SamplerParameters,
+  isObjectEmpty
+} from '@luma.gl/api';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {WebGLSamplerParameters} from '../../types/webgl';
@@ -12,15 +19,75 @@ import {withParameters} from '../../context/state-tracker/with-parameters';
 import {
   getWebGLTextureFormat,
   getWebGLTextureParameters,
-  DATA_FORMAT_CHANNELS,
-  TYPE_SIZES
+  getTextureFormatBytesPerPixel
 } from '../converters/texture-formats';
-import {convertSamplerParametersToWebGL, updateSamplerParametersForNPOT} from '../converters/sampler-parameters';
+import {
+  convertSamplerParametersToWebGL,
+  updateSamplerParametersForNPOT
+} from '../converters/sampler-parameters';
 import WEBGLSampler from './webgl-sampler';
 import WebGLDevice from '../webgl-device';
 import Buffer from '../../classes/webgl-buffer';
 
 export type {TextureProps};
+
+type SetImageDataOptions = {
+  target?: number;
+  level?: number;
+  dataFormat?: any;
+  width: number;
+  height: number;
+  depth?: number;
+  format: any;
+  type?: any;
+  offset?: number;
+  data: any;
+  compressed?: boolean;
+  parameters?: {};
+  /** @deprecated */
+  pixels?: any;
+};
+
+/**
+ * @param {*} pixels, data -
+ *  null - create empty texture of specified format
+ *  Typed array - init from image data in typed array
+ *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+ *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+ *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+ *  HTMLVideoElement - Creates video texture. Auto width/height
+ *
+ * @param  x - xOffset from where texture to be updated
+ * @param  y - yOffset from where texture to be updated
+ * @param  width - width of the sub image to be updated
+ * @param  height - height of the sub image to be updated
+ * @param  level - mip level to be updated
+ * @param {GLenum} format - internal format of image data.
+ * @param {GLenum} type
+ *  - format of array (autodetect from type) or
+ *  - (WEBGL2) format of buffer or ArrayBufferView
+ * @param {GLenum} dataFormat - format of image data.
+ * @param {Number} offset - (WEBGL2) offset from start of buffer
+ * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+ */
+type SetSubImageDataOptions = {
+  target?: number;
+  level?: number;
+  dataFormat?: any;
+  width?: number;
+  height?: number;
+  depth?: number;
+  format?: any;
+  type?: any;
+  offset?: number;
+  data: any;
+  parameters?: {};
+  compressed?: boolean;
+  x?: number;
+  y?: number;
+  /** @deprecated */
+  pixels?: any;
+};
 
 type SetImageData3DOptions = {
   level?: number;
@@ -34,6 +101,7 @@ type SetImageData3DOptions = {
   data: any;
   parameters?: {};
 };
+
 
 // Polyfill
 export default class WEBGLTexture extends Texture {
@@ -158,12 +226,7 @@ export default class WEBGLTexture extends Texture {
 
     let {parameters = {}} = props;
 
-    const {
-      pixels = null,
-      recreate = false,
-      pixelStore = {},
-      textureUnit = undefined
-    } = props;
+    const {pixels = null, recreate = false, pixelStore = {}, textureUnit = undefined} = props;
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -187,7 +250,7 @@ export default class WEBGLTexture extends Texture {
       height
     }));
 
-    const format = getWebGLTextureFormat(props.format);
+    const format = getWebGLTextureFormat(this.gl, props.format);
 
     // Store opts for accessors
     this.width = width;
@@ -218,7 +281,6 @@ export default class WEBGLTexture extends Texture {
       format,
       type,
       dataFormat,
-      mipmaps,
       parameters: pixelStore,
       compressed
     });
@@ -360,7 +422,7 @@ export default class WEBGLTexture extends Texture {
    * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
    */
   // eslint-disable-next-line max-statements, complexity
-  setImageData(options) {
+  setImageData(options: SetImageDataOptions) {
     if (this.props.dimension === '3d') {
       return this.setImageData3D(options);
     }
@@ -434,12 +496,32 @@ export default class WEBGLTexture extends Texture {
           // WebGL2 enables creating textures directly from a WebGL buffer
           gl2 = this.device.assertWebGL2();
           gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-          gl2.texImage2D(target, level, format, width, height, 0/*border*/, dataFormat, type, offset);
+          gl2.texImage2D(
+            target,
+            level,
+            format,
+            width,
+            height,
+            0 /*border*/,
+            dataFormat,
+            type,
+            offset
+          );
           gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
           break;
         case 'browser-object':
           if (this.device.isWebGL2) {
-            gl.texImage2D(target, level, format, width, height, 0/*border*/, dataFormat, type, data);
+            gl.texImage2D(
+              target,
+              level,
+              format,
+              width,
+              height,
+              0 /*border*/,
+              dataFormat,
+              type,
+              data
+            );
           } else {
             gl.texImage2D(target, level, format, dataFormat, type, data);
           }
@@ -452,7 +534,7 @@ export default class WEBGLTexture extends Texture {
               levelData.format,
               levelData.width,
               levelData.height,
-              0, /* border, must be 0 */
+              0 /* border, must be 0 */,
               levelData.data
             );
           }
@@ -466,11 +548,8 @@ export default class WEBGLTexture extends Texture {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      // NOTE(Tarek): Default to RGBA bytes
-      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
-      const channelSize = TYPE_SIZES[this.type] || 1;
-
-      this.trackAllocatedMemory(this.width * this.height * channels * channelSize, 'Texture');
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.gl, this.props.format);
+      this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
     }
 
     this.loaded = true;
@@ -482,26 +561,6 @@ export default class WEBGLTexture extends Texture {
    * Redefines an area of an existing texture
    * Note: does not allocate storage
    * Redefines an area of an existing texture
-   * @param {*} pixels, data -
-   *  null - create empty texture of specified format
-   *  Typed array - init from image data in typed array
-   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
-   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
-   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
-   *  HTMLVideoElement - Creates video texture. Auto width/height
-   *
-   * @param  x - xOffset from where texture to be updated
-   * @param  y - yOffset from where texture to be updated
-   * @param  width - width of the sub image to be updated
-   * @param  height - height of the sub image to be updated
-   * @param  level - mip level to be updated
-   * @param {GLenum} format - internal format of image data.
-   * @param {GLenum} type
-   *  - format of array (autodetect from type) or
-   *  - (WEBGL2) format of buffer or ArrayBufferView
-   * @param {GLenum} dataFormat - format of image data.
-   * @param {Number} offset - (WEBGL2) offset from start of buffer
-   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
    */
   setSubImageData({
     target = this.target,
@@ -518,7 +577,7 @@ export default class WEBGLTexture extends Texture {
     compressed = false,
     offset = 0,
     parameters = {}
-  }) {
+  }: SetSubImageDataOptions) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format: this.props.format,
       type,
@@ -652,7 +711,7 @@ export default class WEBGLTexture extends Texture {
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
-    const parameters = getWebGLTextureParameters(format);
+    const parameters = getWebGLTextureParameters(this.gl, format);
     dataFormat = dataFormat || parameters.dataFormat;
     type = type || parameters.type;
     compressed = compressed || parameters.compressed;
@@ -708,14 +767,7 @@ export default class WEBGLTexture extends Texture {
   }): Promise<void> {
     const {gl} = this;
 
-    const {
-      width,
-      height,
-      pixels,
-      data,
-      format = GL.RGBA,
-      type = GL.UNSIGNED_BYTE
-    } = options;
+    const {width, height, pixels, data, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = options;
     const imageDataMap = pixels || data;
 
     // pixel data (imageDataMap) is an Object from Face to Image or Promise.
@@ -823,7 +875,7 @@ export default class WEBGLTexture extends Texture {
           width,
           height,
           depth,
-          0, /* border, must be 0 */
+          0 /* border, must be 0 */,
           format,
           type,
           data
@@ -840,7 +892,7 @@ export default class WEBGLTexture extends Texture {
           width,
           height,
           depth,
-          0, /* border, must be 0 */
+          0 /* border, must be 0 */,
           format,
           type,
           offset
@@ -851,14 +903,8 @@ export default class WEBGLTexture extends Texture {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      // NOTE(Tarek): Default to RGBA bytes
-      const channels = DATA_FORMAT_CHANNELS[this.dataFormat] || 4;
-      const channelSize = TYPE_SIZES[this.type] || 1;
-
-      this.trackAllocatedMemory(
-        this.width * this.height * this.depth * channels * channelSize,
-        'Texture'
-      );
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.gl, this.props.format);
+      this.trackAllocatedMemory(this.width * this.height * this.depth * bytesPerPixel, 'Texture');
     }
 
     this.loaded = true;

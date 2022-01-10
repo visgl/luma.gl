@@ -74,7 +74,7 @@ export default abstract class Resource<Props extends ResourceProps> {
   // PROTECTED METHODS
 
   /** Called by subclass to track memory allocations */
-  protected trackAllocatedMemory(bytes, name = this[Symbol.toStringTag]) {
+  protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
     const stats = this._device.statsManager.getStats('Resource Counts');
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
@@ -82,7 +82,7 @@ export default abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to track memory deallocations */
-  protected trackDeallocatedMemory(name = this[Symbol.toStringTag]) {
+  protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
     const stats = this._device.statsManager.getStats('Resource Counts');
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
     stats.get(`${name} Memory`).subtractCount(this.allocatedBytes);
@@ -90,7 +90,7 @@ export default abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass .destroy() to track object destruction */
-  protected removeStats() {
+  protected removeStats(): void {
     const stats = this._device.statsManager.getStats('Resource Counts');
     const name = this[Symbol.toStringTag];
     stats.get(`${name}s Active`).decrementCount();
@@ -99,14 +99,13 @@ export default abstract class Resource<Props extends ResourceProps> {
   // PRIVATE METHODS
 
   /** Called by constructor to track object creation */
-  private addStats() {
+  private addStats(): void {
     const stats = this._device.statsManager.getStats('Resource Counts');
     const name = this[Symbol.toStringTag];
     stats.get('Resources Created').incrementCount();
     stats.get(`${name}s Created`).incrementCount();
     stats.get(`${name}s Active`).incrementCount();
   }
-
 }
 
 /**
@@ -115,7 +114,7 @@ export default abstract class Resource<Props extends ResourceProps> {
  * @param defaultProps
  * @returns returns a map of overridden default props
  */
-  function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): Required<Props> {
+function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): Required<Props> {
   const mergedProps = {...defaultProps};
   for (const key in props) {
     if (props[key] !== undefined) {

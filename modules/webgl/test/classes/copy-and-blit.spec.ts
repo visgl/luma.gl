@@ -2,8 +2,35 @@ import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D, Buffer, getKey} from '@luma.gl/webgl';
 import {fixture} from 'test/setup';
-import {WEBGL_TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {readPixelsToArray, readPixelsToBuffer, copyToTexture, blit} from '@luma.gl/webgl';
+
+type WebGLTextureInfo = {
+  dataFormat: number;
+  types: number[];
+  gl2?: boolean;
+  gl1?: boolean | string;
+  compressed?: boolean;
+}
+
+const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
+  // Unsized texture format - more performance
+  [GL.RGB]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
+  // TODO: format: GL.RGBA type: GL.FLOAT is supported in WebGL1 when 'OES_texure_float' is suported
+  // we need to update this table structure to specify extensions (gl1ext: 'OES_texure_float', gl2ext: false) for each type.
+  [GL.RGBA]: {
+    dataFormat: GL.RGBA,
+    types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]
+  },
+  [GL.ALPHA]: {dataFormat: GL.ALPHA, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE]: {dataFormat: GL.LUMINANCE, types: [GL.UNSIGNED_BYTE]},
+  [GL.LUMINANCE_ALPHA]: {dataFormat: GL.LUMINANCE_ALPHA, types: [GL.UNSIGNED_BYTE]},
+
+  // 32 bit floats
+  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
+  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
+  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
+  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
+};
 
 const EPSILON = 1e-6;
 const {abs} = Math;
@@ -263,7 +290,9 @@ function testCopyToTexture(t, gl) {
         height: 1
       };
       if (isSubCopy) {
+        // @ts-expect-error
         opts.targetX = 1;
+        // @ts-expect-error
         opts.targetY = 1;
       }
       copyToTexture(source, destinationTexture, opts);

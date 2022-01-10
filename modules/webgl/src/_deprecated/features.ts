@@ -61,15 +61,15 @@ export const DEPRECATED_TO_CLASSIC_FEATURES: Record<string, DeviceFeature> = {
 
   // BLENDING
   BLEND_EQUATION_MINMAX: 'blend-minmax-webgl1',
-  FLOAT_BLEND: 'float-blend-webgl1',
+  FLOAT_BLEND: 'texture-blend-float-webgl1',
 
   // TEXTURES: '//_webgl1 TEXTURES', RENDERBUFFERS
-  COLOR_ENCODING_SRGB: 'texture-srgb-webgl1',
+  COLOR_ENCODING_SRGB: 'texture-formats-srgb-webgl1',
 
   // TEXTURES
-  TEXTURE_DEPTH: 'texture-depth-webgl1',
-  TEXTURE_FLOAT: 'texture-float32-webgl1',
-  TEXTURE_HALF_FLOAT: 'texture-float16-webgl1',
+  TEXTURE_DEPTH: 'texture-formats-depth-webgl1',
+  TEXTURE_FLOAT: 'texture-formats-float32-webgl1',
+  TEXTURE_HALF_FLOAT: 'texture-formats-float16-webgl1',
 
   TEXTURE_FILTER_LINEAR_FLOAT: 'texture-filter-linear-float32-webgl',
   TEXTURE_FILTER_LINEAR_HALF_FLOAT: 'texture-filter-linear-float16-webgl',
