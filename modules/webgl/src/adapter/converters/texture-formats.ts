@@ -543,6 +543,8 @@ export function _checkFloat32ColorAttachment(
     gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
     const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER) === GL.FRAMEBUFFER_COMPLETE;
+
+    gl.bindTexture(GL.TEXTURE_2D, null);
     return status;
   } finally {
     gl.deleteTexture(texture);
