@@ -342,7 +342,7 @@ export default class WEBGLTexture extends Texture {
     }
 
     // TODO - technically, this is only needed in WebGL1. In WebGL2 we could always use the sampler.
-    const parameters = convertSamplerParametersToWebGL(samplerProps, this.props.mipmaps);
+    const parameters = convertSamplerParametersToWebGL(samplerProps);
     this._setSamplerParameters(parameters);
     return this;
   }
