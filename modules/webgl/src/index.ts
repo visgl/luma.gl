@@ -30,7 +30,7 @@ export {default as TextureCube} from './classes/texture-cube';
 
 export type {ProgramProps} from './classes/program';
 export {default as Program} from './classes/program';
-export type {FramebufferProps} from './classes/framebuffer';
+export type {ClassicFramebufferProps as FramebufferProps} from './classes/framebuffer';
 export {default as Framebuffer} from './classes/framebuffer';
 export type {RenderbufferProps} from './classes/renderbuffer';
 export {default as Renderbuffer} from './classes/renderbuffer';

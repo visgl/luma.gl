@@ -15,9 +15,8 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   width: 1,
   height: 1,
-  // colorAttachments: [],
-  colorAttachments: ['rgba8unorm-unsized'],
-  depthStencilAttachment: 'depth24plus-stencil8'
+  colorAttachments: [], // ['rgba8unorm-unsized'],
+  depthStencilAttachment: undefined // 'depth24plus-stencil8'
 };
 
 /**
@@ -46,13 +45,13 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   /** @deprecated backwards compatibility*/
   resize(options?: {width: number, height: number}): void;
 
-  resize(widthOrOptions: number | {width: number, height: number}, height: number = 0): void {
+  resize(widthOrOptions: number | {width: number, height: number} | undefined, height: number = undefined): void {
     let width;
     if (typeof widthOrOptions === 'number') {
       width = widthOrOptions;
     } else {
-      width = widthOrOptions.width;
-      height = widthOrOptions.height;
+      width = widthOrOptions?.width;
+      height = widthOrOptions?.height;
     }
     if (height !== this.height || width !== this.width) {
       this.width = width;

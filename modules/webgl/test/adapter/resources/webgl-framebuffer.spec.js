@@ -69,7 +69,10 @@ test('WebGLDevice.createFramebuffer()', async (t) => {
   for (const testDevice of await getTestDevices()) {
     t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
 
-    const framebuffer = testDevice.createFramebuffer({depthStencilAttachment: 'depth16unorm'});
+    const framebuffer = testDevice.createFramebuffer({
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth16unorm'
+    });
     t.ok(framebuffer instanceof Framebuffer, 'Framebuffer with attachment');
 
     framebuffer.destroy();
