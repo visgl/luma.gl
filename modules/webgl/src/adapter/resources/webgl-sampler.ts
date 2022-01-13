@@ -19,7 +19,7 @@ export default class WEBGLSampler extends Sampler {
   constructor(device: WebGLDevice, props: SamplerProps) {
     super(device, props);
     this.device = device;
-    this.parameters = convertSamplerParametersToWebGL(props); // TODO mipmaps
+    this.parameters = convertSamplerParametersToWebGL(props);
     if (this.device.isWebGL2) {
       this.handle = this.handle || this.device.gl2.createSampler();
       this._setSamplerParameters(this.parameters);

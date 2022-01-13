@@ -118,7 +118,6 @@ export default class WEBGLFramebuffer extends Framebuffer {
       sampler: {
         minFilter: 'linear',
         magFilter: 'linear',
-        mipmapFilter: 'nearest',
         addressModeU: 'clamp-to-edge',
         addressModeV: 'clamp-to-edge'
       },

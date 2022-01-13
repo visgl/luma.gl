@@ -9,7 +9,7 @@ import {convertCompareFunction, convertToCompareFunction} from './device-paramet
  * @param props
  * @returns
  */
-export function convertSamplerParametersToWebGL(props: SamplerParameters, mipmaps?: boolean): WebGLSamplerParameters {
+export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGLSamplerParameters {
   const params: Record<number, number> = {};
   if (props.addressModeU) {
     params[GL.TEXTURE_WRAP_S] = convertAddressMode(props.addressModeU);
@@ -25,7 +25,7 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters, mipmap
   }
   if (props.minFilter || props.mipmapFilter) {
     // TODO - arbitrary choice of linear?
-    params[GL.TEXTURE_MIN_FILTER] = convertMinFilterMode(props.minFilter || 'linear', props.mipmapFilter || 'linear');
+    params[GL.TEXTURE_MIN_FILTER] = convertMinFilterMode(props.minFilter || 'linear', props.mipmapFilter);
   }
   if (props.lodMinClamp !== undefined) {
     params[GL.TEXTURE_MIN_LOD] = props.lodMinClamp;
@@ -54,8 +54,8 @@ function convertAddressMode(addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-re
   }
 }
 
-function convertMaxFilterMode(filterMode: 'nearest' | 'linear'): GL {
-  switch (filterMode) {
+function convertMaxFilterMode(maxFilter: 'nearest' | 'linear'): GL {
+  switch (maxFilter) {
     case 'nearest': return GL.NEAREST;
     case 'linear': return GL.LINEAR;
   }
@@ -65,13 +65,13 @@ function convertMaxFilterMode(filterMode: 'nearest' | 'linear'): GL {
  * WebGPU has separate min filter and mipmap filter, 
  * WebGL is combined and effectively offers 6 options
  */
-function convertMinFilterMode(filterMode: 'nearest' | 'linear', mipmapFilterMode: 'nearest' | 'linear', mipmaps?: boolean): GL {
-  if (!mipmaps) {
-    return convertMaxFilterMode(filterMode);
+function convertMinFilterMode(minFilter: 'nearest' | 'linear', mipmapFilter?: 'nearest' | 'linear'): GL {
+  if (!mipmapFilter) {
+    return convertMaxFilterMode(minFilter);
   }
-  switch (filterMode) {
-    case 'nearest': return mipmapFilterMode === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
-    case 'linear': return mipmapFilterMode === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
+  switch (minFilter) {
+    case 'nearest': return mipmapFilter === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
+    case 'linear': return mipmapFilter === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
   }
 }
 
