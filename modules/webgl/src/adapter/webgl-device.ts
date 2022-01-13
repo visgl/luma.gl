@@ -33,22 +33,30 @@ import {
 import type {
   BufferProps,
   ShaderProps,
-  RenderPipeline,
-  RenderPipelineProps,
   Sampler,
   SamplerProps,
   TextureProps,
-  FramebufferProps
+  FramebufferProps,
+  RenderPipeline,
+  RenderPipelineProps,
+  ComputePipeline,
+  ComputePipelineProps,
+  RenderPass,
+  RenderPassProps,
+  ComputePass,
+  ComputePassProps
 } from '@luma.gl/api';
 
 // Refactored, minimal classes
 import WEBGLShader from './resources/webgl-shader';
 import WEBGLSampler from './resources/webgl-sampler';
+import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLTexture from './resources/webgl-texture';
 import WEBGLFramebuffer from './resources/webgl-framebuffer';
 
 // Legacy classes
 import WEBGLBuffer from '../classes/webgl-buffer';
+// import WEBGLTexture from '../adapter/resources/webgl-texture';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
 import ClassicFramebuffer from '../classes/framebuffer';
 
@@ -340,12 +348,24 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WEBGLShader(this, props);
   }
 
-  createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
+  createFramebuffer(props: FramebufferProps): Framebuffer {
+    return new WEBGLFramebuffer(this, props);
+  }
+  
+  createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
     throw new Error('not implemented'); // return new Program(props);
   }
 
-  createFramebuffer(props: FramebufferProps): Framebuffer {
-    return new WEBGLFramebuffer(this, props);
+  beginRenderPass(props: RenderPassProps): RenderPass {
+    throw new Error('not implemented'); // return new Program(props);
+  }
+
+  createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
+    throw new Error('not implemented'); // return new Program(props);
+  }
+
+  beginComputePass(props: ComputePassProps): ComputePass {
+    throw new Error('compute shaders not supported in WebGL');
   }
 
   /**

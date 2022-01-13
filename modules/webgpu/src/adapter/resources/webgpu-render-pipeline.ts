@@ -1,40 +1,15 @@
-import {RenderPipeline, RenderPipelineProps, cast, log} from '@luma.gl/api';
-
-import type WebGPUDevice from '../webgpu-device';
-
+import type {Binding} from '@luma.gl/api';
+import {Buffer, RenderPipeline, RenderPipelineProps, assert, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
-import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
+// import {getBindGroup} from '../helpers/get-bind-group';
+import {getVertexBufferLayout, getBufferSlots} from '../helpers/get-vertex-buffer-layout';
+// import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 // import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
-import WebGPUShader from './webgpu-shader';
 // import type {BufferAccessors} from './webgpu-pipeline';
 
-// BIND GROUP LAYOUTS
-
-type Binding = {
-  binding: number;
-  visibility: number;
-
-  buffer?: {
-    type?: 'uniform' | 'storage' | 'read-only-storage';
-    hasDynamicOffset?: false;
-    minBindingSize?: number;
-  };
-  sampler?: {
-    type?: 'filtering' | 'non-filtering' | 'comparison';
-  };
-  texture?: {
-    viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-    sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-    multisampled?: boolean;
-  };
-  storageTexture?: {
-    viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-    access: 'read-only' | 'write-only';
-    format: string;
-  };
-};
-
+import type WebGPUDevice from '../webgpu-device';
+import WebGPUShader from './webgpu-shader';
 
 // RENDER PIPELINE
 
@@ -43,29 +18,90 @@ export default class WebGPURenderPipeline extends RenderPipeline {
   device: WebGPUDevice;
   handle: GPURenderPipeline;
 
+  private _bufferSlots: Record<string, number>;
+  private _buffers: Buffer[];
+  /** For internal use to create BindGroups */
+  private _bindGroupLayout: GPUBindGroupLayout;
+  private _bindGroup: GPUBindGroup = null;
+
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle as GPURenderPipeline || this.createHandle();
     this.handle.label = this.props.id;
+
+    this._bufferSlots = getBufferSlots(this.props.layout, this.props.bufferMap);
+    this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
+    this._bindGroupLayout = this.handle.getBindGroupLayout(0);
   }
 
   protected createHandle(): GPURenderPipeline {
-    if (this.props.handle) {
-      return this.props.handle;
-    }
+    const descriptor = this._getRenderPipelineDescriptor();
+    const renderPipeline = this.device.handle.createRenderPipeline(descriptor);
+    log.groupCollapsed(1, `new WebGPRenderPipeline(${this.id})`)();
+    log.log(1, JSON.stringify(descriptor, null, 2))();
+    log.groupEnd(1)();
+    return renderPipeline;
+  }
 
+  destroy() {
+    // WebGPURenderPipeline has no destroy method.
+  }
+
+  setAttributes(attributes: Record<string, Buffer>): void {
+    for (const [name, buffer] of Object.entries(attributes)) {
+      const bufferIndex = this._bufferSlots[name];
+      if (bufferIndex >= 0) {
+        this._buffers[bufferIndex] = buffer
+      }
+    }
+    // for (let i = 0; i < this._bufferSlots.length; ++i) {
+    //   const bufferName = this._bufferSlots[i];
+    //   if (attributes[bufferName]) {
+    //     this.handle
+    //   }
+    // }
+  }
+
+  /** Set the bindings */
+  setBindings(bindings: Record<string, Binding>): void {
+    if (!isObjectEmpty(this.props.bindings)) {
+      Object.assign(this.props.bindings, bindings);
+      // Set up the bindings
+      // this._bindGroup = getBindGroup(
+      //   this.device.handle,
+      //   this._bindGroupLayout,
+      //   this.props.layout,
+      //   this.props.bindings
+      // );
+    }
+  }
+
+  _getBuffers() {
+    return this._buffers;
+  }
+
+  /** Return a bind group created by setBindings */
+  _getBindGroup() {
+    assert(this._bindGroup);
+    return this._bindGroup;
+  }
+
+  /** Populate the complex WebGPU GPURenderPipelineDescriptor */
+  protected _getRenderPipelineDescriptor() {
+    // Set up the vertex stage
     const vertex: GPUVertexState = {
-      module: cast<WebGPUShader>(this.props.vertexShader).handle,
-      entryPoint: this.props.vertexShaderEntryPoint || 'main',
-      buffers: convertAttributesVertexBufferToLayout(this.props.attributeLayouts)
+      module: cast<WebGPUShader>(this.props.vs).handle,
+      entryPoint: this.props.vsEntryPoint || 'main',
+      buffers: getVertexBufferLayout(this.props.layout, this.props.bufferMap)
     };
 
+    // Set up the fragment stage
     let fragment: GPUFragmentState | undefined;
-    if (this.props.fragmentShader) {
+    if (this.props.fs) {
       fragment = {
-        module: cast<WebGPUShader>(this.props.fragmentShader).handle,
-        entryPoint: this.props.fragmentShaderEntryPoint || 'main',
+        module: cast<WebGPUShader>(this.props.fs).handle,
+        entryPoint: this.props.fsEntryPoint || 'main',
         targets: [
           {
             format: getWebGPUTextureFormat(this.device.canvasContext.presentationFormat),
@@ -74,6 +110,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       };
     }
 
+    // Create a partially populated descriptor
     let descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
@@ -82,96 +119,9 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       }
     };
 
-    descriptor = applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    // Set parameters on the descriptor
+    applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
 
-    log.groupCollapsed(1, 'RenderPipeline.GPURenderPipelineDescriptor')();
-    log.log(1, JSON.stringify(descriptor, null, 2))();
-    log.groupEnd(1)();
-
-    const renderPipeline = this.device.handle.createRenderPipeline(descriptor);
-    return renderPipeline;
-  }
-
-  destroy() {
-    // this.handle.destroy();
-  }
-
-  /** For internal use in render passes */
-  _getBindGroupLayout() {
-    // TODO: Cache
-    return this.handle.getBindGroupLayout(0);
+    return descriptor;
   }
 }
-
-// PIPELINE
-
-/*
-export class WebGPUPipeline<Props> extends WebGPUResource<Props> implements Pipeline {
-  device: WebGPUDevice;
-
-  protected needsRebuild = true;
-
-  constructor(device: WebGPUDevice, props: WebGPUPipelineProps) {
-    super(props, DEFAULT_PIPELINE_PROPS);
-    const {
-      vs,
-      fs,
-      topology,
-      parameters,
-      bufferAccessors
-    } = this.props;
-
-    // this.vs = vs;
-    // this.fs = fs;
-    // this.drawMode = topology;
-    // this.parameters = parameters;
-    // this.bufferAccessors = bufferAccessors;
-
-    this.createIfNeeded();
-  }
-
-  setProps(props) {
-    // if ('vs' in props && props.vs !== this.vs) {
-    //   this.vs = props.vs;
-    //   this.needsRebuild = true;
-    // }
-    // if ('fs' in props && props.fs !== this.fs) {
-    //   this.needsRebuild = true;
-    // }
-  }
-
-  createIfNeeded(): GPUPipelineBase {
-    // GPURenderPipelineDescriptor
-    if (this.needsRebuild) {
-      this.handle = this._createPipeline();
-      this.needsRebuild = false;
-    }
-    return this.pipeline;
-  }
-
-  destroy(): void {
-    this.handle.destroy();
-  }
-
-  _createPipeline(): GPUPipelineBase {
-    topology: "triangle-list",
-
-    colorStates: [
-      {
-        format: swapChainFormat,
-      },
-    ],
-
-    const vertexState = {
-      vertexBuffers: getVertexBuffers(this.bufferAccessors)
-    };
-  }
-}
-
-export class ComputePipeline {
-  constructor(device, {
-  }) {
-    // GPUComputePipelineDescriptor
-  }
-}
-*/

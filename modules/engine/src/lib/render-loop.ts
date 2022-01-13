@@ -51,4 +51,3 @@ class WrappedAnimationLoop extends AnimationLoop {
     this.renderLoop?.onFinalize?.(animationProps);
   }
 }
-

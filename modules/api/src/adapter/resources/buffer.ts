@@ -53,7 +53,8 @@ export default abstract class Buffer extends Resource<BufferProps> {
     super(device, props, DEFAULT_BUFFER_PROPS);
   }
 
-  write(data: ArrayBufferView, byteOffset: number = 0): void { throw new Error('not implemented'); }
+  write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }
+  readAsync(byteOffset?: number, byteLength?: number): Promise<ArrayBuffer>  { throw new Error('not implemented'); }
 
   // Convenience API
 

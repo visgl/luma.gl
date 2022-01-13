@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 export type CompareFunction =
   'never' |
   'less' |
@@ -25,6 +27,8 @@ export type FrontFace = 'ccw' | 'cw';
 // Rasterization Parameters
 
 type _RenderParameters = {
+  // topology?: PrimitiveTopology;
+  // stripIndexFormat?: IndexFormat; // WebGPU only
   cullMode?: CullMode;
   frontFace?: FrontFace;
   depthClamp?: boolean;
@@ -139,7 +143,7 @@ export type MultisampleParameters = {
   sampleAlphaToCoverageEnabled?: boolean; //  = false;
 };
 
-// These are set on the render pass encoder and are thus "cheaper" to change
+// These are set dynamically on the render pass encoder and are thus easier to change
 export type RenderPassParameters = {
   viewport: number[]; // float x, float y, float width, float height, float minDepth, float maxDepth
   scissorRect: number[]; // (GPUIntegerCoordinate x, GPUIntegerCoordinate y, GPUIntegerCoordinate width, GPUIntegerCoordinate height);
@@ -159,10 +163,7 @@ export type Parameters =
   ColorParameters;
   // MultisampleParameters;
 
-// export const DEFAULT_PARAMETERS: Parameters;
-
 export const DEFAULT_PARAMETERS: Required<Parameters> = {
-
   // Rasterization Parameters
 
   cullMode: 'none',

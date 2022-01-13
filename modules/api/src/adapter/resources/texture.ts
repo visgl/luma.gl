@@ -110,6 +110,12 @@ const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
 export default abstract class Texture extends Resource<TextureProps> {
+  static COPY_SRC = 0x01;
+  static COPY_DST = 0x02;
+  static TEXTURE_BINDING = 0x04;
+  static STORAGE_BINDING = 0x08;
+  static RENDER_ATTACHMENT = 0x10;
+
   get [Symbol.toStringTag](): string { return 'Texture'; }
 
   constructor(device: Device, props: TextureProps) {

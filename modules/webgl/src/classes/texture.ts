@@ -9,8 +9,8 @@ import {isTextureFormatSupported, isTextureFormatFilterable} from '../adapter/co
 export type {TextureProps};
 
 export type TextureSupportOptions = {
-  format?: any;
-  linearFiltering?: any;
+  format?: number;
+  linearFiltering?: number;
 };
 
 /**

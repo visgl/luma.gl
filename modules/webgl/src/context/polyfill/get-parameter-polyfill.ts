@@ -51,7 +51,7 @@ const WEBGL_PARAMETERS = {
 
   // Extension LIMITS
   [GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT]: (gl, getParameter) => {
-    const ext = gl.luma?.extensions?.[EXT_texture_filter_anisotropic] || 
+    const ext = gl.luma?.extensions?.[EXT_texture_filter_anisotropic] ||
       gl.getExtension('EXT_texture_filter_anisotropic');
     return ext ? getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 1.0;
   },
