@@ -35,7 +35,7 @@ export async function loadSpectorJS(props?: SpectorProps) {
 
 export function initializeSpectorJS(props?: SpectorProps) {
   props = {...DEFAULT_SPECTOR_PROPS, ...props};
-  if (!props?.debug || props?.spector === false) {
+  if (!props?.debug || !props?.spector) {
     return null;
   }
 

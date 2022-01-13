@@ -120,8 +120,8 @@ export default class AppRenderLoop extends RenderLoop {
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       data: textureData,
-      format: GL.RED,
-      dataFormat: GL.R8,
+      format: 'r8unorm',
+      mipmaps: true,
       sampler: {
         magFilter: 'linear',
         minFilter: 'linear',

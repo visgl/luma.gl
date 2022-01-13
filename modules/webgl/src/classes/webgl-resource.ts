@@ -72,6 +72,10 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     return this._handle;
   }
 
+  destroy(): void {
+    this.delete();
+  }
+
   delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
     // @ts-expect-error

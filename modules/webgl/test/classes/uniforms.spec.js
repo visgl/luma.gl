@@ -1,5 +1,6 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-promise/tape';
+import {Texture} from '@luma.gl/api';
 import {Program, Texture2D} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 import {equals} from '@math.gl/core';
@@ -230,7 +231,8 @@ const setUniformAndCheck = (program, input, expected, t) => {
     let expectedValue = expected[uniformName];
     let value = getUniformValue(program, uniformName);
 
-    if (expectedValue instanceof Texture2D) {
+    if (expectedValue instanceof Texture) {
+      // @ts-expect-error
       expectedValue = expectedValue.textureUnit;
     } else if (expectedValue.length) {
       expectedValue = Array.from(expectedValue);

@@ -232,11 +232,11 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // Depth and stencil formats
   'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT}, // 8 stencil bits
 
-  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT}, // 16 depth bits
+  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, gl1: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT}, // 16 depth bits
   'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, attachment: GL.DEPTH_ATTACHMENT},
   'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, attachment: GL.DEPTH_ATTACHMENT},
 
-  'depth24plus-stencil8': {b: 4, gl: GL.DEPTH_STENCIL, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
+  'depth24plus-stencil8': {b: 4, gl: GL.UNSIGNED_INT_24_8, gl1: GL.DEPTH_STENCIL, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
   // "depth32float-stencil8" feature
@@ -332,7 +332,7 @@ function getTextureFormat(format: TextureFormat | GL): TextureFormat {
   if (typeof format === 'string') {
     return format;
   }
-  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
+  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => (entry.gl === format || entry.gl1 === format));
   if (!entry) {
     throw new Error(`Unknown texture format ${format}`);
   }
@@ -494,10 +494,14 @@ export function getWebGLTextureParameters(gl: WebGLRenderingContext, formatOrGL:
   };
 }
 
-export function getDepthStencilAttachment(
+export function getWebGLDepthStencilAttachment(
   formatOrGL: TextureFormat | GL
 ): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT {
   const format = getTextureFormat(formatOrGL);
+  if (typeof format === 'number') {
+    // TODO
+    throw new Error('unsupported depth stencil format')
+  }
   const info = TEXTURE_FORMATS[format];
   const attachment = info.attachment;
   if (!attachment) {

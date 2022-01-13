@@ -125,7 +125,8 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.quad = new Model(device, {
       id: 'quad',
-      program: new Program(device, {vs: SCREEN_QUAD_VS, fs: SCREEN_QUAD_FS}),
+      vs: SCREEN_QUAD_VS,
+      fs: SCREEN_QUAD_FS,
       geometry: quadGeometry,
       parameters: {
         depthWriteEnabled: true,
@@ -136,7 +137,8 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.persistenceQuad = new Model(device, {
       id: 'persistence-quad',
-      program: new Program(device, {vs: SCREEN_QUAD_VS, fs: PERSISTENCE_FS}),
+      vs: SCREEN_QUAD_VS,
+      fs: PERSISTENCE_FS,
       geometry: quadGeometry,
       parameters: {
         depthWriteEnabled: true,
@@ -148,7 +150,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.sphere = new Model(device, {
       id: 'electron',
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
-      program: new Program(device, {vs: SPHERE_VS, fs: SPHERE_FS}),
+      vs: SPHERE_VS,
+      fs: SPHERE_FS,
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',

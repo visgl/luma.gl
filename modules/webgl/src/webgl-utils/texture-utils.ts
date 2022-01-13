@@ -40,18 +40,19 @@ export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides
  * Wraps a given texture into a framebuffer object, that can be further used
  * to read data from the texture object.
  */ 
-export function toFramebuffer(texture: Texture, opts?: FramebufferProps): Framebuffer {
+export function toFramebuffer(texture: Texture, props?: FramebufferProps): Framebuffer {
   const {gl, width, height, id} = texture;
   const framebuffer = new Framebuffer(
     gl,
-    Object.assign({}, opts, {
+    {
+      ...props,
       id: `framebuffer-for-${id}`,
       width,
       height,
       attachments: {
         [GL.COLOR_ATTACHMENT0]: texture
       }
-    })
+    }
   );
   return framebuffer;
 }
