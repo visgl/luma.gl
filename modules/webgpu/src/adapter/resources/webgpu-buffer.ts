@@ -3,7 +3,7 @@ import {Buffer, BufferProps, assert} from '@luma.gl/api';
 import type WebGPUDevice from '../webgpu-device';
 
 function getByteLength(props: BufferProps): number {
-  return props.byteLength >= 0 ? props.byteLength : props.data.byteLength;
+  return props.byteLength || props.data?.byteLength || 0;
 }
 
 export default class WebGPUBuffer extends Buffer {
@@ -53,6 +53,25 @@ export default class WebGPUBuffer extends Buffer {
       data.byteOffset,
       data.byteLength
     );
+  }
+
+  async readAsync(byteOffset: number = 0, byteLength: number = this.byteLength): Promise<ArrayBuffer> {
+    // We need MAP_READ flag, but only COPY_DST buffers can have MAP_READ flag, so we need to create a temp buffer
+    const tempBuffer = new WebGPUBuffer(this.device, {usage: Buffer.MAP_READ | Buffer.COPY_DST, byteLength});
+
+    // Now do a GPU-side copy into the temp buffer we can actually read.
+    // TODO - we are spinning up an independent command queue here, what does this mean
+    const commandEncoder = this.device.handle.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(this.handle, byteOffset, tempBuffer.handle, 0, byteLength);
+    this.device.handle.queue.submit([commandEncoder.finish()]);
+
+    // Map the temp buffer and read the data.
+    await tempBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
+    const arrayBuffer = tempBuffer.handle.getMappedRange().slice(0);
+    tempBuffer.handle.unmap();
+    tempBuffer.destroy();
+
+    return arrayBuffer;
   }
 
   _writeMapped<TypedArray>(typedArray: TypedArray): void {

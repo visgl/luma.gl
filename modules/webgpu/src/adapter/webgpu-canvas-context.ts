@@ -27,6 +27,10 @@ export default class WebGPUCanvasContext extends CanvasContext {
     this.update();
   }
 
+  destroy() {
+    this.context.unconfigure();
+  }
+
   /** Resizes and updates render targets if necessary */
   update() {
     const size = this.getPixelSize();
