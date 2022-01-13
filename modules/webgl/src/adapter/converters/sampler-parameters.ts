@@ -9,7 +9,7 @@ import {convertCompareFunction, convertToCompareFunction} from './device-paramet
  * @param props
  * @returns
  */
-export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGLSamplerParameters {
+export function convertSamplerParametersToWebGL(props: SamplerParameters, mipmaps?: boolean): WebGLSamplerParameters {
   const params: Record<number, number> = {};
   if (props.addressModeU) {
     params[GL.TEXTURE_WRAP_S] = convertAddressMode(props.addressModeU);
@@ -46,7 +46,7 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGL
 }
 
 /** Convert address more */
-function convertAddressMode(addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-repeat'): number {
+function convertAddressMode(addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-repeat'): GL {
   switch (addressMode) {
     case 'clamp-to-edge': return GL.CLAMP_TO_EDGE;
     case 'repeat': return GL.REPEAT;
@@ -54,15 +54,21 @@ function convertAddressMode(addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-re
   }
 }
 
-function convertMaxFilterMode(filterMode: 'nearest' | 'linear'): number {
+function convertMaxFilterMode(filterMode: 'nearest' | 'linear'): GL {
   switch (filterMode) {
     case 'nearest': return GL.NEAREST;
     case 'linear': return GL.LINEAR;
   }
 }
 
-/** WebGPU has separate min filter and mipmap filter, WebGL is combined */
-function convertMinFilterMode(filterMode: 'nearest' | 'linear', mipmapFilterMode: 'nearest' | 'linear'): number {
+/** 
+ * WebGPU has separate min filter and mipmap filter, 
+ * WebGL is combined and effectively offers 6 options
+ */
+function convertMinFilterMode(filterMode: 'nearest' | 'linear', mipmapFilterMode: 'nearest' | 'linear', mipmaps?: boolean): GL {
+  if (!mipmaps) {
+    return convertMaxFilterMode(filterMode);
+  }
   switch (filterMode) {
     case 'nearest': return mipmapFilterMode === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
     case 'linear': return mipmapFilterMode === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
