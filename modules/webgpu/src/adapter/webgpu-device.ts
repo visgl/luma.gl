@@ -11,6 +11,7 @@ import type {
   ShaderProps,
   TextureProps,
   TextureFormat,
+  ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
   ComputePipelineProps,
@@ -20,6 +21,7 @@ import type {
 import {Device, CanvasContext, log, cast} from '@luma.gl/api';
 import WebGPUBuffer from './resources/webgpu-buffer';
 import WebGPUTexture from './resources/webgpu-texture';
+import WebGPUExternalTexture from './resources/webgpu-external-texture';
 import WebGPUSampler from './resources/webgpu-sampler';
 import WebGPUShader from './resources/webgpu-shader';
 import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
@@ -164,6 +166,10 @@ export default class WebGPUDevice extends Device {
 
   _createTexture(props: TextureProps): WebGPUTexture {
     return new WebGPUTexture(this, props);
+  }
+
+  createExternalTexture(props: ExternalTextureProps): WebGPUExternalTexture {
+    return new WebGPUExternalTexture(this, props);
   }
 
   createShader(props: ShaderProps): WebGPUShader {

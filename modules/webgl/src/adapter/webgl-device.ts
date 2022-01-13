@@ -36,6 +36,8 @@ import type {
   Sampler,
   SamplerProps,
   TextureProps,
+  ExternalTexture,
+  ExternalTextureProps,
   FramebufferProps,
   RenderPipeline,
   RenderPipelineProps,
@@ -338,6 +340,10 @@ export default class WebGLDevice extends Device implements ContextState {
 
   _createTexture(props: TextureProps): WEBGLTexture {
     return new WEBGLTexture(this, props);
+  }
+
+  createExternalTexture(props: ExternalTextureProps): ExternalTexture {
+    throw new Error('not implemented'); // return new Program(props);
   }
 
   createSampler(props: SamplerProps): WEBGLSampler {
