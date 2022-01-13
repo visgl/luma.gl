@@ -1,12 +1,7 @@
 import type {Device, RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../adapter/webgl-device';
-import WebGLResource, {ResourceProps} from './webgl-resource';
-import Texture from './texture';
-import Framebuffer from './framebuffer';
 import {parseUniformName, getUniformSetter} from './uniforms';
-import WEBGLShader from '../adapter/resources/webgl-shader';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
@@ -16,7 +11,11 @@ import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
+import WebGLDevice from '../adapter/webgl-device';
+import WebGLResource, {ResourceProps} from './webgl-resource';
+import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLTexture from '../adapter/resources/webgl-texture';
+import WEBGLFramebuffer from '../adapter/resources/webgl-framebuffer';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -44,7 +43,7 @@ export type ProgramDrawOptions = {
   isInstanced?: boolean;
   vertexArray?: any;
   transformFeedback?: any; // TransformFeedback;
-  framebuffer?: Framebuffer;
+  framebuffer?: WEBGLFramebuffer;
   parameters?: {};
   uniforms?: Record<string, any>;
   samplers?: any;
@@ -248,7 +247,7 @@ export default class Program extends WebGLResource<ProgramProps> {
         let value = uniform;
         let textureUpdate = false;
 
-        if (value instanceof Framebuffer) {
+        if (value instanceof WEBGLFramebuffer) {
           value = value.texture;
         }
         if (value instanceof WEBGLTexture) {

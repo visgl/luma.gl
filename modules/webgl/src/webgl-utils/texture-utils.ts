@@ -5,7 +5,7 @@ import Texture from '../classes/texture';
 import Texture2D from '../classes/texture-2d';
 import TextureCube from '../classes/texture-cube';
 import Texture3D from '../classes/texture-3d';
-import Framebuffer, {FramebufferProps} from '../classes/framebuffer';
+import Framebuffer, {ClassicFramebufferProps} from '../classes/framebuffer';
 
 type TextureType = Texture2D | TextureCube | Texture3D;
 
@@ -40,7 +40,7 @@ export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides
  * Wraps a given texture into a framebuffer object, that can be further used
  * to read data from the texture object.
  */ 
-export function toFramebuffer(texture: Texture, props?: FramebufferProps): Framebuffer {
+export function toFramebuffer(texture: Texture, props?: ClassicFramebufferProps): Framebuffer {
   const {gl, width, height, id} = texture;
   const framebuffer = new Framebuffer(
     gl,

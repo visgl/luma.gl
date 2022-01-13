@@ -12,7 +12,7 @@ import Texture from './texture';
 import Framebuffer from './framebuffer';
 
 /**
- * Copies data from a Framebuffer or a Texture object into ArrayBuffer object.
+ * Copies data from a type  or a Texture object into ArrayBuffer object.
  * App can provide targetPixelArray or have it auto allocated by this method
  *  newly allocated by this method unless provided by app.
  * @note Slow requires roundtrip to GPU
@@ -56,10 +56,11 @@ export function readPixelsToArray(
     sourceAttachment = GL.FRONT;
   }
 
-  assert(attachments[sourceAttachment]);
+  const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
+  // assert(attachments[sourceAttachment]);
 
   // Deduce the type from color attachment if not provided.
-  sourceType = sourceType || attachments[sourceAttachment].type;
+  sourceType = sourceType || framebuffer.colorAttachments[attachment].type;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
@@ -441,14 +442,14 @@ export function blit(
 
 // Helper methods
 
-function getFramebuffer(source) {
+function getFramebuffer(source): {framebuffer: Framebuffer, deleteFramebuffer: boolean} {
   if (!(source instanceof Framebuffer)) {
     return {framebuffer: toFramebuffer(source), deleteFramebuffer: true};
   }
   return {framebuffer: source, deleteFramebuffer: false};
 }
 
-function getPixelArray(pixelArray, type, format, width, height) {
+function getPixelArray(pixelArray, type, format, width: number, height: number): Uint8Array | Uint16Array | Float32Array {
   if (pixelArray) {
     return pixelArray;
   }
@@ -457,5 +458,5 @@ function getPixelArray(pixelArray, type, format, width, height) {
   const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
   const components = glFormatToComponents(format);
   // TODO - check for composite type (components = 1).
-  return new ArrayType(width * height * components);
+  return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;
 }

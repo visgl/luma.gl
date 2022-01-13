@@ -35,7 +35,7 @@ import './adapter/webgl-device.spec';
 // Resources - TODO these tests only depend on Device and could move to API...
 import './adapter/resources/webgl-sampler.spec';
 import './adapter/resources/webgl-texture.spec';
-// import './adapter/resources/webgl-framebuffer.spec';
+import './adapter/resources/webgl-framebuffer.spec';
 
 // helpers
 import './classes/accessor.spec';

@@ -45,7 +45,7 @@ import type {
 import WEBGLShader from './resources/webgl-shader';
 import WEBGLSampler from './resources/webgl-sampler';
 import WEBGLTexture from './resources/webgl-texture';
-// import WEBGLFramebuffer from './resources/webgl-framebuffer';
+import WEBGLFramebuffer from './resources/webgl-framebuffer';
 
 // Legacy classes
 import WEBGLBuffer from '../classes/webgl-buffer';
@@ -345,8 +345,7 @@ export default class WebGLDevice extends Device implements ContextState {
   }
 
   createFramebuffer(props: FramebufferProps): Framebuffer {
-    throw new Error
-    // return new WEBGLFramebuffer(this, props);
+    return new WEBGLFramebuffer(this, props);
   }
 
   /**
