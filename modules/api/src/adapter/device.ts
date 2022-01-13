@@ -10,6 +10,7 @@ import type {default as ComputePipeline, ComputePipelineProps} from './resources
 import type {default as Sampler, SamplerProps} from './resources/sampler';
 import type {default as Shader, ShaderProps} from './resources/shader';
 import type {default as Texture, TextureProps, TextureData} from './resources/texture';
+import type {default as ExternalTexture, ExternalTextureProps} from './resources/external-texture';
 import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {default as RenderPass, RenderPassProps} from './resources/render-pass';
 import type {default as ComputePass, ComputePassProps} from './resources/compute-pass';
@@ -276,6 +277,9 @@ export default abstract class Device {
     }
     return this._createTexture(props);
   }
+
+  /** Create a temporary texture view of a video source */
+  abstract createExternalTexture(props: ExternalTextureProps): ExternalTexture;
 
   /** Create a sampler */
   abstract createSampler(props: SamplerProps): Sampler;
