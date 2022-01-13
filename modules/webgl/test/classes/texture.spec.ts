@@ -26,10 +26,10 @@ const WEBGL_TEXTURE_FORMATS: Record<string, WebGLTextureInfo> = {
   },
 
   // 32 bit floats
-  [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
-  [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
-  [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
-  [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
+  // [GL.R32F]: {dataFormat: GL.RED, types: [GL.FLOAT], gl2: true},
+  // [GL.RG32F]: {dataFormat: GL.RG, types: [GL.FLOAT], gl2: true},
+  // [GL.RGB32F]: {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
+  // [GL.RGBA32F]: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
 };
 
 export const SAMPLER_PARAMETERS = {
@@ -235,7 +235,7 @@ function testFormatDeduction(t, glContext) {
   }
 }
 
-test.only('WebGL#Texture2D format deduction', (t) => {
+test('WebGL#Texture2D format deduction', (t) => {
   const {gl, gl2} = fixture;
   testFormatDeduction(t, gl);
   if (gl2) {
