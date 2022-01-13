@@ -34,6 +34,10 @@ function getContextData(gl) {
  */
 export async function loadWebGLDeveloperTools() {
   if (!globalThis.WebGLDebugUtils) {
+    // @ts-expect-error Developer tools expects global to be set
+    globalThis.global = globalThis.global || globalThis;
+    // @ts-expect-error Developer tools expects global to be set
+    globalThis.global.module = {};
     await loadScript(WEBGL_DEBUG_CDN_URL);
   }
 }
@@ -111,7 +115,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args): v
   args = Array.from(args).map(arg => arg === undefined ? 'undefined' : arg);
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
-  const glName = props.webgl2 ? 'gl1' : 'gl2';
+  const glName = props.webgl2 ? 'gl2' : 'gl1';
   const message = `${errorMessage} in ${glName}.${functionName}(${functionArgs})`;
   if (props.throwOnError) {
     throw new Error(message);

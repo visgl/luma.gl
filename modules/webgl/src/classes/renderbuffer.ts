@@ -38,6 +38,11 @@ const DEFAULT_RENDERBUFFER_PROPS: Required<RenderbufferProps> = {
 export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
   get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
 
+  get width(): number { return this.props.width; }
+  get height(): number { return this.props.height; }
+  get format(): number  { return this.props.format; }
+  get samples(): number { return this.props.samples; }
+
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
     return !options.format || isRenderbufferFormatSupported(gl, options.format);
   }
@@ -102,11 +107,6 @@ export class ImmutableRenderbuffer extends WebGLResource<RenderbufferProps> {
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
 export default class Renderbuffer extends ImmutableRenderbuffer {
-  get width(): number { return this.props.width; }
-  get height(): number { return this.props.height; }
-  get format(): number  { return this.props.format; }
-  get samples(): number { return this.props.samples; }
-
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
     return ImmutableRenderbuffer.isSupported(gl, options);
   }
