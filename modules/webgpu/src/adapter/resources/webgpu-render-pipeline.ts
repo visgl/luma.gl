@@ -2,7 +2,7 @@ import type {Binding} from '@luma.gl/api';
 import {Buffer, RenderPipeline, RenderPipelineProps, assert, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
-// import {getBindGroup} from '../helpers/get-bind-group';
+import {getBindGroup} from '../helpers/get-bind-group';
 import {getVertexBufferLayout, getBufferSlots} from '../helpers/get-vertex-buffer-layout';
 // import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 // import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
@@ -68,12 +68,12 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     if (!isObjectEmpty(this.props.bindings)) {
       Object.assign(this.props.bindings, bindings);
       // Set up the bindings
-      // this._bindGroup = getBindGroup(
-      //   this.device.handle,
-      //   this._bindGroupLayout,
-      //   this.props.layout,
-      //   this.props.bindings
-      // );
+      this._bindGroup = getBindGroup(
+        this.device.handle,
+        this._bindGroupLayout,
+        this.props.layout,
+        this.props.bindings
+      );
     }
   }
 

@@ -18,10 +18,12 @@ export function getDeviceFeatures(gl: WebGLRenderingContext): Set<DeviceFeature>
     features.add(textureFeature);
   }
 
-  // features.add('depth-clamping'); // GPUPrimitiveState.clampDepth
+  // TODO
+  // features.add('depth-clip-control'); // GPUPrimitiveState.clampDepth
   // features.add('depth24unorm-stencil8'); // GPUTextureFormat 'depth24unorm-stencil8'.
   // features.add('depth32float-stencil8'); // GPUTextureFormat 'depth32float-stencil8'.
   // features.add('timestamp-query'); // GPUQueryType "timestamp-query"
+  // "indirect-first-instance"
 
   return features;
 }
