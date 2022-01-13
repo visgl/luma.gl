@@ -121,8 +121,8 @@ export default class ProgramManager {
       // @ts-expect-error TODO - program should be created from device
       this._programCache[hash] = new Program(this.device.gl, {
         hash,
-        vs: assembled.vs,
-        fs: assembled.fs,
+        vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
+        fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
         varyings,
         bufferMode,
         parameters

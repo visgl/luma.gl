@@ -33,6 +33,7 @@ test('WebGL#Program construct/delete', (t) => {
     'Program throws on missing gl context'
   );
 
+  // @ts-expect-error
   t.throws(() => new Program(gl), 'Program throws on missing shader');
 
   const program = new Program(gl, {vs, fs});
@@ -82,13 +83,11 @@ test('WebGL#Program caching', (t) => {
 
   program._isCached = true;
   program.delete();
-  // @ts-expect-error
-  t.ok(program._handle, 'Program should not be deleted');
+  t.ok(program.handle, 'Program should not be deleted');
 
   program._isCached = false;
   program.delete();
-  // @ts-expect-error
-  t.ok(!program._handle, 'Program should be deleted');
+  t.ok(!program.handle, 'Program should be deleted');
 
   t.end();
 });

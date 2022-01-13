@@ -30,6 +30,9 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   width: number;
   /** Height of all attachments in this framebuffer */
   height: number;
+  abstract colorAttachments: Texture[];
+  abstract depthStencilAttachment: Texture;
+
 
   constructor(device: Device, props: FramebufferProps = {}) {
     super(device, props, DEFAULT_FRAMEBUFFER_PROPS)
