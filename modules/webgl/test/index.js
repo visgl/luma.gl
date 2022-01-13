@@ -5,6 +5,7 @@
 import './utils/is-old-ie.spec';
 
 import './webgl-utils/parse-shader-compiler-log.spec';
+import './webgl-utils/texture-utils.spec';
 
 import './helpers/get-program-bindings.spec';
 

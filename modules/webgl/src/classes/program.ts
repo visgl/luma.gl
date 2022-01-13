@@ -16,6 +16,8 @@ import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
+import WEBGLTexture from '../adapter/resources/webgl-texture';
+
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
@@ -249,7 +251,7 @@ export default class Program extends WebGLResource<ProgramProps> {
         if (value instanceof Framebuffer) {
           value = value.texture;
         }
-        if (value instanceof Texture) {
+        if (value instanceof WEBGLTexture) {
           textureUpdate = this.uniforms[uniformName] !== uniform;
 
           if (textureUpdate) {

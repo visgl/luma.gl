@@ -80,7 +80,13 @@ export const WebGLExtensions = ({f}) => {
 
   return (
     <ul>
-      { extensions.map(extension => (<li key={extension} style={{color: 'darkgreen'}} > {extension} </li>)) }
+      { extensions.map(extension => (
+        <li key={extension} style={{color: 'darkgreen'}} > 
+          <a href={"https://www.khronos.org/registry/webgl/extensions/" + extension} target="_blank">
+            {extension} 
+          </a>
+        </li>
+      )) }
     </ul>
   );
 }

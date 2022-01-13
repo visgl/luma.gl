@@ -851,12 +851,12 @@ export default class WEBGLTexture extends Texture {
   /** Image 3D copies from Typed Array or WebGLBuffer */
   setImageData3D({
     level = 0,
-    dataFormat = GL.RGBA,
+    dataFormat,
+    format,
+    type, // = GL.UNSIGNED_BYTE,
     width,
     height,
     depth = 1,
-    format,
-    type = GL.UNSIGNED_BYTE,
     offset = 0,
     data,
     parameters = {}
@@ -865,19 +865,21 @@ export default class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.target, this.handle);
 
+    const webglTextureFormat = getWebGLTextureParameters(this.gl, format);
+
     withParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
         // @ts-expect-error
         this.gl.texImage3D(
           this.target,
           level,
-          dataFormat,
+          webglTextureFormat.format,
           width,
           height,
           depth,
           0 /* border, must be 0 */,
-          format,
-          type,
+          webglTextureFormat.dataFormat,
+          webglTextureFormat.type, // dataType: getWebGL,
           data
         );
       }
