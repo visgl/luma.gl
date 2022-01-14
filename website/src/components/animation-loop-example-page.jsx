@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {lumaStats} from '@luma.gl/core';
 import {RenderLoop} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/webgl';
-import {VRDisplay} from '@luma.gl/experimental';
+// import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';
 
@@ -53,10 +53,10 @@ export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
     // Render loop
-    if ('getAnimationLoop' in this.props.AnimationLoop) {
-      this.animationLoop = RenderLoop.getAnimationLoop(this.props.AnimationLoop);
+    if ('run' in this.props.AnimationLoop) {
+      this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
     } else {
-      this.animationLoop = new this.props.AnimationLoop();
+      this.animationLoop = new this.props.AnimationLoop(props);
     }
     this.state = {
       supported: true
@@ -70,7 +70,7 @@ export default class AnimationLoopExamplePage extends Component {
 
     const {showStats} = this.props;
 
-    this.animationLoop._setDisplay(new VRDisplay());
+    // this.animationLoop._setDisplay(new VRDisplay());
 
     // Ensure the example can find its images
     // TODO - ideally gatsby-theme-ocular should extract images from example source?
@@ -83,7 +83,7 @@ export default class AnimationLoopExamplePage extends Component {
     }
 
     // Start the actual example
-    this.animationLoop.start(this.props);
+    this.animationLoop.start();
 
     this.animationLoop.waitForRender().then(() => {
       if (this.animationLoop.demoNotSupported) {

@@ -231,16 +231,6 @@ module.exports = {
           },
           {
             category: 'WebGL',
-            title: 'Hello Instancing - Mid-level',
-            componentUrl: resolve(
-              __dirname,
-              './templates/webgl/example-hello-instancing-webgl-mid.jsx'
-            ),
-            path: 'examples/webgl/hello-instancing-webgl-mid',
-            image: 'images/example-hello-instancing.png'
-          },
-          {
-            category: 'WebGL',
             title: 'Hello Instancing - Raw WebGL',
             componentUrl: resolve(
               __dirname,
@@ -265,7 +255,17 @@ module.exports = {
             componentUrl: resolve(__dirname, './templates/webgl/example-external-webgl-context.jsx'),
             path: 'examples/webgl/external-webgl-context',
             image: 'images/example-hello-triangle.png'
-          }
+          },
+          {
+            category: 'WebGPU',
+            title: 'Hello Triangle - Shader Geometry',
+            componentUrl: resolve(
+              __dirname,
+              './templates/webgpu/example-hello-triangle-webgpu.jsx'
+            ),
+            path: 'examples/webgpu/hello-triangle',
+            image: 'images/example-hello-triangle.png'
+          },
         ]      
       }
     },

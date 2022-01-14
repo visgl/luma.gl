@@ -30,7 +30,7 @@ export default class WebGPUShader extends Shader {
     if (error) {
       const shaderLog = await this.compilationInfo();
       log.error(`Shader compilation error: ${error.message}`, shaderLog)();
-      // Note: Even though this error is asynchronous and thrown after the constructor completes, 
+      // Note: Even though this error is asynchronous and thrown after the constructor completes,
       // it will result in a useful stack trace leading back to the constructor
       throw new Error(`Shader compilation error: ${error.message}`);
     }

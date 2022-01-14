@@ -284,8 +284,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.initalizeEventHandling(canvas);
   }
 
-  onRender({gl, time, aspect}) {
-    clear(gl, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
+  onRender({device, time, aspect}) {
+    clear(device, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 
     const [pitch, roll] = this.rotation;
     const cameraPos = [

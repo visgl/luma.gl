@@ -61,6 +61,7 @@ function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): Rende
   }
   return newProps;
 }
+
 export default class Program extends WEBGLRenderPipeline {
   get [Symbol.toStringTag](): string { return 'Program'; }
 
@@ -103,7 +104,7 @@ export default class Program extends WEBGLRenderPipeline {
     const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
 
     this.vs = cast<WEBGLShader>(vs);
-    this.fs = fs && cast<WEBGLShader>(fs); 
+    this.fs = fs && cast<WEBGLShader>(fs);
 
     this.hash = hash || ''; // Used by ProgramManager
 

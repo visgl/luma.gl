@@ -1,5 +1,5 @@
 import Geometry from '../geometry/geometry';
-import {uid} from '@luma.gl/webgl';
+import {uid} from '@luma.gl/api';
 
 export type SphereGeometryProps = {
   id?: string;

@@ -62,7 +62,7 @@ export type AttributeLayout = {
   format: VertexFormat;
   /** @note defaults to vertex */
   stepMode?: 'vertex' | 'instance';
-}
+};
 
 // BUFFER MAP
 
@@ -76,38 +76,38 @@ export type AttributeLayout = {
  ]
  ```
  */
- export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
+export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
 
- /** @note Not public: not exported outside of api module */
- export type SingleBufferMapping = {
-   /** Name of attribute to adjust */
-   name: string;
-   /** bytes between successive elements @note `stride` is auto calculated if omitted */
-   byteStride?: number;
-   /** offset into buffer. Defaults to `0` */
-   byteOffset?: number;
- };
- 
- /** @note Not public: not exported outside of api module */
- export type InterleavedBufferMapping = {
-   /** Name of buffer () */
-   name: string;
-   /** bytes between successive elements @note `stride` is auto calculated if omitted */
-   byteStride?: number;
-   /** offset into buffer Defaults to `0` */
-   byteOffset?: number;
-   /** Attributes that read from this buffer */
-   attributes: InterleavedAttribute[]
- };
- 
- /** @note Not public: not exported outside of api module */
- export type InterleavedAttribute = {
-   /** Name of buffer to map */
-   name?: string;
-   /** offset into one stride. @note `offset` is auto calculated starting from zero */
-   byteOffset?: number;
- };
- 
+/** @note Not public: not exported outside of api module */
+export type SingleBufferMapping = {
+  /** Name of attribute to adjust */
+  name: string;
+  /** bytes between successive elements @note `stride` is auto calculated if omitted */
+  byteStride?: number;
+  /** offset into buffer. Defaults to `0` */
+  byteOffset?: number;
+};
+
+/** @note Not public: not exported outside of api module */
+export type InterleavedBufferMapping = {
+  /** Name of buffer () */
+  name: string;
+  /** bytes between successive elements @note `stride` is auto calculated if omitted */
+  byteStride?: number;
+  /** offset into buffer Defaults to `0` */
+  byteOffset?: number;
+  /** Attributes that read from this buffer */
+  attributes: InterleavedAttribute[];
+};
+
+/** @note Not public: not exported outside of api module */
+export type InterleavedAttribute = {
+  /** Name of buffer to map */
+  name?: string;
+  /** offset into one stride. @note `offset` is auto calculated starting from zero */
+  byteOffset?: number;
+};
+
 // BINDING LAYOUTS
 
 /*
@@ -137,8 +137,11 @@ type Binding = {
 */
 
 /** ShaderLayout for bindings */
-export type BindingLayout = 
-BufferBindingLayout | TextureBindingLayout | SamplerBindingLayout | StorageTextureBindingLayout;
+export type BindingLayout =
+  | BufferBindingLayout
+  | TextureBindingLayout
+  | SamplerBindingLayout
+  | StorageTextureBindingLayout;
 
 type BufferBindingLayout = {
   type: 'uniform' | 'storage' | 'read-only-storage';
@@ -147,7 +150,7 @@ type BufferBindingLayout = {
   visibility?: number;
   hasDynamicOffset?: boolean;
   minBindingSize?: number;
-}
+};
 
 type TextureBindingLayout = {
   type: 'texture';
@@ -180,29 +183,28 @@ type StorageTextureBindingLayout = {
 // BINDINGS
 
 /** Binding value */
-export type Binding = Texture | Sampler | Buffer | {buffer: Buffer,  offset?: number, size?: number};
+export type Binding = Texture | Sampler | Buffer | {buffer: Buffer; offset?: number; size?: number};
 
- // ATTRIBUTE LAYOUTS
+// ATTRIBUTE LAYOUTS
 
 /**
  * Holds metadata describing attribute configurations for a program's shaders
  * @deprecated - unify witb ShaderLayout
  */
- export type ProgramBindings = {
+export type ProgramBindings = {
   readonly attributes: AttributeBinding[];
   readonly varyings: VaryingBinding[];
   readonly uniformBlocks: UniformBlockBinding[];
   // Note - samplers are always in unform bindings, even if uniform blocks are used
   readonly uniforms: UniformBinding[];
-}
-
+};
 
 /** @deprecated Describes a varying binding for a program */
 export type VaryingBinding = {
   location: number;
   name: string;
   accessor: Accessor;
-}
+};
 
 // Uniform bindings
 
@@ -215,7 +217,7 @@ export type UniformBlockBinding = {
   fragment: boolean;
   uniformCount: number;
   uniformIndices: number[];
-}
+};
 
 /** Describes a uniform (sampler etc) binding for a program */
 export type UniformBinding = {
@@ -224,12 +226,11 @@ export type UniformBinding = {
   size: number;
   type: number;
   isArray: boolean;
-}
+};
 
 /** @deprecated */
 export type AttributeBinding = {
   name: string;
   location: number;
   accessor: Accessor;
-}
-
+};

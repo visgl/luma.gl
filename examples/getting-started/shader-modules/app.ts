@@ -9,7 +9,6 @@ Re-using shader code with shader modules
 // Base vertex and fragment shader code pairs
 const vs1 = `
   attribute vec2 position;
-
   void main() {
     gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
   }
@@ -17,7 +16,6 @@ const vs1 = `
 
 const fs1 = `
   uniform vec3 hsvColor;
-
   void main() {
     gl_FragColor = vec4(color_hsv2rgb(hsvColor), 1.0);
   }
@@ -25,7 +23,6 @@ const fs1 = `
 
 const vs2 = `
   attribute vec2 position;
-
   void main() {
     gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
   }
@@ -33,7 +30,6 @@ const vs2 = `
 
 const fs2 = `
   uniform vec3 hsvColor;
-
   void main() {
     gl_FragColor = vec4(color_hsv2rgb(hsvColor) - 0.3, 1.0);
   }
@@ -61,7 +57,7 @@ export default class AppRenderLoop extends RenderLoop {
   model2: Model;
   positionBuffer: Buffer;
 
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
@@ -79,7 +75,7 @@ export default class AppRenderLoop extends RenderLoop {
       vertexCount: 3
     });
 
-    this.model2 = new Model(gl, {
+    this.model2 = new Model(device, {
       vs: vs2,
       fs: fs2,
       modules: [colorModule],

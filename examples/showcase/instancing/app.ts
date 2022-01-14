@@ -145,9 +145,10 @@ export default class AppRenderLoop extends RenderLoop {
   timeline: Timeline;
   timelineChannels: Record<string, number>;
 
-  constructor({device, animationLoop}: AnimationProps) {
+  constructor(props: AnimationProps) {
     super();
   
+    const {device, animationLoop} = props;
     this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
@@ -169,9 +170,9 @@ export default class AppRenderLoop extends RenderLoop {
 
     if (_mousePosition) {
       // use the center pixel location in device pixel range
-      const devicePixels = cssToDevicePixels(gl, _mousePosition);
-      const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
-      const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
+      // const devicePixels = cssToDevicePixels(gl, _mousePosition);
+      // const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
+      // const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
       // pickInstance(gl, deviceX, deviceY, this.cube, framebuffer);
     }

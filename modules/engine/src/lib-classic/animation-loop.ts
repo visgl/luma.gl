@@ -1,87 +1,102 @@
-import {luma, Device, DeviceProps} from '@luma.gl/api';
-import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
-import {Timeline} from '@luma.gl/engine';
-import {Stats, Stat} from '@probe.gl/stats';
+// TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
+// TODO - remove dependency on framebuffer (bundle size impact)
+import {luma, Device, DeviceProps, log} from '@luma.gl/api';
+import {isWebGL, resetParameters} from '@luma.gl/webgl';
+import {requestAnimationFrame, cancelAnimationFrame, Query, Framebuffer} from '@luma.gl/webgl';
+import { Stats, Stat } from '@probe.gl/stats'
 import {isBrowser} from '@probe.gl/env';
+import {Timeline} from '../animation/timeline'
+import {AnimationProps as BaseAnimationProps} from '../lib/animation-props';
+
+type ContextProps = DeviceProps;
 
 const isPage = isBrowser() && typeof document !== 'undefined';
 
 let statIdCounter = 0;
 
-type ContextProps = DeviceProps;
+/**
+ * Classic Animation Props.
+ * Contain a number of deprecated fields
+ */
+export type AnimationProps = BaseAnimationProps & {
+  animationLoop: AnimationLoop;
+
+  /** @deprecated Use .device */
+  stop: () => AnimationLoop;
+
+  /** @deprecated Use .device */
+  gl: WebGLRenderingContext;
+  /** @deprecated Will be removed */
+  framebuffer: Framebuffer;
+
+  /** @deprecated Use .timeline */
+  _timeline: Timeline;
+  /** @deprecated Use .animationLoop */
+  _loop: AnimationLoop;
+  /** @deprecated Use .animationLoop */
+  _animationLoop: AnimationLoop;
+}
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Promise<Device>;
+  onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => {} | void;
   onRender?: (animationProps: AnimationProps) => void;
   onFinalize?: (animationProps: AnimationProps) => void;
-  onError?: (reason: Error) => void;
+  onError?: (reason: any) => void;
 
-  device?: Device;
-  deviceProps?: DeviceProps;
   stats?: Stats;
 
+  device?: Device;
+  glOptions?: ContextProps; // createGLContext options
+  // debug?: boolean;
+
   // view parameters
-  debug?: boolean;
   autoResizeViewport?: boolean;
   autoResizeDrawingBuffer?: boolean;
   useDevicePixels?: number | boolean;
+
+  /** @deprecated Use .device */
+  gl?: WebGLRenderingContext
+  /** @deprecated Will be removed */
+  createFramebuffer?: boolean;
 };
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
-  onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
-  onAddHTML: undefined,
+  onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
+  onCreateContext: null,
+  onAddHTML: null,
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
-  device: undefined,
-  deviceProps: {},
-  debug: false,
-  stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
+  device: null,
+  // debug: true,
 
   // view parameters
   useDevicePixels: true,
   autoResizeViewport: true,
   autoResizeDrawingBuffer: true,
-};
+  stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
 
-export type AnimationProps = {
-  device: Device;
-  canvas: HTMLCanvasElement | OffscreenCanvas;
-
-  width: number;
-  height: number;
-  aspect: number;
-
-  // Animation props
-  time: number;
-  startTime: number;
-  engineTime: number;
-  tick: number;
-  tock: number;
-
-  // Initial values
-  useDevicePixels: number | boolean;
-  needsRedraw?: string;
-
-  timeline: Timeline;
-  animationLoop: AnimationLoop;
-
-  // Experimental
-  _mousePosition?: [number, number]; // [offsetX, offsetY],
+  // deprecated
+  // onCreateContext: (opts) => createGLContext(opts),
+  gl: null,
+  glOptions: {},
+  createFramebuffer: false
 };
 
 /** Convenient animation loop */
 export default class AnimationLoop {
   device: Device;
-  canvas: HTMLCanvasElement; // | OffscreenCanvas;
+  canvas: HTMLCanvasElement | OffscreenCanvas;
 
   props: Required<AnimationLoopProps>;
   animationProps: AnimationProps;
+  framebuffer: Framebuffer = null;
   timeline: Timeline = null;
   stats: Stats;
   cpuTime: Stat;
@@ -95,11 +110,15 @@ export default class AnimationLoop {
   _initialized: boolean = false;
   _running: boolean = false;
   _animationFrameId = null;
+  _pageLoadPromise: Promise<{}> | null = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
 
-  // _gpuTimeQuery: Query | null = null;
+  _gpuTimeQuery: Query | null = null;
+
+  /** @deprecated */
+  gl: WebGLRenderingContext;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -109,6 +128,12 @@ export default class AnimationLoop {
     props = this.props;
 
     let {useDevicePixels = true} = this.props;
+
+    if ('useDevicePixelRatio' in props) {
+      log.deprecated('useDevicePixelRatio', 'useDevicePixels')();
+      // @ts-expect-error
+      useDevicePixels = props.useDevicePixelRatio;
+    }
 
     // state
     this.device = props.device;
@@ -149,7 +174,6 @@ export default class AnimationLoop {
     return this;
   }
 
-  // TODO - move to CanvasContext
   setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport;
@@ -164,12 +188,12 @@ export default class AnimationLoop {
   }
 
   start(opts = {}) {
-    this._start();
+    this._start(opts);
     return this;
   }
 
   /** Starts a render loop if not already running */
-  async _start() {
+  async _start(props) {
     if (this._running) {
       return this;
     }
@@ -178,8 +202,7 @@ export default class AnimationLoop {
     // console.debug(`Starting ${this.constructor.name}`);
     // Wait for start promise before rendering frame
     try {
-      // TODO rely on CanvasContext...
-      // await this._getPageLoadPromise();
+      await this._getPageLoadPromise();
 
       // check that we haven't been stopped
       if (!this._running) {
@@ -190,8 +213,8 @@ export default class AnimationLoop {
       if (!this._initialized) {
         this._initialized = true;
         // Create the WebGL context
-        await this._createDevice();
-        this._initialize();
+        await this._createDevice(props);
+        this._initialize(props);
 
         // Note: onIntialize can return a promise (in case app needs to load resources)
         appContext = await this.onInitialize(this.animationProps);
@@ -211,8 +234,8 @@ export default class AnimationLoop {
       }
 
       return this;
-    } catch (error: unknown) {
-      this.props.onError(error instanceof Error ? error : new Error('Unknown error'));
+    } catch (error) {
+      this.props.onError(error);
       // this._running = false; // TODO
       return null;
     }
@@ -220,7 +243,7 @@ export default class AnimationLoop {
 
   /** Explicitly draw a frame */
   redraw(): this {
-    if (this.device.isLost) {
+    if (this.isContextLost()) {
       return this;
     }
 
@@ -280,8 +303,14 @@ export default class AnimationLoop {
 
   async toDataURL() {
     this.setNeedsRedraw('toDataURL');
+
     await this.waitForRender();
-    return this.canvas.toDataURL();
+
+    return this.gl.canvas.toDataURL();
+  }
+
+  isContextLost(): boolean {
+    return this.gl.isContextLost();
   }
 
   onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
@@ -300,9 +329,24 @@ export default class AnimationLoop {
     return this.props.onFinalize(animationProps);
   }
 
+  // DEPRECATED/REMOVED METHODS
+
+  /** @deprecated Use .onCreateDevice() */
+  onCreateContext(props: ContextProps) {
+    return this.props.onCreateContext(props);
+  }
+
+  /** @deprecated */
+  getHTMLControlValue(id, defaultValue = 1) {
+    const element = document.getElementById(id);
+    // @ts-expect-error Not all html elements have value
+    return element ? Number(element.value) : defaultValue;
+  }
+
   // PRIVATE METHODS
 
-  _initialize() {
+  _initialize(props: AnimationLoopProps) {
+    this._createFramebuffer();
     this._startEventHandling();
 
     // Initialize the callback data
@@ -313,7 +357,24 @@ export default class AnimationLoop {
     this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
 
-    // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+    this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+  }
+
+  _getPageLoadPromise() {
+    if (!this._pageLoadPromise) {
+      this._pageLoadPromise = isPage
+        ? new Promise((resolve, reject) => {
+            if (isPage && document.readyState === 'complete') {
+              resolve(document);
+              return;
+            }
+            window.addEventListener('load', () => {
+              resolve(document);
+            });
+          })
+        : Promise.resolve({});
+    }
+    return this._pageLoadPromise;
   }
 
   _setDisplay(display) {
@@ -355,7 +416,7 @@ export default class AnimationLoop {
     // if (this.display && this.display.cancelAnimationFrame) {
     //   this.display.cancelAnimationFrame(this._animationFrameId);
     // }
-  cancelAnimationFrame(this._animationFrameId);
+    cancelAnimationFrame(this._animationFrameId);
     this._animationFrameId = null;
   }
 
@@ -388,34 +449,46 @@ export default class AnimationLoop {
   _setupFrame() {
     this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
+    this._resizeFramebuffer();
   }
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
+    // @ts-expect-error
     this.animationProps = {
-      animationLoop: this,
       device: this.device,
-      canvas: this.device.canvas,
-      timeline: this.timeline,
+      gl: this.gl,
+
+      stop: this.stop,
+      canvas: this.gl.canvas,
 
       // Initial values
       useDevicePixels: this.props.useDevicePixels,
       needsRedraw: null,
 
-      // Placeholders
-      width: 1,
-      height: 1,
-      aspect: 1,
-
       // Animation props
-      time: 0,
       startTime: Date.now(),
       engineTime: 0,
       tick: 0,
       tock: 0,
 
+      timeline: this.timeline,
+      animationLoop: this,
+
+      // Timeline time for back compatibility
+      time: 0,
+
       // Experimental
-      _mousePosition: null // Event props
+      _mousePosition: null, // Event props
+
+      /** @deprecated */
+      framebuffer: this.framebuffer,
+      /** @deprecated */
+      _timeline: this.timeline,
+      /** @deprecated */
+      _loop: this,
+      /** @deprecated */
+      _animationLoop: this
     };
   }
 
@@ -465,15 +538,29 @@ export default class AnimationLoop {
   }
 
   /** Either uses supplied or existing context, or calls provided callback to create one */
-  async _createDevice() {
-    const deviceProps = {...this.props, ...this.props.deviceProps};
+  async _createDevice(props: DeviceProps) {
+    const deviceProps = {...this.props, ...props, ...this.props.glOptions};
+
+    // TODO - support this.onCreateContext
+    // Create the WebGL context if necessary
+    // this.gl = this.props.gl ? instrumentGLContext(this.props.gl, deviceProps) : this.onCreateContext(deviceProps);
+
     this.device = await this.onCreateDevice(deviceProps);
-    this.canvas = this.device.canvas;
+    // @ts-expect-error
+    this.gl = this.device.gl;
+
+    if (!isWebGL(this.gl)) {
+      throw new Error('AnimationLoop.onCreateContext - illegal context returned');
+    }
+
+    // Reset the WebGL context.
+    resetParameters(this.gl);
+
     this._createInfoDiv();
   }
 
   _createInfoDiv() {
-    if (this.canvas && this.props.onAddHTML) {
+    if (this.gl.canvas && this.props.onAddHTML) {
       const wrapperDiv = document.createElement('div');
       document.body.appendChild(wrapperDiv);
       wrapperDiv.style.position = 'relative';
@@ -483,7 +570,7 @@ export default class AnimationLoop {
       div.style.bottom = '10px';
       div.style.width = '300px';
       div.style.background = 'white';
-      wrapperDiv.appendChild(this.canvas);
+      wrapperDiv.appendChild(this.gl.canvas);
       wrapperDiv.appendChild(div);
       const html = this.props.onAddHTML(div);
       if (html) {
@@ -494,11 +581,12 @@ export default class AnimationLoop {
 
   _getSizeAndAspect() {
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device.getSize();
+    const width = this.gl.drawingBufferWidth;
+    const height = this.gl.drawingBufferHeight;
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const canvas = this.device.canvas;
+    const {canvas} = this.gl;
 
     if (canvas && canvas.clientHeight) {
       aspect = canvas.clientWidth / canvas.clientHeight;
@@ -512,7 +600,7 @@ export default class AnimationLoop {
   /** Default viewport setup */
   _resizeViewport() {
     if (this.props.autoResizeViewport) {
-      // this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
+      this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
     }
   }
 
@@ -533,37 +621,38 @@ export default class AnimationLoop {
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same
     // frame they are captured.
-    // if (
-    //   this._gpuTimeQuery &&
-    //   this._gpuTimeQuery.isResultAvailable() &&
-    //   !this._gpuTimeQuery.isTimerDisjoint()
-    // ) {
-    //   this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
-    // }
+    if (
+      this._gpuTimeQuery &&
+      this._gpuTimeQuery.isResultAvailable() &&
+      !this._gpuTimeQuery.isTimerDisjoint()
+    ) {
+      this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
+    }
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query start
-    //   this._gpuTimeQuery.beginTimeElapsedQuery();
-    // }
+    if (this._gpuTimeQuery) {
+      // GPU time query start
+      this._gpuTimeQuery.beginTimeElapsedQuery();
+    }
 
-    // this.cpuTime.timeStart();
+    this.cpuTime.timeStart();
   }
 
   _endTimers() {
     this.cpuTime.timeEnd();
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query end. Results will be available on next frame.
-    //   this._gpuTimeQuery.end();
-    // }
+    if (this._gpuTimeQuery) {
+      // GPU time query end. Results will be available on next frame.
+      this._gpuTimeQuery.end();
+    }
   }
 
   // Event handling
 
   _startEventHandling() {
-    if (this.canvas) {
-      this.canvas.addEventListener('mousemove', this._onMousemove);
-      this.canvas.addEventListener('mouseleave', this._onMouseleave);
+    const {canvas} = this.gl;
+    if (canvas) {
+      canvas.addEventListener('mousemove', this._onMousemove);
+      canvas.addEventListener('mouseleave', this._onMouseleave);
     }
   }
 
@@ -572,5 +661,25 @@ export default class AnimationLoop {
   }
   _onMouseleave(e) {
     this.animationProps._mousePosition = null;
+  }
+
+  // Deprecated
+
+  /** @deprecated */
+  _createFramebuffer() {
+    // Setup default framebuffer
+    if (this.props.createFramebuffer) {
+      this.framebuffer = new Framebuffer(this.gl);
+    }
+  }
+
+  /** @deprecated */
+  _resizeFramebuffer() {
+    if (this.framebuffer) {
+      this.framebuffer.resize({
+        width: this.gl.drawingBufferWidth,
+        height: this.gl.drawingBufferHeight
+      });
+    }
   }
 }

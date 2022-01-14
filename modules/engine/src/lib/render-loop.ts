@@ -1,30 +1,31 @@
-import type {AnimationProps} from './animation-loop';
-import AnimationLoop from './animation-loop';
+import type {DeviceProps} from '@luma.gl/api';
+import type {AnimationProps} from '../lib/animation-props';
+import AnimationLoop from './animation-loop-v2';
 
 /**
  * Minimal animation loop that initializes models in constructor
  * Simplifying type management
+ * v9 API
  */
 export abstract class RenderLoop {
   constructor(animationProps?: AnimationProps) {}
-  onRender(animationProps: AnimationProps) {}
-  onFinalize(animationProps: AnimationProps) {}
-
-  static getAnimationLoop(RenderLoopConstructor: typeof RenderLoop) {
-    return new WrappedAnimationLoop(RenderLoopConstructor);
-  }
+  abstract destroy(animationProps: AnimationProps);
+  abstract frame(animationProps: AnimationProps);
 
   /** Instantiates and runs the render loop */
-  static run(RenderLoopConstructor: typeof RenderLoop, options?: {start?: boolean}): WrappedAnimationLoop {
-    const animationLoop = RenderLoop.getAnimationLoop(RenderLoopConstructor);
-    if (options?.start !== false) {
-      animationLoop.start();
-    }
+  static run(RenderLoopConstructor: typeof RenderLoop, deviceProps?: DeviceProps): AnimationLoop {
+    // Create an animation loop;
+    const animationLoop = new SyncInitAnimationLoop(RenderLoopConstructor, deviceProps);
+
+    // Start the loop automatically
+    // animationLoop.start();
+
     return animationLoop;
   }
 }
 
-class WrappedAnimationLoop extends AnimationLoop {
+/** Instantiates the RenderLoop once the device is created */
+class SyncInitAnimationLoop extends AnimationLoop {
   RenderLoopConstructor: typeof RenderLoop;
   renderLoop: RenderLoop;
 
@@ -33,8 +34,8 @@ class WrappedAnimationLoop extends AnimationLoop {
     return this.RenderLoopConstructor.info;
   }
 
-  constructor(RenderLoopConstructor: typeof RenderLoop) {
-    super();
+  constructor(RenderLoopConstructor: typeof RenderLoop, deviceProps?: DeviceProps) {
+    super({deviceProps});
     this.RenderLoopConstructor = RenderLoopConstructor;
   }
 
@@ -44,10 +45,14 @@ class WrappedAnimationLoop extends AnimationLoop {
   }
 
   onRender(animationProps: AnimationProps) {
-    this.renderLoop.onRender(animationProps);
+    // @ts-expect-error API still TBD
+    this.renderLoop?.onRender?.(animationProps);
+    this.renderLoop?.frame?.(animationProps);
   }
 
   onFinalize(animationProps: AnimationProps) {
+    // @ts-expect-error API still TBD
     this.renderLoop?.onFinalize?.(animationProps);
+    this.renderLoop?.destroy?.(animationProps);
   }
 }

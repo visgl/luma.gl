@@ -32,14 +32,14 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
 
   abstract endPass(): void;
 
-  abstract setPipeline(pipeline: RenderPipeline): void;
+  setPipeline(pipeline: RenderPipeline): void {}
 
-  abstract setIndexBuffer(
+  setIndexBuffer(
     buffer: Buffer,
     indexFormat: 'uint16' | 'uint32',
     offset?: number,
     size?: number
-  ): void;
+  ): void {}
 
   abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
 
@@ -47,7 +47,7 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
 
   abstract setParameters(parameters: RenderPassParameters);
 
-  abstract draw(options: {
+  draw(options: {
     vertexCount?: number; // Either vertexCount or indexCount must be provided
     indexCount?: number;  // Activates indexed drawing (call setIndexBuffer())
     instanceCount?: number; //
@@ -55,7 +55,7 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
     firstIndex?: number; // requires device.features.has('indirect-first-instance')?
     firstInstance?: number;
     baseVertex?: number;
-  }): void;
+  }): void {}
 
   // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
   // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;

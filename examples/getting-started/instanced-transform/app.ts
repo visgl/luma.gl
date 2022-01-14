@@ -94,9 +94,9 @@ export default class AppRenderLoop extends RenderLoop {
   model: Model;
   transform: Transform;
 
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
-    if (!isWebGL2(gl)) {
+    if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
 
@@ -115,10 +115,9 @@ export default class AppRenderLoop extends RenderLoop {
       axisBufferData[vi + 1] = y / l;
       axisBufferData[vi + 2] = z / l;
     }
-    const axisBuffer = new Buffer(gl, axisBufferData);
+    const axisBuffer = device.createBuffer(axisBufferData);
 
-    const rotationBuffer = new Buffer(
-      gl,
+    const rotationBuffer = device.createBuffer(
       new Float32Array([Math.random() * PI2, Math.random() * PI2, Math.random() * PI2, Math.random() * PI2])
     );
 

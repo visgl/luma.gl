@@ -4,7 +4,7 @@ import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import type {Framebuffer, Buffer} from '@luma.gl/webgl';
 import {WebGLDevice, isObjectEmpty} from '@luma.gl/webgl';
 
-import Model from '../lib/model';
+import Model from '../lib-classic/model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
 import {TransformProps, TransformRunOptions, TransformDrawOptions} from './transform-types';

@@ -1,5 +1,5 @@
 import {TruncatedConeGeometry} from './truncated-cone-geometry';
-import {uid} from '@luma.gl/webgl';
+import {uid} from '@luma.gl/api';
 
 export type CylinderGeometryProps = {
   id?: string;
