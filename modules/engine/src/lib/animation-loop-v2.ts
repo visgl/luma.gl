@@ -458,7 +458,7 @@ export default class AnimationLoop {
 
   _getSizeAndAspect() {
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device.getSize();
+    const [width, height] = this.device.canvasContext.getPixelSize();
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
@@ -488,6 +488,7 @@ export default class AnimationLoop {
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
       this.device.resize({useDevicePixels: this.props.useDevicePixels});
+      // this.device.resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

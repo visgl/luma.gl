@@ -222,13 +222,13 @@ module.exports = {
             path: 'examples/api/texture3d/',
             image: 'images/example-texture3d.png'
           },
-          {
-            category: 'Performance',
-            title: 'Stress Test',
-            componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
-            path: 'examples/performance/stress-test/',
-            image: 'images/example-stress-test.png'
-          },
+          // {
+          //   category: 'Performance',
+          //   title: 'Stress Test',
+          //   componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
+          //   path: 'examples/performance/stress-test/',
+          //   image: 'images/example-stress-test.png'
+          // },
           {
             category: 'WebGL',
             title: 'Hello Instancing - Raw WebGL',

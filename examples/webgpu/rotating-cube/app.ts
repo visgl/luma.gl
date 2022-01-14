@@ -105,7 +105,7 @@ function init(device: Device) {
   
     // device.beginRenderPass();
     model.draw();
-    device.commit();
+    device.submit();
     
     requestAnimationFrame(frame);
   }

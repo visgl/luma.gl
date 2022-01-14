@@ -308,7 +308,6 @@ function getSamplerSetter() {
       gl.uniform1i(location, value);
       cache = value;
     }
-
     return update;
   };
 }

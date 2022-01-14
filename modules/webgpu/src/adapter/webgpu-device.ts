@@ -191,14 +191,6 @@ export default class WebGPUDevice extends Device {
     return new WebGPUComputePipeline(this, props);
   }
 
-  commit(): void {
-    this.renderPass.endPass();
-    const commandBuffer = this.commandEncoder.finish();
-    this.handle.queue.submit([commandBuffer]);
-    this.commandEncoder = null;
-    this.renderPass = null;
-  }
-
   // WebGPU specifics
 
   /** 
@@ -207,10 +199,7 @@ export default class WebGPUDevice extends Device {
    */
   beginRenderPass(props?: RenderPassProps): WebGPURenderPass {
     this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
-    if (!this.renderPass) {
-      this.renderPass = new WebGPURenderPass(this, props)
-    }
-    return this.renderPass;
+    return new WebGPURenderPass(this, props);
   }
 
   beginComputePass(props?: ComputePassProps): WebGPUComputePass {
@@ -223,12 +212,23 @@ export default class WebGPUDevice extends Device {
   }
 
   /** 
-   * Gets active renderpass encoder. 
+   * Gets default renderpass encoder.
    * Creates a new encoder against default canvasContext if not already created 
    * @note Called internally by Model.
    */
-  getActiveRenderPass(): WebGPURenderPass {
-    return this.beginRenderPass();
+  getDefaultRenderPass(): WebGPURenderPass {
+    this.renderPass = this.renderPass || this.beginRenderPass({
+      framebuffer: this.canvasContext.getCurrentFramebuffer()
+    });
+    return this.renderPass;
+  }
+
+  submit(): void {
+    this.renderPass.endPass();
+    const commandBuffer = this.commandEncoder.finish();
+    this.handle.queue.submit([commandBuffer]);
+    this.commandEncoder = null;
+    this.renderPass = null;
   }
 
   _getFeatures() {

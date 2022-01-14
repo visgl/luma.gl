@@ -152,7 +152,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     });
     model.draw();
 
-    device.commit();
+    device.submit();
 
     ++t;
     requestAnimationFrame(frame);

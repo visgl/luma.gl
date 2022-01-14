@@ -122,7 +122,7 @@ export async function init(device: Device, language: 'glsl' | 'wgsl') {
     cubeModel.draw();
     cubeModel.setBindings({uniforms: uniformBuffer2});
     cubeModel.draw();
-    device.commit();
+    device.submit();
 
     requestAnimationFrame(frame);
   }

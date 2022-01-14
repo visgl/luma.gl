@@ -113,7 +113,7 @@ export function init(device: Device, language: 'glsl' | 'wgsl') {
 
     // device.beginRenderPass();
     cubeModel.draw();
-    device.commit();
+    device.submit();
 
     requestAnimationFrame(frame);
   }

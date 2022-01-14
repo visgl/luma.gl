@@ -90,8 +90,9 @@ export default class Model {
   }
 
   draw(renderPass?: RenderPass) {
-    renderPass = renderPass || this.device.getActiveRenderPass();
-    renderPass.setPipeline(this.pipeline);
+    renderPass = renderPass || this.device.getDefaultRenderPass();
+    const webgpuRenderPass = cast<WebGPURenderPass>(renderPass);
+    webgpuRenderPass.handle.setPipeline(this.pipeline.handle);
 
     this._setAttributeBuffers(renderPass);
 

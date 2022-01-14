@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import {isBrowser} from 'probe.gl/env';
+import {Device} from '..';
 import type Framebuffer from './resources/framebuffer';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
@@ -28,9 +29,10 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
  * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
 export default abstract class CanvasContext {
-  canvas: HTMLCanvasElement | OffscreenCanvas;
-  resizeObserver: ResizeObserver | undefined;
-  props: Partial<CanvasContextProps>;
+  abstract readonly device: Device;
+  readonly canvas: HTMLCanvasElement | OffscreenCanvas;
+  readonly resizeObserver: ResizeObserver | undefined;
+  readonly props: Partial<CanvasContextProps>;
 
   /** Check if the DOM is loaded */
   static get isPageLoaded(): boolean {
@@ -89,9 +91,10 @@ export default abstract class CanvasContext {
   }
 
   /** 
-   * Returns the size in pixels required to cover the canvas, adjusted for DPR
+   * Returns the size of drawing buffer in device pixels.
    * @note This can be different from the 'CSS' size of a canvas, and also from the
    * canvas' internal drawing buffer size (.width, .height).
+   * This is the size required to cover the canvas, adjusted for DPR
    */
   getPixelSize(): [number, number] {
     if (this.canvas instanceof OffscreenCanvas) {

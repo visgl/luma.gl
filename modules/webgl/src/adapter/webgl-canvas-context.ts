@@ -15,9 +15,12 @@ export default class WebGLCanvasContext extends CanvasContext {
 
   constructor(device: WebGLDevice, props: CanvasContextProps) {
     super(getWebGLCanvasContextProps(device, props));
-    // TODO - We will need to break out WebGL context creating code from WebGLDevice
-    // this.gl = this.canvas.getContext('webgl');
+    this.device = device;
     this.presentationSize = [-1, -1];
+
+    // TODO - We could move WebGL context creating code from WebGLDevice...
+    // this.gl = this.canvas.getContext('webgl');
+
     this._framebuffer = new WEBGLFramebuffer(this.device, {handle: null});
     this.update();
   }
@@ -39,7 +42,7 @@ export default class WebGLCanvasContext extends CanvasContext {
 
 function getWebGLCanvasContextProps(device: WebGLDevice, props: CanvasContextProps): CanvasContextProps {
   if (props.canvas !== device.gl.canvas) {
-    throw new Error('WebGL canvas context only works for ');
+    throw new Error('WebGL canvas must be device canvas');
   }
   return props;
 }

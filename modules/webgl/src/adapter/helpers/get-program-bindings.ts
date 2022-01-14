@@ -1,4 +1,4 @@
-import {ProgramBindings, AttributeBinding, UniformBinding, UniformBlockBinding, VaryingBinding} from '@luma.gl/api';
+import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import Accessor from '../../classes/accessor'; // TODO - should not depend on classes
@@ -9,7 +9,33 @@ import {decomposeCompositeGLType} from '../../webgl-utils/attribute-utils';
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
 */
-export function getProgramBindings(gl: WebGL2RenderingContext, program: WebGLProgram): ProgramBindings {
+export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
+  const programBindings = getProgramBindings(gl, program);
+  const bindings: BindingLayout[] = [];
+  for (const uniformBlock of programBindings.uniformBlocks) {
+    bindings.push({
+      type: 'uniform',
+      name: uniformBlock.name,
+      location: uniformBlock.location
+    });
+  }
+  for (const uniform of programBindings.uniforms) {
+    // console.log(uniform)
+    // switch (uniform.type) {
+    // }
+  }
+  return {
+    attributes: [], // programBindings.attributes,
+    bindings
+  };
+}
+
+/**
+ * Extract metadata describing binding information for a program's shaders
+ * Note: `linkProgram()` needs to have been called
+ * (although linking does not need to have been successful).
+*/
+export function getProgramBindings(gl: WebGLRenderingContext, program: WebGLProgram): ProgramBindings {
   const config: ProgramBindings = {
     attributes: readAttributeBindings(gl, program),
     uniforms: readUniformBindings(gl, program),
@@ -28,7 +54,7 @@ export function getProgramBindings(gl: WebGL2RenderingContext, program: WebGLPro
  *
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
-function readAttributeBindings(gl: WebGL2RenderingContext, program: WebGLProgram): AttributeBinding[] {
+function readAttributeBindings(gl: WebGLRenderingContext, program: WebGLProgram): AttributeBinding[] {
   const attributes: AttributeBinding[] = [];
 
   const count = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
@@ -59,16 +85,17 @@ function readAttributeBindings(gl: WebGL2RenderingContext, program: WebGLProgram
  *
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
-function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): VaryingBinding[] {
+function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): VaryingBinding[] {
   if (!isWebGL2(gl)) {
     return [];
   }
+  const gl2 = gl as WebGL2RenderingContext;
 
   const varyings = [];
 
-  const count = gl.getProgramParameter(program, gl.TRANSFORM_FEEDBACK_VARYINGS);
+  const count = gl.getProgramParameter(program, GL.TRANSFORM_FEEDBACK_VARYINGS);
   for (let location = 0; location < count; location++) {
-    const {name, type: compositeType, size} = gl.getTransformFeedbackVarying(program, location);
+    const {name, type: compositeType, size} = gl2.getTransformFeedbackVarying(program, location);
     const {type, components} = decomposeCompositeGLType(compositeType);
     const accessor = new Accessor({type, size: size * components});
     const varying = {location, name, accessor}; // Base values
@@ -84,10 +111,10 @@ function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): Varyin
  *
  * Query uniform locations and build name to setter map.
  */
-function readUniformBindings(gl: WebGL2RenderingContext, program: WebGLProgram): UniformBinding[] {
+function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): UniformBinding[] {
   const uniforms: UniformBinding[] = [];
 
-  const uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+  const uniformCount = gl.getProgramParameter(program, GL.ACTIVE_UNIFORMS);
   for (let i = 0; i < uniformCount; i++) {
     const {name: rawName, size, type} = gl.getActiveUniform(program, i);
     const {name, isArray} = parseUniformName(rawName);
@@ -128,25 +155,27 @@ function readUniformBindings(gl: WebGL2RenderingContext, program: WebGLProgram):
  * ("Active" just means that unused (aka inactive) blocks may have been
  * optimized away during linking)
  */
-function readUniformBlocks(gl: WebGL2RenderingContext, program: WebGLProgram): UniformBlockBinding[] {
+function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): UniformBlockBinding[] {
   if (!isWebGL2(gl)) {
     return [];
   }
-  const getBlockParameter = (blockIndex, pname) => gl.getActiveUniformBlockParameter(program, blockIndex, pname);
+  const gl2 = gl as WebGL2RenderingContext;
+
+  const getBlockParameter = (blockIndex, pname) => gl2.getActiveUniformBlockParameter(program, blockIndex, pname);
 
   const uniformBlocks: UniformBlockBinding[] = [];
 
-  const blockCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+  const blockCount = gl2.getProgramParameter(program, GL.ACTIVE_UNIFORM_BLOCKS);
   for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
 
     const blockInfo = {
-      name: gl.getActiveUniformBlockName(program, blockIndex),
-      location: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_BINDING),
-      byteLength: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE),
-      vertex: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
-      fragment: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
-      uniformCount: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
-      uniformIndices: getBlockParameter(blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
+      name: gl2.getActiveUniformBlockName(program, blockIndex),
+      location: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_BINDING),
+      byteLength: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_DATA_SIZE),
+      vertex: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
+      fragment: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
+      uniformCount: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
+      uniformIndices: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
       uniforms: []
     }
 

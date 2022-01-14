@@ -5,6 +5,8 @@ import {CanvasContext, Framebuffer} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 
 class TestCanvasContext extends CanvasContext {
+  // @ts-expect-error
+  readonly device = {};
   getCurrentFramebuffer(): Framebuffer { throw new Error('test'); }
   update() {}
 }

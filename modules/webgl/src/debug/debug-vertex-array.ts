@@ -3,7 +3,7 @@ import Buffer from '../classes/webgl-buffer';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';
 
-// Creates object suitable as input for console.table
+/** Creates object suitable as input for console.table */
 export function getDebugTableForVertexArray(options?: {vertexArray: any; header?: string}): {} {
   const {vertexArray, header = 'Attributes'} = options;
 

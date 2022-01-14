@@ -20,7 +20,7 @@ import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
-// import WebGLCanvasContext from './webgl-canvas-context';
+import WebGLCanvasContext from './webgl-canvas-context';
 import {loadSpectorJS, initializeSpectorJS} from '../debug/spector';
 import {loadWebGLDeveloperTools, makeDebugContext} from '../debug/webgl-developer-tools';
 import {
@@ -49,17 +49,19 @@ import type {
   ComputePassProps
 } from '@luma.gl/api';
 
+// import WEBGLTexture from '../adapter/resources/webgl-texture';
+import WEBGLBuffer from '../classes/webgl-buffer';
 // Refactored, minimal classes
 import WEBGLShader from './resources/webgl-shader';
 import WEBGLSampler from './resources/webgl-sampler';
-import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLTexture from './resources/webgl-texture';
 import WEBGLFramebuffer from './resources/webgl-framebuffer';
+import WEBGLRenderPass from './resources/webgl-render-pass';
+import WEBGLRenderPipeline from './resources/webgl-render-pipeline';
 
 // Legacy classes
-import WEBGLBuffer from '../classes/webgl-buffer';
-// import WEBGLTexture from '../adapter/resources/webgl-texture';
 import type {default as VertexArrayObject} from '../classes/vertex-array-object';
+// TODO is this still needed for device.defaultFramebuffer?
 import ClassicFramebuffer from '../classes/framebuffer';
 
 const LOG_LEVEL = 1;
@@ -88,8 +90,6 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   // Common API
-  props: Required<DeviceProps>;
-  userData: {[key: string]: any};
   readonly handle: WebGLRenderingContext;
 
   // WebGL specific API
@@ -105,6 +105,8 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly offScreen: boolean = false;
 
   readonly webglLimits: WebGLLimits;
+
+  readonly canvasContext: WebGLCanvasContext;
 
   defaultFramebuffer?: ClassicFramebuffer;
   defaultVertexArray?: VertexArrayObject;
@@ -136,7 +138,7 @@ export default class WebGLDevice extends Device implements ContextState {
       return gl;
     }
     // @ts-expect-error
-    if (gl && gl.device instanceof Device) {
+    if (gl?.device instanceof Device) {
       // @ts-expect-error
       return gl.device as WebGLDevice;
     }
@@ -180,19 +182,29 @@ export default class WebGLDevice extends Device implements ContextState {
       return device;
     }
 
+    if (props.gl && !isWebGL(props.gl)) {
+      throw new Error('Invalid WebGLRenderingContext');
+    }
     // Create and instrument context
     this.handle = (props.gl || this._createContext(props)) as WebGLRenderingContext;
-
-    this.canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
-    if (typeof OffscreenCanvas !== 'undefined' && props.canvas instanceof OffscreenCanvas) {
-      this.offscreenCanvas = props.canvas;
-    }
-
-    this.spector = initializeSpectorJS({...this.props, canvas: this.canvas});
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
     this.isWebGL1 = !this.isWebGL2;
+
+    // Get a reference to the canvas
+    const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
+
+    const propsWithCanvas = {...this.props, canvas};
+
+    this.canvasContext = new WebGLCanvasContext(this, propsWithCanvas);
+    this.canvas = canvas;
+    if (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas) {
+      this.offscreenCanvas = canvas;
+    }
+
+    this.spector = initializeSpectorJS(propsWithCanvas);
+
     this._state = 'initializing';
 
     // Avoid multiple instrumentations
@@ -354,16 +366,16 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WEBGLShader(this, props);
   }
 
-  createFramebuffer(props: FramebufferProps): Framebuffer {
+  createFramebuffer(props: FramebufferProps): WEBGLFramebuffer {
     return new WEBGLFramebuffer(this, props);
   }
   
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
-    throw new Error('createRenderPipeline() not implemented'); // return new Program(props);
+    return new WEBGLRenderPipeline(this, props);
   }
 
-  beginRenderPass(props: RenderPassProps): RenderPass {
-    throw new Error('beginRenderPass() not implemented');
+  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
+    return new WEBGLRenderPass(this, props);
   }
 
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
@@ -374,12 +386,23 @@ export default class WebGLDevice extends Device implements ContextState {
     throw new Error('compute shaders not supported in WebGL');
   }
 
+  private renderPass: WEBGLRenderPass;
+
+  getDefaultRenderPass(): WEBGLRenderPass {
+    this.renderPass = this.renderPass || this.beginRenderPass({
+      framebuffer: this.canvasContext.getCurrentFramebuffer()
+    });
+    return this.renderPass;
+  }
+
   /**
    * Offscreen Canvas Support: Commit the frame
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  commit(): void {
+  submit(): void {
+    this.renderPass.endPass();
+    this.renderPass = null;
     // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
     if (this.offScreen && this.gl.commit) {
       // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext

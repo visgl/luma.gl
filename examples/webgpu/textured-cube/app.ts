@@ -125,7 +125,7 @@ async function init(device: Device, language: 'glsl' | 'wgsl') {
 
     // device.beginRenderPass();
     model.draw();
-    device.commit();
+    device.submit();
 
     requestAnimationFrame(frame);
   }

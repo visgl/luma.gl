@@ -46,8 +46,8 @@ export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> 
     return !options.format || isRenderbufferFormatSupported(gl, options.format);
   }
 
-  constructor(gl: WebGLRenderingContext, props: RenderbufferProps) {
-    super(WebGLDevice.attach(gl), props, DEFAULT_RENDERBUFFER_PROPS);
+  constructor(device: WebGLDevice, props: RenderbufferProps) {
+    super(device, props, DEFAULT_RENDERBUFFER_PROPS);
     this._initialize(this.props);
   }
 
