@@ -35,10 +35,11 @@ function initializeExtensions(gl: WebGLRenderingContext): void {
   const contextState = getContextState(gl);
   // `getSupportedExtensions` can return null when context is lost.
   const EXTENSIONS = gl.getSupportedExtensions() || [];
-  for (const extension of EXTENSIONS) {
-    contextState._extensions[extension] = gl.getExtension(extension);
+  for (const extensionName of EXTENSIONS) {
+    const extension = gl.getExtension(extensionName);
+    contextState._extensions[extensionName] = extension;
     // TODO - this looks like a mistake?
-    contextState[extension] = gl.getExtension(extension);
+    contextState[extensionName] = extension;
   }
 }
 

@@ -2,10 +2,10 @@
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
+// @ts-nocheck
 
-/* eslint-disable spaced-comment */
 import GL from '@luma.gl/constants';
-import {RenderLoop, Model, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
   Framebuffer,
   clear,
@@ -254,24 +254,24 @@ export default class AppRenderLoop extends RenderLoop {
   dofUniforms: Buffer;
   dofUniformsLayout: UniformBufferLayout;
 
-  constructor({device, gl}) {
+  constructor({device}: AnimationProps) {
     super();
-    if (!isWebGL2(gl)) {
+    if (!device.features.has('webgl2')) {
       throw new Error(ALT_TEXT);
     }
 
     // Create postprocessing pass program.
 
     this.dofUniformsLayout = new UniformBufferLayout({
-      uDepthRange: gl.FLOAT_VEC2,
-      uFocusDistance: gl.FLOAT,
-      uBlurCoefficient: gl.FLOAT,
-      uPPM: gl.FLOAT
+      uDepthRange: GL.FLOAT_VEC2,
+      uFocusDistance: GL.FLOAT,
+      uBlurCoefficient: GL.FLOAT,
+      uPPM: GL.FLOAT
     }).setUniforms({
       uDepthRange: [NEAR, FAR]
     });
 
-    this.dofUniforms = new Buffer(gl, {
+    this.dofUniforms = device.createBuffer({
       target: GL.UNIFORM_BUFFER,
       data: this.dofUniformsLayout.getData(),
       accessor: {
@@ -279,7 +279,7 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    this.dofProgram = new Program(gl, {
+    this.dofProgram = new Program(device, {
       id: 'DOF_PROGRAM',
       vs: DOF_VERTEX,
       fs: DOF_FRAGMENT,
@@ -294,7 +294,7 @@ export default class AppRenderLoop extends RenderLoop {
     // Set up frambuffers.
 
     // Need to ensure both color and depth targets can be sampled.
-    this.sceneFramebuffer = new Framebuffer(gl, {
+    this.sceneFramebuffer = new Framebuffer(device, {
       width: gl.drawingBufferWidth,
       height: gl.drawingBufferHeight,
       attachments: {
@@ -329,7 +329,7 @@ export default class AppRenderLoop extends RenderLoop {
     });
 
     // Postprocessing FBO doesn't need a depth attachment.
-    this.dofFramebuffer = new Framebuffer(gl, {
+    this.dofFramebuffer = new Framebuffer(device, {
       width: gl.drawingBufferWidth,
       height: gl.drawingBufferHeight,
       depth: false
@@ -364,18 +364,18 @@ export default class AppRenderLoop extends RenderLoop {
       });
     }
 
-    const texture = device.createTexture(gl, {
+    const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
       parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
+        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST
       }
     });
 
     // Create instanced model and initialize transform matrices.
 
-    this.instancedCubes = new InstancedCube(gl, {
+    this.instancedCubes = new InstancedCube(device, {
       count: NUM_CUBES,
       uniforms: {
         uTexture: texture
@@ -406,26 +406,25 @@ export default class AppRenderLoop extends RenderLoop {
     // Full-screen quad VAO for postprocessing
     // passes.
 
-    this.quadVertexArray = new VertexArray(gl, {
+    this.quadVertexArray = new VertexArray(device, {
       program: this.dofProgram,
       attributes: {
         aPosition: device.createBuffer(new Float32Array(QUAD_VERTS))
       }
     });
-
   }
 
   onRender({
     device,
-    gl,
     tick,
     width,
     height,
     aspect,
-  }) {
+  }: AnimationProps) {
+    const {gl} = device;
     // TODO
-    // this.sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-    // this.dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    this.sceneFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+    this.dofFramebuffer.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     const magnification = focalLength / Math.max(0.1, Math.abs(focusDistance - focalLength));
     const blurCoefficient = (focalLength * magnification) / fStop;
@@ -496,7 +495,7 @@ export default class AppRenderLoop extends RenderLoop {
     });
 
     // Vertical DOF blur
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
 
     texelOffset[0] = 0;
     texelOffset[1] = 1;
@@ -509,7 +508,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.dofProgram.draw({
       vertexArray: this.quadVertexArray,
-      drawMode: gl.TRIANGLE_STRIP,
+      drawMode: GL.TRIANGLE_STRIP,
       vertexCount: 4
     });
 
@@ -519,5 +518,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

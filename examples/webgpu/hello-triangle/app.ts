@@ -6,25 +6,15 @@ export const description = 'Shows rendering a basic triangle.';
 
 /** Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  glsl: {
-    vs: `\
+  vs: {
+    glsl: `\
 #version 300 es
 const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 void main() {
   gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
 }
 `,
-    fs: `\
-#version 300 es
-precision highp float;
-layout(location = 0) out vec4 outColor;
-void main() {
-    outColor = vec4(1.0, 0.0, 0.0, 1.0);
-}
-`
-  },
-  wgsl: {
-    vs: `\
+    wgsl: `\
 [[stage(vertex)]]
 fn main([[builtin(vertex_index)]] VertexIndex : u32)
     -> [[builtin(position)]] vec4<f32> {
@@ -34,8 +24,18 @@ fn main([[builtin(vertex_index)]] VertexIndex : u32)
       vec2<f32>(0.5, -0.5));
   return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
 }
+`
+  },
+  fs: {
+    glsl: `\
+#version 300 es
+precision highp float;
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
 `,
-    fs: `\
+    wgsl: `\
 [[stage(fragment)]]
 fn main() -> [[location(0)]] vec4<f32> {
   return vec4<f32>(1.0, 0.0, 0.0, 1.0);
@@ -50,8 +50,8 @@ export default class AppRenderLoop extends RenderLoop {
   constructor({device}: AnimationProps) {
     super();
     this.model = new ModelV2(device, {
-      vs: {wgsl: SHADERS.wgsl.vs, glsl: SHADERS.glsl.vs},
-      fs: {wgsl: SHADERS.wgsl.fs, glsl: SHADERS.glsl.fs},
+      vs: SHADERS.vs,
+      fs: SHADERS.fs,
       topology: 'triangle-list',
       vertexCount: 3,
       parameters: {
@@ -71,5 +71,5 @@ export default class AppRenderLoop extends RenderLoop {
 }
 
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
+  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'}).start();
 }

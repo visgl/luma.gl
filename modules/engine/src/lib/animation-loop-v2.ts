@@ -478,7 +478,8 @@ export default class AnimationLoop {
 
   /** Default viewport setup */
   _resizeViewport() {
-    if (this.props.autoResizeViewport) {
+    // @ts-expect-error Expose on canvasContext
+    if (this.props.autoResizeViewport && this.device.gl) {
       // @ts-expect-error Expose canvasContext
       this.device.gl.viewport(0, 0, this.device.gl.drawingBufferWidth, this.device.gl.drawingBufferHeight);
     }

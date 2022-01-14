@@ -259,13 +259,17 @@ module.exports = {
           {
             category: 'WebGPU',
             title: 'Hello Triangle - Shader Geometry',
-            componentUrl: resolve(
-              __dirname,
-              './templates/webgpu/example-hello-triangle-webgpu.jsx'
-            ),
+            componentUrl: resolve(__dirname, './templates/webgpu/example-hello-triangle-webgpu.jsx'),
             path: 'examples/webgpu/hello-triangle',
             image: 'images/example-hello-triangle.png'
           },
+          {
+            category: 'WebGPU',
+            title: 'Rotating Cube - Shader Geometry',
+            componentUrl: resolve(__dirname, './templates/webgpu/example-rotating-cube-webgpu.jsx'),
+            path: 'examples/webgpu/rotating-cube',
+            image: 'images/example-rotating-cube.png'
+          }
         ]      
       }
     },

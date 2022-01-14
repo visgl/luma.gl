@@ -9,7 +9,7 @@ type SpectorProps = {
   /** Whether debug is enabled. Auto-detected if ommitted */
   debug?: boolean;
   /** Whether spector is disabled */
-  spector?: boolean | String | object;
+  spector?: boolean | string | object;
 };
 
 const DEFAULT_SPECTOR_PROPS: SpectorProps = {
@@ -21,6 +21,7 @@ const SPECTOR_CDN_URL = 'https://spectorcdn.babylonjs.com/spector.bundle.js';
 const LOG_LEVEL = 1;
 
 let spector = null;
+let initialized = false;
 
 /** Loads spector from CDN if not already installed */
 export async function loadSpectorJS(props?: SpectorProps) {
@@ -35,7 +36,7 @@ export async function loadSpectorJS(props?: SpectorProps) {
 
 export function initializeSpectorJS(props?: SpectorProps) {
   props = {...DEFAULT_SPECTOR_PROPS, ...props};
-  if (!props?.debug || !props?.spector) {
+  if (!props?.spector) {
     return null;
   }
 
@@ -47,13 +48,19 @@ export function initializeSpectorJS(props?: SpectorProps) {
     }
   }
 
-  if (spector) {
+  if (!spector) {
+    return null;
+  }
+
+  if (!initialized) {
+    initialized = true;
+
     // enables recording some extra information merged in the capture like texture memory sizes and formats
     spector.spyCanvases();
     // A callback when results are ready
-    spector?.onCaptureStarted.add((capture) => log.info(`Spector started:`, capture)());
+    spector?.onCaptureStarted.add((capture) => log.info(`Spector capture started:`, capture)());
     spector?.onCapture.add((capture) => {
-      log.info(`Spector:`, capture)();
+      log.info(`Spector capture complete:`, capture)();
       // Use undocumented Spector API to open the UI with our capture
       // See https://github.com/BabylonJS/Spector.js/blob/767ad1195a25b85a85c381f400eb50a979239eca/src/spector.ts#L124
       spector?.getResultUI()
@@ -62,14 +69,20 @@ export function initializeSpectorJS(props?: SpectorProps) {
     });
   }
 
-  if (spector && props?.canvas) {
+  if (props?.canvas) {
+    // @ts-expect-error If spector is specified as a canvas id, only monitor that canvas
+    if (typeof props.spector === 'string' && props.spector !== props.canvas.id) {
+      return spector;
+    }
+
     // capture startup
     // spector?.captureCanvas(props?.canvas);
     spector?.startCapture(props?.canvas, 500); // 500 commands
-    spector?.displayUI();
-    // new Promise(resolve => setTimeout(resolve, 1000)).then(_ => {
-    //   spector?.stopCapture();
-    // });
+    new Promise(resolve => setTimeout(resolve, 2000)).then(_ => {
+      log.info(`Spector capture stopped after 2 seconds`)();
+      spector?.stopCapture();
+      // spector?.displayUI();
+    });
   }
 
   return spector;

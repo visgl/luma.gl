@@ -1,4 +1,4 @@
-import {log, assert, AttributeBinding} from '@luma.gl/api';
+import {log, assert, uid, AttributeBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import VertexArrayObject, {VertexArrayObjectProps} from '../../classes/vertex-array-object';
 import Accessor from '../../classes/accessor';
@@ -55,7 +55,7 @@ export default class WEBGLVertexArray {
 
   constructor(gl: WebGLRenderingContext, props?: VertexArrayProps) {
     // Use program's id if program is supplied but no id is supplied
-    const id = props?.id || (props?.program && props?.program.id);
+    const id = props?.id || props?.program?.id || uid('vertex-array');
     // super(gl, Object.assign({}, props, {id}));
 
     this.vertexArrayObject = new VertexArrayObject(gl);
@@ -121,6 +121,8 @@ export default class WEBGLVertexArray {
       this.accessors[location] = accessor;
       this.clearDrawParams();
       this.vertexArrayObject.setBuffer(location, buffer, accessor);
+    } else {
+      log.warn(`non-existent attribute ${locationOrName} in vertex array ${this.id}`)();
     }
 
     return this;

@@ -52,7 +52,7 @@ export type DeviceProps = {
 
 export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   id: undefined,
-  type: 'webgl', // 'best-available',
+  type: 'best-available',
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
   webgl2: true, // Attempt to create a WebGL2 context

@@ -617,7 +617,7 @@ function getWebGLPixelDataFormat(
   }
 }
 
-function getWebGLDataType(dataType: string): GL {
+export function getWebGLDataType(dataType: string): GL {
   // prettier-ignore
   switch (dataType) {
     case 'uint8': return GL.UNSIGNED_BYTE;

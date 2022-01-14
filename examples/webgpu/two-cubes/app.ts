@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import {luma, Device, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
-import {ModelV2 as Model, CubeGeometry} from '@luma.gl/engine';
+import {luma, Device, ShaderLayout, RenderPipelineParameters, Buffer} from '@luma.gl/api';
+import {ModelV2 as Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -9,8 +9,9 @@ export const description = 'Shows usage of multiple uniform buffers.';
 
 /** Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  wgsl: {
-    vertex: `
+  vs: {
+    glsl: ``,
+    wgsl: `
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
 };
@@ -31,8 +32,11 @@ fn main([[location(0)]] position : vec4<f32>,
   output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return output;
 }
-        `,
-    fragment: `
+        `
+},
+fs: {
+  glsl: ``,
+  wgsl: `
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
@@ -67,44 +71,58 @@ const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   cullMode: 'back',
 };
 
-export async function init(device: Device, language: 'glsl' | 'wgsl') {
-  // Create a vertex buffer from the cube data.
-  // Create vertex buffers for the cube data.
-  const cube = new CubeGeometry({indices: false});
-  const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
-  const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
+export default class AppRenderLoop extends RenderLoop {
 
-  const cubeModel = new Model(device, {
-    id: 'cube',
-    vs: SHADERS[language].vertex,
-    fs: SHADERS[language].fragment,
-    topology: 'triangle-list',
-    layout: CUBE_SHADER_LAYOUT,
-    attributes: {
-      position: positionBuffer,
-      uv: uvBuffer
-    },
-    vertexCount: cube.vertexCount,
-    parameters: CUBE_RENDER_PARAMETERS
-  });
+  cubeModel: Model;
+  uniformBuffer1: Buffer;
+  uniformBuffer2: Buffer;
 
-  const uniformBuffer1 = device.createBuffer({
-    id: 'uniforms-1',
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    byteLength: UNIFORM_BUFFER_SIZE,
-  });
+  constructor({device}) {
+    super();
+    // Create a vertex buffer from the cube data.
+    // Create vertex buffers for the cube data.
+    const cube = new CubeGeometry({indices: false});
+    const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
+    const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
 
-  const uniformBuffer2 = device.createBuffer({
-    id: 'uniforms-2',
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    byteLength: UNIFORM_BUFFER_SIZE,
-  });
+    this.cubeModel = new Model(device, {
+      id: 'cube',
+      vs: SHADERS.vs,
+      fs: SHADERS.fs,
+      topology: 'triangle-list',
+      layout: CUBE_SHADER_LAYOUT,
+      attributes: {
+        position: positionBuffer,
+        uv: uvBuffer
+      },
+      vertexCount: cube.vertexCount,
+      parameters: CUBE_RENDER_PARAMETERS
+    });
 
-  const projectionMatrix = new Matrix4();
-  const viewMatrix = new Matrix4();
-  const modelViewProjectionMatrix = new Matrix4();
+    this.uniformBuffer1 = device.createBuffer({
+      id: 'uniforms-1',
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      byteLength: UNIFORM_BUFFER_SIZE,
+    });
 
-  function frame() {
+    this.uniformBuffer2 = device.createBuffer({
+      id: 'uniforms-2',
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      byteLength: UNIFORM_BUFFER_SIZE,
+    });
+  }
+
+  destroy() {
+    this.cubeModel.destroy();
+    this.uniformBuffer1.destroy();
+    this.uniformBuffer2.destroy();
+  }
+
+  render({device}: AnimationProps) {
+    const projectionMatrix = new Matrix4();
+    const viewMatrix = new Matrix4();
+    const modelViewProjectionMatrix = new Matrix4();
+
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
@@ -112,22 +130,21 @@ export async function init(device: Device, language: 'glsl' | 'wgsl') {
 
     viewMatrix.identity().translate([-2, 0, -7]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
-    uniformBuffer1.write(new Float32Array(modelViewProjectionMatrix));
+    this.uniformBuffer1.write(new Float32Array(modelViewProjectionMatrix));
 
     viewMatrix.identity().translate([2, 0, -7]).rotateAxis(1, [Math.cos(now), Math.sin(now), 0]);
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
-    uniformBuffer2.write(new Float32Array(modelViewProjectionMatrix));
+    this.uniformBuffer2.write(new Float32Array(modelViewProjectionMatrix));
 
-    cubeModel.setBindings({uniforms: uniformBuffer1});
-    cubeModel.draw();
-    cubeModel.setBindings({uniforms: uniformBuffer2});
-    cubeModel.draw();
+    this.cubeModel.setBindings({uniforms: this.uniformBuffer1});
+    this.cubeModel.draw();
+    this.cubeModel.setBindings({uniforms: this.uniformBuffer2});
+    this.cubeModel.draw();
     device.submit();
-
-    requestAnimationFrame(frame);
   }
 
-  requestAnimationFrame(frame);
 }
 
-(async () => await init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();
+if (!globalThis.website) {
+  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
+}

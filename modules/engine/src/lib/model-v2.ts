@@ -33,7 +33,7 @@ const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
   // targets:
 
   vertexCount: 0,
-  instanceCount: 1,
+  instanceCount: 0,
   parameters: {},
 
   attributes: {},

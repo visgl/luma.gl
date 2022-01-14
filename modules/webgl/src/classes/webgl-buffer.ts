@@ -87,7 +87,26 @@ export default class WEBGLBuffer extends Buffer {
 
     const handle = typeof props === 'object' ? (props as BufferProps).handle : undefined;
     this.handle = handle || this.gl.createBuffer();
+    // @ts-expect-error Add metadata for spector
+    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
 
+    // static MAP_READ = 0x01;
+    // static MAP_WRITE = 0x02;
+    // static COPY_SRC = 0x0004;
+    // static COPY_DST = 0x0008;
+    // static INDEX = 0x0010;
+    // static VERTEX = 0x0020;
+    // static UNIFORM = 0x0040;
+    // static STORAGE = 0x0080;
+    // static INDIRECT = 0x0100;
+    // static QUERY_RESOLVE = 0x0200;
+
+    if (this.props.usage & Buffer.UNIFORM) {
+      // @ts-expect-error
+      props.target = GL.UNIFORM_BUFFER;
+      // @ts-expect-error
+      props.usage = GL.DYNAMIC_DRAW;
+    }
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
@@ -109,6 +128,9 @@ export default class WEBGLBuffer extends Buffer {
     }
   }
 
+  write(data: ArrayBufferView, byteOffset?: number): void {
+    this.subData({data, offset: byteOffset});
+  }
   // returns number of elements in the buffer (assuming that the full buffer is used)
   getElementCount(accessor = this.accessor): number {
     return Math.round(this.byteLength / Accessor.getBytesPerElement(accessor));
