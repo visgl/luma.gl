@@ -1,6 +1,9 @@
 // luma.gl, MIT license
 import {VertexFormat, TextureFormat} from '../types/formats';
 import {Accessor} from '../types/accessor';
+import type Buffer from '../resources/buffer';
+import type Sampler from '../resources/sampler';
+import type Texture from '../resources/texture'; // TextureView...
 
 /**
  * Describes an attribute binding for a program
@@ -51,6 +54,7 @@ export type ShaderLayout = {
   bindings: BindingLayout[];
 };
 
+/** ShaderLayout for attributes */
 export type AttributeLayout = {
   name: string;
   location: number;
@@ -60,45 +64,51 @@ export type AttributeLayout = {
   stepMode?: 'vertex' | 'instance';
 }
 
+// BUFFER MAP
+
+/**
+ * A buffer map is used to specify "non-standard" buffer layouts (buffers with offsets, interleaved buffers etc)
+ *
+ ```
+ bufferMap: [
+   {name: 'interleavedPositions', attributes: [...]}
+   {name: 'position', byteOffset: 1024}
+ ]
+ ```
+ */
+ export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
+
+ /** @note Not public: not exported outside of api module */
+ export type SingleBufferMapping = {
+   /** Name of attribute to adjust */
+   name: string;
+   /** bytes between successive elements @note `stride` is auto calculated if omitted */
+   byteStride?: number;
+   /** offset into buffer. Defaults to `0` */
+   byteOffset?: number;
+ };
+ 
+ /** @note Not public: not exported outside of api module */
+ export type InterleavedBufferMapping = {
+   /** Name of buffer () */
+   name: string;
+   /** bytes between successive elements @note `stride` is auto calculated if omitted */
+   byteStride?: number;
+   /** offset into buffer Defaults to `0` */
+   byteOffset?: number;
+   /** Attributes that read from this buffer */
+   attributes: InterleavedAttribute[]
+ };
+ 
+ /** @note Not public: not exported outside of api module */
+ export type InterleavedAttribute = {
+   /** Name of buffer to map */
+   name?: string;
+   /** offset into one stride. @note `offset` is auto calculated starting from zero */
+   byteOffset?: number;
+ };
+ 
 // BINDING LAYOUTS
-
-type BufferBindingLayout = {
-  type: 'uniform' | 'storage' | 'read-only-storage';
-  name: string;
-  location?: number;
-  visibility: number;
-  hasDynamicOffset?: boolean;
-  minBindingSize?: number;
-}
-
-type TextureBindingLayout = {
-  type: 'texture',
-  name: string;
-  location?: number;
-  visibility: number;
-  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-  multisampled?: boolean;
-};
-
-type StorageTextureBindingLayout = {
-  type: 'storage',
-  name: string;
-  location?: number;
-  visibility: number;
-  access?: 'write-only';
-  format: TextureFormat;
-  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-};
-
-export type BindingLayout = BufferBindingLayout | TextureBindingLayout | StorageTextureBindingLayout;
-
-// BINDINGS
-
-import type Buffer from '../resources/buffer';
-import type Texture from '../resources/texture'; // TextureView...
-
-export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
 
 /*
 type Binding = {
@@ -110,23 +120,69 @@ type Binding = {
     hasDynamicOffset?: false;
     minBindingSize?: number;
   };
-  sampler?: {
-    type?: 'filtering' | 'non-filtering' | 'comparison';
-  };
-  texture?: {
-    viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-    sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-    multisampled?: boolean;
-  };
-  storageTexture?: {
-    viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-    access: 'read-only' | 'write-only';
-    format: string;
-  };
+
+  // type = sampler
+  samplerType?: 'filtering' | 'non-filtering' | 'comparison';
+
+  // type = texture
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  multisampled?: boolean;
+
+  // type = storage
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  access: 'read-only' | 'write-only';
+  format: string;
 };
 */
 
-// ATTRIBUTE LAYOUTS
+/** ShaderLayout for bindings */
+export type BindingLayout = 
+BufferBindingLayout | TextureBindingLayout | SamplerBindingLayout | StorageTextureBindingLayout;
+
+type BufferBindingLayout = {
+  type: 'uniform' | 'storage' | 'read-only-storage';
+  name: string;
+  location: number;
+  visibility?: number;
+  hasDynamicOffset?: boolean;
+  minBindingSize?: number;
+}
+
+type TextureBindingLayout = {
+  type: 'texture';
+  name: string;
+  location: number;
+  visibility?: number;
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d'; // default: '2d'
+  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'; // default: 'float'
+  multisampled?: boolean;
+};
+
+type SamplerBindingLayout = {
+  type: 'sampler';
+  name: string;
+  location: number;
+  visibility?: number;
+  samplerType?: 'filtering' | 'non-filtering' | 'comparison'; // default: filtering
+};
+
+type StorageTextureBindingLayout = {
+  type: 'storage';
+  name: string;
+  location: number;
+  visibility?: number;
+  access?: 'write-only';
+  format: TextureFormat;
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+};
+
+// BINDINGS
+
+/** Binding value */
+export type Binding = Texture | Sampler | Buffer | {buffer: Buffer,  offset?: number, size?: number};
+
+ // ATTRIBUTE LAYOUTS
 
 /**
  * Holds metadata describing attribute configurations for a program's shaders
@@ -177,46 +233,3 @@ export type AttributeBinding = {
   accessor: Accessor;
 }
 
-// BUFFER MAP
-
-/**
- * A buffer map is used to specify "non-standard" buffer layouts (buffers with offsets, interleaved buffers etc)
- *
- ```
- bufferMap: [
-   {name: 'interleavedPositions', attributes: [...]}
-   {name: 'position', byteOffset: 1024}
- ]
- ```
- */
-export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
-
-/** @note Not public: not exported outside of api module */
-export type SingleBufferMapping = {
-  /** Name of attribute to adjust */
-  name: string;
-  /** bytes between successive elements @note `stride` is auto calculated if omitted */
-  byteStride?: number;
-  /** offset into buffer. Defaults to `0` */
-  byteOffset?: number;
-};
-
-/** @note Not public: not exported outside of api module */
-export type InterleavedBufferMapping = {
-  /** Name of buffer () */
-  name: string;
-  /** bytes between successive elements @note `stride` is auto calculated if omitted */
-  byteStride?: number;
-  /** offset into buffer Defaults to `0` */
-  byteOffset?: number;
-  /** Attributes that read from this buffer */
-  attributes: InterleavedAttribute[]
-};
-
-/** @note Not public: not exported outside of api module */
-export type InterleavedAttribute = {
-  /** Name of buffer to map */
-  name?: string;
-  /** offset into one stride. @note `offset` is auto calculated starting from zero */
-  byteOffset?: number;
-};

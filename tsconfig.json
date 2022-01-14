@@ -44,6 +44,7 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "include": [
+    "examples/webgpu",
     "modules/**/*",
     "node_modules/@webgpu/types"
   ],

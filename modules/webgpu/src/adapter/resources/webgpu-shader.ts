@@ -1,4 +1,5 @@
-import {Shader, ShaderProps, CompilerMessage} from '@luma.gl/api';
+import type {ShaderProps, CompilerMessage} from '@luma.gl/api';
+import {Shader, log} from '@luma.gl/api';
 import type WebGPUDevice from '../webgpu-device';
 
 export type WebGPUShaderProps = ShaderProps & {
@@ -16,8 +17,23 @@ export default class WebGPUShader extends Shader {
     super(device, props);
     this.device = device;
 
+    this.device.handle.pushErrorScope('validation');
+
     this.handle = this.props.handle || this.createHandle();
     this.handle.label = this.props.id;
+
+    this._checkCompilationError(this.device.handle.popErrorScope());
+  }
+
+  async _checkCompilationError(errorScope: Promise<GPUError>): Promise<void> {
+    const error = await errorScope as GPUValidationError;
+    if (error) {
+      const shaderLog = await this.compilationInfo();
+      log.error(`Shader compilation error: ${error.message}`, shaderLog)();
+      // Note: Even though this error is asynchronous and thrown after the constructor completes, 
+      // it will result in a useful stack trace leading back to the constructor
+      throw new Error(`Shader compilation error: ${error.message}`);
+    }
   }
 
   destroy() {

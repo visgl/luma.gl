@@ -1,5 +1,5 @@
 // prettier-ignore
-import type {Parameters, RenderPipelineProps, Binding} from '@luma.gl/api';
+import type {Parameters, RenderPipelineProps} from '@luma.gl/api';
 import {RenderPipeline, cast, log} from '@luma.gl/api';
 import WebGLDevice from '../webgl-device';
 import WEBGLShader from './webgl-shader';
@@ -23,8 +23,8 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this.parameters = this.props.parameters;
 
     // Create shaders if needed
-    this.vs = cast<WEBGLShader>(this.props.vs);
-    this.fs = cast<WEBGLShader>(this.props.fs);
+    this.vs = cast<WEBGLShader>(props.vs);
+    this.fs = cast<WEBGLShader>(props.fs);
     // assert(this.vs.stage === 'vertex');
     // assert(this.fs.stage === 'fragment');
   }
