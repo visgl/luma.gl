@@ -9,11 +9,11 @@ import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
 import {TransformProps, TransformRunOptions, TransformDrawOptions} from './transform-types';
 
-/** 
- * Takes source and target buffers/textures and sets up the pipeline 
+/**
+ * Takes source and target buffers/textures and sets up the pipeline
  */
 export default class Transform {
-  /** 
+  /**
    * Check if Transforms are supported (they are not under WebGL1)
    * @todo differentiate writing to buffer vs not
    */
@@ -124,15 +124,13 @@ export default class Transform {
     this._buildResourceTransforms(gl, props);
 
     props = this._updateModelProps(props);
-    this.model = new Model(
-      this.device,
-      Object.assign({}, props, {
-        fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
-        id: props.id || 'transform-model',
-        drawMode: props.drawMode || GL.POINTS,
-        vertexCount: props.elementCount
-      })
-    );
+    this.model = new Model(this.device, {
+      ...props,
+      fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
+      id: props.id || 'transform-model',
+      drawMode: props.drawMode || GL.POINTS,
+      vertexCount: props.elementCount
+    });
 
     if (this.bufferTransform) {
       this.bufferTransform.setupResources({model: this.model});
@@ -174,16 +172,15 @@ export default class Transform {
 // Helper Methods
 
 function canCreateBufferTransform(props: TransformProps): boolean {
-  const canCreate = !isObjectEmpty(props.feedbackBuffers) ||
-  !isObjectEmpty(props.feedbackMap) ||
-  (props.varyings && props.varyings.length > 0);
+  const canCreate =
+    !isObjectEmpty(props.feedbackBuffers) ||
+    !isObjectEmpty(props.feedbackMap) ||
+    (props.varyings && props.varyings.length > 0);
   return Boolean(canCreate);
 }
 
 function canCreateTextureTransform(props: TransformProps): boolean {
   const canCreate =
-    !isObjectEmpty(props._sourceTextures) ||
-    props._targetTexture ||
-    props._targetTextureVarying
+    !isObjectEmpty(props._sourceTextures) || props._targetTexture || props._targetTextureVarying;
   return canCreate;
 }

@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import {isBrowser} from 'probe.gl/env';
+import type Framebuffer from './resources/framebuffer';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
@@ -70,7 +71,13 @@ export default abstract class CanvasContext {
     }
   }
 
-  /** Returns the current DPR, if props.useDevicePixels is true */
+  /** Returns a framebuffer with properly resized current "swap chain" textures */
+  abstract getCurrentFramebuffer(): Framebuffer;
+
+  /**
+   * Returns the current DPR, if props.useDevicePixels is true
+   * Device refers to physical
+   */
   getDevicePixelRatio(): number {
     if (this.canvas instanceof OffscreenCanvas) {
       return 1;

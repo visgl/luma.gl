@@ -17,7 +17,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
 
   get texture() { return this.colorAttachments[0]; }
   readonly colorAttachments: WebGLTexture[] = [];
-  readonly depthStencilAttachment: WebGLTexture | Renderbuffer | undefined = undefined;
+  readonly depthStencilAttachment: WebGLTexture | undefined = undefined;
   protected _ownResources: (WebGLTexture | Renderbuffer)[] = [];
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
@@ -32,6 +32,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
     }
 
     this.colorAttachments = this._createColorAttachments();
+    // @ts-expect-error
     this.depthStencilAttachment = this._createDepthStencilAttachment();
 
     /** Attach from a map of attachments */

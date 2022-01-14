@@ -1,53 +1,65 @@
 // prettier-ignore
-import {
-  Parameters,
-  Buffer, BufferProps,
-  Resource, ResourceProps,
-  Shader,
-  RenderPipeline, RenderPipelineProps, Binding
-} from '@luma.gl/api';
-import {Program} from '@luma.gl/webgl';
+import type {Parameters, RenderPipelineProps, Binding} from '@luma.gl/api';
+import {RenderPipeline, cast, log} from '@luma.gl/api';
 import WebGLDevice from '../webgl-device';
+import WEBGLShader from './webgl-shader';
 
-// import {getRenderPipelineDescriptor} from '../converters/convert-parameters';
-// import {mapAccessorToWebGPUFormat} from '../helpers/accessor-to-format';
-// import type {BufferAccessors} from './webgpu-pipeline';
+const LOG_PROGRAM_PERF_PRIORITY = 4;
 
-/** Creates a new render pipeline when parameters change */
+/** Creates a new render pipeline */
 export default class WEBGLRenderPipeline extends RenderPipeline {
   device: WebGLDevice;
   handle: WebGLProgram;
-  program: Program;
+  vs: WEBGLShader;
+  fs: WEBGLShader;
   parameters: Parameters;
 
   constructor(device: WebGLDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.props.handle || this.createHandle();
+    this.handle = this.props.handle || this.device.gl.createProgram();
+    // @ts-expect-error
+    this.handle.__SPECTOR_Metadata = {id: this.props.id};
     this.parameters = this.props.parameters;
+
+    // Create shaders if needed
+    this.vs = cast<WEBGLShader>(this.props.vs);
+    this.fs = cast<WEBGLShader>(this.props.fs);
+    // assert(this.vs.stage === 'vertex');
+    // assert(this.fs.stage === 'fragment');
   }
 
-  protected createHandle(): RenderPipeline {
-    this.program = new Program(this.device.gl, {
-      id: this.props.id,
-      vs: this.props.vs,
-      fs: this.props.fs
-    });
-    return this.program.handle;
+  destroy(): void {
+    if (this.handle) {
+      this.device.gl.deleteProgram(this.handle);
+      this.handle = null;
+    }
   }
 
-  setAttributes(attributes: Record<string, Buffer>): void {}
-  setBindings(bindings: Record<string, Binding>): void {}
+  // setAttributes(attributes: Record<string, Buffer>): void {}
+  // setBindings(bindings: Record<string, Binding>): void {}
+
+  protected _compileAndLink() {
+    const {gl} = this.device;
+    gl.attachShader(this.handle, this.vs.handle);
+    gl.attachShader(this.handle, this.fs.handle);
+    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
+    gl.linkProgram(this.handle);
+    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
+
+    // Avoid checking program linking error in production
+    // @ts-expect-error
+    if (gl.debug || log.level > 0) {
+      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+      if (!linked) {
+        throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
+      }
+
+      gl.validateProgram(this.handle);
+      const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
+      if (!validated) {
+        throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
+      }
+    }
+  }
 }
-
-// COMPUTE PIPELINE
-
-// @ts-expect-error
-const DEFAULT_COMPUTE_PIPELINE_PROPS: Required<RenderPipelineProps> = {
-  id: undefined,
-  handle: undefined,
-  userData: {},
-  // byteLength: 0,
-  // usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-  // mappedAtCreation: true
-};

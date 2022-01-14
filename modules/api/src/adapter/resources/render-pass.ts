@@ -6,34 +6,16 @@ import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import Buffer from './buffer';
 import RenderPipeline from './render-pipeline';
 import CommandEncoder from './command-encoder';
-
-type ColorAttachment = {
-  // attachment: GPUTextureView;
-  // resolveTarget?: GPUTextureView;
-  // loadValue: GPULoadOp | GPUColor;
-  // storeOp?: GPUStoreOp;
-};
-
-type DepthStencilAttachment = {
-  // attachment: GPUTextureView;
-  // depthLoadValue: GPULoadOp | number;
-  // depthStoreOp: GPUStoreOp;
-  depthReadOnly?: boolean;
-  // stencilLoadValue: GPULoadOp | number;
-  // stencilStoreOp: GPUStoreOp;
-  stencilReadOnly?: boolean;
-};
+import Framebuffer from './framebuffer';
 
 export type RenderPassProps = ResourceProps & {
-  colorAttachments: ColorAttachment[];
-  depthStencilAttachment?: DepthStencilAttachment;
+  framebuffer?: Framebuffer;
   parameters?: RenderPassParameters
 };
 
 const DEFAULT_RENDERPASS_PROPS = {
   ...DEFAULT_RESOURCE_PROPS,
-  colorAttachments: [],
-  depthStencilAttachment: undefined,
+  framebuffer: undefined,
   parameters: undefined
 }
 

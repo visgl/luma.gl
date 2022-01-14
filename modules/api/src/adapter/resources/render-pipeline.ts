@@ -11,20 +11,20 @@ export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
 
   /** Compiled vertex shader */
-  vs: Shader;
+  vs?: Shader | string;
   /** Vertex shader entry point (defaults to 'main'). WGSL only */
   vsEntryPoint?: string; //
   /** Constants to apply to compiled vertex shader (WGSL only) */
   vsConstants?: Record<string, number>; // WGSL only
   /** Compiled fragment shader */
-  fs?: Shader;
+  fs?: Shader | string;
   /** Fragment shader entry point (defaults to 'main'). WGSL only */
   fsEntryPoint?: string; // WGSL only
   /** Constants to apply to compiled fragment shader (WGSL only) */
   fsConstants?: Record<string, number>;
 
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
-  layout: ShaderLayout;
+  layout?: ShaderLayout;
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
@@ -44,7 +44,7 @@ export type RenderPipelineProps = ResourceProps & {
   // TODO - could be supplied to draw, making pipeline immutable
 
   /** Number of "rows" in 'vertex' buffers */
-  vertexCount: number;
+  vertexCount?: number;
   /** Number of "rows" in 'instance' buffers */
   instanceCount?: number;
   /** Buffers for attributes */
@@ -86,8 +86,8 @@ export default abstract class RenderPipeline extends Resource<RenderPipelineProp
     super(device, normalizeProps(props), DEFAULT_RENDER_PIPELINE_PROPS);
   }
 
-  abstract setAttributes(attributes: Record<string, Buffer>): void;
-  abstract setBindings(bindings: Record<string, Binding>): void;
+  // abstract setAttributes(attributes: Record<string, Buffer>): void;
+  // abstract setBindings(bindings: Record<string, Binding>): void;
 
   // abstract draw();
 

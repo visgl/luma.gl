@@ -1,4 +1,4 @@
-import type {Device, RenderPipelineParameters} from '@luma.gl/api';
+import type {Device, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -12,7 +12,7 @@ import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
 import WebGLDevice from '../adapter/webgl-device';
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLTexture from '../adapter/resources/webgl-texture';
 import WEBGLFramebuffer from '../adapter/resources/webgl-framebuffer';
@@ -21,13 +21,10 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
-export type ProgramProps = ResourceProps & {
+export type ProgramProps = RenderPipelineProps & {
   hash?: string;
-  vs?: string | Shader;
-  fs?: string | Shader;
   varyings?: string[];
   bufferMode?: number;
-  parameters?: RenderPipelineParameters;
 };
 
 export type ProgramDrawOptions = {
@@ -49,19 +46,15 @@ export type ProgramDrawOptions = {
   samplers?: any;
 };
 
-// export default class Program extends Resource {
-//   readonly gl: WebGLRenderingContext;
-//   readonly gl2: WebGL2RenderingContext | null;
-//   readonly handle: WebGLProgram;
-
-export default class Program extends WebGLResource<ProgramProps> {
+export default class Program extends WEBGLRenderPipeline {
   get [Symbol.toStringTag](): string { return 'Program'; }
+
+  gl: WebGLRenderingContext;
+  gl2: WebGL2RenderingContext;
 
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
   hash: string; // Used by ProgramManager
-  vs: WEBGLShader;
-  fs: WEBGLShader;
   uniforms: Record<string, any>;
   varyings: Record<string, any>;
   _textureUniforms: Record<string, any>;
@@ -71,8 +64,10 @@ export default class Program extends WebGLResource<ProgramProps> {
   _uniformSetters: Record<string, Function>;
   private _parameters: RenderPipelineParameters;
 
-  constructor(device: Device | WebGLRenderingContext, props: ProgramProps = {}) {
-    super(WebGLDevice.attach(device), props, {} as any);
+  constructor(device: Device | WebGLRenderingContext, props: ProgramProps) {
+    super(WebGLDevice.attach(device), props);
+    this.gl = this.device.gl;
+    this.gl2 = this.device.gl2;
     this._parameters = props.parameters;
     this.initialize(props);
     Object.seal(this);
@@ -80,22 +75,13 @@ export default class Program extends WebGLResource<ProgramProps> {
   }
 
   destroy(options = {}) {
-    if (this._isCached) {
-      // This object is cached, do not delete
-      return this;
+    // This object is cached, do not delete
+    if (!this._isCached) {
+      super.destroy();
     }
-    return super.delete(options);
   }
 
-  delete(options = {}) {
-    if (this._isCached) {
-      // This object is cached, do not delete
-      return this;
-    }
-    return super.delete(options);
-  }
-
-  initialize(props: ProgramProps = {}) {
+  initialize(props: ProgramProps) {
     const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
 
     this.hash = hash || ''; // Used by ProgramManager
@@ -321,15 +307,25 @@ export default class Program extends WebGLResource<ProgramProps> {
     }
   }
 
+    // If program is not named, name it after shader names
+  // TODO - this.id will already have been initialized
+  _setId(id) {
+    if (!id) {
+      const programName = this._getName();
+      this.id = uid(programName);
+    }
+  }
+
+  // Generate a default name for the program based on names of the shaders
+  _getName() {
+    // let programName = this.vs.getName() || this.fs.getName();
+    let programName = this.vs.id || this.fs.id;
+    programName = programName.replace(/shader/i, '');
+    programName = programName ? `${programName}-program` : 'program';
+    return programName;
+  }
+
   // RESOURCE METHODS
-
-  _createHandle() {
-    return this.gl.createProgram();
-  }
-
-  _deleteHandle() {
-    this.gl.deleteProgram(this.handle);
-  }
 
   // Extract opts needed to initialize a `Program` from an independently created WebGLProgram handle
   _getOptionsFromHandle(handle) {
@@ -356,47 +352,7 @@ export default class Program extends WebGLResource<ProgramProps> {
     return this.gl.getProgramParameter(this.handle, pname);
   }
 
-  // If program is not named, name it after shader names
-  // TODO - this.id will already have been initialized
-  _setId(id) {
-    if (!id) {
-      const programName = this._getName();
-      this.id = uid(programName);
-    }
-  }
-
-  // Generate a default name for the program based on names of the shaders
-  _getName() {
-    // let programName = this.vs.getName() || this.fs.getName();
-    let programName = this.vs.id || this.fs.id;
-    programName = programName.replace(/shader/i, '');
-    programName = programName ? `${programName}-program` : 'program';
-    return programName;
-  }
-
-  _compileAndLink() {
-    const {gl} = this;
-    gl.attachShader(this.handle, this.vs.handle);
-    gl.attachShader(this.handle, this.fs.handle);
-    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
-    gl.linkProgram(this.handle);
-    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this._getName()}`)();
-
-    // Avoid checking program linking error in production
-    // @ts-expect-error
-    if (gl.debug || log.level > 0) {
-      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
-      if (!linked) {
-        throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
-      }
-
-      gl.validateProgram(this.handle);
-      const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
-      if (!validated) {
-        throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
-      }
-    }
-  }
+  // TO BE REMOVED in v7?
 
   // query uniform locations and build name to setter map.
   // TODO - This overlaps with ProgramConfiguration?
@@ -420,8 +376,6 @@ export default class Program extends WebGLResource<ProgramProps> {
     }
     this._textureIndexCounter = 0;
   }
-
-  // TO BE REMOVED in v7?
 
   // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
   // https://

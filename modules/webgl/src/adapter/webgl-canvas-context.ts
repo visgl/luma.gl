@@ -1,22 +1,30 @@
 // luma.gl, MIT license
 import type {TextureFormat, CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext} from '@luma.gl/api';
+import WebGLDevice from './webgl-device';
+import WEBGLFramebuffer from './resources/webgl-framebuffer';
 
 /** 
  * Holds a WebGL Canvas Context which will handle drawing buffer resizing etc 
  * @todo This class is WIP, intended to replace the old gltools-based context size tracking
  */
 export default class WebGLCanvasContext extends CanvasContext {
-  // readonly gl: WebGLRenderingContext;
+  device: WebGLDevice;
   presentationSize: [number, number];
+  private _framebuffer: WEBGLFramebuffer;
 
-  constructor(device: WebGLRenderingContext, props: CanvasContextProps) {
-    // This creates the context
-    super(props);
+  constructor(device: WebGLDevice, props: CanvasContextProps) {
+    super(getWebGLCanvasContextProps(device, props));
     // TODO - We will need to break out WebGL context creating code from WebGLDevice
     // this.gl = this.canvas.getContext('webgl');
     this.presentationSize = [-1, -1];
+    this._framebuffer = new WEBGLFramebuffer(this.device, {handle: null});
     this.update();
+  }
+
+  getCurrentFramebuffer(): WEBGLFramebuffer {
+    this.update();
+    return this._framebuffer;
   }
 
   /** Resizes and updates render targets if necessary */
@@ -27,4 +35,11 @@ export default class WebGLCanvasContext extends CanvasContext {
       this.presentationSize = size;
     }
   }
+}
+
+function getWebGLCanvasContextProps(device: WebGLDevice, props: CanvasContextProps): CanvasContextProps {
+  if (props.canvas !== device.gl.canvas) {
+    throw new Error('WebGL canvas context only works for ');
+  }
+  return props;
 }

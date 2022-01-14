@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type {RenderPipelineParameters} from '@luma.gl/api';
+import type {RenderPipelineParameters, Shader} from '@luma.gl/api';
 import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {ProgramProps} from '@luma.gl/webgl';
@@ -36,8 +36,8 @@ export type ModelProps = ProgramProps & {
   id?: string;
 
   // program props
-  // vs,
-  // fs,
+  vs?: Shader | string;
+  fs?: Shader | string;
   varyings?: string[];
   bufferMode?;
 
@@ -164,8 +164,8 @@ export default class Model {
 
   constructor(device: Device, props?: ModelProps);
   /* @deprecated */
-  constructor(gl: WebGLRenderingContext, props?: ModelProps);
-  constructor(device, props: ModelProps = {}) {
+  constructor(gl: WebGLRenderingContext, props: ModelProps);
+  constructor(device, props: ModelProps) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
     this.id = id;
@@ -195,6 +195,7 @@ export default class Model {
       transpileToGLSL100,
       parameters
     } = props;
+
 
     this.programProps = {
       program,
@@ -307,6 +308,7 @@ export default class Model {
   setProgram(props): void {
     const {program, vs, fs, modules, defines, inject, varyings, bufferMode, transpileToGLSL100, parameters} =
       props;
+
     this.programProps = {
       program,
       vs,

@@ -1,58 +1,55 @@
-import {CommandEncoder, CommandEncoderProps} from '@luma.gl/api';
-import type {
-  CopyBufferToBufferOptions,
-  CopyBufferToTextureOptions,
-  CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions
-} from '@luma.gl/api';
-
-import CommandBuffer from './webgl-command-buffer';
+import {RenderPass, RenderPassProps, RenderPipeline, Buffer, Binding, RenderPassParameters, cast} from '@luma.gl/api';
 import WebGLDevice from '../webgl-device';
+import WEBGLRenderPipeline from './webgl-render-pipeline';
 
-export default class WEBGLCommandEncoder extends CommandEncoder {
+export default abstract class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
 
-  readonly commandBuffer = new CommandBuffer();
-
-  constructor(device: WebGLDevice, props: CommandEncoderProps) {
-    super(props);
-    this.device = device;
+  constructor(device: WebGLDevice, props: RenderPassProps) {
+    super(device, props);
   }
 
-  destroy() {}
+  endPass(): void {}
 
-  // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
-  // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
-  // finish(options?: {id?: string}): GPUCommandBuffer;
-
-  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-buffer-to-buffer', options});
+  setPipeline(pipeline: RenderPipeline): void {
+    const webglPipeline = cast<WEBGLRenderPipeline>(pipeline);
+    this.device.gl.useProgram(webglPipeline.handle);
   }
 
-  copyBufferToTexture(options: CopyBufferToTextureOptions) {
-    this.commandBuffer.commands.push({name: 'copy-buffer-to-texture', options});
-  }
+  setIndexBuffer(
+    buffer: Buffer,
+    indexFormat: 'uint16' | 'uint32',
+    offset?: number,
+    size?: number
+  ): void {}
 
-  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-texture-to-buffer', options});
-  }
+  setVertexBuffer(slot: number, buffer: Buffer, offset: number): void {}
 
-  copyTextureToTexture(options: CopyTextureToTextureOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-texture-to-texture', options});
-  }
+  setBindings(bindings: Record<string, Binding>): void {}
+
+  setParameters(parameters: RenderPassParameters): void {}
+
+  draw(options: {
+    vertexCount?: number; // Either vertexCount or indexCount must be provided
+    indexCount?: number;  // Activates indexed drawing (call setIndexBuffer())
+    instanceCount?: number; //
+    firstVertex?: number;
+    firstIndex?: number; // requires device.features.has('indirect-first-instance')?
+    firstInstance?: number;
+    baseVertex?: number;
+  }) {}
+
+  // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
 
   pushDebugGroup(groupLabel: string): void {}
-  popDebugGroup() {}
-
+  popDebugGroup(): void {}
   insertDebugMarker(markerLabel: string): void {}
 
-  // writeTimestamp(querySet: Query, queryIndex: number): void {}
+  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
 
-  // resolveQuerySet(options: {
-  //   querySet: GPUQuerySet,
-  //   firstQuery: number,
-  //   queryCount: number,
-  //   destination: Buffer,
-  //   destinationOffset?: number;
-  // }): void;
-};
+  // beginOcclusionQuery(queryIndex: number): void;
+  // endOcclusionQuery(): void;
+
+  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+}

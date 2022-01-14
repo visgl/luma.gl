@@ -1,15 +1,8 @@
-import {
-  RenderPass,
-  RenderPassProps,
-  RenderPassParameters,
-  RenderPipeline,
-  Buffer,
-  Binding,
-  cast
-} from '@luma.gl/api';
+import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/api';
+import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/api';
 import WebGPUDevice from '../webgpu-device';
 import WebGPUBuffer from './webgpu-buffer';
-import WebGPUCommandEncoder from './webgpu-command-encoder';
+// import WebGPUCommandEncoder from './webgpu-command-encoder';
 import WebGPURenderPipeline from './webgpu-render-pipeline';
 
 export default class WebGPURenderPass extends RenderPass {
@@ -19,10 +12,12 @@ export default class WebGPURenderPass extends RenderPass {
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
 
-  constructor(device: WebGPUDevice, props: RenderPassProps) {
+  constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const renderPassDescriptor = device._updateRenderPassDescriptor(device.canvasContext);
+    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
+    // @ts-expect-error
+    const renderPassDescriptor = framebuffer.renderPassDescriptor;
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
     this.handle.label = this.props.id;
   }

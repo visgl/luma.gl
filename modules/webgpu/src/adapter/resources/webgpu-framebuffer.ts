@@ -1,22 +1,11 @@
-import type {FramebufferProps, TextureFormat, DepthStencilTextureFormat} from '@luma.gl/api';
+import type {FramebufferProps, Texture, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, cast} from '@luma.gl/api';
 import WebGPUDevice from '../webgpu-device';
 // import WebGPUCanvasContext from '../webgpu-canvas-context';
 import WEBGPUTexture from './webgpu-texture';
 import WebGPUTexture from './webgpu-texture';
 
-const DEFAULT_DEPTH_STENCIL_FORMAT: DepthStencilTextureFormat = 'depth24plus';
-
-// TEST CODE
-function f(device: WebGPUDevice) {
-  // A standard default framebuffer
-  // const defaultFramebuffer = device.createFramebuffer({canvasContext, depth: true, clearColor: });
-  // const framebuffer2 = device.createFramebuffer({width, height});
-  //   depthStencil: {
-  //     Format:
-  //   })
-  // }
-}
+// const DEFAULT_DEPTH_STENCIL_FORMAT: DepthStencilTextureFormat = 'depth24plus';
 
 const MAX_COLOR_ATTACHMENTS = 8;
 
@@ -27,13 +16,15 @@ const MAX_COLOR_ATTACHMENTS = 8;
 export default class WebGPUFramebuffer extends Framebuffer {
   readonly device: WebGPUDevice;
 
-  colorTextures: WebGPUTexture[] = [];
-  depthStencilTexture: WebGPUTexture;
+  colorAttachments: WebGPUTexture[] = [];
+  depthStencilAttachment: WebGPUTexture;
 
   /** Partial render pass descriptor. Used by WebGPURenderPass */
   renderPassDescriptor: {
     colorAttachments: GPURenderPassColorAttachment[];
     depthStencilAttachment?: GPURenderPassDepthStencilAttachment;
+  } = {
+    colorAttachments: []
   };
 
   constructor(device: WebGPUDevice, props: FramebufferProps) {
@@ -41,37 +32,30 @@ export default class WebGPUFramebuffer extends Framebuffer {
     this.device = device;
 
     if (props.depthStencilAttachment) {
-      this.depthStencilTexture = this.createDepthStencilTexture(props);
+      this.depthStencilAttachment = this.createDepthStencilTexture(props);
+    }
 
+    if (props.colorAttachments) {
+      this.colorAttachments = props.colorAttachments.map(colorAttachment => this.createColorTexture(this.props, colorAttachment));
+    }
+
+    if (this.depthStencilAttachment) {
       this.renderPassDescriptor.depthStencilAttachment = {
-        view: this.depthStencilTexture.handle.createView(),
+        view: this.depthStencilAttachment.handle.createView(),
+        // Add default clear values
         depthLoadValue: 1.0,
         depthStoreOp: 'store',
         stencilLoadValue: 0,
         stencilStoreOp: 'store',
       }
     }
-  }
 
-  /**
-   * Create new textures with correct size for all attachments.
-   * @note destroys existing textures.
-   */
-  protected _resizeAttachments(width: number, height: number): void {
-    for (let i = 0; i < MAX_COLOR_ATTACHMENTS; ++i) {
-      if (this.colorTextures[i]) {
-        const resizedTexture = this.device._createTexture({...this.colorTextures[i].props, width, height})
-        this.colorTextures[i].destroy();
-        this.colorTextures[i] = resizedTexture;
-        this.renderPassDescriptor.colorAttachments[i].view = resizedTexture.handle.createView();
-      }
-    }
-
-    if (this.depthStencilTexture) {
-       const resizedTexture = this.device._createTexture({...this.depthStencilTexture.props, width, height})
-       this.depthStencilTexture.destroy();
-       this.depthStencilTexture = resizedTexture;
-       this.renderPassDescriptor.depthStencilAttachment.view = resizedTexture.handle.createView();
+    if (this.colorAttachments.length > 0) {
+      this.renderPassDescriptor.colorAttachments = this.colorAttachments.map(colorAttachment => ({
+        view: colorAttachment.handle.createView(),
+        loadValue: [0.0, 0.0, 0.0, 0.0],
+        storeOp: 'store'
+      }));
     }
   }
 
@@ -81,46 +65,56 @@ export default class WebGPUFramebuffer extends Framebuffer {
       return props.depthStencilAttachment;
     }
 
-    let format;
     if (typeof props.depthStencilAttachment === 'string') {
-      format = props.depthStencilAttachment;
-    // } else if (props.depthStencilAttachment === true) {
-    //   format = DEFAULT_DEPTH_STENCIL_FORMAT;
+      return this.device._createTexture({
+        id: 'depth-stencil-attachment',
+        format: props.depthStencilAttachment,
+        width: props.width,
+        height: props.height,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
     }
 
-    const depthTexture = this.device._createTexture({
-      id: 'depth-stencil',
-      width: props.width,
-      height: props.height,
-      depth: 1,
-      format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
-    });
-
-    return depthTexture;
+    throw new Error('type');
   }
 
-  private createDefaultAttachments(props: FramebufferProps) {
-    const depthTexture = this.device._createTexture({
-      id: 'depth-stencil',
-      width: props.width,
-      height: props.height,
-      depth: 1,
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
-    });
+  private createColorTexture(props, texture: Texture | ColorTextureFormat): WEBGPUTexture {
+    if (texture instanceof WEBGPUTexture) {
+      return texture;
+    }
 
-    const depthStencilAttachment = depthTexture.handle.createView();
-    depthStencilAttachment.label = 'depth-stencil-attachment';
+    if (typeof texture === 'string') {
+      return this.device._createTexture({
+        id: 'color-attachment',
+        format: texture,
+        width: props.width,
+        height: props.height,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
+    }
 
-    this.renderPassDescriptor = {
-      // @ts-expect-error `view` field is assigned later
-      colorAttachments: [{
-        view: undefined, //  Assigned later
-        loadValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
-      }],
+    throw new Error('type');
+  }
 
+  /**
+   * Create new textures with correct size for all attachments.
+   * @note destroys existing textures.
+   */
+   protected _resizeAttachments(width: number, height: number): void {
+    for (let i = 0; i < this.colorAttachments.length; ++i) {
+      if (this.colorAttachments[i]) {
+        const resizedTexture = this.device._createTexture({...this.colorAttachments[i].props, width, height})
+        this.colorAttachments[i].destroy();
+        this.colorAttachments[i] = resizedTexture;
+        this.renderPassDescriptor.colorAttachments[i].view = resizedTexture.handle.createView();
+      }
+    }
+
+    if (this.depthStencilAttachment) {
+       const resizedTexture = this.device._createTexture({...this.depthStencilAttachment.props, width, height})
+       this.depthStencilAttachment.destroy();
+       this.depthStencilAttachment = resizedTexture;
+       this.renderPassDescriptor.depthStencilAttachment.view = resizedTexture.handle.createView();
     }
   }
-
 }

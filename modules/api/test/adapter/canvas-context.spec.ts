@@ -1,10 +1,11 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {CanvasContext} from '@luma.gl/api';
+import {CanvasContext, Framebuffer} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 
 class TestCanvasContext extends CanvasContext {
+  getCurrentFramebuffer(): Framebuffer { throw new Error('test'); }
   update() {}
 }
 

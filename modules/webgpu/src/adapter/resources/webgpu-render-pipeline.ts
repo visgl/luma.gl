@@ -83,7 +83,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
 
   /** Return a bind group created by setBindings */
   _getBindGroup() {
-    assert(this._bindGroup);
+    // assert(this._bindGroup);
     return this._bindGroup;
   }
 
@@ -104,7 +104,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         entryPoint: this.props.fsEntryPoint || 'main',
         targets: [
           {
-            format: getWebGPUTextureFormat(this.device.canvasContext.presentationFormat),
+            format: getWebGPUTextureFormat(this.device.canvasContext.format),
           }
         ]
       };

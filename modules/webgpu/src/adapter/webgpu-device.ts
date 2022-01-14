@@ -43,7 +43,6 @@ export default class WebGPUDevice extends Device {
   commandEncoder: GPUCommandEncoder;
   renderPass: WebGPURenderPass;
 
-  private _renderPassDescriptor: GPURenderPassDescriptor;
   private _info: DeviceInfo;
   private _isLost: boolean = false;
 
@@ -111,7 +110,7 @@ export default class WebGPUDevice extends Device {
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     if (props.canvas) {
-      this.canvasContext = new WebGPUCanvasContext(this.handle, this.adapter, {canvas: props.canvas});
+      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {canvas: props.canvas});
       // TODO - handle offscreen canvas?
       this.canvas = this.canvasContext.canvas as HTMLCanvasElement;
     }
@@ -209,7 +208,6 @@ export default class WebGPUDevice extends Device {
   beginRenderPass(props?: RenderPassProps): WebGPURenderPass {
     this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
     if (!this.renderPass) {
-      // const renderPassDescriptor = this._updateRenderPassDescriptor(canvasContext || this.canvasContext);
       this.renderPass = new WebGPURenderPass(this, props)
     }
     return this.renderPass;
@@ -221,7 +219,7 @@ export default class WebGPUDevice extends Device {
   }
 
   createCanvasContext(props?: CanvasContextProps): WebGPUCanvasContext {
-    return new WebGPUCanvasContext(this.handle, this.adapter, props);
+    return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
   /** 
@@ -231,41 +229,6 @@ export default class WebGPUDevice extends Device {
    */
   getActiveRenderPass(): WebGPURenderPass {
     return this.beginRenderPass();
-  }
-
-  /** Initialize a dummy "framebuffer" */
-  _initializeRenderPassDescriptor() {
-    this._renderPassDescriptor = {
-      colorAttachments: [{
-        view: undefined, // Assigned later
-        loadValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
-        storeOp: 'store'
-      }],
-
-      depthStencilAttachment: {
-        view: undefined, // Assigned later
-        depthLoadValue: 1.0,
-        depthStoreOp: "store",
-        stencilLoadValue: 0,
-        stencilStoreOp: "store",
-      }
-    };
-
-    log.groupCollapsed(1, 'Device.GPURenderPassDescriptor')();
-    log.probe(1, JSON.stringify(this._renderPassDescriptor, null, 2))();
-    log.groupEnd(1)();
-  }
-
-  /** Update framebuffer with properly resized "swap chain" texture views */
-  _updateRenderPassDescriptor(canvasContext: CanvasContext) {
-    const webgpuCanvasContext = cast<WebGPUCanvasContext>(canvasContext);
-    if (!this._renderPassDescriptor) {
-      this._initializeRenderPassDescriptor();
-    }
-    const {colorAttachment, depthStencil} = webgpuCanvasContext.getRenderTargets();;
-    this._renderPassDescriptor.colorAttachments[0].view = colorAttachment;
-    this._renderPassDescriptor.depthStencilAttachment.view = depthStencil;
-    return this._renderPassDescriptor;
   }
 
   _getFeatures() {
