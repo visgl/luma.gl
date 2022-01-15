@@ -1,4 +1,4 @@
-import type {Device, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
+import type {Device, RenderPipelineProps, RenderPipelineParameters, RenderPipeline} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -50,14 +50,14 @@ export type ProgramDrawOptions = {
   samplers?: any;
 };
 
-function  getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): RenderPipelineProps {
-  const newProps: RenderPipelineProps = {...props, vs: undefined, fs: undefined};
+function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): RenderPipelineProps {
+  const newProps: RenderPipelineProps = {...props} as RenderPipelineProps;
   // Create shaders if needed
   if (typeof props.vs === 'string') {
-    newProps.vs = this.device.createShader({id: `${props.id}-vs`, source: props.vs, stage: 'vertex'})
+    newProps.vs = device.createShader({id: `${props.id}-vs`, source: props.vs, stage: 'vertex'})
   }
   if (typeof props.fs === 'string') {
-    newProps.fs = this.device.createShader({id: `${props.id}-fs`, source: props.fs, stage: 'fragment'})
+    newProps.fs = device.createShader({id: `${props.id}-fs`, source: props.fs, stage: 'fragment'})
   }
   return newProps;
 }
