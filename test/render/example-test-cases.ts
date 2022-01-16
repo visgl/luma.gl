@@ -4,7 +4,8 @@ import {setPathPrefix} from '@luma.gl/webgl';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
-import './disable-example-loads';
+/** Prevent examples from start up immediately on import */
+import './disable-example-startup';
 
 // getting started
 import helloTriangle from '../../examples/getting-started/hello-triangle/app';
