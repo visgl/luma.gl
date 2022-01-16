@@ -1,4 +1,4 @@
-import type {Device, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
+import type {Device, RenderPipelineProps, RenderPipelineParameters, RenderPipeline} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -21,7 +21,11 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
-export type ProgramProps = RenderPipelineProps & {
+export type ProgramProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
+  /** Compiled vertex shader */
+  vs?: Shader | string;
+  /** Compiled fragment shader */
+  fs?: Shader | string;
   hash?: string;
   varyings?: string[];
   bufferMode?: number;
@@ -46,6 +50,17 @@ export type ProgramDrawOptions = {
   samplers?: any;
 };
 
+function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): RenderPipelineProps {
+  const newProps: RenderPipelineProps = {...props} as RenderPipelineProps;
+  // Create shaders if needed
+  if (typeof props.vs === 'string') {
+    newProps.vs = device.createShader({id: `${props.id}-vs`, source: props.vs, stage: 'vertex'})
+  }
+  if (typeof props.fs === 'string') {
+    newProps.fs = device.createShader({id: `${props.id}-fs`, source: props.fs, stage: 'fragment'})
+  }
+  return newProps;
+}
 export default class Program extends WEBGLRenderPipeline {
   get [Symbol.toStringTag](): string { return 'Program'; }
 
@@ -65,7 +80,7 @@ export default class Program extends WEBGLRenderPipeline {
   private _parameters: RenderPipelineParameters;
 
   constructor(device: Device | WebGLRenderingContext, props: ProgramProps) {
-    super(WebGLDevice.attach(device), props);
+    super(WebGLDevice.attach(device), getRenderPipelineProps(WebGLDevice.attach(device), props));
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this._parameters = props.parameters;
@@ -82,21 +97,18 @@ export default class Program extends WEBGLRenderPipeline {
   }
 
   initialize(props: ProgramProps) {
+    // Create shaders if needed
+    props = getRenderPipelineProps(this.device, props);
+
     const {hash, vs, fs, varyings, bufferMode = GL_SEPARATE_ATTRIBS} = props;
+
+    this.vs = cast<WEBGLShader>(vs);
+    this.fs = fs && cast<WEBGLShader>(fs); 
 
     this.hash = hash || ''; // Used by ProgramManager
 
-    // Create shaders if needed
-    this.vs =
-      typeof vs === 'string'
-        ? this.device.createShader({id: `${props.id}-vs`, source: vs, stage: 'vertex'})
-        : cast<WEBGLShader>(vs);
-    this.fs =
-      typeof fs === 'string'
-        ? this.device.createShader({id: `${props.id}-fs`, source: fs, stage: 'fragment'})
-        : cast<WEBGLShader>(fs);
     assert(this.vs.stage === 'vertex');
-    assert(this.fs.stage === 'fragment');
+    // assert(this.fs.stage === 'fragment');
 
     // uniforms
     this.uniforms = {};

@@ -1,4 +1,4 @@
-import {AttributeBinding, RenderPipelineParameters} from '@luma.gl/api';
+import {ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
 import {_NonIndexedCubeGeometry} from '@luma.gl/engine';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -43,10 +43,15 @@ fn main([[location(0)]] fragUV: vec2<f32>,
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-const CUBE_ATTRIBUTE_LAYOUTS: AttributeBinding[] = [
-  {name: 'position', location: 0, accessor: {format: 'float32x4'}},
-  {name: 'uv', location: 1, accessor: {format: 'float32x2'}}
-];
+const CUBE_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'position', location: 0, format: 'float32x4'},
+    {name: 'uv', location: 1, format: 'float32x2'}
+  ],
+  bindings: [
+    {name: 'uniforms', location: 0, type: 'uniform'}
+  ]
+};
 
 const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   // Enable depth testing so that the fragment closest to the camera
@@ -75,8 +80,11 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     vs: SHADERS[language].vertex,
     fs: SHADERS[language].fragment,
     topology: 'triangle-list',
-    attributeLayouts: CUBE_ATTRIBUTE_LAYOUTS,
-    attributeBuffers: [positionBuffer, uvBuffer],
+    layout: CUBE_SHADER_LAYOUT,
+    attributes: {
+      positions: positionBuffer, 
+      uvs: uvBuffer
+    },
     vertexCount: cube.vertexCount,
     parameters: CUBE_RENDER_PARAMETERS
   });
@@ -112,9 +120,9 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     uniformBuffer2.write(new Float32Array(modelViewProjectionMatrix));
 
     device.beginRenderPass();
-    cubeModel.setBindings([uniformBuffer1]);
+    cubeModel.setBindings({uniforms: uniformBuffer1});
     cubeModel.draw();
-    cubeModel.setBindings([uniformBuffer2]);
+    cubeModel.setBindings({uniforms: uniformBuffer2});
     cubeModel.draw();
     device.commit();
 

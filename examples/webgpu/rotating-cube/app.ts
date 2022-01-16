@@ -8,8 +8,7 @@ export const description = 'Shows rendering a basic triangle.';
 
 /** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  wgsl: {
-    vertex: `
+  vs: `
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
 };
@@ -30,20 +29,19 @@ fn main([[location(0)]] position : vec4<f32>,
   output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return output;
 }
-        `,
-    fragment: `
+`,
+  fs: `
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
   return fragPosition;
 }
-        `
-  }
+`
 };
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-function init(device: Device, language: 'glsl' | 'wgsl') {
+function init(device: Device) {
   // Create vertex buffers for the cube data.
   const cube = new _NonIndexedCubeGeometry();
   const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
@@ -58,15 +56,18 @@ function init(device: Device, language: 'glsl' | 'wgsl') {
 
   const model = new Model(device, {
     id: 'cube',
-    vs: SHADERS[language].vertex,
-    fs: SHADERS[language].fragment,
+    vs: SHADERS.vs,
+    fs: SHADERS.fs,
+    layout: {
+      attributes: [
+        {name: 'position', location: 0, format: 'float32x4'},
+        {name: 'uv', location: 1, format: 'float32x2'}
+      ],
+      bindings: [
+        {name: 'uniforms', location: 0, type: 'uniform'}
+      ]
+    },
     topology: 'triangle-list',
-    attributeLayouts: [
-      {name: 'position', location: 0, accessor: {format: 'float32x4'}},
-      {name: 'uv', location: 1, accessor: {format: 'float32x2'}}
-    ],
-    attributeBuffers: [positionBuffer, uvBuffer],
-    bindings: [uniformBuffer],
     vertexCount: cube.vertexCount,
     parameters: {
       // Enable depth testing so that the fragment closest to the camera
@@ -80,6 +81,13 @@ function init(device: Device, language: 'glsl' | 'wgsl') {
       // pointing toward the camera.
       cullMode: 'back',
     },  
+    attributes: {
+      position: positionBuffer,
+      uv: uvBuffer
+    },
+    bindings: {
+      uniforms: uniformBuffer
+    },
   });
 
   const projectionMatrix = new Matrix4();
@@ -87,7 +95,7 @@ function init(device: Device, language: 'glsl' | 'wgsl') {
   const modelViewProjectionMatrix = new Matrix4();
 
   function frame() {
-    const aspect = device.canvas.width / device.canvas.height;
+    const aspect = device.canvas.clientWidth / device.canvas.clientHeight;
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
@@ -106,4 +114,4 @@ function init(device: Device, language: 'glsl' | 'wgsl') {
 }
 
 // Create device and run
-(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();
+(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'})))();

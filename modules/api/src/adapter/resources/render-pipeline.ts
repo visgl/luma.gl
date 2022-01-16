@@ -11,13 +11,13 @@ export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
 
   /** Compiled vertex shader */
-  vs?: Shader | string;
+  vs?: Shader;
   /** Vertex shader entry point (defaults to 'main'). WGSL only */
   vsEntryPoint?: string; //
   /** Constants to apply to compiled vertex shader (WGSL only) */
   vsConstants?: Record<string, number>; // WGSL only
   /** Compiled fragment shader */
-  fs?: Shader | string;
+  fs?: Shader;
   /** Fragment shader entry point (defaults to 'main'). WGSL only */
   fsEntryPoint?: string; // WGSL only
   /** Constants to apply to compiled fragment shader (WGSL only) */
@@ -59,9 +59,11 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
   vs: undefined,
   vsEntryPoint: undefined,
   vsConstants: undefined,
+
   fs: undefined,
   fsEntryPoint: undefined,
   fsConstants: undefined,
+
   layout: {attributes: [], bindings: []},
 
   topology: 'triangle-list',

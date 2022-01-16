@@ -162,10 +162,7 @@ export default class Model {
   // TODO - just to unbreak deck.gl 7.0-beta, remove as soon as updated
   geometry = {};
 
-  constructor(device: Device, props?: ModelProps);
-  /* @deprecated */
-  constructor(gl: WebGLRenderingContext, props: ModelProps);
-  constructor(device, props: ModelProps) {
+  constructor(device: Device | WebGLRenderingContext, props: ModelProps) {
     // Deduce a helpful id
     const {id = uid('model')} = props;
     this.id = id;

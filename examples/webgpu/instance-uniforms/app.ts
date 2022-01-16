@@ -1,4 +1,4 @@
-import {luma, Device, AttributeBinding, RenderPipelineParameters} from '@luma.gl/api';
+import {luma, Device, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
 import {_NonIndexedCubeGeometry} from '@luma.gl/engine';
 import {Model} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -49,10 +49,15 @@ const NUMBER_OF_INSTANCES = X_COUNT * Y_COUNT;
 const MATRIX_SIZE = 4 * 4 * 4; // 4x4 (x4 bytes) matrix
 const UNIFORM_BUFFER_SIZE = NUMBER_OF_INSTANCES * MATRIX_SIZE; // 4x4 (x4 bytes) matrix
 
-const CUBE_ATTRIBUTE_LAYOUTS: AttributeBinding[] = [
-  {name: 'position', location: 0, accessor: {format: 'float32x4'}},
-  {name: 'uv', location: 1, accessor: {format: 'float32x2'}}
-];
+const CUBE_ATTRIBUTE_LAYOUTS: ShaderLayout = {
+  attributes: [
+    {name: 'position', location: 0, format: 'float32x4'},
+    {name: 'uv', location: 1, format: 'float32x2'}
+  ],
+  bindings: [
+    {name: 'uniforms', location: 0, type: 'uniform'}
+  ]
+};
 
 const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   // Enable depth testing so that the fragment closest to the camera
@@ -84,9 +89,12 @@ export function init(device: Device, language: 'glsl' | 'wgsl') {
     vs: SHADERS[language].vertex,
     fs: SHADERS[language].fragment,
     topology: 'triangle-list',
-    attributeLayouts: CUBE_ATTRIBUTE_LAYOUTS,
-    attributeBuffers: [positionBuffer, uvBuffer],
-    bindings: [uniformBuffer],
+    layout: CUBE_ATTRIBUTE_LAYOUTS,
+    attributes: {
+      position: positionBuffer, 
+      uv: uvBuffer
+    },
+    bindings: {uniforms: uniformBuffer},
     vertexCount: cube.vertexCount,
     instanceCount: NUMBER_OF_INSTANCES,
     parameters: CUBE_RENDER_PARAMETERS

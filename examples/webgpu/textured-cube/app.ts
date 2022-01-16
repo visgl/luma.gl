@@ -1,4 +1,4 @@
-import {luma, Device} from '@luma.gl/api';
+import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
 import {_NonIndexedCubeGeometry} from '@luma.gl/engine';
 import {Model} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -37,29 +37,34 @@ fn main([[location(0)]] position : vec4<f32>,
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
-  return textureSample(myTexture, mySampler, fragUV) * fragPosition;
+  let flippedUV = vec2<f32>(1.0 - fragUV.x, fragUV.y);
+  return textureSample(myTexture, mySampler, flippedUV) * fragPosition;
 }
         `
   }
 };
 
+const SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    {name: 'positions', location: 0, format: 'float32x4'},
+    {name: 'uvs', location: 1, format: 'float32x2'}
+  ],
+  bindings: [
+    {name: 'uniforms', location: 0, type: 'uniform'},
+    {name: 'sampler', location: 1, type: 'sampler'},
+    {name: 'texture', location: 2, type: 'texture'}
+  ]
+};
+
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
 async function init(device: Device, language: 'glsl' | 'wgsl') {
-  // Load the texture bitmap
-  const img = document.createElement('img');
-  img.src = './vis-logo.png';
-  await img.decode();
-  const imageBitmap = await createImageBitmap(img);
-
   // Fetch the image and upload it into a GPUTexture.
   const cubeTexture = device.createTexture({
-    data: imageBitmap,
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    // Create a sampler with linear filtering for smooth interpolation.
-    sampler: {magFilter: 'linear', minFilter: 'linear'}
-    // Create mipmaps
-    // mipmaps: true
+    data: await loadImageBitmap('./vis-logo.png'),
+    usage: Texture.TEXTURE_BINDING | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
+    sampler: {magFilter: 'linear', minFilter: 'linear'} // linear filtering for smooth interpolation.
+    // mipmaps: true // Create mipmaps
   });
 
   // Create vertex buffers for the cube data.
@@ -70,23 +75,27 @@ async function init(device: Device, language: 'glsl' | 'wgsl') {
   const uniformBuffer = device.createBuffer({
     id: 'uniforms',
     byteLength: UNIFORM_BUFFER_SIZE,
-    // TODO - use API constants instead of WebGPU constants
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST,
   });
 
   const model = new Model(device, {
     id: 'cube',
+    // Shader description
     vs: SHADERS[language].vertex,
     fs: SHADERS[language].fragment,
+    layout: SHADER_LAYOUT,
+    //
     topology: 'triangle-list',
-    attributeLayouts: [
-      {name: 'position', location: 0, accessor: {format: 'float32x4'}},
-      {name: 'uv', location: 1, accessor: {format: 'float32x2'}}
-    ],
-    attributeBuffers: [positionBuffer, uvBuffer],
-    // @ts-expect-error
-    bindings: [uniformBuffer, cubeTexture.sampler, cubeTexture],
     vertexCount: cube.vertexCount,
+    attributes: {
+      positions: positionBuffer,
+      uvs: uvBuffer
+    },
+    bindings: {
+      uniforms: uniformBuffer,
+      sampler: cubeTexture.sampler,
+      texture: cubeTexture
+    },
     parameters: {
       // Enable depth testing so that the fragment closest to the camera
       // is rendered in front.
@@ -98,7 +107,7 @@ async function init(device: Device, language: 'glsl' | 'wgsl') {
       // Faces pointing away from the camera will be occluded by faces
       // pointing toward the camera.
       cullMode: 'back',
-    },
+    }
   });
 
   const projectionMatrix = new Matrix4();

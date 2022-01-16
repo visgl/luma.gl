@@ -1,5 +1,5 @@
 import type {Binding} from '@luma.gl/api';
-import {Buffer, RenderPipeline, RenderPipelineProps, assert, cast, log, isObjectEmpty} from '@luma.gl/api';
+import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';

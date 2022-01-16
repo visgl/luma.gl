@@ -14,10 +14,10 @@ import WebGPUBuffer from '../adapter/resources/webgpu-buffer';
 import WebGPURenderPipeline from '../adapter/resources/webgpu-render-pipeline';
 import WebGPURenderPass from '../adapter/resources/webgpu-render-pass';
 
-export type ModelProps = RenderPipelineProps & {
+export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
-  vs?: {glsl?: string; wgsl?: string};
-  fs?: {glsl?: string; wgsl?: string};
+  vs?: {glsl?: string; wgsl?: string} | Shader | string;
+  fs?: {glsl?: string; wgsl?: string} | Shader | string;
   pipeline?: RenderPipeline;
 };
 

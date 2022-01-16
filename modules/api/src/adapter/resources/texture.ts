@@ -121,4 +121,7 @@ export default abstract class Texture extends Resource<TextureProps> {
   constructor(device: Device, props: TextureProps) {
     super(device, props, DEFAULT_TEXTURE_PROPS);
   }
+
+  /** Default sampler for this device */
+  abstract sampler: Sampler;
 }
