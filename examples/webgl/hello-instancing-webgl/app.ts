@@ -1,6 +1,6 @@
 import {DeviceProps} from '@luma.gl/api';
 import {polyfillContext} from '@luma.gl/webgl';
-import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
+import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/engine';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's low-level API
@@ -8,7 +8,7 @@ Instanced triangles using luma.gl's low-level API
 
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-export default class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends ClassicAnimationLoop {
   static info = INFO_HTML;
 
   onCreateContext(props: DeviceProps): WebGLRenderingContext {
@@ -20,7 +20,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     return polyfillContext(gl);
   }
 
-  onInitialize({gl}: AnimationProps): void {
+  onInitialize({gl}: ClassicAnimationProps): void {
     gl.clearColor(0, 0, 0, 1);
 
     const vs = `
@@ -116,7 +116,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     };
   }
 
-  onRender({gl}: AnimationProps): void {
+  onRender({gl}: ClassicAnimationProps): void {
     gl.clear(gl.COLOR_BUFFER_BIT);
     // @ts-expect-error WebGL2
     gl.bindVertexArray(this.resources.vertexArray);
@@ -126,7 +126,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, 4);
   }
 
-  onFinalize({gl}: AnimationProps) {
+  onFinalize({gl}: ClassicAnimationProps) {
     // @ts-expect-error
     const {positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
     gl.deleteBuffer(positionBuffer);

@@ -9,8 +9,6 @@ import AnimationLoop from './animation-loop-v2';
  */
 export abstract class RenderLoop {
   constructor(animationProps?: AnimationProps) {}
-  abstract destroy(animationProps: AnimationProps);
-  abstract frame(animationProps: AnimationProps);
 
   /** Instantiates and runs the render loop */
   static run(RenderLoopConstructor: typeof RenderLoop, deviceProps?: DeviceProps): AnimationLoop {
@@ -47,12 +45,14 @@ class SyncInitAnimationLoop extends AnimationLoop {
   onRender(animationProps: AnimationProps) {
     // @ts-expect-error API still TBD
     this.renderLoop?.onRender?.(animationProps);
+    // @ts-expect-error API still TBD
     this.renderLoop?.frame?.(animationProps);
   }
 
   onFinalize(animationProps: AnimationProps) {
     // @ts-expect-error API still TBD
     this.renderLoop?.onFinalize?.(animationProps);
+    // @ts-expect-error API still TBD
     this.renderLoop?.destroy?.(animationProps);
   }
 }

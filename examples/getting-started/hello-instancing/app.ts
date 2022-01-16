@@ -58,7 +58,9 @@ export default class AppRenderLoop extends RenderLoop {
       modules: [colorShaderModule],
       attributes: {
         position: this.positionBuffer,
+        // @ts-expect-error
         color: [this.colorBuffer, {divisor: 1}],
+        // @ts-expect-error
         offset: [this.offsetBuffer, {divisor: 1}]
       },
       vertexCount: 3,

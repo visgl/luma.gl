@@ -3,10 +3,15 @@
 import {AnimationLoop} from '@luma.gl/core';
 import {pushContextState, popContextState} from '@luma.gl/webgl';
 
+/** Describes a test case */
 export type TestRunnerTestCase = {
+  /** Name of the test case (for logging) */
   name: string;
+  /** Initialize the test case. Can return a promise */
   onInitialize: any;
+  /** Perform rendering */
   onRender: any;
+  /** Clean up after the test case */
   onFinalize: any;
 };
 
@@ -19,13 +24,14 @@ const DEFAULT_TEST_CASE: TestRunnerTestCase = {
   onFinalize: noop
 };
 
+/** Options for a TestRunner */
 export type TestRunnerOptions = {
   // test lifecycle callback
   onTestStart?: any;
   onTestPass?: any;
   onTestFail?: any;
 
-  // milliseconds to wait for each test case before aborting
+  /** milliseconds to wait for each test case before aborting */
   timeout?: number;
 };
 
@@ -39,13 +45,17 @@ const DEFAULT_TEST_OPTIONS: Required<TestRunnerOptions> = {
   timeout: 2000
 };
 
+/** Runs an array of test cases */
 export default class TestRunner {
   props;
   isRunning = false;
-  readonly testOptions: object;
+  readonly testOptions: object = {...DEFAULT_TEST_OPTIONS};
   readonly _animationProps: object = {};
   private _testCases: TestRunnerTestCase[] = [];
   private _testCaseData = null;
+
+  // @ts-expect-error
+  isHeadless: boolean = Boolean(window.browserTestDriver_isHeadless);
 
   /**
    * props
@@ -53,11 +63,6 @@ export default class TestRunner {
    */
   constructor(props = {}) {
     this.props = props;
-
-    // @ts-expect-error
-    this.isHeadless = Boolean(window.browserTestDriver_isHeadless);
-
-    this.testOptions = Object.assign({}, DEFAULT_TEST_OPTIONS);
   }
 
   /**

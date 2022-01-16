@@ -1,6 +1,11 @@
-import TestRunner, {TestRunnerOptions} from './test-runner';
+import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 
+/** A snapshot test case */
+export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
+  /** URL to golden image */
+  goldenImage: string;
+}
 
 export default class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;

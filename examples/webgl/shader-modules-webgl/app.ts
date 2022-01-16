@@ -1,5 +1,5 @@
 import {DeviceProps} from '@luma.gl/api';
-import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
+import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/engine';
 import {assembleShaders} from '@luma.gl/shadertools';
 
 const INFO_HTML = `
@@ -36,7 +36,7 @@ const offsetRightModule = {
   }
 };
 
-export default class AppAnimationLoop extends AnimationLoop {
+export default class AppAnimationLoop extends ClassicAnimationLoop {
   static info = INFO_HTML;
 
   resources;
@@ -47,7 +47,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     return canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
   }
 
-  onInitialize({gl}: AnimationProps) {
+  onInitialize({gl}: ClassicAnimationProps) {
     gl.clearColor(0, 0, 0, 1);
 
     // Program 1
@@ -124,7 +124,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     };
   }
 
-  onRender({gl}: AnimationProps) {
+  onRender({gl}: ClassicAnimationProps) {
     const {program1, program2} = this.resources;
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program1);
@@ -138,7 +138,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     // gl.deleteShader(fShader2);
   }
 
-  onFinalize({gl}: AnimationProps): void {
+  onFinalize({gl}: ClassicAnimationProps): void {
     const {positionBuffer, program1, program2} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);

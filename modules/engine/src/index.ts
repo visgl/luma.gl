@@ -1,6 +1,7 @@
 // luma.gl Engine API
 export type {AnimationProps} from './lib/animation-props';
 export {RenderLoop} from './lib/render-loop';
+export {default as AnimationLoop} from './lib-classic/animation-loop';
 
 // luma.gl v9 Engine API
 export type {ModelProps as ModelV9Props} from './lib/model-v2';
@@ -10,7 +11,7 @@ export {default as AnimationLoopV2} from './lib/animation-loop-v2';
 
 // luma.gl v8 Engine API
 export type {AnimationLoopProps, AnimationProps as ClassicAnimationProps} from './lib-classic/animation-loop';
-export {default as AnimationLoop} from './lib-classic/animation-loop';
+export {default as ClassicAnimationLoop} from './lib-classic/animation-loop';
 
 export type {ModelProps} from './lib-classic/model';
 export {default as Model} from './lib-classic/model';

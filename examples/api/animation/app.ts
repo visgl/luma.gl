@@ -59,6 +59,7 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
+  // @ts-expect-error animationLoop
   constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
 

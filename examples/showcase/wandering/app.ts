@@ -207,9 +207,13 @@ export default class AppRenderLoop extends RenderLoop {
       instanceCount: NUM_INSTANCES,
       attributes: {
         a_position: this.positionBuffer,
+        // @ts-expect-error
         a_color: [this.colorBuffer, {divisor: 1}],
+        // @ts-expect-error
         a_offset: [this.offsetBuffer, {divisor: 1}],
+        // @ts-expect-error
         a_rotation: [this.rotationBuffer, {divisor: 1}],
+        // @ts-expect-error
         instancePickingColors: [this.pickingColorBuffer, {divisor: 1}]
       },
       modules: [picking]
