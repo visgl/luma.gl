@@ -316,7 +316,7 @@ export default class Model {
       varyings,
       bufferMode,
       transpileToGLSL100,
-      // TODO hack. 
+      // TODO hack.
       parameters: parameters || this.programProps?.parameters
     };
     this._programDirty = true;

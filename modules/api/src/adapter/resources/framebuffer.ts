@@ -33,7 +33,6 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   abstract colorAttachments: Texture[];
   abstract depthStencilAttachment: Texture;
 
-
   constructor(device: Device, props: FramebufferProps = {}) {
     super(device, props, DEFAULT_FRAMEBUFFER_PROPS)
     this.width = this.props.width;

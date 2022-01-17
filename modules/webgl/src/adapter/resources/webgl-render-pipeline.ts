@@ -1,5 +1,5 @@
 // prettier-ignore
-import type {Parameters, RenderPipelineProps} from '@luma.gl/api';
+import type {RenderPipelineProps, Parameters, RenderPass, Buffer, Binding} from '@luma.gl/api';
 import {RenderPipeline, cast, log} from '@luma.gl/api';
 import WebGLDevice from '../webgl-device';
 import WEBGLShader from './webgl-shader';
@@ -34,6 +34,30 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       this.device.gl.deleteProgram(this.handle);
       this.handle = null;
     }
+  }
+
+  /** @todo needed for portable model */
+  setAttributes(attributes: Record<string, Buffer>): void {
+    throw new Error('Not implemented');
+  }
+
+  /** @todo needed for portable model */
+  setBindings(bindings: Record<string, Binding>): void {
+    throw new Error('Not implemented');
+  }
+
+  /** @todo needed for portable model */
+  draw(options: {
+    renderPass?: RenderPass;
+    vertexCount?: number;
+    indexCount?: number;
+    instanceCount?: number;
+    firstVertex?: number;
+    firstIndex?: number;
+    firstInstance?: number;
+    baseVertex?: number;
+  }): void {
+    throw new Error('Not implemented');
   }
 
   // setAttributes(attributes: Record<string, Buffer>): void {}

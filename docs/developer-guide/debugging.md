@@ -62,6 +62,10 @@ luma.gl runs checks on attributes and buffers when they are being set, catching 
 
 Buffers will also have their first values checked to ensure that they are not NaN. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
 
+## Resource Leak Detection
+
+See the chapter on Profiling for some tools that can help spot resource leaks.
+
 ## Khronos WebGL developer tools integration (WebGL only)
 
 luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and luma.gl use these tools to "instrument" the `WebGLRenderingContext` which enabled:

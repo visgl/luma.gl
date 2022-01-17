@@ -96,7 +96,7 @@ export default class AppRenderLoop extends RenderLoop {
   persistenceQuad;
   sphere;
   
-  constructor({device, gl, width, height}: AnimationProps) {
+  constructor({device, width, height}: AnimationProps) {
     super();
 
     setParameters(device, {

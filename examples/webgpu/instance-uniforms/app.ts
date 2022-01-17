@@ -1,6 +1,6 @@
 import {luma, Device, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
-import {_NonIndexedCubeGeometry} from '@luma.gl/engine';
-import {Model} from '@luma.gl/webgpu';
+import {ModelV2 as Model, CubeGeometry} from '@luma.gl/engine';
+import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Two Cubes';
@@ -74,7 +74,7 @@ const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
 
 export function init(device: Device, language: 'glsl' | 'wgsl') {
   // Create vertex buffers for the cube data.
-  const cube = new _NonIndexedCubeGeometry();
+  const cube = new CubeGeometry({indices: false});
   const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
   const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
 
@@ -91,7 +91,7 @@ export function init(device: Device, language: 'glsl' | 'wgsl') {
     topology: 'triangle-list',
     layout: CUBE_ATTRIBUTE_LAYOUTS,
     attributes: {
-      position: positionBuffer, 
+      position: positionBuffer,
       uv: uvBuffer
     },
     bindings: {uniforms: uniformBuffer},

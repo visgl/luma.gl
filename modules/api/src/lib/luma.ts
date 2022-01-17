@@ -75,6 +75,6 @@ export default class luma {
         }
         break;
     }
-    throw new Error('No matching device found');
+    throw new Error('No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.');
   }
 }

@@ -1,5 +1,5 @@
-import {log, assert, checkProps} from '@luma.gl/api';
-import {Buffer, BufferProps} from '@luma.gl/api';
+import type {Device, BufferProps} from '@luma.gl/api';
+import {Buffer, log, assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
@@ -74,15 +74,17 @@ export default class WEBGLBuffer extends Buffer {
 
   debugData;
 
-  constructor(gl: WebGLRenderingContext, props?: BufferProps);
-  constructor(gl: WebGLRenderingContext, data: ArrayBufferView | number[]);
-  constructor(gl: WebGLRenderingContext, byteLength: number);
+  constructor(device: Device | WebGLRenderingContext, props?: BufferProps);
+  constructor(device: Device | WebGLRenderingContext, data: ArrayBufferView | number[]);
+  constructor(device: Device | WebGLRenderingContext, byteLength: number);
 
-  constructor(gl: WebGLRenderingContext, props = {}) {
-    super(WebGLDevice.attach(gl), props);
+  constructor(device: Device | WebGLRenderingContext, props = {}) {
+    super(WebGLDevice.attach(device), props);
 
-    this.gl = gl;
-    this.gl2 = getWebGL2Context(gl);
+    this.device = WebGLDevice.attach(device);
+    this.gl = this.device.gl;
+    this.gl2 = this.device.gl2;
+
     const handle = typeof props === 'object' ? (props as BufferProps).handle : undefined;
     this.handle = handle || this.gl.createBuffer();
 

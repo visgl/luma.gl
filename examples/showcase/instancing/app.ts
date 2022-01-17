@@ -123,9 +123,13 @@ class InstancedCube extends Model {
         instanceCount: SIDE * SIDE,
         geometry: new CubeGeometry(),
         attributes: {
+          // @ts-expect-error
           instanceSizes: new Float32Array([1]), // Constant attribute
+          // @ts-expect-error
           instanceOffsets: [offsetsBuffer, {divisor: 1}],
+          // @ts-expect-error
           instanceColors: [colorsBuffer, {divisor: 1}],
+          // @ts-expect-error
           instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
         },
         parameters: {
@@ -145,6 +149,7 @@ export default class AppRenderLoop extends RenderLoop {
   timeline: Timeline;
   timelineChannels: Record<string, number>;
 
+  // @ts-expect-error
   constructor({device, animationLoop}: AnimationProps) {
     super();
   
@@ -169,9 +174,9 @@ export default class AppRenderLoop extends RenderLoop {
 
     if (_mousePosition) {
       // use the center pixel location in device pixel range
-      const devicePixels = cssToDevicePixels(gl, _mousePosition);
-      const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
-      const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
+      // const devicePixels = cssToDevicePixels(gl, _mousePosition);
+      // const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
+      // const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
       // pickInstance(gl, deviceX, deviceY, this.cube, framebuffer);
     }

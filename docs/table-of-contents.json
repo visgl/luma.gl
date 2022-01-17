@@ -32,6 +32,7 @@
         { "entry": "docs/developer-guide/installing" },
         { "entry": "docs/developer-guide/bundling" },
         { "entry": "docs/developer-guide/debugging" },
+        { "entry": "docs/developer-guide/profiling" },
         { "entry": "docs/developer-guide/testing" },
         { "entry": "docs/developer-guide/contributing" },
         { "entry": "docs/design-notes/v9-api" },

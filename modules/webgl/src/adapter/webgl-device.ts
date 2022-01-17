@@ -343,7 +343,7 @@ export default class WebGLDevice extends Device implements ContextState {
   }
 
   createExternalTexture(props: ExternalTextureProps): ExternalTexture {
-    throw new Error('not implemented'); // return new Program(props);
+    throw new Error('createExternalTexture() not implemented'); // return new Program(props);
   }
 
   createSampler(props: SamplerProps): WEBGLSampler {
@@ -359,15 +359,15 @@ export default class WebGLDevice extends Device implements ContextState {
   }
   
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
-    throw new Error('not implemented'); // return new Program(props);
+    throw new Error('createRenderPipeline() not implemented'); // return new Program(props);
   }
 
   beginRenderPass(props: RenderPassProps): RenderPass {
-    throw new Error('not implemented'); // return new Program(props);
+    throw new Error('beginRenderPass() not implemented');
   }
 
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
-    throw new Error('not implemented'); // return new Program(props);
+    throw new Error('ComputePipeline not supported in WebGL');
   }
 
   beginComputePass(props: ComputePassProps): ComputePass {

@@ -1,11 +1,21 @@
-// CORE
-export type {AnimationLoopProps, AnimationProps} from './lib/animation-loop';
-export {default as AnimationLoop} from './lib/animation-loop';
+// luma.gl Engine API
+export type {AnimationProps} from './lib/animation-props';
 export {RenderLoop} from './lib/render-loop';
+export {default as AnimationLoop} from './lib-classic/animation-loop';
 
-export type {ModelProps} from './lib/model';
-export {default as Model} from './lib/model';
-export {default as ProgramManager} from './lib/program-manager';
+// luma.gl v9 Engine API
+export type {ModelProps as ModelV9Props} from './lib/model-v2';
+export {default as ModelV2} from './lib/model-v2';
+export type {AnimationLoopProps as AnimationLoopPropsV2} from './lib/animation-loop-v2';
+export {default as AnimationLoopV2} from './lib/animation-loop-v2';
+
+// luma.gl v8 Engine API
+export type {AnimationLoopProps, AnimationProps as ClassicAnimationProps} from './lib-classic/animation-loop';
+export {default as ClassicAnimationLoop} from './lib-classic/animation-loop';
+
+export type {ModelProps} from './lib-classic/model';
+export {default as Model} from './lib-classic/model';
+export {default as ProgramManager} from './lib-classic/program-manager';
 export {default as Transform} from './transform/transform';
 
 // Geometries
@@ -26,9 +36,6 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
-
-export type {_NonIndexedCubeGeometryProps} from './geometries/non-indexed-cube-geometry';
-export {_NonIndexedCubeGeometry} from './geometries/non-indexed-cube-geometry';
 
 // Animation
 export {Timeline} from './animation/timeline';

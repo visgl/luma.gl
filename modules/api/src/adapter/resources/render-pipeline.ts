@@ -6,6 +6,7 @@ import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout'
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import type {default as Buffer} from './buffer';
 import type {default as Shader} from './shader';
+import type {default as RenderPass} from './render-pass';
 
 export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
@@ -88,10 +89,20 @@ export default abstract class RenderPipeline extends Resource<RenderPipelineProp
     super(device, normalizeProps(props), DEFAULT_RENDER_PIPELINE_PROPS);
   }
 
-  // abstract setAttributes(attributes: Record<string, Buffer>): void;
-  // abstract setBindings(bindings: Record<string, Binding>): void;
+  abstract setAttributes(attributes: Record<string, Buffer>): void;
+  abstract setBindings(bindings: Record<string, Binding>): void;
 
   // abstract draw();
+  abstract draw(options: {
+    renderPass?: RenderPass;
+    vertexCount?: number;
+    indexCount?: number;
+    instanceCount?: number;
+    firstVertex?: number;
+    firstIndex?: number;
+    firstInstance?: number;
+    baseVertex?: number;
+  }): void;
 
   /** Private "export" for Model class */
   static _DEFAULT_PROPS = DEFAULT_RENDER_PIPELINE_PROPS;

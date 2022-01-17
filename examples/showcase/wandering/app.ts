@@ -1,6 +1,8 @@
-import {Buffer, readPixelsToArray, Framebuffer, isWebGL2, cssToDevicePixels} from '@luma.gl/webgl';
+/* eslint-enable camelcase */
+import {Buffer, readPixelsToArray, Framebuffer, cssToDevicePixels} from '@luma.gl/webgl';
+import GL from '@luma.gl/constants';
+import {RenderLoop, AnimationProps, Model, Transform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
-import {RenderLoop, Model, Transform} from '@luma.gl/engine';
 import {Log} from '@probe.gl/log';
 
 import {getRandom} from '@luma.gl/api';
@@ -153,14 +155,14 @@ export default class AppRenderLoop extends RenderLoop {
   pickingFramebuffer: Framebuffer;
 
   // eslint-disable-next-line max-statements
-  constructor({device, gl, width, height}) {
+  constructor({device, width, height}: AnimationProps) {
     super();
 
-    if (!isWebGL2(gl)) {
+    if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
-    gl.canvas.addEventListener('mousemove', mousemove);
-    gl.canvas.addEventListener('mouseleave', mouseleave);
+    device.canvas.addEventListener('mousemove', mousemove);
+    device.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);
@@ -189,31 +191,35 @@ export default class AppRenderLoop extends RenderLoop {
       pickingColors[i * 2 + 1] = i - 255 * pickingColors[i * 2];
     }
 
-    this.positionBuffer = new Buffer(gl, trianglePositions);
-    this.colorBuffer = new Buffer(gl, instanceColors);
-    this.offsetBuffer = new Buffer(gl, instanceOffsets);
-    this.rotationBuffer = new Buffer(gl, instanceRotations);
-    this.pickingColorBuffer = new Buffer(gl, pickingColors);
+    this.positionBuffer = new Buffer(device, trianglePositions);
+    this.colorBuffer = new Buffer(device, instanceColors);
+    this.offsetBuffer = new Buffer(device, instanceOffsets);
+    this.rotationBuffer = new Buffer(device, instanceRotations);
+    this.pickingColorBuffer = new Buffer(device, pickingColors);
 
-    this.renderModel = new Model(gl, {
+    this.renderModel = new Model(device, {
       id: 'RenderModel',
       vs: DRAW_VS,
       fs: DRAW_FS,
-      drawMode: gl.TRIANGLE_FAN,
+      drawMode: GL.TRIANGLE_FAN,
       vertexCount: 3,
       isInstanced: true,
       instanceCount: NUM_INSTANCES,
       attributes: {
         a_position: this.positionBuffer,
+        // @ts-expect-error
         a_color: [this.colorBuffer, {divisor: 1}],
+        // @ts-expect-error
         a_offset: [this.offsetBuffer, {divisor: 1}],
+        // @ts-expect-error
         a_rotation: [this.rotationBuffer, {divisor: 1}],
+        // @ts-expect-error
         instancePickingColors: [this.pickingColorBuffer, {divisor: 1}]
       },
       modules: [picking]
     });
 
-    this.transform = new Transform(gl, {
+    this.transform = new Transform(device, {
       vs: EMIT_VS,
       elementCount: NUM_INSTANCES,
       sourceBuffers: {
@@ -226,7 +232,7 @@ export default class AppRenderLoop extends RenderLoop {
       }
     });
 
-    this.pickingFramebuffer = new Framebuffer(gl, {width, height});
+    this.pickingFramebuffer = new Framebuffer(device, {width, height});
   }
 
   onFinalize(): void {
@@ -257,23 +263,23 @@ export default class AppRenderLoop extends RenderLoop {
       },
       parameters: {
         blend: true,
-        blendFunc: [gl.SRC_ALPHA, gl.ONE]
+        blendFunc: [GL.SRC_ALPHA, GL.ONE]
       }
     });
 
     this.offsetBuffer.setAccessor({divisor: 0});
     this.rotationBuffer.setAccessor({divisor: 0});
 
-    if (pickPosition) {
-      // use the center pixel location in device pixel range
-      const devicePixels = cssToDevicePixels(gl, pickPosition);
-      const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
-      const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
+    // if (pickPosition) {
+    //   // use the center pixel location in device pixel range
+    //   const devicePixels = cssToDevicePixels(gl, pickPosition);
+    //   const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
+    //   const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
-      this.pickingFramebuffer.resize({width, height});
+    //   this.pickingFramebuffer.resize({width, height});
 
-      pickInstance(gl, deviceX, deviceY, this.renderModel, this.pickingFramebuffer);
-    }
+    //   pickInstance(gl, deviceX, deviceY, this.renderModel, this.pickingFramebuffer);
+    // }
   }
 }
 
@@ -291,8 +297,8 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
     sourceY: pickY,
     sourceWidth: 1,
     sourceHeight: 1,
-    sourceFormat: gl.RGBA,
-    sourceType: gl.UNSIGNED_BYTE
+    sourceFormat: GL.RGBA,
+    sourceType: GL.UNSIGNED_BYTE
   });
 
   if (color[0] + color[1] + color[2] > 0) {
