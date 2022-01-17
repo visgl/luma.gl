@@ -57,6 +57,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
     // @ts-expect-error AnimationLoop vs RenderLoop 
     const animationLoop: AnimationLoop = RenderLoop.run 
       ? RenderLoop.run(AppRenderLoop as typeof RenderLoop) 
+      // @ts-expect-error actually a an AnimationLoop
       : new AppRenderLoop({});
     testCases.push({
       name,
