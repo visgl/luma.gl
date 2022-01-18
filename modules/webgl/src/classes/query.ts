@@ -2,7 +2,7 @@
 import {assert} from '@luma.gl/api';
 import WebGLDevice from '../adapter/webgl-device';
 import {isWebGL2} from '../context/context/webgl-checks';
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import WebGLResource, {ResourceProps} from '../adapter/objects/webgl-resource';
 
 const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.
 const GL_QUERY_RESULT_AVAILABLE = 0x8867; // whether query result is available.

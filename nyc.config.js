@@ -9,6 +9,8 @@ module.exports = {
   exclude: [
     '**/deprecated',
     '**/bundle.ts',
+    // render tests pull in examples
+    'examples',
     // no need to test coverage of constants
     'modules/constants',
     // core is just re-exporting things at the moment
