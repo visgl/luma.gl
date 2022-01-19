@@ -19,7 +19,7 @@ import Framebuffer from './framebuffer';
  *
  * @param source
  * @param options
-// @returns {Uint8Array|Uint16Array|FloatArray} - pixel array,
+ * @returns pixel array,
  */
 export function readPixelsToArray(
   source: Framebuffer | Texture,
