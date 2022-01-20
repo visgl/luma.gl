@@ -4,6 +4,7 @@ import test from 'tape-promise/tape';
 import {CanvasContext, Framebuffer} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 
+// @ts-expect-error
 class TestCanvasContext extends CanvasContext {
   // @ts-expect-error
   readonly device = {};

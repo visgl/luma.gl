@@ -95,7 +95,7 @@ function init(device: Device) {
   const modelViewProjectionMatrix = new Matrix4();
 
   function frame() {
-    const aspect = device.canvas.clientWidth / device.canvas.clientHeight;
+    const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);

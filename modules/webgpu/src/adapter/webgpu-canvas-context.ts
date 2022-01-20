@@ -79,6 +79,11 @@ export default class WebGPUCanvasContext extends CanvasContext {
 
       log.log(1, `Resized to ${this.width}x${this.height}px`)();
     }
+
+  }
+
+  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
+    this.update();
   }
 
   /** We build render targets on demand (i.e. not when size changes but when about to render) */

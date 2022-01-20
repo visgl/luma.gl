@@ -56,7 +56,7 @@ test('WebGLDevice#isWebGL2', (t) => {
 test.skip('WebGLDevice#resize', (t) => {
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate webgl1Device context
-  webgl1Device.resize({width: 10, height: 20, useDevicePixels: 1});
+  webgl1Device.canvasContext.resize({width: 10, height: 20, useDevicePixels: 1});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
@@ -66,7 +66,7 @@ test.skip('WebGLDevice#resize', (t) => {
   // update drawing buffer size to simulate webgl1Device context
   // Using custom device pixel ratio
   const DPR = 12.5;
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
@@ -74,7 +74,7 @@ test.skip('WebGLDevice#resize', (t) => {
   );
 
   // trigger again without any changes
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},

@@ -161,8 +161,8 @@ export default class AppRenderLoop extends RenderLoop {
     if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
-    device.canvas.addEventListener('mousemove', mousemove);
-    device.canvas.addEventListener('mouseleave', mouseleave);
+    device.canvasContext.canvas.addEventListener('mousemove', mousemove);
+    device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);

@@ -240,18 +240,10 @@ export default abstract class Device {
   /** default canvas context */
   abstract canvasContext: CanvasContext;
 
-  /** @deprecated Use canvasContext */
-  canvas: HTMLCanvasElement;
-  /** @deprecated Use canvasContext */
-  offscreenCanvas: OffscreenCanvas | undefined;
-
-  /** Resize - @deprecated Needs to move into canvas context */
-  abstract resize(options: any): void;
-
-  /** */
+  /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 
-  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
+  /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
   abstract submit(): void;
 
   // Resource creation

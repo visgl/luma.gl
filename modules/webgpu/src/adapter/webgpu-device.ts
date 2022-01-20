@@ -111,8 +111,6 @@ export default class WebGPUDevice extends Device {
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     if (props.canvas) {
       this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {canvas: props.canvas});
-      // TODO - handle offscreen canvas?
-      this.canvas = this.canvasContext.canvas as HTMLCanvasElement;
     }
 
     this.features = this._getFeatures();
@@ -153,10 +151,6 @@ export default class WebGPUDevice extends Device {
 
   get isLost(): boolean {
     return this._isLost;
-  }
-
-  resize(options: any): void {
-    this.canvasContext.update();
   }
 
   _createBuffer(props: BufferProps): WebGPUBuffer {

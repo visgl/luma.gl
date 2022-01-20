@@ -105,7 +105,7 @@ export async function init(device: Device, language: 'glsl' | 'wgsl') {
   const modelViewProjectionMatrix = new Matrix4();
 
   function frame() {
-    const aspect = device.canvas.clientWidth / device.canvas.clientHeight;
+    const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
     projectionMatrix.perspective({fov: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import {isBrowser} from 'probe.gl/env';
-import {Device} from '..';
+import type Device from './device';
 import type Framebuffer from './resources/framebuffer';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
@@ -33,6 +33,8 @@ export default abstract class CanvasContext {
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
   readonly resizeObserver: ResizeObserver | undefined;
   readonly props: Partial<CanvasContextProps>;
+  width: number;
+  height: number;
 
   /** Check if the DOM is loaded */
   static get isPageLoaded(): boolean {
@@ -52,6 +54,13 @@ export default abstract class CanvasContext {
   constructor(props?: CanvasContextProps) {
     props = {...DEFAULT_CANVAS_CONTEXT_PROPS, ...props};
     this.props = props;
+
+    if (!isBrowser()) {
+      this.width = props.width;
+      this.height = props.height;
+      return;
+    }
+
     if (!props.canvas) {
       this.canvas = createCanvas(props);
     } else if (typeof props.canvas === 'string') {
@@ -81,7 +90,7 @@ export default abstract class CanvasContext {
    * Device refers to physical
    */
   getDevicePixelRatio(): number {
-    if (this.canvas instanceof OffscreenCanvas) {
+    if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
       return 1;
     }
     if (typeof this.props.useDevicePixels === 'number') {
@@ -97,12 +106,23 @@ export default abstract class CanvasContext {
    * This is the size required to cover the canvas, adjusted for DPR
    */
   getPixelSize(): [number, number] {
-    if (this.canvas instanceof OffscreenCanvas) {
+    if (!this.canvas) {
+      return [this.width, this.height];
+    }
+    if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
       return [this.canvas.width, this.canvas.height];
     }
     const dpr = this.getDevicePixelRatio();
+    // @ts-expect-error
     return [this.canvas.clientWidth * dpr, this.canvas.clientHeight * dpr];
   }
+
+  getAspect(): number {
+    const [width, height] = this.getPixelSize();
+    return width / height;
+  }
+
+  abstract resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void;
 
   /** Perform platform specific updates (WebGPU vs WebGL) */
   abstract update(): void;

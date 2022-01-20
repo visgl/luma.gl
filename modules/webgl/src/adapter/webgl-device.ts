@@ -5,17 +5,14 @@ import type {
   DeviceLimits,
   DeviceFeature,
   CanvasContextProps,
-  TextureFormat,
-  Framebuffer
+  TextureFormat
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import {ContextState} from '../context/context/context-state';
-import {getDevicePixelRatio, setDevicePixelRatio} from '../context/context/device-pixels';
 import {createBrowserContext} from '../context/context/create-context';
-import {getCanvas} from '../context/context/get-canvas';
 import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
@@ -101,8 +98,6 @@ export default class WebGLDevice extends Device implements ContextState {
   readonly isWebGL1: boolean;
   /** `true` if this is a WebGL2 context. @note `false` if WebGL1 */
   readonly isWebGL2: boolean;
-  /** Is this device attached to an offscreen context */
-  readonly offScreen: boolean = false;
 
   readonly webglLimits: WebGLLimits;
 
@@ -182,11 +177,15 @@ export default class WebGLDevice extends Device implements ContextState {
       return device;
     }
 
-    if (props.gl && !isWebGL(props.gl)) {
-      throw new Error('Invalid WebGLRenderingContext');
-    }
+    // if (props.gl && !isWebGL(props.gl)) {
+    //   console.log(props.gl)
+    //   throw new Error('Invalid WebGLRenderingContext');
+    // }
+
     // Create and instrument context
-    this.handle = (props.gl || this._createContext(props)) as WebGLRenderingContext;
+    this.canvasContext = new WebGLCanvasContext(this, props);
+
+    this.handle = props.gl || createBrowserContext(this.canvasContext.canvas, props);
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
@@ -196,12 +195,6 @@ export default class WebGLDevice extends Device implements ContextState {
     const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
 
     const propsWithCanvas = {...this.props, canvas};
-
-    this.canvasContext = new WebGLCanvasContext(this, propsWithCanvas);
-    this.canvas = canvas;
-    if (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas) {
-      this.offscreenCanvas = canvas;
-    }
 
     this.spector = initializeSpectorJS(propsWithCanvas);
 
@@ -233,36 +226,33 @@ export default class WebGLDevice extends Device implements ContextState {
     log.probe(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
 
     polyfillContext(this.gl);
-    log.probe(LOG_LEVEL, 'polyfilled context')();
 
     // Install context state tracking
-    trackContextState(this.gl, {
-      copyState: false,
-      log: (...args) => log.log(1, ...args)()
-    });
-    log.probe(LOG_LEVEL, 'instrumented context')();
+    trackContextState(this.gl, {copyState: false, log: (...args) => log.log(1, ...args)()});
 
     // WebGPU Device fields
     this.features = getDeviceFeatures(this.gl);
-    log.probe(LOG_LEVEL, `queried device features ${counter}`)();
     this.limits = getDeviceLimits(this.gl);
-    log.probe(LOG_LEVEL, 'queried device limits')();
 
     // Add seer integration - TODO - currently removed
 
     // WEBGL specific fields
     this.webglLimits = getWebGLLimits(this.gl);
-    log.probe(LOG_LEVEL, 'queried webgl limits')();
 
     // DEBUG contexts:  Add debug instrumentation to the context
     if (isBrowser() && props.debug) {
-      this.gl = makeDebugContext(this.gl, {...props, gl: this.gl, webgl2: this.isWebGL2, throwOnError: true});
+      this.gl = makeDebugContext(this.gl, {
+        ...props,
+        gl: this.gl,
+        webgl2: this.isWebGL2,
+        throwOnError: true
+      });
       if (this.gl2) {
         this.gl2 = this.gl as WebGL2RenderingContext;
       }
       // Debug forces log level to at least 1
       log.level = Math.max(log.level, 1);
-      log.info('WebGL debug mode activated. Performance reduced.')();
+      log.warn('WebGL debug mode activated. Performance reduced.')();
     }
 
     log.groupEnd(LOG_LEVEL)();
@@ -313,33 +303,6 @@ export default class WebGLDevice extends Device implements ContextState {
     return this.gl2;
   }
 
-  /**
-   * Resize the canvas' drawing buffer.
-   *
-   * Can match the canvas CSS size, and optionally also consider devicePixelRatio
-   * Can be called every frame
-   *
-   * Regardless of size, the drawing buffer will always be scaled to the viewport, but
-   * for best visual results, usually set to either:
-   *  canvas CSS width x canvas CSS height
-   *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
-   * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-   */
-  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    // Resize browser context .
-    if (this.gl.canvas) {
-      const devicePixelRatio = getDevicePixelRatio(options?.useDevicePixels);
-      setDevicePixelRatio(this.gl, devicePixelRatio, options);
-      return;
-    }
-
-    // Resize headless gl context
-    const ext = this.gl.getExtension('STACKGL_resize_drawingbuffer');
-    if (ext && options && `width` in options && `height` in options) {
-      ext.resize(options.width, options.height);
-    }
-  }
-
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
@@ -369,7 +332,7 @@ export default class WebGLDevice extends Device implements ContextState {
   createFramebuffer(props: FramebufferProps): WEBGLFramebuffer {
     return new WEBGLFramebuffer(this, props);
   }
-  
+
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
     return new WEBGLRenderPipeline(this, props);
   }
@@ -389,9 +352,11 @@ export default class WebGLDevice extends Device implements ContextState {
   private renderPass: WEBGLRenderPass;
 
   getDefaultRenderPass(): WEBGLRenderPass {
-    this.renderPass = this.renderPass || this.beginRenderPass({
-      framebuffer: this.canvasContext.getCurrentFramebuffer()
-    });
+    this.renderPass =
+      this.renderPass ||
+      this.beginRenderPass({
+        framebuffer: this.canvasContext.getCurrentFramebuffer()
+      });
     return this.renderPass;
   }
 
@@ -403,23 +368,11 @@ export default class WebGLDevice extends Device implements ContextState {
   submit(): void {
     this.renderPass.endPass();
     this.renderPass = null;
-    // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
-    if (this.offScreen && this.gl.commit) {
-      // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
-      this.gl.commit();
-    }
-  }
-
-  // PRIVATE METHODS
-
-  /**
-   * Creates a context giving access to the WebGL API
-   */
-  _createContext(props: DeviceProps): WebGLRenderingContext {
-    const {width, height, canvas} = props;
-    // Get or create a canvas
-    const targetCanvas = getCanvas({canvas, width, height});
-    // Create a WebGL context in the canvas
-    return createBrowserContext(targetCanvas, props);
+    // TODO - move to CanvasContext
+    // gl.commit was ultimately removed??
+    // if (this.offScreen && this.gl.commit) {
+    //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
+    //   this.gl.commit();
+    // }
   }
 }

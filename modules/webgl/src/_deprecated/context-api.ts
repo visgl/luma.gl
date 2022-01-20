@@ -49,7 +49,7 @@ export function resizeGLContext(
   }
 ) {
   const webglDevice = WebGLDevice.attach(gl);
-  webglDevice.resize(options);
+  webglDevice.canvasContext.resize(options);
 }
 
 /** 
