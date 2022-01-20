@@ -1,6 +1,7 @@
 // luma.gl, MIT license
-import type {TextureFormat, CanvasContextProps} from '@luma.gl/api';
+import type {CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext} from '@luma.gl/api';
+import {getDevicePixelRatio, setDevicePixelRatio} from '../context/context/device-pixels';
 import WebGLDevice from './webgl-device';
 import WEBGLFramebuffer from './resources/webgl-framebuffer';
 
@@ -14,16 +15,16 @@ export default class WebGLCanvasContext extends CanvasContext {
   private _framebuffer: WEBGLFramebuffer;
 
   constructor(device: WebGLDevice, props: CanvasContextProps) {
-    super(getWebGLCanvasContextProps(device, props));
-    // TODO - We will need to break out WebGL context creating code from WebGLDevice
-    // this.gl = this.canvas.getContext('webgl');
+    // Note: Base class creates / looks up the canvas (unless under Node.js)
+    super(props);
+    this.device = device;
     this.presentationSize = [-1, -1];
-    this._framebuffer = new WEBGLFramebuffer(this.device, {handle: null});
     this.update();
   }
 
   getCurrentFramebuffer(): WEBGLFramebuffer {
     this.update();
+    this._framebuffer = this._framebuffer || new WEBGLFramebuffer(this.device, {handle: null});
     return this._framebuffer;
   }
 
@@ -35,11 +36,39 @@ export default class WebGLCanvasContext extends CanvasContext {
       this.presentationSize = size;
     }
   }
-}
 
-function getWebGLCanvasContextProps(device: WebGLDevice, props: CanvasContextProps): CanvasContextProps {
-  if (props.canvas !== device.gl.canvas) {
-    throw new Error('WebGL canvas context only works for ');
+  /**
+   * Resize the canvas' drawing buffer.
+   *
+   * Can match the canvas CSS size, and optionally also consider devicePixelRatio
+   * Can be called every frame
+   *
+   * Regardless of size, the drawing buffer will always be scaled to the viewport, but
+   * for best visual results, usually set to either:
+   *  canvas CSS width x canvas CSS height
+   *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
+   * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+   */
+   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
+    // Resize browser context .
+    if (this.canvas) {
+      const devicePixelRatio = getDevicePixelRatio(options?.useDevicePixels);
+      setDevicePixelRatio(this.device.gl, devicePixelRatio, options);
+      return;
+    }
+
+    // Resize headless gl context
+    const ext = this.device.gl.getExtension('STACKGL_resize_drawingbuffer');
+    if (ext && options && `width` in options && `height` in options) {
+      ext.resize(options.width, options.height);
+    }
   }
-  return props;
+
+  commit() {
+    // gl.commit was ultimately removed??
+    // if (this.offScreen && this.gl.commit) {
+    //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
+    //   this.gl.commit();
+    // }
+  }
 }

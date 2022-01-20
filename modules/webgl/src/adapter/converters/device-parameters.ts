@@ -1,6 +1,8 @@
 import {Device, Parameters, CompareFunction, StencilOperation, log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import type { GLParameters } from '../../types/webgl';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
+import {setParameters} from '../../context/parameters/unified-parameter-api';
 import WebGLDevice from '../webgl-device';
 
 /**
@@ -11,7 +13,7 @@ import WebGLDevice from '../webgl-device';
  * - Restores parameters
  * - Returns the return value of the supplied function
  */
- export function withDeviceParameters<T = unknown>(device: Device, parameters: Parameters, func: (device?: Device) => T): T {
+export function withDeviceParameters<T = unknown>(device: Device, parameters: Parameters & GLParameters, func: (device?: Device) => T): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(device);
@@ -21,6 +23,7 @@ import WebGLDevice from '../webgl-device';
   // @ts-expect-error
   pushContextState(device.gl);
   try {
+    setParameters(device, parameters);
     setDeviceParameters(device, parameters);
     return func(device);
   } finally {

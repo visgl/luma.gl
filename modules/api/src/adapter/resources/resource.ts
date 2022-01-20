@@ -73,6 +73,22 @@ export default abstract class Resource<Props extends ResourceProps> {
 
   // PROTECTED METHODS
 
+  /** Called by resource constructor to track object creation */
+  private addStats(): void {
+    const stats = this._device.statsManager.getStats('Resource Counts');
+    const name = this[Symbol.toStringTag];
+    stats.get('Resources Created').incrementCount();
+    stats.get(`${name}s Created`).incrementCount();
+    stats.get(`${name}s Active`).incrementCount();
+  }
+
+  /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
+  protected removeStats(): void {
+    const stats = this._device.statsManager.getStats('Resource Counts');
+    const name = this[Symbol.toStringTag];
+    stats.get(`${name}s Active`).decrementCount();
+  }
+
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
     const stats = this._device.statsManager.getStats('Resource Counts');
@@ -87,24 +103,6 @@ export default abstract class Resource<Props extends ResourceProps> {
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
     stats.get(`${name} Memory`).subtractCount(this.allocatedBytes);
     this.allocatedBytes = 0;
-  }
-
-  /** Called by subclass .destroy() to track object destruction */
-  protected removeStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
-    const name = this[Symbol.toStringTag];
-    stats.get(`${name}s Active`).decrementCount();
-  }
-
-  // PRIVATE METHODS
-
-  /** Called by constructor to track object creation */
-  private addStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
-    const name = this[Symbol.toStringTag];
-    stats.get('Resources Created').incrementCount();
-    stats.get(`${name}s Created`).incrementCount();
-    stats.get(`${name}s Active`).incrementCount();
   }
 }
 

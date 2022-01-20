@@ -11,6 +11,8 @@ import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
 import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
+import VertexArray from './vertex-array';
+
 import WebGLDevice from '../adapter/webgl-device';
 import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLShader from '../adapter/resources/webgl-shader';
@@ -42,7 +44,7 @@ export type ProgramDrawOptions = {
   indexType?: any;
   instanceCount?: number;
   isInstanced?: boolean;
-  vertexArray?: any;
+  vertexArray: VertexArray;
   transformFeedback?: any; // TransformFeedback;
   framebuffer?: WEBGLFramebuffer;
   parameters?: {};
@@ -72,7 +74,7 @@ export default class Program extends WEBGLRenderPipeline {
   // Experimental flag to avoid deleting Program object while it is cached
   hash: string; // Used by ProgramManager
   uniforms: Record<string, any>;
-  varyings: Record<string, any>;
+  varyings: string[];
   _textureUniforms: Record<string, any>;
   _isCached: boolean = false;
   _textureIndexCounter: number = 0;
@@ -122,7 +124,7 @@ export default class Program extends WEBGLRenderPipeline {
       this.gl2.transformFeedbackVaryings(this.handle, varyings, bufferMode);
     }
 
-    this._compileAndLink();
+    // this._compileAndLink();
     this._readUniformLocationsFromLinkedProgram();
     this.configuration = new ProgramConfiguration(this);
 

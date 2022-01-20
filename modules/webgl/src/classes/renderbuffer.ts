@@ -1,9 +1,10 @@
 /* eslint-disable no-inline-comments */
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../adapter/webgl-device';
-import WEBGLRenderbuffer, {RenderbufferProps} from '../adapter/objects/webgl-renderbuffer';
+import type {RenderbufferProps} from '../adapter/objects/webgl-renderbuffer';
+import WEBGLRenderbuffer from '../adapter/objects/webgl-renderbuffer';
 
-export {RenderbufferProps}
+export type {RenderbufferProps}
 
 /**
  * Renderbuffers are GPU objects that contain images.
@@ -26,7 +27,7 @@ export default class Renderbuffer extends WEBGLRenderbuffer {
   }
 
   constructor(gl: WebGLRenderingContext, props?: RenderbufferProps) {
-    super(gl, props);
+    super(WebGLDevice.attach(gl), props);
   }
 
   resize(size: {width: number, height: number}): this {

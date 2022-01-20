@@ -66,7 +66,7 @@ export default class AppRenderLoop extends RenderLoop {
 
   frame({device}: AnimationProps) {
     this.model.draw();
-    device.commit();
+    device.submit();
   }
 }
 

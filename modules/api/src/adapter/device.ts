@@ -210,10 +210,8 @@ export default abstract class Device {
 
   readonly id: string;
   readonly statsManager: StatsManager = lumaStats;
-  readonly props: DeviceProps;
-
-  canvas: HTMLCanvasElement;
-  offscreenCanvas: OffscreenCanvas | undefined;
+  readonly props: Required<DeviceProps>;
+  userData: {[key: string]: any} = {};
 
   /** Information about the device (vendor, versions etc) */
   abstract info: DeviceInfo;
@@ -239,19 +237,14 @@ export default abstract class Device {
   /** Promise that resolves when context is lost */
   abstract readonly lost: Promise<{reason: 'destroyed', message: string}>;
 
-  /** Hack: Portably return drawing buffer size, used by AnimationLoop */
-  getSize(): [number, number] {
-    return [0, 0];
-  }
+  /** default canvas context */
+  abstract canvasContext: CanvasContext;
 
-  /** Resize */
-  abstract resize(options: any): void;
-
-  /** Call after rendering a frame (necessary e.g. on WebGL OffScreenCanvas) */
-  abstract commit(): void;
-
-  /** */
+  /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
+
+  /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
+  abstract submit(): void;
 
   // Resource creation
 
@@ -297,10 +290,12 @@ export default abstract class Device {
 
 
   /** Create a RenderPass */
-  // abstract beginRenderPass(props: RenderPassProps): RenderPass;
+  abstract beginRenderPass(props: RenderPassProps): RenderPass;
 
   /** Create a ComputePass */
   // abstract beginComputePass(props?: ComputePassProps): ComputePass;
+
+  abstract getDefaultRenderPass(): RenderPass;
 
   // Implementation
 

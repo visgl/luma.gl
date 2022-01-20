@@ -142,7 +142,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     baseVertex?: number;
   }): void {
     const webgpuRenderPass =
-      cast<WebGPURenderPass>(options.renderPass) || this.device.getActiveRenderPass();
+      cast<WebGPURenderPass>(options.renderPass) || this.device.getDefaultRenderPass();
 
     // Set pipeline
     webgpuRenderPass.handle.setPipeline(this.handle);

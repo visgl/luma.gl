@@ -24,14 +24,27 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
     return 'RenderPass';
   }
 
-  readonly device: Device;
-
   constructor(device: Device, props: RenderPassProps) {
     super(device, props, DEFAULT_RENDERPASS_PROPS);
   }
 
   abstract endPass(): void;
 
+  abstract pushDebugGroup(groupLabel: string): void;
+  abstract popDebugGroup(): void;
+  abstract insertDebugMarker(markerLabel: string): void;
+
+  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
+
+  // beginOcclusionQuery(queryIndex: number): void;
+  // endOcclusionQuery(): void;
+
+  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+
+  // In WebGPU the following methods are on the renderpass.
+  // luma.gl keeps them on the pipeline for now
+
+  /*
   setPipeline(pipeline: RenderPipeline): void {}
 
   setIndexBuffer(
@@ -57,17 +70,7 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
     baseVertex?: number;
   }): void {}
 
-  // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-
-  abstract pushDebugGroup(groupLabel: string): void;
-  abstract popDebugGroup(): void;
-  abstract insertDebugMarker(markerLabel: string): void;
-
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
-
-  // beginOcclusionQuery(queryIndex: number): void;
-  // endOcclusionQuery(): void;
-
-  // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  */
 }
