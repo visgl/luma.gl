@@ -523,7 +523,7 @@ export function _checkFloat32ColorAttachment(
   let texture: WebGLTexture;
   let framebuffer: WebGLFramebuffer;
   try {
-    const texture = gl.createTexture();
+    texture = gl.createTexture();
     gl.bindTexture(GL.TEXTURE_2D, texture);
 
     const level = 0;
@@ -543,7 +543,7 @@ export function _checkFloat32ColorAttachment(
       pixel
     );
 
-    const framebuffer = gl.createFramebuffer();
+    framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
     const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER) === GL.FRAMEBUFFER_COMPLETE;
@@ -617,7 +617,7 @@ function getWebGLPixelDataFormat(
   }
 }
 
-function getWebGLDataType(dataType: string): GL {
+export function getWebGLDataType(dataType: string): GL {
   // prettier-ignore
   switch (dataType) {
     case 'uint8': return GL.UNSIGNED_BYTE;

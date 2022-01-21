@@ -28,7 +28,7 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
     return 'BaseVertexArrayObject';
   }
 
-  constructor(device: WebGLDevice, props: VertexArrayObjectProps) {
+  constructor(device: WebGLDevice, props?: VertexArrayObjectProps) {
     // @ts-expect-error
     super(device, props, {});
   }

@@ -10,7 +10,7 @@ import WEBGLFramebuffer from './resources/webgl-framebuffer';
  * @todo This class is WIP, intended to replace the old gltools-based context size tracking
  */
 export default class WebGLCanvasContext extends CanvasContext {
-  device: WebGLDevice;
+  readonly device: WebGLDevice;
   presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer;
 
@@ -65,7 +65,7 @@ export default class WebGLCanvasContext extends CanvasContext {
   }
 
   commit() {
-    // gl.commit was ultimately removed??
+    // gl.commit was ultimately removed from standard??
     // if (this.offScreen && this.gl.commit) {
     //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
     //   this.gl.commit();

@@ -30,6 +30,7 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
  */
 export default abstract class CanvasContext {
   abstract readonly device: Device;
+  readonly id: string;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
   readonly resizeObserver: ResizeObserver | undefined;
   readonly props: Partial<CanvasContextProps>;
@@ -56,6 +57,7 @@ export default abstract class CanvasContext {
     this.props = props;
 
     if (!isBrowser()) {
+      this.id = 'node.js';
       this.width = props.width;
       this.height = props.height;
       return;
@@ -68,6 +70,7 @@ export default abstract class CanvasContext {
     } else {
       this.canvas = props.canvas;
     }
+    this.id = this.canvas instanceof HTMLCanvasElement ? this.canvas.id : 'offscreen-canvas';
 
     // React to size changes
     if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {

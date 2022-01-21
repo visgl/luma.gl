@@ -1,5 +1,5 @@
-import type {FramebufferProps, Texture, ColorTextureFormat} from '@luma.gl/api';
-import {Framebuffer, cast} from '@luma.gl/api';
+import type {FramebufferProps, ColorTextureFormat} from '@luma.gl/api';
+import {Framebuffer, Texture} from '@luma.gl/api';
 import WebGPUDevice from '../webgpu-device';
 // import WebGPUCanvasContext from '../webgpu-canvas-context';
 import WEBGPUTexture from './webgpu-texture';
@@ -71,7 +71,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
         format: props.depthStencilAttachment,
         width: props.width,
         height: props.height,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT
+        usage: Texture.RENDER_ATTACHMENT
       });
     }
 
@@ -89,7 +89,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
         format: texture,
         width: props.width,
         height: props.height,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT
+        usage: Texture.RENDER_ATTACHMENT
       });
     }
 

@@ -6,7 +6,7 @@ import type WebGLDevice from './webgl-device';
 
 const DEFAULT_BUFFER_PROPS = {
   byteLength: 0,
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+  usage: Buffer.COPY_DST | Buffer.COPY_SRC,
   mappedAtCreation: true
 }
 

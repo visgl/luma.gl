@@ -77,7 +77,7 @@ async function init(canvas: HTMLCanvasElement) {
   const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
   const resultMatrixBuffer = device.createBuffer({
     size: resultMatrixBufferSize,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
 
 
@@ -114,7 +114,7 @@ async function init(canvas: HTMLCanvasElement) {
   // Get a GPU buffer for reading in an unmapped state.
   const gpuReadBuffer = device.createBuffer({
     size: resultMatrixBufferSize,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
   });
 
   // Encode commands for copying buffer to buffer.

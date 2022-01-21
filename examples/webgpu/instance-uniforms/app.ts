@@ -1,4 +1,4 @@
-import {luma, Device, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
+import {luma, Device, Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
 import {ModelV2 as Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -80,7 +80,7 @@ export function init(device: Device, language: 'glsl' | 'wgsl') {
 
   const uniformBuffer = device.createBuffer({
     id: 'uniforms',
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST,
     byteLength: UNIFORM_BUFFER_SIZE,
   });
 

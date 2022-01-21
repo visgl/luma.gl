@@ -1,5 +1,5 @@
-import {luma, Device} from '@luma.gl/api';
-import {ModelV2 as Model, CubeGeometry} from '@luma.gl/engine';
+import {Buffer} from '@luma.gl/api';
+import {ModelV2 as Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -8,7 +8,29 @@ export const description = 'Shows rendering a basic triangle.';
 
 /** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  vs: `
+  vs: {
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform uniforms {
+  mat4 modelViewProjectionMatrix;
+};
+
+layout(location=0) in vec3 position;
+layout(location=1) in vec2 uv;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);
+  fragUV = uv;
+  fragPosition = vec4(position, 1.);
+  // fragPosition = 0.5 * (vec4(position, 1.) + vec4(1., 1., 1., 1.));
+}
+    `,
+    wgsl: `\
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
 };
@@ -29,89 +51,114 @@ fn main([[location(0)]] position : vec4<f32>,
   output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return output;
 }
-`,
-  fs: `
+`
+  },
+  fs: {
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+}
+    `,
+    wgsl: `\
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
   return fragPosition;
 }
 `
+  }
 };
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-function init(device: Device) {
-  // Create vertex buffers for the cube data.
-  const cube = new CubeGeometry({indices: false});
-  const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
-  const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
+export default class AppRenderLoop extends RenderLoop {
+  model: Model;
+  uniformBuffer: Buffer;
 
-  const uniformBuffer = device.createBuffer({
-    id: 'uniforms', 
-    byteLength: UNIFORM_BUFFER_SIZE,
-    // TODO - use API constants instead of WebGPU constants
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  constructor({device}: AnimationProps) {
+    super();
 
-  const model = new Model(device, {
-    id: 'cube',
-    vs: SHADERS.vs,
-    fs: SHADERS.fs,
-    layout: {
-      attributes: [
-        {name: 'position', location: 0, format: 'float32x4'},
-        {name: 'uv', location: 1, format: 'float32x2'}
-      ],
-      bindings: [
-        {name: 'uniforms', location: 0, type: 'uniform'}
-      ]
-    },
-    topology: 'triangle-list',
-    vertexCount: cube.vertexCount,
-    parameters: {
-      // Enable depth testing so that the fragment closest to the camera
-      // is rendered in front.
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-      depthFormat: 'depth24plus',
+    // Create vertex buffers for the cube data.
+    const cube = new CubeGeometry({indices: false});
+    const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
+    const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
 
-      // Backface culling since the cube is solid piece of geometry.
-      // Faces pointing away from the camera will be occluded by faces
-      // pointing toward the camera.
-      cullMode: 'back',
-    },  
-    attributes: {
-      position: positionBuffer,
-      uv: uvBuffer
-    },
-    bindings: {
-      uniforms: uniformBuffer
-    },
-  });
+    this.uniformBuffer = device.createBuffer({
+      id: 'uniforms',
+      byteLength: UNIFORM_BUFFER_SIZE,
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+    });
 
-  const projectionMatrix = new Matrix4();
-  const viewMatrix = new Matrix4();
-  const modelViewProjectionMatrix = new Matrix4();
+    this.model = new Model(device, {
+      id: 'cube',
+      vs: SHADERS.vs,
+      fs: SHADERS.fs,
+      layout: {
+        attributes: [
+          {name: 'position', location: 0, format: 'float32x4'},
+          {name: 'uv', location: 1, format: 'float32x2'}
+        ],
+        bindings: [
+          {name: 'uniforms', location: 0, type: 'uniform'}
+        ]
+      },
+      topology: 'triangle-list',
+      vertexCount: cube.vertexCount,
+      parameters: {
+        // Enable depth testing so that the fragment closest to the camera
+        // is rendered in front.
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        depthFormat: 'depth24plus',
 
-  function frame() {
+        // Backface culling since the cube is solid piece of geometry.
+        // Faces pointing away from the camera will be occluded by faces
+        // pointing toward the camera.
+        cullMode: 'back',
+      },
+      attributes: {
+        position: positionBuffer,
+        uv: uvBuffer
+      },
+      bindings: {
+        uniforms: this.uniformBuffer
+      },
+    });
+  }
+
+  destroy() {
+    this.model.destroy();
+    this.uniformBuffer.destroy();
+  }
+
+  frame({device}: AnimationProps) {
+    const projectionMatrix = new Matrix4();
+    const viewMatrix = new Matrix4();
+    const modelViewProjectionMatrix = new Matrix4();
+
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
     projectionMatrix.perspective({fov: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
-    uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
+    this.uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
   
     // device.beginRenderPass();
-    model.draw();
+    this.model.draw();
     device.submit();
-    
-    requestAnimationFrame(frame);
   }
-
-  requestAnimationFrame(frame);
 }
 
 // Create device and run
-(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'})))();
+if (!globalThis.website) {
+  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
+}

@@ -5,15 +5,19 @@ import type {
   Buffer,
   Binding,
   ShaderLayout,
-  PrimitiveTopology
+  PrimitiveTopology,
+  BindingLayout,
+  AttributeLayout
 } from '@luma.gl/api';
-import {RenderPipeline, cast, log} from '@luma.gl/api';
+import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {copyUniform, checkUniformValues} from '../../classes/uniforms';
-import {getShaderLayout, getProgramBindings} from '../helpers/get-program-bindings';
+import { getWebGLDataType } from '../converters/texture-formats';
+// import {copyUniform, checkUniformValues} from '../../classes/uniforms';
+import {getShaderLayout} from '../helpers/get-program-bindings';
 import {withDeviceParameters} from '../converters/device-parameters';
 
-import VertexArray from '../../classes/vertex-array';
+// import VertexArrayObject from '../../classes/vertex-array-object';
+import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
 
 import WebGLDevice from '../webgl-device';
 import WEBGLShader from './webgl-shader';
@@ -33,7 +37,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   // configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
   varyings: string[];
-  vertexArray: VertexArray;
+  vertexArrayObject: WEBGLVertexArrayObject;
   uniforms: Record<string, any> = {};
   bindings: Record<string, any> = {};
   _textureUniforms: Record<string, any> = {};
@@ -66,7 +70,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this._compileAndLink();
 
     this.layout = props.layout || getShaderLayout(this.device.gl, this.handle);
-    this.vertexArray = new VertexArray(this.device.gl);
+    this.vertexArrayObject = new WEBGLVertexArrayObject(this.device);
   }
 
   destroy(): void {
@@ -78,7 +82,17 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
   /** @todo needed for portable model */
   setAttributes(attributes: Record<string, Buffer>): void {
-    this.vertexArray.setAttributes(attributes);
+    for (const [name, buffer] of Object.entries(attributes)) {
+      const webglBuffer = cast<WEBGLBuffer>(buffer);
+      const attribute = getAttributeLayout(this.layout, name);
+      const decoded = decodeVertexFormat(attribute.format);
+      const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
+      const divisor = attribute.stepMode === 'instance' ? 1 : 0;
+      const type = getWebGLDataType(typeString);
+      this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
+        size, type, stride, offset: 0, normalized, integer, divisor: 0
+      });
+    }
   }
 
   /** @todo needed for portable model */
@@ -101,10 +115,14 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
           if (!(value instanceof WEBGLBuffer) && !(value.buffer instanceof WEBGLBuffer)) {
             throw new Error('buffer value');
           }
+          break;
         case 'texture':
           if (!(value instanceof WEBGLTexture)) {
             throw new Error('texture value');
           }
+          break;
+        default:
+          throw new Error(binding.type);
       }
 
       this.bindings[name] = value;
@@ -126,9 +144,13 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       switch (binding.type) {
         case 'uniform':
           // Set buffer
-          const {location} = binding;
-          // const location = gl2.getUniformBlockIndex(this.handle, name);
+          const {name} = binding;
+          const location = gl2.getUniformBlockIndex(this.handle, name);
+          if (location === GL.INVALID_INDEX) {
+            throw new Error(`Invalid uniform block name ${name}`);
+          }
           gl2.uniformBlockBinding(this.handle, uniformBufferIndex, location);
+          // console.debug(binding, location);
           if (value instanceof WEBGLBuffer) {
             gl2.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
@@ -190,7 +212,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     const drawMode = getDrawMode(this.props.topology);
     const isIndexed: boolean = false;
     const indexType = GL.UNSIGNED_INT;
-    const isInstanced: boolean = options.instanceCount !== undefined;
+    const isInstanced: boolean = options.instanceCount > 0;
 
     // Avoid WebGL draw call when not rendering any data or values are incomplete
     // Note: async textures set as uniforms might still be loading.
@@ -203,7 +225,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
     this.device.gl.useProgram(this.handle);
 
-    this.vertexArray.bindForDraw(vertexCount, instanceCount, () => {
+    this.vertexArrayObject.bind(() => {
       const parameters = {...this.props.parameters, framebuffer: renderPass.props.framebuffer};
 
       const primitiveMode = getGLPrimitive(this.props.topology);
@@ -317,4 +339,28 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
   case 'triangle-strip': return GL.TRIANGLES;
   default: throw new Error(topology);
   }
+}
+
+function getAttributesByLocation(attributes: Record<string, Buffer>, layout: ShaderLayout): Record<number, Buffer> {
+  const byLocation: Record<number, Buffer> = {};
+  for (const [name, buffer] of Object.entries(attributes)) {
+    const attribute = getAttributeLayout(layout, name);
+    byLocation[attribute.location] = buffer;
+  }
+  return byLocation;
+}
+
+function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout {
+  const attribute = layout.attributes.find((binding) => binding.name === name);
+  if (!attribute) {
+    throw new Error(`Unknown attribute ${name}`);
+  }
+  return attribute;
+}
+function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
+  const binding = layout.bindings.find((binding) => binding.name === name);
+  if (!binding) {
+    throw new Error(`Unknown binding ${name}`);
+  }
+  return binding;
 }

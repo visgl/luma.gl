@@ -162,7 +162,7 @@ export default class WebGPUTexture extends Texture {
   /*
   async readPixels() {
     const readbackBuffer = device.createBuffer({
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ,
         size: 4 * textureWidth * textureHeight,
     });
 
@@ -207,7 +207,7 @@ export default class WebGPUTexture extends Texture {
   setData(data): this {
     const textureDataBuffer = this.device.handle.createBuffer({
       size: data.byteLength,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC,
       mappedAtCreation: true
     });
     new Uint8Array(textureDataBuffer.getMappedRange()).set(data);

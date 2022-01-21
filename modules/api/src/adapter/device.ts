@@ -52,7 +52,7 @@ export type DeviceProps = {
 
 export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   id: undefined,
-  type: 'webgl', // 'best-available',
+  type: 'best-available',
   canvas: undefined, // A canvas element or a canvas string id
   gl: undefined,
   webgl2: true, // Attempt to create a WebGL2 context
@@ -217,10 +217,10 @@ export default abstract class Device {
   abstract info: DeviceInfo;
 
   /** Optional capability discovery */
-  abstract features: Set<DeviceFeature>;
+  abstract get features(): Set<DeviceFeature>;
 
   /** WebGPU style device limits */
-  abstract limits: DeviceLimits;
+  abstract get limits(): DeviceLimits;
 
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
   abstract isTextureFormatSupported(format: TextureFormat): boolean;

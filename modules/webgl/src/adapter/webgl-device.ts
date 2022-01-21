@@ -76,20 +76,31 @@ let counter = 0;
 
 /** WebGPU style Device API for a WebGL context */
 export default class WebGLDevice extends Device implements ContextState {
-  // WebGPU style API
+  // Public API
 
-  /** A set like interface to test features */
-  readonly features: Set<DeviceFeature>;
-  readonly limits: DeviceLimits;
+  static type: string = 'webgl';
+
+  static isSupported(): boolean {
+    return typeof WebGLRenderingContext !== 'undefined';
+  }
+
   readonly info: DeviceInfo;
-
-  /** Promise that rejects when context is lost */
+  readonly canvasContext: WebGLCanvasContext;
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-
-  // Common API
   readonly handle: WebGLRenderingContext;
 
+  get features(): Set<DeviceFeature> {
+    this._features = this._features || getDeviceFeatures(this.gl);
+    return this._features;
+  }
+
+  get limits(): DeviceLimits {
+    this._limits = this._limits || getDeviceLimits(this.gl);
+    return this._limits;
+  }
+
   // WebGL specific API
+
   readonly gl: WebGLRenderingContext;
   /** WebGL2 context. Can be null. */
   readonly gl2: WebGL2RenderingContext;
@@ -99,28 +110,28 @@ export default class WebGLDevice extends Device implements ContextState {
   /** `true` if this is a WebGL2 context. @note `false` if WebGL1 */
   readonly isWebGL2: boolean;
 
-  readonly webglLimits: WebGLLimits;
+  get webglLimits(): WebGLLimits {
+    this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
+    return this._webglLimits;
+  }
 
-  readonly canvasContext: WebGLCanvasContext;
-
+  /** @deprecated remove */
   defaultFramebuffer?: ClassicFramebuffer;
+  /** @deprecated remove */
   defaultVertexArray?: VertexArrayObject;
 
-  // State used by luma.gl classes
-  _state: 'uninitialized' | 'initializing' | 'initialized' = 'uninitialized';
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-  readonly _extensions: Record<string, any> = {};
-  _polyfilled: boolean = false;
   /** Instance of Spector.js (if initialized) */
   spector;
 
-  // Public API
+  private _features: Set<DeviceFeature>;
+  private _limits: DeviceLimits;
+  private _webglLimits: WebGLLimits;
 
-  static type: string = 'webgl';
-
-  static isSupported(): boolean {
-    return typeof WebGLRenderingContext !== 'undefined';
-  }
+  _state: 'uninitialized' | 'initializing' | 'initialized' = 'uninitialized';
+  /** State used by luma.gl classes */
+  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+  readonly _extensions: Record<string, any> = {};
+  _polyfilled: boolean = false;
 
   /**
    * Get a device instance from a GL context
@@ -155,9 +166,11 @@ export default class WebGLDevice extends Device implements ContextState {
     if (props.debug) {
       // Load webgl debug script if requested
       await loadWebGLDeveloperTools();
+    }
+    // if (props.spector) {
       // Load Spector.js CDN script if requested
       await loadSpectorJS();
-    }
+    // }
 
     log.probe(LOG_LEVEL, 'DOM is loaded')();
     return new WebGLDevice(props);
@@ -209,7 +222,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // @ts-expect-error
     this.gl.device = this;
-    // @ts-ignore
+    // @ts-expect-error
     this.gl._version =
       typeof WebGL2RenderingContext !== 'undefined' && this.gl instanceof WebGL2RenderingContext
         ? 2
@@ -219,25 +232,21 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // Luma Device fields
     this.info = getDeviceInfo(this.gl);
+
     // Log some debug info about the newly created context
     // @ts-expect-error device is attached to context
     const debug = this.gl.debug ? ' debug' : '';
-    const webGL = isWebGL2(this.gl) ? 'WebGL2' : 'WebGL1';
-    log.probe(LOG_LEVEL, `${webGL}${debug} context: ${this.info.vendor}, ${this.info.renderer}`)();
+    const {info} = this;
+    const message = `\
+Created ${info.type}${debug} context: ${info.vendor}, ${info.renderer} for canvas: ${this.canvasContext.id}`;
+    log.probe(LOG_LEVEL, message)();
 
+    // Add subset of WebGL2 methods to WebGL1 context
     polyfillContext(this.gl);
-
     // Install context state tracking
     trackContextState(this.gl, {copyState: false, log: (...args) => log.log(1, ...args)()});
 
-    // WebGPU Device fields
-    this.features = getDeviceFeatures(this.gl);
-    this.limits = getDeviceLimits(this.gl);
-
-    // Add seer integration - TODO - currently removed
-
-    // WEBGL specific fields
-    this.webglLimits = getWebGLLimits(this.gl);
+    // TODO - Add seer integration - currently removed
 
     // DEBUG contexts:  Add debug instrumentation to the context
     if (isBrowser() && props.debug) {
@@ -368,11 +377,6 @@ export default class WebGLDevice extends Device implements ContextState {
   submit(): void {
     this.renderPass.endPass();
     this.renderPass = null;
-    // TODO - move to CanvasContext
-    // gl.commit was ultimately removed??
-    // if (this.offScreen && this.gl.commit) {
-    //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
-    //   this.gl.commit();
-    // }
+    // this.canvasContext.commit();
   }
 }
