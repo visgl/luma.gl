@@ -217,10 +217,10 @@ export default abstract class Device {
   abstract info: DeviceInfo;
 
   /** Optional capability discovery */
-  abstract features: Set<DeviceFeature>;
+  abstract get features(): Set<DeviceFeature>;
 
   /** WebGPU style device limits */
-  abstract limits: DeviceLimits;
+  abstract get limits(): DeviceLimits;
 
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
   abstract isTextureFormatSupported(format: TextureFormat): boolean;

@@ -101,13 +101,13 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.uniformBuffer1 = device.createBuffer({
       id: 'uniforms-1',
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
       byteLength: UNIFORM_BUFFER_SIZE,
     });
 
     this.uniformBuffer2 = device.createBuffer({
       id: 'uniforms-2',
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
       byteLength: UNIFORM_BUFFER_SIZE,
     });
   }

@@ -29,7 +29,7 @@ const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   byteLength: 0,
   data: undefined,
-  usage: undefined, // GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+  usage: undefined, // Buffer.COPY_DST | Buffer.COPY_SRC
   mappedAtCreation: false
 };
 

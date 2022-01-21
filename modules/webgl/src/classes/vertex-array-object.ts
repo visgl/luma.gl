@@ -20,6 +20,7 @@ export type VertexArrayObjectProps = ResourceProps & {
   isDefaultArray?: boolean;
 };
 
+/** @deprecated Use RenderPipeline (public) and WEBGLVertexArrayObject (internal) */
 export default class VertexArrayObject extends WEBGLVertexArrayObject {
   get [Symbol.toStringTag](): string {
     return 'VertexArrayObject';

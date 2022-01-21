@@ -14,6 +14,7 @@ import {withDeviceParameters} from '../adapter/converters/device-parameters';
 import VertexArray from './vertex-array';
 
 import WebGLDevice from '../adapter/webgl-device';
+import WEBGLBuffer from './webgl-buffer';
 import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLTexture from '../adapter/resources/webgl-texture';
@@ -81,12 +82,14 @@ export default class Program extends WEBGLRenderPipeline {
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function>;
   private _parameters: RenderPipelineParameters;
+  private vertexArray: VertexArray;
 
   constructor(device: Device | WebGLRenderingContext, props: ProgramProps) {
     super(WebGLDevice.attach(device), getRenderPipelineProps(WebGLDevice.attach(device), props));
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this._parameters = props.parameters;
+    this.vertexArray = new VertexArray(this.device.gl);
     this.initialize(props);
     Object.seal(this);
     this._setId(props.id);
@@ -138,8 +141,16 @@ export default class Program extends WEBGLRenderPipeline {
     return this;
   }
 
-  // A good thing about the WebGL API is that there are so many ways to draw things ;)
-  // This function unifies those ways into a single call using common parameters with sane defaults
+  /** @note completely overrides base class */
+  setAttributes(attributes: Record<string, WEBGLBuffer>): void {
+    this.vertexArray.setAttributes(attributes);
+  }
+
+  /** 
+   * A good thing about the WebGL API is that there are so many ways to draw things ;)
+   * This function unifies those ways into a single call using common parameters with sane defaults
+   * @note completely overrides base class 
+   */
   draw(options: ProgramDrawOptions): boolean {
     const {
       logPriority, // Probe log priority, enables Model to do more integrated logging

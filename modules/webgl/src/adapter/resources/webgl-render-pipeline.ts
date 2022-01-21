@@ -16,7 +16,8 @@ import { getWebGLDataType } from '../converters/texture-formats';
 import {getShaderLayout} from '../helpers/get-program-bindings';
 import {withDeviceParameters} from '../converters/device-parameters';
 
-import VertexArrayObject from '../../classes/vertex-array-object';
+// import VertexArrayObject from '../../classes/vertex-array-object';
+import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
 
 import WebGLDevice from '../webgl-device';
 import WEBGLShader from './webgl-shader';
@@ -36,7 +37,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   // configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
   varyings: string[];
-  vertexArray: VertexArrayObject;
+  vertexArrayObject: WEBGLVertexArrayObject;
   uniforms: Record<string, any> = {};
   bindings: Record<string, any> = {};
   _textureUniforms: Record<string, any> = {};
@@ -69,7 +70,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this._compileAndLink();
 
     this.layout = props.layout || getShaderLayout(this.device.gl, this.handle);
-    this.vertexArray = new VertexArrayObject(this.device.gl);
+    this.vertexArrayObject = new WEBGLVertexArrayObject(this.device);
   }
 
   destroy(): void {
@@ -88,7 +89,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
       const divisor = attribute.stepMode === 'instance' ? 1 : 0;
       const type = getWebGLDataType(typeString);
-      this.vertexArray.setBuffer(attribute.location, webglBuffer, {
+      this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
         size, type, stride, offset: 0, normalized, integer, divisor: 0
       });
     }
@@ -224,7 +225,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
     this.device.gl.useProgram(this.handle);
 
-    this.vertexArray.bind(() => {
+    this.vertexArrayObject.bind(() => {
       const parameters = {...this.props.parameters, framebuffer: renderPass.props.framebuffer};
 
       const primitiveMode = getGLPrimitive(this.props.topology);

@@ -39,13 +39,15 @@ const PROP_CHECKS_SET_PROPS = {
 };
 
 /** WebGL Buffer interface */
-export type WebGLBufferProps = BufferProps & {
+export type ClassicBufferProps = BufferProps & {
   handle?: WebGLBuffer;
   data?: any; // ArrayBufferView;
   byteLength?: number;
   target?: number;
   usage?: number;
   accessor?: AccessorObject;
+
+  webglUsage?: number;
 
   /** @deprecated */
   index?: number;
@@ -66,6 +68,7 @@ export default class WEBGLBuffer extends Buffer {
 
   target: number;
   usage: number;
+  webglUsage: number;
 
   byteLength: number;
   bytesUsed: number;
@@ -74,7 +77,7 @@ export default class WEBGLBuffer extends Buffer {
 
   debugData;
 
-  constructor(device: Device | WebGLRenderingContext, props?: BufferProps);
+  constructor(device: Device | WebGLRenderingContext, props?: ClassicBufferProps);
   constructor(device: Device | WebGLRenderingContext, data: ArrayBufferView | number[]);
   constructor(device: Device | WebGLRenderingContext, byteLength: number);
 
@@ -100,19 +103,21 @@ export default class WEBGLBuffer extends Buffer {
     // static STORAGE = 0x0080;
     // static INDIRECT = 0x0100;
     // static QUERY_RESOLVE = 0x0200;
+    this.usage = this.props.usage;
 
     if (this.props.usage & Buffer.UNIFORM) {
       // @ts-expect-error
       props.target = GL.UNIFORM_BUFFER;
       // @ts-expect-error
-      props.usage = GL.DYNAMIC_DRAW;
+      props.webglUsage = GL.DYNAMIC_DRAW;
     }
+  
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
     // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     // @ts-expect-error
     this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
-
+  
     this.initialize(props);
 
     Object.seal(this);
@@ -145,7 +150,7 @@ export default class WEBGLBuffer extends Buffer {
   // Signature: `new Buffer(gl, {data: new Float32Array(...)})`
   // Signature: `new Buffer(gl, new Float32Array(...))`
   // Signature: `new Buffer(gl, 100)`
-  initialize(props: BufferProps = {}): this {
+  initialize(props: ClassicBufferProps = {}): this {
     // Signature `new Buffer(gl, new Float32Array(...)`
     if (ArrayBuffer.isView(props)) {
       props = {data: props};
@@ -160,7 +165,7 @@ export default class WEBGLBuffer extends Buffer {
     props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
 
     // Initialize member fields
-    this.usage = props.usage || GL.STATIC_DRAW;
+    this.webglUsage = props.webglUsage || GL.STATIC_DRAW;
     this.debugData = null;
 
     // Deprecated: Merge main props and accessor
@@ -404,7 +409,7 @@ export default class WEBGLBuffer extends Buffer {
 
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, byteLength, this.usage);
+    this.gl.bufferData(target, byteLength, this.webglUsage);
     this.gl.bufferSubData(target, offset, data);
     this.gl.bindBuffer(target, null);
 
@@ -421,7 +426,7 @@ export default class WEBGLBuffer extends Buffer {
   }
 
   // Allocate a GPU buffer of specified size.
-  _setByteLength(byteLength: number, usage = this.usage): this {
+  _setByteLength(byteLength: number, webglUsage = this.webglUsage): this {
     assert(byteLength >= 0);
 
     this.trackDeallocatedMemory();
@@ -436,10 +441,10 @@ export default class WEBGLBuffer extends Buffer {
 
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, data, usage);
+    this.gl.bufferData(target, data, webglUsage);
     this.gl.bindBuffer(target, null);
 
-    this.usage = usage;
+    this.webglUsage = webglUsage;
     this.debugData = null;
     this.bytesUsed = byteLength;
     this.byteLength = byteLength;

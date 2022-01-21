@@ -30,7 +30,7 @@ const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
 
 const WEBGL2_ONLY_FEATURES: DeviceFeature[] = ['webgl2', 'texture-renderable-float32-webgl'];
 
-test('WebGLDevice#features (unknown)', (t) => {
+test('WebGLDevice#features (query for unknown features)', (t) => {
   // @ts-expect-error
   t.notOk(webgl1TestDevice.features.has('unknown'), 'features.has should return false');
   // @ts-expect-error
