@@ -1,5 +1,5 @@
 import {luma, Device, Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
-import {ModelV2 as Model, CubeGeometry} from '@luma.gl/engine';
+import {ModelV2 as Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -8,8 +8,28 @@ export const description = 'Shows usage of multiple uniform buffers.';
 
 /** TODO - Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  wgsl: {
-    vertex: `
+  vs: {
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform uniforms {
+  mat4 modelViewProjectionMatrix[16];
+};
+
+layout(location=0) in vec3 position;
+layout(location=1) in vec2 uv;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = modelViewProjectionMatrix[gl_InstanceID] * vec4(position, 1.0);
+  fragUV = uv;
+  fragPosition = vec4(position, 1.);
+}
+    `,
+    wgsl: `
 struct Uniforms {
   modelViewProjectionMatrix : [[stride(64)]] array<mat4x4<f32>, 16>;
 };
@@ -32,8 +52,23 @@ fn main([[builtin(instance_index)]] instanceIdx : u32,
   output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return output;
 }
+    `
+  },
+  fs: {
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+}
     `,
-    fragment: `
+    wgsl: `
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
@@ -72,53 +107,57 @@ const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   cullMode: 'back',
 };
 
-export function init(device: Device, language: 'glsl' | 'wgsl') {
-  // Create vertex buffers for the cube data.
-  const cube = new CubeGeometry({indices: false});
-  const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
-  const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
+export default class AppRenderLoop extends RenderLoop {
+  cubeModel: Model;
+  uniformBuffer: Buffer;
 
-  const uniformBuffer = device.createBuffer({
-    id: 'uniforms',
-    usage: Buffer.UNIFORM | Buffer.COPY_DST,
-    byteLength: UNIFORM_BUFFER_SIZE,
-  });
+  constructor({device}: AnimationProps) {
+    super();
+    // Create vertex buffers for the cube data.
+    const cube = new CubeGeometry({indices: false});
+    const positionBuffer = device.createBuffer({id: 'cube-positions', data: cube.attributes.POSITION.value});
+    const uvBuffer = device.createBuffer({id: 'cube-uvs', data: cube.attributes.TEXCOORD_0.value});
 
-  const cubeModel = new Model(device, {
-    id: 'cube',
-    vs: SHADERS[language].vertex,
-    fs: SHADERS[language].fragment,
-    topology: 'triangle-list',
-    layout: CUBE_ATTRIBUTE_LAYOUTS,
-    attributes: {
-      position: positionBuffer,
-      uv: uvBuffer
-    },
-    bindings: {uniforms: uniformBuffer},
-    vertexCount: cube.vertexCount,
-    instanceCount: NUMBER_OF_INSTANCES,
-    parameters: CUBE_RENDER_PARAMETERS
-  });
+    this.uniformBuffer = device.createBuffer({
+      id: 'uniforms',
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      byteLength: UNIFORM_BUFFER_SIZE,
+    });
 
-  const projectionMatrix = new Matrix4();
+    this.cubeModel = new Model(device, {
+      id: 'cube',
+      vs: SHADERS.vs,
+      fs: SHADERS.fs,
+      topology: 'triangle-list',
+      layout: CUBE_ATTRIBUTE_LAYOUTS,
+      attributes: {
+        position: positionBuffer,
+        uv: uvBuffer
+      },
+      bindings: {
+        uniforms: this.uniformBuffer
+      },
+      vertexCount: cube.vertexCount,
+      instanceCount: NUMBER_OF_INSTANCES,
+      parameters: CUBE_RENDER_PARAMETERS
+    });
 
-  function frame() {
+  }
+
+  frame({device}: AnimationProps) {
+    const projectionMatrix = new Matrix4();
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
     projectionMatrix.perspective({fov: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
 
     const mvpMatrices = getMVPMatrixArray(projectionMatrix, now);
-    uniformBuffer.write(mvpMatrices);
+    this.uniformBuffer.write(mvpMatrices);
 
     // device.beginRenderPass();
-    cubeModel.draw();
+    this.cubeModel.draw();
     device.submit();
-
-    requestAnimationFrame(frame);
   }
-
-  requestAnimationFrame(frame);
 }
 
 // Initialize the matrix data for every instance.
@@ -156,4 +195,6 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
 }
 
 // Create device and run
-(async () => init(await luma.createDevice({type: 'webgpu', canvas: 'canvas'}), 'wgsl'))();
+if (!globalThis.website) {
+  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
+}

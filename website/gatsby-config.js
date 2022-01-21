@@ -236,7 +236,7 @@ module.exports = {
               __dirname,
               './templates/webgl/example-hello-instancing-webgl.jsx'
             ),
-            path: 'examples/webgl/hello-instancing-webgl',
+            path: 'examples/webgl/hello-instancing-webgl/',
             image: 'images/example-hello-instancing.png'
           },
           {
@@ -246,31 +246,52 @@ module.exports = {
               __dirname,
               './templates/webgl/example-shader-modules-webgl.jsx'
             ),
-            path: 'examples/webgl/shader-modules-webgl',
+            path: 'examples/webgl/shader-modules-webgl/',
             image: 'images/example-shader-hooks.jpg'
           },
           {
             category: 'WebGL',
             title: 'External Context',
             componentUrl: resolve(__dirname, './templates/webgl/example-external-webgl-context.jsx'),
-            path: 'examples/webgl/external-webgl-context',
+            path: 'examples/webgl/external-webgl-context/',
             image: 'images/example-hello-triangle.png'
           },
           {
             category: 'WebGPU',
             title: 'Hello Triangle - Shader Geometry',
             componentUrl: resolve(__dirname, './templates/webgpu/example-hello-triangle-webgpu.jsx'),
-            path: 'examples/webgpu/hello-triangle',
+            path: 'examples/webgpu/hello-triangle/',
             image: 'images/example-hello-triangle.png'
           },
           {
             category: 'WebGPU',
-            title: 'Rotating Cube - Shader Geometry',
+            title: 'Rotating Cube - Uniform Buffer',
             componentUrl: resolve(__dirname, './templates/webgpu/example-rotating-cube-webgpu.jsx'),
-            path: 'examples/webgpu/rotating-cube',
-            image: 'images/example-rotating-cube.png'
+            path: 'examples/webgpu/rotating-cube/',
+            image: 'images/example-hello-triangle.png'
+          },
+          {
+            category: 'WebGPU',
+            title: 'Two Rotating Cubes - One Model, two Uniform Buffers',
+            componentUrl: resolve(__dirname, './templates/webgpu/example-two-cubes-webgpu.jsx'),
+            path: 'examples/webgpu/two-cubes/',
+            image: 'images/example-hello-triangle.png'
+          },
+          {
+            category: 'WebGPU',
+            title: 'Instanced Cubes',
+            componentUrl: resolve(__dirname, './templates/webgpu/example-instanced-cubes-webgpu.jsx'),
+            path: 'examples/webgpu/instanced-cubes/',
+            image: 'images/example-hello-triangle.png'
+          },
+          {
+            category: 'WebGPU',
+            title: 'Textured Cube',
+            componentUrl: resolve(__dirname, './templates/webgpu/example-textured-cube-webgpu.jsx'),
+            path: 'examples/getting-started/lighting/',
+            image: 'images/example-hello-triangle.png'
           }
-        ]      
+        ]
       }
     },
     {

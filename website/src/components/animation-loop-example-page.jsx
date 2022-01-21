@@ -52,18 +52,23 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
-    // Render loop
-    if ('run' in this.props.AnimationLoop) {
-      this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
-    } else {
-      this.animationLoop = new this.props.AnimationLoop(props);
+    try {
+      // Render loop
+      if ('run' in this.props.AnimationLoop) {
+        this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
+      } else {
+        this.animationLoop = new this.props.AnimationLoop(props);
+      }
+    } catch (error) {
+      this.setState({error});
     }
     this.state = {
-      supported: true
+      supported: true,
+      error: null
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     if (!this.state.supported) {
       return;
     }
@@ -83,13 +88,16 @@ export default class AnimationLoopExamplePage extends Component {
     }
 
     // Start the actual example
-    this.animationLoop.start();
-
-    this.animationLoop.waitForRender().then(() => {
+    try {
+      await this.animationLoop.start();
+      await this.animationLoop.waitForRender();
       if (this.animationLoop.demoNotSupported) {
         this.setState({supported: false});
       }
-    });
+    } catch (error) {
+      this.setState({error});
+    }
+
 
     // animationLoop.stats.reset();
 
@@ -195,6 +203,7 @@ export default class AnimationLoopExamplePage extends Component {
         {panel && (
           <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`}>
             <div dangerouslySetInnerHTML={{__html: controls}} />
+            { this.state.error ? (<div> <b style={{color: 'red'}}> This sample failed to render: {this.state.error.message} </b></div>) : (<></>)}
           </InfoPanel>
         )}
       </div>

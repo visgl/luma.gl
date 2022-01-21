@@ -5,8 +5,6 @@ import Highlight, {defaultProps} from 'prism-react-renderer';
 import theme from './prism-themes/github';
 import './code.css';
 
-import './code.css';
-
 // Install additional languages
 import Prism from 'prism-react-renderer/prism';
 (typeof global !== 'undefined' ? global : window).Prism = Prism;

@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {luma, Device, ShaderLayout, RenderPipelineParameters, Buffer} from '@luma.gl/api';
+import {ShaderLayout, RenderPipelineParameters, Buffer} from '@luma.gl/api';
 import {ModelV2 as Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -10,7 +10,26 @@ export const description = 'Shows usage of multiple uniform buffers.';
 /** Provide both GLSL and WGSL shaders */
 const SHADERS = {
   vs: {
-    glsl: ``,
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform uniforms {
+  mat4 modelViewProjectionMatrix;
+};
+
+layout(location=0) in vec3 position;
+layout(location=1) in vec2 uv;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);
+  fragUV = uv;
+  fragPosition = vec4(position, 1.);
+}
+    `,
     wgsl: `
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
@@ -35,8 +54,20 @@ fn main([[location(0)]] position : vec4<f32>,
         `
 },
 fs: {
-  glsl: ``,
-  wgsl: `
+  glsl: `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+}
+    `,
+    wgsl: `
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
@@ -118,7 +149,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.uniformBuffer2.destroy();
   }
 
-  render({device}: AnimationProps) {
+  frame({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();
@@ -146,5 +177,5 @@ export default class AppRenderLoop extends RenderLoop {
 }
 
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
+  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'}).start();
 }
