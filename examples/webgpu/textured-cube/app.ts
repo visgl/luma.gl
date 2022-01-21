@@ -9,7 +9,27 @@ export const description = 'Shows rendering a basic triangle.';
 /** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
   vs: {
-    glsl: ``,
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform uniforms {
+  mat4 modelViewProjectionMatrix;
+};
+
+layout(location=0) in vec3 position;
+layout(location=1) in vec2 uv;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);
+  fragUV = uv;
+  fragPosition = vec4(position, 1.);
+  // fragPosition = 0.5 * (vec4(position, 1.) + vec4(1., 1., 1., 1.));
+}
+    `,
     wgsl: `
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
@@ -33,7 +53,21 @@ fn main([[location(0)]] position : vec4<f32>,
 }        `
   },
   fs: {
-    glsl: ``,
+    glsl: `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+in vec2 fragUV;
+in vec4 fragPosition;
+
+uniform sampler2D uTexture;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));;
+}
+  `,
     wgsl: `
 [[group(0), binding(1)]] var mySampler: sampler;
 [[group(0), binding(2)]] var myTexture: texture_2d<f32>;
@@ -70,10 +104,10 @@ export default class AppRenderLoop extends RenderLoop {
     super();
     // Fetch the image and upload it into a GPUTexture.
     const cubeTexture = device.createTexture({
-      data: loadImageBitmap('./vis-logo.png'),
+      data: loadImageBitmap('vis-logo.png'),
       usage: Texture.TEXTURE_BINDING | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
-      sampler: {magFilter: 'linear', minFilter: 'linear'} // linear filtering for smooth interpolation.
-      // mipmaps: true // Create mipmaps
+      sampler: {magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge'}, // linear filtering for smooth interpolation.
+      mipmaps: true // Create mipmaps
     });
 
     // Create vertex buffers for the cube data.
@@ -102,7 +136,7 @@ export default class AppRenderLoop extends RenderLoop {
       },
       bindings: {
         uniforms: this.uniformBuffer,
-        sampler: cubeTexture.sampler,
+        sampler: cubeTexture.sampler || cubeTexture,
         texture: cubeTexture
       },
       parameters: {
@@ -125,7 +159,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.uniformBuffer.destroy();
   }
 
-  render({device}: AnimationProps) {
+  frame({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();

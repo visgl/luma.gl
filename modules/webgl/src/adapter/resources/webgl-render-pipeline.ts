@@ -121,6 +121,9 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
             throw new Error('texture value');
           }
           break;
+        case 'sampler':
+          log.warn(`Ignoring sampler ${name}`)();
+          break;
         default:
           throw new Error(binding.type);
       }
@@ -177,6 +180,9 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
           break;
 
         case 'sampler':
+          // ignore
+          break;
+
         case 'storage':
         case 'read-only-storage':
           throw new Error(`binding type '${binding.type}' not supported in WebGL`);
@@ -303,10 +309,16 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   _areTexturesRenderable() {
     let texturesRenderable = true;
 
-    for (const uniformName in this._textureUniforms) {
-      const texture = this._textureUniforms[uniformName];
+    for (const [name, texture] of Object.entries(this._textureUniforms)) {
       texture.update();
       texturesRenderable = texturesRenderable && texture.loaded;
+    }
+
+    for (const [name, texture] of Object.entries(this.bindings)) {
+      // texture.update();
+      if (texture.loaded !== undefined) {
+        texturesRenderable = texturesRenderable && texture.loaded;
+      }
     }
 
     return texturesRenderable;

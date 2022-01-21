@@ -138,13 +138,8 @@ export default class AnimationLoop {
     return this;
   }
 
-  start(opts = {}) {
-    this._start();
-    return this;
-  }
-
   /** Starts a render loop if not already running */
-  async _start() {
+  async start() {
     if (this._running) {
       return this;
     }
@@ -185,10 +180,11 @@ export default class AnimationLoop {
       }
 
       return this;
-    } catch (error: unknown) {
-      this.props.onError(error instanceof Error ? error : new Error('Unknown error'));
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error')
+      this.props.onError(error);
       // this._running = false; // TODO
-      return null;
+      throw error;
     }
   }
 
