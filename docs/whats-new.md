@@ -1,27 +1,30 @@
 # What's New
 
-## Version 8.7
+## Version 9.0
 
-Target Date: Early Q1, 2022
+Target Date: Q1, 2022
 
-The 8.7 release represents a major internal refactor of luma.gl to prepare for WebGPU introduction.
-While it should remain highly compatible with 8.X, a range of APIs are now deprecated and it is a good
-time to consult the upgrade guide to start updating your code in anticipation of the upcoming 9.0 release.
+The v9.0 release adds WebGPU support and a refreshed luma.gl API. While the changes under the hood are quite extensive,
+luma.gl v9.0 should remain compatible with luma.gl 8.x. In addition, a range of APIs are now deprecated and it is recommended
+to consult the upgrade guide before upgrading your applications.
 
-#### `@luma.gl/api` (NEW)
+The luma.gl documentation has been overhauled to focus on the new API. The classic API documentation is still available.
 
-- The next generation, cross-platform luma.gl API (supporting both WebGPU and WebGL2) is being prototyped in the `@luma.gl/api` module. The API is not frozen and some smaller changes are expected, however it is possible for early adopters to start using the new API.
+#### `@luma.gl/api` (new module)
 
-#### `@luma.gl/webgpu` (NEW)
+- The new cross-platform luma.gl API is exposed through `@luma.gl/api` module. Applications written against this API can run on both WebGPU and WebGL2 devices.
 
-- A partial WebGPU implementation of the new luma.gl API (`@luma.gl/api`). For "early adopters" only. Still in development and not considered production ready.
+#### `@luma.gl/webgpu` (new module)
+
+- Provides a WebGPU implementation of the luma.gl API (`@luma.gl/api`). Importing this module enables the application to create `Device`s of type `'webgpu'`. 
 
 #### `@luma.gl/webgl`
 
-- WebGL classes can now be created through the `@luma.gl/api` `Device` interface.
-- Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`. They no longer need to be bundled.
-- Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `inspect: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
-- TypeScript: the public API is more strongly typed.
+- Provides a WebGL / WebGL 2 implementation of the luma.gl API (`@luma.gl/api`). Importing this module enables the application to create `Device`s of type `'webgpu'`. 
+- The "classic" WebGL classes can still be imported directly from this module.
+- TypeScript: the webgl module is more strongly typed.
+- Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
+- Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured", and luma.gl API metadata will exposed to the Spector UI.
 
 #### `@luma.gl/shadertools`
 
@@ -31,14 +34,13 @@ time to consult the upgrade guide to start updating your code in anticipation of
 
 - `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
 
-#### `@luma.gl/gltools` (Deprecated)
+#### `@luma.gl/core`
 
-- The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module to facilitate refactoring the WebGL API to match the new `@luma.gl/api`.
+- Re-exports of symbols from other luma.gl modules has been deprecated.
 
+#### `@luma.gl/gltools` (deprecated)
 
-## Version 8.6
-
-No change from 8.5
+- The `@luma.gl/gltools` module is deprecated. WebGL context related code has been moved into the `@luma.gl/webgl` module and the `WebGLDevice` class.
 
 ## Version 8.5
 

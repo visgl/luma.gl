@@ -1,12 +1,12 @@
 # Introduction
 
 <span />This is the luma.gl documentation, covering
-<a href="https://github.com/visgl/luma.gl/blob/8.5-release/docs">
-  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/v-8.5-brightgreen.svg?style=flat-square" />
+<a href="https://github.com/visgl/luma.gl/blob/master/docs">
+  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/v-9.0-brightgreen.svg?style=flat-square" />
 </a>
 <span />Looking for an older version?
-<a href="https://github.com/visgl/luma.gl/blob/8.4-release/docs">
-  <img src="https://img.shields.io/badge/v-8.4-green.svg?style=flat-square" />
+<a href="https://github.com/visgl/luma.gl/blob/8.5-release/docs">
+  <img src="https://img.shields.io/badge/v-8.5-green.svg?style=flat-square" />
 </a>
 <a href="https://github.com/visgl/luma.gl/blob/7.3-release/docs">
   <img src="https://img.shields.io/badge/v-7.3-green.svg?style=flat-square" />
