@@ -12,7 +12,7 @@ Development of luma.gl v9.0 is still ongoing however a number of expected change
 - `clear` can no longer be called directly. Clear colors must be set on framebuffers.
 - Uniform buffers are required, at least if WebGPU support is desired.
 
-## Upgrading from v8.5 to v8.7
+### Deprecations
 
 v8.7 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
 
