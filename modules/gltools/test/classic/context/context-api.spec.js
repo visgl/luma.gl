@@ -1,13 +1,8 @@
 import test from 'tape-promise/tape';
 import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 
-import {
-  getContextDebugInfo,
-  isWebGL,
-  isWebGL2,
-  resizeGLContext,
-  getWebGLDevice
-} from '@luma.gl/webgl';
+import {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} from '@luma.gl/gltools';
+import {getWebGLDevice} from '@luma.gl/webgl';
 
 const gl1 = webgl1TestDevice.gl;
 const gl2 = webgl2TestDevice?.gl2;

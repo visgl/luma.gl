@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {TransformFeedback, Buffer} from '@luma.gl/webgl';
+import {TransformFeedback, Buffer} from '@luma.gl/gltools';
 // TODO - tests shouldn't depend on higher level module?
 import {Model} from '@luma.gl/core';
 import test from 'tape-promise/tape';

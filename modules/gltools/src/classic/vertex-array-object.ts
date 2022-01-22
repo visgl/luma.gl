@@ -1,12 +1,11 @@
 import type {NumberArray} from '@luma.gl/api';
-import {assert, getScratchArray, fillArray} from '@luma.gl/api';
+import {assert, getScratchArray, fillArray, ResourceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
-import WebGLDevice from '../adapter/webgl-device';
-import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
+import {WebGLDevice} from '@luma.gl/webgl';
+import {assertWebGL2Context, isWebGL2} from '@luma.gl/webgl';
 import Program from './program';
-import {ResourceProps} from '../adapter/objects/webgl-resource';
-import WEBGLVertexArrayObject from '../adapter/objects/webgl-vertex-array-object';
+import {WEBGLVertexArrayObject} from '@luma.gl/webgl';
 import Buffer from './buffer';
 
 /**

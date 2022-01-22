@@ -1,10 +1,11 @@
 // eslint-disable-next-line import/no-unresolved
 // import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
-import {Device} from '@luma.gl/api';
+import {Device, log, lumaStats} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
-import {clear, log, lumaStats} from '@luma.gl/webgl';
+import {clear} from '@luma.gl/gltools';
+
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Matrix4, radians} from '@math.gl/core';

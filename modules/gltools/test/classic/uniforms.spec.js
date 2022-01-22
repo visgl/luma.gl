@@ -1,14 +1,14 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-promise/tape';
 import {Texture} from '@luma.gl/api';
-import {Program, Texture2D} from '@luma.gl/webgl';
+import {Program, Texture2D} from '@luma.gl/gltools';
 import {isBrowser} from '@probe.gl/env';
 import {equals} from '@math.gl/core';
 import {
   checkUniformValues,
   parseUniformName,
   getUniformSetter
-} from '@luma.gl/webgl/classic/uniforms';
+} from '@luma.gl/gltools/classic/uniforms';
 
 import {fixture} from 'test/setup';
 

@@ -1,8 +1,7 @@
 /* eslint-disable no-inline-comments */
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../adapter/webgl-device';
-import type {RenderbufferProps} from '../adapter/objects/webgl-renderbuffer';
-import WEBGLRenderbuffer from '../adapter/objects/webgl-renderbuffer';
+import type {RenderbufferProps} from '@luma.gl/webgl';
+import {WebGLDevice, WEBGLRenderbuffer} from '@luma.gl/webgl';
 
 export type {RenderbufferProps}
 

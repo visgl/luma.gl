@@ -31,7 +31,7 @@ export {
 
 // WEBGL - importing from `@luma.gl/core` is deprecated
 
-// GLTOOLS - Already marked as deprecated at source
+// GLTOOLS
 export {
   createGLContext,
   instrumentGLContext,
@@ -44,74 +44,29 @@ import {
   lumaStats as lumaStatsDeprecated
 } from '@luma.gl/api';
 
-import {
-  isWebGL as isWebGLDeprecated,
-  isWebGL2 as isWebGL2Deprecated,
-  getParameters as getParametersDeprecated,
-  setParameters as setParametersDeprecated,
-  withParameters as withParametersDeprecated,
-  resetParameters as resetParametersDeprecated,
-  cssToDeviceRatio as cssToDeviceRatioDeprecated,
-  cssToDevicePixels as cssToDevicePixelsDeprecated,
-  Buffer as BufferDeprecated,
-  Program as ProgramDeprecated,
-  Framebuffer as FramebufferDeprecated,
-  Renderbuffer as RenderbufferDeprecated,
-  Texture2D as Texture2DDeprecated,
-  TextureCube as TextureCubeDeprecated,
-  clear as clearDeprecated,
-  readPixelsToArray as readPixelsToArrayDeprecated,
-  readPixelsToBuffer as readPixelsToBufferDeprecated,
-  cloneTextureFrom as cloneTextureFromDeprecated,
-  copyToTexture as copyToTextureDeprecated,
-  Texture3D as Texture3DDeprecated,
-  TransformFeedback as TransformFeedbackDeprecated
+export {
+  isWebGL,
+  isWebGL2,
+  getParameters,
+  setParameters,
+  withParameters,
+  resetParameters,
+  cssToDeviceRatio,
+  cssToDevicePixels,
+  Buffer,
+  Program,
+  Framebuffer,
+  Renderbuffer,
+  Texture2D,
+  TextureCube,
+  clear,
+  readPixelsToArray,
+  readPixelsToBuffer,
+  cloneTextureFrom,
+  copyToTexture,
+  Texture3D,
+  TransformFeedback
 } from '@luma.gl/gltools';
-
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const isWebGL = isWebGLDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const isWebGL2 = isWebGL2Deprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const getParameters = getParametersDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const setParameters = setParametersDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const withParameters = withParametersDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const resetParameters = resetParametersDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const cssToDeviceRatio = cssToDeviceRatioDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const cssToDevicePixels = cssToDevicePixelsDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const lumaStats = lumaStatsDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Buffer = BufferDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Program = ProgramDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Framebuffer = FramebufferDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Renderbuffer = RenderbufferDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Texture2D = Texture2DDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const TextureCube = TextureCubeDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const clear = clearDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const readPixelsToArray = readPixelsToArrayDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const readPixelsToBuffer = readPixelsToBufferDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const cloneTextureFrom = cloneTextureFromDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const copyToTexture = copyToTextureDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const Texture3D = Texture3DDeprecated;
-/** @deprecated Import directly from `@luma.gl/webgl` */
-export const TransformFeedback = TransformFeedbackDeprecated;
 
 // SHADERTOOLS - importing from `@luma.gl/core` is deprecated
 

@@ -1,6 +1,6 @@
 import GL from '@luma.gl/constants';
 
-import {cloneTextureFrom, readPixelsToArray, Buffer, Texture2D, Framebuffer} from '@luma.gl/webgl';
+import {cloneTextureFrom, readPixelsToArray, Buffer, Texture2D, Framebuffer} from '@luma.gl/gltools';
 
 import {
   _transform as transformModule,

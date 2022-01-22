@@ -11,13 +11,31 @@ import './init'
 export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
 export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
-// WebGL Functions
-export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
-
 // Legacy WebGL Classes - will be moved to gltools
 export {default as Accessor} from './classic/accessor';
 export type {ClassicBufferProps as BufferProps} from './classic/buffer';
 export {default as Buffer} from './classic/buffer';
+export {default as WEBGLResource, default as WebGLResource} from './adapter/objects/webgl-resource';
+export {default as WEBGLBuffer} from './adapter/resources/webgl-buffer';
+export {default as WEBGLTexture} from './adapter/resources/webgl-texture';
+// export {default as WEBGLExternalTexture} from './adapter/resources/webgl-external-texture';
+export {default as WEBGLShader} from './adapter/resources/webgl-shader';
+export {default as WEBGLSampler} from './adapter/resources/webgl-sampler';
+export {default as WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
+
+export {default as WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
+
+// export {default as WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
+export {default as WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
+export {default as WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
+//export {default as WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
+
+export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
+export {default as WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
+export {default as WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
+
+// WebGL Functions
+export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 
 export {
   isWebGL,
@@ -59,9 +77,3 @@ export {polyfillContext} from './context/polyfill/polyfill-context';
 export {getProgramBindings} from './adapter/helpers/get-program-bindings';
 export {loadWebGLDeveloperTools} from './debug/webgl-developer-tools';
 export {_checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
-
-
-// Deprecated re-exports
-// export {lumaStats} from '@luma.gl/api';
-// export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
-// export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';

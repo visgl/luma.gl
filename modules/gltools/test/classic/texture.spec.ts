@@ -4,8 +4,8 @@ import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '@luma.gl/webgl';
-import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/gltools';
+import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/gltools';
 
 type WebGLTextureInfo = {
   dataFormat: number;

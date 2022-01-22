@@ -1,5 +1,5 @@
 import GL from '@luma.gl/constants';
-import {Buffer, isWebGL} from '@luma.gl/webgl';
+import {Buffer, isWebGL} from '@luma.gl/gltools';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';

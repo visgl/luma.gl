@@ -1,15 +1,17 @@
 import type {FramebufferProps, ColorAttachment} from '@luma.gl/api';
 import {Device, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../adapter/webgl-device';
-import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
+import {getWebGL2Context, assertWebGL2Context} from '@luma.gl/webgl';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
-// import Texture2D from './texture-2d';
+import Texture from './texture';
 // import {copyToDataUrl} from './copy-and-blit';
 
-import WEBGLFramebuffer, {Attachment} from '../adapter/resources/webgl-framebuffer';
+import {WebGLDevice, WEBGLFramebuffer} from '@luma.gl/webgl';
+
+export type TextureAttachment = [Texture, number?, number?];
+export type Attachment = WebGLTexture | Renderbuffer | TextureAttachment;
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 

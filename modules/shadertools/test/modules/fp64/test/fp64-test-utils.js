@@ -4,7 +4,7 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
-import {Buffer, Program} from '@luma.gl/webgl';
+import {Buffer, Program} from '@luma.gl/gltools';
 import {assembleShaders, fp64} from '@luma.gl/shadertools';
 import {
   initializeGL,

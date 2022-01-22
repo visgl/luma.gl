@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {Framebuffer, Renderbuffer, Texture2D} from '@luma.gl/webgl';
+import {Framebuffer, Renderbuffer, Texture2D} from '@luma.gl/gltools';
 import {fixture} from 'test/setup';
 
 const TEST_CASES = [
@@ -187,7 +187,7 @@ test('WebGL1#Framebuffer resize', (t) => {
 });
 /*
 
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/texture-formats';
+import {TEXTURE_FORMATS} from '@luma.gl/gltools/texture-formats';
 
 const RGB_TO = {
   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],

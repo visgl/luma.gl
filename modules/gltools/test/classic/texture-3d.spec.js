@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
-import {Texture3D} from '@luma.gl/webgl';
-// import {Buffer} from '@luma.gl/webgl';
+import {Texture3D} from '@luma.gl/gltools';
+// import {Buffer} from '@luma.gl/gltools';
 
 import {fixture} from 'test/setup';
 

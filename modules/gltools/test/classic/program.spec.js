@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {Program, Buffer, VertexArray} from '@luma.gl/webgl';
+import {Program, Buffer, VertexArray} from '@luma.gl/gltools';
 
 import {fixture} from 'test/setup';
 

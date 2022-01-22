@@ -3,9 +3,8 @@ import GL from '@luma.gl/constants';
 import Accessor from './accessor';
 import Program from './program';
 import ProgramConfiguration from './program-configuration';
-import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
-import ClassicBuffer from './buffer';
-import WEBGLBuffer from '../adapter/resources/webgl-buffer';
+import VertexArrayObject from './vertex-array-object';
+import {Buffer as ClassicBuffer, WEBGLBuffer} from '@luma.gl/webgl';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';

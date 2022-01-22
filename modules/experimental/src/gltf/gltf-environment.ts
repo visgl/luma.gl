@@ -1,6 +1,7 @@
 import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {WebGLDevice, Texture2D, TextureCube} from '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
+import {Texture2D, TextureCube} from '@luma.gl/gltools';
 import {loadImage} from '@loaders.gl/images';
 
 

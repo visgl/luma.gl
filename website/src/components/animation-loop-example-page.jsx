@@ -1,8 +1,8 @@
 import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types';
+import {setPathPrefix} from '@luma.gl/api';
 import {lumaStats} from '@luma.gl/core';
 import {RenderLoop} from '@luma.gl/engine';
-import {setPathPrefix} from '@luma.gl/webgl';
 // import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';

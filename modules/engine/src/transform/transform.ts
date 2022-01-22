@@ -1,8 +1,8 @@
-import {Device, assert} from '@luma.gl/api';
+import {Device, assert, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import type {Framebuffer, Buffer} from '@luma.gl/webgl';
-import {WebGLDevice, isObjectEmpty} from '@luma.gl/webgl';
+import type {Framebuffer, Buffer} from '@luma.gl/gltools';
+import {WebGLDevice} from '@luma.gl/webgl';
 
 import Model from '../lib-classic/classic-model';
 import BufferTransform from './buffer-transform';

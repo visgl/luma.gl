@@ -5,7 +5,7 @@ import {webgl1TestDevice, webgl2TestDevice, getTestDevices} from '@luma.gl/test-
 
 import {Device, Texture, TextureFormat, cast} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {Buffer, getKey, isWebGL2, readPixelsToArray} from '@luma.gl/webgl';
+import {Buffer, getKey, isWebGL2, readPixelsToArray} from '@luma.gl/gltools';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './webgl-sampler.spec';

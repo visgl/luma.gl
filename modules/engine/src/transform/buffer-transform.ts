@@ -1,5 +1,6 @@
 import {assert} from '@luma.gl/api';
-import {Buffer, TransformFeedback, isWebGL2} from '@luma.gl/webgl';
+import {Buffer, TransformFeedback} from '@luma.gl/gltools';
+import {isWebGL2} from '@luma.gl/webgl';
 import type {TransformProps, TransformDrawOptions, TransformRunOptions, TransformBinding} from './transform-types';
 
 // import {TransformDrawOptions, TransformModelProps} from './resource-transform';

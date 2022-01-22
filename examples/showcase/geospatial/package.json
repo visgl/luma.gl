@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@luma.gl/engine": "8.6.0-alpha.5",
+    "@luma.gl/gltools": "8.6.0-alpha.5",
     "@luma.gl/webgl": "8.6.0-alpha.5",
     "mapbox-gl": "^1.2.1"
   },

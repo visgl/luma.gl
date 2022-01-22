@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {UniformBufferLayout, Buffer, Program} from '@luma.gl/webgl';
+import {UniformBufferLayout, Buffer, Program} from '@luma.gl/gltools';
 // TODO - tests shouldn't depend on higher level module?
 import {Transform} from '@luma.gl/engine';
 import {fixture} from 'test/setup';

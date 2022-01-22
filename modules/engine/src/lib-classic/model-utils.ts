@@ -1,5 +1,6 @@
+import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {Buffer, assert} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/webgl';
 
 // Support for mapping new geometries with glTF attribute names to "classic" luma.gl shader names
 const GLTF_TO_LUMA_ATTRIBUTE_MAP = {

@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
 import {createTestDevice, webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
-import {isWebGL, isWebGL2} from '@luma.gl/webgl';
+import {isWebGL, isWebGL2} from '@luma.gl/gltools';
 
 const webgl1Device = webgl1TestDevice;
 const webgl2Device = webgl2TestDevice;

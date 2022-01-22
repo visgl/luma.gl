@@ -1,26 +1,19 @@
 // luma.gl, MIT license
 import type {RenderPipelineParameters, Shader} from '@luma.gl/api';
-import {Device} from '@luma.gl/api';
+import {Device, log, isObjectEmpty, uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type {ProgramProps} from '@luma.gl/webgl';
+import type {ProgramProps} from '@luma.gl/gltools';
+import {WebGLDevice, withDeviceParameters} from '@luma.gl/webgl';
 import {
-  WebGLDevice,
   Program,
   VertexArray,
   clear,
   TransformFeedback,
   Buffer,
-  log,
-  isObjectEmpty,
-  uid,
-  assert,
-  withDeviceParameters
-} from '@luma.gl/webgl';
-import {
   getDebugTableForUniforms,
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
-} from '@luma.gl/webgl';
+} from '@luma.gl/gltools';
 import ProgramManager from './program-manager';
 import {getBuffersFromGeometry} from './model-utils';
 
@@ -53,13 +46,13 @@ export type ClassicModelProps = ProgramProps & {
   attributes?: object;
   uniforms?: object; // Uniforms
   geometry?: object; // Geometry
-  vertexCount?: number
-  drawMode?: number
-  isInstanced?: boolean
-  instanceCount?: number
-  programManager?: ProgramManager
-  onBeforeRender?: () => void
-  onAfterRender?: () => void
+  vertexCount?: number;
+  drawMode?: number;
+  isInstanced?: boolean;
+  instanceCount?: number;
+  programManager?: ProgramManager;
+  onBeforeRender?: () => void;
+  onAfterRender?: () => void;
   _feedbackBuffers?: object; // FeedbackBuffers
 
   timerQueryEnabled?: boolean;
@@ -71,9 +64,8 @@ export type ClassicModelProps = ProgramProps & {
   vertexArrayInstanced?: boolean;
 
   /** @deprecated Use isInstanced */
-  instanced?: boolean
+  instanced?: boolean;
 };
-
 
 export type ModelDrawOptions = {
   moduleSettings?;
@@ -147,7 +139,15 @@ export default class Model {
   instanceCount: number;
   pickable: boolean = true;
 
-  programProps: ProgramProps & {program?: Program; modules; inject; defines; varyings; bufferMode; transpileToGLSL100;};
+  programProps: ProgramProps & {
+    program?: Program;
+    modules;
+    inject;
+    defines;
+    varyings;
+    bufferMode;
+    transpileToGLSL100;
+  };
   vertexArray: VertexArray;
   program: Program;
   transformFeedback: TransformFeedback | undefined;
@@ -176,7 +176,8 @@ export default class Model {
   initialize(props: ClassicModelProps) {
     this.props = {};
 
-    this.programManager = props.programManager || ProgramManager.getDefaultProgramManager(this.device);
+    this.programManager =
+      props.programManager || ProgramManager.getDefaultProgramManager(this.device);
     this._programManagerState = -1;
     this._managedProgram = false;
 
@@ -192,7 +193,6 @@ export default class Model {
       transpileToGLSL100,
       parameters
     } = props;
-
 
     this.programProps = {
       program,
@@ -303,8 +303,18 @@ export default class Model {
   }
 
   setProgram(props): void {
-    const {program, vs, fs, modules, defines, inject, varyings, bufferMode, transpileToGLSL100, parameters} =
-      props;
+    const {
+      program,
+      vs,
+      fs,
+      modules,
+      defines,
+      inject,
+      varyings,
+      bufferMode,
+      transpileToGLSL100,
+      parameters
+    } = props;
 
     this.programProps = {
       program,
@@ -550,8 +560,17 @@ export default class Model {
     if (program) {
       this._managedProgram = false;
     } else {
-      const {vs, fs, modules, inject, defines, varyings, bufferMode, transpileToGLSL100, parameters} =
-        this.programProps;
+      const {
+        vs,
+        fs,
+        modules,
+        inject,
+        defines,
+        varyings,
+        bufferMode,
+        transpileToGLSL100,
+        parameters
+      } = this.programProps;
       program = this.programManager.get({
         // @ts-expect-error
         vs,

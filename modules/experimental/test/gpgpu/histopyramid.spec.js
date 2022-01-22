@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Buffer, Texture2D} from '@luma.gl/webgl';
+import {Buffer, Texture2D} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import test from 'tape-promise/tape';

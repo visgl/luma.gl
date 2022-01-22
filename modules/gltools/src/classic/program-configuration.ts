@@ -2,7 +2,7 @@
 // Much of this is automatically extracted from shaders after program linking
 // import Accessor from './accessor';
 import type {AttributeBinding, VaryingBinding} from '@luma.gl/api';
-import {getProgramBindings} from '../adapter/helpers/get-program-bindings';
+import {getProgramBindings} from '@luma.gl/webgl';
 import type Program from './program';
 
 /**

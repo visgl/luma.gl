@@ -1,6 +1,6 @@
 /* eslint-disable max-len, max-statements */
 import test from 'tape-promise/tape';
-import {Query} from '@luma.gl/webgl';
+import {Query} from '@luma.gl/gltools';
 import util from 'util';
 import GL from '@luma.gl/constants';
 import {fixture} from 'test/setup';

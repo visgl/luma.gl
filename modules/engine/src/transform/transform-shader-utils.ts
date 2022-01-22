@@ -1,4 +1,4 @@
-import {assert} from '@luma.gl/webgl';
+import {assert} from '@luma.gl/api';
 import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
 
 const SAMPLER_UNIFORM_PREFIX = 'transform_uSampler_';

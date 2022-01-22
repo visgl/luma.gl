@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {Accessor} from '@luma.gl/webgl';
+import {Accessor} from '@luma.gl/gltools';
 import {DEFAULT_ACCESSOR_VALUES} from '@luma.gl/webgl/classic/accessor';
 
 const TEST_CASES_FOR_CONSTRUCTOR = [

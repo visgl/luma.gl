@@ -1,10 +1,9 @@
 import {Device, TextureProps, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {isWebGL2} from '../context/context/webgl-checks';
+import {isWebGL2} from '@luma.gl/webgl';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
-import WEBGLTexture from '../adapter/resources/webgl-texture';
-import WebGLDevice from '../adapter/webgl-device';
-import {isTextureFormatSupported, isTextureFormatFilterable} from '../adapter/converters/texture-formats';
+import {WebGLDevice, WEBGLTexture} from '@luma.gl/webgl';
+// import {isTextureFormatSupported, isTextureFormatFilterable} from '../adapter/converters/texture-formats';
 
 export type {TextureProps};
 
@@ -28,9 +27,11 @@ export default class ClassicTexture extends WEBGLTexture {
     const {format, linearFiltering} = options;
     let supported = true;
     if (format) {
-      supported = supported && isTextureFormatSupported(webglDevice.gl, format);
+      // @ts-expect-error
+      supported = supported && webglDevice.isTextureFormatSupported(format);
       supported =
-        supported && (!linearFiltering || isTextureFormatFilterable(webglDevice.gl, format));
+        // @ts-expect-error
+        supported && (!linearFiltering || webglDevice.isTextureFormatFilterable(format));
     }
     return supported;
   }

@@ -1,9 +1,9 @@
-import {Buffer, Texture2D} from '@luma.gl/webgl';
-import {Transform} from '@luma.gl/engine';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
+
+import {Transform} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {setParameters, getParameters} from '@luma.gl/gltools';
+import {Buffer, Texture2D, setParameters, getParameters} from '@luma.gl/gltools';
 
 const VS = `\
 #version 300 es

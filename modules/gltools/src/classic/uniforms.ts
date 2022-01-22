@@ -1,8 +1,7 @@
 import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import {WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
-import WEBGLTexture from '../adapter/resources/webgl-texture';
-import WEBGLFramebuffer from '../adapter/resources/webgl-framebuffer';
 import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
 import Texture from './texture';

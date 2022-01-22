@@ -5,20 +5,14 @@ import {parseUniformName, getUniformSetter} from './uniforms';
 import ProgramConfiguration from './program-configuration';
 import {copyUniform, checkUniformValues} from './uniforms';
 
-import {isWebGL2, assertWebGL2Context} from '../context/context/webgl-checks';
-import {withParameters} from '../context/state-tracker/with-parameters';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getPrimitiveDrawMode} from '../webgl-utils/attribute-utils';
-import {withDeviceParameters} from '../adapter/converters/device-parameters';
 
 import VertexArray from './vertex-array';
 
-import WebGLDevice from '../adapter/webgl-device';
-import WEBGLBuffer from '../adapter/resources/webgl-buffer';
-import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
-import WEBGLShader from '../adapter/resources/webgl-shader';
-import WEBGLTexture from '../adapter/resources/webgl-texture';
-import WEBGLFramebuffer from '../adapter/resources/webgl-framebuffer';
+import {isWebGL2, assertWebGL2Context} from '@luma.gl/webgl';
+import {withParameters, withDeviceParameters} from '@luma.gl/webgl';
+import {WebGLDevice, WEBGLBuffer, WEBGLRenderPipeline, WEBGLShader, WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 

@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {Texture2D} from '@luma.gl/webgl';
+import {Texture2D} from '@luma.gl/gltools';
 
 import {fixture} from 'test/setup';
 

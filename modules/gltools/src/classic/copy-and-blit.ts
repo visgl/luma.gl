@@ -1,7 +1,7 @@
 import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGL2Context} from '../context/context/webgl-checks';
-import {withParameters} from '../context/state-tracker/with-parameters';
+import {assertWebGL2Context} from '@luma.gl/webgl';
+import {withParameters} from '@luma.gl/webgl';
 import {flipRows, scalePixels} from '../webgl-utils/typed-array-utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';

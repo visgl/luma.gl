@@ -5,7 +5,7 @@
 import {getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, ClassicModel as Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {setParameters, clear} from '@luma.gl/webgl';
+import {setParameters, clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 

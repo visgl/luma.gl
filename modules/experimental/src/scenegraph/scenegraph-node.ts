@@ -1,5 +1,5 @@
+import {assert, uid} from '@luma.gl/api';
 import {Vector3, Matrix4} from '@math.gl/core';
-import {assert, uid} from '@luma.gl/webgl';
 
 export type ScenegraphNodeProps = {
   id?: string;

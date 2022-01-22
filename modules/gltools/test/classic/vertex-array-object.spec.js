@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {VertexArrayObject} from '@luma.gl/webgl';
+import {VertexArrayObject} from '@luma.gl/gltools';
 
 import {fixture} from 'test/setup';
 

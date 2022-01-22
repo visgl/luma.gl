@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
-import {cloneTextureFrom} from '@luma.gl/webgl/webgl-utils/texture-utils';
-import {Texture2D} from '@luma.gl/webgl';
+import {cloneTextureFrom} from '@luma.gl/gltools/webgl-utils/texture-utils';
+import {Texture2D} from '@luma.gl/gltools';
 import {fixture} from 'test/setup';
 import GL from '@luma.gl/constants';
 

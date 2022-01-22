@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {Program} from '@luma.gl/webgl';
+import {Program} from '@luma.gl/gltools';
 import {fixture} from 'test/setup';
 
 const vs = `

@@ -1,8 +1,7 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-import {assert} from '@luma.gl/api';
-import WebGLDevice from '../adapter/webgl-device';
-import {isWebGL2} from '../context/context/webgl-checks';
-import WebGLResource, {ResourceProps} from '../adapter/objects/webgl-resource';
+import {assert, ResourceProps} from '@luma.gl/api';
+import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/webgl';
 
 const GL_QUERY_RESULT = 0x8866; // Returns a GLuint containing the query result.
 const GL_QUERY_RESULT_AVAILABLE = 0x8867; // whether query result is available.

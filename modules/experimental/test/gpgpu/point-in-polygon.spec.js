@@ -1,7 +1,8 @@
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
+
+import {Buffer} from '@luma.gl/gltools';
 import {equals} from '@math.gl/core';
-import {Buffer} from '@luma.gl/webgl';
 import {GPUPointInPolygon} from '@luma.gl/experimental';
 import {cpuPointInPolygon} from './point-in-polygon-cpu';
 

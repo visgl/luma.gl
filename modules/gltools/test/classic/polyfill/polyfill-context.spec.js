@@ -1,4 +1,4 @@
-import {polyfillContext} from '@luma.gl/webgl';
+import {polyfillContext} from '@luma.gl/gltools';
 import test from 'tape-promise/tape';
 import {makeSpy} from '@probe.gl/test-utils';
 
