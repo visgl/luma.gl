@@ -1,8 +1,6 @@
-/*
+import {AnimationLoop} from '@luma.gl/core';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
-
-import {AnimationLoop} from '@luma.gl/engine';
 
 test('core#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
@@ -137,4 +135,3 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', (
     t.end();
   }, 150);
 });
-*/

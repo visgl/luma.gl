@@ -1,5 +1,5 @@
 import {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model, ProgramManager} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, ClassicModel as Model, ProgramManager} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `

@@ -25,9 +25,9 @@ import {
   convertSamplerParametersToWebGL,
   updateSamplerParametersForNPOT
 } from '../converters/sampler-parameters';
-import WEBGLSampler from './webgl-sampler';
 import WebGLDevice from '../webgl-device';
-import Buffer from '../../classes/webgl-buffer';
+import WEBGLBuffer from './webgl-buffer';
+import WEBGLSampler from './webgl-sampler';
 
 export type {TextureProps};
 
@@ -604,7 +604,7 @@ export default class WEBGLTexture extends Texture {
     }
 
     // Support buffers
-    if (data instanceof Buffer) {
+    if (data instanceof WEBGLBuffer) {
       data = data.handle;
     }
 
@@ -694,9 +694,10 @@ export default class WEBGLTexture extends Texture {
     if (ArrayBuffer.isView(data)) {
       return {data, dataType: 'typed-array'};
     }
-    if (data instanceof Buffer) {
+    if (data instanceof WEBGLBuffer) {
       return {data: data.handle, dataType: 'buffer'};
     }
+    // Raw WebGL handle (not a luma wrapper)
     if (typeof WebGLBuffer !== 'undefined' && data instanceof WebGLBuffer) {
       return {data, dataType: 'buffer'};
     }
@@ -884,7 +885,7 @@ export default class WEBGLTexture extends Texture {
         );
       }
 
-      if (data instanceof Buffer) {
+      if (data instanceof WEBGLBuffer) {
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
         // @ts-expect-error
         this.gl.texImage3D(

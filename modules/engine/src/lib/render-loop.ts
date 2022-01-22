@@ -1,6 +1,6 @@
 import type {DeviceProps} from '@luma.gl/api';
 import type {AnimationProps} from '../lib/animation-props';
-import AnimationLoop from './animation-loop-v2';
+import AnimationLoop from './animation-loop';
 
 /**
  * Minimal animation loop that initializes models in constructor

@@ -6,7 +6,7 @@ import type {
 } from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../webgl-device';
-import WEBGLBuffer from '../../classes/webgl-buffer';
+import WEBGLBuffer from './webgl-buffer';
 
 function cast<T>(value) {
   return value as T;
@@ -46,16 +46,16 @@ export function submitCommands(device: WebGLDevice, commands: Command[] = []) {
   for (const command of commands) {
     switch (command.name) {
       case 'copy-buffer-to-buffer':
-        this._copyBufferToBuffer(device, command.options);
+        _copyBufferToBuffer(device, command.options);
         break;
       case 'copy-buffer-to-texture':
-        this._copyBufferToTexture(device, command.options);
+        _copyBufferToTexture(device, command.options);
         break;
       case 'copy-texture-to-buffer':
-        this._copyTextureToBuffer(device, command.options);
+        _copyTextureToBuffer(device, command.options);
         break;
       case 'copy-texture-to-texture':
-        this._copyTextureToTexture(device, command.options);
+        _copyTextureToTexture(device, command.options);
         break;
     }
   }
@@ -65,7 +65,7 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
   const source = cast<WEBGLBuffer>(options.source);
   const destination = cast<WEBGLBuffer>(options.destination);
 
-  const {gl, gl2} = device;
+  const {gl2} = device;
   if (gl2) {
     // In WebGL2 we can perform the copy on the GPU
     // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
@@ -81,9 +81,9 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
     gl2.bindBuffer(GL.COPY_READ_BUFFER, null);
     gl2.bindBuffer(GL.COPY_WRITE_BUFFER, null);
   } else {
-    // TODO - in WebGL1 we have to read back to CPU
+    // TODO - in WebGL1 we would have to read back to CPU
     // read / write buffer from / to CPU
-    throw new Error();
+    throw new Error('copyBufferToBuffer not implemented in WebGL1');
   }
 }
 

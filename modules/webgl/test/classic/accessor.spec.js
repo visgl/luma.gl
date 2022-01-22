@@ -1,8 +1,7 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {Accessor} from '@luma.gl/webgl';
-// @ts-expect-error
-import {DEFAULT_ACCESSOR_VALUES} from '@luma.gl/webgl/classes/accessor';
+import {DEFAULT_ACCESSOR_VALUES} from '@luma.gl/webgl/classic/accessor';
 
 const TEST_CASES_FOR_CONSTRUCTOR = [
   {

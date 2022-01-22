@@ -14,7 +14,7 @@ import {withDeviceParameters} from '../adapter/converters/device-parameters';
 import VertexArray from './vertex-array';
 
 import WebGLDevice from '../adapter/webgl-device';
-import WEBGLBuffer from './webgl-buffer';
+import WEBGLBuffer from '../adapter/resources/webgl-buffer';
 import WEBGLRenderPipeline from '../adapter/resources/webgl-render-pipeline';
 import WEBGLShader from '../adapter/resources/webgl-shader';
 import WEBGLTexture from '../adapter/resources/webgl-texture';
@@ -146,10 +146,10 @@ export default class Program extends WEBGLRenderPipeline {
     this.vertexArray.setAttributes(attributes);
   }
 
-  /** 
+  /**
    * A good thing about the WebGL API is that there are so many ways to draw things ;)
    * This function unifies those ways into a single call using common parameters with sane defaults
-   * @note completely overrides base class 
+   * @note completely overrides base class
    */
   draw(options: ProgramDrawOptions): boolean {
     const {

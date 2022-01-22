@@ -112,8 +112,10 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
    */
   static getDefaultFramebuffer(gl: WebGLRenderingContext): ClassicFramebuffer {
     const webglDevice = WebGLDevice.attach(gl);
+    // @ts-expect-error
     webglDevice.defaultFramebuffer =
-      webglDevice.defaultFramebuffer ||
+    // @ts-expect-error
+    webglDevice.defaultFramebuffer ||
       new ClassicFramebuffer(gl, {
         id: 'default-framebuffer',
         handle: null,
@@ -121,6 +123,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
         check: false
       });
     // TODO - can we query for and get a handle to the GL.FRONT renderbuffer?
+    // @ts-expect-error
     return webglDevice.defaultFramebuffer;
   }
 
@@ -494,8 +497,8 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
    * Attempt to provide workable defaults for WebGL2 symbols under WebGL1
    * null means OK to query
    * TODO - move to webgl1 polyfills
-   * @param pname 
-   * @returns 
+   * @param pname
+   * @returns
    */
   // eslint-disable-next-line complexity
   _getAttachmentParameterFallback(pname) {

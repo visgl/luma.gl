@@ -19,27 +19,27 @@ export {cloneTextureFrom} from './webgl-utils/texture-utils';
 export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 
 // WebGL Helper Classes
-export {default as Accessor} from './classes/accessor';
+export {default as Accessor} from './classic/accessor';
 
 // WebGL1 classes
-export type {BufferProps} from '@luma.gl/api';
-export {default as Buffer} from './classes/webgl-buffer';
-export type {Texture2DProps} from './classes/texture-2d';
-export {default as Texture2D} from './classes/texture-2d';
-export {default as TextureCube} from './classes/texture-cube';
+export type {ClassicBufferProps as BufferProps} from './classic/buffer';
+export {default as Buffer} from './classic/buffer';
+export type {Texture2DProps} from './classic/texture-2d';
+export {default as Texture2D} from './classic/texture-2d';
+export {default as TextureCube} from './classic/texture-cube';
 
-export type {ProgramProps} from './classes/program';
-export {default as Program} from './classes/program';
-export type {ClassicFramebufferProps as FramebufferProps} from './classes/framebuffer';
-export {default as Framebuffer} from './classes/framebuffer';
-export type {RenderbufferProps} from './classes/renderbuffer';
-export {default as Renderbuffer} from './classes/renderbuffer';
+export type {ProgramProps} from './classic/program';
+export {default as Program} from './classic/program';
+export type {ClassicFramebufferProps as FramebufferProps} from './classic/framebuffer';
+export {default as Framebuffer} from './classic/framebuffer';
+export type {RenderbufferProps} from './classic/renderbuffer';
+export {default as Renderbuffer} from './classic/renderbuffer';
 
 // Classic luma.gl classes (For backwards compatibility)
-export type {ShaderProps} from './classes/shader';
-export {Shader, VertexShader, FragmentShader} from './classes/shader';
+export type {ShaderProps} from './classic/shader';
+export {Shader, VertexShader, FragmentShader} from './classic/shader';
 
-export {clear, clearBuffer} from './classes/clear';
+export {clear, clearBuffer} from './classic/clear';
 
 // Copy and Blit
 export {
@@ -49,19 +49,20 @@ export {
   copyToImage,
   copyToTexture,
   blit
-} from './classes/copy-and-blit';
+} from './classic/copy-and-blit';
 
 // WebGL2 classes & Extensions
-export type {QueryProps} from './classes/query';
-export {default as Query} from './classes/query';
-export {default as Texture3D} from './classes/texture-3d';
-export type {TransformFeedbackProps} from './classes/transform-feedback';
-export {default as TransformFeedback} from './classes/transform-feedback';
-export type {VertexArrayObjectProps} from './classes/vertex-array-object';
-export {default as VertexArrayObject} from './classes/vertex-array-object';
-export type {VertexArrayProps} from './classes/vertex-array';
-export {default as VertexArray} from './classes/vertex-array';
-export {default as UniformBufferLayout} from './classes/uniform-buffer-layout';
+export type {QueryProps} from './classic/query';
+export {default as Query} from './classic/query';
+export {default as Texture3D} from './classic/texture-3d';
+export type {TransformFeedbackProps} from './classic/transform-feedback';
+export {default as TransformFeedback} from './classic/transform-feedback';
+export type {VertexArrayObjectProps} from './classic/vertex-array-object';
+export {default as VertexArrayObject} from './classic/vertex-array-object';
+export type {VertexArrayProps} from './classic/vertex-array';
+export {default as VertexArray} from './classic/vertex-array';
+
+export {default as UniformBufferLayout} from './classic/uniform-buffer-layout';
 
 // experimental WebGL exports
 
@@ -103,7 +104,7 @@ export {
 export {polyfillContext} from './context/polyfill/polyfill-context';
 
 // INTERNAL
-export {parseUniformName, getUniformSetter} from './classes/uniforms';
+export {parseUniformName, getUniformSetter} from './classic/uniforms';
 export {getDebugTableForUniforms} from './debug/debug-uniforms';
 export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
@@ -122,7 +123,7 @@ export {log, assert, uid, isObjectEmpty} from '@luma.gl/api';
 export {setPathPrefix, loadFile, loadImage} from '@luma.gl/api';
 
 // GLTOOLS
-export type {GLContextOptions} from './_deprecated/context-api';
+export type {GLContextOptions} from './classic/context-api';
 export {
   createGLContext,
   instrumentGLContext,
@@ -134,10 +135,10 @@ export {
   getGLContextInfo,
   getContextLimits,
   getContextDebugInfo
-} from './_deprecated/context-api';
+} from './classic/context-api';
 
 // Features
-export {DEPRECATED_FEATURES as FEATURES} from './_deprecated/features';
+export {DEPRECATED_FEATURES as FEATURES} from './classic/features';
 
 // REMOVED in v8.7
 // getShaderInfo,

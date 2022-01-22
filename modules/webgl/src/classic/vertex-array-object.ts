@@ -7,7 +7,7 @@ import {assertWebGL2Context, isWebGL2} from '../context/context/webgl-checks';
 import Program from './program';
 import {ResourceProps} from '../adapter/objects/webgl-resource';
 import WEBGLVertexArrayObject from '../adapter/objects/webgl-vertex-array-object';
-import Buffer from './webgl-buffer';
+import Buffer from './buffer';
 
 /**
  * VertexArrayObject properties
@@ -46,9 +46,12 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
    */
   static getDefaultArray(gl: WebGLRenderingContext): VertexArrayObject {
     const webglDevice = WebGLDevice.attach(gl);
+    // @ts-expect-error
     webglDevice.defaultVertexArray =
-      webglDevice.defaultVertexArray ||
+    // @ts-expect-error
+    webglDevice.defaultVertexArray ||
       new VertexArrayObject(gl, {handle: null, isDefaultArray: true});
+    // @ts-expect-error
     return webglDevice.defaultVertexArray;
   }
 

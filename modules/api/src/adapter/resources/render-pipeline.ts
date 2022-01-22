@@ -85,6 +85,8 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
 export default abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
+  hash: string;
+
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, normalizeProps(props), DEFAULT_RENDER_PIPELINE_PROPS);
   }

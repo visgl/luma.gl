@@ -2,6 +2,17 @@ import {assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
 
+export interface AccessorObject {
+  buffer?: Buffer;
+  offset?: number;
+  stride?: number;
+  type?: number;
+  size?: number;
+  divisor?: number;
+  normalize?: boolean;
+  integer?: boolean;
+}
+
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,
   stride: 0,
@@ -20,14 +31,25 @@ const PROP_CHECKS = {
 };
 
 export default class Accessor {
-  static getBytesPerElement(accessor) {
+  offset?: number;
+  stride?: number;
+  type?: number;
+  size?: number;
+  divisor?: number;
+  normalized?: boolean;
+  integer?: boolean;
+
+  buffer?;
+  index?;
+
+  static getBytesPerElement(accessor): number {
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
     const ArrayType = getTypedArrayFromGLType(accessor.type || GL.FLOAT);
     return ArrayType.BYTES_PER_ELEMENT;
   }
 
-  static getBytesPerVertex(accessor) {
+  static getBytesPerVertex(accessor): number {
     assert(accessor.size);
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
@@ -39,7 +61,7 @@ export default class Accessor {
   // Usually [programAccessor, bufferAccessor, appAccessor]
   // All props will be set in the returned object.
   // TODO check for conflicts between values in the supplied accessors
-  static resolve(...accessors) {
+  static resolve(...accessors): Accessor {
     return new Accessor(...[DEFAULT_ACCESSOR_VALUES, ...accessors]); // Default values
   }
 
@@ -48,25 +70,25 @@ export default class Accessor {
     Object.freeze(this);
   }
 
-  toString() {
+  toString(): string {
     return JSON.stringify(this);
   }
 
   // ACCESSORS
 
   // TODO - remove>
-  get BYTES_PER_ELEMENT() {
+  get BYTES_PER_ELEMENT(): number {
     return Accessor.getBytesPerElement(this);
   }
 
-  get BYTES_PER_VERTEX() {
+  get BYTES_PER_VERTEX(): number {
     return Accessor.getBytesPerVertex(this);
   }
 
   // PRIVATE
 
   // eslint-disable-next-line complexity, max-statements
-  _assign(props = {}) {
+  _assign(props: AccessorObject = {}): this {
     props = checkProps('Accessor', props, PROP_CHECKS);
 
     if (props.type !== undefined) {
@@ -86,7 +108,12 @@ export default class Accessor {
     if (props.stride !== undefined) {
       this.stride = props.stride;
     }
+    // if (props.normalize !== undefined) {
+    //   this.normalized = props.normalize;
+    // }
+    // @ts-expect-error
     if (props.normalized !== undefined) {
+      // @ts-expect-error
       this.normalized = props.normalized;
     }
     if (props.integer !== undefined) {
@@ -105,22 +132,41 @@ export default class Accessor {
 
     // The binding index (for binding e.g. Transform feedbacks and Uniform buffers)
     // TODO - should this be part of accessor?
+    // @ts-expect-error
     if (props.index !== undefined) {
+      // @ts-expect-error
       if (typeof props.index === 'boolean') {
+        // @ts-expect-error
         this.index = props.index ? 1 : 0;
       } else {
+        // @ts-expect-error
         this.index = props.index;
       }
     }
 
     // DEPRECATED
+    // @ts-expect-error
     if (props.instanced !== undefined) {
+      // @ts-expect-error
       this.divisor = props.instanced ? 1 : 0;
     }
+    // @ts-expect-error
     if (props.isInstanced !== undefined) {
+      // @ts-expect-error
       this.divisor = props.isInstanced ? 1 : 0;
     }
 
+    if (this.offset === undefined) delete this.offset;
+    if (this.stride === undefined) delete this.stride;
+    if (this.type === undefined) delete this.type;
+    if (this.size === undefined) delete this.size;
+    if (this.divisor === undefined) delete this.divisor;
+    if (this.normalized === undefined) delete this.normalized;
+    if (this.integer === undefined) delete this.integer;
+  
+    if (this.buffer === undefined) delete this.buffer;
+    if (this.index === undefined) delete this.index;
+  
     return this;
   }
 }

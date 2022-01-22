@@ -1,11 +1,10 @@
-/*
 import test from 'tape-promise/tape';
 import {webgl1TestDevice} from '@luma.gl/test-utils';
 
 import GL from '@luma.gl/constants';
 import {luma} from '@luma.gl/api';
 // TODO - Model test should not depend on Cube
-import {Model, ProgramManager} from '@luma.gl/engine';
+import {ClassicModel as Model, ProgramManager} from '@luma.gl/engine';
 import {Buffer} from '@luma.gl/webgl';
 import {CubeGeometry} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
@@ -51,8 +50,8 @@ const FS_300 = `#version 300 es
 
 test('Model#construct/destruct', (t) => {
   // Avoid re-using program from ProgramManager
-  const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
-  const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
+  const vs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_Position = vec4(0.0);}';
+  const fs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_FragColor = vec4(0.0);}';
 
   const model = new Model(webgl1TestDevice, {
     drawMode: GL.POINTS,
@@ -74,8 +73,8 @@ test('Model#construct/destruct', (t) => {
 
 test('Model#multiple delete', (t) => {
   // Avoid re-using program from ProgramManager
-  const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
-  const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
+  const vs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_Position = vec4(0.0);}';
+  const fs = '/* DO_NOT_CACHE Model#construct/destruct */ void main() {gl_FragColor = vec4(0.0);}';
 
   const model1 = new Model(webgl1TestDevice, {
     drawMode: GL.POINTS,
@@ -102,11 +101,11 @@ test('Model#multiple delete', (t) => {
 });
 
 test('Model#setAttribute', (t) => {
-  const buffer1 = webgl1TestDevice.createBuffer({
+  const buffer1 = new Buffer(webgl1TestDevice.gl, {
     accessor: {size: 2},
     data: new Float32Array(4).fill(1)
   });
-  const buffer2 = webgl1TestDevice.createBuffer({data: new Float32Array(8)});
+  const buffer2 = new Buffer(webgl1TestDevice.gl, {data: new Float32Array(8)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
@@ -372,8 +371,7 @@ test('Model#transpileToGLSL100', (t) => {
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
-  @ts-expect-error object possibly undefined
+  // @ts-expect-error object possibly undefined
   t.ok(model.program, 'Created a program');
   t.end();
 });
-*/

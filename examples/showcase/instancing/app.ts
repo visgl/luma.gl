@@ -1,7 +1,7 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, CubeGeometry, Timeline, Model, ModelProps, ProgramManager} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, CubeGeometry, Timeline, ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/engine';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
-import {readPixelsToArray, cssToDevicePixels, clear} from '@luma.gl/webgl';
+import {readPixelsToArray, clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `

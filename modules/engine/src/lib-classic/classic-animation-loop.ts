@@ -6,7 +6,7 @@ import {requestAnimationFrame, cancelAnimationFrame, Query, Framebuffer} from '@
 import { Stats, Stat } from '@probe.gl/stats'
 import {isBrowser} from '@probe.gl/env';
 import {Timeline} from '../animation/timeline'
-import {AnimationProps as BaseAnimationProps} from '../lib/animation-props';
+import {AnimationProps} from '../lib/animation-props';
 
 type ContextProps = DeviceProps;
 
@@ -18,11 +18,11 @@ let statIdCounter = 0;
  * Classic Animation Props.
  * Contain a number of deprecated fields
  */
-export type AnimationProps = BaseAnimationProps & {
-  animationLoop: AnimationLoop;
+export type ClassicAnimationProps = AnimationProps & {
+  animationLoop: ClassicAnimationLoop;
 
   /** @deprecated Use .device */
-  stop: () => AnimationLoop;
+  stop: () => ClassicAnimationLoop;
 
   /** @deprecated Use .device */
   gl: WebGLRenderingContext;
@@ -32,19 +32,19 @@ export type AnimationProps = BaseAnimationProps & {
   /** @deprecated Use .timeline */
   _timeline: Timeline;
   /** @deprecated Use .animationLoop */
-  _loop: AnimationLoop;
+  _loop: ClassicAnimationLoop;
   /** @deprecated Use .animationLoop */
-  _animationLoop: AnimationLoop;
+  _animationLoop: ClassicAnimationLoop;
 }
 
-/** AnimationLoop properties */
-export type AnimationLoopProps = {
+/** ClassicAnimationLoop properties */
+export type ClassicAnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
-  onInitialize?: (animationProps: AnimationProps) => {} | void;
-  onRender?: (animationProps: AnimationProps) => void;
-  onFinalize?: (animationProps: AnimationProps) => void;
+  onInitialize?: (animationProps: ClassicAnimationProps) => {} | void;
+  onRender?: (animationProps: ClassicAnimationProps) => void;
+  onFinalize?: (animationProps: ClassicAnimationProps) => void;
   onError?: (reason: any) => void;
 
   stats?: Stats;
@@ -64,7 +64,7 @@ export type AnimationLoopProps = {
   createFramebuffer?: boolean;
 };
 
-const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
+const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
   onCreateContext: null,
   onAddHTML: null,
@@ -90,12 +90,12 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
 };
 
 /** Convenient animation loop */
-export default class AnimationLoop {
+export default class ClassicAnimationLoop {
   device: Device;
   canvas: HTMLCanvasElement | OffscreenCanvas;
 
-  props: Required<AnimationLoopProps>;
-  animationProps: AnimationProps;
+  props: Required<ClassicAnimationLoopProps>;
+  animationProps: ClassicAnimationProps;
   framebuffer: Framebuffer = null;
   timeline: Timeline = null;
   stats: Stats;
@@ -111,8 +111,8 @@ export default class AnimationLoop {
   _running: boolean = false;
   _animationFrameId = null;
   _pageLoadPromise: Promise<{}> | null = null;
-  _nextFramePromise: Promise<AnimationLoop> | null = null;
-  _resolveNextFrame: ((AnimationLoop) => void) | null = null;
+  _nextFramePromise: Promise<ClassicAnimationLoop> | null = null;
+  _resolveNextFrame: ((ClassicAnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
 
   _gpuTimeQuery: Query | null = null;
@@ -123,8 +123,8 @@ export default class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor(props: AnimationLoopProps = {}) {
-    this.props = {...DEFAULT_ANIMATION_LOOP_PROPS, ...props};
+  constructor(props: ClassicAnimationLoopProps = {}) {
+    this.props = {...DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS, ...props};
     props = this.props;
 
     let {useDevicePixels = true} = this.props;
@@ -174,7 +174,7 @@ export default class AnimationLoop {
     return this;
   }
 
-  setProps(props: AnimationLoopProps): this {
+  setProps(props: ClassicAnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport;
     }
@@ -290,7 +290,7 @@ export default class AnimationLoop {
     this.timeline = null;
   }
 
-  waitForRender(): Promise<AnimationLoop> {
+  waitForRender(): Promise<ClassicAnimationLoop> {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
@@ -317,15 +317,15 @@ export default class AnimationLoop {
     return this.props.onCreateDevice(deviceProps);
   }
 
-  onInitialize(animationProps: AnimationProps): {} | void {
+  onInitialize(animationProps: ClassicAnimationProps): {} | void {
     return this.props.onInitialize(animationProps);
   }
 
-  onRender(animationProps: AnimationProps) {
+  onRender(animationProps: ClassicAnimationProps) {
     return this.props.onRender(animationProps);
   }
 
-  onFinalize(animationProps: AnimationProps) {
+  onFinalize(animationProps: ClassicAnimationProps) {
     return this.props.onFinalize(animationProps);
   }
 
@@ -345,7 +345,7 @@ export default class AnimationLoop {
 
   // PRIVATE METHODS
 
-  _initialize(props: AnimationLoopProps) {
+  _initialize(props: ClassicAnimationLoopProps) {
     this._createFramebuffer();
     this._startEventHandling();
 
@@ -430,7 +430,7 @@ export default class AnimationLoop {
 
   // Called on each frame, can be overridden to call onRender multiple times
   // to support e.g. stereoscopic rendering
-  _renderFrame(props: AnimationProps) {
+  _renderFrame(props: ClassicAnimationProps) {
     // Allow e.g. VR display to render multiple frames.
     if (this.display) {
       this.display._renderFrame(props);
@@ -550,7 +550,7 @@ export default class AnimationLoop {
     this.gl = this.device.gl;
 
     if (!isWebGL(this.gl)) {
-      throw new Error('AnimationLoop.onCreateContext - illegal context returned');
+      throw new Error('ClassicAnimationLoop.onCreateContext - illegal context returned');
     }
 
     // Reset the WebGL context.

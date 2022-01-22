@@ -1,11 +1,13 @@
 import type {Device, BufferProps} from '@luma.gl/api';
 import {Buffer, log, assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getWebGL2Context, assertWebGL2Context} from '../context/context/webgl-checks';
+import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+
 import WebGLDevice from '../adapter/webgl-device';
+import WEBGLBuffer from '../adapter/resources/webgl-buffer';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -38,6 +40,25 @@ const PROP_CHECKS_SET_PROPS = {
   removedProps: DEPRECATED_PROPS
 };
 
+function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | number): BufferProps {
+  // Signature `new Buffer(gl, new Float32Array(...)`
+  if (ArrayBuffer.isView(props)) {
+    return {data: props};
+  }
+
+  // Signature: `new Buffer(gl, 100)`
+  else if (Number.isFinite(props)) {
+    return {byteLength: props as number};
+  }
+
+  props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
+  const bufferProps = {...props as ClassicBufferProps};
+  if (bufferProps.offset) {
+    bufferProps.byteOffset = bufferProps.offset;
+  }
+  return bufferProps;
+}
+
 /** WebGL Buffer interface */
 export type ClassicBufferProps = BufferProps & {
   handle?: WebGLBuffer;
@@ -60,65 +81,29 @@ export type ClassicBufferProps = BufferProps & {
 }
 
 /** WebGL Buffer interface */
-export default class WEBGLBuffer extends Buffer {
-  readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
-  readonly gl2: WebGL2RenderingContext | null;
-  readonly handle: WebGLBuffer;
-
-  target: number;
+export default class ClassicBuffer extends WEBGLBuffer {
   usage: number;
-  webglUsage: number;
-
-  byteLength: number;
-  bytesUsed: number;
-
   accessor: Accessor;
-
-  debugData;
 
   constructor(device: Device | WebGLRenderingContext, props?: ClassicBufferProps);
   constructor(device: Device | WebGLRenderingContext, data: ArrayBufferView | number[]);
   constructor(device: Device | WebGLRenderingContext, byteLength: number);
 
   constructor(device: Device | WebGLRenderingContext, props = {}) {
-    super(WebGLDevice.attach(device), props);
+    super(WebGLDevice.attach(device), getWEBGLBufferProps(props));
 
-    this.device = WebGLDevice.attach(device);
-    this.gl = this.device.gl;
-    this.gl2 = this.device.gl2;
+    // Base class initializes
+    // this.initialize(props);
 
-    const handle = typeof props === 'object' ? (props as BufferProps).handle : undefined;
-    this.handle = handle || this.gl.createBuffer();
-    // @ts-expect-error Add metadata for spector
-    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
+    // Deprecated: Merge main props and accessor
+    this.setAccessor(Object.assign({}, props, (props as ClassicBufferProps).accessor));
 
-    // static MAP_READ = 0x01;
-    // static MAP_WRITE = 0x02;
-    // static COPY_SRC = 0x0004;
-    // static COPY_DST = 0x0008;
-    // static INDEX = 0x0010;
-    // static VERTEX = 0x0020;
-    // static UNIFORM = 0x0040;
-    // static STORAGE = 0x0080;
-    // static INDIRECT = 0x0100;
-    // static QUERY_RESOLVE = 0x0200;
-    this.usage = this.props.usage;
-
-    if (this.props.usage & Buffer.UNIFORM) {
-      // @ts-expect-error
-      props.target = GL.UNIFORM_BUFFER;
-      // @ts-expect-error
-      props.webglUsage = GL.DYNAMIC_DRAW;
+    // infer GL type from supplied typed array
+    if (this.props.data) {
+      const type = getGLTypeFromTypedArray(this.props.data);
+      assert(type);
+      this.setAccessor(new Accessor(this.accessor, {type}));
     }
-  
-    // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
-    // otherwise buffer type will lock to generic (non-element) buffer
-    // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
-    // @ts-expect-error
-    this.target = props.target || (this.gl.webgl2 ? GL.COPY_READ_BUFFER : GL.ARRAY_BUFFER);
-  
-    this.initialize(props);
 
     Object.seal(this);
   }
@@ -181,7 +166,7 @@ export default class WEBGLBuffer extends Buffer {
     return this;
   }
 
-  setProps(props: BufferProps): this {
+  setProps(props: ClassicBufferProps): this {
     props = checkProps('Buffer', props, PROP_CHECKS_SET_PROPS);
 
     if ('accessor' in props) {
@@ -264,7 +249,7 @@ export default class WEBGLBuffer extends Buffer {
   }
 
   /**
-   * Copies part of the data of another buffer into this buffer 
+   * Copies part of the data of another buffer into this buffer
    * @note WEBGL2 ONLY
    */
   copyData(options: {
@@ -347,7 +332,6 @@ export default class WEBGLBuffer extends Buffer {
   bind(options?: {target?: number; index?: any; offset?: number; size: any}): this {
     const {
       target = this.target, // target for the bind operation
-      // @ts-expect-error
       index = this.accessor && this.accessor.index, // index = index of target (indexed bind point)
       offset = 0,
       size
@@ -370,7 +354,6 @@ export default class WEBGLBuffer extends Buffer {
   }
 
   unbind(options?: {target?: any; index?: any}): this {
-    // @ts-expect-error
     const {target = this.target, index = this.accessor && this.accessor.index} = options || {};
     const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {

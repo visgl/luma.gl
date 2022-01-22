@@ -1,5 +1,5 @@
 import {formatValue} from '@luma.gl/api';
-import Buffer from '../classes/webgl-buffer';
+import Buffer from '../classic/buffer';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';
 

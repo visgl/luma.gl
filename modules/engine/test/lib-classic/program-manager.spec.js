@@ -1,8 +1,7 @@
-import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
-
 import {ProgramManager} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
+import {webgl1TestDevice} from '@luma.gl/test-utils';
+import test from 'tape-promise/tape';
 
 const vs = `\
 attribute vec4 positions;

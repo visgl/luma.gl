@@ -1,4 +1,4 @@
-import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, ClassicModel as Model, CubeGeometry} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 

@@ -1,5 +1,5 @@
 import {luma, Device, Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
-import {ModelV2 as Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 

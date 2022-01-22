@@ -8,8 +8,8 @@ export {log, assert, uid} from '@luma.gl/api';
 
 // ENGINE
 export {
-  AnimationLoop,
-  Model,
+  ClassicAnimationLoop as AnimationLoop,
+  ClassicModel as Model,
   Transform,
   ProgramManager,
   Timeline

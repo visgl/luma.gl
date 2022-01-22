@@ -25,7 +25,7 @@ export default class Texture2D extends Texture {
       props = {data: props};
     }
 
-    // Signature: new Texture2D(gl, {data: url}): 
+    // Signature: new Texture2D(gl, {data: url}):
     // Handled by `WEBGLTexture` constructor
 
     super(device, {...props, dimension: '2d'}); // target: GL.TEXTURE_2D
