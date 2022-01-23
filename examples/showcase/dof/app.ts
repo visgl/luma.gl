@@ -13,7 +13,6 @@ import {
   VertexArray,
   UniformBufferLayout,
   Buffer,
-  isWebGL2,
 } from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';
 

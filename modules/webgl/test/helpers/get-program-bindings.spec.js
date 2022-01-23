@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {Program} from '@luma.gl/webgl';
+import {Program} from '@luma.gl/gltools';
 import {getProgramBindings} from '@luma.gl/webgl/adapter/helpers/get-program-bindings';
 import {fixture} from 'test/setup';
 

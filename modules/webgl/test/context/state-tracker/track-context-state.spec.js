@@ -9,7 +9,7 @@ import {
   setParameters,
   resetParameters
 } from '@luma.gl/webgl';
-import {Texture2D} from '@luma.gl/webgl';
+import {Texture2D} from '@luma.gl/gltools';
 
 import {
   GL_PARAMETER_DEFAULTS,

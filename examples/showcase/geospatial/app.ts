@@ -1,5 +1,5 @@
 import mapboxgl from 'mapbox-gl';
-import {Buffer} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/gltools';
 // import {instrumentGLContext} from '@luma.gl/webgl';
 import {AnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
 
