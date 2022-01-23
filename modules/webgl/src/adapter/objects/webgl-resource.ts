@@ -3,8 +3,10 @@ import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/api';
 import type {Device} from '@luma.gl/api';
 export type {ResourceProps} from '@luma.gl/api';
 import {isWebGL2, assertWebGLContext} from '../../context/context/webgl-checks';
-import {getKey, getKeyValue} from '../../webgl-utils/constants-to-keys';
 import WebGLDevice from '../webgl-device';
+
+// Requires full GL enum to be bundled... Make these bindings dependent on dynamic import (debug)?
+import {getKey, getKeyValue} from './constants-to-keys';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 

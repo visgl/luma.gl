@@ -15,6 +15,7 @@ let statIdCounter = 0;
 /**
  * Classic Animation Props.
  * Contain a number of deprecated fields
+ * @deprecated Use new AnimationLoop in `@luma.gl/engine`
  */
 export type ClassicAnimationProps = AnimationProps & {
   animationLoop: ClassicAnimationLoop;

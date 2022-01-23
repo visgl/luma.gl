@@ -1,7 +1,7 @@
-import {CompilerMessage} from '@luma.gl/api';
-// TODO - formatGLSLCompilerError should not depend on this
-// import getShaderName from './get-shader-name';
-// import getShaderTypeName from './get-shader-type-name';
+// luma.gl, MIT license
+import type {CompilerMessage} from '@luma.gl/shadertools';
+
+const MESSAGE_TYPES = ['warning', 'error', 'info'];
 
 /**
  * Parse a WebGL-format GLSL compilation log into an array of WebGPU style message records.
@@ -32,10 +32,12 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
       linePos = 0;
     }
 
-    const type = getMessageType(messageType);
+    // Ensure supported type
+    const lowerCaseType = messageType.toLowerCase();
+    const type = (MESSAGE_TYPES.includes(lowerCaseType) ? lowerCaseType : 'info') as 'warning' | 'error' | 'info';
 
     messages.push({
-      message: rest.join('').trim(),
+      message: rest.join(':').trim(),
       type,
       lineNum,
       linePos // TODO
@@ -43,15 +45,4 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
   }
 
   return messages;
-}
-
-/** Ensure valid type */
-function getMessageType(type: string):  'warning' | 'error' | 'info' {
-  switch (type) {
-    case 'warning':
-    case 'error':
-      return type;
-    default:
-      return 'info';
-  }
 }

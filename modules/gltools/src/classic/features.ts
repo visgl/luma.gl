@@ -87,7 +87,10 @@ export const DEPRECATED_TO_CLASSIC_FEATURES: Record<string, DeviceFeature> = {
   GLSL_TEXTURE_LOD: 'glsl-texture-lod'
 };
 
-/** Extract all WebGL features */
+/** 
+ * Extract all WebGL features 
+ * @deprecated Use `device.features.has(...)`
+ */
 export function getWebGLFeatures(gl: WebGLRenderingContext): Set<string> {
   // Enable EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
   gl.getExtension('EXT_color_buffer_float');

@@ -115,6 +115,7 @@ interface TransformOpts extends DrawOpts {
 }
 */
 
+/** @deprecated Use new Model class in `@luma.gl/engine` */
 export default class Model {
   readonly device: Device;
   readonly gl: WebGLRenderingContext;

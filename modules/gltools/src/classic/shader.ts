@@ -12,6 +12,8 @@ export type {ShaderProps};
 /**
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
  * This is an internal class, use FragmentShader or VertexShader
+ * 
+ * @deprecated Use device.createShader
  */
 export class Shader extends WEBGLShader {
   shaderType: GL.FRAGMENT_SHADER | GL.VERTEX_SHADER;

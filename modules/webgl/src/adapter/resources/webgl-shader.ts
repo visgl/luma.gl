@@ -2,7 +2,7 @@
 import {log, uid, Shader, ShaderProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
-import {parseShaderCompilerLog} from '../../webgl-utils/parse-shader-compiler-log';
+import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import WebGLDevice from '../webgl-device';
 
 /**
