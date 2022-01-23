@@ -31,6 +31,19 @@ export {
 
 // WEBGL - importing from `@luma.gl/core` is deprecated
 
+// GLTOOLS - Already marked as deprecated at source
+export {
+  createGLContext,
+  instrumentGLContext,
+  FEATURES,
+  hasFeature,
+  hasFeatures
+} from '@luma.gl/gltools';
+
+import {
+  lumaStats as lumaStatsDeprecated
+} from '@luma.gl/api';
+
 import {
   isWebGL as isWebGLDeprecated,
   isWebGL2 as isWebGL2Deprecated,
@@ -40,7 +53,6 @@ import {
   resetParameters as resetParametersDeprecated,
   cssToDeviceRatio as cssToDeviceRatioDeprecated,
   cssToDevicePixels as cssToDevicePixelsDeprecated,
-  lumaStats as lumaStatsDeprecated,
   Buffer as BufferDeprecated,
   Program as ProgramDeprecated,
   Framebuffer as FramebufferDeprecated,
@@ -54,7 +66,7 @@ import {
   copyToTexture as copyToTextureDeprecated,
   Texture3D as Texture3DDeprecated,
   TransformFeedback as TransformFeedbackDeprecated
-} from '@luma.gl/webgl';
+} from '@luma.gl/gltools';
 
 /** @deprecated Import directly from `@luma.gl/webgl` */
 export const isWebGL = isWebGLDeprecated;
@@ -135,12 +147,3 @@ export const gouraudLighting = gouraudLightingDeprecated;
 export const phongLighting = phongLightingDeprecated;
 /** @deprecated Import directly from `@luma.gl/shadertools` */
 export const pbr = pbrDeprecated;
-
-// GLTOOLS - Already marked as deprecated at source
-export {
-  createGLContext,
-  instrumentGLContext,
-  FEATURES,
-  hasFeature,
-  hasFeatures
-} from '@luma.gl/webgl';

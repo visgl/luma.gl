@@ -39,7 +39,7 @@ export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides
 /**
  * Wraps a given texture into a framebuffer object, that can be further used
  * to read data from the texture object.
- */ 
+ */
 export function toFramebuffer(texture: Texture, props?: ClassicFramebufferProps): Framebuffer {
   const {gl, width, height, id} = texture;
   const framebuffer = new Framebuffer(
