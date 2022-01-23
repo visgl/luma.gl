@@ -114,3 +114,21 @@ export {getKeyValue, getKey} from '@luma.gl/webgl';
 export {getDebugTableForUniforms} from './debug/debug-uniforms';
 export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
+
+// luma.gl v8 Engine API
+export type {ClassicAnimationLoopProps, ClassicAnimationProps} from './engine/classic-animation-loop';
+export {default as ClassicAnimationLoop} from './engine/classic-animation-loop';
+export type {ClassicModelProps} from './engine/classic-model';
+export {default as ClassicModel} from './engine/classic-model';
+
+export type {ClassicAnimationLoopProps as AnimationLoopProps} from './engine/classic-animation-loop';
+export type {ClassicAnimationProps as AnimationProps} from './engine/classic-animation-loop';
+export {default as AnimationLoop} from './engine/classic-animation-loop';
+export type {ClassicModelProps as ModelProps} from './engine/classic-model';
+export {default as Model} from './engine/classic-model';
+
+export {default as ProgramManager} from './engine/program-manager';
+
+export {default as Transform} from './transform/transform';
+
+export {default as ClipSpace} from './engine/classic-clip-space';

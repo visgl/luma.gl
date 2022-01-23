@@ -1,4 +1,4 @@
-import {ClassicAnimationLoop as AnimationLoop} from '@luma.gl/engine';
+import {ClassicAnimationLoop as AnimationLoop} from '@luma.gl/gltools';
 import {withParameters} from '@luma.gl/webgl';
 
 export default class Display {

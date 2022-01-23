@@ -1,5 +1,5 @@
 import {Device} from '@luma.gl/api';
-import {ClassicModel as Model, ClassicModelProps as ModelProps} from '@luma.gl/engine';
+import {ClassicModel as Model, ClassicModelProps as ModelProps} from '@luma.gl/gltools';
 import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
 
 export type ModelNodeProps = ScenegraphNodeProps & ModelProps & {

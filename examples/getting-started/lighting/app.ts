@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {clear} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {clear, ClassicModel as Model} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -57,7 +57,7 @@ export default class AppRenderLoop extends RenderLoop {
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   mvpMatrix = new Matrix4();
   
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
 
     const texture = device.createTexture({data: 'vis-logo.png'});

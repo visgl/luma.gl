@@ -1,6 +1,6 @@
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, ClassicModel as Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {clear, ClassicModel as Model} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API
@@ -58,9 +58,7 @@ export default class AppRenderLoop extends RenderLoop {
       modules: [colorShaderModule],
       attributes: {
         position: this.positionBuffer,
-        // @ts-expect-error
         color: [this.colorBuffer, {divisor: 1}],
-        // @ts-expect-error
         offset: [this.offsetBuffer, {divisor: 1}]
       },
       vertexCount: 3,

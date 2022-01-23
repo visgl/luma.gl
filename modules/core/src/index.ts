@@ -7,17 +7,18 @@ export {log, assert, uid} from '@luma.gl/api';
 // CORE MODULE EXPORTS FOR LUMA.GL
 
 // ENGINE
+export {Timeline} from '@luma.gl/engine';
+
 export {
   ClassicAnimationLoop as AnimationLoop,
   ClassicModel as Model,
   Transform,
   ProgramManager,
-  Timeline
-} from '@luma.gl/engine';
+  ClipSpace
+} from '@luma.gl/gltools';
 
 export {
   Geometry,
-  ClipSpace,
   ConeGeometry,
   CubeGeometry,
   CylinderGeometry,

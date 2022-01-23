@@ -6,14 +6,8 @@ export {default as Model} from './lib/model';
 export type {AnimationLoopProps} from './lib/animation-loop';
 export {default as AnimationLoop} from './lib/animation-loop';
 
-// luma.gl v8 Engine API
-export {default as ClassicAnimationLoop} from './lib-classic/classic-animation-loop';
-export type {ClassicAnimationLoopProps, ClassicAnimationProps as ClassicAnimationProps} from './lib-classic/classic-animation-loop';
-export type {ClassicModelProps} from './lib-classic/classic-model';
-export {default as ClassicModel} from './lib-classic/classic-model';
-
-export {default as ProgramManager} from './lib-classic/program-manager';
-export {default as Transform} from './transform/transform';
+// Utils
+// export {default as ClipSpace} from './lib/clip-space';
 
 // Geometries
 export {default as Geometry} from './geometry/geometry';
@@ -38,5 +32,3 @@ export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 
-// Utils
-export {default as ClipSpace} from './utils/clip-space';

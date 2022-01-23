@@ -1,6 +1,6 @@
+import {uid} from '@luma.gl/api';
 import Geometry from '../geometry/geometry';
 import {unpackIndexedGeometry} from '../geometry/geometry-utils';
-import {uid} from '@luma.gl/api';
 
 export type PlaneGeometryProps = {
   id?: string;

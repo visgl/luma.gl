@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames, ClassicModel as Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
+import {clear, ClassicModel as Model} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -59,7 +59,6 @@ export default class AppRenderLoop extends RenderLoop {
     model: Model
   }[];
 
-  // @ts-expect-error animationLoop
   constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
 

@@ -4,7 +4,7 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 
 import {Buffer} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/engine';
+import {Transform} from '@luma.gl/gltools';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;

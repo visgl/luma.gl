@@ -1,6 +1,6 @@
 import {DeviceProps} from '@luma.gl/api';
 import {polyfillContext} from '@luma.gl/webgl';
-import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/engine';
+import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's low-level API

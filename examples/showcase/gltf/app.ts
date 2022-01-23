@@ -212,7 +212,7 @@ export default class AppRenderLoop extends RenderLoop {
 
   device: Device;
   
-  constructor({animationLoop, device, gl, canvas}: AnimationProps) {
+  constructor({animationLoop, device, canvas}: AnimationProps) {
     super();
 
     this.device = device; // for onDrop

@@ -1,7 +1,7 @@
 import type {RenderPipelineParameters} from '@luma.gl/api';
 import {Device} from '@luma.gl/api/';
 import {assembleShaders} from '@luma.gl/shadertools';
-import {Program} from '@luma.gl/gltools';
+import Program from '../classic/program';
 
 type Module = 'string' | {name: string}; // TODO
 

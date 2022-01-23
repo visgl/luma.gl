@@ -4,7 +4,7 @@ import {uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
 /**
- * Rendering primitives - "opology" specifies how to extract primitives from vertices.
+ * Rendering primitives - "topology" specifies how to extract primitives from vertices.
  */
 export type Topology =
   GL.POINTS |  // draw single points.

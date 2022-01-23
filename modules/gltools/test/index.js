@@ -33,3 +33,12 @@ import './classic/context/features.spec';
 
 // Context API
 import './classic/context/context-api.spec';
+
+// luma v8 engine API
+import './engine/model.spec';
+import './engine/animation-loop.spec';
+import './engine/program-manager.spec';
+
+import './transform/transform.spec';
+import './transform/transform-shader-utils.spec';
+import './transform/buffer-transform.spec';

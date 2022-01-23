@@ -1,5 +1,6 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, CubeGeometry, Timeline, ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, CubeGeometry, Timeline} from '@luma.gl/engine';
+import {ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/gltools';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {readPixelsToArray} from '@luma.gl/gltools';
 import {clear} from '@luma.gl/gltools';
@@ -126,11 +127,8 @@ class InstancedCube extends Model {
         attributes: {
           // @ts-expect-error
           instanceSizes: new Float32Array([1]), // Constant attribute
-          // @ts-expect-error
           instanceOffsets: [offsetsBuffer, {divisor: 1}],
-          // @ts-expect-error
           instanceColors: [colorsBuffer, {divisor: 1}],
-          // @ts-expect-error
           instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
         },
         parameters: {
@@ -150,7 +148,6 @@ export default class AppRenderLoop extends RenderLoop {
   timeline: Timeline;
   timelineChannels: Record<string, number>;
 
-  // @ts-expect-error
   constructor({device, animationLoop}: AnimationProps) {
     super();
   
@@ -168,9 +165,10 @@ export default class AppRenderLoop extends RenderLoop {
     this.cube = new InstancedCube(device);
   }
 
-  onRender(animationProps) {
-    const {device, gl, aspect, tick} = animationProps;
-    const {framebuffer, _mousePosition} = animationProps;
+  onRender(animationProps: AnimationProps) {
+    const {device, aspect, tick} = animationProps;
+    // @ts-expect-error
+    const {gl, framebuffer, _mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
     if (_mousePosition) {

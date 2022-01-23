@@ -1,6 +1,6 @@
 import {getRandom} from '@luma.gl/api';
-import {RenderLoop, ClassicModel as Model, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
-import {clear, Framebuffer, setParameters} from '@luma.gl/gltools';
+import {RenderLoop, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
+import {clear, Framebuffer, setParameters, ClassicModel as Model} from '@luma.gl/gltools';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `

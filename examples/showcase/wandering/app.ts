@@ -1,5 +1,6 @@
 /* eslint-enable camelcase */
-import {RenderLoop, AnimationProps, ClassicModel as Model, Transform} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {ClassicModel as Model, Transform} from '@luma.gl/gltools';
 import {picking} from '@luma.gl/shadertools';
 import {Buffer, readPixelsToArray, Framebuffer} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
@@ -207,13 +208,9 @@ export default class AppRenderLoop extends RenderLoop {
       instanceCount: NUM_INSTANCES,
       attributes: {
         a_position: this.positionBuffer,
-        // @ts-expect-error
         a_color: [this.colorBuffer, {divisor: 1}],
-        // @ts-expect-error
         a_offset: [this.offsetBuffer, {divisor: 1}],
-        // @ts-expect-error
         a_rotation: [this.rotationBuffer, {divisor: 1}],
-        // @ts-expect-error
         instancePickingColors: [this.pickingColorBuffer, {divisor: 1}]
       },
       modules: [picking]
