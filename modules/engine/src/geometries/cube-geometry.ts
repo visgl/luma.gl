@@ -1,5 +1,5 @@
-import Geometry from '../geometry/geometry';
 import {uid} from '@luma.gl/api';
+import Geometry from '../geometry/geometry';
 
 export type CubeGeometryProps = {
   id?: string;

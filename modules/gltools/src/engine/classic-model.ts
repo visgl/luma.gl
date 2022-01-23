@@ -1,15 +1,14 @@
 // luma.gl, MIT license
 import type {RenderPipelineParameters, Shader} from '@luma.gl/api';
-import {Device, log, isObjectEmpty, uid, assert} from '@luma.gl/api';
+import {Device, Buffer, log, isObjectEmpty, uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type {ProgramProps} from '@luma.gl/gltools';
-import {WebGLDevice, withDeviceParameters} from '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
+import type {ProgramProps} from '../classic/program';
 import {
   Program,
   VertexArray,
   clear,
   TransformFeedback,
-  Buffer,
   getDebugTableForUniforms,
   getDebugTableForVertexArray,
   getDebugTableForProgramConfiguration
@@ -25,7 +24,7 @@ const ERR_MODEL_PARAMS = 'Model needs drawMode and vertexCount';
 const NOOP = () => {};
 const DRAW_PARAMS = {};
 
-export type ClassicModelProps = ProgramProps & {
+export type ClassicModelProps = Omit<ProgramProps, 'attributes'> & {
   id?: string;
 
   // program props
@@ -43,7 +42,7 @@ export type ClassicModelProps = ProgramProps & {
   transpileToGLSL100?: boolean;
 
   moduleSettings?: object; // UniformsOptions
-  attributes?: object;
+  attributes?: Record<string, Buffer | [Buffer, any]>;
   uniforms?: object; // Uniforms
   geometry?: object; // Geometry
   vertexCount?: number;

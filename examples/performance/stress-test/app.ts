@@ -1,8 +1,8 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model, ModelProps, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
-import {clear, Texture2D, Buffer, withParameters, isWebGL2} from '@luma.gl/webgl';
+import {clear, withParameters, Model, ModelProps} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
@@ -81,6 +81,7 @@ class InstancedCube extends Model {
         uniforms: props.uniforms,
         attributes: {
           offset: {
+            // @ts-expect-error
             buffer: offsetBuffer,
             size: 3,
             divisor: 1
@@ -104,11 +105,15 @@ export default class AppRenderLoop extends RenderLoop {
   
   rotationAngle = 0;
 
-  constructor({device, gl}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
-    if (!isWebGL2(gl)) {
+
+    if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
+
+    // @ts-expect-error
+    const {gl} = device;
 
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
@@ -116,9 +121,10 @@ export default class AppRenderLoop extends RenderLoop {
     const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
-      parameters: {
-        [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-        [gl.TEXTURE_MIN_FILTER]: gl.LINEAR_MIPMAP_NEAREST
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'nearest'
       }
     });
 
@@ -159,7 +165,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.transparentCubes.forEach((c) => c.delete());
   }
 
-  onRender({gl, aspect, tick}: AnimationProps) {
+  onRender({device, aspect, tick}: AnimationProps) {
     this.rotationAngle += 0.01;
     this.statsWidget.update();
 
@@ -179,10 +185,11 @@ export default class AppRenderLoop extends RenderLoop {
       up: [0, 1, 0]
     });
 
-    clear(gl, {color: [0, 0, 0, 1], depth: true});
+    clear(device, {color: [0, 0, 0, 1], depth: true});
 
     withParameters(
-      gl,
+      // @ts-expect-error
+      device.gl,
       {depthTest: true, depthMask: true, depthFunc: GL.LEQUAL, cull: true, blend: false},
       () => {
         for (let i = 0; i < OPAQUE_DRAWCALLS; ++i) {
@@ -197,7 +204,8 @@ export default class AppRenderLoop extends RenderLoop {
     );
 
     withParameters(
-      gl,
+      // @ts-expect-error
+      device.gl,
       {
         depthTest: true,
         depthMask: false,

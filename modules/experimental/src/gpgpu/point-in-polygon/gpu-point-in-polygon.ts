@@ -1,7 +1,7 @@
 import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {Buffer, Texture2D} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/engine';
+import {Transform} from '@luma.gl/gltools';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
 import {normalize, getSurfaceIndices, getVertexCount} from './polygon';

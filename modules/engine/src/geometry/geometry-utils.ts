@@ -1,4 +1,4 @@
-import type Geometry from './geometry';
+// import type Geometry from './geometry';
 
 export function unpackIndexedGeometry(geometry) {
   const {indices, attributes} = geometry;

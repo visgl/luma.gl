@@ -4,12 +4,12 @@ import {webgl1TestDevice} from '@luma.gl/test-utils';
 import GL from '@luma.gl/constants';
 import {luma} from '@luma.gl/api';
 // TODO - Model test should not depend on Cube
-import {ClassicModel as Model, ProgramManager} from '@luma.gl/engine';
+import {ClassicModel as Model, ProgramManager} from '@luma.gl/gltools';
 import {Buffer} from '@luma.gl/webgl';
 import {CubeGeometry} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 
-import {getBuffersFromGeometry} from '@luma.gl/engine/lib-classic/model-utils';
+import {getBuffersFromGeometry} from '@luma.gl/gltools/engine/model-utils';
 
 const stats = luma.stats.get('Resource Counts');
 

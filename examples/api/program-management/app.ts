@@ -1,6 +1,7 @@
 import {getRandom} from '@luma.gl/api';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
-import {RenderLoop, ClassicModel as Model, ProgramManager, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {ClassicModel as Model, ProgramManager} from '@luma.gl/gltools';
 import {clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 

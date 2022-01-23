@@ -1,6 +1,5 @@
 import {Device, log} from '@luma.gl/api';
 import {pbr} from '@luma.gl/shadertools';
-import {isWebGL2, WebGLDevice} from '@luma.gl/webgl';
 import ModelNode from '../scenegraph/model-node';
 import GLTFMaterialParser from './gltf-material-parser';
 
@@ -98,6 +97,5 @@ export default function createGLTFModel(device: Device, options: any): ModelNode
 }
 
 function addVersionToShader(device: Device, source: string): string {
-  // @ts-expect-error TODO
-  return isWebGL2(device.gl) ? `#version 300 es\n${source}` : source;
+  return device.info.type === 'webgl2' ? `#version 300 es\n${source}` : source;
 }

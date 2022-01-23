@@ -1,11 +1,10 @@
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {luma, Device, DeviceProps, log, requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
+import {Timeline, AnimationProps} from '@luma.gl/engine';
 import {isWebGL, resetParameters, Query, Framebuffer} from '@luma.gl/gltools';
 import { Stats, Stat } from '@probe.gl/stats'
 import {isBrowser} from '@probe.gl/env';
-import {Timeline} from '../animation/timeline'
-import {AnimationProps} from '../lib/animation-props';
 
 type ContextProps = DeviceProps;
 
@@ -453,7 +452,6 @@ export default class ClassicAnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
-    // @ts-expect-error
     this.animationProps = {
       device: this.device,
       gl: this.gl,
@@ -472,6 +470,7 @@ export default class ClassicAnimationLoop {
       tock: 0,
 
       timeline: this.timeline,
+      // @ts-expect-error
       animationLoop: this,
 
       // Timeline time for back compatibility

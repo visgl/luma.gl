@@ -1,7 +1,7 @@
 import mapboxgl from 'mapbox-gl';
-import {Buffer} from '@luma.gl/gltools';
-// import {instrumentGLContext} from '@luma.gl/webgl';
-import {AnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationProps} from '@luma.gl/engine';
+import {Buffer, ClassicModel as Model, ClassicAnimationLoop as AnimationLoop} from '@luma.gl/gltools';
+// import {instrumentGLContext} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 <p>A triangle connecting Times Square, Rockefeller Center, and Columbus Circle in Manhattan, NYC on a <a class="external-link" href="https://www.mapbox.com/">Mapbox</a> basemap using the

@@ -365,7 +365,6 @@ export default class AnimationLoop {
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {
     this.animationProps = {
-      // @ts-expect-error
       animationLoop: this,
       device: this.device,
       canvas: this.device.canvasContext.canvas,

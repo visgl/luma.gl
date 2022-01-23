@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
-import BufferTransform from '@luma.gl/engine/transform/buffer-transform';
+import BufferTransform from '@luma.gl/gltools/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/gltools';
-import {ClassicModel as Model} from '@luma.gl/engine';
+import {ClassicModel as Model} from '@luma.gl/gltools';
 import {fixture} from 'test/setup';
 
 const VS = `\

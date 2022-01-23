@@ -1,4 +1,4 @@
-import {updateForTextures} from '@luma.gl/engine/transform/transform-shader-utils';
+import {updateForTextures} from '@luma.gl/gltools/transform/transform-shader-utils';
 import {Texture2D} from '@luma.gl/gltools';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';

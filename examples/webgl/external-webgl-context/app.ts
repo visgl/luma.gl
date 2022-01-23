@@ -1,5 +1,5 @@
-import {AnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
-import {Buffer, clear} from '@luma.gl/webgl';
+import {AnimationLoop, AnimationProps, Model} from '@luma.gl/gltools';
+import {Buffer, clear} from '@luma.gl/gltools';
 import {GLContextOptions, instrumentGLContext} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -18,6 +18,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     return instrumentGLContext(gl);
   }
 
+  //
   onInitialize({gl}: AnimationProps) {
     gl.clearColor(0, 0, 0, 1);
 

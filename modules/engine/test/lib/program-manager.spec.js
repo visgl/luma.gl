@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {webgl1TestDevice} from '@luma.gl/test-utils';
 
-import {ProgramManager} from '@luma.gl/engine';
+import {ProgramManager} from '@luma.gl/gltools';
 import {dirlight, picking} from '@luma.gl/shadertools';
 
 const vs = `\

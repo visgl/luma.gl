@@ -1,10 +1,11 @@
 // luma.gl, MIT license
-import {Buffer, Texture2D} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/engine';
-import GL from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 import {equals} from '@math.gl/core';
+
+import {Buffer, Texture2D} from '@luma.gl/gltools';
+import {Transform} from '@luma.gl/gltools';
+import GL from '@luma.gl/constants';
 import {_transform as transformModule} from '@luma.gl/shadertools';
 import {
   buildHistopyramidBaseLevel,
