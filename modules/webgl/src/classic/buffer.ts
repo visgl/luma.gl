@@ -4,7 +4,7 @@ import GL from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
 import Accessor from './accessor';
-import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 
 import WebGLDevice from '../adapter/webgl-device';
 import WEBGLBuffer from '../adapter/resources/webgl-buffer';

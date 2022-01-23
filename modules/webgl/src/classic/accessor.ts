@@ -1,6 +1,6 @@
 import {assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getTypedArrayFromGLType} from '../webgl-utils/typed-array-utils';
+import {getTypedArrayFromGLType} from './typed-array-utils';
 
 export interface AccessorObject {
   buffer?: Buffer;

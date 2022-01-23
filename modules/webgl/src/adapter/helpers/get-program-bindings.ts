@@ -2,7 +2,7 @@ import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, Progra
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
-import {decomposeCompositeGLType} from '../../webgl-utils/attribute-utils';
+import {decomposeCompositeGLType} from './attribute-utils';
 
 /**
  * Extract metadata describing binding information for a program's shaders

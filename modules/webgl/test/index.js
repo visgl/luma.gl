@@ -11,8 +11,8 @@ import './adapter/helpers/get-program-bindings.spec';
 // import './context/device-pixels.spec';
 
 // polyfills
-// import './context/polyfill/get-parameter-polyfill.spec';
-// import './context/polyfill/polyfill-context.spec';
+import './context/polyfill/get-parameter-polyfill.spec';
+import './context/polyfill/polyfill-context.spec';
 
 // state-tracker
 import './context/state-tracker/deep-array-equal.spec';
