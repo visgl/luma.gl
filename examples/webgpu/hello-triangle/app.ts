@@ -1,4 +1,4 @@
-import {ModelV2, RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {Model, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
@@ -45,11 +45,11 @@ fn main() -> [[location(0)]] vec4<f32> {
 };
 
 export default class AppRenderLoop extends RenderLoop {
-  model: ModelV2;
+  model: Model;
 
   constructor({device}: AnimationProps) {
     super();
-    this.model = new ModelV2(device, {
+    this.model = new Model(device, {
       vs: SHADERS.vs,
       fs: SHADERS.fs,
       topology: 'triangle-list',

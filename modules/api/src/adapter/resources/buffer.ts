@@ -4,30 +4,34 @@ import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type BufferProps = ResourceProps & {
   handle?: WebGLBuffer;
-
+  usage?: number;
   byteLength?: number;
   data?: ArrayBuffer | ArrayBufferView;
+  byteOffset?: number;
 
-  usage?: number;
+  // TBD
   mappedAtCreation?: boolean;
-  target?: number;
 
+  /** @deprecated *
   accessor?: any; // AccessorObject;
 
-  /** @deprecated */
+  /** @deprecated Use BufferProps.usage = VERTEX | INDEX | UNIFORM *
+  target?: number;
+  /** @deprecated Bind separately *
   index?: number;
-  /** @deprecated */
+  /** @deprecated *
   offset?: number;
-  /** @deprecated */
+  /** @deprecated *
   size?: number;
-  /** @deprecated */
+  /** @deprecated *
   type?: number;
+  */
 }
 
-// @ts-expect-error
 const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   byteLength: 0,
+  byteOffset: 0,
   data: undefined,
   usage: undefined, // Buffer.COPY_DST | Buffer.COPY_SRC
   mappedAtCreation: false

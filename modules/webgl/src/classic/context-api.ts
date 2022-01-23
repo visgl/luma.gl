@@ -52,7 +52,7 @@ export function resizeGLContext(
   webglDevice.canvasContext.resize(options);
 }
 
-/** 
+/**
  * Check one or more features
  * @deprecated Use `WebGLDevice.features.has()`
 */

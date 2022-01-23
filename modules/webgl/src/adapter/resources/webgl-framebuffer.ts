@@ -3,7 +3,7 @@ import {Framebuffer, Texture, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../webgl-device';
 import WebGLTexture from './webgl-texture';
-import Renderbuffer from '../../classes/renderbuffer';
+import Renderbuffer from '../objects/webgl-renderbuffer';
 import {getWebGLTextureFormat, getWebGLDepthStencilAttachment} from '../converters/texture-formats';
 
 export type TextureAttachment = [Texture, number?, number?];
@@ -147,7 +147,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
     const format = this.props.depthStencilAttachment;
     const webglFormat = getWebGLTextureFormat(this.gl, format);
 
-    const texture = new Renderbuffer(this.gl, {
+    const texture = new Renderbuffer(this.device, {
       id: `${this.id}-depth-stencil`, // TODO misleading if not depth and stencil?
       format: webglFormat,
       // dataFormat: GL.DEPTH_STENCIL,

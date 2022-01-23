@@ -1,4 +1,3 @@
-import type {NumberArray} from '@luma.gl/api';
 import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
@@ -6,23 +5,17 @@ import {getBrowser} from '@probe.gl/env';
 import WebGLDevice from '../webgl-device';
 import WebGLResource, {ResourceProps} from './webgl-resource';
 
-import Buffer from '../../classes/webgl-buffer';
-import Program from '../../classes/program';
-import {VertexArrayObject} from '../..';
+import Buffer from '../resources/webgl-buffer';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 /**
  * VertexArrayObject properties
- * @param constantAttributeZero Attribute 0 can not be disable on most desktop OpenGL based browsers
- * and on iOS Safari browser.
  */
 export type VertexArrayObjectProps = ResourceProps & {
-  constantAttributeZero?: boolean;
-  program?: Program;
-  isDefaultArray?: boolean;
 };
 
+/** VertexArrayObject wrapper */
 export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   get [Symbol.toStringTag](): string {
     return 'BaseVertexArrayObject';

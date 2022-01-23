@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, ClassicModel as Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const INFO_HTML = `

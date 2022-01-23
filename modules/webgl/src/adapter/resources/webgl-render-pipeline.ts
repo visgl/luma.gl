@@ -20,8 +20,8 @@ import {withDeviceParameters} from '../converters/device-parameters';
 import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
 
 import WebGLDevice from '../webgl-device';
+import WEBGLBuffer from './webgl-buffer';
 import WEBGLShader from './webgl-shader';
-import WEBGLBuffer from '../../classes/webgl-buffer';
 import WEBGLTexture from './webgl-texture';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;

@@ -8,7 +8,7 @@ import {
   checkUniformValues,
   parseUniformName,
   getUniformSetter
-} from '@luma.gl/webgl/classes/uniforms';
+} from '@luma.gl/webgl/classic/uniforms';
 
 import {fixture} from 'test/setup';
 

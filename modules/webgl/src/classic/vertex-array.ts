@@ -1,10 +1,11 @@
 import {log, assert, AttributeBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import Accessor from './accessor';
-import Buffer from './webgl-buffer';
-import Program from './program'; 
+import Program from './program';
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject, {VertexArrayObjectProps} from './vertex-array-object';
+import ClassicBuffer from './buffer';
+import WEBGLBuffer from '../adapter/resources/webgl-buffer';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';
@@ -34,6 +35,11 @@ export type DrawParams = {
   instanceCount: number;
 };
 
+// returns number of vertices in the buffer (assuming that the full buffer is used)
+function getVertexCount(buffer: WEBGLBuffer, accessor = buffer.accessor): number {
+  return Math.round(buffer.byteLength / Accessor.getBytesPerVertex(accessor));
+}
+
 /** @deprecated Use RenderPipeline (public) and WEBGLVertexArrayObject (internal) */
 export default class VertexArray {
   id: string;
@@ -53,7 +59,7 @@ export default class VertexArray {
   unused = null;
   drawParams = null;
   buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
-  
+
   bindOnUse = false;
 
   constructor(gl: WebGLRenderingContext, props?: VertexArrayProps) {
@@ -160,8 +166,8 @@ export default class VertexArray {
   }
 
   // Set (bind) an elements buffer, for indexed rendering.
-  // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
-  setElementBuffer(elementBuffer: Buffer | null = null, accessor = {}): this {
+  // Must be a WEBGLBuffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
+  setElementBuffer(elementBuffer: WEBGLBuffer | null = null, accessor = {}): this {
     this.elements = elementBuffer; // Save value for debugging
     this.elementsAccessor = accessor;
     this.clearDrawParams();
@@ -171,7 +177,7 @@ export default class VertexArray {
   }
 
   // Set a location in vertex attributes array to a buffer
-  setBuffer(locationOrName: number | string, buffer: Buffer, appAccessor = {}): this {
+  setBuffer(locationOrName: number | string, buffer: WEBGLBuffer, appAccessor = {}): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       this.setElementBuffer(buffer, appAccessor);
@@ -235,10 +241,10 @@ export default class VertexArray {
       // so we need to offer and unbind facility
       // WebGL offers disabling, but no clear way to set a VertexArray buffer to `null`
       // So we just bind all the attributes to the dummy "attribute zero" buffer
-      this.buffer = this.buffer || new Buffer(this.gl, {accessor: {size: 4}});
+      this.buffer = this.buffer || new ClassicBuffer(this.gl, {accessor: {size: 4}});
 
       for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
-        if (this.values[location] instanceof Buffer) {
+        if (this.values[location] instanceof WEBGLBuffer) {
           this.gl.disableVertexAttribArray(location);
           this.gl.bindBuffer(GL.ARRAY_BUFFER, this.buffer.handle);
           this.gl.vertexAttribPointer(location, 1, GL.FLOAT, false, 0, 0);
@@ -258,7 +264,7 @@ export default class VertexArray {
 
       for (let location = 0; location < this.vertexArrayObject.MAX_ATTRIBUTES; location++) {
         const buffer = this.values[location];
-        if (buffer instanceof Buffer) {
+        if (buffer instanceof WEBGLBuffer) {
           this.setBuffer(location, buffer);
         }
       }
@@ -347,16 +353,16 @@ export default class VertexArray {
     return {location: -1};
   }
 
-  _setAttribute(locationOrName: number | string, value: Buffer): void;
-  _setAttribute(locationOrName: number | string, value: [Buffer, any]): void;
+  _setAttribute(locationOrName: number | string, value: WEBGLBuffer): void;
+  _setAttribute(locationOrName: number | string, value: [WEBGLBuffer, any]): void;
   _setAttribute(locationOrName: number | string, value: ArrayBuffer | any[]): void;
-  _setAttribute(locationOrName: number | string, value: {value: Buffer}): void;
+  _setAttribute(locationOrName: number | string, value: {value: WEBGLBuffer}): void;
 
   _setAttribute(locationOrName: number | string, value): void {
-    if (value instanceof Buffer) {
-      //  Signature: {attributeName: Buffer}
+    if (value instanceof WEBGLBuffer) {
+      //  Signature: {attributeName: WEBGLBuffer}
       this.setBuffer(locationOrName, value);
-    } else if (Array.isArray(value) && value.length && value[0] instanceof Buffer) {
+    } else if (Array.isArray(value) && value.length && value[0] instanceof WEBGLBuffer) {
       // Signature: {attributeName: [buffer, accessor]}
       const buffer = value[0];
       const accessor = value[1];
@@ -365,7 +371,7 @@ export default class VertexArray {
       // Signature: {attributeName: constant}, constant == short (typed) array
       const constant = value;
       this.setConstant(locationOrName, constant);
-    } else if (value.buffer instanceof Buffer) {
+    } else if (value.buffer instanceof WEBGLBuffer) {
       // luma.gl v7: Support accessor objects with 'buffer' field
       // for interleaved data
       // Signature: {attributeName: {...accessor, buffer}}
@@ -465,16 +471,16 @@ export default class VertexArray {
     const isInstanced = divisor > 0;
     drawParams.isInstanced = drawParams.isInstanced || isInstanced;
 
-    if (value instanceof Buffer) {
+    if (value instanceof WEBGLBuffer) {
       const buffer = value;
 
       if (isInstanced) {
         // instance attribute
-        const instanceCount = buffer.getVertexCount(accessor);
+        const instanceCount = getVertexCount(buffer, accessor);
         drawParams.instanceCount = Math.min(drawParams.instanceCount, instanceCount);
       } else {
         // normal attribute
-        const vertexCount = buffer.getVertexCount(accessor);
+        const vertexCount = getVertexCount(buffer, accessor);
         drawParams.vertexCount = Math.min(drawParams.vertexCount, vertexCount);
       }
     }

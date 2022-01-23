@@ -6,7 +6,7 @@ import {flipRows, scalePixels} from '../webgl-utils/typed-array-utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
-import Buffer from './webgl-buffer';
+import Buffer from './buffer';
 // import Texture from '../adapter/resources/webgl-texture';
 import Texture from './texture';
 import Framebuffer from './framebuffer';

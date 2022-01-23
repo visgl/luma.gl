@@ -51,6 +51,15 @@ export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> 
     this._initialize(this.props);
   }
 
+  resize(size: {width: number, height: number}): this {
+    // Don't resize if width/height haven't changed
+    if (size.width !== this.width || size.height !== this.height) {
+      Object.assign(this.props, {...size, format: this.format, samples: this.samples});
+      this._initialize(this.props);
+    }
+    return this;
+  }
+
   // PRIVATE METHODS
 
   /** Creates and initializes a renderbuffer object's data store */

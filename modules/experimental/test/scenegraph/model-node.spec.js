@@ -3,7 +3,7 @@
 import test from 'tape-promise/tape';
 import {makeSpy} from '@probe.gl/test-utils';
 import {fixture} from 'test/setup';
-import {Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/experimental';
 
 const DUMMY_VS = `

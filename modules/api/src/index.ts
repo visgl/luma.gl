@@ -3,10 +3,12 @@ import './init';
 
 // MAIN API ACCESS POINTS
 export {default as luma} from './lib/luma';
+
 export type {DeviceProps, DeviceLimits, DeviceInfo, DeviceFeature} from './adapter/device';
 export {default as Device} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {default as CanvasContext} from './adapter/canvas-context';
+
 
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resources/resource';
@@ -101,7 +103,7 @@ export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-u
 export {getRandom, random} from './utils/random';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
-export {requestAnimationFrame, cancelAnimationFrame} from './engine/request-animation-frame';
+export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';
 
 // INTERNAL
 

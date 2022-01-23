@@ -18,8 +18,13 @@ export default class WebGPUBuffer extends Buffer {
     this.byteLength = getByteLength(props);
     const mapBuffer = Boolean(props.data);
 
-    this.handle = this.props.handle || this.createHandle(mapBuffer);
-    this.handle.label = this.props.id;
+    this.handle = this.props.handle || this.device.handle.createBuffer({
+      size: this.byteLength,
+      // usage defaults to vertex
+      usage: this.props.usage || (GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST),
+      mappedAtCreation: this.props.mappedAtCreation || mapBuffer,
+      label: this.props.id
+    });
 
     if (props.data) {
       this._writeMapped(props.data);
@@ -32,12 +37,7 @@ export default class WebGPUBuffer extends Buffer {
   }
 
   protected createHandle(mapBuffer: boolean): GPUBuffer {
-    return this.device.handle.createBuffer({
-      size: this.byteLength,
-      // usage defaults to vertex
-      usage: this.props.usage || (GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST),
-      mappedAtCreation: this.props.mappedAtCreation || mapBuffer
-    });
+    return
   }
 
   destroy(): void {

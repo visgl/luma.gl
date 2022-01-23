@@ -38,37 +38,37 @@ import './adapter/resources/webgl-texture.spec';
 import './adapter/resources/webgl-framebuffer.spec';
 
 // helpers
-import './classes/accessor.spec';
+import './classic/accessor.spec';
 
 // webgl
-import './classes/buffer.spec';
-import './classes/vertex-array-object.spec';
-import './classes/vertex-array.spec';
-import './classes/uniforms.spec';
+import './classic/buffer.spec';
+import './classic/vertex-array-object.spec';
+import './classic/vertex-array.spec';
+import './classic/uniforms.spec';
 
-import './classes/texture.spec';
-import './classes/texture-2d.spec';
-import './classes/texture-3d.spec';
+import './classic/texture.spec';
+import './classic/texture-2d.spec';
+import './classic/texture-3d.spec';
 
-import './classes/renderbuffer.spec';
-import './classes/framebuffer.spec';
+import './classic/renderbuffer.spec';
+import './classic/framebuffer.spec';
 
-import './classes/program.spec';
-import './classes/program-configuration.spec';
-import './classes/draw.spec';
+import './classic/program.spec';
+import './classic/program-configuration.spec';
+import './classic/draw.spec';
 
-import './classes/copy-and-blit.spec';
+import './classic/copy-and-blit.spec';
 
 // Extensions / webgl2
-import './classes/query.spec';
+import './classic/query.spec';
 
 // webgl2
-import './classes/uniform-buffer-layout.spec';
-import './classes/transform-feedback.spec';
+import './classic/uniform-buffer-layout.spec';
+import './classic/transform-feedback.spec';
 
 // features
-import './_deprecated/features/features.spec';
+import './classic/context/features.spec';
 // import './_deprecated/features/limits.spec';
 
 // Context API
-import './_deprecated/context-api.spec';
+import './classic/context/context-api.spec';

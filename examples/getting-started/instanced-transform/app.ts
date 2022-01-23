@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, Model, Transform, CubeGeometry} from '@luma.gl/engine';
-import {Buffer, clear, isWebGL2} from '@luma.gl/webgl';
+import {RenderLoop, AnimationProps, ClassicModel as Model, Transform, CubeGeometry} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 

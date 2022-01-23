@@ -1,7 +1,7 @@
 import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
-import Accessor from '../../classes/accessor'; // TODO - should not depend on classes
+import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decomposeCompositeGLType} from '../../webgl-utils/attribute-utils';
 
 /**

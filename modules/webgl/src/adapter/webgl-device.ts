@@ -46,20 +46,14 @@ import type {
   ComputePassProps
 } from '@luma.gl/api';
 
-// import WEBGLTexture from '../adapter/resources/webgl-texture';
-import WEBGLBuffer from '../classes/webgl-buffer';
-// Refactored, minimal classes
+import ClassicBuffer from '../classic/buffer';
+import WEBGLBuffer from './resources/webgl-buffer';
 import WEBGLShader from './resources/webgl-shader';
 import WEBGLSampler from './resources/webgl-sampler';
 import WEBGLTexture from './resources/webgl-texture';
 import WEBGLFramebuffer from './resources/webgl-framebuffer';
 import WEBGLRenderPass from './resources/webgl-render-pass';
 import WEBGLRenderPipeline from './resources/webgl-render-pipeline';
-
-// Legacy classes
-import type {default as VertexArrayObject} from '../classes/vertex-array-object';
-// TODO is this still needed for device.defaultFramebuffer?
-import ClassicFramebuffer from '../classes/framebuffer';
 
 const LOG_LEVEL = 1;
 
@@ -114,11 +108,6 @@ export default class WebGLDevice extends Device implements ContextState {
     this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
     return this._webglLimits;
   }
-
-  /** @deprecated remove */
-  defaultFramebuffer?: ClassicFramebuffer;
-  /** @deprecated remove */
-  defaultVertexArray?: VertexArrayObject;
 
   /** Instance of Spector.js (if initialized) */
   spector;
@@ -319,7 +308,7 @@ Created ${info.type}${debug} context: ${info.vendor}, ${info.renderer} for canva
   }
 
   _createBuffer(props: BufferProps): WEBGLBuffer {
-    return new WEBGLBuffer(this.gl, props);
+    return new ClassicBuffer(this, props);
   }
 
   _createTexture(props: TextureProps): WEBGLTexture {

@@ -3,7 +3,7 @@
 */
 
 import {getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, ClassicModel as Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import {setParameters, clear} from '@luma.gl/webgl';
 import {Matrix4, radians} from '@math.gl/core';

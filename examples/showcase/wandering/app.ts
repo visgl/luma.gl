@@ -1,7 +1,7 @@
 /* eslint-enable camelcase */
 import {Buffer, readPixelsToArray, Framebuffer, cssToDevicePixels} from '@luma.gl/webgl';
 import GL from '@luma.gl/constants';
-import {RenderLoop, AnimationProps, Model, Transform} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, ClassicModel as Model, Transform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 import {Log} from '@probe.gl/log';
 
