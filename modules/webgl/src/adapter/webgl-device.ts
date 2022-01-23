@@ -18,8 +18,8 @@ import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
 import WebGLCanvasContext from './webgl-canvas-context';
-import {loadSpectorJS, initializeSpectorJS} from '../debug/spector';
-import {loadWebGLDeveloperTools, makeDebugContext} from '../debug/webgl-developer-tools';
+import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
+import {loadWebGLDeveloperTools, makeDebugContext} from '../context/debug/webgl-developer-tools';
 import {
   isTextureFormatSupported,
   isTextureFormatRenderable,
