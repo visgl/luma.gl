@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {parseShaderCompilerLog} from '@luma.gl/gltools/webgl-utils/parse-shader-compiler-log';
+import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
 
 test('parseShaderCompilerLog', (t) => {
   const {ERROR_LOG, EXPECTED_MESSAGES} = getFixtures();

@@ -34,9 +34,6 @@ export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {default as WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 export {default as WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
 
-// WebGL Functions
-export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
-
 export {
   isWebGL,
   isWebGL2,

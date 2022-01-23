@@ -10,6 +10,8 @@ import type Program from './program';
  * about it, so as to be able to interface and interact with it.
  * For example, if there is a uniform, you may need to query its
  * location so that you can set its value.
+ * 
+ * @deprecated Use ShaderLayout
  */
  export default class ProgramConfiguration {
   id: string;

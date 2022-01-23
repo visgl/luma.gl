@@ -59,6 +59,7 @@ function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): Rende
   return newProps;
 }
 
+/** @deprecated Use device.createRenderPipeline */
 export default class Program extends WEBGLRenderPipeline {
   get [Symbol.toStringTag](): string { return 'Program'; }
 

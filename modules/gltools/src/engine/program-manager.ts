@@ -17,6 +17,7 @@ type GetProgramOptions = {
   parameters?: RenderPipelineParameters;
 };
 
+/** @deprecated Use new PipelineFactory in `@luma.gl/engine` */
 export default class ProgramManager {
   readonly device: Device;
 

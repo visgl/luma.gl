@@ -15,7 +15,10 @@ const GL_DEPTH_STENCIL = 0x84f9;
 // Should disappear if asserts are removed
 const ERR_ARGUMENTS = 'clear: bad arguments';
 
-/** Optionally clears depth, color and stencil buffers */
+/** 
+ * Optionally clears depth, color and stencil buffers 
+ * @deprecated Set clear color when creating a RenderPass
+ */
 export function clear(
   gl: Device | WebGLRenderingContext,
   options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}
@@ -59,7 +62,10 @@ export function clear(
   });
 }
 
-/** WebGL2 - clear a specific drawing buffer */
+/** 
+ * WebGL2 - clear a specific drawing buffer 
+ * @deprecated Set clear color when creating a RenderPass
+ */
 export function clearBuffer(
   gl: Device | WebGLRenderingContext,
   options?: {framebuffer?: Framebuffer; buffer?: any; drawBuffer?: any; value?: any}

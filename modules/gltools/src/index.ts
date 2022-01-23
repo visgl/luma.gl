@@ -108,7 +108,7 @@ export {default as UniformBufferLayout} from './classic/uniform-buffer-layout';
 
 // WebGL Functions
 export {cloneTextureFrom} from './webgl-utils/texture-utils';
-export {getKeyValue, getKey} from '@luma.gl/webgl';
+export {getKeyValue, getKey} from './webgl-utils/constants-to-keys';
 
 // INTERNAL
 export {getDebugTableForUniforms} from './debug/debug-uniforms';

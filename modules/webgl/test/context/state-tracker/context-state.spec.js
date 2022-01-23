@@ -2,7 +2,7 @@ import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/webgl';
 
-import {getKey} from '@luma.gl/webgl';
+import {getKey} from '@luma.gl/gltools';
 import {Framebuffer} from '@luma.gl/gltools';
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';

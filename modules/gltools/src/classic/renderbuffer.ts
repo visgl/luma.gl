@@ -14,6 +14,8 @@ export type {RenderbufferProps}
  * (such as when reading depth back in a second shader pass),
  * use Textures instead.
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
+ * 
+ * @deprecated Use WEBGLRenderBuffer
  */
 export default class Renderbuffer extends WEBGLRenderbuffer {
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
