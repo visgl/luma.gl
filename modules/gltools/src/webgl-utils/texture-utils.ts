@@ -9,7 +9,10 @@ import Framebuffer, {ClassicFramebufferProps} from '../classic/framebuffer';
 
 type TextureType = Texture2D | TextureCube | Texture3D;
 
-/** Clone a new texture object from a reference texture object. */
+/** 
+ * Clone a new texture object from a reference texture object. 
+ * @deprecated
+ */
 export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides?: any): T {
   assert(
     refTexture instanceof Texture2D ||
