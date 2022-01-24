@@ -88,7 +88,10 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
   createFramebuffer: false
 };
 
-/** Convenient animation loop */
+/** 
+ * Convenient animation loop 
+ * @deprecated Use `@luma.gl/engine` AnimationLoop
+ */
 export default class ClassicAnimationLoop {
   device: Device;
   canvas: HTMLCanvasElement | OffscreenCanvas;

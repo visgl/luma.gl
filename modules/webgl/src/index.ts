@@ -72,5 +72,4 @@ export {polyfillContext} from './context/polyfill/polyfill-context';
 
 // HELPERS - EXPERIMENTAL
 export {getProgramBindings} from './adapter/helpers/get-program-bindings';
-export {loadWebGLDeveloperTools} from './debug/webgl-developer-tools';
 export {_checkFloat32ColorAttachment} from './adapter/converters/texture-formats';

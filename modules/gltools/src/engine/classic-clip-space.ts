@@ -23,6 +23,7 @@ void main(void) {
 /* eslint-disable indent, no-multi-spaces */
 const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 
+/** @deprecated Use new class in `@luma.gl/engine` */
 
 export default class ClipSpace extends Model {
   constructor(gl: WebGLRenderingContext, opts?: ModelProps) {

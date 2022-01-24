@@ -4,7 +4,7 @@ import Texture, {TextureProps} from './texture';
 
 /**
  * Cube Texture
- * @deprecated Use device.createTexture({dimension: '3d'})
+ * @deprecated Use device.createTexture({dimension: 'cube'})
  */
 export default class TextureCube extends Texture {
   static FACES: number[] = [
