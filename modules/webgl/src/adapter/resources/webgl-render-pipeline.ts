@@ -13,7 +13,7 @@ import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import { getWebGLDataType } from '../converters/texture-formats';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
-import {getShaderLayout} from '../helpers/get-program-bindings';
+import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceParameters} from '../converters/device-parameters';
 
 // import VertexArrayObject from '../../classes/vertex-array-object';

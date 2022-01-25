@@ -1,7 +1,8 @@
-import {TextureFormat, VertexType} from '../types/formats';
-import { decodeVertexType } from './decode-data-type';
+import {TextureFormat} from '../types/texture-formats';
+import {VertexType} from '../types/vertex-formats';
+import {decodeVertexType} from './decode-data-type';
 
-const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/
+const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
 
 /**
  * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
@@ -30,7 +31,7 @@ export function decodeTextureFormat(format: TextureFormat): {
       srgb: srgb === '-srgb',
       unsized: suffix === '-unsized',
       webgl: suffix === '-webgl',
-      ...decodedType,
+      ...decodedType
     };
   }
   throw new Error(`Unknown format ${format}`);

@@ -1,5 +1,6 @@
 // luma.gl, MIT license
-import {VertexFormat, TextureFormat} from '../types/formats';
+import {TextureFormat} from '../types/texture-formats';
+import {VertexFormat} from '../types/vertex-formats';
 import {Accessor} from '../types/accessor';
 import type Buffer from '../resources/buffer';
 import type Sampler from '../resources/sampler';

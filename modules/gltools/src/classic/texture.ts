@@ -27,11 +27,10 @@ export default class ClassicTexture extends WEBGLTexture {
     const {format, linearFiltering} = options;
     let supported = true;
     if (format) {
-      // @ts-expect-error
+      // @ts-expect-error Hack: we allow number (GL constant)
       supported = supported && webglDevice.isTextureFormatSupported(format);
-      supported =
-        // @ts-expect-error
-        supported && (!linearFiltering || webglDevice.isTextureFormatFilterable(format));
+      // @ts-expect-error Hack: we allow number (GL constant)
+      supported = supported && (!linearFiltering || webglDevice.isTextureFormatFilterable(format));
     }
     return supported;
   }

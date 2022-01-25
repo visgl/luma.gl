@@ -1,9 +1,9 @@
-import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding} from '@luma.gl/api';
+import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding, AttributeLayout} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decomposeCompositeGLType} from './attribute-utils';
-
+import {getVertexFormat} from '../converters/vertex-formats';
 /**
  * Extract metadata describing binding information for a program's shaders
  * Note: `linkProgram()` needs to have been called
@@ -11,6 +11,19 @@ import {decomposeCompositeGLType} from './attribute-utils';
 */
 export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
   const programBindings = getProgramBindings(gl, program);
+
+  const attributes: AttributeLayout[] = [];
+  for (const attribute of programBindings.attributes) {
+    const format = attribute.accessor.format || 
+      getVertexFormat(attribute.accessor.type || GL.FLOAT, attribute.accessor.size);
+    attributes.push({
+      name: attribute.name,
+      location: attribute.location,
+      format,
+      stepMode: attribute.accessor.divisor === 1 ? 'instance' : 'vertex'
+    });
+  }
+
   const bindings: BindingLayout[] = [];
   for (const uniformBlock of programBindings.uniformBlocks) {
     bindings.push({
@@ -19,14 +32,19 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
       location: uniformBlock.location
     });
   }
+
+  const uniforms: any[] = [];
   for (const uniform of programBindings.uniforms) {
+    debugger;
     // console.log(uniform)
     // switch (uniform.type) {
     // }
   }
   return {
-    attributes: [], // programBindings.attributes,
-    bindings
+    attributes, // programBindings.attributes,
+    bindings,
+    uniforms,
+    varyings: program
   };
 }
 

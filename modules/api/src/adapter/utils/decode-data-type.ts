@@ -1,4 +1,4 @@
-import {DataType, NormalizedDataType} from '../types/formats';
+import {DataType, NormalizedDataType} from '../types/vertex-formats';
 
 /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
 export function decodeVertexType(type: NormalizedDataType): {

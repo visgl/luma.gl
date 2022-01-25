@@ -2,7 +2,7 @@
 import StatsManager, {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/utils';
-import {TextureFormat} from './types/formats';
+import {TextureFormat} from './types/texture-formats';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
 import type {default as Buffer, BufferProps} from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
