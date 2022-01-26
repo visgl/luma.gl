@@ -1,13 +1,16 @@
 // luma.gl, MIT license
 import {assert} from '../utils/assert';
 import {log} from '../utils/log';
+import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
 import UniformBufferLayout from './uniform-buffer-layout';
 
 /** A uniform block holds a number of uniforms */
-export class UniformBlock<TUniforms = Record<string, any>> {
-  readonly layout: UniformBufferLayout;
+export default class UniformBlock<TUniforms = Record<string, any>> {
+  // readonly layout: UniformBufferLayout;
+  readonly layout: Record<string, UniformInfo> = {};
   uniforms: TUniforms;
 
+  protected size: number;
   protected data: ArrayBuffer;
   protected typedArray: {
     float32: Float32Array,
@@ -15,11 +18,21 @@ export class UniformBlock<TUniforms = Record<string, any>> {
     uint32: Uint32Array
   };
 
-  constructor(layout: UniformBufferLayout) {
-    this.layout = layout;
+  constructor(layout: ShaderLayout, blockName: string) {
+    const binding = layout.bindings
+      .find(binding => binding.type === 'uniform' && binding.name === blockName);
+    assert(binding, blockName);
+
+    const uniformBlock = binding as UniformBufferBindingLayout;
+    for (const uniform of uniformBlock.uniforms) {
+      this.layout[uniform.name] = uniform;
+    }
+
+    // TODO calculate
+    this.size = 256;
 
     // Allocate three typed arrays pointing at same memory
-    this.data = new ArrayBuffer(this.layout.size * 4);
+    this.data = new ArrayBuffer(this.size * 4);
     this.typedArray = {
       float32: new Float32Array(this.data),
       sint32: new Int32Array(this.data),
@@ -30,7 +43,7 @@ export class UniformBlock<TUniforms = Record<string, any>> {
   /** Set a map of uniforms */
   setUniforms(uniforms: TUniforms): void {
     for (const [key, value] of Object.entries(uniforms)) {
-      if (this.layout.has(key)) {
+      if (this.layout[key] !== undefined) {
         this._setValue(key, value);
       } else {
         log.warn(`Unknown uniform ${key}`)

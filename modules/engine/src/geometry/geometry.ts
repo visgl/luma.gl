@@ -18,10 +18,13 @@ export type Topology =
 
 export type GeometryProps = {
   id?: string;
-  drawMode?: Topology,
   attributes?: {},
   indices?;
-  vertexCount?: number
+  vertexCount?: number;
+  /** Determines how vertices are read from the 'vertex' attributes */
+  topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  /** @deprecated */
+  drawMode?: Topology;
 };
 
 type GeometryAttributes = {
@@ -45,17 +48,21 @@ export default class Geometry {
   };
 
   readonly id: string;
+  userData: Record<string, any> = {};
+
+  /** Determines how vertices are read from the 'vertex' attributes */
+  topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  /** @deprecated */
   readonly drawMode: Topology = GL.TRIANGLES;
 
-  vertexCount: number;
-  attributes: {
+  readonly vertexCount: number;
+  readonly attributes: {
     POSITION: {size: number, value: TypedArray, [key: string]: any},
     NORMAL: {size: number, value: TypedArray, [key: string]: any},
     TEXCOORD_0: {size: number, value: TypedArray, [key: string]: any},
     COLOR_0?: {size: number, value: TypedArray, [key: string]: any},
   };
-  indices;
-  userData: Record<string, any> = {};
+  readonly indices?: Uint16Array | Uint32Array;
 
   constructor(props: GeometryProps = {}) {
     const {
@@ -68,6 +75,7 @@ export default class Geometry {
 
     this.id = id;
     this.drawMode = drawMode;
+    this.topology = props.topology || convertToTopology(props.drawMode);
 
     this._setAttributes(attributes, indices);
 
@@ -83,9 +91,9 @@ export default class Geometry {
   }
 
   // Return an object with all attributes plus indices added as a field.
-  getAttributes(): GeometryAttributes {
-    return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
-  }
+  // getAttributes(): GeometryAttributes {
+  //   return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
+  // }
 
   // PRIVATE
 
@@ -100,6 +108,7 @@ export default class Geometry {
   // target: WebGL buffer type (string or constant)
   _setAttributes(attributes, indices): this {
     if (indices) {
+      // @ts-expect-error
       this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
     }
 
@@ -124,14 +133,18 @@ export default class Geometry {
       // Move indices to separate field
       if (attributeName === 'indices') {
         assert(!this.indices);
-        this.indices = attribute;
+      // @ts-expect-error
+      this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;
       }
     }
 
-    if (this.indices && this.indices.isIndexed !== undefined) {
+      // @ts-expect-error
+      if (this.indices && this.indices.isIndexed !== undefined) {
+      // @ts-expect-error
       this.indices = Object.assign({}, this.indices);
+      // @ts-expect-error
       delete this.indices.isIndexed;
     }
 
@@ -153,5 +166,20 @@ export default class Geometry {
 
     assert(Number.isFinite(vertexCount));
     return vertexCount;
+  }
+}
+
+function convertToTopology(drawMode: GL): 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip' {
+  switch (drawMode) {
+    case GL.POINTS: return 'point-list'; // draw single points.
+    case GL.LINES: return 'line-list'; // draw lines. Each vertex connects to the one after it.
+    case GL.LINE_STRIP: return 'line-strip';  // draw a connected group of line segments from the first vertex to the last
+    case GL.TRIANGLES: return 'triangle-list'; // draw triangles. Each set of three vertices creates a separate triangle.
+    case GL.TRIANGLE_STRIP: return 'triangle-strip'; // draw a connected group of triangles.
+
+    case GL.TRIANGLE_FAN: // draw a connected group of triangles.
+    case GL.LINE_LOOP:  // draw lines. Each set of two vertices is treated as a separate line segment.
+    default:
+      throw new Error(String(drawMode));
   }
 }

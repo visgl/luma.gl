@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {clear} from '@luma.gl/gltools';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -79,5 +79,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

@@ -1,6 +1,5 @@
-import {uid} from '@luma.gl/api';
-import Geometry from '../geometry/geometry';
-// import type {GeometryType} from '../geometry/geometry-type';
+import type {GeometryTable} from '../geometry/geometry-table';
+// import {unpackIndexedGeometry} from '../geometry/geometry-utils';
 
 export type CubeGeometryProps = {
   id?: string;
@@ -8,20 +7,33 @@ export type CubeGeometryProps = {
   attributes?;
 };
 
-export class CubeGeometry extends Geometry {
-  constructor(props: CubeGeometryProps = {}) {
-    const {id = uid('cube-geometry'), indices = true} = props;
-    super(indices ? {
-      ...props,
-      id,
-      indices: {size: 1, value: CUBE_INDICES},
-      attributes: {...ATTRIBUTES, ...props.attributes}
-    } : {
-      ...props,
-      id,
-      attributes: {...NON_INDEXED_ATTRIBUTES, ...props.attributes}
-    });
+export function makeCubeGeometry(props?: CubeGeometryProps): GeometryTable {
+  const primitive: GeometryTable = {
+    topology: 'triangle-list',
+    length: 36,
+    indices: CUBE_INDICES,
+    attributes: {
+      POSITION: CUBE_POSITIONS,
+      NORMAL: CUBE_NORMALS,
+      TEXCOORD_0: CUBE_TEX_COORDS
+    }
+  };
+  // return props?.indices ? primitive : unpackIndexedGeometry(primitive);
+   
+  if (props?.indices) {
+    return primitive;
   }
+   return {
+    topology: 'triangle-list',
+    length: 1,
+    // @ts-expect-error
+    attributes: {
+      POSITION: CUBE_NON_INDEXED_POSITIONS,
+      // NORMAL: CUBE_NON_INDEXED_NORMALS,
+      TEXCOORD_0: CUBE_NON_INDEXED_TEX_COORDS,
+      COLOR_0: CUBE_NON_INDEXED_COLORS
+    }
+  };
 }
 
 // prettier-ignore
@@ -210,16 +222,3 @@ export const CUBE_NON_INDEXED_COLORS = Object.freeze(new Float32Array([
   1, 0, 0, 1,
   0, 1, 0, 1,
 ]));
-
-const ATTRIBUTES = {
-  POSITION: {size: 3, value: CUBE_POSITIONS},
-  NORMAL: {size: 3, value: CUBE_NORMALS},
-  TEXCOORD_0: {size: 2, value: CUBE_TEX_COORDS}
-};
-
-const NON_INDEXED_ATTRIBUTES = {
-  POSITION: {size: 4, value: CUBE_NON_INDEXED_POSITIONS},
-  // NORMAL: {size: 3, value: CUBE_NON_INDEXED_NORMALS},
-  TEXCOORD_0: {size: 2, value: CUBE_NON_INDEXED_TEX_COORDS},
-  COLOR_0: {size: 3, value: CUBE_NON_INDEXED_COLORS}
-};

@@ -22,6 +22,10 @@ export default class WebGPURenderPipeline extends RenderPipeline {
 
   private _bufferSlots: Record<string, number>;
   private _buffers: Buffer[];
+  private _indexBuffer: WebGPUBuffer;
+  // private _firstIndex: number;
+  // private _lastIndex: number;
+
   /** For internal use to create BindGroups */
   private _bindGroupLayout: GPUBindGroupLayout;
   private _bindGroup: GPUBindGroup = null;
@@ -48,6 +52,10 @@ export default class WebGPURenderPipeline extends RenderPipeline {
 
   destroy() {
     // WebGPURenderPipeline has no destroy method.
+  }
+
+  setIndexBuffer(indexBuffer: Buffer): void {
+    this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
   }
 
   setAttributes(attributes: Record<string, Buffer>): void {
@@ -80,6 +88,12 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         this.props.layout,
         this.props.bindings
       );
+    }
+  }
+
+  setUniforms(uniforms: Record<string, any>): void {
+    if (!isObjectEmpty(uniforms)) {
+      throw new Error('WebGPU does not support uniforms');
     }
   }
 
@@ -175,6 +189,10 @@ export default class WebGPURenderPipeline extends RenderPipeline {
   }
 
   _setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
+    if (this._indexBuffer) {
+      webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
+    }
+
     const buffers = this._getBuffers();
     for (let i = 0; i < buffers.length; ++i) {
       const buffer = cast<WebGPUBuffer>(buffers[i]);

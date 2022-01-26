@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Have to start somewhere...
@@ -53,13 +53,13 @@ export default class AppRenderLoop extends RenderLoop {
     });
   }
 
-  onFinalize() {
+  destroy() {
     this.model.destroy();
     this.positionBuffer.destroy();
     this.colorBuffer.destroy();
   }
 
-  onRender({device}: AnimationProps): void {
+  frame({device}: AnimationProps): void {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }
@@ -67,5 +67,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

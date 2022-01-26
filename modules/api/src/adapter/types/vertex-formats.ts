@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 export type DataType =
   'uint8' |
   'sint8' |

@@ -84,7 +84,7 @@ export type {
 } from './adapter/types/shader-layout';
 
 export {default as UniformBufferLayout} from './lib/uniform-buffer-layout';
-export {default as UniformBlock} from './lib/uniform-buffer-layout';
+export {default as UniformBlock} from './lib/uniform-block';
 
 // API UTILS
 export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';

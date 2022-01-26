@@ -8,6 +8,8 @@ export type BufferProps = ResourceProps & {
   byteLength?: number;
   data?: ArrayBuffer | ArrayBufferView;
   byteOffset?: number;
+  /** If props.usage & Buffer.INDEX */
+  indexType?: 'uint16' | 'uint32';
 
   // TBD
   mappedAtCreation?: boolean;
@@ -30,10 +32,11 @@ export type BufferProps = ResourceProps & {
 
 const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
   ...DEFAULT_RESOURCE_PROPS,
+  usage: undefined, // Buffer.COPY_DST | Buffer.COPY_SRC
   byteLength: 0,
   byteOffset: 0,
   data: undefined,
-  usage: undefined, // Buffer.COPY_DST | Buffer.COPY_SRC
+  indexType: undefined,
   mappedAtCreation: false
 };
 

@@ -67,14 +67,14 @@ test('Object#Geometries', (t) => {
       t.is(typeof geometry.mode, 'number', `${name}: .mode is a number`);
       t.is(typeof geometry.vertexCount, 'number', `${name}: .vertexCount is a number`);
 
-      const attributes = geometry.getAttributes();
+      const attributes = geometry.attributes;
 
       t.ok(checkAttribute(attributes.POSITION), `${name}: POSITION is Float32Array`);
       t.ok(checkAttribute(attributes.NORMAL), `${name}: NORMAL is Float32Array`);
       t.ok(checkAttribute(attributes.TEXCOORD_0), `${name}: TEXCOORD_0 is Float32Array`);
-      if (attributes.indices) {
+      if (geometry.indices) {
         t.ok(
-          checkAttribute(attributes.indices, [Uint16Array, Uint32Array]),
+          checkAttribute(geometry.indices, [Uint16Array, Uint32Array]),
           `${name}: indices is Uint{16/32}Array`
         );
       }

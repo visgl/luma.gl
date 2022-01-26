@@ -8,7 +8,7 @@ const INDEX_OFFSETS = {
   z: [1, 2, 0]
 };
 
-export type TruncatedConeGeometryProps = {
+export type TruncatedConeProps = {
   topRadius?: number;
   bottomRadius?: number;
   topCap?: boolean;
@@ -24,7 +24,7 @@ export type TruncatedConeGeometryProps = {
  * copyright 2011 Google Inc. new BSD License
  * (http://www.opensource.org/licenses/bsd-license.php).
  */
-export function makeTruncatedConeGeometry(props?: TruncatedConeGeometryProps): GeometryTable {
+export function makeTruncatedCone(props?: TruncatedConeProps): GeometryTable {
   const {indices, attributes} = tesselateTruncatedCone(props);
   return {
     length: indices.length,
@@ -33,8 +33,8 @@ export function makeTruncatedConeGeometry(props?: TruncatedConeGeometryProps): G
   };
 }
 
-export class TruncatedConeGeometry extends Geometry {
-  constructor(props: TruncatedConeGeometryProps & {id?: string; attributes?} = {}) {
+export class TruncatedCone extends Geometry {
+  constructor(props: TruncatedConeProps & {id?: string; attributes?} = {}) {
     const {id = uid('truncated-code-geometry')} = props;
     const {indices, attributes} = tesselateTruncatedCone(props);
     super({
@@ -51,7 +51,7 @@ export class TruncatedConeGeometry extends Geometry {
 }
 
 /* eslint-disable max-statements, complexity */
-function tesselateTruncatedCone(props: TruncatedConeGeometryProps = {}) {
+function tesselateTruncatedCone(props: TruncatedConeProps = {}) {
   const {
     bottomRadius = 0,
     topRadius = 0,
