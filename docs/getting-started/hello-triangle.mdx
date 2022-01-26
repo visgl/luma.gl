@@ -6,13 +6,15 @@ import {HelloTriangleExample} from '../../website';
 <DeviceTabs />
 <HelloTriangleExample />
 
-This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs. It is assumed you've set up your development environment as described in [Getting Started](/docs/getting-started). Your `index.js` file should look like the following:
+This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs.
+It is assumed you've set up your development environment as described in
+[Getting Started](/docs/getting-started). Your `index.js` file should look like the following:
 
 ```js
 import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
-const loop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop ({
   onInitialize({device}) {
     // Setup logic goes here
   },
@@ -23,6 +25,7 @@ const loop = new AnimationLoop({
   }
 });
 
+const loop = new AppAnimationLoop();
 loop.start();
 ```
 
@@ -83,7 +86,7 @@ Next let's add the vertex and fragment shader code we'll be using to draw:
   }
 ```
 
-As a final step in our initialization, we'll create a `Model` and return it from `onInitialize`:
+As a final step in our initialization, we'll create a `Model` in `onInitialize`:
 
 ```js
   onInitialize({device}) {
@@ -93,7 +96,7 @@ As a final step in our initialization, we'll create a `Model` and return it from
 
     // Shaders...
 
-    const model = new Model(device, {
+    this.model = new Model(device, {
       vs,
       fs,
       attributes: {
@@ -112,9 +115,9 @@ A `Model` can be thought of as gathering all the WebGL pieces necessary for a si
 Our `onRender` method is comparitavely much simpler:
 
 ```js
-  onRender({device, model}) {
+  onRender({device}) {
     clear(device, {color: [0, 0, 0, 1]});
-    model.draw();
+    this.model.draw();
   }
 ```
 
@@ -126,7 +129,7 @@ The entire application should look like the following:
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
-const loop = new AnimationLoop({
+class AppAnimationLoop extends AnimationLoop {
   onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
@@ -169,7 +172,8 @@ const loop = new AnimationLoop({
     clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }
-});
+};
 
+const loop = new AppAnimationLoop();
 loop.start();
 ```

@@ -12,6 +12,8 @@
 | Module      | Exports                                                                                                                                                                                                                       |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@luma.gl/engine`      | `AnimationLoop`, `Model`, `Transform`, `ProgramManager`, Timeline, Geometry, ClipSpace, ConeGeometry, CubeGeometry, CylinderGeometry, IcoSphereGeometry, PlaneGeometry, SphereGeometry, TruncatedConeGeometry                         |
-| webgl       | lumaStats, FEATURES, hasFeature, hasFeatures, Buffer, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, readPixelsToArray, readPixelsToBuffer, cloneTextureFrom, copyToTexture, Texture3D, TransformFeedback |
-| gltools     | createGLContext, instrumentGLContext, isWebGL, isWebGL2, getParameters, setParameters, withParameters, resetParameters, cssToDeviceRatio, cssToDevicePixels                                                                   |
-| shadertools | normalizeShaderModule, fp32, fp64, project, dirlight, picking, gouraudLighting, phongLighting, pbr                                                                                                                            |
+| `@luma.gl/api`       | lumaStats, FEATURES, hasFeature, hasFeatures, Buffer, Program, Framebuffer, Renderbuffer, Texture2D, TextureCube, clear, readPixelsToArray, readPixelsToBuffer, cloneTextureFrom, copyToTexture, Texture3D, TransformFeedback |
+| `@luma.gl/webgl`       |
+| `@luma.gl/webgpu`       |
+| `@luma.gl/gltools`     | createGLContext, instrumentGLContext, isWebGL, isWebGL2, getParameters, setParameters, withParameters, resetParameters, cssToDeviceRatio, cssToDevicePixels                                                                   | `@luma.gl/shadertools` | `normalizeShaderModule`, `fp32`, `fp64`, `project`, `dirlight`, `picking`, `gouraudLighting`, `phongLighting`, `pbr`                                                                                                                           |
+| `@luma.gl/experimental`       |

@@ -29,9 +29,12 @@ With a bit more work, typescript users can retrieve the `WebGLRenderingContext`
 without ignoring type errors:
 
 ```typescript
-import {cast} from '@luma.gl/api';
+import {Device, cast} from '@luma.gl/api';
 import {WebGPUDevice} from '@luma.gl/webgpu'; // Installs the WebGPUDevice adapter
 
-const webgpuDevice = cast<WebGPUDevice>(device);
-const gl = webgpuDevice.handle;
+function f(device: Device) {
+  const webgpuDevice = device as WebGPUDevice;
+  const gpuDevice: GPUDevice = webgpuDevice.handle; // Get underlying WebGPU device
+  ...
+}
 ```

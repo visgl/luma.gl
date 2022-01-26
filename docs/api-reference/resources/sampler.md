@@ -1,16 +1,20 @@
 # Sampler
 
-A Sampler is an immutable object that holds a set of sampling parameters for texture access.
+> Proposed luma.gl v9 API. Open for comments.
+
+A `Sampler` is an immutable object that holds a set of sampling parameters for texture access.
 Sampling parameters are applied during shader execution and control how values ("texels")
 are read from textures.
 
-Samplers allow texture sampling parameters to be specified independently of textures.
-By using samplers an application can render the same texture with different
-parameters without duplicating the texture, or modifying the texture parameters.
+Note that luma.gl automatically creates a default `Sampler` for each `Texture`. 
+A texture's default sampler parameters can be specified creating the texture via `device.createTexture({sampler: SamplerProps}))`.
+Unless an application needs to render the same texture with different sampling parameters,
+an application typically does not need to explicitly instantiate samplers.
 
-References:
-
-- [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).
+Finally, a **Comparison sampler** is a special type of `Sampler` that compares against the depth buffer.
+During comparison sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
+and the result of the comparison (`0` or `1`) is assigned to the red channel.
+Specifying the `compare` sampler property creates a comparison sampler.
 
 ## Usage
 
@@ -24,7 +28,7 @@ const sampler = device.createSampler(gl, {
 });
 ```
 
-A `Sampler` is automatically created for each texture.
+Note that a default `Sampler` is automatically created for each texture:
 
 ```typescript
 // Create a texture
@@ -37,29 +41,18 @@ const texture = device.createTexture({
 console.log(texture.sampler);
 ```
 
-## Base Classes
-
-Sampler inherits from [Resource](/docs/modules/api/api-reference/resources/resource.md) and supports the same use cases.
-
-## Methods
-
-### Base Class
-
-`Sampler` inherits methods and members from [Resource](/docs/modules/api/api-reference/resources/resource.md):
-
-### constructor
+Create a new **comparison sampler**, by specifying the `compare` sampler property creates a comparison sampler.
 
 ```typescript
-device.createSampler({...})
+const sampler = device.createSampler(gl, {
+  compare: 'lequal'
+});
 ```
 
-- `props` - an object where each key represents a sampler parameter and its value.
 
-### destroy
+## Types
 
-Frees the underlying WebGL resource
-
-## Sampler Parameters
+### SamplerProps
 
 | Sampler Parameter | Values                                               | Description                                                         |
 | ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
@@ -69,47 +62,12 @@ Frees the underlying WebGL resource
 | `magFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
 | `minFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
 | `mipmapFilter?`   | `'nearest'` \| `'linear'`                            | Sample closest mipmap, or interpolate two closest mipmaps           |
+| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate        |
 | `lodMinClamp?`    | `number`                                             | Minimum level of detail to use when sampling                        |
 | `lodMaxClamp?`    | `number`                                             | Maximum level of detail to use when sampling                        |
 | `compare?`        | `lequal` etc (see below)                             | Create a depth "comparison sampler" with specified compare function |
-| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate        |
 
-### Texture Magnification Filter
-
-Controls how a pixel is textured when it maps to less than one texel.
-
-Parameter: `texture_mag_filter`
-
-| Value               | Description        |
-| ------------------- | ------------------ |
-| `linear`            | interpolated texel |
-| `nearest` (default) | nearest texel      |
-
-- `nearest` is faster than `linear`, but is not as smooth.
-
-### Texture Minification Filter
-
-Controls how a pixel is textured maps to more than one texel.
-
-ParameterL `texture_min_filter`
-
-| Value     | Description        |
-| --------- | ------------------ |
-| `linear`  | interpolated texel |
-| `nearest` | nearest texel      |
-
-### Texture Minification Filter
-
-Controls how a pixel is textured maps to more than one texel.
-
-ParameterL `texture_min_filter`
-
-| Value     | Description        |
-| --------- | ------------------ |
-| `linear`  | interpolated texel |
-| `nearest` | nearest texel      |
-
-### Texture Wrapping
+#### Texture Wrapping
 
 Controls how texture coordinates outside of the [0, 1] range are sampled.
 
@@ -121,26 +79,52 @@ Controls how texture coordinates outside of the [0, 1] range are sampled.
 | `clamp-to-edge`    | clamp texture coordinates                                                              |
 | `mirrored-repeat`  | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
 
-### Comparison Samplers
+#### Texture Magnification Filter
 
-Specifying the `compare` sampler property creates a comparison sampler.
-Comparison samplers are special samplers that compare against the depth buffer.
+Controls how a pixel is textured when it maps to less than one texel.
 
-In other words, specifies the texture comparison mode for currently bound depth textures
-(i.e. textures whose internal format is `depth_component_*`).
+Parameter: `magFilter`
 
-```typescript
-const sampler = device.createSampler(gl, {
-  compare: 'lequal'
-});
-```
+| Value               | Description        |
+| ------------------- | ------------------ |
+| `linear`            | interpolated texel |
+| `nearest` (default) | nearest texel      |
 
-During sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
-and the result of the comparison (`0` or `1`) is assigned to the red channel.
+- `nearest` is faster than `linear`, but is not as smooth.
 
-### Texture Comparison Function
+#### Texture Minification Filter
 
-Parameter: `texture_compare_func`
+Controls how a pixel is textured when it maps to more than one texel.
+
+Parameter: `minFilter`
+
+| Value     | Description        |
+| --------- | ------------------ |
+| `linear`  | interpolated texel |
+| `nearest` | nearest texel      |
+
+#### Texture Mipmap Filter
+
+Controls if a pixel is textured by referencing more than one mipmap level.
+
+ParameterL `mipmapFilter`
+
+| Value     | Description                 |
+| --------- | --------------------------- |
+| `linear`  | interpolate between mipmaps |
+| `nearest` | nearest mipmap              |
+| N/A       | no mipmaps                  |
+
+#### Texture Max Anisotropy
+
+Controls multiple mipmap level can be consulted when texturing a pixel.
+
+#### Texture Comparison Function
+
+> Specifying the `compare` sampler property creates a comparison sampler.
+> Comparison samplers are special samplers that compare against the depth buffer.
+
+Parameter: `compare`
 
 | `Value             | Computed result                    |
 | ------------------ | ---------------------------------- |
@@ -152,3 +136,33 @@ Parameter: `texture_compare_func`
 | `notequal`         | result = 1.0 0.0, r ≠ D t r = D t  |
 | `always`           | result = 1.0                       |
 | `never`            | result = 0.0                       |
+
+During sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
+and the result of the comparison (`0` or `1`) is assigned to the red channel.
+
+## Members
+
+- `device`: `Device` - holds a reference to the `Device` that created this `Sampler`.
+- `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
+- `props`: `SamplerProps` - holds a copy of the `SamplerProps` used to create this `Sampler`.
+
+## Methods
+
+### `constructor(props: SamplerProps)`
+
+`Sampler` is an abstract class and cannot be instantiated directly. Create with `device.createSampler(...)`.
+
+```typescript
+device.createSampler({...})
+```
+
+### `destroy(): void`
+
+Free up any GPU resources associated with this sampler immediately (instead of waiting for garbage collection).
+## Methods
+
+`Sampler` inherits methods and members from [Resource](/docs/modules/api/api-reference/resources/resource.md).
+
+## Remarks
+
+- WebGL: More information about `WebGLSampler` can be found in the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Sampler_Object).

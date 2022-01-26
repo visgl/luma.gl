@@ -1,8 +1,10 @@
 # Model
 
-`Model` is the primary class in luma.gl.
+> Proposed luma.gl v9 API. Open for comments.
 
-A `Model` holds all the data necessary to perform draw calls:
+The `Model` is the primary class for most luma.gl applications.
+
+A `Model` brings together a range of different luma.gl functions in one class. It holds all the data necessary to perform draw calls:
 
 - **shaders** (via a [`Program`](/docs/api-reference/webgl/program) instance)
 - **bindings** these can reference uniforms and textures.
@@ -24,7 +26,7 @@ Create model object by passing shaders, uniforms, geometry and render it by pass
 
 ```typescript
 // construct the model.
-const model =  new Model(gl, {
+const model =  new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
   uniforms: {uSampler: texture},
@@ -46,23 +48,23 @@ When using `Buffer` objects, data remains on GPU and same `Buffer` object can be
 
 ```typescript
 // construct the model.
-const model =  new Model(gl, {
+const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  uniforms: {uSampler: texture},
+  topology: 'triangle-list',
+  vertexCount: 3,
   attributes: {
     attributeName1: bufferObject,
-    attributeName2: [new Buffer(gl, new Float32Array(...)), {size: 3, type: GL.FLOAT}]
-  }
-  drawMode: gl.TRIANGLE_FAN,
-  vertexCount: 3,
+    attributeName2: device.createBuffer(new Float32Array(...))
+  },
+  uniforms: {uSampler: texture},
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
 model
   .setUniforms({
     uPMatrix: currentProjectionMatrix,
-    uMVMatrix: current ModelViewMatrix
+    uMVMatrix: currentModelViewMatrix
   })
   .draw();
 ```
@@ -73,7 +75,7 @@ A `VertexArray` object can be build and passed to `Model.draw()` to provide attr
 
 ```typescript
 // construct the model.
-const model = new Model(gl, {
+const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
   uniforms: {uSampler: texture},
@@ -83,13 +85,13 @@ const model = new Model(gl, {
 
 const ATTRIBUTE1_LOCATION = 0;
 const ATTRIBUTE2_LOCATION = 1;
-const vertexArray1 = new VertexArray(gl, {
+const vertexArray1 = device.createVertexArray({
   buffers: {
     [ATTRIBUTE1_LOCATION]: buffer1,
     [ATTRIBUTE2_LOCATION]: buffer2
   }
 });
-const vertexArray2 = new VertexArray(gl, {
+const vertexArray2 = device.createVertexArray({
   buffers: {
     [ATTRIBUTE1_LOCATION]: buffer3,
     [ATTRIBUTE2_LOCATION]: buffer4
@@ -106,13 +108,12 @@ model.draw({
 });
 
 // Switch attribute data to vertexArray2
-model.draw({
-  uniforms: {
-    uPMatrix: currentProjectionMatrix,
-    uMVMatrix: currentModelViewMatrix
-  },
-  vertexArray: vertexArray2
-});
+model.setUniforms({
+  uPMatrix: currentProjectionMatrix,
+  uMVMatrix: currentModelViewMatrix
+})
+model.setVertexArray(vertexArray2);
+model.draw({...});
 ```
 
 ## Properties
@@ -150,21 +151,15 @@ function to be called before every time this model is drawn.
 
 function to be called after every time this model is drawn.
 
-## Constructor
+## Methods
 
-### Model(gl: WebGLRenderingContext, props: object)
+### Model(device: Device, props: ModelProps)
 
 The constructor for the Model class. Use this to create a new Model.
 
-### delete()
+### destroy()
 
 Free WebGL resources associated with this model
-
-## Methods
-
-### setProps(props: object); this
-
-Updates properties
 
 ### isAnimated(): boolean
 
@@ -232,55 +227,3 @@ model.transform({
   discard: false
 });
 ```
-
-### clear(options: object); this
-
-## Deprecated Methods in v7
-
-### render(options: object): boolean
-
-Use Model.setUniforms() and Model.draw()
-
-### getDrawMode(): Enum
-
-Gets the WebGL drawMode
-
-### getVertexCount(): GLInt
-
-Gets vertex count
-
-Note: might be autocalculated from `Geometry`
-
-### getInstanceCount(): GLInt
-
-Defaults to 0
-
-### getAttributes(): object
-
-Get a map of named attributes
-
-### setDrawMode(); this
-
-Sets the WebGL `drawMode`.
-
-`GL.POINTS` etc.
-
-### setVertexCount(); this
-
-Sets the number of vertices
-
-### setInstanceCount(); this
-
-How many instances will be rendered
-
-### setGeometry(); this
-
-Use a `Geometry` instance to define attribute buffers
-
-### setAttributes(attributes: object); this
-
-Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/webgl/vertex-array))
-
-## Remarks
-
-- The `Model` class is arguably the most useful class for typical applications. It manages the WebGL resources needed to perform draw calls and provide additional functionality as described below.
