@@ -97,7 +97,7 @@ export default class AppRenderLoop extends RenderLoop {
   }
 
   onFinalize() {
-    this.model.delete();
+    this.model.destroy();
   }
 
   onRender({device, aspect, tick}) {
