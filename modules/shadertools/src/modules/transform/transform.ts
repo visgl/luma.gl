@@ -43,5 +43,5 @@ vec4 transform_getInput(sampler2D texSampler, vec2 size) {
 export const transform = {
   name: 'transform',
   vs,
-  fs: null
+  fs: undefined
 };

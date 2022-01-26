@@ -78,7 +78,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
     throw new Error('type');
   }
 
-  private createColorTexture(props, texture: Texture | ColorTextureFormat): WEBGPUTexture {
+  private createColorTexture(props: FramebufferProps, texture: Texture | ColorTextureFormat): WEBGPUTexture {
     if (texture instanceof WEBGPUTexture) {
       return texture;
     }

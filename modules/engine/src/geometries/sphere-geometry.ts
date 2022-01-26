@@ -37,7 +37,7 @@ function tesselateSphere(props: SphereGeometryProps) {
   const longRange = endLong - startLong;
   const numVertices = (nlat + 1) * (nlong + 1);
 
-  const radius = (n1, n2, n3, u, v) => props.radius || 1;
+  const radius = (n1: number, n2: number, n3: number, u: number, v: number) => props.radius || 1;
 
   const positions = new Float32Array(numVertices * 3);
   const normals = new Float32Array(numVertices * 3);

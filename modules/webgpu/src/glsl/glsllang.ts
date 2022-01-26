@@ -1,7 +1,7 @@
 // Inspired by webgpu samples at https://github.com/austinEng/webgpu-samples/blob/master/src/glslang.ts
 // under BSD 3-clause license
 
-let glslang;
+let glslang: unknown;
 
 /** Dynamically load the GLSL compiler */
 export async function loadGlslangModule() {

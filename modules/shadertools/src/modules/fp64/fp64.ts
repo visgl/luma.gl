@@ -19,7 +19,6 @@ function getUniforms() {
 export const fp64arithmetic = {
   name: 'fp64-arithmetic',
   vs: fp64arithmeticShader,
-  fs: null,
   getUniforms,
   fp64ify,
   fp64LowPart,
@@ -32,7 +31,6 @@ export const fp64arithmetic = {
 export const fp64 = {
   name: 'fp64',
   vs: fp64functionShader,
-  fs: null,
   dependencies: [fp64arithmetic],
   fp64ify,
   fp64LowPart,

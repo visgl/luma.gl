@@ -44,7 +44,7 @@ import WebGLDevice from '../webgl-device';
 
   // PRIVATE METHODS
 
-  _compile(source) {
+  _compile(source: string): void {
     const addGLSLVersion = source => source.startsWith('#version ') ? source : `#version 100\n${source}`;
     source = addGLSLVersion(source);
 

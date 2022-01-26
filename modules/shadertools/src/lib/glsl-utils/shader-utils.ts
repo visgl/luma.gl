@@ -32,9 +32,9 @@ export function getQualifierDetails(line: string, qualifiers: string | string[])
  */
 export function getPassthroughFS(options?: {
   version?: number;
-  input?;
-  inputType?,
-  output?
+  input?: string;
+  inputType?: string;
+  output?: string;
 }): string {
   const {version = 100, input, inputType, output} = options || {};
   if (!input) {

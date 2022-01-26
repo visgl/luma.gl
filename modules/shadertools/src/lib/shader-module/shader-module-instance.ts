@@ -1,14 +1,14 @@
 import {assert} from '../utils/assert';
 import {parsePropTypes} from '../filters/prop-types';
-import {ShaderModule} from '../../types';
+import {ShaderModule, ShaderModuleDeprecation} from '../../types';
 
 export class ShaderModuleInstance {
-  name;
-  vs;
-  fs;
+  name: string;
+  vs: string;
+  fs: string;
   getModuleUniforms;
-  dependencies;
-  deprecations;
+  dependencies: ShaderModule[];
+  deprecations: ShaderModuleDeprecation[];
   defines;
   injections;
   uniforms;
@@ -98,7 +98,7 @@ ${moduleSource}\
     });
   }
 
-  _parseDeprecationDefinitions(deprecations) {
+  _parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
     deprecations.forEach((def) => {
       switch (def.type) {
         case 'function':

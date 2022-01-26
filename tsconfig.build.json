@@ -14,15 +14,14 @@
     {"path": "modules/gltools"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
-    {"path": "modules/webgl"}
+    {"path": "modules/webgl"},
+    {"path": "modules/webgpu"}
   ],
   "include": [
     "modules/*/src"
   ],
   "exclude": [
     "modules/*/src/libs",
-    "modules/tile-converter",
-    "modules/textures/src/libs/basis_encoder.js",
     "examples",
     "test",
     "scripts",

@@ -23,7 +23,7 @@ export async function loadFile(url: string, options?: {dataType?: string} & Requ
  * image.crossOrigin can be set via opts.crossOrigin, default to 'anonymous'
  * @returns a promise tracking the load
  */
-export async function loadImageBitmap(url: string, opts?: {crossOrigin}): Promise<ImageBitmap> {
+export async function loadImageBitmap(url: string, opts?: {crossOrigin?: string}): Promise<ImageBitmap> {
   const img = new Image();
   img.crossOrigin = opts?.crossOrigin || 'anonymous';
   img.src = pathPrefix + url;

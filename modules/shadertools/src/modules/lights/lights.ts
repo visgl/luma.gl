@@ -1,10 +1,27 @@
 import lightingShader from './lights.glsl';
 
+type Color = [number, number, number];
+
 type LightSources = {
-  ambientLight?, pointLights?, directionalLights?
+  ambientLight?: {
+    color: Color;
+    intensity: number
+  };
+  pointLights?:  {
+    color: Color;
+    intensity: number;
+    position: [number, number, number];
+    attenuation: number
+  }[];
+  directionalLights?: {
+    color: Color;
+    intensity: number;
+    position: [number, number, number];
+    direction: [number, number, number]
+  }[];
 };
 
-type LightsOptions = {
+export type LightsOptions = {
   lightSources?: LightSources;
 }
 
@@ -49,7 +66,7 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
 }
 
 // eslint-disable-next-line complexity
-function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS) {
+function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS): Record<string, any> {
   // Specify lights separately
   if ('lightSources' in opts) {
     const {ambientLight, pointLights, directionalLights} = opts.lightSources || {};
