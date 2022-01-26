@@ -9,7 +9,7 @@ export function getRandom(): () => number {
   };
 }
 
-function fract(n) {
+function fract(n: number): number {
   return n - Math.floor(n);
 }
 

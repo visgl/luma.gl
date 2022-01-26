@@ -1,9 +1,17 @@
 import {lights} from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
-const INITIAL_MODULE_OPTIONS = {};
+export type PhongLightingProps = {
+  ambient?: number;
+  diffuse?: number;
+  shininess?: number;
+  specularColor?: [number, number, number];
+}
 
-function getMaterialUniforms(material) {
+const INITIAL_MODULE_OPTIONS: {material?: PhongLightingProps} = {};
+
+
+function getMaterialUniforms(material: PhongLightingProps) {
   const {ambient = 0.35, diffuse = 0.6, shininess = 32, specularColor = [30, 30, 30]} = material;
 
   return {
@@ -14,12 +22,11 @@ function getMaterialUniforms(material) {
   };
 }
 
-function getUniforms(opts = INITIAL_MODULE_OPTIONS) {
+function getUniforms(opts: {material?: PhongLightingProps} = INITIAL_MODULE_OPTIONS): Record<string, any> {
   if (!('material' in opts)) {
     return {};
   }
 
-  // @ts-expect-error
   const {material} = opts;
 
   if (!material) {

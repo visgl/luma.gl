@@ -38,9 +38,9 @@ function instantiateModules(modules: (ShaderModule | ShaderModuleInstance)[]): S
  * @param modules - Array of modules (inline modules or module names)
  * @return - Array of modules
  */
-function getShaderDependencies(modules: any[]): any[] {
-  const moduleMap = {};
-  const moduleDepth = {};
+function getShaderDependencies(modules: ShaderModule[]): ShaderModuleInstance[] {
+  const moduleMap: Record<string, ShaderModuleInstance> = {};
+  const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
 
   // Return a reverse sort so that dependencies come before the modules that use them
@@ -60,9 +60,9 @@ function getShaderDependencies(modules: any[]): any[] {
  */
 // Adds another level of dependencies to the result map
 function getDependencyGraph(options: {
-  modules: any[],
+  modules: ShaderModule[],
   level: number,
-  moduleMap: Record<string, any>;
+  moduleMap: Record<string, ShaderModule>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;

@@ -145,9 +145,9 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   const hookFunctionMap = normalizeHookFunctions(hookFunctions);
 
   // Add source of dependent modules in resolved order
-  const hookInjections = {};
-  const declInjections = {};
-  const mainInjections = {};
+  const hookInjections: Record<string, string[]> = {};
+  const declInjections: Record<string, string[]> = {};
+  const mainInjections: Record<string, string[]> = {};
 
   for (const key in inject) {
     const injection =

@@ -1,4 +1,4 @@
-import type {TextureFormat, CanvasContextProps} from '@luma.gl/api';
+import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext, log} from '@luma.gl/api';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import WebGPUDevice from './webgpu-device';
@@ -16,7 +16,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   depthStencilFormat: TextureFormat = 'depth24plus';
   sampleCount: number = 1;
 
-  private depthStencilAttachment;
+  private depthStencilAttachment: Texture;
 
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);

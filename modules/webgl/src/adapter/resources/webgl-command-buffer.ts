@@ -8,7 +8,7 @@ import GL from '@luma.gl/constants';
 import WebGLDevice from '../webgl-device';
 import WEBGLBuffer from './webgl-buffer';
 
-function cast<T>(value) {
+function cast<T>(value: unknown): T {
   return value as T;
 }
 

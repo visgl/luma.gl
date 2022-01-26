@@ -24,11 +24,19 @@ export type ShaderModule = {
   name: string;
   fs?: string;
   vs?: string;
-  uniforms?: object;
+  uniforms?: Record<string, any>;
   getUniforms?: any;
-  defines?: object;
+  defines?: Record<string, string | number>;
   dependencies?: ShaderModule[];
-  deprecations?: any[];
+  deprecations?: ShaderModuleDeprecation[];
+};
+
+export type ShaderModuleDeprecation = {
+  type: string;
+  regex?: RegExp;
+  new: string;
+  old: string;
+  deprecated?: boolean;
 };
 
 /*

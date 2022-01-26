@@ -45,6 +45,8 @@ export {triangleBlur} from './modules/image-blur-filters/triangleblur';
 export {zoomBlur} from './modules/image-blur-filters/zoomblur';
 
 // glfx image adjustment shader modules
+import type {BrightnessContrastProps} from './modules/image-adjust-filters/brightnesscontrast';
+export type {BrightnessContrastProps};
 export {brightnessContrast} from './modules/image-adjust-filters/brightnesscontrast';
 export {denoise} from './modules/image-adjust-filters/denoise';
 export {hueSaturation} from './modules/image-adjust-filters/huesaturation';
@@ -71,3 +73,7 @@ export {fxaa} from './modules/fxaa/fxaa';
 // experimental
 export {warp as _warp} from './modules/image-warp-filters/warp';
 export {transform as _transform} from './modules/transform/transform';
+
+export type ShaderPassProps = {
+  brightnessContrast?: BrightnessContrastProps;
+}

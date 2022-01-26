@@ -6,26 +6,29 @@ import {assembleShaders} from '@luma.gl/shadertools';
 export type GetRenderPipelineOptions = {
   vs: string,
   fs: string,
+  topology;
+  parameters?: RenderPipelineParameters;
+
   modules?: ShaderModule[];
-  defines?: {},
-  inject?: {},
+  defines?: Record<string, string>,
+  inject?: Record<string, string>,
   transpileToGLSL100?: boolean;
 
   varyings?: string[],
   bufferMode?: number,  
-  topology;
-  parameters?: RenderPipelineParameters;
 };
 
 export type GetComputePipelineOptions = {
   cs: string,
-  defines?: {},
-  inject?: {},
+  parameters?: RenderPipelineParameters;
+
+  modules?: ShaderModule[];
+  defines?: Record<string, string>,
+  inject?: Record<string, string>,
+  transpileToGLSL100?: boolean;
+
   varyings?: string[],
   bufferMode?: number,
-  modules?: ShaderModule[];
-  transpileToGLSL100?: boolean;
-  parameters?: RenderPipelineParameters;
 };
 
 const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
@@ -101,7 +104,7 @@ export default class PipelineFactory {
       const {renderPipeline, getUniforms} = this._createRenderPipeline({...props, modules});
       renderPipeline.hash = hash;
       this._pipelineCache[hash] = renderPipeline;
-      this._getUniforms[hash] = getUniforms || ((x) => {});
+      this._getUniforms[hash] = getUniforms || ((x: Record<string, Record<string, any>>) => {});
       this._useCounts[hash] = 0;
     }
 
@@ -182,7 +185,7 @@ export default class PipelineFactory {
   // Dedupe and combine with default modules
   _getModuleList(appModules: ShaderModule[] = []): ShaderModule[] {
     const modules = new Array(this._defaultModules.length + appModules.length);
-    const seen = {};
+    const seen: Record<string, boolean> = {};
     let count = 0;
 
     for (let i = 0, len = this._defaultModules.length; i < len; ++i) {
