@@ -50,7 +50,7 @@ export default class AppRenderLoop extends RenderLoop {
       vs,
       fs,
       geometry: new CubeGeometry(),
-      uniforms: {
+      bindings: {
         uTexture: texture
       },
       parameters: {

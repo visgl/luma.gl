@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {clear} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -83,8 +83,10 @@ export default class AppRenderLoop extends RenderLoop {
           }
         ]
       },
-      uniforms: {
+      bindings: {
         uTexture: texture,
+      },
+      uniforms: {
         uEyePosition: eyePosition
       },
       parameters: {
@@ -118,5 +120,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

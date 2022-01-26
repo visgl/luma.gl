@@ -91,6 +91,10 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     for (const [name, buffer] of Object.entries(attributes)) {
       const webglBuffer = cast<WEBGLBuffer>(buffer);
       const attribute = getAttributeLayout(this.layout, name);
+      if (!attribute) {
+        log.warn(`Unknown attribute "${name}" in pipeline "${this.id}"`)();
+        continue;
+      }
       const decoded = decodeVertexFormat(attribute.format);
       const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
       const divisor = attribute.stepMode === 'instance' ? 1 : 0;
@@ -102,7 +106,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
         offset: 0,
         normalized,
         integer,
-        divisor: 0
+        divisor: attribute.stepMode === 'instance' ? 1 : 0
       });
     }
   }
@@ -175,7 +179,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     } = options;
 
     const drawMode = getDrawMode(this.props.topology);
-    const isIndexed: boolean = false;
+    const isIndexed: boolean = Boolean(this._indexBuffer);
     const indexType = this._indexBuffer?.props.indexType === 'uint16' ? GL.UNSIGNED_SHORT : GL.UNSIGNED_INT;
     const isInstanced: boolean = options.instanceCount > 0;
 
@@ -347,8 +351,11 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
   _applyUniforms() {
     for (const uniformLayout of this.layout.uniforms || []) {
-      const {name, location, type} = uniformLayout;
-      setUniform(this.device.gl, location, type, this.uniforms[name]);
+      const {name, location, type, textureUnit} = uniformLayout;
+      const value = this.uniforms[name] || textureUnit;
+      if (value !== undefined) {
+        setUniform(this.device.gl, location, type, value);
+      }
     }
   }
 }
@@ -393,13 +400,10 @@ function getAttributesByLocation(
   return byLocation;
 }
 
-function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout {
-  const attribute = layout.attributes.find((binding) => binding.name === name);
-  if (!attribute) {
-    throw new Error(`Unknown attribute ${name}`);
-  }
-  return attribute;
+function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | undefined {
+  return layout.attributes.find((binding) => binding.name === name);
 }
+
 function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
   const binding = layout.bindings.find((binding) => binding.name === name);
   if (!binding) {

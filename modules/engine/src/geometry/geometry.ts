@@ -75,7 +75,7 @@ export default class Geometry {
 
     this.id = id;
     this.drawMode = drawMode;
-    this.topology = props.topology || convertToTopology(props.drawMode);
+    this.topology = props.topology || convertToTopology(drawMode);
 
     this._setAttributes(attributes, indices);
 

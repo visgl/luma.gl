@@ -1,7 +1,7 @@
 import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding, AttributeLayout} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
-import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
+import Accessor, {AccessorObject} from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decodeUniformType, decodeAttributeType} from './uniforms';
 import {getVertexFormat} from '../converters/vertex-formats';
 import {isSamplerUniform} from './uniforms';
@@ -113,9 +113,11 @@ function readAttributeBindings(gl: WebGLRenderingContext, program: WebGLProgram)
     // `gl_InstanceID` locaiton will be < 0
     if (location >= 0) {
       const {glType, components} = decodeAttributeType(compositeType);
-      const accessor = {type: glType, size: size * components};
-      inferProperties(location, name, accessor);
-
+      const accessor: AccessorObject = {type: glType, size: size * components};
+      // Any attribute name containing the word "instance" will be assumed to be instanced
+      if (/instance/i.test(name)) {
+        accessor.divisor = 1;
+      }
       const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
       // @ts-expect-error
       attributes.push(attributeInfo);
@@ -311,14 +313,6 @@ function parseUniformName(name) {
     length: matches[2] || 1,
     isArray: Boolean(matches[2])
   };
-}
-
-// Extract additional attribute metadata from shader names (based on attribute naming conventions)
-function inferProperties(accessor, location, name) {
-  if (/instance/i.test(name)) {
-    // Any attribute containing the word "instance" will be assumed to be instanced
-    accessor.divisor = 1;
-  }
 }
 
 /**

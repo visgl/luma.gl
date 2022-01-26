@@ -1,5 +1,6 @@
 import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding} from '@luma.gl/api';
 import {RenderPipeline, Shader, cast} from '@luma.gl/api';
+import type { ShaderModule } from '@luma.gl/shadertools';
 import type Geometry from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
 import PipelineFactory from './pipeline-factory';
@@ -8,6 +9,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
   vs?: {glsl?: string; wgsl?: string} | string;
   fs?: {glsl?: string; wgsl?: string} | string;
+  modules?: ShaderModule[];
+  moduleSettings?: Record<string, Record<string, any>>;
   geometry?: Geometry;
 };
 
@@ -18,6 +21,8 @@ const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
   id: 'unnamed',
   handle: undefined,
   userData: {},
+  modules: [],
+  moduleSettings: {},
   geometry: undefined
 };
 
@@ -44,23 +49,27 @@ export default class Model {
       this.fs = getShaderSource(this.device, props.fs);
     }
 
-    this.pipeline = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
-      ...this.props,
-      vs: this.vs,
-      fs: this.fs,
-      topology: props.topology,
-      parameters: props.parameters,
-      // Geometry in the vertex shader!
-      // @ts-expect-error
-      layout: props.layout
-    });
-
     this.vertexCount = this.props.vertexCount;
     this.topology = this.props.topology;
 
     if (this.props.geometry) {
       this.vertexCount = this.props.geometry.vertexCount;
       this.topology = this.props.geometry.topology;
+    }
+
+    this.pipeline = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
+      ...this.props,
+      vs: this.vs,
+      fs: this.fs,
+      topology: this.topology,
+      parameters: props.parameters,
+      // Geometry in the vertex shader!
+      // @ts-expect-error
+      layout: props.layout
+    });
+
+
+    if (this.props.geometry) {
       this._setGeometry(this.props.geometry);
     }
     this.setAttributes(this.props.attributes);
@@ -75,7 +84,7 @@ export default class Model {
   draw(renderPass?: RenderPass) {
     this.pipeline.draw({
       renderPass,
-      vertexCount: this.props.vertexCount,
+      vertexCount: this.vertexCount,
       instanceCount: this.props.instanceCount
     });
   }

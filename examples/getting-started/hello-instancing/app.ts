@@ -1,6 +1,6 @@
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API
@@ -42,12 +42,12 @@ export default class AppRenderLoop extends RenderLoop {
     this.model = new Model(device, {
       vs: `
         attribute vec2 position;
-        attribute vec3 color;
-        attribute vec2 offset;
+        attribute vec3 instanceColor;
+        attribute vec2 instanceOffset;
 
         void main() {
-          color_setColor(color);
-          gl_Position = vec4(position + offset, 0.0, 1.0);
+          color_setColor(instanceColor);
+          gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
         }
       `,
       fs: `
@@ -58,12 +58,11 @@ export default class AppRenderLoop extends RenderLoop {
       modules: [colorShaderModule],
       attributes: {
         position: this.positionBuffer,
-        color: [this.colorBuffer, {divisor: 1}],
-        offset: [this.offsetBuffer, {divisor: 1}]
+        instanceColor: this.colorBuffer,
+        instanceOffset:this.offsetBuffer
       },
       vertexCount: 3,
-      instanceCount: 4,
-      isInstanced: true
+      instanceCount: 4
     });
   }
 
@@ -82,5 +81,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

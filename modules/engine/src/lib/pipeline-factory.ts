@@ -1,5 +1,6 @@
 import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
 import {Device, RenderPipeline, ComputePipeline} from '@luma.gl/api/';
+import type { ShaderModule } from '@luma.gl/shadertools';
 import {assembleShaders} from '@luma.gl/shadertools';
 
 type Module = 'string' | {name: string}; // TODO
@@ -7,7 +8,7 @@ type Module = 'string' | {name: string}; // TODO
 export type GetRenderPipelineOptions = {
   vs: string,
   fs: string,
-  modules?: Module[];
+  modules?: ShaderModule[];
   defines?: {},
   inject?: {},
   transpileToGLSL100?: boolean;
