@@ -84,10 +84,10 @@ test('gltools#UniformBufferLayout getData', (t) => {
   const offsets = program.getActiveUniforms(indices, GL.UNIFORM_OFFSET).map((x) => x / 4);
 
   const std140 = new UniformBufferLayout({
-    float_1: 'f32',
-    vec2_1: 'vec2<f32>',
-    vec3_1: 'vec3<f32>',
-    vec4_1: 'vec4<f32>'
+    float_1: GL.FLOAT,
+    vec2_1: GL.FLOAT_VEC2,
+    vec3_1: GL.FLOAT_VEC3,
+    vec4_1: GL.FLOAT_VEC4
   }).setUniforms({
     float_1: 1.0,
     vec2_1: VEC2,
@@ -133,10 +133,10 @@ test('gltools#UniformBufferLayout setData', (t) => {
   });
 
   const std140 = new UniformBufferLayout({
-    float_1: 'f32',
-    vec2_1: 'vec2<f32>',
-    vec3_1: 'vec3<f32>',
-    vec4_1: 'vec4<f32>'
+    float_1: GL.FLOAT,
+    vec2_1: GL.FLOAT_VEC2,
+    vec3_1: GL.FLOAT_VEC3,
+    vec4_1: GL.FLOAT_VEC4
   }).setUniforms({
     float_1: 1.0,
     vec2_1: VEC2,

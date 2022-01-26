@@ -114,13 +114,24 @@ void main(void) {
         { name: 'uv', location: 1, format: 'float32x2', stepMode: 'vertex' } 
       ], 
       bindings: [ 
-        {
-          type: 'uniform', name: 'uniforms', location: 0, visibility: 0, minBindingSize: 64, 
+        { type: 'uniform', name: 'uniforms', location: 0, visibility: 0, minBindingSize: 64, 
           uniforms: [ 
-            { name: 'modelViewProjectionMatrix', format: 'mat4x4', byteOffset: 0, byteLength: 1 } 
+            { name: 'modelViewProjectionMatrix', format: 'mat4x4<f32>', byteOffset: 0, byteStride: 0, arrayLength: 1 } 
           ] 
-        } 
-      ] 
+        }
+      ]
+      // attributes: [ 
+      //   { name: 'position', location: 0, format: 'float32x3', stepMode: 'vertex' }, 
+      //   { name: 'uv', location: 1, format: 'float32x2', stepMode: 'vertex' } 
+      // ], 
+      // bindings: [ 
+      //   {
+      //     type: 'uniform', name: 'uniforms', location: 0, visibility: 0, minBindingSize: 64, 
+      //     uniforms: [ 
+      //       { name: 'modelViewProjectionMatrix', format: 'mat4x4<f32>', byteOffset: 0, byteLength: 1, arrayLength: 1 } 
+      //     ] 
+      //   } 
+      // ] 
     }
   }
 ];

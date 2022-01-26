@@ -55,10 +55,10 @@ const TEST_CASES = [
       attributes: {
         positions: {value: new Float32Array([0, 0, 1, 0, 1, 1, 1, 0]), size: 2}
       },
-      drawMode: Geometry.DRAW_MODE.TRIANGLE_FAN,
+      drawMode: Geometry.DRAW_MODE.TRIANGLE_STRIP,
       vertexCount: 3
     },
-    drawMode: Geometry.DRAW_MODE.TRIANGLE_FAN,
+    drawMode: Geometry.DRAW_MODE.TRIANGLE_STRIP,
     vertexCount: 3
   }
 ];
