@@ -26,7 +26,7 @@ export type ShaderModule = {
   vs?: string;
   uniforms?: Record<string, any>;
   getUniforms?: any;
-  defines?: Record<string, string>;
+  defines?: Record<string, string | number>;
   dependencies?: ShaderModule[];
   deprecations?: ShaderModuleDeprecation[];
 };
