@@ -1,18 +1,19 @@
-import type {RenderPipelineParameters} from '@luma.gl/api';
+import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
 import {Device, RenderPipeline, ComputePipeline} from '@luma.gl/api/';
+import type { ShaderModule } from '@luma.gl/shadertools';
 import {assembleShaders} from '@luma.gl/shadertools';
-
-type Module = 'string' | {name: string}; // TODO
 
 export type GetRenderPipelineOptions = {
   vs: string,
   fs: string,
+  modules?: ShaderModule[];
   defines?: {},
   inject?: {},
-  varyings?: string[],
-  bufferMode?: number,
-  modules?: Module[];
   transpileToGLSL100?: boolean;
+
+  varyings?: string[],
+  bufferMode?: number,  
+  topology;
   parameters?: RenderPipelineParameters;
 };
 
@@ -22,7 +23,7 @@ export type GetComputePipelineOptions = {
   inject?: {},
   varyings?: string[],
   bufferMode?: number,
-  modules?: Module[];
+  modules?: ShaderModule[];
   transpileToGLSL100?: boolean;
   parameters?: RenderPipelineParameters;
 };
@@ -33,11 +34,15 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
   modules: [],
   defines: {},
   inject: {},
+  transpileToGLSL100: false,
+
   varyings: [],
   bufferMode: 0x8c8d, // // varyings/bufferMode for xform feedback, 0x8c8d: SEPARATE_ATTRIBS
-  transpileToGLSL100: false,
+  topology: 'triangle-list',
   parameters: {} 
 };
+
+/** Efficiently create shared pipelines with varying parameters */
 export default class PipelineFactory {
   readonly device: Device;
 
@@ -64,18 +69,18 @@ export default class PipelineFactory {
     this.device = device;
   }
 
-  addDefaultModule(module: Module): void {
-    if (!this._defaultModules.find((m) => m.name === (typeof module === 'string' ? module : module.name))) {
-      this._defaultModules.push(module);
-    }
-    this.stateHash++;
-  }
+  // addDefaultModule(module: ShaderModule): void {
+  //   if (!this._defaultModules.find((m) => m.name === (typeof module === 'string' ? module : module.name))) {
+  //     this._defaultModules.push(module);
+  //   }
+  //   this.stateHash++;
+  // }
 
-  removeDefaultModule(module: Module): void {
-    const moduleName = typeof module === 'string' ? module : module.name;
-    this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
-    this.stateHash++;
-  }
+  // removeDefaultModule(module: ShaderModule): void {
+  //   const moduleName = typeof module === 'string' ? module : module.name;
+  //   this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
+  //   this.stateHash++;
+  // }
 
   addShaderHook(hook, opts?): void {
     if (opts) {
@@ -85,7 +90,7 @@ export default class PipelineFactory {
     this.stateHash++;
   }
 
-  getRenderPipeline(options: GetRenderPipelineOptions): RenderPipeline {
+  createRenderPipeline(options: GetRenderPipelineOptions): RenderPipeline {
     const props: Required<GetRenderPipelineOptions> = {...DEFAULT_RENDER_PIPELINE_OPTIONS, ...options};
 
     const modules = this._getModuleList(props.modules); // Combine with default modules
@@ -158,12 +163,13 @@ export default class PipelineFactory {
   _createRenderPipeline(props: GetRenderPipelineOptions): {renderPipeline: RenderPipeline, getUniforms: any} {
     const assembled = assembleShaders(this.device, {...props, hookFunctions: this._hookFunctions});
 
-    // @ts-expect-error TODO - pipeline should be created from device
-    return this.device.createRenderPipeline({
+    const renderPipeline = this.device.createRenderPipeline({
       ...props,
       vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
       fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
     });
+
+    return {renderPipeline, getUniforms: assembled.getUniforms};
   }
 
   _getHash(key: string): number {
@@ -174,7 +180,7 @@ export default class PipelineFactory {
   }
 
   // Dedupe and combine with default modules
-  _getModuleList(appModules: Module[] = []): Module[] {
+  _getModuleList(appModules: ShaderModule[] = []): ShaderModule[] {
     const modules = new Array(this._defaultModules.length + appModules.length);
     const seen = {};
     let count = 0;
@@ -188,7 +194,6 @@ export default class PipelineFactory {
 
     for (let i = 0, len = appModules.length; i < len; ++i) {
       const module = appModules[i];
-      // @ts-expect-error
       const name = module.name;
       if (!seen[name]) {
         modules[count++] = module;

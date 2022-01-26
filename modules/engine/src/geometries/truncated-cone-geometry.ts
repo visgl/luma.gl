@@ -1,5 +1,6 @@
 import {uid} from '@luma.gl/api';
 import Geometry from '../geometry/geometry';
+import {GeometryTable} from '../geometry/geometry-table';
 
 const INDEX_OFFSETS = {
   x: [2, 0, 1],
@@ -8,32 +9,49 @@ const INDEX_OFFSETS = {
 };
 
 export type TruncatedConeGeometryProps = {
-  id?: string;
   topRadius?: number;
   bottomRadius?: number;
   topCap?: boolean;
   bottomCap?: boolean;
-  attributes?
+  height?: number;
+  nradial?: number;
+  nvertical?: number;
+  verticalAxis?: 'x' | 'y' | 'z';
 };
 
-// Primitives inspired by TDL http://code.google.com/p/webglsamples/,
-// copyright 2011 Google Inc. new BSD License
-// (http://www.opensource.org/licenses/bsd-license.php).
+/**
+ * Primitives inspired by TDL http://code.google.com/p/webglsamples/,
+ * copyright 2011 Google Inc. new BSD License
+ * (http://www.opensource.org/licenses/bsd-license.php).
+ */
+export function makeTruncatedConeGeometry(props?: TruncatedConeGeometryProps): GeometryTable {
+  const {indices, attributes} = tesselateTruncatedCone(props);
+  return {
+    length: indices.length,
+    indices,
+    attributes
+  };
+}
+
 export class TruncatedConeGeometry extends Geometry {
-  constructor(props: TruncatedConeGeometryProps = {}) {
+  constructor(props: TruncatedConeGeometryProps & {id?: string; attributes?} = {}) {
     const {id = uid('truncated-code-geometry')} = props;
     const {indices, attributes} = tesselateTruncatedCone(props);
     super({
       ...props,
       id,
       indices,
-      attributes: {...attributes, ...props.attributes}
+      attributes: {
+        POSITION: {size: 3, value: attributes.POSITION},
+        NORMAL: {size: 3, value: attributes.NORMAL},
+        TEXCOORD_0: {size: 2, value: attributes.TEXCOORD_0},
+        ...props.attributes}
     });
   }
 }
 
 /* eslint-disable max-statements, complexity */
-function tesselateTruncatedCone(props) {
+function tesselateTruncatedCone(props: TruncatedConeGeometryProps = {}) {
   const {
     bottomRadius = 0,
     topRadius = 0,
@@ -123,9 +141,9 @@ function tesselateTruncatedCone(props) {
   return {
     indices,
     attributes: {
-      POSITION: {size: 3, value: positions},
-      NORMAL: {size: 3, value: normals},
-      TEXCOORD_0: {size: 2, value: texCoords}
+      POSITION: positions,
+      NORMAL: normals,
+      TEXCOORD_0: texCoords
     }
   };
 }

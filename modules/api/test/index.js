@@ -9,3 +9,6 @@ import './adapter/utils/decode-texture-format.spec';
 
 // adapter
 import './adapter/canvas-context.spec';
+
+// lib
+import './lib/uniform-buffer-layout.spec';

@@ -1,0 +1,71 @@
+// luma.gl, MIT license
+import {assert} from '../utils/assert';
+import {log} from '../utils/log';
+import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
+import UniformBufferLayout from './uniform-buffer-layout';
+
+/** A uniform block holds a number of uniforms */
+export default class UniformBlock<TUniforms = Record<string, any>> {
+  // readonly layout: UniformBufferLayout;
+  readonly layout: Record<string, UniformInfo> = {};
+  uniforms: TUniforms;
+
+  protected size: number;
+  protected data: ArrayBuffer;
+  protected typedArray: {
+    float32: Float32Array,
+    sint32: Int32Array,
+    uint32: Uint32Array
+  };
+
+  constructor(layout: ShaderLayout, blockName: string) {
+    const binding = layout.bindings
+      .find(binding => binding.type === 'uniform' && binding.name === blockName);
+    assert(binding, blockName);
+
+    const uniformBlock = binding as UniformBufferBindingLayout;
+    for (const uniform of uniformBlock.uniforms) {
+      this.layout[uniform.name] = uniform;
+    }
+
+    // TODO calculate
+    this.size = 256;
+
+    // Allocate three typed arrays pointing at same memory
+    this.data = new ArrayBuffer(this.size * 4);
+    this.typedArray = {
+      float32: new Float32Array(this.data),
+      sint32: new Int32Array(this.data),
+      uint32: new Uint32Array(this.data)
+    };
+  }
+
+  /** Set a map of uniforms */
+  setUniforms(uniforms: TUniforms): void {
+    for (const [key, value] of Object.entries(uniforms)) {
+      if (this.layout[key] !== undefined) {
+        this._setValue(key, value);
+      } else {
+        log.warn(`Unknown uniform ${key}`)
+      }
+    }
+  }
+  
+  /** Get the current data ArrayBuffer */
+  getData(): ArrayBuffer {
+    return this.data;
+  }
+
+  _setValue(key: string, value): void {
+    const layout = this.layout.layout[key];
+    assert(layout, 'UniformLayoutStd140 illegal argument');
+    const typedArray = this.typedArray[layout.type];
+    if (layout.size === 1) {
+      // single value -> just set it
+      typedArray[layout.offset] = value;
+    } else {
+      // vector/matrix -> copy the supplied (typed) array, starting from offset
+      typedArray.set(value, layout.offset);
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// luma.gl, MIT license
 // Initialize any global state
 import './init';
 
@@ -58,12 +59,13 @@ export type {
   RenderPipelineParameters
 } from './adapter/types/parameters';
 
+export type {VertexFormat} from './adapter/types/vertex-formats';
+export type {UniformFormat} from './adapter/types/uniform-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
   DepthStencilTextureFormat,
-  VertexFormat
-} from './adapter/types/formats';
+} from './adapter/types/texture-formats';
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
 export type {
@@ -81,9 +83,13 @@ export type {
   VaryingBinding
 } from './adapter/types/shader-layout';
 
+export {default as UniformBufferLayout} from './lib/uniform-buffer-layout';
+export {default as UniformBlock} from './lib/uniform-block';
+
 // API UTILS
 export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/utils/decode-texture-format';
+
 
 // GENERAL TYPES
 export type {TypedArray, TypedArrayConstructor, NumberArray} from './types';

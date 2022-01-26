@@ -1,5 +1,6 @@
 import {uid} from '@luma.gl/api';
 import Geometry from '../geometry/geometry';
+// import type {GeometryType} from '../geometry/geometry-type';
 
 export type CubeGeometryProps = {
   id?: string;
@@ -13,7 +14,7 @@ export class CubeGeometry extends Geometry {
     super(indices ? {
       ...props,
       id,
-      indices: {size: 1, value: new Uint16Array(CUBE_INDICES)},
+      indices: {size: 1, value: CUBE_INDICES},
       attributes: {...ATTRIBUTES, ...props.attributes}
     } : {
       ...props,
@@ -71,27 +72,6 @@ const CUBE_TEX_COORDS = new Float32Array([
   // Left face
   0,  0,  1,  0,  1,  1,  0,  1
 ]);
-
-const ATTRIBUTES = {
-  POSITION: {size: 3, value: new Float32Array(CUBE_POSITIONS)},
-  NORMAL: {size: 3, value: new Float32Array(CUBE_NORMALS)},
-  TEXCOORD_0: {size: 2, value: new Float32Array(CUBE_TEX_COORDS)}
-};
-
-export type _NonIndexedCubeGeometryProps = {
-  id?: string;
-  attributes?
-};
-
-/**
- * @todo - needs normals, colors are only used by examples
- */
-export class _NonIndexedCubeGeometry extends Geometry {
-  constructor(props: _NonIndexedCubeGeometryProps = {}) {
-    const {id = uid('non-indexed-cube-geometry')} = props;
-    super({...props, id, attributes: {...ATTRIBUTES, ...props.attributes}});
-  }
-}
 
 // float4 position
 // prettier-ignore
@@ -230,6 +210,12 @@ export const CUBE_NON_INDEXED_COLORS = new Float32Array([
   1, 0, 0, 1,
   0, 1, 0, 1,
 ]);
+
+const ATTRIBUTES = {
+  POSITION: {size: 3, value: CUBE_POSITIONS},
+  NORMAL: {size: 3, value: CUBE_NORMALS},
+  TEXCOORD_0: {size: 2, value: CUBE_TEX_COORDS}
+};
 
 const NON_INDEXED_ATTRIBUTES = {
   POSITION: {size: 4, value: CUBE_NON_INDEXED_POSITIONS},

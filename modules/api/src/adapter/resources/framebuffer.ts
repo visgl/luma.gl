@@ -1,4 +1,4 @@
-import type {ColorTextureFormat, DepthStencilTextureFormat} from '../types/formats';
+import type {ColorTextureFormat, DepthStencilTextureFormat} from '../types/texture-formats';
 // import type {ColorAttachment, DepthStencilAttachment} from '../types/types';
 import type Device from '../device';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';

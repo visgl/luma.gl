@@ -1,9 +1,10 @@
-import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding} from '@luma.gl/api';
+import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding, AttributeLayout} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
-import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
-import {decomposeCompositeGLType} from './attribute-utils';
-
+import Accessor, {AccessorObject} from '../../classic/accessor'; // TODO - should NOT depend on classic API
+import {decodeUniformType, decodeAttributeType} from './uniforms';
+import {getVertexFormat} from '../converters/vertex-formats';
+import {isSamplerUniform} from './uniforms';
 /**
  * Extract metadata describing binding information for a program's shaders
  * Note: `linkProgram()` needs to have been called
@@ -11,23 +12,69 @@ import {decomposeCompositeGLType} from './attribute-utils';
 */
 export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
   const programBindings = getProgramBindings(gl, program);
-  const bindings: BindingLayout[] = [];
-  for (const uniformBlock of programBindings.uniformBlocks) {
-    bindings.push({
-      type: 'uniform',
-      name: uniformBlock.name,
-      location: uniformBlock.location
+
+  const shaderLayout: ShaderLayout = {
+    attributes: [], 
+    bindings: []
+  };
+
+  for (const attribute of programBindings.attributes) {
+    const format = attribute.accessor.format || 
+      getVertexFormat(attribute.accessor.type || GL.FLOAT, attribute.accessor.size);
+    shaderLayout.attributes.push({
+      name: attribute.name,
+      location: attribute.location,
+      format,
+      stepMode: attribute.accessor.divisor === 1 ? 'instance' : 'vertex'
     });
   }
-  for (const uniform of programBindings.uniforms) {
-    // console.log(uniform)
-    // switch (uniform.type) {
-    // }
+
+  // Uniform blocks
+  for (const uniformBlock of programBindings.uniformBlocks) {
+    const uniforms = uniformBlock.uniforms.map(uniform => ({
+      name: uniform.name,
+      format: uniform.format,
+      byteOffset: uniform.byteOffset,
+      byteStride: uniform.byteStride,
+      arrayLength: uniform.arrayLength
+    }));
+    shaderLayout.bindings.push({
+      type: 'uniform',
+      name: uniformBlock.name,
+      location: uniformBlock.location,
+      visibility: (uniformBlock.vertex ? 0x1 : 0) & (uniformBlock.fragment ? 0x2 : 0),
+      minBindingSize: uniformBlock.byteLength,
+      uniforms
+    });
   }
-  return {
-    attributes: [], // programBindings.attributes,
-    bindings
+
+  let textureUnit = 0;
+  for (const uniform of programBindings.uniforms) {
+    if (isSamplerUniform(uniform.type)) {
+      const {viewDimension, sampleType} = getSamplerInfo(uniform.type);
+      shaderLayout.bindings.push({
+        type: 'texture',
+        name: uniform.name,
+        location: textureUnit,
+        viewDimension,
+        sampleType
+      });
+
+      // @ts-expect-error
+      uniform.textureUnit = textureUnit;
+      textureUnit += 1;
+    }
+  }
+
+  const uniforms = programBindings.uniforms?.filter(uniform => uniform.location !== null) || [];
+  if (uniforms.length) {
+    shaderLayout.uniforms = uniforms;
+  }
+  if (programBindings.varyings?.length) {
+    shaderLayout.varyings = programBindings.varyings;
   };
+
+  return shaderLayout;
 }
 
 /**
@@ -65,10 +112,12 @@ function readAttributeBindings(gl: WebGLRenderingContext, program: WebGLProgram)
     // Add only user provided attributes, for built-in attributes like
     // `gl_InstanceID` locaiton will be < 0
     if (location >= 0) {
-      const {type, components} = decomposeCompositeGLType(compositeType);
-      const accessor = {type, size: size * components};
-      inferProperties(location, name, accessor);
-
+      const {glType, components} = decodeAttributeType(compositeType);
+      const accessor: AccessorObject = {type: glType, size: size * components};
+      // Any attribute name containing the word "instance" will be assumed to be instanced
+      if (/instance/i.test(name)) {
+        accessor.divisor = 1;
+      }
       const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
       // @ts-expect-error
       attributes.push(attributeInfo);
@@ -96,8 +145,8 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
   const count = gl.getProgramParameter(program, GL.TRANSFORM_FEEDBACK_VARYINGS);
   for (let location = 0; location < count; location++) {
     const {name, type: compositeType, size} = gl2.getTransformFeedbackVarying(program, location);
-    const {type, components} = decomposeCompositeGLType(compositeType);
-    const accessor = new Accessor({type, size: size * components});
+    const {glType, components} = decodeUniformType(compositeType);
+    const accessor = new Accessor({type: glType, size: size * components});
     const varying = {location, name, accessor}; // Base values
     varyings.push(varying);
   }
@@ -175,12 +224,29 @@ function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): Un
       vertex: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
       fragment: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
       uniformCount: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
-      uniformIndices: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
       uniforms: []
     }
 
-    for (let uniformIndex = 0; uniformIndex < blockInfo.uniformCount; ++uniformIndex) {
-      // TODO - Can we extract more?
+    const uniformIndices = getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+
+    const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
+    const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
+    const uniformBlockIndex = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_BLOCK_INDEX); // Array of GLint indicating the block indices of the uniforms.
+    const uniformOffset = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
+    const uniformStride = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
+    const uniformMatrixStride = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_MATRIX_STRIDE); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
+    const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_IS_ROW_MAJOR); 
+    for (let i = 0; i < blockInfo.uniformCount; ++i) {
+      blockInfo.uniforms.push({
+        name: gl2.getActiveUniform(program, uniformIndices[i]).name,
+        format: decodeUniformType(uniformType[i]).format,
+        type: uniformType[i],
+        arrayLength: uniformArrayLength[i],
+        byteOffset: uniformOffset[i],
+        byteStride: uniformStride[i],
+        matrixStride: uniformStride[i],
+        rowMajor: uniformRowMajor[i]
+      });
     }
 
     uniformBlocks.push(blockInfo);
@@ -190,7 +256,10 @@ function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): Un
   return uniformBlocks;
 }
 
-const SAMPLER_UNIFORMS_GL_TO_GPU = {
+const SAMPLER_UNIFORMS_GL_TO_GPU: Record<number, [
+  '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
+  'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'
+]> = {
   [GL.SAMPLER_2D]: ['2d', 'float'],
   [GL.SAMPLER_CUBE]: ['cube', 'float'],
   [GL.SAMPLER_3D]: ['3d', 'float'],
@@ -201,46 +270,23 @@ const SAMPLER_UNIFORMS_GL_TO_GPU = {
   [GL.INT_SAMPLER_2D]: ['2d', 'sint'],
   [GL.INT_SAMPLER_3D]: ['3d', 'sint'],
   [GL.INT_SAMPLER_CUBE]: ['cube', 'sint'],
-  [GL.INT_SAMPLER_2D_ARRAY]: ['2d-array', 'sint'],
-  [GL.UNSIGNED_INT_SAMPLER_2D]: ['2d', 'sint'],
-  [GL.UNSIGNED_INT_SAMPLER_3D]: ['3d', 'sint'],
-  [GL.UNSIGNED_INT_SAMPLER_CUBE]: ['cube', 'sint'],
-  [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'sint']
+  [GL.INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint'],
+  [GL.UNSIGNED_INT_SAMPLER_2D]: ['2d', 'uint'],
+  [GL.UNSIGNED_INT_SAMPLER_3D]: ['3d', 'uint'],
+  [GL.UNSIGNED_INT_SAMPLER_CUBE]: ['cube', 'uint'],
+  [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint']
 };
 
-/**
- * Generate a list of "WebGPU-style" bindings for this program
- */
-function generateWebGPUStyleBindings(config: ProgramBindings) {
-  const bindings: any = [];
-
-  // Uniform blocks
-  for (const blockInfo of config.uniformBlocks) {
-    bindings.push({
-      binding: blockInfo.location,
-      visibility: (blockInfo.vertex ? 0x1 : 0) & (blockInfo.fragment ? 0x2 : 0),
-      buffer: {
-        type: 'uniform',
-        // minBindingSize: blockInfo.size
-      }
-    })
+function getSamplerInfo(type: GL): {
+  viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+} | undefined {
+  let sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
+  if (sampler) {
+    const [viewDimension, sampleType] = sampler;
+    return {viewDimension, sampleType};
   }
-
-  // Sampler uniforms
-  for (const uniformInfo of config.uniforms) {
-    let sampler = SAMPLER_UNIFORMS_GL_TO_GPU[uniformInfo.type];
-    if (sampler) {
-      const [viewDimension, sampleType] = sampler;
-      bindings.push({
-        binding: uniformInfo.location,
-        visibility: 0, // Not available in WebGL on individual uniforms?
-        texture: {
-          viewDimension,
-          sampleType
-        }
-      });
-    }
-  }
+  return null;
 }
 
 // HELPERS
@@ -267,14 +313,6 @@ function parseUniformName(name) {
     length: matches[2] || 1,
     isArray: Boolean(matches[2])
   };
-}
-
-// Extract additional attribute metadata from shader names (based on attribute naming conventions)
-function inferProperties(accessor, location, name) {
-  if (/instance/i.test(name)) {
-    // Any attribute containing the word "instance" will be assumed to be instanced
-    accessor.divisor = 1;
-  }
 }
 
 /**

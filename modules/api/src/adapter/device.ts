@@ -2,9 +2,10 @@
 import StatsManager, {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/utils';
-import {TextureFormat} from './types/formats';
+import {TextureFormat} from './types/texture-formats';
 import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
-import type {default as Buffer, BufferProps} from './resources/buffer';
+import type {BufferProps} from './resources/buffer';
+import Buffer from './resources/buffer';
 import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
 import type {default as ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {default as Sampler, SamplerProps} from './resources/sampler';
@@ -150,23 +151,8 @@ export type WebGLDeviceFeature =
 
   // api support (unify with WebGPU timestamp-query?)
   'timer-query-webgl' |
-
-  // api support
-  'vertex-array-object-webgl1' |
-  'instanced-rendering-webgl1' |
-  'multiple-render-targets-webgl1' |
-  'index-uint32-webgl1' |
-  'blend-minmax-webgl1' |
-
-  // texture format support
-  'texture-formats-srgb-webgl1' |
-  'texture-formats-depth-webgl1' |
-  'texture-formats-float32-webgl1' |
-  'texture-formats-float16-webgl1' |
-  'texture-formats-norm16-webgl' |
-
-  // texture blending
-  'texture-blend-float-webgl1' |
+  'uniform-buffers-webgl' |
+  'uniforms-webgl' |
 
   // texture filtering
   'texture-filter-linear-float32-webgl' |
@@ -177,6 +163,23 @@ export type WebGLDeviceFeature =
   'texture-renderable-float32-webgl' |
   'texture-renderable-float16-webgl' |
   'texture-renderable-rgba32float-webgl' | // TODO - remove
+
+  // texture blending
+  'texture-blend-float-webgl1' |
+
+  // texture format support
+  'texture-formats-norm16-webgl' |
+  'texture-formats-srgb-webgl1' |
+  'texture-formats-depth-webgl1' |
+  'texture-formats-float32-webgl1' |
+  'texture-formats-float16-webgl1' |
+
+  // api support
+  'vertex-array-object-webgl1' |
+  'instanced-rendering-webgl1' |
+  'multiple-render-targets-webgl1' |
+  'index-uint32-webgl1' |
+  'blend-minmax-webgl1' |
 
   // glsl extensions
   'glsl-frag-data' |
@@ -253,9 +256,19 @@ export default abstract class Device {
   createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer;
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer {
-    return props instanceof ArrayBuffer || ArrayBuffer.isView(props)
-      ? this._createBuffer({data: props})
-      : this._createBuffer(props);
+    if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
+      return this._createBuffer({data: props});
+    }
+
+    // Deduce indexType
+    if (props.usage & Buffer.INDEX && !props.indexType) {
+      if (props.data instanceof Uint32Array) {
+        props.indexType = 'uint32';
+      } else if (props.data instanceof Uint16Array) {
+        props.indexType = 'uint16';
+      }
+    }
+    return this._createBuffer(props);
   }
 
   /** Create a texture */

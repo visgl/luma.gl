@@ -1,9 +1,11 @@
 // luma.gl, MIT license
-import {VertexFormat, TextureFormat} from '../types/formats';
+import {TextureFormat} from '../types/texture-formats';
+import {VertexFormat} from '../types/vertex-formats';
 import {Accessor} from '../types/accessor';
 import type Buffer from '../resources/buffer';
 import type Sampler from '../resources/sampler';
-import type Texture from '../resources/texture'; // TextureView...
+import type Texture from '../resources/texture';
+import {UniformFormat} from './uniform-formats';
 
 /**
  * Describes an attribute binding for a program
@@ -52,6 +54,10 @@ export type ShaderLayout = {
   // csConstants?: Record<string, number>;
   attributes: AttributeLayout[];
   bindings: BindingLayout[];
+  /** WebGL only (WebGPU use bindings and uniform buffers) */
+  uniforms?: any[]
+  /** WebGL2 only (WebGPU use compute shaders) */
+  varyings?: any[]
 };
 
 /** ShaderLayout for attributes */
@@ -138,12 +144,31 @@ type Binding = {
 
 /** ShaderLayout for bindings */
 export type BindingLayout =
+  | UniformBufferBindingLayout 
   | BufferBindingLayout
   | TextureBindingLayout
   | SamplerBindingLayout
   | StorageTextureBindingLayout;
 
-type BufferBindingLayout = {
+export type UniformBufferBindingLayout = {
+  type: 'uniform';
+  name: string;
+  location: number;
+  visibility?: number;
+  hasDynamicOffset?: boolean;
+  minBindingSize?: number;
+  uniforms?: UniformInfo[];
+};
+
+export type UniformInfo = {
+  name: string;
+  format: UniformFormat;
+  arrayLength: number;
+  byteOffset: number;
+  byteStride: number;
+};
+
+export type BufferBindingLayout = {
   type: 'uniform' | 'storage' | 'read-only-storage';
   name: string;
   location: number;
@@ -216,7 +241,8 @@ export type UniformBlockBinding = {
   vertex: boolean;
   fragment: boolean;
   uniformCount: number;
-  uniformIndices: number[];
+  uniformIndices?: number[];
+  uniforms: UniformInfo[];
 };
 
 /** Describes a uniform (sampler etc) binding for a program */

@@ -1,3 +1,4 @@
+/*
 import type {
   Device,
   Buffer,
@@ -118,7 +119,7 @@ export default class Model {
     }
   }
 
-  setIndices(indices) {
+  setInd(indices) {
     // this.pipeline.setIndices(indices)
     // this._indices = indices;
   }
@@ -128,7 +129,7 @@ export default class Model {
     Object.assign(this.props.attributes, attributes);
   }
 
-  /** Set the bindings */
+  /** Set the bindings *
   setBindings(bindings: Record<string, Binding>): void {
     this.pipeline.setBindings(bindings);
     Object.assign(this.props.bindings, bindings);
@@ -159,7 +160,7 @@ export default class Model {
         }
       }
     }
-    */
+    *
   }
 
   /*
@@ -174,10 +175,10 @@ export default class Model {
   setUniformSampler(binding, sampler) {
     this._bindings[binding] = {binding, resource: sampler};
   }
-  */
+  *
 }
 
-/** Create a shader from the different overloads */
+/** Create a shader from the different overloads *
 function getShader(
   device: WebGPUDevice,
   shader: Shader | string | {glsl?: string; wgsl?: string},
@@ -194,3 +195,4 @@ function getShader(
   }
   throw new Error('WebGPU GLSL support not implemented');
 }
+*/

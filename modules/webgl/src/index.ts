@@ -71,5 +71,5 @@ export {
 export {polyfillContext} from './context/polyfill/polyfill-context';
 
 // HELPERS - EXPERIMENTAL
-export {getProgramBindings} from './adapter/helpers/get-program-bindings';
+export {getShaderLayout, getProgramBindings} from './adapter/helpers/get-shader-layout';
 export {_checkFloat32ColorAttachment} from './adapter/converters/texture-formats';

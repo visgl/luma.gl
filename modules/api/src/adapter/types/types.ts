@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {TextureFormat} from './formats';
+import {TextureFormat} from './texture-formats';
 
 // BINDING LAYOUTS
 

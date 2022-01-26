@@ -1,4 +1,4 @@
-import {DepthStencilTextureFormat} from './formats';
+import {DepthStencilTextureFormat} from './texture-formats';
 
 export type CompareFunction =
   'never' |

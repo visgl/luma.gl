@@ -11,18 +11,17 @@ import type {
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import { getWebGLDataType } from '../converters/texture-formats';
-// import {copyUniform, checkUniformValues} from '../../classes/uniforms';
-import {getShaderLayout} from '../helpers/get-program-bindings';
+import {getWebGLDataType} from '../converters/texture-formats';
+import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceParameters} from '../converters/device-parameters';
-
-// import VertexArrayObject from '../../classes/vertex-array-object';
-import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
+import {setUniform} from '../helpers/set-uniform';
+// import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
 import WebGLDevice from '../webgl-device';
 import WEBGLBuffer from './webgl-buffer';
 import WEBGLShader from './webgl-shader';
 import WEBGLTexture from './webgl-texture';
+import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -38,6 +37,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   // Experimental flag to avoid deleting Program object while it is cached
   varyings: string[];
   vertexArrayObject: WEBGLVertexArrayObject;
+  _indexBuffer?: Buffer;
   uniforms: Record<string, any> = {};
   bindings: Record<string, any> = {};
   _textureUniforms: Record<string, any> = {};
@@ -80,17 +80,33 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
+  setIndexBuffer(indexBuffer: Buffer): void {
+    const webglBuffer = cast<WEBGLBuffer>(indexBuffer);
+    this.vertexArrayObject.setElementBuffer(webglBuffer);
+    this._indexBuffer = indexBuffer;
+  }
+
   /** @todo needed for portable model */
   setAttributes(attributes: Record<string, Buffer>): void {
     for (const [name, buffer] of Object.entries(attributes)) {
       const webglBuffer = cast<WEBGLBuffer>(buffer);
       const attribute = getAttributeLayout(this.layout, name);
+      if (!attribute) {
+        log.warn(`Unknown attribute "${name}" in pipeline "${this.id}"`)();
+        continue;
+      }
       const decoded = decodeVertexFormat(attribute.format);
       const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
       const divisor = attribute.stepMode === 'instance' ? 1 : 0;
       const type = getWebGLDataType(typeString);
       this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
-        size, type, stride, offset: 0, normalized, integer, divisor: 0
+        size,
+        type,
+        stride,
+        offset: 0,
+        normalized,
+        integer,
+        divisor: attribute.stepMode === 'instance' ? 1 : 0
       });
     }
   }
@@ -132,62 +148,9 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  _applyBindings() {
-    this.device.gl.useProgram(this.handle);
-
-    const {gl2} = this.device;
-
-    let textureUnit = 0;
-    let uniformBufferIndex = 0;
-    for (const binding of this.layout.bindings) {
-      const value = this.bindings[binding.name];
-      if (!value) {
-        throw new Error(`No value for binding ${binding.name} in ${this.id}`);
-      }
-      switch (binding.type) {
-        case 'uniform':
-          // Set buffer
-          const {name} = binding;
-          const location = gl2.getUniformBlockIndex(this.handle, name);
-          if (location === GL.INVALID_INDEX) {
-            throw new Error(`Invalid uniform block name ${name}`);
-          }
-          gl2.uniformBlockBinding(this.handle, uniformBufferIndex, location);
-          // console.debug(binding, location);
-          if (value instanceof WEBGLBuffer) {
-            gl2.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
-          } else {
-            gl2.bindBufferRange(
-              GL.UNIFORM_BUFFER,
-              uniformBufferIndex,
-              value.buffer.handle,
-              value.offset || 0,
-              value.size || value.buffer.byteLength - value.offset
-            );
-          }
-          uniformBufferIndex += 1;
-          break;
-
-        case 'texture':
-          if (!(value instanceof WEBGLTexture)) {
-            throw new Error('texture');
-          }
-          const texture: WEBGLTexture = value;
-          gl2.activeTexture(GL.TEXTURE0 + textureUnit);
-          gl2.bindTexture(texture.target, texture.handle);
-          // gl2.bindSampler(textureUnit, sampler.handle);
-          textureUnit += 1;
-          break;
-
-        case 'sampler':
-          // ignore
-          break;
-
-        case 'storage':
-        case 'read-only-storage':
-          throw new Error(`binding type '${binding.type}' not supported in WebGL`);
-      }
-    }
+  setUniforms(uniforms: Record<string, any>) {
+    // TODO - check against layout
+    Object.assign(this.uniforms, uniforms);
   }
 
   /** @todo needed for portable model
@@ -216,8 +179,8 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     } = options;
 
     const drawMode = getDrawMode(this.props.topology);
-    const isIndexed: boolean = false;
-    const indexType = GL.UNSIGNED_INT;
+    const isIndexed: boolean = Boolean(this._indexBuffer);
+    const indexType = this._indexBuffer?.props.indexType === 'uint16' ? GL.UNSIGNED_SHORT : GL.UNSIGNED_INT;
     const isInstanced: boolean = options.instanceCount > 0;
 
     // Avoid WebGL draw call when not rendering any data or values are incomplete
@@ -242,6 +205,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
       // We have to apply bindings before every draw call since other draw calls will overwrite
       this._applyBindings();
+      this._applyUniforms();
 
       // TODO - double context push/pop
       withDeviceParameters(this.device, parameters, () => {
@@ -303,9 +267,11 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
   // PRIVATE METHODS
 
-  // Checks if all texture-values uniforms are renderable (i.e. loaded)
-  // Update a texture if needed (e.g. from video)
-  // Note: This is currently done before every draw call
+  /**
+   * Checks if all texture-values uniforms are renderable (i.e. loaded)
+   * Update a texture if needed (e.g. from video)
+   * Note: This is currently done before every draw call
+   */
   _areTexturesRenderable() {
     let texturesRenderable = true;
 
@@ -322,6 +288,75 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     return texturesRenderable;
+  }
+
+  /** Apply any bindings */
+  _applyBindings() {
+    this.device.gl.useProgram(this.handle);
+
+    const {gl2} = this.device;
+
+    let textureUnit = 0;
+    let uniformBufferIndex = 0;
+    for (const binding of this.layout.bindings) {
+      const value = this.bindings[binding.name];
+      if (!value) {
+        throw new Error(`No value for binding ${binding.name} in ${this.id}`);
+      }
+      switch (binding.type) {
+        case 'uniform':
+          // Set buffer
+          const {name} = binding;
+          const location = gl2.getUniformBlockIndex(this.handle, name);
+          if (location === GL.INVALID_INDEX) {
+            throw new Error(`Invalid uniform block name ${name}`);
+          }
+          gl2.uniformBlockBinding(this.handle, uniformBufferIndex, location);
+          // console.debug(binding, location);
+          if (value instanceof WEBGLBuffer) {
+            gl2.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
+          } else {
+            gl2.bindBufferRange(
+              GL.UNIFORM_BUFFER,
+              uniformBufferIndex,
+              value.buffer.handle,
+              value.offset || 0,
+              value.size || value.buffer.byteLength - value.offset
+            );
+          }
+          uniformBufferIndex += 1;
+          break;
+
+        case 'texture':
+          if (!(value instanceof WEBGLTexture)) {
+            throw new Error('texture');
+          }
+          const texture: WEBGLTexture = value;
+          gl2.activeTexture(GL.TEXTURE0 + textureUnit);
+          gl2.bindTexture(texture.target, texture.handle);
+          // gl2.bindSampler(textureUnit, sampler.handle);
+          textureUnit += 1;
+          break;
+
+        case 'sampler':
+          // ignore
+          break;
+
+        case 'storage':
+        case 'read-only-storage':
+          throw new Error(`binding type '${binding.type}' not supported in WebGL`);
+      }
+    }
+  }
+
+  _applyUniforms() {
+    for (const uniformLayout of this.layout.uniforms || []) {
+      const {name, location, type, textureUnit} = uniformLayout;
+      const value = this.uniforms[name] || textureUnit;
+      if (value !== undefined) {
+        setUniform(this.device.gl, location, type, value);
+      }
+    }
   }
 }
 
@@ -353,7 +388,10 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
   }
 }
 
-function getAttributesByLocation(attributes: Record<string, Buffer>, layout: ShaderLayout): Record<number, Buffer> {
+function getAttributesByLocation(
+  attributes: Record<string, Buffer>,
+  layout: ShaderLayout
+): Record<number, Buffer> {
   const byLocation: Record<number, Buffer> = {};
   for (const [name, buffer] of Object.entries(attributes)) {
     const attribute = getAttributeLayout(layout, name);
@@ -362,13 +400,10 @@ function getAttributesByLocation(attributes: Record<string, Buffer>, layout: Sha
   return byLocation;
 }
 
-function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout {
-  const attribute = layout.attributes.find((binding) => binding.name === name);
-  if (!attribute) {
-    throw new Error(`Unknown attribute ${name}`);
-  }
-  return attribute;
+function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | undefined {
+  return layout.attributes.find((binding) => binding.name === name);
 }
+
 function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
   const binding = layout.bindings.find((binding) => binding.name === name);
   if (!binding) {

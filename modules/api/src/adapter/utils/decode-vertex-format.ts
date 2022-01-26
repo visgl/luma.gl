@@ -1,4 +1,4 @@
-import {VertexFormat, VertexType} from '../types/formats';
+import {VertexFormat, VertexType} from '../types/vertex-formats';
 import { decodeVertexType } from './decode-data-type';
 
 /**

@@ -48,10 +48,14 @@ export type RenderPipelineProps = ResourceProps & {
   vertexCount?: number;
   /** Number of "rows" in 'instance' buffers */
   instanceCount?: number;
+  /** Optional index buffer */
+  indices?: Buffer;
   /** Buffers for attributes */
   attributes?: Record<string, Buffer>;
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
+  /** uniforms (WebGL only) */
+  uniforms?: Record<string, any>;
 };
 
 export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
@@ -65,7 +69,7 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
   fsEntryPoint: undefined,
   fsConstants: undefined,
 
-  layout: {attributes: [], bindings: []},
+  layout: undefined, // {attributes: [], bindings: []},
 
   topology: 'triangle-list',
   // targets:
@@ -75,8 +79,11 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
 
   vertexCount: 0,
   instanceCount: 0,
+
+  indices: undefined,
   attributes: {},
   bindings: {},
+  uniforms: {}
 };
 
 /**
@@ -88,13 +95,19 @@ export default abstract class RenderPipeline extends Resource<RenderPipelineProp
   hash: string;
 
   constructor(device: Device, props: RenderPipelineProps) {
-    super(device, normalizeProps(props), DEFAULT_RENDER_PIPELINE_PROPS);
+    super(device, props, DEFAULT_RENDER_PIPELINE_PROPS);
   }
 
+  /** Set attributes (stored on pipeline and set before each call) */
+  abstract setIndexBuffer(indices: Buffer): void;
+  /** Set attributes (stored on pipeline and set before each call) */
   abstract setAttributes(attributes: Record<string, Buffer>): void;
+  /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
+  /** Uniforms (only supported on WebGL devices. Reset before each call to enable pipeline sharing) */
+  abstract setUniforms(bindings: Record<string, any>): void;
 
-  // abstract draw();
+  /** Draw call */ 
   abstract draw(options: {
     renderPass?: RenderPass;
     vertexCount?: number;
@@ -108,9 +121,4 @@ export default abstract class RenderPipeline extends Resource<RenderPipelineProp
 
   /** Private "export" for Model class */
   static _DEFAULT_PROPS = DEFAULT_RENDER_PIPELINE_PROPS;
-}
-
-function normalizeProps(props: RenderPipelineProps): RenderPipelineProps {
-  return {...props};
-  // return {...props, attributeMap: normalizeAttributeMap(props)};
 }
