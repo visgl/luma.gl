@@ -1,5 +1,9 @@
 import test from 'tape-promise/tape';
-import {lights} from '@luma.gl/shadertools';
+import {checkType} from '@luma.gl/test-utils';
+
+import {lights, ShaderModule} from '@luma.gl/shadertools';
+
+checkType<ShaderModule>(lights);
 
 test('shadertools#lights', (t) => {
   let uniforms = lights.getUniforms();

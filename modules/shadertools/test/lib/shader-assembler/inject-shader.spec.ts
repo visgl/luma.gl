@@ -1,15 +1,19 @@
 /* eslint-disable camelcase, no-console, no-undef */
+import test from 'tape-promise/tape';
+import {Device} from '@luma.gl/api';
 import {webgl1TestDevice} from '@luma.gl/test-utils';
 import {assembleShaders} from '@luma.gl/shadertools';
 import injectShader, {
   combineInjects,
   DECLARATION_INJECT_MARKER
 } from '@luma.gl/shadertools/lib/shader-assembler/inject-shader';
-import test from 'tape-promise/tape';
 
-const fixture = {
-  gl1: webgl1TestDevice.gl
-};
+function getInfo(device: Device) {
+  return {
+    gpu: device.info.gpu,
+    features: device.features
+  };
+}
 
 const VS_GLSL_TEMPLATE = `\
 #version 300 es
@@ -129,7 +133,7 @@ test('injectShader#injectShader', (t) => {
 });
 
 test('injectShader#assembleShaders', (t) => {
-  const assembleResult = assembleShaders(webgl1TestDevice, {
+  const assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
     inject: INJECT,

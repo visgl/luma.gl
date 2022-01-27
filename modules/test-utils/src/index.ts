@@ -7,3 +7,5 @@ export {createHeadlessContext} from './create-headless-context';
 export {createTestContext} from './create-test-context';
 export {createTestDevice, webgl1TestDevice, webgl2TestDevice, webgpuTestDevice} from './create-test-device';
 export {getTestDevices, getWebGLTestDevices} from './create-test-device';
+
+export {checkType} from './check-type';

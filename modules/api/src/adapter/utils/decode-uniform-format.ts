@@ -33,7 +33,7 @@ export function decodeUniformFormat(format: UniformFormat): {type: UniformDataTy
 } 
 
 /** Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes) */
-export function alignTo(size, count) {
+export function alignTo(size: number, count: number): number {
   // prettier-ignore
   switch (count) {
     case 1: return size; // Pad upwards to even multiple of 2

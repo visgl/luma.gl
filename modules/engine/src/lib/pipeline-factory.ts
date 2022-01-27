@@ -140,7 +140,12 @@ export default class PipelineFactory {
     renderPipeline: RenderPipeline,
     getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>
   } {
-    const assembled = assembleShaders(this.device, {...props, hookFunctions: this._hookFunctions});
+    const platformInfo = {
+      gpu: this.device.info.gpu,
+      features: this.device.features
+    };
+
+    const assembled = assembleShaders(platformInfo, {...props, hookFunctions: this._hookFunctions});
 
     const renderPipeline = this.device.createRenderPipeline({
       ...props,

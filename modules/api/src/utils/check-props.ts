@@ -30,7 +30,13 @@ class Buffer {
 }
 */
 
-export function checkProps(className, props, propChecks) {
+export type PropChecks = {
+  removedProps?: Record<string, any>;
+  replacedProps?: Record<string, string>;
+  deprecatedProps?: Record<string, string>;
+};
+
+export function checkProps(className: string, props: Record<string, any>, propChecks: PropChecks): Record<string, unknown> {
   const {removedProps = {}, deprecatedProps = {}, replacedProps = {}} = propChecks;
 
   // removedProps: Removed props no longer supported

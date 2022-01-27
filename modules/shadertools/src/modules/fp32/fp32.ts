@@ -158,6 +158,5 @@ float tan_fp32(float a) {
  */
 export const fp32 = {
   name: 'fp32',
-  vs: fp32shader,
-  fs: null
+  vs: fp32shader
 };

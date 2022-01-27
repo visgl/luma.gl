@@ -12,8 +12,8 @@ export function setPathPrefix(prefix: string) {
 /**
  * Reads raw file data. Respects setPathPrefix.
  */
-export async function loadFile(url: string, options?: {dataType?: string} & RequestInit): Promise<any> {
-  url = url.startsWith('http') ? url : pathPrefix + url;
+export async function loadFile(url: string, options?: {dataType?: 'text' | 'arrayBuffer'} & RequestInit): Promise<any> {
+    url = url.startsWith('http') ? url : pathPrefix + url;
   const dataType = options?.dataType || 'text';
   const response = await fetch(url, options);
   return await response[dataType]();
@@ -38,7 +38,7 @@ export async function loadImageBitmap(url: string, opts?: {crossOrigin?: string}
  * @returns a promise tracking the load
  * @deprecated Use `loadImageBitmap()` unless you are supporting old versions of Safari.
  */
-export async function loadImage(url: string, opts?: {crossOrigin}): Promise<HTMLImageElement> {
+export async function loadImage(url: string, opts?: {crossOrigin?: string}): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     try {
       const image = new Image();

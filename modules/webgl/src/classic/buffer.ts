@@ -47,7 +47,7 @@ function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | numbe
   }
 
   // Signature: `new Buffer(gl, 100)`
-  else if (Number.isFinite(props)) {
+  else if (typeof props === 'number') {
     return {byteLength: props as number};
   }
 
