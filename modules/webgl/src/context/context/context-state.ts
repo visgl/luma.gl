@@ -34,6 +34,8 @@ export function getContextState(gl: WebGLRenderingContext): ContextState {
     // @ts-expect-error
     gl.luma = contextState;
   }
-  // @ts-expect-error
-  return gl.luma;
+  throw new Error('context state without device');
+
+  // // @ts-expect-error
+  // return gl.luma;
 }
