@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps} from '@luma.gl/engine';
-import {clear, Transform, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear, Transform} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Animation via transform feedback.

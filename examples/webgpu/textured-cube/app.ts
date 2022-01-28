@@ -6,6 +6,8 @@ import {Matrix4} from '@math.gl/core';
 export const title = 'Rotating Cube';
 export const description = 'Shows rendering a basic triangle.';
 
+const TEXTURE_URL = 'https://raw.githubusercontent.com/uber/luma.gl/8.5-release/examples/getting-started/hello-cube/vis-logo.png';
+
 /** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
   vs: {
@@ -104,7 +106,7 @@ export default class AppRenderLoop extends RenderLoop {
     super();
     // Fetch the image and upload it into a GPUTexture.
     const cubeTexture = device.createTexture({
-      data: loadImageBitmap('vis-logo.png'),
+      data: loadImageBitmap(TEXTURE_URL),
       usage: Texture.TEXTURE_BINDING | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
       sampler: {magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge'}, // linear filtering for smooth interpolation.
       mipmaps: true // Create mipmaps

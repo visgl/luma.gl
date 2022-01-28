@@ -1,6 +1,7 @@
 // keyframes
 export type KeyFrame<T> = [number, T];
 
+/** Holds a list of key frames (timestamped values) */
 export class KeyFrames<T = number> {
   startIndex: number = -1;
   endIndex: number = -1;

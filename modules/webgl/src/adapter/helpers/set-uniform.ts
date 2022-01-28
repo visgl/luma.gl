@@ -35,44 +35,52 @@ export function setUniform(
     }
   }
 
-  if (typeof value !== 'number') {
-    // prettier-ignore
-    switch (type) {
-      case GL.FLOAT: return gl.uniform1fv(location, value);
-      case GL.FLOAT_VEC2: return gl.uniform2fv(location, value);
-      case GL.FLOAT_VEC3: return gl.uniform3fv(location, value);
-      case GL.FLOAT_VEC4: return gl.uniform4fv(location, value);
+  // @ts-expect-error
+  if (value === true) {
+    value = 1;
+  }
+  // @ts-expect-error
+  if (value === false) {
+    value = 1;
+  }
+  const arrayValue = (typeof value === 'number') ? [value] : value;
 
-      case GL.INT: return gl.uniform1iv(location, value);
-      case GL.INT_VEC2: return gl.uniform2iv(location, value);
-      case GL.INT_VEC3: return gl.uniform3iv(location, value);
-      case GL.INT_VEC4: return gl.uniform4iv(location, value);
+  // prettier-ignore
+  switch (type) {
+    case GL.FLOAT: return gl.uniform1fv(location, arrayValue);
+    case GL.FLOAT_VEC2: return gl.uniform2fv(location, arrayValue);
+    case GL.FLOAT_VEC3: return gl.uniform3fv(location, arrayValue);
+    case GL.FLOAT_VEC4: return gl.uniform4fv(location, arrayValue);
 
-      case GL.BOOL: return gl.uniform1iv(location, value);
-      case GL.BOOL_VEC2: return gl.uniform2iv(location, value);
-      case GL.BOOL_VEC3: return gl.uniform3iv(location, value);
-      case GL.BOOL_VEC4: gl.uniform4iv(location, value);
+    case GL.INT: return gl.uniform1iv(location, arrayValue);
+    case GL.INT_VEC2: return gl.uniform2iv(location, arrayValue);
+    case GL.INT_VEC3: return gl.uniform3iv(location, arrayValue);
+    case GL.INT_VEC4: return gl.uniform4iv(location, arrayValue);
 
-      // WEBGL2 - unsigned integers
-      case GL.UNSIGNED_INT: return gl2.uniform1uiv(location, value, 1);
-      case GL.UNSIGNED_INT_VEC2: return gl2.uniform2uiv(location, value, 2);
-      case GL.UNSIGNED_INT_VEC3: return gl2.uniform3uiv(location, value, 3);
-      case GL.UNSIGNED_INT_VEC4: return gl2.uniform4uiv(location, value, 4);
+    case GL.BOOL: return gl.uniform1iv(location, arrayValue);
+    case GL.BOOL_VEC2: return gl.uniform2iv(location, arrayValue);
+    case GL.BOOL_VEC3: return gl.uniform3iv(location, arrayValue);
+    case GL.BOOL_VEC4: gl.uniform4iv(location, arrayValue);
 
-      // WebGL2 - quadratic matrices
-      // false: don't transpose the matrix
-      case GL.FLOAT_MAT2: return gl.uniformMatrix2fv(location, false, value);
-      case GL.FLOAT_MAT3: return gl.uniformMatrix3fv(location, false, value);
-      case GL.FLOAT_MAT4: return gl.uniformMatrix4fv(location, false, value);
+    // WEBGL2 - unsigned integers
+    case GL.UNSIGNED_INT: return gl2.uniform1uiv(location, arrayValue, 1);
+    case GL.UNSIGNED_INT_VEC2: return gl2.uniform2uiv(location, arrayValue, 2);
+    case GL.UNSIGNED_INT_VEC3: return gl2.uniform3uiv(location, arrayValue, 3);
+    case GL.UNSIGNED_INT_VEC4: return gl2.uniform4uiv(location, arrayValue, 4);
 
-      // WebGL2 - rectangular matrices
-      case GL.FLOAT_MAT2x3: return gl2.uniformMatrix2x3fv(location, false, value);
-      case GL.FLOAT_MAT2x4: return gl2.uniformMatrix2x4fv(location, false, value);
-      case GL.FLOAT_MAT3x2: return gl2.uniformMatrix3x2fv(location, false, value);
-      case GL.FLOAT_MAT3x4: return gl2.uniformMatrix3x4fv(location, false, value);
-      case GL.FLOAT_MAT4x2: return gl2.uniformMatrix4x2fv(location, false, value);
-      case GL.FLOAT_MAT4x3: return gl2.uniformMatrix4x3fv(location, false, value);
-    }
+    // WebGL2 - quadratic matrices
+    // false: don't transpose the matrix
+    case GL.FLOAT_MAT2: return gl.uniformMatrix2fv(location, false, arrayValue);
+    case GL.FLOAT_MAT3: return gl.uniformMatrix3fv(location, false, arrayValue);
+    case GL.FLOAT_MAT4: return gl.uniformMatrix4fv(location, false, arrayValue);
+
+    // WebGL2 - rectangular matrices
+    case GL.FLOAT_MAT2x3: return gl2.uniformMatrix2x3fv(location, false, arrayValue);
+    case GL.FLOAT_MAT2x4: return gl2.uniformMatrix2x4fv(location, false, arrayValue);
+    case GL.FLOAT_MAT3x2: return gl2.uniformMatrix3x2fv(location, false, arrayValue);
+    case GL.FLOAT_MAT3x4: return gl2.uniformMatrix3x4fv(location, false, arrayValue);
+    case GL.FLOAT_MAT4x2: return gl2.uniformMatrix4x2fv(location, false, arrayValue);
+    case GL.FLOAT_MAT4x3: return gl2.uniformMatrix4x3fv(location, false, arrayValue);
   }
 
   throw new Error('Illegal uniform');

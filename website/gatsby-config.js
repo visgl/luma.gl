@@ -88,42 +88,42 @@ module.exports = {
 
         EXAMPLES: [
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'Instancing',
             componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
             path: 'examples/showcase/instancing/',
             image: 'images/example-instancing.jpg'
           },
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'Persistence',
             componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
             path: 'examples/showcase/persistence/',
             image: 'images/example-persistence.jpg'
           },
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'GLTF',
             componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
             path: 'examples/showcase/gltf/',
             image: 'images/example-gltf.jpg'
           },
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'DOF',
             componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
             path: 'examples/showcase/dof/',
             image: 'images/example-dof.jpg'
           },
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'Geospatial',
             componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
             path: 'examples/showcase/geospatial/',
             image: 'images/example-geospatial.jpg'
           },
           {
-            category: 'Showcases',
+            category: 'Showcases v8',
             title: 'Wandering',
             componentUrl: resolve(__dirname, './templates/showcase/example-wandering.jsx'),
             path: 'examples/showcase/wandering/',
@@ -288,7 +288,7 @@ module.exports = {
             category: 'WebGPU',
             title: 'Textured Cube',
             componentUrl: resolve(__dirname, './templates/webgpu/example-textured-cube-webgpu.jsx'),
-            path: 'examples/getting-started/lighting/',
+            path: 'examples/webgpu/textured-cube',
             image: 'images/example-hello-triangle.png'
           }
         ]

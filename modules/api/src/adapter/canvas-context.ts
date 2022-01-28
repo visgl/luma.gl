@@ -23,7 +23,11 @@ export type CanvasContextProps = {
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
+<<<<<<< HEAD
   colorSpace?: 'srgb', // GPUPredefinedColorSpace 
+=======
+  colorSpace?: 'srgb', // GPUPredefinedColorSpace
+>>>>>>> fix(website): Ensure all examples run again against new api
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
   compositingAlphaMode?: 'opaque' | 'premultiplied'
 };
@@ -90,7 +94,7 @@ export default abstract class CanvasContext {
       this.canvas = createCanvas(props);
       if (props?.container) {
         props?.container.appendChild(this.canvas);
-      } else {     
+      } else {
         document.body.insertBefore(this.canvas, document.body.firstChild);
       }
       if (!props?.visible) {
@@ -150,7 +154,7 @@ export default abstract class CanvasContext {
         const dpr = this.getDevicePixelRatio();
         const canvas = this.canvas as HTMLCanvasElement;
         // If not attached to DOM client size can be 0
-        return canvas.parentElement 
+        return canvas.parentElement
           ? [canvas.clientWidth * dpr,  canvas.clientHeight * dpr]
           : [this.canvas.width, this.canvas.height];
     }

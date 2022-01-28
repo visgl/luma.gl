@@ -1,6 +1,6 @@
 import {Buffer} from '@luma.gl/api';
-import {RenderLoop, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
 Re-using shader code with shader modules
@@ -90,8 +90,8 @@ export default class AppRenderLoop extends RenderLoop {
   }
 
   onFinalize() {
-    this.model1.delete();
-    this.model2.delete();
+    this.model1.destroy();
+    this.model2.destroy();
     this.positionBuffer.delete();
   }
 
