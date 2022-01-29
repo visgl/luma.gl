@@ -1,41 +1,47 @@
+import type {NumberArray} from '../../types';
 import lightingShader from './lights.glsl';
 
-type Color = [number, number, number];
+type Color = NumberArray;
 
 type LightSources = {
   ambientLight?: {
     color: Color;
-    intensity: number
+    intensity: number;
   };
-  pointLights?:  {
+  pointLights?: {
     color: Color;
     intensity: number;
-    position: [number, number, number];
-    attenuation: number
+    position: NumberArray;
+    attenuation: number;
   }[];
   directionalLights?: {
     color: Color;
     intensity: number;
-    position: [number, number, number];
-    direction: [number, number, number]
+    position: NumberArray;
+    direction: NumberArray;
   }[];
 };
 
 export type LightsOptions = {
   lightSources?: LightSources;
-}
+};
 
 const INITIAL_MODULE_OPTIONS: Required<LightsOptions> = {
   lightSources: {}
 };
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
-function convertColor({color = [0, 0, 0], intensity = 1.0} = {}) {
+function convertColor(colorDef: {color?: NumberArray, intensity?: number} = {}): NumberArray {
+  const {color = [0, 0, 0], intensity = 1.0} = colorDef;
   return color.map((component) => (component * intensity) / 255.0);
 }
 
-function getLightSourceUniforms({ambientLight, pointLights = [], directionalLights = []}) {
-  const lightSourceUniforms = {};
+function getLightSourceUniforms({
+  ambientLight,
+  pointLights = [],
+  directionalLights = []
+}: LightSources): Record<string, any> {
+  const lightSourceUniforms: Record<string, any> = {};
 
   if (ambientLight) {
     lightSourceUniforms['lighting_uAmbientLight.color'] = convertColor(ambientLight);
@@ -50,7 +56,6 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
       1, 0, 0
     ];
   });
-  // @ts-expect-error
   lightSourceUniforms.lighting_uPointLightCount = pointLights.length;
 
   directionalLights.forEach((directionalLight, index) => {
@@ -59,7 +64,6 @@ function getLightSourceUniforms({ambientLight, pointLights = [], directionalLigh
     lightSourceUniforms[`lighting_uDirectionalLight[${index}].direction`] =
       directionalLight.direction;
   });
-  // @ts-expect-error
   lightSourceUniforms.lighting_uDirectionalLightCount = directionalLights.length;
 
   return lightSourceUniforms;
@@ -90,14 +94,13 @@ function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS): Record<strin
 
   // Support for array of lights. Type of light is detected by type field
   if ('lights' in opts) {
-    const lightSources = {pointLights: [], directionalLights: []};
+    const lightSources: LightSources = {pointLights: [], directionalLights: []};
     // @ts-expect-error
     for (const light of opts.lights || []) {
       switch (light.type) {
         case 'ambient':
           // Note: Only uses last ambient light
           // TODO - add ambient light sources on CPU?
-          // @ts-expect-error
           lightSources.ambientLight = light;
           break;
         case 'directional':
@@ -123,7 +126,7 @@ function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS): Record<strin
  * An implementation of PBR (Physically-Based Rendering).
  * Physically Based Shading of a microfacet surface defined by a glTF material.
  */
- export const lights = {
+export const lights = {
   name: 'lights',
   vs: lightingShader,
   fs: lightingShader,

@@ -42,6 +42,5 @@ vec4 transform_getInput(sampler2D texSampler, vec2 size) {
 /** Private shader module used by `Transform` */
 export const transform = {
   name: 'transform',
-  vs,
-  fs: undefined
+  vs
 };

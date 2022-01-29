@@ -97,8 +97,8 @@ export default function injectShader(
 }
 
 // Takes an array of inject objects and combines them into one
-export function combineInjects(injects: {}[]) {
-  const result = {};
+export function combineInjects(injects: {}[]): Record<string, string> {
+  const result: Record<string, string> = {};
   assert(Array.isArray(injects) && injects.length > 1);
   injects.forEach((inject) => {
     for (const key in inject) {

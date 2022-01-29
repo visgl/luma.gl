@@ -1,8 +1,8 @@
 // luma.gl, MIT license
+import type {NumberArray} from '../types';
 import {assert} from '../utils/assert';
 import {log} from '../utils/log';
 import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
-import UniformBufferLayout from './uniform-buffer-layout';
 
 /** A uniform block holds a number of uniforms */
 export default class UniformBlock<TUniforms = Record<string, any>> {
@@ -56,9 +56,11 @@ export default class UniformBlock<TUniforms = Record<string, any>> {
     return this.data;
   }
 
-  _setValue(key: string, value): void {
+  _setValue(key: string, value: number | NumberArray): void {
+    // @ts-ignore
     const layout = this.layout.layout[key];
     assert(layout, 'UniformLayoutStd140 illegal argument');
+    // @ts-ignore
     const typedArray = this.typedArray[layout.type];
     if (layout.size === 1) {
       // single value -> just set it

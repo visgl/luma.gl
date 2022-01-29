@@ -41,7 +41,7 @@ ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.mes
   return `${message.type.toUpperCase()}: ${message.message}\n`;
 }
 
-function getNumberedLines(lines, lineNum) {
+function getNumberedLines(lines: readonly string[], lineNum: number): string {
   let numberedLines = '';
   for (let line = lineNum - 2; line <= lineNum; line++) {
     const sourceLine = lines[line]

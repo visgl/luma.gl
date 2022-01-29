@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {isBrowser} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 import type Device from './device';
 import type Framebuffer from './resources/framebuffer';
 

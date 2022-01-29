@@ -13,7 +13,7 @@ export type RenderPassProps = ResourceProps & {
   parameters?: RenderPassParameters
 };
 
-const DEFAULT_RENDERPASS_PROPS = {
+const DEFAULT_RENDERPASS_PROPS: Required<RenderPassProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   framebuffer: undefined,
   parameters: undefined

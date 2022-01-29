@@ -55,20 +55,21 @@ export type CopyTextureToTextureOptions = {
   // destination: GPUImageCopyTexture,
   // copySize: GPUExtent3D
 };
-interface Queue {
-  submit(commandBuffers);
 
-  // onSubmittedWorkDone(): Promise<undefined>;
+// interface Queue {
+//   submit(commandBuffers);
 
-  writeBuffer(options: WriteBufferOptions): void;
-  writeTexture(options: WriteTextureOptions): void;
+//   // onSubmittedWorkDone(): Promise<undefined>;
 
-  // copyExternalImageToTexture(
-  //   GPUImageCopyExternalImage source,
-  //   GPUImageCopyTextureTagged destination,
-  //   GPUExtent3D copySize
-  // ): void;
-}
+//   writeBuffer(options: WriteBufferOptions): void;
+//   writeTexture(options: WriteTextureOptions): void;
+
+//   // copyExternalImageToTexture(
+//   //   GPUImageCopyExternalImage source,
+//   //   GPUImageCopyTextureTagged destination,
+//   //   GPUExtent3D copySize
+//   // ): void;
+// }
 
 export type CommandEncoderProps = ResourceProps & {
   measureExecutionTime?: boolean;

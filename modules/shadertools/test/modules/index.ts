@@ -3,6 +3,7 @@
 import './modules.spec';
 
 // Modules
+import './dirlight/dirlight.spec';
 import './fp64/fp64-arithmetic-transform.spec';
 import './fp64/fp64-utils.spec';
 import './lights/lights.spec';

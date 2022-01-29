@@ -17,6 +17,13 @@ type GetProgramOptions = {
   parameters?: RenderPipelineParameters;
 };
 
+function getInfo(device: Device) {
+  return {
+    gpu: device.info.gpu,
+    features: device.features
+  };
+}
+
 /** @deprecated Use new PipelineFactory in `@luma.gl/engine` */
 export default class ProgramManager {
   readonly device: Device;
@@ -109,7 +116,7 @@ export default class ProgramManager {
     }`;
 
     if (!this._programCache[hash]) {
-      const assembled = assembleShaders(this.device, {
+      const assembled = assembleShaders(getInfo(this.device), {
         vs,
         fs,
         modules,

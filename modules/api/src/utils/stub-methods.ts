@@ -1,13 +1,13 @@
 import {log} from './log';
 
 // Install stubs for removed methods
-export function stubRemovedMethods(instance, className, version, methodNames) {
+export function stubRemovedMethods(instance: any, className: string, version: string, methodNames: string[]) {
   const upgradeMessage = `See luma.gl ${version} Upgrade Guide at \
 https://luma.gl/docs/upgrade-guide`;
 
   const prototype = Object.getPrototypeOf(instance);
 
-  methodNames.forEach((methodName) => {
+  methodNames.forEach((methodName: string): void => {
     if (prototype.methodName) {
       return;
     }

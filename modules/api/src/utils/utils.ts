@@ -1,6 +1,6 @@
 import assert from './assert';
 
-const uidCounters = {};
+const uidCounters: Record<string, number> = {};
 
 /**
  * Returns a UID.

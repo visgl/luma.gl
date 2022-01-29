@@ -1,8 +1,11 @@
-import {Device} from '@luma.gl/api';
+export type PlatformInfo = {
+  gpu: string;
+  features: Set<string>;
+};
 
 /** Adds defines to help identify GPU architecture / platform */
-export function getPlatformShaderDefines(device: Device): string {
-  switch (device.info?.gpu.toLowerCase()) {
+export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
+  switch (platformInfo?.gpu.toLowerCase()) {
     case 'nvidia':
       return `\
 #define NVIDIA_GPU
@@ -40,7 +43,7 @@ export function getPlatformShaderDefines(device: Device): string {
 }
 
 /** Adds defines to let shaders portably v1/v3 check for features */
-export function getVersionDefines(device: Device): string {
+export function getVersionDefines(platformInfo: PlatformInfo): string {
   let versionDefines = `\
 #if (__VERSION__ > 120)
 
@@ -58,7 +61,7 @@ export function getVersionDefines(device: Device): string {
 #endif // __VERSION
 `;
 
-  if (device.features?.has('glsl-frag-depth')) {
+  if (platformInfo.features.has('glsl-frag-depth')) {
     versionDefines += `\
 
 // FRAG_DEPTH => gl_FragDepth is available
@@ -70,7 +73,7 @@ export function getVersionDefines(device: Device): string {
 #endif
 `;
   }
-  if (device.features?.has('glsl-derivatives')) {
+  if (platformInfo?.features.has('glsl-derivatives')) {
     versionDefines += `\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
@@ -81,7 +84,7 @@ export function getVersionDefines(device: Device): string {
 #endif
 `;
   }
-  if (device.features?.has('glsl-frag-data')) {
+  if (platformInfo?.features.has('glsl-frag-data')) {
     versionDefines += `\
 
 // DRAW_BUFFERS => gl_FragData[] is available
@@ -92,7 +95,7 @@ export function getVersionDefines(device: Device): string {
 #endif
 `;
   }
-  if (device.features?.has('glsl-texture-lod')) {
+  if (platformInfo?.features.has('glsl-texture-lod')) {
     versionDefines += `\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod

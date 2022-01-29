@@ -52,7 +52,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
 
     // Program 1
 
-    const assembled1 = assembleShaders(gl, {
+    const assembled1 = assembleShaders(null, {
       vs,
       fs,
       modules: [offsetLeftModule],
@@ -77,7 +77,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
 
     // Program 2
 
-    const assembled2 = assembleShaders(gl, {
+    const assembled2 = assembleShaders(null, {
       vs,
       fs,
       modules: [offsetRightModule],

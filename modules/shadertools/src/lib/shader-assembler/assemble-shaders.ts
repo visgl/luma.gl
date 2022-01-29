@@ -1,9 +1,9 @@
-import {Device} from '@luma.gl/api';
 import {resolveModules} from './resolve-modules';
-import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
+import {getPlatformShaderDefines, getVersionDefines, PlatformInfo} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
+
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
@@ -47,7 +47,7 @@ export type AssembleShaderOptions = {
  * Inject a list of shader modules into shader sources
  */
 export function assembleShaders(
-  device: Device | WebGLRenderingContext,
+  platformInfo: PlatformInfo,
   options: AssembleShaderOptions
 ): {
   vs: string;
@@ -57,10 +57,8 @@ export function assembleShaders(
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
   return {
-    // @ts-expect-error
-    vs: assembleShader(device, {...options, source: vs, type: 'vs', modules}),
-    // @ts-expect-error
-    fs: assembleShader(device, {...options, source: fs, type: 'fs', modules}),
+    vs: assembleShader(platformInfo, {...options, source: vs, type: 'vs', modules}),
+    fs: assembleShader(platformInfo, {...options, source: fs, type: 'fs', modules}),
     getUniforms: assembleGetUniforms(modules)
   };
 }
@@ -73,18 +71,18 @@ export function assembleShaders(
  * @returns 
  */
 function assembleShader(
-  device: Device,
+  platformInfo: PlatformInfo,
   options: {
-    id?: string,
-    source: string,
-    type: 'vs' | 'fs',
-    modules: any[],
-    defines?: Defines,
-    hookFunctions?: any[],
-    inject?: Record<string, any>,
-    transpileToGLSL100?: boolean,
-    prologue?: boolean,
-    log?
+    id?: string;
+    source: string;
+    type: 'vs' | 'fs';
+    modules: any[];
+    defines?: Defines;
+    hookFunctions?: any[];
+    inject?: Record<string, any>;
+    transpileToGLSL100?: boolean;
+    prologue?: boolean;
+    log?: any;
   }
 ) {
   const {
@@ -100,7 +98,6 @@ function assembleShader(
     log
   } = options;
 
-  assert(device, 'device');
   assert(typeof source === 'string', 'shader source must be a string');
 
   const isVertex = type === 'vs';
@@ -134,8 +131,8 @@ function assembleShader(
 ${versionLine}
 ${getShaderName({id, source, type})}
 ${getShaderType({type})}
-${getPlatformShaderDefines(device)}
-${getVersionDefines(device)}
+${getPlatformShaderDefines(platformInfo)}
+${getVersionDefines(platformInfo)}
 ${getApplicationDefines(allDefines)}
 ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 `
@@ -248,7 +245,7 @@ function getShaderType({type}) {
  * These are understood by the GLSL error parsing function
  * If id is provided and no SHADER_NAME constant is present in source, create one
  */
-function getShaderName(options: {id, source: string, type: 'vs' | 'fs'}): string {
+function getShaderName(options: {id: string, source: string, type: 'vs' | 'fs'}): string {
   const {id, source, type} = options;
   const injectShaderName = id && typeof id === 'string' && source.indexOf('SHADER_NAME') === -1;
   return injectShaderName
@@ -290,7 +287,7 @@ function getHookFunctions(hookFunctions, hookInjections): string {
     }
     if (hookInjections[hookName]) {
       const injections = hookInjections[hookName];
-      injections.sort((a, b) => a.order - b.order);
+      injections.sort((a: {order: number}, b: {order: number}): number => a.order - b.order);
       for (const injection of injections) {
         result += `  ${injection.injection}\n`;
       }
@@ -305,7 +302,7 @@ function getHookFunctions(hookFunctions, hookInjections): string {
 }
 
 function normalizeHookFunctions(hookFunctions): {vs: Record<string, any>, fs: Record<string, any>} {
-  const result = {
+  const result: {vs: Record<string, any>, fs: Record<string, any>} = {
     vs: {},
     fs: {}
   };

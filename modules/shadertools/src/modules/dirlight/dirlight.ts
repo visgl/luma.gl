@@ -1,14 +1,16 @@
-// import {checkType} from 'test/utils/types';
-import type {ShaderModule} from '../../types';
+// luma.gl, MIT license
+import type {NumberArray} from '../../types';
 import {project} from '../project/project';
 
-const DEFAULT_LIGHT_DIRECTION = new Float32Array([1, 1, 2]);
+export type DirlightOptions = {
+  lightDirection?: NumberArray
+}
 
-const DEFAULT_MODULE_OPTIONS = {
-  lightDirection: DEFAULT_LIGHT_DIRECTION
+const DEFAULT_MODULE_OPTIONS: Required<DirlightOptions> = {
+  lightDirection: new Float32Array([1, 1, 2])
 };
 
-function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
+function getUniforms(opts: DirlightOptions = DEFAULT_MODULE_OPTIONS): Record<string, any> {
   const uniforms = {};
   if (opts.lightDirection) {
     // @ts-expect-error TODO add types
@@ -17,10 +19,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS) {
   return uniforms;
 }
 
-// TODO - reuse normal from geometry module
-const vs = null;
-
-const fs = `\
+var fs = `\
 uniform vec3 dirlight_uLightDirection;
 
 /*
@@ -36,13 +35,10 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
-export const dirlight = {
+ export const dirlight = {
   name: 'dirlight',
-  vs,
+  // vs // TODO - reuse normal from geometry module
   fs,
   getUniforms,
   dependencies: [project]
 };
-
-// type checks
-// checkType<ShaderModule>(dirlight);
