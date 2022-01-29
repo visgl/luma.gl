@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
-import {clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
+import {clear, ClassicModel} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -53,9 +53,9 @@ export default class AppRenderLoop extends RenderLoop {
   timeSlider;
 
   cubes: {
-    translation: any[],
-    rotation: any[],
-    keyFrames: any[],
+    translation: number[],
+    rotation: number[],
+    keyFrames: KeyFrames<number>,
     model: Model
   }[];
 
@@ -67,18 +67,9 @@ export default class AppRenderLoop extends RenderLoop {
     this.timeSlider = document.getElementById('time');
 
     if (playButton) {
-      playButton.addEventListener('click', () => {
-        this.timeline.play();
-      });
-
-      pauseButton.addEventListener('click', () => {
-        this.timeline.pause();
-      });
-
-      this.timeSlider.addEventListener('input', (event) => {
-        // @ts-ignore
-        this.timeline.setTime(parseFloat(event.target.value));
-      });
+      playButton.addEventListener('click', () => this.timeline.play());
+      pauseButton.addEventListener('click', () => this.timeline.pause());
+      this.timeSlider.addEventListener('input', (event) => this.timeline.setTime(parseFloat(event.target.value)));
     }
 
     const translations = [
@@ -156,7 +147,6 @@ export default class AppRenderLoop extends RenderLoop {
       this.cubes[i] = {
         translation: translations[i],
         rotation: rotations[i],
-        // @ts-expect-error
         keyFrames: keyFrames[i],
         model: new Model(device, {
           vs,
@@ -164,6 +154,8 @@ export default class AppRenderLoop extends RenderLoop {
           modules: [dirlight],
           geometry: new CubeGeometry(),
           parameters: {
+            //@ts-expect-error
+            id: `hack-to-prevent-pipeline-sharing-${i}`,
             depthWriteEnabled: true,
             depthCompare: 'less-equal'
           },
@@ -181,8 +173,8 @@ export default class AppRenderLoop extends RenderLoop {
   }
 
   onFinalize() {
-    for (let i = 0; i < 4; ++i) {
-      this.cubes[i].model.destroy();
+    for (const cube of this.cubes) {
+      cube.model.destroy();
     }
   }
 
@@ -196,13 +188,9 @@ export default class AppRenderLoop extends RenderLoop {
     // Draw the cubes
     clear(device, {color: [0, 0, 0, 1], depth: true});
 
-    for (let i = 0; i < 4; ++i) {
-      const cube = this.cubes[i];
-      // @ts-expect-error
+    for (const cube of this.cubes) {
       const startRotation = cube.keyFrames.getStartData();
-      // @ts-expect-error
       const endRotation = cube.keyFrames.getEndData();
-      // @ts-expect-error
       const rotation = startRotation + cube.keyFrames.factor * (endRotation - startRotation);
       const rotationX = cube.rotation[0] + rotation;
       const rotationY = cube.rotation[1] + rotation;
@@ -211,11 +199,10 @@ export default class AppRenderLoop extends RenderLoop {
         .identity()
         .translate(cube.translation)
         .rotateXYZ([rotationX, rotationY, rotationZ]);
-      cube.model
-        .setUniforms({
-          uModel: modelMatrix
-        })
-        .draw();
+      cube.model.setUniforms({
+        uModel: modelMatrix
+      });
+      cube.model.draw();
     }
   }
 }

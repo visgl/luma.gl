@@ -76,7 +76,7 @@ export function getAttributeBuffersFromGeometry(device: Device, geometry: Geomet
       throw new Error('constant attributes not supported');
     } else {
       const typedArray = attribute.value;
-      buffers[remappedName] = device.createBuffer(typedArray);
+      buffers[remappedName] = device.createBuffer({data: typedArray, id: `${remappedName}-buffer`});
     }
   }
 

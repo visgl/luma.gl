@@ -203,7 +203,11 @@ export default class AnimationLoopExamplePage extends Component {
         {panel && (
           <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`}>
             <div dangerouslySetInnerHTML={{__html: controls}} />
-            { this.state.error ? (<div> <b style={{color: 'red'}}> This sample failed to render: {this.state.error.message} </b></div>) : (<></>)}
+            {
+              this.state.error
+                ? (<div> <b style={{color: 'red', overflowWrap: 'break-word', width: 200}}> This sample failed to render: <br /> {this.state.error.message} </b></div>)
+                : (<></>)
+            }
           </InfoPanel>
         )}
       </div>

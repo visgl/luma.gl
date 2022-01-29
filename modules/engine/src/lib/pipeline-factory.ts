@@ -93,7 +93,10 @@ export default class PipelineFactory {
     this.stateHash++;
   }
 
-  createRenderPipeline(options: GetRenderPipelineOptions): RenderPipeline {
+  createRenderPipeline(options: GetRenderPipelineOptions): {
+    renderPipeline: RenderPipeline;
+    getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>;
+  } {
     const props: Required<GetRenderPipelineOptions> = {...DEFAULT_RENDER_PIPELINE_OPTIONS, ...options};
 
     const modules = this._getModuleList(props.modules); // Combine with default modules
@@ -110,7 +113,10 @@ export default class PipelineFactory {
 
     this._useCounts[hash]++;
 
-    return this._pipelineCache[hash];
+    return {
+      renderPipeline: this._pipelineCache[hash],
+      getUniforms: this._getUniforms[hash]
+    };
   }
 
   release(pipeline: RenderPipeline): void {
@@ -129,6 +135,21 @@ export default class PipelineFactory {
   }
 
   // PRIVATE
+
+  _createRenderPipeline(props: GetRenderPipelineOptions): {
+    renderPipeline: RenderPipeline,
+    getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>
+  } {
+    const assembled = assembleShaders(this.device, {...props, hookFunctions: this._hookFunctions});
+
+    const renderPipeline = this.device.createRenderPipeline({
+      ...props,
+      vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
+      fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
+    });
+
+    return {renderPipeline, getUniforms: assembled.getUniforms};
+  }
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   _hashRenderPipeline(props: GetRenderPipelineOptions): string {
@@ -161,18 +182,6 @@ export default class PipelineFactory {
     )}I${injectHashes.join('/')}V${varyingHashes.join('/')}H${this.stateHash}B${props.bufferMode}${
       props.transpileToGLSL100 ? 'T' : ''
     }P${parameterHash}`;
-  }
-
-  _createRenderPipeline(props: GetRenderPipelineOptions): {renderPipeline: RenderPipeline, getUniforms: any} {
-    const assembled = assembleShaders(this.device, {...props, hookFunctions: this._hookFunctions});
-
-    const renderPipeline = this.device.createRenderPipeline({
-      ...props,
-      vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
-      fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
-    });
-
-    return {renderPipeline, getUniforms: assembled.getUniforms};
   }
 
   _getHash(key: string): number {

@@ -41,9 +41,9 @@ export {
   hasFeatures
 } from '@luma.gl/gltools';
 
-import {
-  lumaStats as lumaStatsDeprecated
-} from '@luma.gl/api';
+import {luma} from '@luma.gl/api';
+/** @deprecated Use luma.stats */
+export const lumaStats = luma.stats;
 
 export {
   isWebGL,

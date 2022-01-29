@@ -13,7 +13,7 @@ import {
   VertexArray,
   UniformBufferLayout,
   Buffer,
-} from '@luma.gl/webgl';
+} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `

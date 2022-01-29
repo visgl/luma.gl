@@ -152,14 +152,13 @@ export default class WebGLDevice extends Device implements ContextState {
       await CanvasContext.pageLoaded;
     }
 
-    if (props.debug) {
-      // Load webgl debug script if requested
+      // Load webgl and spector debug scripts from CDN if requested
+      if (props.debug) {
       await loadWebGLDeveloperTools();
     }
-    // if (props.spector) {
-      // Load Spector.js CDN script if requested
+    if (props['spector']) {
       await loadSpectorJS();
-    // }
+    }
 
     log.probe(LOG_LEVEL, 'DOM is loaded')();
     return new WebGLDevice(props);

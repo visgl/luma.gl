@@ -1,6 +1,7 @@
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
+import {luma} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {Transform} from '@luma.gl/gltools';
 import {Buffer, Texture2D, setParameters, getParameters} from '@luma.gl/gltools';
@@ -41,8 +42,6 @@ void main()
 `;
 
 function getResourceCounts() {
-  /* global luma */
-  // @ts-expect-error
   const resourceStats = luma.stats.get('Resource Counts');
   return {
     Texture2D: resourceStats.get('Texture2Ds Active').count,

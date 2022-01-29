@@ -145,12 +145,7 @@ export default class AnimationLoop {
     }
     this._running = true;
 
-    // console.debug(`Starting ${this.constructor.name}`);
-    // Wait for start promise before rendering frame
     try {
-      // TODO rely on CanvasContext...
-      // await this._getPageLoadPromise();
-
       // check that we haven't been stopped
       if (!this._running) {
         return null;

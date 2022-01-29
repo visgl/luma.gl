@@ -1,5 +1,5 @@
-import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
-import {clear, ClassicModel as Model, Transform} from '@luma.gl/gltools';
+import {RenderLoop, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
+import {clear, Transform} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -27,9 +27,9 @@ const vs = `\
   attribute vec3 positions;
   attribute vec3 normals;
   attribute vec2 texCoords;
-  attribute vec2 offsets;
-  attribute vec3 axes;
-  attribute float rotations;
+  attribute vec2 instanceOffsets;
+  attribute vec3 instanceAxes;
+  attribute float instanceRotations;
 
   uniform mat4 uView;
   uniform mat4 uProjection;
@@ -39,30 +39,30 @@ const vs = `\
   varying vec2 vUV;
 
   void main(void) {
-    float s = sin(rotations);
-    float c = cos(rotations);
+    float s = sin(instanceRotations);
+    float c = cos(instanceRotations);
     float t = 1.0 - c;
-    float xt = axes.x * t;
-    float yt = axes.y * t;
-    float zt = axes.z * t;
-    float xs = axes.x * s;
-    float ys = axes.y * s;
-    float zs = axes.z * s;
+    float xt = instanceAxes.x * t;
+    float yt = instanceAxes.y * t;
+    float zt = instanceAxes.z * t;
+    float xs = instanceAxes.x * s;
+    float ys = instanceAxes.y * s;
+    float zs = instanceAxes.z * s;
 
     mat3 rotationMat = mat3(
-        axes.x * xt + c,
-        axes.y * xt + zs,
-        axes.z * xt - ys,
-        axes.x * yt - zs,
-        axes.y * yt + c,
-        axes.z * yt + xs,
-        axes.x * zt + ys,
-        axes.y * zt - xs,
-        axes.z * zt + c
+        instanceAxes.x * xt + c,
+        instanceAxes.y * xt + zs,
+        instanceAxes.z * xt - ys,
+        instanceAxes.x * yt - zs,
+        instanceAxes.y * yt + c,
+        instanceAxes.z * yt + xs,
+        instanceAxes.x * zt + ys,
+        instanceAxes.y * zt - xs,
+        instanceAxes.z * zt + c
     );
 
     vPosition = rotationMat * positions;
-    vPosition.xy += offsets;
+    vPosition.xy += instanceOffsets;
     vNormal = rotationMat * normals;
     vUV = texCoords;
     gl_Position = uProjection * uView * vec4(vPosition, 1.0);
@@ -142,12 +142,14 @@ export default class AppRenderLoop extends RenderLoop {
       fs,
       geometry: new CubeGeometry(),
       attributes: {
-        offsets: [offsetBuffer, {divisor: 1}],
-        axes: [axisBuffer, {divisor: 1}],
-        rotations: [rotationBuffer, {divisor: 1}]
+        instanceOffsets: offsetBuffer,
+        instanceAxes: axisBuffer,
+        instanceRotations: rotationBuffer
+      },
+      bindings: {
+        uTexture: texture,
       },
       uniforms: {
-        uTexture: texture,
         uEyePosition: eyePosition,
         uView: viewMatrix
       },
@@ -188,7 +190,7 @@ export default class AppRenderLoop extends RenderLoop {
 
     clear(device, {color: [0, 0, 0, 1], depth: true});
     this.model
-      .setAttributes({rotations: [this.transform.getBuffer('vRotation'), {divisor: 1}]})
+      .setAttributes({instanceRotations: this.transform.getBuffer('vRotation')})
       .setUniforms({uProjection: this.projectionMatrix})
       .draw();
 
