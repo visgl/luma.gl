@@ -8,7 +8,7 @@ import type {ProgramProps} from '../classic/program';
 import Program from '../classic/program';
 import VertexArray from '../classic/vertex-array';
 import {clear} from '../classic/clear';
-import TransformFeedback from '../classic/transform-feedback';
+// import TransformFeedback from '../classic/transform-feedback';
 import {getDebugTableForUniforms} from '../debug/debug-uniforms';
 import {getDebugTableForVertexArray} from '../debug/debug-vertex-array';
 import {getDebugTableForProgramConfiguration} from '../debug/debug-program-configuration';
@@ -150,7 +150,7 @@ export default class Model {
   };
   vertexArray: VertexArray;
   program: Program;
-  transformFeedback: TransformFeedback | undefined;
+  // transformFeedback: TransformFeedback | undefined;
   _programDirty = true;
   _programManagerState;
   _managedProgram;
@@ -423,7 +423,7 @@ export default class Model {
       framebuffer,
       uniforms = {},
       attributes = {},
-      transformFeedback = this.transformFeedback,
+      // transformFeedback = this.transformFeedback,
       parameters = {},
       vertexArray = this.vertexArray
     } = opts;
@@ -469,7 +469,7 @@ export default class Model {
         drawMode: this.getDrawMode(),
         vertexCount: this.getVertexCount(),
         vertexArray,
-        transformFeedback,
+        // transformFeedback,
         isIndexed,
         indexType,
         isInstanced,
@@ -640,19 +640,19 @@ export default class Model {
   // Transform Feedback
 
   _setFeedbackBuffers(feedbackBuffers = {}): this {
-    // Avoid setting needsRedraw if no feedbackBuffers
-    if (isObjectEmpty(feedbackBuffers)) {
-      return this;
-    }
+    // // Avoid setting needsRedraw if no feedbackBuffers
+    // if (isObjectEmpty(feedbackBuffers)) {
+    //   return this;
+    // }
 
-    const {gl} = this.program;
-    this.transformFeedback =
-      this.transformFeedback ||
-      new TransformFeedback(gl, {
-        program: this.program
-      });
+    // const {gl} = this.program;
+    // this.transformFeedback =
+    //   this.transformFeedback ||
+    //   new TransformFeedback(gl, {
+    //     program: this.program
+    //   });
 
-    this.transformFeedback.setBuffers(feedbackBuffers);
+    // this.transformFeedback.setBuffers(feedbackBuffers);
     return this;
   }
 

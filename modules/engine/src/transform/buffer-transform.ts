@@ -1,14 +1,9 @@
 // luma.gl, MIT license
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/buffer-transform.ts
 import {Device, Resource, assert} from '@luma.gl/core';
-import {isWebGL2} from '@luma.gl/webgl';
-========
-import {Device, Resource, assert} from '@luma.gl/api';
 import {WebGLDevice, isWebGL2} from '@luma.gl/webgl';
 import {WEBGLTransformFeedback as TransformFeedback} from '@luma.gl/webgl';
 import {ClassicBuffer as Buffer, BufferProps} from '@luma.gl/webgl';
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/buffer-transform.ts
 
 import type {TransformProps, TransformDrawOptions, TransformRunOptions} from './transform';
 import {Model} from '../lib/model';
@@ -31,13 +26,8 @@ type BufferBinding = {
   transformFeedback?: TransformFeedback;
 };
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/buffer-transform.ts
-export default class BufferTransform {
-  device: Device;
-========
 export class BufferTransform {
   device: WebGLDevice;
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/buffer-transform.ts
   gl: WebGL2RenderingContext;
   currentIndex = 0;
   feedbackMap: Record<string, string> = {};
@@ -45,15 +35,9 @@ export class BufferTransform {
   bindings: BufferBinding[] = [];
   resources: Record<string, Resource<any>> = {}; // resources to be deleted
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/buffer-transform.ts
   constructor(device: Device, props: TransformProps = {}) {
     this.device = device;
     this.gl = (device as any).gl2 as WebGL2RenderingContext;
-========
-  constructor(device: Device | WebGL2RenderingContext, props: TransformProps = {}) {
-    this.device = WebGLDevice.attach(device);
-    this.gl = this.device.gl2;
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/buffer-transform.ts
     this._initialize(props);
     Object.seal(this);
   }

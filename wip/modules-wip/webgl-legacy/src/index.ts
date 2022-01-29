@@ -94,8 +94,8 @@ export {
 export type {QueryProps} from './classic/query';
 export {default as Query} from './classic/query';
 export {default as Texture3D} from './classic/texture-3d';
-export type {TransformFeedbackProps} from './classic/transform-feedback';
-export {default as TransformFeedback} from './classic/transform-feedback';
+// export type {TransformFeedbackProps} from './classic/transform-feedback';
+// export {default as TransformFeedback} from './classic/transform-feedback';
 export type {VertexArrayObjectProps} from './classic/vertex-array-object';
 export {default as VertexArrayObject} from './classic/vertex-array-object';
 export type {VertexArrayProps} from './classic/vertex-array';
@@ -129,7 +129,7 @@ export {default as Model} from './engine/classic-model';
 
 export {default as ProgramManager} from './engine/program-manager';
 
-export {default as Transform} from './transform/transform';
+// export {default as Transform} from './transform/transform';
 
 export {default as ClipSpace} from './engine/classic-clip-space';
 

@@ -11,15 +11,9 @@ import {
   _transform as transformModule
 } from '@luma.gl/shadertools';
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
-import Buffer from '../classic/buffer';
-import Texture2D from '../classic/texture-2d';
-import {readPixelsToArray} from '../classic/copy-and-blit';
-========
 import {Device, Texture, Framebuffer} from '@luma.gl/api';
 import {ClassicBuffer as Buffer} from '@luma.gl/webgl';
-import {readPixelsToArray} from '@luma.gl/webgl-legacy';
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
+import {readPixelsToArray} from '@luma.gl/webgl';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
 import type {TransformProps, TransformDrawOptions} from './transform';
@@ -43,14 +37,9 @@ type TextureBinding = {
   framebuffer?: Framebuffer;
 };
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
 export default class TextureTransform {
   device: Device;
   gl: WebGL2RenderingContext;
-========
-export class TextureTransform {
-  device: Device,
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
   id = 0;
   currentIndex = 0;
   _swapTexture: string | null = null;
@@ -69,10 +58,7 @@ export class TextureTransform {
 
   constructor(device: Device, props: TransformProps = {}) {
     this.device = device;
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
     this.gl = (device as any).gl2 as WebGL2RenderingContext;
-========
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
     this._initialize(props);
     Object.seal(this);
   }

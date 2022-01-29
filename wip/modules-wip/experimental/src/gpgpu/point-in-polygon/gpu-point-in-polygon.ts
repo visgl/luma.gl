@@ -1,32 +1,40 @@
+<<<<<<< HEAD:wip/modules-wip/experimental/src/gpgpu/point-in-polygon/gpu-point-in-polygon.ts
 import {assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {Buffer, Texture2D} from '@luma.gl/webgl-legacy';
 import {Transform} from '@luma.gl/webgl-legacy';
+=======
+// luma.gl, MIT license
+/* eslint-disable camelcase */
+
+import {Device, Buffer, Texture, SamplerProps, assert} from '@luma.gl/api';
+import {Transform} from '@luma.gl/engine';
+import GL from '@luma.gl/constants';
+>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/experimental/src/gpgpu/point-in-polygon/gpu-point-in-polygon.ts
 import {textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
 import {normalize, getSurfaceIndices, getVertexCount} from './polygon';
 
-/* eslint-disable camelcase */
 
 const TEXTURE_SIZE = 512;
 
 export type GPUPointInPolygonProps = {polygons?, textureSize?};
 
 export class GPUPointInPolygon {
-  gl: WebGL2RenderingContext;
+  device: Device;
   textureSize = TEXTURE_SIZE;
 
   boundingBox: number[];
   
-  polygonTexture: Texture2D;
+  polygonTexture: Texture;
   positionBuffer: Buffer;
   idBuffer: Buffer;
   indexBuffer: Buffer;
   polyTextureTransform: Transform;
   filterTransform: Transform;
 
-  constructor(gl: WebGL2RenderingContext, props: GPUPointInPolygonProps = {}) {
-    this.gl = gl;
+  constructor(device: Device, props: GPUPointInPolygonProps = {}) {
+    this.device = device;
     this._setupResources();
     this.update(props);
   }
@@ -65,32 +73,34 @@ export class GPUPointInPolygon {
   // PRIVATE
 
   _setupResources() {
-    const {gl} = this;
-
     // texture to render polygons to
+<<<<<<< HEAD:wip/modules-wip/experimental/src/gpgpu/point-in-polygon/gpu-point-in-polygon.ts
     this.polygonTexture = new Texture2D(gl, {
       // @ts-expect-error TODO rewrite with Texture
       format: 'GL.RGB',
       type: GL.UNSIGNED_BYTE,
       dataFormat: GL.RGB,
       border: 0,
+=======
+    this.polygonTexture = this.device.createTexture({
+      // format: GL.RGB,
+      // type: GL.UNSIGNED_BYTE,
+      // dataFormat: GL.RGB,
+>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/experimental/src/gpgpu/point-in-polygon/gpu-point-in-polygon.ts
       mipmaps: false,
-      parameters: {
-        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_WRAP_S]: gl.CLAMP_TO_EDGE,
-        [GL.TEXTURE_WRAP_T]: gl.CLAMP_TO_EDGE
-      }
+      sampler: {
+        magFilter: 'nearest',
+        minFilter: 'nearest',
+        wrapS: 'clamp_to_edge',
+        wrapT: 'clamp_to_edge'
+      } as SamplerProps
     });
-    this.positionBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 2}});
-    this.idBuffer = new Buffer(gl, {accessor: {type: GL.FLOAT, size: 1}});
-    this.indexBuffer = new Buffer(gl, {
-      target: GL.ELEMENT_ARRAY_BUFFER,
-      accessor: {type: GL.UNSIGNED_SHORT}
-    });
+    this.positionBuffer = this.device.createBuffer(); // {accessor: {type: GL.FLOAT, size: 2}});
+    this.idBuffer = this.device.createBuffer(); // {accessor: {type: GL.FLOAT, size: 1}});
+    this.indexBuffer = this.device.createBuffer({usage: Buffer.INDEX}); // , accessor: {type: GL.UNSIGNED_SHORT}});
 
     // transform to generate polygon texture
-    this.polyTextureTransform = new Transform(gl, {
+    this.polyTextureTransform = new Transform(this.device, {
       id: 'polygon-texture-creation-transform',
       elementCount: 0,
       _targetTexture: this.polygonTexture,
@@ -106,7 +116,7 @@ export class GPUPointInPolygon {
     });
 
     // transform to perform filtering
-    this.filterTransform = new Transform(gl, {
+    this.filterTransform = new Transform(this.device, {
       id: 'filter transform',
       vs: FILTER_VS,
       modules: [textureFilterModule],
@@ -133,9 +143,9 @@ export class GPUPointInPolygon {
 
     this.boundingBox = boundingBox;
     this.polygonTexture.resize({width: texWidth, height: texHeight, mipmaps: false});
-    this.positionBuffer.setData(new Float32Array(vertices));
-    this.idBuffer.setData(new Float32Array(ids));
-    this.indexBuffer.setData(new Uint16Array(indices));
+    this.positionBuffer.write(new Float32Array(vertices));
+    this.idBuffer.write(new Float32Array(ids));
+    this.indexBuffer.write(new Uint16Array(indices));
     this.polyTextureTransform.update({
       elementCount: indices.length,
       _targetTexture: this.polygonTexture

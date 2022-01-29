@@ -1,17 +1,15 @@
 import test from 'tape-promise/tape';
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {glsl} from '@luma.gl/core';
+import {glsl, Device, Buffer, TransformFeedback} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
+import {webgl2Device} from '@luma.gl/test-utils';
+
 import BufferTransform from '@luma.gl/webgl-legacy/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl-legacy';
 import {ClassicModel as Model} from '@luma.gl/webgl-legacy';
-========
-import {glsl, Device, Buffer, TransformFeedback} from '@luma.gl/api';
-import {Model} from '@luma.gl/engine';
+
 import {_BufferTransform as BufferTransform} from '@luma.gl/engine';
-import {webgl2Device} from '@luma.gl/test-utils';
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
 
 const VS = glsl`\
 attribute float source;
@@ -30,17 +28,10 @@ void main(void) {
 `;
 
 test('WebGL#BufferTransform construct', (t) => {
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  const bt = new BufferTransform(webgl1Device, {
-    sourceBuffers: {
-      input: new Buffer(webgl1Device, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
-========
-
   // @ts-expect-error
   const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       input: webgl2Device.createBuffer({id: 'source-1', data: new Float32Array([0, 2.7, -45])})
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
     }
   });
   t.ok(bt instanceof BufferTransform, 'should construct with only sourceBuffers');
@@ -49,20 +40,12 @@ test('WebGL#BufferTransform construct', (t) => {
 });
 
 test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  let source = new Buffer(webgl1Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  let feedback = new Buffer(webgl1Device, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
-  t.throws(
-    () =>
-      new BufferTransform(webgl1Device, {
-========
   let source = webgl2Device.createBuffer({id: 'source', data: new Float32Array([0, 2.7, -45])});
   let feedback = webgl2Device.createBuffer({id: 'feedback', data: new Float32Array([0, 2.7, -45])});
   t.throws(
     () =>
       // @ts-expect-error
       new BufferTransform(webgl2Device, {
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
         sourceBuffers: {
           source
         },
@@ -104,11 +87,7 @@ test('WebGL#BufferTransform feedbackBuffer with referece', (t) => {
     t.end();
     return;
   }
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-========
   const source = webgl2Device.createBuffer({id: 'source', data: new Float32Array([0, 2.7, -45])});
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
   const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
@@ -132,11 +111,7 @@ test('WebGL#BufferTransform updateModelProps', (t) => {
   }
 
   // const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-========
   const source = webgl2Device.createBuffer({id: 'source', data: new Float32Array([0, 2.7, -45])});
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
 
   const cutomVaryings = ['a', 'b'];
   let bt = new BufferTransform(webgl2Device, {
@@ -151,11 +126,7 @@ test('WebGL#BufferTransform updateModelProps', (t) => {
   let {varyings} = bt.updateModelProps();
   t.deepEqual(varyings, cutomVaryings, 'should use custom varyings when provided');
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
   bt.destroy();
-========
-  bt.delete();
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
   bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
@@ -184,11 +155,7 @@ test('WebGL#BufferTransform setupResources', (t) => {
   }
 
   const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-========
   const source = webgl2Device.createBuffer({id: 'source', data: new Float32Array([0, 2.7, -45])});
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
   const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
@@ -216,11 +183,7 @@ test('WebGL#BufferTransform swap', (t) => {
   }
 
   const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/test/transform/buffer-transform.spec.ts
-  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-========
   const source = webgl2Device.createBuffer({id: 'source', data: new Float32Array([0, 2.7, -45])});
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/test/transform/buffer-transform.spec.ts
   const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source

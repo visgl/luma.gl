@@ -1,11 +1,16 @@
 // luma.gl, MIT license
 
+<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/transform.ts
 import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/core';
+========
+import {Device, Framebuffer, Texture, TransformFeedback, assert, isObjectEmpty} from '@luma.gl/api';
+>>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/transform.ts
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 // import {AccessorObject} from '@luma.gl/webgl';
 
+<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/transform.ts
 import {clear} from '../classic/clear';
 import type Buffer from '../classic/buffer';
 import {default as Texture2D} from '../classic/texture-2d';
@@ -13,6 +18,12 @@ import {default as TransformFeedback} from '../classic/transform-feedback';
 import Model from '../engine/classic-model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
+========
+import type {ClassicBuffer as Buffer, } from '@luma.gl/webgl';
+import {Model} from '../lib/model';
+import {BufferTransform} from './buffer-transform';
+import {TextureTransform} from './texture-transform';
+>>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/transform.ts
 
 /** Properties for creating Transforms */
 export type TransformProps = {
@@ -33,8 +44,8 @@ export type TransformProps = {
   inject?: Record<string, string>;
   drawMode?: number;
   framebuffer?: Framebuffer;
-  _sourceTextures?: Record<string, Texture2D>;
-  _targetTexture?: string | Texture2D;
+  _sourceTextures?: Record<string, Texture>;
+  _targetTexture?: string | Texture;
   _targetTextureVarying?: string;
   _swapTexture?: string | null;
   _fs?: string;
@@ -62,17 +73,17 @@ export type TransformDrawOptions = {
 
 export type TransformBinding = {
   sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture2D>;
+  sourceTextures: Record<string, Texture>;
   feedbackBuffers?: Record<string, Buffer | {buffer: Buffer}>;
   transformFeedback?: TransformFeedback;
   framebuffer?: Framebuffer;
-  targetTexture?: Texture2D;
+  targetTexture?: Texture;
 };
 
 /**
  * Takes source and target buffers/textures and sets up the pipeline
  */
-export default class Transform {
+export class Transform {
   /**
    * Check if Transforms are supported (they are not under WebGL1)
    * @todo differentiate writing to buffer vs not

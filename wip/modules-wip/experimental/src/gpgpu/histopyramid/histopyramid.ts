@@ -1,8 +1,14 @@
 // luma.gl, MIT license
 
+<<<<<<< HEAD:wip/modules-wip/experimental/src/gpgpu/histopyramid/histopyramid.ts
 import type { Device } from '@luma.gl/core';
 import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl-legacy';
 import {GL, Transform} from '@luma.gl/webgl-legacy';
+=======
+import type { Device } from '@luma.gl/api';
+import {GL, Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl-legacy';
+import {Transform} from '@luma.gl/engine';
+>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/experimental/src/gpgpu/histopyramid/histopyramid.ts
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,
   HISTOPYRAMID_TRAVERSAL_UTILS,

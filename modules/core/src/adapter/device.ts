@@ -18,6 +18,7 @@ import type {RenderPass, RenderPassProps} from './resources/render-pass';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
+import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 
 /** Device properties */
 export type DeviceProps = {
@@ -306,6 +307,7 @@ export abstract class Device {
   /** Create a sampler */
   abstract createSampler(props: SamplerProps): Sampler;
 
+  /** Create a Framebuffer. Must have at least one attachment */
   abstract createFramebuffer(props: FramebufferProps): Framebuffer;
 
   /** Create a shader */
@@ -314,7 +316,7 @@ export abstract class Device {
   /** Create a render pipeline (aka program) */
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
-  /** Create a compute pipeline (aka program) */
+  /** Create a compute pipeline (aka program) @note WebGPU only */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
@@ -333,7 +335,12 @@ export abstract class Device {
   /** Get a renderpass that is set up to render to the primary CanvasContext */
   abstract getDefaultRenderPass(): RenderPass;
 
-  // Resource creation helpers
+  // Resource creation helpers - WebGL only
+
+  /** Create a transform feedback (immutable set of output buffer bindings) - WebGL only */
+  abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
+
+  // Implementation
 
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {

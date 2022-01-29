@@ -39,7 +39,3 @@ import './classic/transform-feedback.spec';
 import './engine/model.spec';
 import './engine/animation-loop.spec';
 import './engine/program-manager.spec';
-
-import './transform/transform.spec';
-import './transform/transform-shader-utils.spec';
-import './transform/buffer-transform.spec';
