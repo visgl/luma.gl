@@ -23,11 +23,7 @@ export type CanvasContextProps = {
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-<<<<<<< HEAD
-  colorSpace?: 'srgb', // GPUPredefinedColorSpace 
-=======
   colorSpace?: 'srgb', // GPUPredefinedColorSpace
->>>>>>> fix(website): Ensure all examples run again against new api
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
   compositingAlphaMode?: 'opaque' | 'premultiplied'
 };

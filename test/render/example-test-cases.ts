@@ -42,7 +42,7 @@ const examples = {
   // programManagement,
 
   // showcases
-  instancing,
+  // instancing,
   persistence,
   wandering,
 
