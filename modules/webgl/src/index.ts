@@ -8,7 +8,7 @@
 import '@luma.gl/api';
 import './init'
 
-export {default as WebGLDevice, getWebGLDevice} from './adapter/webgl-device';
+export {default as WebGLDevice} from './adapter/webgl-device';
 export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
 // Legacy WebGL Classes - will be moved to gltools

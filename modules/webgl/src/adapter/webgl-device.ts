@@ -13,7 +13,6 @@ import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import {ContextState} from '../context/context/context-state';
 import {createBrowserContext} from '../context/context/create-context';
-import {isWebGL, isWebGL2} from '../context/context/webgl-checks';
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
@@ -57,15 +56,6 @@ import WEBGLRenderPipeline from './resources/webgl-render-pipeline';
 
 const LOG_LEVEL = 1;
 
-// TODO use weakmap instead of modifying context
-const glToContextMap = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, WebGLDevice>();
-
-export function getWebGLDevice(
-  gl: WebGLRenderingContext | WebGL2RenderingContext
-): WebGLDevice | undefined {
-  return glToContextMap.get(gl);
-}
-
 let counter = 0;
 
 /** WebGPU style Device API for a WebGL context */
@@ -95,9 +85,11 @@ export default class WebGLDevice extends Device implements ContextState {
 
   // WebGL specific API
 
+  /** WebGL1 typed context. Can always be used. */
   readonly gl: WebGLRenderingContext;
-  /** WebGL2 context. Can be null. */
+  /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
   readonly gl2: WebGL2RenderingContext;
+  readonly debug: boolean = false;
 
   /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
   readonly isWebGL1: boolean;
@@ -109,18 +101,18 @@ export default class WebGLDevice extends Device implements ContextState {
     return this._webglLimits;
   }
 
-  /** Instance of Spector.js (if initialized) */
-  spector;
-
   private _features: Set<DeviceFeature>;
   private _limits: DeviceLimits;
   private _webglLimits: WebGLLimits;
 
-  _state: 'uninitialized' | 'initializing' | 'initialized' = 'uninitialized';
-  /** State used by luma.gl classes */
+  /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+  /** State used by luma.gl classes */
   readonly _extensions: Record<string, any> = {};
   _polyfilled: boolean = false;
+
+  /** Instance of Spector.js (if initialized) */
+  spector;
 
   /**
    * Get a device instance from a GL context
@@ -152,8 +144,8 @@ export default class WebGLDevice extends Device implements ContextState {
       await CanvasContext.pageLoaded;
     }
 
-      // Load webgl and spector debug scripts from CDN if requested
-      if (props.debug) {
+    // Load webgl and spector debug scripts from CDN if requested
+    if (props.debug) {
       await loadWebGLDeveloperTools();
     }
     if (props['spector']) {
@@ -171,17 +163,9 @@ export default class WebGLDevice extends Device implements ContextState {
     // @ts-expect-error device is attached to context
     const device: WebGLDevice | undefined = props.gl?.device;
     if (device) {
-      if (device._state !== 'initialized') {
-        log.error('recursive context');
-        throw new Error('recursive context');
-      }
+      log.warn(`WebGL context already attached to device ${device.id}`);
       return device;
     }
-
-    // if (props.gl && !isWebGL(props.gl)) {
-    //   console.log(props.gl)
-    //   throw new Error('Invalid WebGLRenderingContext');
-    // }
 
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, props);
@@ -192,68 +176,40 @@ export default class WebGLDevice extends Device implements ContextState {
     this.isWebGL2 = isWebGL2(this.gl);
     this.isWebGL1 = !this.isWebGL2;
 
-    // Get a reference to the canvas
-    const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
-
-    const propsWithCanvas = {...this.props, canvas};
-
-    this.spector = initializeSpectorJS(propsWithCanvas);
-
-    this._state = 'initializing';
-
-    // Avoid multiple instrumentations
-    // @ts-expect-error
-    if (this.gl.device) {
-      log.error('device already created');
-      throw new Error('device already created'); // ASSERT this device;
-    }
-
-    // @ts-expect-error
-    this.gl.device = this;
-    // @ts-expect-error
-    this.gl._version =
-      typeof WebGL2RenderingContext !== 'undefined' && this.gl instanceof WebGL2RenderingContext
-        ? 2
-        : 1;
-    // TODO - move to weak map indexing
-    glToContextMap.set(this.gl, this);
-
-    // Luma Device fields
+    // luma Device fields
     this.info = getDeviceInfo(this.gl);
 
-    // Log some debug info about the newly created context
-    // @ts-expect-error device is attached to context
-    const debug = this.gl.debug ? ' debug' : '';
-    const {info} = this;
-    const message = `\
-Created ${info.type}${debug} context: ${info.vendor}, ${info.renderer} for canvas: ${this.canvasContext.id}`;
-    log.probe(LOG_LEVEL, message)();
+    // @ts-expect-error Link webgl context back to device
+    this.gl.device = this;
+    // @ts-expect-error Annotate webgl context to handle 
+    this.gl._version = this.isWebGL2 ? 2 : 1;
 
     // Add subset of WebGL2 methods to WebGL1 context
     polyfillContext(this.gl);
     // Install context state tracking
     trackContextState(this.gl, {copyState: false, log: (...args) => log.log(1, ...args)()});
 
-    // TODO - Add seer integration - currently removed
-
-    // DEBUG contexts:  Add debug instrumentation to the context
+    // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
     if (isBrowser() && props.debug) {
-      this.gl = makeDebugContext(this.gl, {
-        ...props,
-        gl: this.gl,
-        webgl2: this.isWebGL2,
-        throwOnError: true
-      });
-      if (this.gl2) {
-        this.gl2 = this.gl as WebGL2RenderingContext;
-      }
-      // Debug forces log level to at least 1
+      this.gl = makeDebugContext(this.gl, {...props, webgl2: this.isWebGL2, throwOnError: true});
+      this.gl2 = this.gl as WebGL2RenderingContext;
+      this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
     }
 
+    if (isBrowser() && props['spector']) {
+      const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
+      this.spector = initializeSpectorJS({...this.props, canvas});
+    }
+
+    // Log some debug info about the newly created context
+    const message = `\
+Created ${this.info.type}${this.debug ? ' debug' : ''} context: \
+${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`;
+    log.probe(LOG_LEVEL, message)();
+
     log.groupEnd(LOG_LEVEL)();
-    this._state = 'initialized';
   }
 
   /**
@@ -367,4 +323,26 @@ Created ${info.type}${debug} context: ${info.vendor}, ${info.renderer} for canva
     this.renderPass = null;
     // this.canvasContext.commit();
   }
+}
+
+/** Check if supplied parameter is a WebGLRenderingContext */
+function isWebGL(gl: any): boolean {
+  if (typeof WebGLRenderingContext !== 'undefined' && gl instanceof WebGLRenderingContext) {
+    return true;
+  }
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    return true;
+  }
+  // Look for debug contexts, headless gl etc
+  return Boolean(gl && Number.isFinite(gl._version));
+}
+
+
+/** Check if supplied parameter is a WebGL2RenderingContext */
+function isWebGL2(gl: any): boolean {
+  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
+    return true;
+  }
+  // Look for debug contexts, headless gl etc
+  return Boolean(gl && gl._version === 2);
 }

@@ -9,7 +9,6 @@ type DebugContextProps = {
   throwOnError?: boolean;
   break?: string[];
   webgl2?: boolean;
-  gl?: any;
 };
 
 const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
@@ -17,7 +16,6 @@ const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
   throwOnError: false,
   break: undefined,
   webgl2: false,
-  gl: undefined
 }
 
 // Helper to get shared context data
@@ -45,8 +43,8 @@ export async function loadWebGLDeveloperTools() {
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
 export function makeDebugContext(gl, props: DebugContextProps = {}) {
+  // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
   if (!gl) {
-    // Return null to ensure we don't try to create a context in this case.
     return null;
   }
 
@@ -74,23 +72,28 @@ function getDebugContext(gl, props: DebugContextProps) {
     return data.debugContext;
   }
 
-  // Make sure we have all WebGL2 and extension constants (todo dynamic import to circumvent minification?)
-  for (const key in GL) {
-    if (!(key in gl) && typeof GL[key] === 'number') {
-      gl[key] = GL[key];
-    }
-  }
-
   // Create a new debug context
-  class WebGLDebugContext {}
-  const debugContext = globalThis.WebGLDebugUtils.makeDebugContext(
+  globalThis.WebGLDebugUtils.init({...GL, ...gl});
+  const glDebug = globalThis.WebGLDebugUtils.makeDebugContext(
     gl,
     onGLError.bind(null, props),
     onValidateGLFunc.bind(null, props)
   );
-  // Make sure we have all constants
-  Object.assign(WebGLDebugContext.prototype, debugContext);
 
+  // Make sure we have all WebGL2 and extension constants (todo dynamic import to circumvent minification?)
+  for (const key in GL) {
+    if (!(key in glDebug) && typeof GL[key] === 'number') {
+      glDebug[key] = GL[key];
+    }
+  }
+  
+  // Ensure we have a clean prototype on the instrumented object
+  // Note: setPrototypeOf does come with perf warnings, but we already take a bigger perf reduction
+  // by synchronizing the WebGL errors after each WebGL call.
+  class WebGLDebugContext {}
+  Object.setPrototypeOf(glDebug, Object.getPrototypeOf(gl));
+  Object.setPrototypeOf(WebGLDebugContext, glDebug);
+  const debugContext = Object.create(WebGLDebugContext);
   // Store the debug context
   data.realContext = gl;
   data.debugContext = debugContext;
@@ -117,20 +120,19 @@ function onGLError(props: DebugContextProps, err, functionName: string, args): v
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const glName = props.webgl2 ? 'gl2' : 'gl1';
   const message = `${errorMessage} in ${glName}.${functionName}(${functionArgs})`;
+  log.error(message)();
+  debugger; // eslint-disable-line
   if (props.throwOnError) {
     throw new Error(message);
-  } else {
-    log.error(message)();
-    debugger; // eslint-disable-line
   }
 }
 
 // Don't generate function string until it is needed
 function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs): void {
   let functionString;
-  if (log.level >= 4) {
+  if (log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
-    log.log(4, functionString)();
+    log.log(1, functionString)();
   }
 
   if (props.break) {
