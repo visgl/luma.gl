@@ -13,8 +13,9 @@ export function setPathPrefix(prefix: string) {
  * Reads raw file data. Respects setPathPrefix.
  */
 export async function loadFile(url: string, options?: {dataType?: string} & RequestInit): Promise<any> {
+  url = url.startsWith('http') ? url : pathPrefix + url;
   const dataType = options?.dataType || 'text';
-  const response = await fetch(pathPrefix + url, options);
+  const response = await fetch(url, options);
   return await response[dataType]();
 }
 
@@ -24,11 +25,11 @@ export async function loadFile(url: string, options?: {dataType?: string} & Requ
  * @returns a promise tracking the load
  */
 export async function loadImageBitmap(url: string, opts?: {crossOrigin?: string}): Promise<ImageBitmap> {
-  const img = new Image();
-  img.crossOrigin = opts?.crossOrigin || 'anonymous';
-  img.src = pathPrefix + url;
-  await img.decode();
-  return await createImageBitmap(img);
+  const image = new Image();
+  image.crossOrigin = opts?.crossOrigin || 'anonymous';
+  image.src = url.startsWith('http') ? url : pathPrefix + url;
+  await image.decode();
+  return await createImageBitmap(image);
 }
 
 /**
@@ -44,7 +45,7 @@ export async function loadImage(url: string, opts?: {crossOrigin}): Promise<HTML
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error(`Could not load image ${url}.`));
       image.crossOrigin = opts?.crossOrigin || 'anonymous';
-      image.src = pathPrefix + url;
+      image.src = url.startsWith('http') ? url : pathPrefix + url;
     } catch (error) {
       reject(error);
     }
