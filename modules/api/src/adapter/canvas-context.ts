@@ -6,19 +6,38 @@ import type Framebuffer from './resources/framebuffer';
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
 
+/** Properties for a CanvasContext */
 export type CanvasContextProps = {
+  /** If canvas not supplied, will be created and added to the DOM. If string, will be looked up in the DOM */
   canvas?: HTMLCanvasElement | OffscreenCanvas | string;
+  /** Width in pixels of the canvas */
   width?: number;
+  /** Height in pixels of the canvas */
   height?: number;
+  /** Whether to apply a device pixels scale factor (`true` uses browser DPI) */
   useDevicePixels?: boolean | number;
+  /** Whether to track resizes (if not ) */
   autoResize?: boolean;
-  // WebGPU https://www.w3.org/TR/webgpu/#canvas-configuration
-  // colorSpace: "srgb"; // GPUPredefinedColorSpace 
-  // compositingAlphaMode = "opaque"; | 'premultiplied'
+  /** Parent DOM element. If omitted, added as first child of document.body (only used if new canvas is created) */
+  container?: HTMLElement;
+  /** Visibility (only used if new canvas is created). */
+  visible?: boolean;
+  /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
+  colorSpace?: 'srgb', // GPUPredefinedColorSpace 
+  /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
+  compositingAlphaMode?: 'opaque' | 'premultiplied'
 };
 
-const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
-  autoResize: true
+const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
+  canvas: undefined,
+  width: 800, // width are height are only used by headless gl
+  height: 600,
+  useDevicePixels: true,
+  autoResize: true,
+  container: undefined,
+  visible: true,
+  colorSpace: 'srgb',
+  compositingAlphaMode: 'opaque'
 };
 
 /**
@@ -31,11 +50,14 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
 export default abstract class CanvasContext {
   abstract readonly device: Device;
   readonly id: string;
+  readonly props: Required<CanvasContextProps>;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
-  readonly resizeObserver: ResizeObserver | undefined;
-  readonly props: Partial<CanvasContextProps>;
+  readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
+
   width: number;
   height: number;
+
+  readonly resizeObserver: ResizeObserver | undefined;
 
   /** Check if the DOM is loaded */
   static get isPageLoaded(): boolean {
@@ -43,7 +65,7 @@ export default abstract class CanvasContext {
   }
 
   /** 
-   * Get a "lazy" promise that resolves when the DOM is loaded.
+   * Get a 'lazy' promise that resolves when the DOM is loaded.
    * @note Since there may be limitations on number of `load` event listeners,
    * it is recommended avoid calling this function until actually needed.
    * I.e. don't call it until you know that you will be looking up a string in the DOM.
@@ -53,11 +75,12 @@ export default abstract class CanvasContext {
   }
 
   constructor(props?: CanvasContextProps) {
-    props = {...DEFAULT_CANVAS_CONTEXT_PROPS, ...props};
-    this.props = props;
+    this.props = {...DEFAULT_CANVAS_CONTEXT_PROPS, ...props};
+    props = this.props;
 
     if (!isBrowser()) {
       this.id = 'node.js';
+      this.type = 'node';
       this.width = props.width;
       this.height = props.height;
       return;
@@ -65,12 +88,21 @@ export default abstract class CanvasContext {
 
     if (!props.canvas) {
       this.canvas = createCanvas(props);
+      if (props?.container) {
+        props?.container.appendChild(this.canvas);
+      } else {     
+        document.body.insertBefore(this.canvas, document.body.firstChild);
+      }
+      if (!props?.visible) {
+        this.canvas.style.visibility = 'hidden';
+      }
     } else if (typeof props.canvas === 'string') {
       this.canvas = getCanvasFromDOM(props.canvas);
     } else {
       this.canvas = props.canvas;
     }
     this.id = this.canvas instanceof HTMLCanvasElement ? this.canvas.id : 'offscreen-canvas';
+    this.type = this.canvas instanceof HTMLCanvasElement ? 'html-canvas' : 'offscreen-canvas';
 
     // React to size changes
     if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {
@@ -85,7 +117,7 @@ export default abstract class CanvasContext {
     }
   }
 
-  /** Returns a framebuffer with properly resized current "swap chain" textures */
+  /** Returns a framebuffer with properly resized current 'swap chain' textures */
   abstract getCurrentFramebuffer(): Framebuffer;
 
   /**
@@ -109,15 +141,19 @@ export default abstract class CanvasContext {
    * This is the size required to cover the canvas, adjusted for DPR
    */
   getPixelSize(): [number, number] {
-    if (!this.canvas) {
-      return [this.width, this.height];
+    switch (this.type) {
+      case 'node':
+        return [this.width, this.height];
+      case 'offscreen-canvas':
+        return [this.canvas.width, this.canvas.height];
+      case 'html-canvas':
+        const dpr = this.getDevicePixelRatio();
+        const canvas = this.canvas as HTMLCanvasElement;
+        // If not attached to DOM client size can be 0
+        return canvas.parentElement 
+          ? [canvas.clientWidth * dpr,  canvas.clientHeight * dpr]
+          : [this.canvas.width, this.canvas.height];
     }
-    if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
-      return [this.canvas.width, this.canvas.height];
-    }
-    const dpr = this.getDevicePixelRatio();
-    // @ts-expect-error
-    return [this.canvas.clientWidth * dpr, this.canvas.clientHeight * dpr];
   }
 
   getAspect(): number {
@@ -135,12 +171,13 @@ export default abstract class CanvasContext {
 
 /** Create a new canvas */
 function createCanvas(props: CanvasContextProps) {
-  const {width = 800, height = 600} = props;
+  const {width, height} = props;
   const targetCanvas = document.createElement('canvas');
   targetCanvas.id = 'lumagl-canvas';
+  targetCanvas.width = width || 1;
+  targetCanvas.height = height || 1;
   targetCanvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
   targetCanvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
-  document.body.insertBefore(targetCanvas, document.body.firstChild);
   return targetCanvas;
 }
 
