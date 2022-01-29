@@ -92,7 +92,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const webglBuffer = cast<WEBGLBuffer>(buffer);
       const attribute = getAttributeLayout(this.layout, name);
       if (!attribute) {
-        log.warn(`Unknown attribute "${name}" in pipeline "${this.id}"`)();
+        log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
         continue;
       }
       const decoded = decodeVertexFormat(attribute.format);

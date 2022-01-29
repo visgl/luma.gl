@@ -1,6 +1,6 @@
 import {Device, loadImage} from '@luma.gl/api';
-import {RenderLoop, CubeGeometry, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model, ClassicModelProps as ModelProps} from '@luma.gl/gltools';
+import {RenderLoop, CubeGeometry, AnimationProps, Model, ModelProps} from '@luma.gl/engine';
+import {clear, ClassicModel, ClassicModelProps} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -39,7 +39,7 @@ void main(void) {
 }
 `;
 
-    super(device, {geometry: new CubeGeometry(), ...props, fs, vs});
+    super(device, {...props, geometry: new CubeGeometry(), fs, vs});
   }
 }
 
@@ -84,7 +84,7 @@ void main(void) {
   gl_FragColor = color * reflectedColor;
 }
 `;
-    super(device, {geometry: new CubeGeometry(), ...props, vs, fs});
+    super(device, {...props, geometry: new CubeGeometry(), vs, fs});
   }
 }
 
@@ -113,15 +113,18 @@ export default class AppRenderLoop extends RenderLoop {
     const texture = device.createTexture({
       data: 'vis-logo.png',
       mipmaps: true,
-      parameters: {
-        [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
-        [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_NEAREST
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'nearest'
       }
     });
 
     this.cube = new RoomCube(device, {
+      bindings: {
+        uTextureCube: cubemap
+      },
       uniforms: {
-        uTextureCube: cubemap,
         uModel: new Matrix4().scale([20, 20, 20])
       },
       parameters: {
@@ -131,9 +134,9 @@ export default class AppRenderLoop extends RenderLoop {
     });
 
     this.prism = new Prism(device, {
-      uniforms: {
+      bindings: {
+        uTexture: texture,
         uTextureCube: cubemap,
-        uTexture: texture
       },
       parameters: {
         depthWriteEnabled: true,
@@ -154,21 +157,19 @@ export default class AppRenderLoop extends RenderLoop {
 
     clear(device, {color: [0, 0, 0, 1], depth: true});
 
-    this.cube.draw({
-      uniforms: {
-        uView: view,
-        uProjection: projection
-      }
+    this.cube.setUniforms({
+      uView: view,
+      uProjection: projection
     });
+    this.cube.draw();
 
-    this.prism.draw({
-      uniforms: {
-        uEyePosition: eyePosition,
-        uView: view,
-        uProjection: projection,
-        uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-      }
+    this.prism.setUniforms({
+      uEyePosition: eyePosition,
+      uView: view,
+      uProjection: projection,
+      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
     });
+    this.prism.draw();
   }
 }
 

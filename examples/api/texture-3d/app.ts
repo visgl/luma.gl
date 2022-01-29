@@ -3,9 +3,9 @@
 */
 
 import {getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
-import {setParameters, clear, ClassicModel as Model} from '@luma.gl/gltools';
+import {setParameters, clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -132,13 +132,15 @@ export default class AppRenderLoop extends RenderLoop {
     this.cloud = new Model(device, {
       vs,
       fs,
-      drawMode: GL.POINTS,
+      topology: 'point-list',
       vertexCount: positionData.length / 3,
       attributes: {
         position: positionBuffer
       },
+      bindings: {
+        uTexture: texture
+      },
       uniforms: {
-        uTexture: texture,
         uView: this.viewMat
       },
       parameters: {
@@ -158,12 +160,13 @@ export default class AppRenderLoop extends RenderLoop {
 
     // Draw the cubes
     clear(device, {color: [0, 0, 0, 1], depth: true});
-    this.cloud.draw({
+    this.cloud.setProps({
       uniforms: {
         uTime: tick / 100,
         uMVP: this.mvpMat
       }
     });
+    this.cloud.draw();
   }
 }
 

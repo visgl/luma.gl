@@ -71,7 +71,7 @@ class InstancedCube extends Model {
     super(
       device,
       {
-        geometry: new CubeGeometry(), 
+        geometry: new CubeGeometry(),
         ...props,
         vs: CUBE_VERTEX,
         fs: CUBE_FRAGMENT,
@@ -102,7 +102,7 @@ export default class AppRenderLoop extends RenderLoop {
   opaqueCubes;
   transparentCubes;
   statsWidget: StatsWidget;
-  
+
   rotationAngle = 0;
 
   constructor({device}: AnimationProps) {

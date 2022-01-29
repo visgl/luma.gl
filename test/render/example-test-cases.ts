@@ -17,7 +17,7 @@ import transformFeedback from '../../examples/getting-started/transform-feedback
 // API
 import animation from '../../examples/api/animation/app';
 import texture3d from '../../examples/api/texture-3d/app';
-import programManagement from '../../examples/api/program-management/app';
+// import programManagement from '../../examples/api/program-management/app';
 
 // showcases
 import instancing from '../../examples/showcase/instancing/app';
@@ -39,10 +39,10 @@ const examples = {
   // API
   animation,
   // texture3d,
-  programManagement,
+  // programManagement,
 
   // showcases
-  instancing,
+  // instancing,
   persistence,
   wandering,
 

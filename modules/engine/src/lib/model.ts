@@ -37,6 +37,8 @@ export default class Model {
   readonly vertexCount;
   props: Required<ModelProps>;
 
+  private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
+
   constructor(device: Device, props: ModelProps) {
     this.props = {...DEFAULT_MODEL_PROPS, ...props};
     props = this.props;
@@ -57,7 +59,7 @@ export default class Model {
       this.topology = this.props.geometry.topology;
     }
 
-    this.pipeline = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
+    const {renderPipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
       ...this.props,
       vs: this.vs,
       fs: this.fs,
@@ -68,28 +70,30 @@ export default class Model {
       layout: props.layout
     });
 
+    this.pipeline = renderPipeline;
+    this._getModuleUniforms = getUniforms;
 
     if (this.props.geometry) {
       this._setGeometry(this.props.geometry);
     }
-    this.setAttributes(this.props.attributes);
-    this.setBindings(this.props.bindings);
-    this.setUniforms(this.props.uniforms);
+    this.setUniforms(this._getModuleUniforms()) // Get all default module uniforms
+    this.setProps(this.props);
   }
 
   destroy(): void {
     this.pipeline.destroy();
   }
 
-  draw(renderPass?: RenderPass) {
+  draw(renderPass?: RenderPass): this {
     this.pipeline.draw({
       renderPass,
       vertexCount: this.vertexCount,
       instanceCount: this.props.instanceCount
     });
+    return this;
   }
 
-  setProps(props: ModelProps) {
+  setProps(props: ModelProps): this {
     if (props.indices) {
       this.setIndexBuffer(props.indices);
     }
@@ -102,27 +106,41 @@ export default class Model {
     if (props.uniforms) {
       this.setUniforms(props.uniforms);
     }
+    if (props.moduleSettings) {
+      this.updateModuleSettings(props.moduleSettings);
+    }
+    return this;
   }
 
-  setIndexBuffer(indices: Buffer) {
+  updateModuleSettings(props: Record<string, any>): this {
+    const uniforms = this._getModuleUniforms(props);
+    this.setUniforms(uniforms);
+    return this;
+  }
+
+  setIndexBuffer(indices: Buffer): this {
     this.pipeline.setIndexBuffer(indices);
     // this._indices = indices;
+    return this;
   }
 
-  setAttributes(attributes: Record<string, Buffer>) {
+  setAttributes(attributes: Record<string, Buffer>): this {
     this.pipeline.setAttributes(attributes);
     Object.assign(this.props.attributes, attributes);
+    return this;
   }
 
   /** Set the bindings */
-  setBindings(bindings: Record<string, Binding>): void {
+  setBindings(bindings: Record<string, Binding>): this {
     this.pipeline.setBindings(bindings);
     Object.assign(this.props.bindings, bindings);
+    return this;
   }
 
-  setUniforms(uniforms: Record<string, any>): void {
+  setUniforms(uniforms: Record<string, any>): this {
     this.pipeline.setUniforms(uniforms);
     Object.assign(this.props.uniforms, uniforms);
+    return this;
   }
 
   _setGeometry(geometry: Geometry): void {
@@ -135,36 +153,6 @@ export default class Model {
     if (indexBuffer) {
       this.setIndexBuffer(indexBuffer);
     }
-  }
-}
-
-/** Create a shader from the different overloads */
-function getShader(
-  device: Device,
-  shader: Shader | string | {glsl?: string; wgsl?: string},
-  stage: 'vertex' | 'fragment'
-): Shader {
-  if (shader instanceof Shader) {
-    return cast<Shader>(shader);
-  }
-
-  // TODO - detect WGSL/GLSL and throw an error if not supported
-  if (typeof shader === 'string') {
-    return device.createShader({stage, source: shader});
-  }
-
-  switch (device.info.type) {
-    case 'webgpu':
-      if (shader?.wgsl) {
-        return device.createShader({stage, source: shader.wgsl});
-      }
-      throw new Error('WebGPU does not support GLSL shaders');
-
-    default:
-      if (shader?.glsl) {
-        return device.createShader({stage, source: shader.glsl});
-      }
-      throw new Error('WebGL does not support WGSL shaders');
   }
 }
 

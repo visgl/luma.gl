@@ -1,6 +1,6 @@
-import {getRandom} from '@luma.gl/api';
+import {Framebuffer, getRandom} from '@luma.gl/api';
 import {RenderLoop, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
-import {clear, Framebuffer, setParameters, ClassicModel as Model} from '@luma.gl/gltools';
+import {clear, setParameters, ClassicModel as Model} from '@luma.gl/gltools';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -104,11 +104,11 @@ export default class AppRenderLoop extends RenderLoop {
       clearDepth: 1,
     });
 
-    this.mainFramebuffer = new Framebuffer(device, {width, height});
+    this.mainFramebuffer = device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'});
 
     this.pingpongFramebuffers = [
-      new Framebuffer(device, {width, height}),
-      new Framebuffer(device, {width, height})
+      device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'}),
+      device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'})
     ];
 
     const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
@@ -149,9 +149,9 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.sphere = new Model(device, {
       id: 'electron',
-      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
       vs: SPHERE_VS,
       fs: SPHERE_FS,
+      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
@@ -245,8 +245,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.persistenceQuad.draw({
       framebuffer: currentFramebuffer,
       uniforms: {
-        uScene: this.mainFramebuffer.texture,
-        uPersistence: nextFramebuffer.texture,
+        uScene: this.mainFramebuffer.colorAttachments[0],
+        uPersistence: nextFramebuffer.colorAttachments[0],
         uRes: [width, height]
       }
     });
@@ -255,7 +255,7 @@ export default class AppRenderLoop extends RenderLoop {
     clear(device, {color: true, depth: true});
     this.quad.draw({
       uniforms: {
-        uTexture: currentFramebuffer.texture,
+        uTexture: currentFramebuffer.colorAttachments[0],
         uRes: [width, height]
       }
     });

@@ -96,7 +96,7 @@ export type {TypedArray, TypedArrayConstructor, NumberArray} from './types';
 
 // GENERAL UTILS
 
-export {default as StatsManager, lumaStats} from './utils/stats-manager';
+export {default as StatsManager} from './utils/stats-manager';
 export {assert} from './utils/assert';
 export {cast} from './utils/cast';
 export {log} from './utils/log';

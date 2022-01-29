@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 // import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
-import {Device, log, lumaStats} from '@luma.gl/api';
+import {Device, log, luma} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
@@ -388,7 +388,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.scenes.forEach((scene) => scene.delete());
     this.scenes = [];
 
-    lumaStats.get('Resource Counts').forEach(({name, count}) => {
+    luma.stats.get('Resource Counts').forEach(({name, count}) => {
       log.info(3, `${name}: ${count}`)();
     });
   }
