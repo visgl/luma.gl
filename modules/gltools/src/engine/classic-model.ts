@@ -338,18 +338,18 @@ export default class Model {
 
   // SETTERS
 
-  setDrawMode(drawMode): this {
+  setDrawMode(drawMode: GL): this {
     this.drawMode = drawMode;
     return this;
   }
 
-  setVertexCount(vertexCount): this {
+  setVertexCount(vertexCount: number): this {
     assert(Number.isFinite(vertexCount));
     this.vertexCount = vertexCount;
     return this;
   }
 
-  setInstanceCount(instanceCount): this {
+  setInstanceCount(instanceCount: number): this {
     assert(Number.isFinite(instanceCount));
     this.instanceCount = instanceCount;
     return this;
@@ -668,7 +668,7 @@ export default class Model {
     return logLevel;
   }
 
-  _logDrawCallEnd(logLevel, vertexArray, uniforms, framebuffer?): void {
+  _logDrawCallEnd(logLevel: number, vertexArray, uniforms, framebuffer?): void {
     // HACK: logLevel === undefined means logDrawCallStart didn't run
     if (logLevel === undefined) {
       return;

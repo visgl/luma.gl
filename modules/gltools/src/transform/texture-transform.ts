@@ -287,7 +287,7 @@ export default class TextureTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  _createNewTexture(refTexture) {
+  _createNewTexture(refTexture: Texture2D) {
     const texture = cloneTextureFrom(refTexture, {
       parameters: {
         [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,

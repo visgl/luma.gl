@@ -1,8 +1,9 @@
 import {Device, assert, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import type {Framebuffer, Buffer} from '@luma.gl/gltools';
 import {WebGLDevice} from '@luma.gl/webgl';
+import type Framebuffer from '../classic/framebuffer';
+import type Buffer from '../classic/buffer';
 
 import Model from '../engine/classic-model';
 import BufferTransform from './buffer-transform';
@@ -30,9 +31,9 @@ export default class Transform {
   readonly gl: WebGL2RenderingContext;
   model: Model | null = null;
   elementCount = 0;
-  bufferTransform = null;
-  textureTransform = null;
-  elementIDBuffer = null;
+  bufferTransform: BufferTransform = null;
+  textureTransform: TextureTransform = null;
+  elementIDBuffer: Buffer = null;
 
   constructor(device: Device | WebGL2RenderingContext, props: TransformProps = {}) {
     this.device = WebGLDevice.attach(device);

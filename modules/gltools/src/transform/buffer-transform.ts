@@ -1,4 +1,4 @@
-import {assert} from '@luma.gl/api';
+import {assert, Resource} from '@luma.gl/api';
 import {Buffer, TransformFeedback} from '@luma.gl/gltools';
 import {isWebGL2} from '@luma.gl/webgl';
 import type {TransformProps, TransformDrawOptions, TransformRunOptions, TransformBinding} from './transform-types';
@@ -21,7 +21,7 @@ export default class BufferTransform {
   feedbackMap = {};
   varyings: string[] | null = null; // varyings array
   bindings: TransformBinding[] = [];
-  resources = {}; // resources to be deleted
+  resources: Record<string, Resource<any>> = {}; // resources to be deleted
 
   constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
     this.gl = gl;
@@ -102,7 +102,7 @@ export default class BufferTransform {
   }
 
   // auto create feedback buffers if requested
-  _getFeedbackBuffers(props) {
+  _getFeedbackBuffers(props: {sourceBuffers?, feedbackBuffers?}) {
     const {sourceBuffers = {}} = props;
     const feedbackBuffers = {};
     if (this.bindings[this.currentIndex]) {
