@@ -19,9 +19,13 @@ const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
 }
 
 // Helper to get shared context data
-function getContextData(gl) {
+function getContextData(gl: any) {
   gl.luma = gl.luma || {};
   return gl.luma;
+}
+
+declare global {
+  var WebGLDebugUtils: any;
 }
 
 /**
@@ -30,7 +34,7 @@ function getContextData(gl) {
  * @see https://github.com/KhronosGroup/WebGLDeveloperTools
  * @see https://github.com/vorg/webgl-debug
  */
-export async function loadWebGLDeveloperTools() {
+export async function loadWebGLDeveloperTools(): Promise<void> {
   if (!globalThis.WebGLDebugUtils) {
     // @ts-expect-error Developer tools expects global to be set
     globalThis.global = globalThis.global || globalThis;
@@ -42,7 +46,7 @@ export async function loadWebGLDeveloperTools() {
 
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
-export function makeDebugContext(gl, props: DebugContextProps = {}) {
+export function makeDebugContext(gl: WebGLRenderingContext, props: DebugContextProps = {}): WebGLRenderingContext {
   // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
   if (!gl) {
     return null;
@@ -52,14 +56,14 @@ export function makeDebugContext(gl, props: DebugContextProps = {}) {
 }
 
 // Returns the real context from either of the real/debug contexts
-function getRealContext(gl) {
+function getRealContext(gl: WebGLRenderingContext): WebGLRenderingContext {
   const data = getContextData(gl);
   // If the context has a realContext member, it is a debug context so return the realContext
   return data.realContext ? data.realContext : gl;
 }
 
 // Returns the debug context from either of the real/debug contexts
-function getDebugContext(gl, props: DebugContextProps) {
+function getDebugContext(gl: WebGLRenderingContext, props: DebugContextProps): WebGLRenderingContext {
   if (!globalThis.WebGLDebugUtils) {
     log.warn('webgl-debug not loaded')();
     return gl;
@@ -113,7 +117,7 @@ function getFunctionString(functionName: string, functionArgs): string {
   return `gl.${functionName}(${args})`;
 }
 
-function onGLError(props: DebugContextProps, err, functionName: string, args): void {
+function onGLError(props: DebugContextProps, err, functionName: string, args: any[]): void {
   // Cover bug in webgl-debug-tools
   args = Array.from(args).map(arg => arg === undefined ? 'undefined' : arg);
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
@@ -128,8 +132,8 @@ function onGLError(props: DebugContextProps, err, functionName: string, args): v
 }
 
 // Don't generate function string until it is needed
-function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs): void {
-  let functionString;
+function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs: any[]): void {
+  let functionString: string;
   if (log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
     log.log(1, functionString)();
@@ -138,7 +142,7 @@ function onValidateGLFunc(props: DebugContextProps, functionName: string, functi
   if (props.break) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
     const isBreakpoint =
-      props.break && props.break.every((breakOn) => functionString.indexOf(breakOn) !== -1);
+      props.break && props.break.every((breakOn: string) => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }

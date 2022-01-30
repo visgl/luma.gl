@@ -81,6 +81,11 @@ class GLState {
   }
 }
 
+function getContextState(gl: WebGLRenderingContext): GLState {
+  // @ts-expect-error
+  return gl.state as GLState;
+}
+
 // PUBLIC API
 
 /**
@@ -127,8 +132,8 @@ class GLState {
     installGetterOverride(gl, 'isEnabled');
   }
 
-  // @ts-expect-error
-  gl.state.enable = enable;
+  const glState = getContextState(gl);
+  glState.enable = enable;
 
   return gl;
 }
@@ -137,12 +142,12 @@ class GLState {
  * Saves current WebGL context state onto an internal per-context stack
  */
  export function pushContextState(gl: WebGLRenderingContext): void {
-  // @ts-expect-error
-  if (!gl.state) {
+  let glState = getContextState(gl);
+  if (!glState) {
     trackContextState(gl, {copyState: false});
+    glState = getContextState(gl);
   }
-  // @ts-expect-error
-  gl.state.push();
+  glState.push();
 }
 
 
@@ -150,10 +155,9 @@ class GLState {
  * Restores previously saved WebGL context state
  */
 export function popContextState(gl: WebGLRenderingContext): void {
-  // @ts-expect-error
-  assert(gl.state);
-  // @ts-expect-error
-  gl.state.pop();
+  const glState = getContextState(gl);
+  assert(glState);
+  glState.pop();
 }
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
@@ -164,7 +168,7 @@ export function popContextState(gl: WebGLRenderingContext): void {
  * @param gl
  * @param functionName
  */
-function installGetterOverride(gl, functionName) {
+function installGetterOverride(gl: WebGLRenderingContext, functionName: string) {
   // Get the original function from the WebGLRenderingContext
   const originalGetterFunc = gl[functionName].bind(gl);
 
@@ -175,15 +179,16 @@ function installGetterOverride(gl, functionName) {
       return originalGetterFunc(pname);
     }
 
-    if (!(pname in gl.state.cache)) {
+    const glState = getContextState(gl);
+    if (!(pname in glState.cache)) {
       // WebGL limits are not prepopulated in the cache, call the original getter when first queried.
-      gl.state.cache[pname] = originalGetterFunc(pname);
+      glState.cache[pname] = originalGetterFunc(pname);
     }
 
     // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
-    return gl.state.enable
+    return glState.enable
       ? // Call the getter the params so that it can e.g. serve from a cache
-        gl.state.cache[pname]
+        glState.cache[pname]
       : // Optionally call the original function to do a "hard" query from the WebGLRenderingContext
         originalGetterFunc(pname);
   };
@@ -204,7 +209,7 @@ function installGetterOverride(gl, functionName) {
  * @param setter
  * @returns
  */
-function installSetterSpy(gl, functionName, setter) {
+function installSetterSpy(gl: WebGLRenderingContext, functionName, setter) {
   // Get the original function from the WebGLRenderingContext
   if (!gl[functionName]) {
     // This could happen if we try to intercept WebGL2 method on a WebGL1 context
@@ -216,7 +221,8 @@ function installSetterSpy(gl, functionName, setter) {
   gl[functionName] = function set(...params) {
     // Update the value
     // Call the setter with the state cache and the params so that it can store the parameters
-    const {valueChanged, oldValue} = setter(gl.state._updateCache, ...params);
+    const glState = getContextState(gl);
+    const {valueChanged, oldValue} = setter(glState._updateCache, ...params);
 
     // Call the original WebGLRenderingContext func to make sure the context actually gets updated
     if (valueChanged) {
@@ -238,13 +244,14 @@ function installSetterSpy(gl, functionName, setter) {
   });
 }
 
-function installProgramSpy(gl) {
+function installProgramSpy(gl: WebGLRenderingContext): void {
   const originalUseProgram = gl.useProgram.bind(gl);
 
   gl.useProgram = function useProgramLuma(handle) {
-    if (gl.state.program !== handle) {
+    const glState = getContextState(gl);
+    if (glState.program !== handle) {
       originalUseProgram(handle);
-      gl.state.program = handle;
+      glState.program = handle;
     }
   };
 }

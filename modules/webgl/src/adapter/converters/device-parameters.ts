@@ -209,11 +209,11 @@ function convertBlendOperationToEquation(parameter, value): number {
   });
 }
 
-function message(parameter, value) {
+function message(parameter: string, value: any): string {
   return `Illegal parameter ${value} for ${parameter}`;
 }
 
-function map(parameter, value, valueMap) {
+function map(parameter: string, value: any, valueMap: Record<string, any>): any {
   if (!(value in valueMap)) {
     throw new Error(message(parameter, value));
   }

@@ -1,7 +1,17 @@
-import {ShaderLayout, BindingLayout, UniformBinding, UniformBlockBinding, ProgramBindings, AttributeBinding, VaryingBinding, AttributeLayout} from '@luma.gl/api';
+import {
+  ShaderLayout,
+  BindingLayout,
+  UniformBinding,
+  UniformBlockBinding,
+  ProgramBindings,
+  AttributeBinding,
+  VaryingBinding,
+  AttributeLayout,
+  AccessorObject
+} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
-import Accessor, {AccessorObject} from '../../classic/accessor'; // TODO - should NOT depend on classic API
+import Accessor from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decodeUniformType, decodeAttributeType} from './uniforms';
 import {getVertexFormat} from '../converters/vertex-formats';
 import {isSamplerUniform} from './uniforms';
@@ -9,17 +19,18 @@ import {isSamplerUniform} from './uniforms';
  * Extract metadata describing binding information for a program's shaders
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
-*/
+ */
 export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
   const programBindings = getProgramBindings(gl, program);
 
   const shaderLayout: ShaderLayout = {
-    attributes: [], 
+    attributes: [],
     bindings: []
   };
 
   for (const attribute of programBindings.attributes) {
-    const format = attribute.accessor.format || 
+    const format =
+      // attribute.accessor.format ||
       getVertexFormat(attribute.accessor.type || GL.FLOAT, attribute.accessor.size);
     shaderLayout.attributes.push({
       name: attribute.name,
@@ -31,7 +42,7 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
 
   // Uniform blocks
   for (const uniformBlock of programBindings.uniformBlocks) {
-    const uniforms = uniformBlock.uniforms.map(uniform => ({
+    const uniforms = uniformBlock.uniforms.map((uniform) => ({
       name: uniform.name,
       format: uniform.format,
       byteOffset: uniform.byteOffset,
@@ -66,13 +77,13 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
     }
   }
 
-  const uniforms = programBindings.uniforms?.filter(uniform => uniform.location !== null) || [];
+  const uniforms = programBindings.uniforms?.filter((uniform) => uniform.location !== null) || [];
   if (uniforms.length) {
     shaderLayout.uniforms = uniforms;
   }
   if (programBindings.varyings?.length) {
     shaderLayout.varyings = programBindings.varyings;
-  };
+  }
 
   return shaderLayout;
 }
@@ -81,8 +92,11 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
  * Extract metadata describing binding information for a program's shaders
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
-*/
-export function getProgramBindings(gl: WebGLRenderingContext, program: WebGLProgram): ProgramBindings {
+ */
+export function getProgramBindings(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram
+): ProgramBindings {
   const config: ProgramBindings = {
     attributes: readAttributeBindings(gl, program),
     uniforms: readUniformBindings(gl, program),
@@ -95,13 +109,15 @@ export function getProgramBindings(gl: WebGLRenderingContext, program: WebGLProg
   // generateWebGPUStyleBindings(bindings);
 }
 
-
 /**
  * Extract info about all transform feedback varyings
  *
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
-function readAttributeBindings(gl: WebGLRenderingContext, program: WebGLProgram): AttributeBinding[] {
+function readAttributeBindings(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram
+): AttributeBinding[] {
   const attributes: AttributeBinding[] = [];
 
   const count = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
@@ -119,13 +135,11 @@ function readAttributeBindings(gl: WebGLRenderingContext, program: WebGLProgram)
         accessor.divisor = 1;
       }
       const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
-      // @ts-expect-error
       attributes.push(attributeInfo);
     }
   }
 
-  // @ts-expect-error
-  attributes.sort((a, b) => (a.location ?? a.field[0].location) - (b.location ?? b.field[0].location));
+  attributes.sort((a: AttributeBinding, b: AttributeBinding) => a.location - b.location);
   return attributes;
 }
 
@@ -140,7 +154,7 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
   }
   const gl2 = gl as WebGL2RenderingContext;
 
-  const varyings = [];
+  const varyings: VaryingBinding[] = [];
 
   const count = gl.getProgramParameter(program, GL.TRANSFORM_FEEDBACK_VARYINGS);
   for (let location = 0; location < count; location++) {
@@ -204,19 +218,22 @@ function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): 
  * ("Active" just means that unused (aka inactive) blocks may have been
  * optimized away during linking)
  */
-function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): UniformBlockBinding[] {
+function readUniformBlocks(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram
+): UniformBlockBinding[] {
   if (!isWebGL2(gl)) {
     return [];
   }
   const gl2 = gl as WebGL2RenderingContext;
 
-  const getBlockParameter = (blockIndex, pname) => gl2.getActiveUniformBlockParameter(program, blockIndex, pname);
+  const getBlockParameter = (blockIndex: number, pname: GL): any =>
+    gl2.getActiveUniformBlockParameter(program, blockIndex, pname);
 
   const uniformBlocks: UniformBlockBinding[] = [];
 
   const blockCount = gl2.getProgramParameter(program, GL.ACTIVE_UNIFORM_BLOCKS);
   for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
-
     const blockInfo = {
       name: gl2.getActiveUniformBlockName(program, blockIndex),
       location: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_BINDING),
@@ -224,18 +241,26 @@ function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): Un
       vertex: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
       fragment: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
       uniformCount: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
-      uniforms: []
-    }
+      uniforms: [] as any[]
+    };
 
     const uniformIndices = getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
 
     const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
-    const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
-    const uniformBlockIndex = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_BLOCK_INDEX); // Array of GLint indicating the block indices of the uniforms.
-    const uniformOffset = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
-    const uniformStride = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
-    const uniformMatrixStride = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_MATRIX_STRIDE); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
-    const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices,GL.UNIFORM_IS_ROW_MAJOR); 
+    const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
+    const uniformBlockIndex = gl2.getActiveUniforms(
+      program,
+      uniformIndices,
+      GL.UNIFORM_BLOCK_INDEX
+    ); // Array of GLint indicating the block indices of the uniforms.
+    const uniformOffset = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
+    const uniformStride = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
+    const uniformMatrixStride = gl2.getActiveUniforms(
+      program,
+      uniformIndices,
+      GL.UNIFORM_MATRIX_STRIDE
+    ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
+    const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
       blockInfo.uniforms.push({
         name: gl2.getActiveUniform(program, uniformIndices[i]).name,
@@ -256,10 +281,13 @@ function readUniformBlocks(gl: WebGLRenderingContext, program: WebGLProgram): Un
   return uniformBlocks;
 }
 
-const SAMPLER_UNIFORMS_GL_TO_GPU: Record<number, [
-  '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
-  'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'
-]> = {
+const SAMPLER_UNIFORMS_GL_TO_GPU: Record<
+  number,
+  [
+    '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
+    'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'
+  ]
+> = {
   [GL.SAMPLER_2D]: ['2d', 'float'],
   [GL.SAMPLER_CUBE]: ['cube', 'float'],
   [GL.SAMPLER_3D]: ['3d', 'float'],
@@ -277,10 +305,12 @@ const SAMPLER_UNIFORMS_GL_TO_GPU: Record<number, [
   [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint']
 };
 
-function getSamplerInfo(type: GL): {
-  viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-} | undefined {
+function getSamplerInfo(type: GL):
+  | {
+      viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+      sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+    }
+  | undefined {
   let sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
   if (sampler) {
     const [viewDimension, sampleType] = sampler;
@@ -291,9 +321,9 @@ function getSamplerInfo(type: GL): {
 
 // HELPERS
 
-function parseUniformName(name) {
+function parseUniformName(name: string): {name: string; length: number; isArray: boolean} {
   // Shortcut to avoid redundant or bad matches
-  if (name[name.length - 1] !== ']'){
+  if (name[name.length - 1] !== ']') {
     return {
       name,
       length: 1,
@@ -310,7 +340,7 @@ function parseUniformName(name) {
 
   return {
     name: matches[1],
-    length: matches[2] || 1,
+    length: matches[2] ? 1 : 0,
     isArray: Boolean(matches[2])
   };
 }

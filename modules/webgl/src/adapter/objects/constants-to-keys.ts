@@ -1,7 +1,8 @@
 import {assert} from '@luma.gl/api';
+import GL from '@luma.gl/constants';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
-export function getKeyValue(gl, name) {
+export function getKeyValue(gl: WebGLRenderingContext, name: string | GL): GL {
   // If not a string, return (assume number)
   if (typeof name !== 'string') {
     return name;
@@ -20,7 +21,8 @@ export function getKeyValue(gl, name) {
   return value;
 }
 
-export function getKey(gl, value) {
+export function getKey(gl: WebGLRenderingContext, value: any): string {
+  // @ts-expect-error 
   gl = gl.gl || gl;
   value = Number(value);
   for (const key in gl) {
@@ -31,7 +33,7 @@ export function getKey(gl, value) {
   return String(value);
 }
 
-export function getKeyType(gl, value) {
+export function getKeyType(gl: WebGLRenderingContext, value: any): string {
   assert(value !== undefined, 'undefined key');
   value = Number(value);
   for (const key in gl) {

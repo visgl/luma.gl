@@ -22,6 +22,7 @@ varying float vClipped;
 
   t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
   t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
+  // @ts-expect-error
   t.throws(() => shaderModule.getModuleSource(''), 'unknown shader type');
 
   t.end();

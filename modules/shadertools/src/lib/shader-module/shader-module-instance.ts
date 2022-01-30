@@ -49,7 +49,7 @@ export class ShaderModuleInstance {
   }
 
   // Extracts the source code chunk for the specified shader type from the named shader module
-  getModuleSource(type) {
+  getModuleSource(type: 'vs' | 'fs'): string {
     let moduleSource;
     switch (type) {
       case 'vs':
@@ -81,12 +81,12 @@ ${moduleSource}\
     return {};
   }
 
-  getDefines() {
+  getDefines(): Record<string, number> {
     return this.defines;
   }
 
   // Warn about deprecated uniforms or functions
-  checkDeprecations(shaderSource, log) {
+  checkDeprecations(shaderSource: string, log: any): void {
     this.deprecations.forEach((def) => {
       if (def.regex.test(shaderSource)) {
         if (def.deprecated) {
@@ -112,8 +112,8 @@ ${moduleSource}\
     return deprecations;
   }
 
-  _defaultGetUniforms(opts = {}) {
-    const uniforms = {};
+  _defaultGetUniforms(opts = {}): Record<string, any> {
+    const uniforms: Record<string, any> = {};
     const propTypes = this.uniforms;
 
     for (const key in propTypes) {

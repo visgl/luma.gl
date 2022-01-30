@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/api';
-import type {Device} from '@luma.gl/api';
-export type {ResourceProps} from '@luma.gl/api';
+import type {Device, ResourceProps} from '@luma.gl/api';
+import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGLContext} from '../../context/context/webgl-checks';
 import WebGLDevice from '../webgl-device';
 
@@ -172,7 +172,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
 
     const isWebgl2 = isWebGL2(this.gl);
 
-    const values = {};
+    const values: Record<string, any> = {};
 
     // Query all parameters if no list provided
     const parameterKeys = parameters || Object.keys(PARAMETERS);
@@ -204,11 +204,11 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
    *
    * @todo - cache parameter to avoid issuing WebGL calls?
    *
-   * @param {string} pname - parameter (GL constant, value or key)
-   * @param {GLint|GLfloat|GLenum} value
-   * @return {Resource} returns self to enable chaining
+   * @param pname - parameter (GL constant, value or key)
+   * @param value {GLint|GLfloat|GLenum} 
+   * @return returns self to enable chaining
    */
-  setParameter(pname, value) {
+  setParameter(pname: GL | string, value: any): this {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
@@ -245,7 +245,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
    * Batch update resource parameters
    * Assumes the subclass supports a setParameter call
    */
-  setParameters(parameters) {
+  setParameters(parameters: Record<GL, any>) {
     for (const pname in parameters) {
       this.setParameter(pname, parameters[pname]);
     }
@@ -253,12 +253,12 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
   }
 
   // Install stubs for removed methods
-  stubRemovedMethods(className, version, methodNames) {
+  stubRemovedMethods(className: string, version: string, methodNames: string[]) {
     return stubRemovedMethods(this, className, version, methodNames);
   }
 
   // PUBLIC VIRTUAL METHODS
-  initialize(props) {}
+  initialize(props: ResourceProps) {}
 
   // PROTECTED METHODS - These must be overridden by subclass
   _createHandle() {
@@ -269,7 +269,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  _bindHandle(handle) {
+  _bindHandle(handle: any) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
@@ -277,11 +277,11 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  _getParameter(pname, props): number {
+  _getParameter(pname: GL, props: Record<string, any>): number {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 
-  _setParameter(pname, value) {
+  _setParameter(pname: GL | string, value: any) {
     throw new Error(ERR_RESOURCE_METHOD_UNDEFINED);
   }
 

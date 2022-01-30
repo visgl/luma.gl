@@ -1,9 +1,9 @@
-import {assert} from '@luma.gl/api';
+import {assert, ResourceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 
 import WebGLDevice from '../webgl-device';
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import WebGLResource from './webgl-resource';
 
 import Buffer from '../resources/webgl-buffer';
 
@@ -37,7 +37,7 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
     // return [this.elements, ...this.buffers];
   }
 
-  _bindHandle(handle): void {
+  _bindHandle(handle: WEBGLVertexArrayObject): void {
     this.gl2.bindVertexArray(handle);
   }
 

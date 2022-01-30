@@ -198,7 +198,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const parameters = {...this.props.parameters, framebuffer: renderPass.props.framebuffer};
 
       const primitiveMode = getGLPrimitive(this.props.topology);
-      const transformFeedback = null;
+      const transformFeedback: any = null;
       if (transformFeedback) {
         transformFeedback.begin(primitiveMode);
       }

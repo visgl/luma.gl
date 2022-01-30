@@ -1,9 +1,8 @@
-import {assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-
+import {GLDrawMode, GLPrimitive} from '../../types/webgl';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
-export function getPrimitiveDrawMode(drawMode) {
+export function getPrimitiveDrawMode(drawMode: GLDrawMode): GLPrimitive {
   switch (drawMode) {
     case GL.POINTS:
       return GL.POINTS;
@@ -20,13 +19,13 @@ export function getPrimitiveDrawMode(drawMode) {
     case GL.TRIANGLE_FAN:
       return GL.TRIANGLES;
     default:
-      assert(false);
-      return 0;
+      throw new Error('drawMode');
   }
 }
 
 // Counts the number of complete "primitives" given a number of vertices and a drawMode
-export function getPrimitiveCount({drawMode, vertexCount}) {
+export function getPrimitiveCount(options: {drawMode: GLDrawMode, vertexCount: number}): number {
+  const {drawMode, vertexCount} = options;
   switch (drawMode) {
     case GL.POINTS:
     case GL.LINE_LOOP:
@@ -41,13 +40,13 @@ export function getPrimitiveCount({drawMode, vertexCount}) {
     case GL.TRIANGLE_FAN:
       return vertexCount - 2;
     default:
-      assert(false);
-      return 0;
+      throw new Error('drawMode');
   }
 }
 
 // Counts the number of vertices after splitting the vertex stream into separate "primitives"
-export function getVertexCount({drawMode, vertexCount}) {
+export function getVertexCount(options: {drawMode: GLDrawMode, vertexCount: number}): number {
+  const {drawMode, vertexCount} = options;
   const primitiveCount = getPrimitiveCount({drawMode, vertexCount});
   switch (getPrimitiveDrawMode(drawMode)) {
     case GL.POINTS:
@@ -57,7 +56,6 @@ export function getVertexCount({drawMode, vertexCount}) {
     case GL.TRIANGLES:
       return primitiveCount * 3;
     default:
-      assert(false);
-      return 0;
+      throw new Error('drawMode');
   }
 }

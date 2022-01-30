@@ -43,7 +43,7 @@ type SetImageDataOptions = {
   offset?: number;
   data: any;
   compressed?: boolean;
-  parameters?: {};
+  parameters?: Record<GL, any>;
   /** @deprecated */
   pixels?: any;
 };
@@ -81,7 +81,7 @@ type SetSubImageDataOptions = {
   type?: any;
   offset?: number;
   data: any;
-  parameters?: {};
+  parameters?: Record<GL, any>;
   compressed?: boolean;
   x?: number;
   y?: number;
@@ -99,7 +99,7 @@ type SetImageData3DOptions = {
   type?: any;
   offset?: number;
   data: any;
-  parameters?: {};
+  parameters?: Record<GL, any>;
 };
 
 
@@ -127,9 +127,9 @@ export default class WEBGLTexture extends Texture {
   height: number = undefined;
   depth: number = undefined;
 
-  format = undefined;
-  type = undefined;
-  dataFormat = undefined;
+  format: GL = undefined;
+  type: GL = undefined;
+  dataFormat: GL = undefined;
   mipmaps: boolean = undefined;
 
   /**
@@ -152,8 +152,12 @@ export default class WEBGLTexture extends Texture {
    * Textures that are still loading from promises
    * Set to true as soon as texture has been initialized with valid data
    */
-  loaded = false;
-  _video;
+  loaded: boolean = false;
+  _video: {
+    video: HTMLVideoElement;
+    parameters: any;
+    lastTime: number;
+  };
 
   constructor(device: Device, props: TextureProps) {
     super(device, {format: GL.RGBA, ...props});
@@ -224,9 +228,10 @@ export default class WEBGLTexture extends Texture {
       return this;
     }
 
-    let {parameters = {}} = props;
+    let {parameters = {}  as Record<GL, any>} = props;
 
-    const {pixels = null, recreate = false, pixelStore = {}, textureUnit = undefined} = props;
+    const {
+      pixels = null, recreate = false, pixelStore = {}, textureUnit = undefined} = props;
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -281,6 +286,7 @@ export default class WEBGLTexture extends Texture {
       format,
       type,
       dataFormat,
+      // @ts-expect-error 
       parameters: pixelStore,
       compressed
     });
@@ -299,7 +305,7 @@ export default class WEBGLTexture extends Texture {
     }
     if (isVideo) {
       this._video = {
-        video: data,
+        video: data as HTMLVideoElement,
         parameters,
         // @ts-expect-error
         lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
@@ -310,7 +316,7 @@ export default class WEBGLTexture extends Texture {
   }
 
   initializeCube(props?: TextureProps): this {
-    const {mipmaps = true, parameters = {}} = props;
+    const {mipmaps = true, parameters = {}  as Record<GL, any>} = props;
 
     // Store props for accessors
     // this.props = props;
@@ -435,7 +441,7 @@ export default class WEBGLTexture extends Texture {
       level = 0,
       format = this.format,
       offset = 0,
-      parameters = {}
+      parameters = {}  as Record<GL, any>
     } = options;
 
     let {
@@ -576,7 +582,7 @@ export default class WEBGLTexture extends Texture {
     dataFormat = this.dataFormat,
     compressed = false,
     offset = 0,
-    parameters = {}
+    parameters = {} as Record<GL, any>
   }: SetSubImageDataOptions) {
     ({type, dataFormat, compressed, width, height} = this._deduceParameters({
       format: this.props.format,
@@ -860,7 +866,7 @@ export default class WEBGLTexture extends Texture {
     depth = 1,
     offset = 0,
     data,
-    parameters = {}
+    parameters = {}  as Record<GL, any> as Record<GL, any>
   }: SetImageData3DOptions) {
     this.trackDeallocatedMemory('Texture');
 

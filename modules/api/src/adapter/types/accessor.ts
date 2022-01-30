@@ -1,13 +1,16 @@
 // luma.gl, MIT license
-import type {VertexFormat} from './vertex-formats';
+import type Buffer from '../resources/buffer';
+// import type {VertexFormat} from './vertex-formats';
 
 // ACCESSORS
 
 /**
  * Attribute descriptor object
+ * @deprecated Use ShaderLayout
  */
-export type Accessor = {
-  format: VertexFormat;
+export interface AccessorObject {
+  buffer?: Buffer;
+  // format: VertexFormat;
   offset?: number;
   // can now be described with single WebGPU-style `format` string
 
@@ -25,4 +28,7 @@ export type Accessor = {
   normalized?: boolean;
   /** @deprecated - Infer from format */
   integer?: boolean;
+
+  /** @deprecated */
+  index?: number;
 };

@@ -1,8 +1,8 @@
 /* eslint-disable no-inline-comments */
-import {assert} from '@luma.gl/api';
+import {assert, ResourceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../webgl-device';
-import WebGLResource, {ResourceProps} from './webgl-resource';
+import WebGLResource from './webgl-resource';
 import {
   isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel
 } from '../converters/renderbuffer-formats';
@@ -87,7 +87,7 @@ export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> 
     return this;
   }
 
-  // RESOURECE IMPLEMENTATION
+  // RESOURCE IMPLEMENTATION
 
   _createHandle() {
     return this.gl.createRenderbuffer();
@@ -98,7 +98,7 @@ export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> 
     this.trackDeallocatedMemory();
   }
 
-  _bindHandle(handle): void {
+  _bindHandle(handle: WEBGLRenderbuffer): void {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, handle);
   }
 }
