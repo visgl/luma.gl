@@ -1,4 +1,6 @@
+import {TypedArray} from '@luma.gl/api/types';
 import GL from '@luma.gl/constants';
+import {GLType} from '../types/webgl'
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 
@@ -18,7 +20,7 @@ type TypedArrayConstructor =
  * @param {*} arrayOrType
  * @returns
  */
-export function getGLTypeFromTypedArray(arrayOrType) {
+export function getGLTypeFromTypedArray(arrayOrType: TypedArray): GLType {
   // If typed array, look up constructor
   const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
   switch (type) {

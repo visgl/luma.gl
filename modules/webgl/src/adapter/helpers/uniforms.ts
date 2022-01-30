@@ -1,12 +1,13 @@
 import {UniformFormat, VertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import {GLUniformType, GLSamplerType, GLCompositeType, GLType} from '../../types/webgl'
 
 /** Check is uniform is of sampler type */
-export function isSamplerUniform(type: GL): boolean {
-  return SAMPLER_TYPES.includes(type);
+export function isSamplerUniform(type: GLUniformType): boolean {
+  return SAMPLER_TYPES.includes(type as GLSamplerType);
 }
 
-const SAMPLER_TYPES = [
+const SAMPLER_TYPES: GLSamplerType[] = [
   GL.SAMPLER_2D,
   GL.SAMPLER_CUBE,
   GL.SAMPLER_3D,
@@ -25,7 +26,7 @@ const SAMPLER_TYPES = [
 ];
 
 // Composite types table 
-const COMPOSITE_GL_TYPES: Record<string, [GL, number, string, UniformFormat, VertexFormat?]> = {
+const COMPOSITE_GL_TYPES: Record<GLCompositeType, [GLType, number, string, UniformFormat, VertexFormat?]> = {
   [GL.FLOAT]: [GL.FLOAT, 1, 'float', 'f32', 'float32'],
   [GL.FLOAT_VEC2]: [GL.FLOAT, 2, 'vec2', 'vec2<f32>', 'float32x2'],
   [GL.FLOAT_VEC3]: [GL.FLOAT, 3, 'vec3', 'vec3<f32>', 'float32x3'],
@@ -60,7 +61,7 @@ const COMPOSITE_GL_TYPES: Record<string, [GL, number, string, UniformFormat, Ver
 };
 
 /** Decomposes a composite type GL.VEC3 into a basic type (GL.FLOAT) and components (3) */
-export function decodeUniformType(uniformType: GL): {format: UniformFormat, components: number, glType} {
+export function decodeUniformType(uniformType: GL): {format: UniformFormat, components: number, glType: GLType} {
   const typeAndSize = COMPOSITE_GL_TYPES[uniformType];
   if (!typeAndSize) {
     return null;
@@ -69,7 +70,7 @@ export function decodeUniformType(uniformType: GL): {format: UniformFormat, comp
   return {format, components, glType};
 }
 
-export function decodeAttributeType(uniformType: GL): {format: VertexFormat, components: number, glType} {
+export function decodeAttributeType(uniformType: GL): {format: VertexFormat, components: number, glType: GLType} {
   const typeAndSize = COMPOSITE_GL_TYPES[uniformType];
   if (!typeAndSize) {
     return null;
@@ -79,7 +80,7 @@ export function decodeAttributeType(uniformType: GL): {format: VertexFormat, com
 }
 
 /** Decomposes a composite type GL.VEC3 into a basic type (GL.FLOAT) and components (3) */
-export function decomposeCompositeGLType(compositeGLType) {
+export function decomposeCompositeGLType(compositeGLType: GLCompositeType): {type: GLType, components: number} | null {
   const typeAndSize = COMPOSITE_GL_TYPES[compositeGLType];
   if (!typeAndSize) {
     return null;
@@ -88,7 +89,7 @@ export function decomposeCompositeGLType(compositeGLType) {
   return {type, components};
 }
 
-export function getCompositeGLType(type, components) {
+export function getCompositeGLType(type: GL, components): {glType: GLType, name: string} | null {
   switch (type) {
     case GL.BYTE:
     case GL.UNSIGNED_BYTE:
@@ -102,7 +103,7 @@ export function getCompositeGLType(type, components) {
   for (const glType in COMPOSITE_GL_TYPES) {
     const [compType, compComponents, name] = COMPOSITE_GL_TYPES[glType];
     if (compType === type && compComponents === components) {
-      return {glType, name};
+      return {glType: Number(glType), name};
     }
   }
   return null;

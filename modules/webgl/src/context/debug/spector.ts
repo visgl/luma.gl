@@ -19,8 +19,12 @@ const DEFAULT_SPECTOR_PROPS: SpectorProps = {
 const SPECTOR_CDN_URL = 'https://spectorcdn.babylonjs.com/spector.bundle.js';
 const LOG_LEVEL = 1;
 
-let spector = null;
-let initialized = false;
+let spector: any = null;
+let initialized: boolean = false;
+
+declare global {
+  var SPECTOR: any;
+}
 
 /** Loads spector from CDN if not already installed */
 export async function loadSpectorJS(props?: SpectorProps) {
@@ -57,8 +61,8 @@ export function initializeSpectorJS(props?: SpectorProps) {
     // enables recording some extra information merged in the capture like texture memory sizes and formats
     spector.spyCanvases();
     // A callback when results are ready
-    spector?.onCaptureStarted.add((capture) => log.info(`Spector capture started:`, capture)());
-    spector?.onCapture.add((capture) => {
+    spector?.onCaptureStarted.add((capture: unknown) => log.info(`Spector capture started:`, capture)());
+    spector?.onCapture.add((capture: unknown) => {
       log.info(`Spector capture complete:`, capture)();
       // Use undocumented Spector API to open the UI with our capture
       // See https://github.com/BabylonJS/Spector.js/blob/767ad1195a25b85a85c381f400eb50a979239eca/src/spector.ts#L124

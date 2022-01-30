@@ -10,6 +10,8 @@ export type PropType = {
   value: any;
   max?: number;
   min?: number;
+  private?: boolean;
+  validate?(value: any, propDef: PropType): boolean;
 };
 
 const TYPE_DEFINITIONS = {

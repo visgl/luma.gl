@@ -72,7 +72,7 @@ function isFeatureSupported(gl: WebGLRenderingContext, feature: DeviceFeature): 
   }
 }
 
-const compiledGLSLExtensions = {};
+const compiledGLSLExtensions: Record<string, boolean> = {};
 
 /*
  * Enables feature detection in IE11 due to a bug where gl.getExtension may return true

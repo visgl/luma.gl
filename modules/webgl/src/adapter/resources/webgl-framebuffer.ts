@@ -101,7 +101,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** Create a color attachment */
-  protected _createColorAttachment(format: ColorTextureFormat, width, height): WebGLTexture {
+  protected _createColorAttachment(format: ColorTextureFormat, width: number, height: number): WebGLTexture {
     const texture = this.device._createTexture({
       id: `${this.id}-color`,
       data: null, // reserves texture memory, but texels are undefined

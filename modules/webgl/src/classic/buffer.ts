@@ -1,4 +1,4 @@
-import type {Device, BufferProps} from '@luma.gl/api';
+import type {Device, BufferProps, TypedArray} from '@luma.gl/api';
 import {Buffer, log, assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
@@ -62,13 +62,11 @@ function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | numbe
 /** WebGL Buffer interface */
 export type ClassicBufferProps = BufferProps & {
   handle?: WebGLBuffer;
-  data?: any; // ArrayBufferView;
-  byteLength?: number;
-  target?: number;
-  usage?: number;
-  accessor?: AccessorObject;
 
+  target?: number;
   webglUsage?: number;
+
+  accessor?: AccessorObject;
 
   /** @deprecated */
   index?: number;
@@ -100,7 +98,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
 
     // infer GL type from supplied typed array
     if (this.props.data) {
-      const type = getGLTypeFromTypedArray(this.props.data);
+      const type = getGLTypeFromTypedArray(this.props.data as TypedArray);
       assert(type);
       this.setAccessor(new Accessor(this.accessor, {type}));
     }
@@ -118,16 +116,16 @@ export default class ClassicBuffer extends WEBGLBuffer {
     }
   }
 
-  write(data: ArrayBufferView, byteOffset?: number): void {
+  write(data: TypedArray, byteOffset?: number): void {
     this.subData({data, offset: byteOffset});
   }
   // returns number of elements in the buffer (assuming that the full buffer is used)
-  getElementCount(accessor = this.accessor): number {
+  getElementCount(accessor: AccessorObject = this.accessor): number {
     return Math.round(this.byteLength / Accessor.getBytesPerElement(accessor));
   }
 
   // returns number of vertices in the buffer (assuming that the full buffer is used)
-  getVertexCount(accessor = this.accessor): number {
+  getVertexCount(accessor: AccessorObject = this.accessor): number {
     return Math.round(this.byteLength / Accessor.getBytesPerVertex(accessor));
   }
 
@@ -178,11 +176,12 @@ export default class ClassicBuffer extends WEBGLBuffer {
 
   // Optionally stores an accessor with the buffer, makes it easier to use it as an attribute later
   // {type, size = 1, offset = 0, stride = 0, normalized = false, integer = false, divisor = 0}
-  setAccessor(accessor): this {
+  setAccessor(accessor: AccessorObject | Accessor): this {
     // NOTE: From luma.gl v7.0, Accessors have an optional `buffer `field
     // (mainly to support "interleaving")
     // To avoid confusion, ensure `buffer.accessor` does not have a `buffer.accessor.buffer` field:
     accessor = Object.assign({}, accessor);
+    // @ts-expect-error
     delete accessor.buffer;
 
     // This new statement ensures that an "accessor object" is re-packaged as an Accessor instance
@@ -195,7 +194,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
   // Returns:
   //  `true`: buffer was reallocated, data was cleared
   //  `false`: buffer was big enough, data is intact
-  reallocate(byteLength) {
+  reallocate(byteLength: number): boolean {
     if (byteLength > this.byteLength) {
       this._setByteLength(byteLength);
       return true;
@@ -205,7 +204,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
   }
 
   // Update with new data. Reinitializes the buffer
-  setData(props) {
+  setData(props: ClassicBufferProps) {
     return this.initialize(props);
   }
 
@@ -214,14 +213,14 @@ export default class ClassicBuffer extends WEBGLBuffer {
   // Offset into buffer
   // WebGL2 only: Offset into srcData
   // WebGL2 only: Number of bytes to be copied
-  subData(props) {
+  subData(options: TypedArray | {data: TypedArray, offset?: number; srcOffset?: number; byteLength?: number, length?: number}) {
     // Signature: buffer.subData(new Float32Array([...]))
-    if (ArrayBuffer.isView(props)) {
-      props = {data: props};
+    if (ArrayBuffer.isView(options)) {
+      options = {data: options};
     }
 
-    const {data, offset = 0, srcOffset = 0} = props;
-    const byteLength = props.byteLength || props.length;
+    const {data, offset = 0, srcOffset = 0} = options;
+    const byteLength = options.byteLength || options.length;
 
     assert(data);
 
@@ -444,7 +443,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
     return this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.target;
   }
 
-  _getAvailableElementCount(srcByteOffset) {
+  _getAvailableElementCount(srcByteOffset: number) {
     const ArrayType = getTypedArrayFromGLType(this.accessor.type || GL.FLOAT, {clamped: false});
     const sourceElementOffset = srcByteOffset / ArrayType.BYTES_PER_ELEMENT;
     return this.getElementCount() - sourceElementOffset;
@@ -460,7 +459,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
 
   // RESOURCE METHODS
 
-  getParameter(pname) {
+  getParameter(pname: GL): any {
     this.gl.bindBuffer(this.target, this.handle);
     const value = this.gl.getBufferParameter(this.target, pname);
     this.gl.bindBuffer(this.target, null);
@@ -471,24 +470,5 @@ export default class ClassicBuffer extends WEBGLBuffer {
   /** @deprecated Use Buffer.accessor.type */
   get type() {
     return this.accessor.type;
-  }
-
-  get bytes() {
-    log.deprecated('Buffer.bytes', 'Buffer.byteLength')();
-    return this.byteLength;
-  }
-
-  // DEPRECATIONS - v6.0
-  // Deprecated in v6.x, but not warnings not properly implemented
-  setByteLength(byteLength) {
-    log.deprecated('setByteLength', 'reallocate')();
-    return this.reallocate(byteLength);
-  }
-
-  // Deprecated in v6.x, but not warnings not properly implemented
-  updateAccessor(opts) {
-    log.deprecated('updateAccessor(...)', 'setAccessor(new Accessor(buffer.accessor, ...)')();
-    this.accessor = new Accessor(this.accessor, opts);
-    return this;
   }
 }

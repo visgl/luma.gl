@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {TextureFormat} from '../types/texture-formats';
 import {VertexFormat} from '../types/vertex-formats';
-import {Accessor} from '../types/accessor';
+import {AccessorObject} from '../types/accessor';
 import type Buffer from '../resources/buffer';
 import type Sampler from '../resources/sampler';
 import type Texture from '../resources/texture';
@@ -228,7 +228,7 @@ export type ProgramBindings = {
 export type VaryingBinding = {
   location: number;
   name: string;
-  accessor: Accessor;
+  accessor: AccessorObject;
 };
 
 // Uniform bindings
@@ -258,5 +258,5 @@ export type UniformBinding = {
 export type AttributeBinding = {
   name: string;
   location: number;
-  accessor: Accessor;
+  accessor: AccessorObject;
 };

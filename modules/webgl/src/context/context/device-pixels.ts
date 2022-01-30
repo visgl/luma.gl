@@ -52,7 +52,7 @@ export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
 }
 
 // use devicePixelRatio to set canvas width and height
-export function setDevicePixelRatio(gl, devicePixelRatio, options: {width?: number, height?: number} = {}) {
+export function setDevicePixelRatio(gl: WebGLRenderingContext, devicePixelRatio: number, options: {width?: number, height?: number} = {}) {
   // NOTE: if options.width and options.height not used remove in v8
   let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth;
   let clientHeight = 'height' in options ? options.height : gl.canvas.clientHeight;
@@ -101,7 +101,12 @@ export function setDevicePixelRatio(gl, devicePixelRatio, options: {width?: numb
 
 // PRIVATE
 
-function scalePixels(pixel, ratio, width, height, yInvert) {
+function scalePixels(pixel: number[], ratio: number, width: number, height: number, yInvert: boolean): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
   const x = scaleX(pixel[0], ratio, width);
   let y = scaleY(pixel[1], ratio, height, yInvert);
 
@@ -133,13 +138,13 @@ function scalePixels(pixel, ratio, width, height, yInvert) {
   };
 }
 
-function scaleX(x, ratio, width) {
+function scaleX(x: number, ratio: number, width: number): number {
   // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
   const r = Math.min(Math.round(x * ratio), width - 1);
   return r;
 }
 
-function scaleY(y, ratio, height, yInvert) {
+function scaleY(y: number, ratio: number, height: number, yInvert: boolean): number {
   // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
   return yInvert
     ? Math.max(0, height - 1 - Math.round(y * ratio))

@@ -1,17 +1,19 @@
-import {assert, checkProps} from '@luma.gl/api';
+import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
 
-export interface AccessorObject {
-  buffer?: Buffer;
-  offset?: number;
-  stride?: number;
-  type?: number;
-  size?: number;
-  divisor?: number;
-  normalize?: boolean;
-  integer?: boolean;
-}
+// export interface AccessorObject {
+//   offset?: number;
+//   stride?: number;
+//   type?: number;
+//   size?: number;
+//   divisor?: number;
+//   normalized?: boolean;
+//   integer?: boolean;
+
+//   buffer?: Buffer;
+//   index?: number;
+// }
 
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,
@@ -30,7 +32,7 @@ const PROP_CHECKS = {
   }
 };
 
-export default class Accessor {
+export default class Accessor implements AccessorObject {
   offset?: number;
   stride?: number;
   type?: number;
@@ -39,17 +41,17 @@ export default class Accessor {
   normalized?: boolean;
   integer?: boolean;
 
-  buffer?;
-  index?;
+  buffer?: Buffer;
+  index?: number;
 
-  static getBytesPerElement(accessor): number {
+  static getBytesPerElement(accessor: Accessor | AccessorObject): number {
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
     const ArrayType = getTypedArrayFromGLType(accessor.type || GL.FLOAT);
     return ArrayType.BYTES_PER_ELEMENT;
   }
 
-  static getBytesPerVertex(accessor): number {
+  static getBytesPerVertex(accessor: AccessorObject): number {
     assert(accessor.size);
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
@@ -61,11 +63,11 @@ export default class Accessor {
   // Usually [programAccessor, bufferAccessor, appAccessor]
   // All props will be set in the returned object.
   // TODO check for conflicts between values in the supplied accessors
-  static resolve(...accessors): Accessor {
+  static resolve(...accessors: AccessorObject[]): Accessor {
     return new Accessor(...[DEFAULT_ACCESSOR_VALUES, ...accessors]); // Default values
   }
 
-  constructor(...accessors) {
+  constructor(...accessors: AccessorObject[]) {
     accessors.forEach((accessor) => this._assign(accessor)); // Merge in sequence
     Object.freeze(this);
   }
@@ -108,12 +110,12 @@ export default class Accessor {
     if (props.stride !== undefined) {
       this.stride = props.stride;
     }
-    // if (props.normalize !== undefined) {
-    //   this.normalized = props.normalize;
-    // }
     // @ts-expect-error
-    if (props.normalized !== undefined) {
+    if (props.normalize !== undefined) {
       // @ts-expect-error
+      this.normalized = props.normalize;
+    }
+    if (props.normalized !== undefined) {
       this.normalized = props.normalized;
     }
     if (props.integer !== undefined) {
@@ -132,14 +134,10 @@ export default class Accessor {
 
     // The binding index (for binding e.g. Transform feedbacks and Uniform buffers)
     // TODO - should this be part of accessor?
-    // @ts-expect-error
     if (props.index !== undefined) {
-      // @ts-expect-error
       if (typeof props.index === 'boolean') {
-        // @ts-expect-error
         this.index = props.index ? 1 : 0;
       } else {
-        // @ts-expect-error
         this.index = props.index;
       }
     }

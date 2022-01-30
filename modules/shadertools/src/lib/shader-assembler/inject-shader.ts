@@ -9,7 +9,7 @@ const MODULE_INJECTORS = {
 
 const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last function
-const fragments = [];
+const fragments: string[] = [];
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
@@ -49,13 +49,13 @@ export default function injectShader(
       // inject code at the beginning of the main function
       case 'vs:#main-start':
         if (isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, (match) => match + fragmentString);
+          source = source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'vs:#main-end':
         if (isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, (match) => fragmentString + match);
+          source = source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
       // declarations are injected before the main function
@@ -67,13 +67,13 @@ export default function injectShader(
       // inject code at the beginning of the main function
       case 'fs:#main-start':
         if (!isVertex) {
-          source = source.replace(REGEX_START_OF_MAIN, (match) => match + fragmentString);
+          source = source.replace(REGEX_START_OF_MAIN, (match: string) => match + fragmentString);
         }
         break;
       // inject code at the end of main function
       case 'fs:#main-end':
         if (!isVertex) {
-          source = source.replace(REGEX_END_OF_MAIN, (match) => fragmentString + match);
+          source = source.replace(REGEX_END_OF_MAIN, (match: string) => fragmentString + match);
         }
         break;
 
@@ -81,7 +81,7 @@ export default function injectShader(
         // TODO(Tarek): I think this usage should be deprecated.
 
         // inject code after key, leaving key in place
-        source = source.replace(key, (match) => match + fragmentString);
+        source = source.replace(key, (match: string) => match + fragmentString);
     }
   }
 
@@ -90,7 +90,7 @@ export default function injectShader(
 
   // Finally, if requested, insert an automatic module injector chunk
   if (injectStandardStubs) {
-    source = source.replace(/\}\s*$/, (match) => match + MODULE_INJECTORS[type]);
+    source = source.replace(/\}\s*$/, (match: string) => match + MODULE_INJECTORS[type]);
   }
 
   return source;

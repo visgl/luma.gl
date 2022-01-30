@@ -40,7 +40,7 @@ export type {ComputePassProps} from './adapter/resources/compute-pass';
 export {default as ComputePass} from './adapter/resources/compute-pass';
 
 // API TYPES
-export type {Accessor} from './adapter/types/accessor';
+export type {AccessorObject} from './adapter/types/accessor';
 export type {
   Parameters,
   PrimitiveTopology,

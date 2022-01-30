@@ -148,7 +148,8 @@ export default class WebGLDevice extends Device implements ContextState {
     if (props.debug) {
       await loadWebGLDeveloperTools();
     }
-    if (props['spector']) {
+    // @ts-expect-error spector not on props
+    if (props.spector) {
       await loadSpectorJS();
     }
 
@@ -187,7 +188,7 @@ export default class WebGLDevice extends Device implements ContextState {
     // Add subset of WebGL2 methods to WebGL1 context
     polyfillContext(this.gl);
     // Install context state tracking
-    trackContextState(this.gl, {copyState: false, log: (...args) => log.log(1, ...args)()});
+    trackContextState(this.gl, {copyState: false, log: (...args: any[]) => log.log(1, ...args)()});
 
     // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
     if (isBrowser() && props.debug) {
@@ -198,7 +199,8 @@ export default class WebGLDevice extends Device implements ContextState {
       log.warn('WebGL debug mode activated. Performance reduced.')();
     }
 
-    if (isBrowser() && props['spector']) {
+    // @ts-expect-error spector not on props
+    if (isBrowser() && props.spector) {
       const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
       this.spector = initializeSpectorJS({...this.props, canvas});
     }

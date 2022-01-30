@@ -1,6 +1,6 @@
 
 /** deeply compare two arrays */
-export function deepArrayEqual(x, y): boolean {
+export function deepArrayEqual(x: any, y: any): boolean {
   if (x === y) {
     return true;
   }
