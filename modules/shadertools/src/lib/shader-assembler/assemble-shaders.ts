@@ -3,6 +3,8 @@ import {getPlatformShaderDefines, getVersionDefines, PlatformInfo} from './platf
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
 import transpileShader from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
+import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
+import type { Injection } from '../shader-module/shader-module-instance';
 
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
@@ -24,10 +26,7 @@ precision highp float;
 /** Define map */
 type Defines = Record<string, string | number | boolean>;
 
-export type HookFunction = string | { hook: string; header: string; footer: string; } | {
-  vs: string;
-  fs: string;
-};
+export type HookFunction = { hook: string; header: string; footer: string; signature?: string};
 
 export type AssembleShaderOptions = {
   id?: string;
@@ -36,7 +35,7 @@ export type AssembleShaderOptions = {
   type?: any;
   modules?: any[];
   defines?: Defines;
-  hookFunctions?: HookFunction[] | [string, string];
+  hookFunctions?: (HookFunction | string | { hook: string; header: string; footer: string; })[];
   inject?: object;
   transpileToGLSL100?: boolean;
   prologue?: boolean;
@@ -130,7 +129,7 @@ function assembleShader(
     ? `\
 ${versionLine}
 ${getShaderName({id, source, type})}
-${getShaderType({type})}
+${getShaderType(type)}
 ${getPlatformShaderDefines(platformInfo)}
 ${getVersionDefines(platformInfo)}
 ${getApplicationDefines(allDefines)}
@@ -142,9 +141,9 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   const hookFunctionMap = normalizeHookFunctions(hookFunctions);
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, string[]> = {};
-  const declInjections: Record<string, string[]> = {};
-  const mainInjections: Record<string, string[]> = {};
+  const hookInjections: Record<string, Injection[]> = {};
+  const declInjections: Record<string, Injection[]> = {};
+  const mainInjections: Record<string, Injection[]> = {};
 
   for (const key in inject) {
     const injection =
@@ -221,8 +220,8 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
  * @param modules 
  * @returns 
  */
-function assembleGetUniforms(modules) {
-  return function getUniforms(opts) {
+function assembleGetUniforms(modules: ShaderModuleInstance[]) {
+  return function getUniforms(opts: Record<string, any>): Record<string, any> {
     const uniforms = {};
     for (const module of modules) {
       // `modules` is already sorted by dependency level. This guarantees that
@@ -234,7 +233,7 @@ function assembleGetUniforms(modules) {
   };
 }
 
-function getShaderType({type}) {
+function getShaderType(type: 'fs' | 'vs') {
   return `
 #define SHADER_TYPE_${SHADER_TYPE[type].toUpperCase()}
 `;
@@ -277,7 +276,8 @@ function getApplicationDefines(defines: Defines = {}): string {
   return sourceText;
 }
 
-function getHookFunctions(hookFunctions, hookInjections): string {
+function getHookFunctions(
+  hookFunctions: Record<string, HookFunction>, hookInjections: Record<string, Injection[]>): string {
   let result = '';
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
@@ -301,23 +301,31 @@ function getHookFunctions(hookFunctions, hookInjections): string {
   return result;
 }
 
-function normalizeHookFunctions(hookFunctions): {vs: Record<string, any>, fs: Record<string, any>} {
+function normalizeHookFunctions(hookFunctions: (string | HookFunction)[]): {
+  vs: Record<string, HookFunction>, 
+  fs: Record<string, HookFunction>
+} {
   const result: {vs: Record<string, any>, fs: Record<string, any>} = {
     vs: {},
     fs: {}
   };
 
-  hookFunctions.forEach((hook) => {
-    let opts;
-    if (typeof hook !== 'string') {
-      opts = hook;
+  hookFunctions.forEach((hookFunction: string | HookFunction) => {
+    let opts: HookFunction;
+    let hook: string;
+    if (typeof hookFunction !== 'string') {
+      opts = hookFunction;
       hook = opts.hook;
     } else {
-      opts = {};
+      opts = {} as HookFunction;
+      hook = hookFunction;
     }
     hook = hook.trim();
     const [stage, signature] = hook.split(':');
     const name = hook.replace(/\(.+/, '');
+    if (stage !== 'vs' && stage !== 'fs') {
+      throw new Error(stage);
+    }
     result[stage][name] = Object.assign(opts, {signature});
   });
 

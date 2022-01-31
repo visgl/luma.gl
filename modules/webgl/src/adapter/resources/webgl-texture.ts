@@ -357,7 +357,8 @@ export default class WEBGLTexture extends Texture {
    * If size has changed, reinitializes with current format
    * @note note clears image and mipmaps
    */
-  resize({height, width, mipmaps = false}): this {
+  resize(options: {height: number, width: number, mipmaps?: boolean}): this {
+    const {height, width, mipmaps = false} = options;
     if (width !== this.width || height !== this.height) {
       return this.initialize({
         width,

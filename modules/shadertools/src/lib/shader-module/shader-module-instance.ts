@@ -2,6 +2,11 @@ import {assert} from '../utils/assert';
 import {parsePropTypes} from '../filters/prop-types';
 import {ShaderModule, ShaderModuleDeprecation} from '../../types';
 
+export type Injection = {
+  injection: string;
+  order: number;
+}
+
 export class ShaderModuleInstance {
   name: string;
   vs: string;
@@ -9,9 +14,12 @@ export class ShaderModuleInstance {
   getModuleUniforms;
   dependencies: ShaderModule[];
   deprecations: ShaderModuleDeprecation[];
-  defines;
-  injections;
-  uniforms;
+  defines: Record<string, string | number>;
+  injections: {
+    vs: Record<string, Injection>;
+    fs: Record<string, Injection>;
+  };
+  uniforms: Record<string, any>;
 
   constructor(props: ShaderModule) {
     const {
@@ -70,7 +78,7 @@ ${moduleSource}\
 `;
   }
 
-  getUniforms(opts, uniforms) {
+  getUniforms(opts: Record<string, any>, uniforms: Record<string, any>): Record<string, any> {
     if (this.getModuleUniforms) {
       return this.getModuleUniforms(opts, uniforms);
     }
@@ -81,7 +89,7 @@ ${moduleSource}\
     return {};
   }
 
-  getDefines(): Record<string, number> {
+  getDefines(): Record<string, string | number> {
     return this.defines;
   }
 
@@ -112,7 +120,7 @@ ${moduleSource}\
     return deprecations;
   }
 
-  _defaultGetUniforms(opts = {}): Record<string, any> {
+  _defaultGetUniforms(opts: Record<string, any> = {}): Record<string, any> {
     const uniforms: Record<string, any> = {};
     const propTypes = this.uniforms;
 
@@ -133,8 +141,14 @@ ${moduleSource}\
 }
 
 
-function normalizeInjections(injections) {
-  const result = {
+function normalizeInjections(injections: Record<string, string | Injection>): {
+  vs: Record<string, Injection>, 
+  fs: Record<string, Injection>
+} {
+  const result: {
+    vs: Record<string, Injection>, 
+    fs: Record<string, Injection>
+  } = {
     vs: {},
     fs: {}
   };
@@ -142,6 +156,9 @@ function normalizeInjections(injections) {
   for (const hook in injections) {
     let injection = injections[hook];
     const stage = hook.slice(0, 2);
+    if (stage !== 'vs' && stage !== 'fs') {
+      throw new Error(stage);
+    }
 
     if (typeof injection === 'string') {
       injection = {

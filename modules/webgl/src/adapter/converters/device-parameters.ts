@@ -198,7 +198,7 @@ function convertStencilOperation(parameter: string, value: StencilOperation): GL
   });
 }
 
-function convertBlendOperationToEquation(parameter, value): number {
+function convertBlendOperationToEquation(parameter: string, value: string): number {
   return map(parameter, value, {
     'add': GL.FUNC_ADD,
     'sub': GL.FUNC_SUBTRACT,
@@ -220,6 +220,6 @@ function map(parameter: string, value: any, valueMap: Record<string, any>): any 
   return valueMap[value];
 }
 
-function mapBoolean(parameter, value) {
+function mapBoolean(parameter: string, value: boolean): boolean {
   return value;
 }

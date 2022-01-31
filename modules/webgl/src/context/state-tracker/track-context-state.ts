@@ -10,14 +10,14 @@ import {deepArrayEqual} from './deep-array-equal';
 /* eslint-disable no-shadow */
 class GLState {
   gl: WebGLRenderingContext;
-  program = null;
-  stateStack = [];
+  program: unknown = null;
+  stateStack: object[] = [];
   enable = true;
-  cache;
+  cache: Record<string, any>;
   log;
 
   constructor(
-    gl,
+    gl: WebGLRenderingContext,
     {
       copyState = false, // Copy cache from params (slow) or initialize from WebGL defaults (fast)
       log = () => {} // Logging function, called when gl parameter change calls are actually issued
@@ -50,11 +50,11 @@ class GLState {
    * @param values
    * @returns
    */
-  _updateCache(values) {
+  _updateCache(values: {[key: number | string]: any}) {
     let valueChanged = false;
     let oldValue; // = undefined
 
-    const oldValues = this.stateStack.length > 0 && this.stateStack[this.stateStack.length - 1];
+    const oldValues: {[key: number | string]: any} = this.stateStack.length > 0 && this.stateStack[this.stateStack.length - 1];
 
     for (const key in values) {
       assert(key !== undefined);
@@ -209,12 +209,13 @@ function installGetterOverride(gl: WebGLRenderingContext, functionName: string) 
  * @param setter
  * @returns
  */
-function installSetterSpy(gl: WebGLRenderingContext, functionName, setter) {
+function installSetterSpy(gl: WebGLRenderingContext, functionName: string, setter) {
   // Get the original function from the WebGLRenderingContext
   if (!gl[functionName]) {
     // This could happen if we try to intercept WebGL2 method on a WebGL1 context
     return;
   }
+
   const originalSetterFunc = gl[functionName].bind(gl);
 
   // Wrap it with a spy so that we can update our state cache when it gets called

@@ -6,7 +6,7 @@
  * @note We always run transpiler even if same version e.g. 3.00 => 3.00
  * RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/portable-glsl-300-rfc.md
  */
- export default function transpileShader(source: string, targetGLSLVersion: number, isVertex): string {
+ export default function transpileShader(source: string, targetGLSLVersion: number, isVertex: boolean): string {
   switch (targetGLSLVersion) {
     case 300:
       return isVertex
