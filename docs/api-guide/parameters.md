@@ -1,26 +1,16 @@
 # Parameters
 
-> This section describes the experimental, work-in-progress v9 luma.gl API.
-
-The luma.gl API provides a unified key/value API for GPU parameters enabling applications to control GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
-
-1. Vertex Shader
-2. Primitive assembly (`topology`)
-3. Rasterization (multisampling parameters)
-4. Fragment shader `Framebuffer`
-5. Stencil test and operation (stencil parameters)
-6. Depth test and write (depth parameters)
-7. Output merging, controlled by `Framebuffer`
+luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 
 A number of parameters are set when certain GPU objects are created, and cannot be changed without creating a new object.
 
 | Parameter "Type" | Comments                                                                                                      |
 | ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| `RenderPipeline` | `RenderPipeline` is created.                                                                                  |
-| `RenderPass`     | Render targets, clear colors etc. To vary these parameters, additional RenderPasses would need to be created. |
-| Dynamic          | (`viewport`, `scissor` and `blendConstant`) can be changed dynamically on a RenderPass between draw calls.    |
+| `RenderPipeline` constructor | `RenderPipeline` is created.                                                                                  |
+| `RenderPass` constructor    | Render targets, clear colors etc. To vary these parameters, additional RenderPasses would need to be created. |
+| `RenderPass` method          | (`viewport`, `scissor` and `blendConstant`) can be changed dynamically between draw calls in the same RenderPass.    |
 
-For completeness, there are certain types of parameters affecting GPU operation that are not
+Note that there are certain types of parameters affecting GPU operation that are not handled by
 
 | Parameters    | Comments                                                                                                                     |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -84,6 +74,16 @@ renderPass.draw();
 ## Parameters by GPU Pipeline Stages
 
 Describes luma.gl setting names and values
+
+
+1. Vertex Shader
+2. Primitive assembly (`topology`)
+3. Rasterization (multisampling parameters)
+4. Fragment shader `Framebuffer`
+5. Stencil test and operation (stencil parameters)
+6. Depth test and write (depth parameters)
+7. Output merging, controlled by `Framebuffer`
+
 
 ### Primitive Assembly Parameters (RenderPipeline)
 

@@ -1,0 +1,305 @@
+import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@luma.gl/react-website';
+
+# Texture Formats
+
+> Proposed luma.gl v9 API. Open for comments.
+
+GPUs support a wide range of texture formats. In luma.gl,
+each format is identified with a string (the `TextureFormat` type).
+
+Support for a specific format generally has three levels. luma provides `Device` functions to help
+applications determine the capabilities of a texture format.
+
+| Texture Format Capability                                                                      | Check using                                |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Can textures with the format be **created and sampled** (using `nearest` filters)?             | `Device.isTextureFormatSupported(format)`  |
+| Can textures with the format be sampled using **linear filtering**?                            | `Device.isTextureFormatFilterable(format)` |
+| Can textures with the format be rendered into? I.e used as render targets / color attachments? | `Device.isTextureFormatRenderable(format)` |
+| Can textures with the format be used for storage bindings?                                     | N/A                                        |
+| Can textures with the format be blended?                                                       | Yes if sampler type 1float` is supported   |
+| Do textures with the format support multisampling?                                             | N/A                                        |
+
+Remarks
+
+- Mipmaps can only be auto created for formats that are both filterable and renderable.
+- A renderable format is either a color renderable format, or a depth-or-stencil format
+- All depth/stencil formats are renderable.
+- Less than 4 components, sampler reads the missing red, green and blue components as 0.0, alpha is 1.0
+- The capabilities reported by luma.gl represent the minimal specification of the underlying API. Occasionally a driver may provide additional capabilities, such as a WebGL2 device running on top of an OpenGL ES 3.2 driver. Use of non-standard capabilities is enabled but not portable.
+- The WebGL 1 core does not provide sized formats. While sized formats offer more control, unsized formats do give the GPU freedom to select the most performant internal representation.
+
+## Formats
+
+| `Texture Format`                       | Available                           | Filterable                         | Renderable                         | Notes                                                                                                                   |
+| -------------------------------------- | ----------------------------------- | ---------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **8-bit formats**                      |                                     |
+| `r8unorm`                              | <Ft f="r8unorm" />                  | <L f="r8unorm" />                  | <R f="r8unorm" />                  | gl: `GL.R8`                                                                                                             |
+| `r8snorm`                              | <Ft f="r8snorm" />                  | <L f="r8snorm" />                  | <R f="r8snorm" />                  | b: 1, c: 1                                                                                                              |
+| `r8uint`                               | <Ft f="r8uint" />                   | <L f="r8uint" />                   | <R f="r8uint" />                   | gl: `GL.R8UI`                                                                                                           |
+| `r8sint`                               | <Ft f="r8sint" />                   | <L f="r8sint" />                   | <R f="r8sint" />                   | gl: `GL.R8I`                                                                                                            |
+| **16-bit formats**                     |                                     |
+| `r16uint`                              | <Ft f="r16uint" />                  | <L f="r16uint" />                  | <R f="r16uint" />                  | gl: `GL.R16UI`                                                                                                          |
+| `r16sint`                              | <Ft f="r16sint" />                  | <L f="r16sint" />                  | <R f="r16sint" />                  | gl: `GL.R16I`                                                                                                           |
+| `r16unorm-webgl`                       | <Ft f="r16unorm-webgl" />           | <L f="r16unorm-webgl" />           | <R f="r16unorm-webgl" />           |                                                                                                                         |
+| `r16snorm-webgl`                       | <Ft f="r16snorm-webgl" />           | <L f="r16snorm-webgl" />           | <R f="r16snorm-webgl" />           |                                                                                                                         |
+| `r16float`                             | <Ft f="r16float" />                 | <L f="r16float" />                 | <R f="r16float" />                 | gl: `GL.R16F`                                                                                                           |
+| `rg8unorm`                             | <Ft f="rg8unorm" />                 | <L f="rg8unorm" />                 | <R f="rg8unorm" />                 | gl: `GL.RG8`                                                                                                            |
+| `rg8snorm`                             | <Ft f="rg8snorm" />                 | <L f="rg8snorm" />                 | <R f="rg8snorm" />                 | b: 2, c: 2                                                                                                              |
+| `rg8uint`                              | <Ft f="rg8uint" />                  | <L f="rg8uint" />                  | <R f="rg8uint" />                  | gl: `GL.RG8UI`                                                                                                          |
+| `rg8sint`                              | <Ft f="rg8sint" />                  | <L f="rg8sint" />                  | <R f="rg8sint" />                  | gl: `GL.RG8I`                                                                                                           |
+| **Packed 16-bit formats**              |                                     |
+| `rgba4norm-webgl`                      | <Ft f="rgba4norm-webgl" />          | <L f="rgba4norm-webgl" />          | <R f="rgba4norm-webgl" />          | `GL.RGBA4`                                                                                                              |
+| `rgb565norm-webgl`                     | <Ft f="rgb565norm-webgl" />         | <L f="rgb565norm-webgl" />         | <R f="rgb565norm-webgl" />         | `GL.RGB565`                                                                                                             |
+| `rgb5a1norm-webgl`                     | <Ft f="rgb5a1norm-webgl" />         | <L f="rgb5a1norm-webgl" />         | <R f="rgb5a1norm-webgl" />         | `GL.RGB5_A1`                                                                                                            |
+| **24-bit formats**                     |                                     |
+| `rbg8norm-webgl`                       | <Ft f="rbg8norm-webgl" />           | <L f="rbg8norm-webgl" />           | <R f="rbg8norm-webgl" />           | `GL.RGB8`                                                                                                               |
+| **32-bit formats**                     |                                     |
+| `r32uint`                              | <Ft f="r32uint" />                  | <L f="r32uint" />                  | <R f="r32uint" />                  | `GL.R32UI`                                                                                                              |
+| `r32sint`                              | <Ft f="r32sint" />                  | <L f="r32sint" />                  | <R f="r32sint" />                  | `GL.R32I`                                                                                                               |
+| `r32float`                             | <Ft f="r32float" />                 | <L f="r32float" />                 | <R f="r32float" />                 | `GL.R32F`                                                                                                               |
+| `rg16uint`                             | <Ft f="rg16uint" />                 | <L f="rg16uint" />                 | <R f="rg16uint" />                 | `GL.RG16UI`                                                                                                             |
+| `rg16sint`                             | <Ft f="rg16sint" />                 | <L f="rg16sint" />                 | <R f="rg16sint" />                 | `GL.RG16I`                                                                                                              |
+| `rg16unorm-webgl`                      | <Ft f="rg16unorm-webgl" />          | <L f="rg16unorm-webgl" />          | <R f="rg16unorm-webgl" />          |                                                                                                                         |
+| `rg16snorm-webgl`                      | <Ft f="rg16snorm-webgl" />          | <L f="rg16snorm-webgl" />          | <R f="rg16snorm-webgl" />          |                                                                                                                         |
+| `rg16float`                            | <Ft f="rg16float" />                | <L f="rg16float" />                | <R f="rg16float" />                | `GL.RG16F`                                                                                                              |
+| `rgba8unorm`                           | <Ft f="rgba8unorm" />               | <L f="rgba8unorm" />               | <R f="rgba8unorm" />               | `GL.RGBA8`                                                                                                              |
+| `rgba8unorm-srgb`                      | <Ft f="rgba8unorm-srgb" />          | <L f="rgba8unorm-srgb" />          | <R f="rgba8unorm-srgb" />          | `GL.SRGB8_ALPHA8`                                                                                                       |
+| `rgba8snorm`                           | <Ft f="rgba8snorm" />               | <L f="rgba8snorm" />               | <R f="rgba8snorm" />               |                                                                                                                         |
+| `rgba8uint`                            | <Ft f="rgba8uint" />                | <L f="rgba8uint" />                | <R f="rgba8uint" />                | `GL.RGBA8UI`                                                                                                            |
+| `rgba8sint`                            | <Ft f="rgba8sint" />                | <L f="rgba8sint" />                | <R f="rgba8sint" />                | `GL.RGBA8I`                                                                                                             |
+| `bgra8unorm`                           | <Ft f="bgra8unorm" />               | <L f="bgra8unorm" />               | <R f="bgra8unorm" />               |                                                                                                                         |
+| `bgra8unorm-srgb`                      | <Ft f="bgra8unorm-srgb" />          | <L f="bgra8unorm-srgb" />          | <R f="bgra8unorm-srgb" />          |                                                                                                                         |
+| **Packed 32-bit formats**              |                                     |                                    |                                    |
+| `rgb9e5ufloat`                         | <Ft f="rgb9e5ufloat" />             | <L f="rgb9e5ufloat" />             | <R f="rgb9e5ufloat" />             | `GL.RGB9_E5`                                                                                                            |
+| `rg11b10ufloat`                        | <Ft f="rg11b10ufloat" />            | <L f="rg11b10ufloat" />            | <R f="rg11b10ufloat" />            | `GL.R11F_G11F_B10F`                                                                                                     |
+| `rgb10a2unorm`                         | <Ft f="rgb10a2unorm" />             | <L f="rgb10a2unorm" />             | <R f="rgb10a2unorm" />             | `GL.RGB10_A2`                                                                                                           |
+| `rgb10a2unorm-webgl`                   | <Ft f="rgb10a2unorm-webgl" />       | <L f="rgb10a2unorm-webgl" />       | <R f="rgb10a2unorm-webgl" />       | `GL.RGB10_A2UI`                                                                                                         |
+| **48-bit formats**                     |                                     |                                    |                                    |
+| `rgb16unorm-webgl`                     | <Ft f="rgb16unorm-webgl" />         | <L f="rgb16unorm-webgl" />         | <R f="rgb16unorm-webgl" />         |                                                                                                                         |
+| `rgb16snorm-webgl`                     | <Ft f="rgb16snorm-webgl" />         | <L f="rgb16snorm-webgl" />         | <R f="rgb16snorm-webgl" />         |                                                                                                                         |
+| **64-bit formats**                     |                                     | }}                                 |
+| `rg32uint`                             | <Ft f="rg32uint" />                 | <L f="rg32uint" />                 | <R f="rg32uint" />                 | `GL.RG32UI`                                                                                                             |
+| `rg32sint`                             | <Ft f="rg32sint" />                 | <L f="rg32sint" />                 | <R f="rg32sint" />                 | `GL.RG32I`                                                                                                              |
+| `rg32float`                            | <Ft f="rg32float" />                | <L f="rg32float" />                | <R f="rg32float" />                | `GL.RG32F`                                                                                                              |
+| `rgba16uint`                           | <Ft f="rgba16uint" />               | <L f="rgba16uint" />               | <R f="rgba16uint" />               | `GL.RGBA16UI`                                                                                                           |
+| `rgba16sint`                           | <Ft f="rgba16sint" />               | <L f="rgba16sint" />               | <R f="rgba16sint" />               | `GL.RGBA16I`                                                                                                            |
+| `rgba16unorm-webgl`                    | <Ft f="rgba16unorm-webgl" />        | <L f="rgba16unorm-webgl" />        | <R f="rgba16unorm-webgl" />        |                                                                                                                         |
+| `rgba16snorm-webgl`                    | <Ft f="rgba16snorm-webgl" />        | <L f="rgba16snorm-webgl" />        | <R f="rgba16snorm-webgl" />        |                                                                                                                         |
+| `rgba16float`                          | <Ft f="rgba16float" />              | <L f="rgba16float" />              | <R f="rgba16float" />              | `GL.RGBA16F`                                                                                                            |
+| **96-bit formats**                     |                                     |                                    |                                    |
+| `rgb32float-webgl`                     | <Ft f="rgb32float-webgl" />         | <L f="rgb32float-webgl" />         | <R f="rgb32float-webgl" />         | Deprecated format.                                                                                                      |
+| **128-bit formats**                    |                                     |                                    |                                    |
+| `rgba32uint`                           | <Ft f="rgba32uint" />               | <L f="rgba32uint" />               | <R f="rgba32uint" />               |                                                                                                                         |
+| `rgba32sint`                           | <Ft f="rgba32sint" />               | <L f="rgba32sint" />               | <R f="rgba32sint" />               |                                                                                                                         |
+| `rgba32float`                          | <Ft f="rgba32float" />              | <L f="rgba32float" />              | <R f="rgba32float" />              |                                                                                                                         |
+| **Depth and stencil formats**          |                                     |
+| `stencil8`                             | <Ft f="stencil8" />                 | <L f="stencil8" />                 | <R f="stencil8" />                 | Platform dependent: Might use `depth24stencil8` with hidden depth.                                                      |
+| `depth16unorm`                         | <Ft f="depth16unorm" />             | <L f="depth16unorm" />             | <R f="depth16unorm" />             |                                                                                                                         |
+| `depth24plus`                          | <Ft f="depth24plus" />              | <L f="depth24plus" />              | <R f="depth24plus" />              | Platform dependent: Maps to "`depth24unorm`" or `depth32float`.                                                         |
+| `depth24plus-stencil81`                | <Ft f="depth24plus-stencil8" />     | <L f="depth24plus-stencil8" />     | <R f="depth24plus-stencil8" />     | Platform dependent: Maps to "`depth24unorm`" or `depth32float`.                                                         |
+| `depth32float`                         | <Ft f="depth32float" />             | <L f="depth32float" />             | <R f="depth32float" />             | Higher precision than `depth24unorm` in representable range (0.0 to 1.0)                                                |
+| `depth24unorm-stencil8`                | <Ft f="depth24unorm-stencil8" />    | <L f="depth24unorm-stencil8" />    | <R f="depth24unorm-stencil8" />    | Platform dependent: Check via `depth24unorm-stencil8` feature.                                                          |
+| `depth32float-stencil8`                | <Ft f="depth32float-stencil8" />    | <L f="depth32float-stencil8" />    | <R f="depth32float-stencil8" />    | Platform dependent: Check via `depth32float-stencil8` feature.                                                          |
+| **`texture-compression-bc(5)`**        |                                     |                                    |                                    | _[S3 Texture Compression][s3tc_wiki], aka BC (Block Compression) using FourCC DXTn file identifiers. 4-6x compression._ |
+| `bc1-rgb-unorm-webgl`                  | <Ft f="bc1-rgb-unorm-webgl" />      | <L f="bc1-rgb-unorm-webgl" />      | <R f="bc1-rgb-unorm-webgl" />      | BC1 / DXT1: 16 input pixels in 64 bits.                                                                                 |
+| `bc1-rgb-unorm-srgb-webgl`             | <Ft f="bc1-rgb-unorm-srgb-webgl" /> | <L f="bc1-rgb-unorm-srgb-webgl" /> | <R f="bc1-rgb-unorm-srgb-webgl" /> |                                                                                                                         |
+| `bc1-rgba-unorm`                       | <Ft f="bc1-rgba-unorm" />           | <L f="bc1-rgba-unorm" />           | <R f="bc1-rgba-unorm" />           |                                                                                                                         |
+| `bc1-rgba-unorm-srgb`                  | <Ft f="bc1-rgba-unorm-srgb" />      | <L f="bc1-rgba-unorm-srgb" />      | <R f="bc1-rgba-unorm-srgb" />      |                                                                                                                         |
+| `bc2-rgba-unorm`                       | <Ft f="bc2-rgba-unorm" />           | <L f="bc2-rgba-unorm" />           | <R f="bc2-rgba-unorm" />           | BC2 / DXT3: 16 input pixels in 128 bits                                                                                 |
+| `bc2-rgba-unorm-srgb`                  | <Ft f="bc2-rgba-unorm-srgb" />      | <L f="bc2-rgba-unorm-srgb" />      | <R f="bc2-rgba-unorm-srgb" />      |                                                                                                                         |
+| `bc3-rgba-unorm`                       | <Ft f="bc3-rgba-unorm" />           | <L f="bc3-rgba-unorm" />           | <R f="bc3-rgba-unorm" />           | BC3 / DXT5: as BC2 with interpolated alpha.                                                                             |
+| `bc3-rgba-unorm-srgb`                  | <Ft f="bc3-rgba-unorm-srgb" />      | <L f="bc3-rgba-unorm-srgb" />      | <R f="bc3-rgba-unorm-srgb" />      |                                                                                                                         |
+| `bc4-r-unorm`                          | <Ft f="bc4-r-unorm" />              | <L f="bc4-r-unorm" />              | <R f="bc4-r-unorm" />              | BC4: 16 input single-channel (e.g. greyscale) pixels into 64 bits of output.                                            |
+| `bc4-r-snorm`                          | <Ft f="bc4-r-snorm" />              | <L f="bc4-r-snorm" />              | <R f="bc4-r-snorm" />              |                                                                                                                         |
+| `bc5-rg-unorm`                         | <Ft f="bc5-rg-unorm" />             | <L f="bc5-rg-unorm" />             | <R f="bc5-rg-unorm" />             |                                                                                                                         |
+| `bc5-rg-snorm`                         | <Ft f="bc5-rg-snorm" />             | <L f="bc5-rg-snorm" />             | <R f="bc5-rg-snorm" />             |                                                                                                                         |
+| **`texture-compression-bc`**           |                                     |                                    |                                    |
+| `bc6h-rgb-ufloat`                      | <Ft f="bc6h-rgb-ufloat" />          | <L f="bc6h-rgb-ufloat" />          | <R f="bc6h-rgb-ufloat" />          | BC6H: 6 input RGB HDR (float16) pixels into 128 bits of output                                                          |
+| `bc6h-rgb-float`                       | <Ft f="bc6h-rgb-float" />           | <L f="bc6h-rgb-float" />           | <R f="bc6h-rgb-float" />           |                                                                                                                         |
+| `bc7-rgba-unorm`                       | <Ft f="bc7-rgba-unorm" />           | <L f="bc7-rgba-unorm" />           | <R f="bc7-rgba-unorm" />           | BC7: encodes 16 input RGB8/RGBA8 pixels into 128 bits of output                                                         |
+| `bc7-rgba-unorm-srgb`                  | <Ft f="bc7-rgba-unorm-srgb" />      | <L f="bc7-rgba-unorm-srgb" />      | <R f="bc7-rgba-unorm-srgb" />      |                                                                                                                         |
+| **`texture-compression-etc2`**`        |                                     |                                    |                                    | Performance caveat: Often CPU decompressed.                                                                             |
+| `etc2-rgb8unorm`                       | <Ft f="etc2-rgb8unorm" />           | <L f="etc2-rgb8unorm" />           | <R f="etc2-rgb8unorm" />           | `GL.COMPRESSED_RGB8_ETC2`                                                                                               |
+| `etc2-rgb8unorm-srgb`                  | <Ft f="etc2-rgb8unorm-srgb" />      | <L f="etc2-rgb8unorm-srgb" />      | <R f="etc2-rgb8unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ETC2`                                                                                              |
+| `etc2-rgb8a1unorm`                     | <Ft f="etc2-rgb8a1unorm" />         | <L f="etc2-rgb8a1unorm" />         | <R f="etc2-rgb8a1unorm" />         | `GL.COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2`                                                                           |
+| `etc2-rgb8a1unorm-srgb`                | <Ft f="etc2-rgb8a1unorm-srgb" />    | <L f="etc2-rgb8a1unorm-srgb" />    | <R f="etc2-rgb8a1unorm-srgb" />    | `GL.COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2`                                                                          |
+| `etc2-rgba8unorm`                      | <Ft f="etc2-rgba8unorm" />          | <L f="etc2-rgba8unorm" />          | <R f="etc2-rgba8unorm" />          | `GL.COMPRESSED_RGBA8_ETC2_EAC`                                                                                          |
+| `etc2-rgba8unorm-srgb`                 | <Ft f="etc2-rgba8unorm-srgb" />     | <L f="etc2-rgba8unorm-srgb" />     | <R f="etc2-rgba8unorm-srgb" />     | `GL.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC`                                                                                   |
+| `eac-r11unorm`                         | <Ft f="eac-r11unorm" />             | <L f="eac-r11unorm" />             | <R f="eac-r11unorm" />             | `GL.COMPRESSED_R11_EAC`                                                                                                 |
+| `eac-r11snorm`                         | <Ft f="eac-r11snorm" />             | <L f="eac-r11snorm" />             | <R f="eac-r11snorm" />             | `GL.COMPRESSED_SIGNED_R11_EAC`                                                                                          |
+| `eac-rg11unorm`                        | <Ft f="eac-rg11unorm" />            | <L f="eac-rg11unorm" />            | <R f="eac-rg11unorm" />            | `GL.COMPRESSED_RG11_EAC`                                                                                                |
+| `eac-rg11snorm`                        | <Ft f="eac-rg11snorm" />            | <L f="eac-rg11snorm" />            | <R f="eac-rg11snorm" />            | `GL.COMPRESSED_SIGNED_RG11_EAC`                                                                                         |
+| **`texture-compression-astc`**`        |                                     |                                    |                                    | X_ASTC compressed formats device.features.has                                                                           |
+| `astc-4x4-unorm`                       | <Ft f="astc-4x4-unorm" />           | <L f="astc-4x4-unorm" />           | <R f="astc-4x4-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_4x4_KHR`                                                                                       |
+| `astc-4x4-unorm-srgb`                  | <Ft f="astc-4x4-unorm-srgb" />      | <L f="astc-4x4-unorm-srgb" />      | <R f="astc-4x4-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR`                                                                               |
+| `astc-5x4-unorm`                       | <Ft f="astc-5x4-unorm" />           | <L f="astc-5x4-unorm" />           | <R f="astc-5x4-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_5x4_KHR`                                                                                       |
+| `astc-5x4-unorm-srgb`                  | <Ft f="astc-5x4-unorm-srgb" />      | <L f="astc-5x4-unorm-srgb" />      | <R f="astc-5x4-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR`                                                                               |
+| `astc-5x5-unorm`                       | <Ft f="astc-5x5-unorm" />           | <L f="astc-5x5-unorm" />           | <R f="astc-5x5-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_5x5_KHR`                                                                                       |
+| `astc-5x5-unorm-srgb`                  | <Ft f="astc-5x5-unorm-srgb" />      | <L f="astc-5x5-unorm-srgb" />      | <R f="astc-5x5-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR`                                                                               |
+| `astc-6x5-unorm`                       | <Ft f="astc-6x5-unorm" />           | <L f="astc-6x5-unorm" />           | <R f="astc-6x5-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_6x5_KHR`                                                                                       |
+| `astc-6x5-unorm-srgb`                  | <Ft f="astc-6x5-unorm-srgb" />      | <L f="astc-6x5-unorm-srgb" />      | <R f="astc-6x5-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR`                                                                               |
+| `astc-6x6-unorm`                       | <Ft f="astc-6x6-unorm" />           | <L f="astc-6x6-unorm" />           | <R f="astc-6x6-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_6x6_KHR`                                                                                       |
+| `astc-6x6-unorm-srgb`                  | <Ft f="astc-6x6-unorm-srgb" />      | <L f="astc-6x6-unorm-srgb" />      | <R f="astc-6x6-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR`                                                                               |
+| `astc-8x5-unorm`                       | <Ft f="astc-8x5-unorm" />           | <L f="astc-8x5-unorm" />           | <R f="astc-8x5-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_8x5_KHR`                                                                                       |
+| `astc-8x5-unorm-srgb`                  | <Ft f="astc-8x5-unorm-srgb" />      | <L f="astc-8x5-unorm-srgb" />      | <R f="astc-8x5-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR`                                                                               |
+| `astc-8x6-unorm`                       | <Ft f="astc-8x6-unorm" />           | <L f="astc-8x6-unorm" />           | <R f="astc-8x6-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_8x6_KHR`                                                                                       |
+| `astc-8x6-unorm-srgb`                  | <Ft f="astc-8x6-unorm-srgb" />      | <L f="astc-8x6-unorm-srgb" />      | <R f="astc-8x6-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR`                                                                               |
+| `astc-8x8-unorm`                       | <Ft f="astc-8x8-unorm" />           | <L f="astc-8x8-unorm" />           | <R f="astc-8x8-unorm" />           | `GL.COMPRESSED_RGBA_ASTC_8x8_KHR`                                                                                       |
+| `astc-8x8-unorm-srgb`                  | <Ft f="astc-8x8-unorm-srgb" />      | <L f="astc-8x8-unorm-srgb" />      | <R f="astc-8x8-unorm-srgb" />      | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR`                                                                               |
+| `astc-10x5-unorm`                      | <Ft f="astc-10x5-unorm" />          | <L f="astc-10x5-unorm" />          | <R f="astc-10x5-unorm" />          | `GL.COMPRESSED_RGBA_ASTC_10x10_KHR`                                                                                     |
+| `astc-10x5-unorm-srgb`                 | <Ft f="astc-10x5-unorm-srgb" />     | <L f="astc-10x5-unorm-srgb" />     | <R f="astc-10x5-unorm-srgb" />     | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR`                                                                             |
+| `astc-10x6-unorm`                      | <Ft f="astc-10x6-unorm" />          | <L f="astc-10x6-unorm" />          | <R f="astc-10x6-unorm" />          | `GL.COMPRESSED_RGBA_ASTC_10x6_KHR`                                                                                      |
+| `astc-10x6-unorm-srgb`                 | <Ft f="astc-10x6-unorm-srgb" />     | <L f="astc-10x6-unorm-srgb" />     | <R f="astc-10x6-unorm-srgb" />     | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR`                                                                              |
+| `astc-10x8-unorm`                      | <Ft f="astc-10x8-unorm" />          | <L f="astc-10x8-unorm" />          | <R f="astc-10x8-unorm" />          | `GL.COMPRESSED_RGBA_ASTC_10x8_KHR`                                                                                      |
+| `astc-10x8-unorm-srgb`                 | <Ft f="astc-10x8-unorm-srgb" />     | <L f="astc-10x8-unorm-srgb" />     | <R f="astc-10x8-unorm-srgb" />     | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR`                                                                              |
+| `astc-10x10-unorm`                     | <Ft f="astc-10x10-unorm" />         | <L f="astc-10x10-unorm" />         | <R f="astc-10x10-unorm" />         | `GL.COMPRESSED_RGBA_ASTC_10x10_KHR`                                                                                     |
+| `astc-10x10-unorm-srgb`                | <Ft f="astc-10x10-unorm-srgb" />    | <L f="astc-10x10-unorm-srgb" />    | <R f="astc-10x10-unorm-srgb" />    | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR`                                                                             |
+| `astc-12x10-unorm`                     | <Ft f="astc-12x10-unorm" />         | <L f="astc-12x10-unorm" />         | <R f="astc-12x10-unorm" />         | `GL.COMPRESSED_RGBA_ASTC_12x10_KHR`                                                                                     |
+| `astc-12x10-unorm-srgb`                | <Ft f="astc-12x10-unorm-srgb" />    | <L f="astc-12x10-unorm-srgb" />    | <R f="astc-12x10-unorm-srgb" />    | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR`                                                                             |
+| `astc-12x12-unorm`                     | <Ft f="astc-12x12-unorm" />         | <L f="astc-12x12-unorm" />         | <R f="astc-12x12-unorm" />         | `GL.COMPRESSED_RGBA_ASTC_12x12_KHR`                                                                                     |
+| `astc-12x12-unorm-srgb`                | <Ft f="astc-12x12-unorm-srgb" />    | <L f="astc-12x12-unorm-srgb" />    | <R f="astc-12x12-unorm-srgb" />    | `GL.COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR`                                                                             |
+| **`texture-compression-pvrtc-webgl`**` |                                     |                                    |                                    | WEBGL_compressed_texture_pvrtc                                                                                          |
+| `pvrtc-rgb4unorm-webgl`                | <Ft f="pvrtc-rgb4unorm-webgl" />    | <L f="pvrtc-rgb4unorm-webgl" />    | <R f="pvrtc-rgb4unorm-webgl" />    | `GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG`                                                                                    |
+| `pvrtc-rgba4unorm-webgl`               | <Ft f="pvrtc-rgba4unorm-webgl" />   | <L f="pvrtc-rgba4unorm-webgl" />   | <R f="pvrtc-rgba4unorm-webgl" />   | `GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG`                                                                                   |
+| `pvrtc-rbg2unorm-webgl`                | <Ft f="pvrtc-rbg2unorm-webgl" />    | <L f="pvrtc-rbg2unorm-webgl" />    | <R f="pvrtc-rbg2unorm-webgl" />    | `GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG`                                                                                    |
+| `pvrtc-rgba2unorm-webgl`               | <Ft f="pvrtc-rgba2unorm-webgl" />   | <L f="pvrtc-rgba2unorm-webgl" />   | <R f="pvrtc-rgba2unorm-webgl" />   | `GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG`                                                                                   |
+| **`texture-compression-etc1-webgl`**   |
+| `etc1-rbg-unorm-webgl`                 | <Ft f="etc1-rbg-unorm-webgl" />     | <L f="etc1-rbg-unorm-webgl" />     | <R f="etc1-rbg-unorm-webgl" />     | `GL.COMPRESSED_RGB_ETC1_WEBGL`                                                                                          |
+| **`texture-compression-pvrtc-webgl`**  |
+| `atc-rgb-unorm-webgl`                  | <Ft f="atc-rgb-unorm-webgl" />      | <L f="atc-rgb-unorm-webgl" />      | <R f="atc-rgb-unorm-webgl" />      | `GL.COMPRESSED_RGB_ATC_WEBGL`                                                                                           |
+| `atc-rgba-unorm-webgl`                 | <Ft f="atc-rgba-unorm-webgl" />     | <L f="atc-rgba-unorm-webgl" />     | <R f="atc-rgba-unorm-webgl" />     | `GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL`                                                                           |
+| `atc-rgbai-unorm-webgl`                | <Ft f="atc-rgbai-unorm-webgl" />    | <L f="atc-rgbai-unorm-webgl" />    | <R f="atc-rgbai-unorm-webgl" />    | `GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL`                                                                       |
+
+[s3tc_wiki]: https://en.wikipedia.org/wiki/S3_Texture_Compression
+
+## Features
+
+While a big subset of texture formats are supported on all devices,
+some formats are only supported if the underlying hardware supports them.
+[`Device.features`](./features) will be populated with constant that
+can be queried to determine if specific formats are supported.
+
+| Feature                               | Optional capabilities                                     |
+| ------------------------------------- | --------------------------------------------------------- |
+| `texture-srgb-webgl`                  | sRGB format support                                       |
+| `texture-depth-webgl`                 | depth texture support                                     |
+| `texture-float32-webgl`               | Create floating point textures (`nearest` sampling only)  |
+| `texture-float16-webgl`               | Create half-floating point textures (`nearest` sampling)  |
+| `texture-renderable-float32-webgl`    | Floating point textures are color-renderable and readable |
+| `texture-renderable-float15-webgl`    | Half float textures are color-renderable and readable     |
+| `texture-filter-anisotropic-webgl`    | anisotropic filtering                                     |
+| `texture-filter-linear-float32-webgl` | `linear` sampling of floating point textures              |
+| `texture-filter-linear-float16-webgl` | `linear` sampling of half-floating point textures         |
+
+## Compressed Textures
+
+See [Compressed Textures in 2020](https://aras-p.info/blog/2020/12/08/Texture-Compression-in-2020/).
+
+| `Feature`                         | Type                                      | Description                                                    |
+| --------------------------------- | ----------------------------------------- | -------------------------------------------------------------- |
+| `texture-compression-bc5-webgl`   | DXT compressed textures (BC1-BC5)         | Mainly desktops.                                               |
+| `texture-compression-bc`          | DXT compressed textures (BC1-BC7)         | Mainly desktops.                                               |
+| `texture-compression-etc`         | Ericsson compression.                     | Generally available (CPU decode).                              |
+| `texture-compression-astc`        | Intel GPUs, Nividia Tegra, Mali ARM GPUs. |                                                                |
+| `texture-compression-pvrtc-webgl` | PowerVR chipsets.                         | All generations of iPhone and iPad and certain Android devices |
+| `texture-compression-atc-webgl`   | Adreno GPUs                               | Qualcomm Snapdragon devices.                                   |
+| `texture-compression-etc1-webgl`  | Ericsson Compression                      | Older ETC compression.                                         |
+
+## WebGL notes
+
+On WebGL devices, luma.gl maps WebGPU style format strings to WebGL constants under the hood.
+It is however possible to provide overrides for the WebGL constants. The following tables provide some information about WebGL texture constants
+
+If an application wants to store the texture at a certain resolution or in a certain format,
+it can request the resolution and format with `internalFormat`.
+WebGL will choose an internal representation with least the internal component sizes,
+and exactly the component types shown for that format, although it may not match exactly.
+
+### Internal Formats
+
+| Sized Internal Format                | Comp. | Size     | Description                                                                                   |
+| ------------------------------------ | ----- | -------- | --------------------------------------------------------------------------------------------- |
+| `GL.R8` (WebGL 2)                    | 1     | 8 bits   | red component                                                                                 |
+| `GL.R16F` (WebGL 2)                  | 1     | 16 bits  | half float red component                                                                      |
+| `GL.R32F` (WebGL 2)                  | 1     | 32 bits  | float red component                                                                           |
+| `GL.R8UI` (WebGL 2)                  | 1     | 8 bits   | unsigned int red component, `usampler`, no filtering                                          |
+| `GL.RG8` (WebGL 2)                   | 1     | 16 bits  | red and green components                                                                      |
+| `GL.RG16F` (WebGL 2)                 | 2     | 32 bits  | red and green components, half float                                                          |
+| `GL.RG32F` (WebGL 2)                 | 2     | 64 bits  | red and green components, float                                                               |
+| `GL.RGUI` (WebGL 2)                  | 2     | 16 bits  | red and green components, `usampler`, no filtering                                            |
+| `GL.RGB8` (WebGL 2)                  | 3     | 24 bits  | red, green and blue components                                                                |
+| `GL.SRGB8` (WebGL 2, EXT_sRGB)       | 3     | 24 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
+| `GL.RGB565` (WebGL 2)                | 3     | 16 bits  | 5 bit red, 6 bit green, 5 bit blue                                                            |
+| `GL.R11F_G11F_B10F` (WebGL 2)        | 3     | 32 bits  | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats)        |
+| `GL.RGB9_E5` (WebGL 2)               | 3     | 32 bits  | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB16F` (WebGL 2)                | 3     | 48 bits  | half float RGB                                                                                |
+| `GL.RGB32F` (WebGL 2)                | 3     | 96 bits  | float RBG                                                                                     |
+| `GL.RGB8UI` (WebGL 2)                | 3     | 24 bits  | unsigned integer 8 bit RGB: use `usampler`, no filtering                                      |
+| `GL.RGBA8` (WebGL 2)                 | 4     | 32 bits  | 8 bit RGBA, typically what `GL.RGBA` "resolves" to                                            |
+| `GL.SRGB_APLHA8` (WebGL 2, EXT_sRGB) | 4     | 32 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
+| `GL.RGB5_A1` (WebGL 2)               | 4     | 16 bits  | 5 bit RGB, 1 bit alpha                                                                        |
+| `GL.RGBA4444` (WebGL 2)              | 4     | 16 bits  | 4 bit RGBA                                                                                    |
+| `GL.RGBA16F` (WebGL 2)               | 4     | 64 bits  | half float RGBA                                                                               |
+| `GL.RGBA32F` (WebGL 2)               | 4     | 128 bits | float RGA                                                                                     |
+| `GL.RGBA8UI` (WebGL 2)               | 4     | 32 bits  | unsigned integer 8 bit RGBA, `usampler`, no filtering                                         |
+
+### Texture Component Type
+
+Describes the layout of each color component in memory.
+
+| Value                               | WebGL 2 | WebGL 1                  | Description                                         |
+| ----------------------------------- | ------- | ------------------------ | --------------------------------------------------- |
+| `GL.UNSIGNED_BYTE`                  | Yes     | Yes                      | GLbyte 8 bits per channel for `GL.RGBA`             |
+| `GL.UNSIGNED_SHORT_5_6_5`           | Yes     | Yes                      | 5 red bits, 6 green bits, 5 blue bits               |
+| `GL.UNSIGNED_SHORT_4_4_4_4`         | Yes     | Yes                      | 4 red bits, 4 green bits, 4 blue bits, 4 alpha bits |
+| `GL.UNSIGNED_SHORT_5_5_5_1`         | Yes     | Yes                      | 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit  |
+| `GL.BYTE`                           | Yes     | No                       |                                                     |
+| `GL.UNSIGNED_SHORT`                 | Yes     | `WEBGL_depth_texture`    |                                                     |
+| `GL.SHORT`                          | Yes     | No                       |                                                     |
+| `GL.UNSIGNED_INT`                   | Yes     | `WEBGL_depth_texture`    |                                                     |
+| `GL.INT`                            | Yes     | No                       |                                                     |
+| `GL.HALF_FLOAT`                     | Yes     | `OES_texture_half_float` |                                                     |
+| `GL.FLOAT`                          | Yes     | `OES_texture_float`      |
+| `GL.UNSIGNED_INT_2_10_10_10_REV`    | Yes     | No                       |                                                     |
+| `GL.UNSIGNED_INT_10F_11F_11F_REV`   | Yes     | No                       |                                                     |
+| `GL.UNSIGNED_INT_5_9_9_9_REV`       | Yes     | No                       |                                                     |
+| `GL.UNSIGNED_INT_24_8`              | Yes     | `WEBGL_depth_texture`    |                                                     |
+| `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` | Yes     | No                       | (pixels must be null)                               |
+
+### Texture Format Combinations
+
+This a simplified table illustrating what combinations of internal formats
+work with what data formats and types. Note that luma.gl deduces `dataFormat` and `type` from `format` by taking the first value from the data format and data type entries in this table.
+
+For more details, see tables in:
+
+- [WebGL 2 spec](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
+- [OpenGL ES spec](https://www.khronos.org/opengles/sdk/docs/man3/html/glTexImage2D.xhtml)
+
+| Internal Format      | Data Format          | Data Type                                                                  |
+| -------------------- | -------------------- | -------------------------------------------------------------------------- |
+| `GL.RGB`             | `GL.RGB`             | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_5_6_5`                               |
+| `GL.RGBA`            | `GL.RGBA`            | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_4_4_4_4` `GL.UNSIGNED_SHORT_5_5_5_1` |
+| `GL.R8`              | `GL.RED`             | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.R16F`            | `GL.RED`             | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
+| `GL.R32F`            | `GL.RED`             | `GL.FLOAT`                                                                 |
+| `GL.R8UI`            | `GL.RED_INTEGER`     | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RG8`             | `GL.RG`              | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RG16F`           | `GL.RG`              | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
+| `GL.RG32F`           | `GL.RG`              | `GL.FLOAT`                                                                 |
+| `GL.RG8UI`           | `GL.RG_INTEGER`      | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RGB8`            | `GL.RGB`             | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.SRGB8`           | `GL.RGB`             | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RGB565`          | `GL.RGB`             | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_5_6_5`                               |
+| `GL.R11F_G11F_B10F`  | `GL.RGB`             | `GL.UNSIGNED_INT_10F_11F_11F_REV` `GL.HALF_FLOAT` `GL.FLOAT`               |
+| `GL.RGB9_E5`         | `GL.RGB`             | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
+| `GL.RGB16FG`         | `GL.RGB`             | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
+| `GL.RGB32F`          | `GL.RGB`             | `GL.FLOAT`                                                                 |
+| `GL.RGB8UI`          | `GL.RGB_INTEGER`     | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RGBA8`           | `GL.RGBA`            | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.SRGB8_ALPHA8`    | `GL.RGBA`            | `GL.UNSIGNED_BYTE`                                                         |
+| `GL.RGB5_A1`         | `GL.RGBA`            | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_5_5_5_1`                             |
+| `GL.RGBA4`           | `GL.RGBA`            | `GL.UNSIGNED_BYTE` `GL.UNSIGNED_SHORT_4_4_4_4`                             |
+| `GL.RGBA16F`         | `GL.RGBA`            | `GL.HALF_FLOAT` `GL.FLOAT`                                                 |
+| `GL.RGBA32F`         | `GL.RGBA`            | `GL.FLOAT`                                                                 |
+| `GL.RGBA8UI`         | `GL.RGBA_INTEGER`    | `GL.UNSIGNED_BYTE`                                                         |

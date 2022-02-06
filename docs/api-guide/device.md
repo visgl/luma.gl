@@ -1,4 +1,4 @@
-# Device
+# Device and CanvasContext
 
 The `Device` class initializes, instruments a WebGL contexts.
 
@@ -7,6 +7,29 @@ The `Device` API is similar to the WebGPU `GPUDevice` class.
 - Instrument an externally-created context with the same options as `createGLContext`. This performs WebGL 2 polyfilling (which is required for higher-level luma.gl classes) as well as optional state tracking and debug context creation.
 - Polyfill a WebGL context integrating available extensions.
 
+
+## Installing adapters
+
+The `@luma.gl/api` module is not usable on its own. A device adapter module must
+be imported (it self registers on import).
+
+```typescript
+import {luma} from '@luma.gl/api';
+import '@luma.gl/webgpu';
+
+const device = await luma.createDevice({type: 'webgpu', canvas: ...});
+```
+
+It is possible to register more than one device adapter to create an application
+that can work in both WebGL and WebGPU environments.
+
+```typescript
+import {luma} from '@luma.gl/api';
+import '@luma.gl/webgpu';
+import '@luma.gl/webgl';
+
+const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
+```
 
 ## Usage
 
@@ -50,82 +73,33 @@ const device = Device.attach(gl);
 const vao = device.gl.createVertexArray();
 ```
 
-## Fields
 
-### isWebGL
+# CanvasContext
 
-Test if an object is a WebGL 1 or 2 context, including correctly identifying a luma.gl debug context (which is not a subclass of a `WebGLRendringContext`).
+> This class is still experimental
 
-`isWebGL(gl)`
+A `CanvasContext` holds a connection between the GPU `Device` and an HTML `canvas` into which it can render.
 
-- `gl` (Object) - Object to test.
-  Returns true if the context is a WebGL 1 or 2 Context.
+A `CanvasContext` handles the following responsibilities:
+- manages the "swap chain" (provides fresh texture view every frame on WebGPU)
+- manages canvas resizing
+- manages device pixel ratio
+- can look up canvas elements in DOM, or create a new canvas elements if needed
 
-### isWebGL2
+Note that:
+- A `WebGPUDevice` can have multiple associated `CanvasContext` instances, or none, if only used for compute.
+- A `WebGLDevice` always has exactly one `CanvasContext` (and can thus only render into a single canvas). This is due to fundamental limitations of the WebGL API.
 
-Test if an object is a WebGL 1 or 2 context, including correctly identifying a luma.gl debug context (which is not a subclass of a `WebGL2RendringContext`).
+## CanvasContextProps
 
-`isWebGL2(gl)`
+| Property | Type |
+| --- | --- |
+| `canvas?` | HTMLCanvasElement \| OffscreenCanvas \| string |
+| `width?` | number |
+| `height?` | number |
+| `useDevicePixels?` | boolean \| number |
+| `autoResize?` | boolean |
 
-- `gl` (Object) - Object to test.
-  Returns true if the context is a WebGL 2 Context.
+Remarks:
+- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).
 
-### info
-
-Get debug information about a WebGL context. Depends on `WEBGL_debug_renderer_info` extension.
-
-Returns (Object):
-
-- **vendor**: GPU vendor (unmasked if possible)
-- **renderer**: Renderer (unmasked if possible)
-- **vendorMasked**: Masked GPU vendor
-- **rendererMasked**: Masked renderer
-- **version**: WebGL version
-- **shadingLanguageVersion**: shading language version
-
-
-
-## Functions
-
-### constructor(props?: WebGLDeviceProps)
-
-Creates and returns a WebGL context, both in browsers and in Node.js.
-
-```typescript
-const device = new Device(props);
-```
-
-- `props` (_Object_) - key/value pairs containing context creation options
-
-| Parameter                      | Default     | Description                                                                                                                                                                   |
-| ------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `canvas`                       | `null`      | A _string_ containing the `id` of an existing HTML element or a _DOMElement_ instance. If `null` or not provided, a new canvas will be created.                               |
-| `webgl2?: boolean`                       | `true`      | If `true`, will attempt to create a WebGL 2 context. Will silently fall back to WebGL 1 contexts unless `webgl1` is set to `false`.                                           |
-| `webgl1?: boolean`                       | `true`      | If `true`, will attempt to create a WebGL 1 context. The `webgl2` flag has higher priority.                                                                                   |
-| `debug?: boolean`                        | `false`     | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
-| `break?: string[]`                        | `[]`        | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                                                                |
-| `manageState?: boolean`                  | `true`      | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to.                                                    |
-| `onContextLost?: Function`                | `undefined` | A handler for webglcontextlost event that is fired if the user agent detects that the drawing buffer associated with a WebGLRenderingContext object has been lost.            |
-| `onContextRestored?: Function`            | `undefined` | A handler for webglcontextrestored event that is fired if the user agent restores the drawing buffer for a WebGLRenderingContext object.                                      |
-| `alpha?: boolean`                        | `true`      | Default render target has an alpha buffer.                                                                                                                                    |
-| `depth?: boolean`                        | `true`      | Default render target has a depth buffer of at least 16 bits.                                                                                                                 |
-| `stencil?`                      | `false`     | Default render target has a stencil buffer of at least 8 bits.                                                                                                                |
-| `antialias?`                    | `true`      | Boolean that indicates whether or not to perform anti-aliasing.                                                                                                               |
-| `premultipliedAlpha?`           | `true`      | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.                                                     |
-| `preserveDrawingBuffer?`        | `false`     | Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten                                                   |
-| `failIfMajorPerformanceCaveat?` | `false`     | Do not create if the system performance is low.                                                                                                                               |
-
-
-### resize
-
-Resize the drawing surface.
-
-```
-resizeGLContext(gl, options);
-```
-
-- `gl` (_Object_) - A WebGL context.
-- `options` (_Object_) - key/value pairs containing resize options.
-  - **width**: New drawing surface width.
-  - **height**: New drawing surface height.
-  - **useDevicePixels**: Whether to scale the drawing surface using the device pixel ratio.

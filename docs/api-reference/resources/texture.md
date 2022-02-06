@@ -1,16 +1,10 @@
 # Texture
 
+> Proposed luma.gl v9 API. Open for comments.
+
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
-
-
-- [`1d`] - Contains a "normal" image texture
-- [`2d`] - Contains a "normal" image texture
-- [`2d-array`](WebGL 2) - Holds a "stack" of textures which enables 3D interpolation.
-- [`3d`](WebGL 2) - Holds a "stack" of textures which enables 3D interpolation.
-- [`cube`] - Holds 6 textures representing sides of a cube.
-- [`cube-array`] - Holds 6 textures representing sides of a cube.
 
 For more details see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Texture).
 
@@ -18,15 +12,10 @@ Note that textures have a lot of optional capabilities made available by extensi
 
 ## Usage
 
-- For additional usage examples, `Texture` inherits from [`Resource`](/docs/api-reference/webgl/resource).
-
-Configuring a Texture
+Creating a texture
 
 ```js
-const texture = device.createTexture);
-texture.setParameters({
-  [GL.TEXTURE_WRAP_S]: GL.CLAMP
-});
+const texture = device.createTexture({sampler: {addressModeU: 'clamp-to-edge'});
 ```
 
 Using Textures
@@ -46,6 +35,59 @@ model.draw({
   uniforms({uMVMatrix: matrix})
 });
 ```
+
+- For additional usage examples, `Texture` inherits from [`Resource`](/docs/api-reference/webgl/resource).
+
+## Types
+
+### `BufferProps`
+
+| Property      | Type                             | Description                                                                  |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| `usage?`      | `number`                         | Bit mask of Usage flags                                                      |
+| `byteLength?` | `number`                         | Length of buffer (cannot be changed after creation).                         |
+| `data?`       | `ArrayBuffer \| ArrayBufferView` | Data to be copied into buffer. `byteLength` will be deduced if not supplied. |
+| `byteOffset?` | `number`                         | Offset for `data`                                                            |
+| `indexType?`  | `'uint16' \| 'uint32'`           | If props.usage & Buffer.INDEX                                                |
+
+### Usage
+
+Usage expresses two things: The type of texture and what operations can be performed on it.
+
+Note that the allowed combinations are very limited, especially in WebGPU.
+
+| Usage Flag             | Value  | Description                                              |
+| ---------------------- | ------ | -------------------------------------------------------- |
+|  `Texture.COPY_SRC` | 0x01 | |
+|  `Texture.COPY_DST` | 0x02 | |
+|  `Texture.TEXTURE_BINDING` | 0x04 | |
+|  `Texture.STORAGE_BINDING` | 0x08 | |
+|  `Texture.RENDER_ATTACHMENT` | 0x10 | |
+
+## TextureDimension
+
+| Dimension    | WebGPU | WebGL2 | WebGL1 | Description                                                          |
+| ------------ | ------ | ------ | ------ | -------------------------------------------------------------------- |
+| `1d`         | ✅     | ❌     | ❌     | Contains a one dimensional texture (typically used for compute )     |
+| `2d`         | ✅     | ✅     | ✅     | Contains a "normal" image texture                                    |
+| `2d-array`   | ✅     | ✅     | ❌     | Holds an "array" of 2D textures.                                     |
+| `3d`         | ✅     | ✅     | ❌     | Holds a "stack" of textures which enables 3D interpolation.          |
+| `cube`       | ✅     | ✅     | ✅     | Holds 6 textures representing sides of a cube.                       |
+| `cube-array` | ✅     | ❌     | ❌     | Holds an array where every 6 textures represent the sides of a cube. |
+
+## TextureData
+
+WebGL allows textures to be created from a number of different data sources.
+
+| Type                                  | Description                                                                                           |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `null`                                | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
+| `typed array`                         | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
+| `Buffer` or `WebGLBuffer` (`WebGL 2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
+| `Image` (`HTMLImageElement`)          | image will be used to fill the texture. width and height will be deduced.                             |
+| `Video` (`HTMLVideoElement`)          | video will be used to continously update the texture. width and height will be deduced.               |
+| `Canvas` (`HTMLCanvasElement`)        | canvas will be used to fill the texture. width and height will be deduced.                            |
+| `ImageData`                           | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
 
 ## Members
 
@@ -67,18 +109,21 @@ Sampler parameters can be accessed using `Texture.getParameter`, e.g:
 
 `texture.getParameter(GL.TEXTURE_MAG_FILTER);`
 
+## Members
+
+- `device`: `Device` - holds a reference to the `Device` that created this `Texture`.
+- `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
+- `props`: `TextureProps` - holds a copy of the `TextureProps` used to create this `Texture`.
+
 ## Methods
 
-### constructor(gl : WebGLRenderingContext, props : Object)
+### `constructor(props: TextureProps)`
 
+`Texture` is an abstract class and cannot be instantiated directly. Create with `device.createTexture(...)`.
 
-- [`Texture2D`](/docs/api-reference/webgl/texture-2d),
-- [`TextureCube`](/docs/api-reference/webgl/texture-cube) and
-- [`Texture3D`](/docs/api-reference/webgl/texture-3d).
+### `destroy(): void`
 
-The constructors for these classes should be used to create textures. They constructors all take common parameters, many of which are specified in this document.
-
-- Pixel store parameters are described in [`State Management`](/docs/api-reference/gltools/parameter-setting).
+Free up any GPU resources associated with this texture immediately (instead of waiting for garbage collection).
 
 ### resize(options : Object) : Texture2D
 
@@ -200,21 +245,7 @@ The following WebGL APIs are called in the function
 The following WebGL APIs are called in the function
 [gl.activeTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/activeTexture), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture)
 
-## Texture Image Data
-
-WebGL allows textures to be created from a number of different data sources.
-
-| Type                                  | Description                                                                                           |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `null`                                | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
-| `typed array`                         | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
-| `Buffer` or `WebGLBuffer` (`WebGL 2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
-| `Image` (`HTMLImageElement`)          | image will be used to fill the texture. width and height will be deduced.                             |
-| `Video` (`HTMLVideoElement`)          | video will be used to continously update the texture. width and height will be deduced.               |
-| `Canvas` (`HTMLCanvasElement`)        | canvas will be used to fill the texture. width and height will be deduced.                            |
-| `ImageData`                           | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
-
-## NPOT Textures (WebGL 1)
+## NOT (Non-Power-of-Two) Textures (WebGL 1)
 
 - Any texture with a `non power of two` dimension (width or height) is referred as `NPOT` texture, under WebGL 1 NPOT textures have following limitations.
 
@@ -234,3 +265,4 @@ WebGL allows textures to be created from a number of different data sources.
 - Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL 2).
 - The WebGL Context has global "pixel store" parameters that control how pixel data is laid out, including Y direction, color space etc.
 - Textures are read from supplied data and written to the specified format/type parameters and pixel store parameters.
+- WebGL: Pixel store parameters are described in [`State Management`](/docs/api-reference/gltools/parameter-setting).

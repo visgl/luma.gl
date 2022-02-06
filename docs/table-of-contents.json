@@ -34,40 +34,81 @@
         { "entry": "docs/developer-guide/debugging" },
         { "entry": "docs/developer-guide/profiling" },
         { "entry": "docs/developer-guide/testing" },
-        { "entry": "docs/developer-guide/contributing" },
-        { "entry": "docs/design-notes/v9-api" },
-        { "entry": "docs/design-notes/webgpu-vs-webgl" }
+        { "entry": "docs/developer-guide/contributing" }
       ]
     },
     {
       "title": "API Guide",
       "entries": [
-        { "entry": "docs/api-guide/device-properties" },
-        { "entry": "docs/api-guide/canvas-context" },
+        { "entry": "docs/api-guide/device" },
         { "entry": "docs/api-guide/parameters" },
         { "entry": "docs/api-guide/texture-formats" },
         { "entry": "docs/api-guide/bindings" },
         { "entry": "docs/api-guide/transform" },
-        { "entry": "docs/api-guide/shader-modules" }
+        { "entry": "docs/api-guide/shader-modules" },
+        { "entry": "docs/api-guide/v9-api" },
+        { "entry": "docs/api-guide/webgpu-vs-webgl" }
       ]
     },
     {
       "title": "API Reference",
       "chapters": [
         {
-          "title": "API",
+          "title": "Main",
           "entries": [
-            { "entry": "docs/api-reference/types/shader-layout" },
+            { "entry": "docs/api-reference/device" },
+            { "entry": "docs/api-reference/canvas-context" },
+            { "entry": "docs/api-reference/device-features" },
+            { "entry": "docs/api-reference/device-limits" },
+            { "entry": "docs/api-reference/texture-formats" },
+            { "entry": "docs/api-reference/types/shader-layout" }
+          ]
+        },
+        {
+          "title": "Resources",
+          "entries": [
             { "entry": "docs/api-reference/resources/buffer" },
+            { "entry": "docs/api-reference/resources/command-encoder" },
+            { "entry": "docs/api-reference/resources/compute-pass" },
             { "entry": "docs/api-reference/resources/compute-pipeline" },
             { "entry": "docs/api-reference/resources/framebuffer" },
-            { "entry": "docs/api-reference/resources/pipeline" },
+            { "entry": "docs/api-reference/resources/render-pass" },
             { "entry": "docs/api-reference/resources/render-pipeline" },
             { "entry": "docs/api-reference/resources/sampler" },
             { "entry": "docs/api-reference/resources/shader" },
-            { "entry": "docs/api-reference/resources/texture" },
-            { "entry": "docs/api-reference/canvas-context" },
-            { "entry": "docs/api-reference/device" }
+            { "entry": "docs/api-reference/resources/texture" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "API Reference (v8)",
+      "chapters": [
+        {
+          "title": "API",
+          "entries": [
+            { "entry": "docs/api-reference-legacy/accessor" },
+            { "entry": "docs/api-reference-legacy/buffer" },
+            { "entry": "docs/api-reference-legacy/framebuffer" },
+            { "entry": "docs/api-reference-legacy/program" },
+            { "entry": "docs/api-reference-legacy/query" },
+            { "entry": "docs/api-reference-legacy/renderbuffer" },
+            { "entry": "docs/api-reference-legacy/shader" },
+            { "entry": "docs/api-reference-legacy/texture" },
+            { "entry": "docs/api-reference-legacy/texture-2d" },
+            { "entry": "docs/api-reference-legacy/texture-3d" },
+            { "entry": "docs/api-reference-legacy/texture-cube" },
+            { "entry": "docs/api-reference-legacy/transform-feedback" },
+            { "entry": "docs/api-reference-legacy/uniform-buffer-layout" },
+            { "entry": "docs/api-reference-legacy/vertex-array" },
+            { "entry": "docs/api-reference-legacy/vertex-array-object" },
+            { "entry": "docs/api-reference-legacy/resource" },
+            { "entry": "docs/api-reference-legacy/context/feature-checking" },
+            { "entry": "docs/api-reference-legacy/context/context-properties" },
+            { "entry": "docs/api-reference-legacy/moving-data" },
+            { "entry": "docs/api-reference-legacy/context" },
+            { "entry": "docs/api-reference-legacy/parameter-setting" },
+            { "entry": "docs/api-reference-legacy/device-pixels" }
           ]
         }
       ]
@@ -128,29 +169,7 @@
         {
           "title": "@luma.gl/webgl",
           "entries": [
-            { "entry": "docs/modules/webgl" },
-            { "entry": "docs/modules/webgl/legacy/accessor" },
-            { "entry": "docs/modules/webgl/legacy/buffer" },
-            { "entry": "docs/modules/webgl/legacy/framebuffer" },
-            { "entry": "docs/modules/webgl/legacy/program" },
-            { "entry": "docs/modules/webgl/legacy/query" },
-            { "entry": "docs/modules/webgl/legacy/renderbuffer" },
-            { "entry": "docs/modules/webgl/legacy/shader" },
-            { "entry": "docs/modules/webgl/legacy/texture" },
-            { "entry": "docs/modules/webgl/legacy/texture-2d" },
-            { "entry": "docs/modules/webgl/legacy/texture-3d" },
-            { "entry": "docs/modules/webgl/legacy/texture-cube" },
-            { "entry": "docs/modules/webgl/legacy/transform-feedback" },
-            { "entry": "docs/modules/webgl/legacy/uniform-buffer-layout" },
-            { "entry": "docs/modules/webgl/legacy/vertex-array" },
-            { "entry": "docs/modules/webgl/legacy/vertex-array-object" },
-            { "entry": "docs/modules/webgl/legacy/resource" },
-            { "entry": "docs/modules/webgl/legacy/context/feature-checking" },
-            { "entry": "docs/modules/webgl/legacy/context/context-properties" },
-            { "entry": "docs/modules/webgl/legacy/moving-data" },
-            { "entry": "docs/modules/webgl/legacy/context" },
-            { "entry": "docs/modules/webgl/legacy/parameter-setting" },
-            { "entry": "docs/modules/webgl/legacy/device-pixels" }
+            { "entry": "docs/modules/webgl" }
           ]
         },
         {
