@@ -12,6 +12,25 @@ a `CanvasContext` handles the following responsibilities:
 - manages canvas resizing
 - manages device pixel ratio
 
+## Usage
+
+Use a device's default canvas context:
+
+```typescript
+const renderPass = device.beginRenderPass({
+  framebuffer: device.canvasContext.getFramebuffer()
+});
+```
+
+Create additional canvas contexts (WebGPU only):
+
+```typescript
+const canvasContext2 = device.createCanvasContext({canvas: ...});
+const renderPass = device.beginRenderPass({
+  framebuffer: canvasContext2.getFramebuffer()
+});
+```
+
 ## Types
 
 ### `CanvasContextProps`
@@ -67,5 +86,4 @@ canvasContext.resize(options)
 ## Remarks
 
 - Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute). However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of the WebGL API.)
-
 - `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).

@@ -1,37 +1,50 @@
 # Upgrade Guide
 
-## Upgrading from v8.X to v9.0 (Forward-Looking Changes)
+## Upgrading from v8.X to v9.0
 
-luma.gl v9 needs major API changes to be able to incorporate WebGPU in a natural way.
-WebGPU is a more performant API and it does not make sense to try to hide it under a legacy API.
+luma.gl v9 introduces major API changes driven primarily by the addition of WebGPU support. 
+The motivations for the breaking changes are described separately.
 
-Development of luma.gl v9.0 is still ongoing however a number of expected changes are already clear:
+While the API changes are fairly extensive, they typically will not require the structure of applications to change. 
+An application should still be "instantly recognizable" as luma.gl application whether written towards the v8 or v9+ API.
 
-- APIs will no longer accept `WebGLRenderingContext` directly. All APIs will require a `Device`.
-- Parameters can no longer be set on the context.
-- `clear` can no longer be called directly. Clear colors must be set on framebuffers.
-- Uniform buffers are required, at least if WebGPU support is desired.
+### Module-level changes
 
-### Deprecations
+v9.0 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
 
-v8.7 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
-
-- `@luma.gl/gltools` module is deprecated. 
-    - The module still exists, but is now just re-exporting the functions which have been moved to `@luma.gl/webgl`. 
+- `@luma.gl/gltools` module is now deprecated. 
+    - The module still exists, but is no longer dedicated to WebGL context functionality.
+    - now just re-exporting the functions which have been moved to `@luma.gl/webgl`. 
     - In v9.0 the `@luma.gl/gltools` module will be removed, and the context functions will be replaced by the new experimental `WebGLDevice` class.
-- `@luma.gl/core` module is being trimmed. 
-    - WebGL module re-exports are deprecated and should be imported directly from `@luma.gl/webgl`.
+- `@luma.gl/core` module is "in transition": 
+    - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
+    - in v10, the core module will be completely updated and instead export the new v9+ API.
+    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/gltools`.
     - gltools module re-exports are deprecated and should be imported directly from `@luma.gl/webgl`.
-- `@luma.gl/constants` module is no longer recommended. 
-    - The luma.gl API is moving towards using WebGPU-style string constants instead of numeric enums, which works very well with the strict typescript typings. This means that WebGL-style numeric constants are being phased out of the luma.gl API. 
-
-Required changes:
-- N/A
+- `@luma.gl/constants` module remains but is no longer needed by applications:
+    - WebGL-style numeric constants (`GL.` constants) are no longer used in the public v9 API. 
+    - Instead, the luma.gl v9 API uses string constants (strictly typed, of course).
 
 Recommended changes:
 - Change imports from `@luma.gl/gltools` to `@luma.gl/webgl`. 
 - Change imports from `@luma.gl/core` to `@luma.gl/webgl`. 
 - Gradually revise use of `@luma.gl/constants` and start adopting string constants.
+
+### Feature-level changes
+
+A long list of changes, some required to make the API portable between WebGPU and WebGL, and many to accommodate the limitations of the more locked-down WebGPU API.
+
+- APIs no longer accept `WebGLRenderingContext` directly. APIs now require a `Device`.
+- WebGL classes such as Buffer, Texture2D etc can no longer be imported and instantiated with `new Buffer(gl, props)`. Instead they must be created via a device `device.createBuffer(props)`.
+- `Program` is now called `RenderPipeline`.
+- Parameters can no longer be set on the WebGL context. They must be set on a `RenderPipeline`.
+- `RenderPipeline` parameters cannot be changed after creation (though the `Model` class will create new `RenderPipeline` instances if parameters change).
+- Some parameters are set on `RenderPass`.
+- Constant attributes are no longer supported.
+- `clear` can no longer be called directly. Instead attachments are cleared when a `RenderPass` is created and clear colors must be specified in `beginRenderPass`.
+- Uniform buffers are required to run under WebGPU.
+
+---
 
 ## Upgrading from v8.4 to v8.5
 
