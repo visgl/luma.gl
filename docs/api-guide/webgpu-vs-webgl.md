@@ -2,6 +2,10 @@
 
 This pages collects notes on some of the notable differences between WebGPU and WebGL. This is not intended to be a complete list but is essentially a set of author's notes, included because they may be useful to understanding why some of the breaking changes in the luma.gl v9 API were made, and provide more detail on the differences between the WebGPU and WebGL implementations.
 
+- The imminent completion of the WebGPU standard and launch of WebGPU support in the Chrome browser.
+- Announcements that no further evolution of the WebGL standard is taking place.
+- WebGPU essentially exposes the latest next-gen GPU APIs (Vulkan, Metal, DX12) in the browser. A primary characteristic of these APIs is that they are designed to ensure GPU usage can be optimized "to the bone" (by e.g. minimization CPU-side validation overhead, enabling multi-threading etc) and wrapping WebGPU APIs under a backwards-compatible WebGL-centric API does not make much sense.
+
 **Decision: Convert luma.gl into a "WebGPU first" API**
 
 ## Background

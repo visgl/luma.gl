@@ -1,27 +1,43 @@
 # Device and CanvasContext
 
-The `Device` class initializes, instruments a WebGL contexts.
+The [`Device`](../api-reference/device) class provides access to the GPU. 
+An luma.gl application first obtains a `Device` provides the 
+application with facilities for creating GPU resources 
+(such as `Buffer` and `Texture` objects), query GPU capabilities etc.
 
-The `Device` API is similar to the WebGPU `GPUDevice` class.
-
-- Instrument an externally-created context with the same options as `createGLContext`. This performs WebGL 2 polyfilling (which is required for higher-level luma.gl classes) as well as optional state tracking and debug context creation.
-- Polyfill a WebGL context integrating available extensions.
-
+While a `Device` can be used on its own to perform computations on the GPU,
+at least one `CanvasContext` is required for rendering to the screen.
+Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvasElement` (or `OffscreenCanvas`).
 
 ## Installing adapters
 
-The `@luma.gl/api` module is not usable on its own. A device adapter module must
-be imported (it self registers on import).
+The `@luma.gl/api` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
+One or more device "adapter" modules (`@luma.gl/webgl` and `@luma.gl/webgpu`) must be also be imported, 
+and the actual resources returned to the application will be created by the adapter.
+
+Create a WebGPU device:
+
+```sh
+yarn add @luma.gl/api
+yarn add @luma.gl/webgpu
+```
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import '@luma.gl/webgpu';
+import '@luma.gl/webgpu'; // Note: self registers on import
 
 const device = await luma.createDevice({type: 'webgpu', canvas: ...});
 ```
 
 It is possible to register more than one device adapter to create an application
-that can work in both WebGL and WebGPU environments.
+that can work in both WebGL and WebGPU environments. To create a `Device` using 
+the best available adapter (WebGPU, WebGL 2 and WebGL in that order).
+
+```sh
+yarn add @luma.gl/api
+yarn add @luma.gl/webgl
+yarn add @luma.gl/webgpu
+```
 
 ```typescript
 import {luma} from '@luma.gl/api';
@@ -36,70 +52,26 @@ const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 Create a WebGL2 or WebGL context, auto creating a canvas
 
 ```typescript
-import {Device} from '@luma.gl/gltools';
-const device = new Device(); // Prefers WebGL 2 but falls back to WebGL 1
+import {luma} from '@luma.gl/api';
+import '@luma.gl/webgl';
+
+const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
 ```
 
 Create a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
-import {Device} from '@luma.gl/gltools';
-const device = createGLContext({
-  webgl1: false,
-});
+import {luma} from '@luma.gl/api';
+import '@luma.gl/webgl';
+
+const webgpuDevice = luma.createDevice({type: 'webgl2', canvas: ...});
 ```
 
-Attaching a Device to an externally created WebGLRendering context instruments it
-so that it works with other luma.gl classes.
+## CanvasContext
 
-```typescript
-import {Device} from '@luma.gl/gltools';
-import {Model} from '@luma.gl/engine';
-
-const device = Device.attach(gl); // "instruments" the external context
-
-// Instrumentation ensures the context works with higher-level classes.
-const model = new Model(gl, options);
-```
-
-Attaching a device to a WebGL1 context adds WebGL2 "polyfills" to the WebGLRendering context
-extends that context with a subset of WebGL2 APIs that are available via WebGL extensions.
-
-```typescript
-const gl = canvas.createContext('webgl'); // A WebGL 1 context
-const device = Device.attach(gl);
-
-// Can now use a subset of WebGL2 APIs on
-const vao = device.gl.createVertexArray();
-```
-
-
-# CanvasContext
-
-> This class is still experimental
-
-A `CanvasContext` holds a connection between the GPU `Device` and an HTML `canvas` into which it can render.
-
-A `CanvasContext` handles the following responsibilities:
-- manages the "swap chain" (provides fresh texture view every frame on WebGPU)
-- manages canvas resizing
-- manages device pixel ratio
-- can look up canvas elements in DOM, or create a new canvas elements if needed
-
-Note that:
-- A `WebGPUDevice` can have multiple associated `CanvasContext` instances, or none, if only used for compute.
-- A `WebGLDevice` always has exactly one `CanvasContext` (and can thus only render into a single canvas). This is due to fundamental limitations of the WebGL API.
-
-## CanvasContextProps
-
-| Property | Type |
-| --- | --- |
-| `canvas?` | HTMLCanvasElement \| OffscreenCanvas \| string |
-| `width?` | number |
-| `height?` | number |
-| `useDevicePixels?` | boolean \| number |
-| `autoResize?` | boolean |
-
-Remarks:
-- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).
-
+A [`CanvasContext`](../api-reference/canvas-context) holds a connection between 
+the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
+A `CanvasContext` takes care of:
+- providing a fresh framebuffer every render frame, set up to render into the canvas' swap chain.
+- canvas resizing
+- device pixel ratio considerations

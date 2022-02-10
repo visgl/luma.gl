@@ -2,12 +2,13 @@
 
 > Proposed luma.gl v9 API. Open for comments.
 
-The `Model` is the primary class for most luma.gl applications.
+The `Model` class brings together and orchestrates the different functions needed
+to perform draw calls, including:
 
-A `Model` brings together a range of different luma.gl functions in one class. It holds all the data necessary to perform draw calls:
-
-- **shaders** (via a [`Program`](/docs/api-reference/webgl/program) instance)
+- **shader module dependency injection and shader transpilation**
+- **render pipeline creation** -
 - **bindings** these can reference uniforms and textures.
+- **uniforms**
 - **attributes** (holds a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
 The `Model` class integrates with the `@luma.gl/shadertools` shader module system: [see `Shader Assembly`](/docs/api-reference/shadertools/assemble-shaders).
@@ -20,17 +21,23 @@ TBD
 
 ## Usage
 
+```typescript
+import {Model} from `@luma.gl/engine`;
+```
+
 ### Provide attribute data using Geometry object
 
 Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
 
 ```typescript
 // construct the model.
-const model =  new Model(device, {
+const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  uniforms: {uSampler: texture},
   geometry: geometryObject,
+  bindings: {
+    uSampler: texture
+  },
 })
 
 // and on each frame update any uniforms (typically matrices) and call render.
@@ -116,82 +123,80 @@ model.setVertexArray(vertexArray2);
 model.draw({...});
 ```
 
+## Types
+
+### ModelProps
+
+| Property             | Type                 | Description                                                                                                                    |
+| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `vs`                 | `Shader` \| _string_ | A vertex shader object, or source as a string.                                                                                 |
+| `fs`                 | `Shader` \| _string_ | A fragment shader object, or source as a string.                                                                               |
+| `modules`            |                      | shader modules to be applied (shadertools).                                                                                    |
+| `programManager`     |                      | `ProgramManager` to use for program creation and caching.                                                                      |
+| `varyings`           | (WebGL 2)            | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).                        |
+| `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `GL.SEPARATE_ATTRIBS`. |
+| `transpileToGLSL100` |                      | Transpile vertex and fragment shaders to GLSL 1.0.                                                                             |
+
+`ModelProps` passes through `RenderPipelineProps`
+
+| Property      | Type                       | Description                                                                             |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `layout`      | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
+| `topology?`   |                            | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
+| `parameters?` | `RenderPipelineParameters` |                                                                                         |
+
+| Property          | Type                     | Description                                                         |
+| ----------------- | ------------------------ | ------------------------------------------------------------------- |
+| `vertexCount?`    | `number`                 |                                                                     |
+| `instanceCount?`  | `number`                 |                                                                     |
+| `moduleSettings?` | `Record<string, any>`    | any values required by shader modules (will be mapped to uniforms). |
+| `uniforms?`       | `Record<string, any>`    | any non-binding uniform values                                      |
+| `bindings?`       | `Record<string, any>`    |                                                                     |
+| `buffers?`        | `Record<string, Buffer>` |                                                                     |
+
 ## Properties
 
-| Property      | Type                     | Description                                                                             |
-| ------------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| `vs`          | `Shader` \| _string_     | A vertex shader object, or source as a string.                                          |
-| `fs`          | `Shader` \| _string_     | A fragment shader object, or source as a string.                                        |
-| `layout`      | `ShaderLayout`           | Describes how shader attributes and bindings are laid out.                              |
-| `modules`     |                          | shader modules to be applied (shadertools).                                             |
-| `pipeline`    |                          | pre created program to use, when provided, vs, ps and modules are not used.             |
-| `topology?`   |                          | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
-| `parameters?` | RenderPipelineParameters |                                                                                         |
+### renderPipeline: RenderPipeline
 
-- `programManager` | | `ProgramManager` to use for program creation and caching. |
-- `varyings` | (WebGL 2) | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow). |
-- `bufferMode` | (WebGL 2) | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`. |
-- `transpileToGLSL100` | | Transpile vertex and fragment shaders to GLSL 1.0. |
-
-## Properties
-
-### moduleSettings: object
-
-any uniforms needed by shader modules.
-
-### uniforms: object
-
-uniform values to be used for drawing.
-
-### onBeforeRender
-
-function to be called before every time this model is drawn.
-
-### onAfterRender
-
-function to be called after every time this model is drawn.
+Get model's `Program` instance
 
 ## Methods
 
-### Model(device: Device, props: ModelProps)
+### constructor(device: Device, props: ModelProps)
 
 The constructor for the Model class. Use this to create a new Model.
 
-### destroy()
+### destroy(): void
 
-Free WebGL resources associated with this model
+Free GPU resources associated with this model immediately, instead of waiting for garbage collection.
 
 ### isAnimated(): boolean
 
 Returns `true` if the model is animated (i.e. needs to be redrawn every frame).
 
-### getProgram(): Program
-
-Get model's `Program` instance
-
 ### getUniforms(): object
 
 Returns map of currently stored uniforms
 
-### setUniforms(uniforms: object); this
+### setUniforms(uniforms: object): void
 
 Stores named uniforms {key, value}
 
-### updateModuleSettings(moduleSettings: object); this
+### updateModuleSettings(moduleSettings: object): void
 
-### draw(options: object): boolean
+### draw(options: DrawOptions): boolean
 
 Renders the model with provided uniforms, attributes and samplers
 
 ```typescript
 model.draw({
+  renderPass,
   moduleSettings = null,
   uniforms = {},
   attributes = {},
   samplers = {},
   parameters = {},
   settings,
-  framebuffer = null,
   vertexArray = null,
   transformFeedback = null
 });
@@ -212,18 +217,3 @@ The remaining draw options are passed directly to `Program.draw()`:
 - `framebuffer`=`null` (`Framebuffer`) - if provided, renders into the supplied framebuffer, otherwise renders to the default framebuffer.
 - `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 - `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
-
-### transform(options: object); this
-
-Renders the model with provided uniforms, and samplers. Calls `Program.draw()` with rasterization turned off.
-
-- `discard`=`true` (Boolean) - Turns off rasterization
-- `feedbackBuffers`=`null` (Object) - Optional map of feedback buffers. A `TransformFeedback` object will be created, initialized with these buffers, and passed to `Model.draw`.
-- `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feeback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
-  .
-
-```typescript
-model.transform({
-  discard: false
-});
-```

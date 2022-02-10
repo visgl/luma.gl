@@ -2,16 +2,17 @@
 
 > Proposed luma.gl v9 API. Open for comments.
 
-A configuration for compute.
+> WebGPU only
+
+A pass on which to run computations with compute pipelines.
 
 ## Types
 
-### `BufferProps`
+### `ComputePassProps`
 
-| Property      | Type                             | Description                                                                  |
-| ------------- | -------------------------------- | ---------------------------------------------------------------------------- |
-| `parameters?`  | `Parameters`                    | GPU pipeline parameters                         |
-
+| Property | Type | Description |
+| -------- | ---- | ----------- |
+| N/A      |      |             |
 
 ## Members
 

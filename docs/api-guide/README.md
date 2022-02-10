@@ -4,11 +4,14 @@
 
 The luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 
-Naturally, core responsibilities for any GPU library:
+Core responsibilities for any GPU library are:
 
-- GPU resource management (create and destroy GPU resources like Buffers, Textures etc)
-- GPU Bindings (making attribute buffers, uniform buffers, textures, samplers etc available to GPU shaders.
+- GPU resource management (create and destroy Buffers, Textures etc)
+- GPU binding management (make attribute buffers, uniforms, textures, samplers available to GPU shaders).
 - Shader execution (draw, compute)
+
+Together with features like:
+
 - Shader composition
 - Cross platform support: backwards compatibility with WebGL 2 (WebGL on a "best effort" basis).
 
