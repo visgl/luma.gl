@@ -1,6 +1,6 @@
 # Model
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 The `Model` class brings together and orchestrates the different functions needed
 to perform draw calls, including:

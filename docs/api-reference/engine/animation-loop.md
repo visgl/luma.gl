@@ -1,6 +1,6 @@
 # AnimationLoop
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 An optional helper class to manage the applications render loop,
 `AnimationLoop` provides a number of conveniences related to

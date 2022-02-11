@@ -1,6 +1,6 @@
 # Device
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 The `Device` class manages the application's connection with the GPU,
 providing methods to:

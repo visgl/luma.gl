@@ -1,6 +1,6 @@
 # luma.gl v9 API
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 The proposed luma.gl v9 API does represents a break with the v8 API. The new v9 API is optimized around WebGPU and TypeScript, while the v8 API design focused on providing a set of classes optimized for working with the WebGL2 API, and predated TypeScript introduction.
 

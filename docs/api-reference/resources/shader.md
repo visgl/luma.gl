@@ -1,6 +1,6 @@
 # Shader
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 The `Shader` class holds a compiled shader. 
 - It takes shader source code and compiles it during construction. 

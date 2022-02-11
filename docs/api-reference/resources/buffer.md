@@ -1,6 +1,6 @@
 # Buffer
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 Holds a block of GPU memory. The length of a buffer cannot be changed after creation.
 

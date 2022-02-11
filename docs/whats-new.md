@@ -1,6 +1,6 @@
 # What's New
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 ## Version 9.0
 
