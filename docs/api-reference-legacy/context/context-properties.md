@@ -14,7 +14,7 @@ luma.gl provides several helper functions for testing properties of a WebGL cont
 Check a certain limit (whether through an extension under WebGL 1 or through WebGL 2)
 ```js
 import GL from '@luma.gl/constants';
-import {getContextLimits} from '@luma.gl/webgl';
+import {getContextLimits} from '@luma.gl/gltools';
 const limits = getContextLimits(gl);
 if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL 1
    ...
@@ -24,7 +24,7 @@ if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL 1
 There are a few additional capability query functions sprinkled through the luma.gl API. In particular, WebGL 2 specific classes have an `isSupported` method that duplicates some of the queryies that can be made using the capability system
 
 ```js
-import {Query} from '@luma.gl/webgl';
+import {Query} from '@luma.gl/gltools';
 if (Query.isSupported(gl)) {
   ...
 }

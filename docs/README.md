@@ -15,26 +15,29 @@
   <img src="https://img.shields.io/badge/v-6.4-green.svg?style=flat-square" />
 </a>
 
-luma.gl is a GPU toolkit for the Web, focused primarily on visualization of large datasets,
-however the design is generic and supports more general 3D usage.
-luma.gl is the core rendering library in the [vis.gl](http://vis.gl/) framework suite.
+luma.gl is a moderns GPU toolkit for the Web, focused primarily on visualization of large datasets.
+luma.gl is the core rendering library in the [vis.gl](http://vis.gl/) framework suite, 
+and is developed under open governance through the Linux Foundation.
 
 ## Highlights
 
-luma.gl aims to help developers stay in control of GPU programming and
-work directly with shaders and GPU data structures. By offering a low abstraction API that
-remains conceptually close to the underlying WebGPU and WebGL APIs, luma.gl focuses on the processing
-of data on the GPU rather than higher level 3D engine type abstractions.
+luma.gl facilitates processing of big data on the GPU 
+rather than providing higher level 3D engine type abstractions, 
+and lets developers stay in control of GPU programming and
+work directly with shaders and GPU data structures. The low abstraction API
+is intentionally closely aligned with the underlying WebGPU and WebGL APIs. 
+
+## Features
 
 Some key features of luma.gl are:
 
-- A device-independent API that enables applications to portably access GPU resources.
+- A device-independent GPU API that implements both WebGPU and WebGL classes.
+- Higher level classes such as `Model`, `Transform` and `AnimationLoop`.
 - A GLSL shader system supporting modules, dependencies, injection, transpilation etc.
-- A few high-level classes such as `Model`, `Transform` and `AnimationLoop`.
 
 ## Showcases
 
-For some high-impact examples of what can be achieved with luma.gl, take a look at:
+Some examples of what can be built on top of luma.gl:
 
 - [kepler.gl](https://kepler.gl/) ([GitHub](https://github.com/keplergl/kepler.gl)) a powerful open source geospatial analysis tool for large-scale data sets
 - [deck.gl](http://deck.gl/#/) ([GitHub](https://github.com/visgl/deck.gl)) a WebGL-powered framework for visual exploratory data analysis of large data sets

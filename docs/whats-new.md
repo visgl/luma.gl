@@ -1,16 +1,17 @@
 # What's New
 
+> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+
 ## Version 9.0
 
 Target Date: Q1, 2022
 
-The v9.0 release brings WebGPU support and a modernized luma.gl API. Adoption of the new API will require applications to be updated. 
+The v9.0 release brings WebGPU support and a modernized luma.gl API. Adoption of the new API will require applications to be updated. However, all legacy v8 APIs are still available, so it should be possible to gradually migrate luma.gl v8 applications to luma.gl v9.
 
-All legacy v8 APIs are still available, so it should be possible to first migrate luma.gl v8 applications to luma.gl v9 without any modifications and then gradually start updating the application to the v9 API.
-
-The luma.gl documentation focuses on the new v9 API, however legacy v8 API documentation is still included.
-
-luma.gl v9 is now written in TypeScript from the ground up and is more rigorously typed. 
+Highlights:
+- luma.gl is now closely aligned with WebGPU API. 
+- luma.gl is now fully rewritten in TypeScript and applications will benefit from more rigorous types. 
+- The luma.gl documentation now focuses on the new v9 API, however legacy v8 API documentation is still included.
 
 #### `@luma.gl/api` (new module)
 

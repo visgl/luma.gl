@@ -1,6 +1,6 @@
 # Texture
 
-> Proposed luma.gl v9 API. Open for comments.
+> The luma.gl v9 API is currently in [public review](/docs/open-governance).
 
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 

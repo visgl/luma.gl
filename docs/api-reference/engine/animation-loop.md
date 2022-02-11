@@ -1,6 +1,6 @@
 # AnimationLoop
 
-> Proposed luma.gl v9 API. Open for comments.
+> The luma.gl v9 API is currently in [public review](/docs/open-governance).
 
 An optional helper class to manage the applications render loop,
 `AnimationLoop` provides a number of conveniences related to

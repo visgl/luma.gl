@@ -1,6 +1,6 @@
 # ComputePass
 
-> Proposed luma.gl v9 API. Open for comments.
+> The luma.gl v9 API is currently in [public review](/docs/open-governance).
 
 > WebGPU only
 

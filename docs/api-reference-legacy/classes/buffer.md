@@ -9,7 +9,7 @@ For additional information, see [OpenGL Wiki](https://www.khronos.org/opengl/wik
 ## Usage
 
 ```js
-import {Buffer} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/gltools';
 ```
 
 Creating a generic buffer

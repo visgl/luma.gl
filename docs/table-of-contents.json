@@ -6,6 +6,7 @@
       "entries": [
         { "entry": "docs" },
         { "entry": "docs/whats-new" },
+        { "entry": "docs/open-governance" },
         { "entry": "docs/upgrade-guide" }
       ]
     },
@@ -41,20 +42,21 @@
       "title": "API Guide",
       "entries": [
         { "entry": "docs/api-guide/device" },
+        { "entry": "docs/api-guide/resources" },
         { "entry": "docs/api-guide/parameters" },
-        { "entry": "docs/api-guide/texture-formats" },
         { "entry": "docs/api-guide/bindings" },
-        { "entry": "docs/api-guide/transform" },
+        { "entry": "docs/api-guide/textures" },
+        { "entry": "docs/api-guide/transforms" },
         { "entry": "docs/api-guide/shader-modules" },
         { "entry": "docs/api-guide/v9-api" },
         { "entry": "docs/api-guide/webgpu-vs-webgl" }
       ]
     },
     {
-      "title": "API Reference",
+      "title": "API Reference (v9)",
       "chapters": [
         {
-          "title": "Main",
+          "title": "Device",
           "entries": [
             { "entry": "docs/api-reference/device" },
             { "entry": "docs/api-reference/canvas-context" },
@@ -83,34 +85,29 @@
     },
     {
       "title": "API Reference (v8)",
-      "chapters": [
-        {
-          "title": "API",
-          "entries": [
-            { "entry": "docs/api-reference-legacy/accessor" },
-            { "entry": "docs/api-reference-legacy/buffer" },
-            { "entry": "docs/api-reference-legacy/framebuffer" },
-            { "entry": "docs/api-reference-legacy/program" },
-            { "entry": "docs/api-reference-legacy/query" },
-            { "entry": "docs/api-reference-legacy/renderbuffer" },
-            { "entry": "docs/api-reference-legacy/shader" },
-            { "entry": "docs/api-reference-legacy/texture" },
-            { "entry": "docs/api-reference-legacy/texture-2d" },
-            { "entry": "docs/api-reference-legacy/texture-3d" },
-            { "entry": "docs/api-reference-legacy/texture-cube" },
-            { "entry": "docs/api-reference-legacy/transform-feedback" },
-            { "entry": "docs/api-reference-legacy/uniform-buffer-layout" },
-            { "entry": "docs/api-reference-legacy/vertex-array" },
-            { "entry": "docs/api-reference-legacy/vertex-array-object" },
-            { "entry": "docs/api-reference-legacy/resource" },
-            { "entry": "docs/api-reference-legacy/context/feature-checking" },
-            { "entry": "docs/api-reference-legacy/context/context-properties" },
-            { "entry": "docs/api-reference-legacy/moving-data" },
-            { "entry": "docs/api-reference-legacy/context" },
-            { "entry": "docs/api-reference-legacy/parameter-setting" },
-            { "entry": "docs/api-reference-legacy/device-pixels" }
-          ]
-        }
+      "entries": [
+        { "entry": "docs/api-reference-legacy/context/context-api" },
+        { "entry": "docs/api-reference-legacy/context/context-properties" },
+        { "entry": "docs/api-reference-legacy/context/feature-checking" },
+        { "entry": "docs/api-reference-legacy/context/parameter-setting" },
+        { "entry": "docs/api-reference-legacy/context/device-pixels" },
+        { "entry": "docs/api-reference-legacy/classes/accessor" },
+        { "entry": "docs/api-reference-legacy/classes/buffer" },
+        { "entry": "docs/api-reference-legacy/classes/framebuffer" },
+        { "entry": "docs/api-reference-legacy/classes/program" },
+        { "entry": "docs/api-reference-legacy/classes/query" },
+        { "entry": "docs/api-reference-legacy/classes/renderbuffer" },
+        { "entry": "docs/api-reference-legacy/classes/shader" },
+        { "entry": "docs/api-reference-legacy/classes/texture" },
+        { "entry": "docs/api-reference-legacy/classes/texture-2d" },
+        { "entry": "docs/api-reference-legacy/classes/texture-3d" },
+        { "entry": "docs/api-reference-legacy/classes/texture-cube" },
+        { "entry": "docs/api-reference-legacy/classes/transform-feedback" },
+        { "entry": "docs/api-reference-legacy/classes/uniform-buffer-layout" },
+        { "entry": "docs/api-reference-legacy/classes/vertex-array" },
+        { "entry": "docs/api-reference-legacy/classes/vertex-array-object" },
+        { "entry": "docs/api-reference-legacy/classes/resource" },
+        { "entry": "docs/api-reference-legacy/classes/moving-data" }
       ]
     },
     {

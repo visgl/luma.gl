@@ -1,5 +1,7 @@
 # Upgrade Guide
 
+> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+
 ## Upgrading from v8.X to v9.0
 
 luma.gl v9 introduces major API changes driven primarily by the addition of WebGPU support. 

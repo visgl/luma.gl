@@ -30,16 +30,19 @@ export default class IndexPage extends React.Component {
     return (
       <Home HeroExample={HeroExample} >
         <ContentContainer>
-          <h2>High-performance toolkit for WebGL-based data visualization.</h2>
+          <h2>High-performance toolkit for GPU-based data visualization.</h2>
           <ul>
             <Bullet>
-              The core 3D rendering technology behind the vis.gl suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
+              The core GPU framework behind the vis.gl suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
             </Bullet>
             <Bullet>
-              Provides simplified abstractions for high-performance data visualizaton APIs like instanced rendering and transform feedback.
+              Focused on high-performance big data visualization and compute.
             </Bullet>
             <Bullet>
-              Polyfills WebGL 1 contexts where possible to provide WebGL 2 API support, relieving developers of common cross-platform support headaches.
+              Supports latest Web GPU standards, including WebGPU. WebGL 2 and glTF.
+            </Bullet>
+            <Bullet>
+              A Linux Foundation projection: open source and open governance.
             </Bullet>
           </ul>
         </ContentContainer>

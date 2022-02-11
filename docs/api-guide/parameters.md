@@ -1,4 +1,4 @@
-# GPU Parameters
+# Parameters
 
 luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 
