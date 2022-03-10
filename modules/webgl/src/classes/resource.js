@@ -13,6 +13,10 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
 // }
 
 export default class Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Resource';
+  }
   constructor(gl, opts = {}) {
     assertWebGLContext(gl);
 
@@ -21,7 +25,7 @@ export default class Resource {
     // @ts-ignore
     this.gl2 = gl;
     // this.ext = polyfillContext(gl);
-    this.id = id || uid(this.constructor.name);
+    this.id = id || uid(this[Symbol.toStringTag]);
     this.userData = userData;
     this._bound = false;
 
@@ -44,7 +48,7 @@ export default class Resource {
   }
 
   toString() {
-    return `${this.constructor.name}(${this.id})`;
+    return `${this[Symbol.toStringTag] || this.constructor.name}(${this.id})`;
   }
 
   get handle() {
@@ -275,7 +279,7 @@ export default class Resource {
   }
 
   _addStats() {
-    const name = this.constructor.name;
+    const name = this[Symbol.toStringTag];
     const stats = lumaStats.get('Resource Counts');
 
     stats.get('Resources Created').incrementCount();
@@ -284,13 +288,13 @@ export default class Resource {
   }
 
   _removeStats() {
-    const name = this.constructor.name;
+    const name = this[Symbol.toStringTag];
     const stats = lumaStats.get('Resource Counts');
 
     stats.get(`${name}s Active`).decrementCount();
   }
 
-  _trackAllocatedMemory(bytes, name = this.constructor.name) {
+  _trackAllocatedMemory(bytes, name = this[Symbol.toStringTag]) {
     const stats = lumaStats.get('Memory Usage');
 
     stats.get('GPU Memory').addCount(bytes);
@@ -298,7 +302,7 @@ export default class Resource {
     this.byteLength = bytes;
   }
 
-  _trackDeallocatedMemory(name = this.constructor.name) {
+  _trackDeallocatedMemory(name = this[Symbol.toStringTag]) {
     const stats = lumaStats.get('Memory Usage');
 
     stats.get('GPU Memory').subtractCount(this.byteLength);

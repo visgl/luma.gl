@@ -22,6 +22,10 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
 
 export default class Texture extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Texture';
+  }
   static isSupported(gl, opts = {}) {
     const {format, linearFiltering} = opts;
     let supported = true;

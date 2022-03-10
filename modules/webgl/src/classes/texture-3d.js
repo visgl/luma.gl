@@ -5,6 +5,11 @@ import {DATA_FORMAT_CHANNELS, TYPE_SIZES} from './texture-formats';
 import Buffer from './buffer';
 
 export default class Texture3D extends Texture {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Texture3D';
+  }
+
   static isSupported(gl) {
     return isWebGL2(gl);
   }

@@ -9,6 +9,11 @@ const ERR_SOURCE = 'Shader: GLSL source code must be a JavaScript string';
 
 // For now this is an internal class
 export class Shader extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Shader';
+  }
+
   static getTypeName(shaderType) {
     switch (shaderType) {
       case GL.VERTEX_SHADER:
@@ -116,6 +121,11 @@ export class Shader extends Resource {
 }
 
 export class VertexShader extends Shader {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'VertexShader';
+  }
+
   constructor(gl, props) {
     // Signature: new VertexShader(gl, source)
     if (typeof props === 'string') {
@@ -131,6 +141,10 @@ export class VertexShader extends Shader {
 }
 
 export class FragmentShader extends Shader {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'FragmentShader';
+  }
   constructor(gl, props) {
     // Signature: new FragmentShader(gl, source)
     if (typeof props === 'string') {

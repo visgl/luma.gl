@@ -39,6 +39,10 @@ const V6_DEPRECATED_METHODS = [
 ];
 
 export default class Program extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Program';
+  }
   constructor(gl, props = {}) {
     super(gl, props);
 

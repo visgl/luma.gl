@@ -9,6 +9,10 @@ import {getBrowser} from 'probe.gl';
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
 export default class VertexArrayObject extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'VertexArrayObject';
+  }
   static isSupported(gl, options = {}) {
     // Attribute 0 can not be disable on most desktop OpenGL based browsers
     // and on iOS Safari browser.
