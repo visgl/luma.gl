@@ -175,9 +175,9 @@ export default class GLTFMaterialParser {
   }
 
   /**
-   * Destroy all generated textures to release memory.
+   * Destroy all generated resources to release memory.
    */
-  destroyTextures(): void {
+  deleteResources(): void {
     this.generatedTextures.forEach(texture => texture.delete());
   }
 }
