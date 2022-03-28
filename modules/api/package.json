@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/api",
-  "version": "8.6.0-alpha.5",
+  "version": "9.0.0-alpha.1",
   "description": "luma.gl API",
   "license": "MIT",
   "publishConfig": {

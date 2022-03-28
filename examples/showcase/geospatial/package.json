@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-geospatial",
-  "version": "8.6.0-alpha.5",
+  "version": "9.0.0-alpha.1",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.6.0-alpha.5",
-    "@luma.gl/gltools": "8.6.0-alpha.5",
-    "@luma.gl/webgl": "8.6.0-alpha.5",
+    "@luma.gl/engine": "9.0.0-alpha.1",
+    "@luma.gl/gltools": "9.0.0-alpha.1",
+    "@luma.gl/webgl": "9.0.0-alpha.1",
     "mapbox-gl": "^1.2.1"
   },
   "devDependencies": {

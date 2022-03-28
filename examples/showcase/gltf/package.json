@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-gltf",
-  "version": "8.6.0-alpha.5",
+  "version": "9.0.0-alpha.1",
   "private": true,
   "description": "glTF loader using luma.gl for rendering.",
   "contributors": [
@@ -15,11 +15,11 @@
     "@loaders.gl/core": "^3.1.3",
     "@loaders.gl/gltf": "^3.1.3",
     "@loaders.gl/polyfills": "^3.1.3",
-    "@luma.gl/constants": "8.6.0-alpha.5",
-    "@luma.gl/engine": "8.6.0-alpha.5",
-    "@luma.gl/experimental": "8.6.0-alpha.5",
-    "@luma.gl/gltools": "8.6.0-alpha.5",
-    "@luma.gl/webgl": "8.6.0-alpha.5",
+    "@luma.gl/constants": "9.0.0-alpha.1",
+    "@luma.gl/engine": "9.0.0-alpha.1",
+    "@luma.gl/experimental": "9.0.0-alpha.1",
+    "@luma.gl/gltools": "9.0.0-alpha.1",
+    "@luma.gl/webgl": "9.0.0-alpha.1",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {
