@@ -1,13 +1,20 @@
 import React, {Component} from 'react'; // eslint-disable-line
-import PropTypes from 'prop-types';
+import PropTypes from 'prop-types'; 
+import {isBrowser} from '@probe.gl/env';
 import {setPathPrefix} from '@luma.gl/api';
 import {lumaStats} from '@luma.gl/core';
 import {RenderLoop} from '@luma.gl/engine';
+import {luma} from '@luma.gl/api';
+import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGPUDevice} from '@luma.gl/webgpu';
+
 // import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.2-release';
+
+luma.registerDevices([WebGPUDevice, WebGLDevice]);
 
 // WORKAROUND FOR luma.gl VRDisplay
 if (!globalThis.navigator) {// eslint-disable-line
@@ -89,10 +96,13 @@ export default class AnimationLoopExamplePage extends Component {
 
     // Start the actual example
     try {
-      await this.animationLoop.start();
-      await this.animationLoop.waitForRender();
-      if (this.animationLoop.demoNotSupported) {
-        this.setState({supported: false});
+      if (isBrowser()) {
+        await this.animationLoop.start();
+        await this.animationLoop.waitForRender();
+        if (this.animationLoop.demoNotSupported) {
+          this.setState({supported: false});
+        }
+        this.setState({error: null});
       }
     } catch (error) {
       this.setState({error});

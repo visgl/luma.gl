@@ -1,6 +1,6 @@
 # CanvasContext
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 A `CanvasContext` holds a connection between the GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
 

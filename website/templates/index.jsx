@@ -33,7 +33,7 @@ export default class IndexPage extends React.Component {
           <h2>High-performance toolkit for GPU-based data visualization.</h2>
           <ul>
             <Bullet>
-              The core GPU framework behind the vis.gl suite of data visualization tools, including <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
+              The core GPU framework behind the vis.gl suite of data visualization tools.
             </Bullet>
             <Bullet>
               Focused on high-performance big data visualization and compute.
@@ -43,6 +43,9 @@ export default class IndexPage extends React.Component {
             </Bullet>
             <Bullet>
               A Linux Foundation projection: open source and open governance.
+            </Bullet>
+            <Bullet>
+              Used applications like <a href="https://deck.gl">deck.gl</a>, <a href="https://kepler.gl">kepler.gl</a>, and <a href="https://avs.auto">avs.auto</a>.
             </Bullet>
           </ul>
         </ContentContainer>

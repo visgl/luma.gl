@@ -6,7 +6,7 @@
       "entries": [
         { "entry": "docs" },
         { "entry": "docs/whats-new" },
-        { "entry": "docs/open-governance" },
+        { "entry": "docs/public-review" },
         { "entry": "docs/upgrade-guide" }
       ]
     },

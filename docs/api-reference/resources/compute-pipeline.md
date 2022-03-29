@@ -1,6 +1,6 @@
 # ComputePipeline
 
-> The luma.gl v9 API is currently in [public review](/docs/open-governance).
+> The luma.gl v9 API is currently in [public review](/docs/public-review).
 
 > `ComputePipeline` is only available on WebGPU. Note that you can still perform
 > many GPU computations on WebGL using `RenderPipeline`.
