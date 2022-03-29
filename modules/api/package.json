@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/api",
-  "version": "9.0.0-alpha.2",
+  "version": "9.0.0-alpha.3",
   "description": "luma.gl API",
   "license": "MIT",
   "publishConfig": {
@@ -32,5 +32,5 @@
   "dependencies": {
     "@babel/runtime": "^7.0.0"
   },
-  "gitHead": "d93520006d32ebe8c6b0a8757b5c86a0ffbb3c34"
+  "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

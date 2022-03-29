@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "9.0.0-alpha.2",
+  "version": "9.0.0-alpha.3",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.2",
+    "@luma.gl/constants": "9.0.0-alpha.3",
     "@math.gl/core": "^3.5.0",
     "earcut": "^2.0.6"
   },
@@ -42,5 +42,5 @@
     "@luma.gl/shadertools": "8.6.0-alpha.1",
     "@luma.gl/webgl": "8.6.0-alpha.1"
   },
-  "gitHead": "d93520006d32ebe8c6b0a8757b5c86a0ffbb3c34"
+  "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

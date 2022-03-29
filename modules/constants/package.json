@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/constants",
-  "version": "9.0.0-alpha.2",
+  "version": "9.0.0-alpha.3",
   "description": "WebGL and WebGL2 constants",
   "license": "MIT",
   "repository": {
@@ -29,5 +29,5 @@
     "pre-build": "npm run build-bundle",
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
-  "gitHead": "d93520006d32ebe8c6b0a8757b5c86a0ffbb3c34"
+  "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }
