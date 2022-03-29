@@ -1,6 +1,8 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.1
+## v9.0.0-alpha.4
+
+alpha.1 through alpha.3 should be avoided. Partial releases, bad dependencies.
 
 - (HEAD -> master, tag: v9.0.0-alpha.1, origin/master, origin/HEAD) v9.0.0-alpha.1
 - build(deps): bump follow-redirects from 1.14.7 to 1.14.8 (#1625)
