@@ -1,9 +1,8 @@
 {
   "name": "@luma.gl/webgpu",
-  "version": "9.0.0-alpha.1",
+  "version": "9.0.0-alpha.2",
   "description": "WebGPU adapter for the luma.gl API",
   "license": "MIT",
-  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"
@@ -29,7 +28,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/api": "9.0.0-alpha.1",
+    "@luma.gl/api": "9.0.0-alpha.2",
     "@webgpu/types": "^0.1.9",
     "probe.gl": "^3.2.1"
   },
