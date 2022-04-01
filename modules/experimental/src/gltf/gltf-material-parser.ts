@@ -1,4 +1,4 @@
-import {Device, log} from '@luma.gl/api';
+import {Device, log, Texture} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import GLTFEnvironment from './gltf-environment';
 
@@ -16,7 +16,7 @@ export default class GLTFMaterialParser {
   readonly defines: Record<string, number | boolean>;
   readonly uniforms: Record<string, any>;
   readonly parameters: Record<string, any>;
-  readonly generatedTextures: object[];
+  readonly generatedTextures: Texture[];
 
   constructor(device: Device, props: GLTFMaterialParserProps) {
     const {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents} = props;
@@ -96,7 +96,7 @@ export default class GLTFMaterialParser {
       textureOptions = {data: image};
     }
 
-    const texture = this.device.createTexture({
+    const texture: Texture = this.device.createTexture({
       id: gltfTexture.name || gltfTexture.id,
       parameters: {
         ...parameters,
@@ -177,7 +177,7 @@ export default class GLTFMaterialParser {
   /**
    * Destroy all generated resources to release memory.
    */
-  deleteResources(): void {
-    this.generatedTextures.forEach(texture => texture.delete());
+  delete(): void {
+    this.generatedTextures.forEach(texture => texture.destroy());
   }
 }
