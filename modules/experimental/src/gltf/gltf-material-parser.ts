@@ -1,4 +1,6 @@
-import {Device, log, Texture} from '@luma.gl/api';
+import type {Device, Texture} from '@luma.gl/api';
+import {log} from '@luma.gl/api';
+
 import GL from '@luma.gl/constants';
 import GLTFEnvironment from './gltf-environment';
 
