@@ -158,4 +158,11 @@ export default class GLTFMaterialParser {
       });
     }
   }
+
+  /**
+   * Destroy all generated resources to release memory.
+   */
+  delete() {
+    this.generatedTextures.forEach(texture => texture.delete());
+  }
 }
