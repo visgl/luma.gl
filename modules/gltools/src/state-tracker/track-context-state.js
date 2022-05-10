@@ -166,9 +166,8 @@ export function trackContextState(gl, options = {}) {
   assert(copyState !== undefined);
   // @ts-ignore
   if (!gl.state) {
-    const global_ = typeof global !== 'undefined' ? global : window;
     // @ts-ignore
-    const {polyfillContext} = global_;
+    const {polyfillContext} = globalThis;
     if (polyfillContext) {
       polyfillContext(gl);
     }
