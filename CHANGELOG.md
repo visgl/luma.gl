@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v8.5.11
+
+- Replace global from probe.gl/env with globalThis (#1643)
+- Cleanup generated textures (#1639)
+
 ## v8.5.10
 
 - Revert remove overly broad platform defines (#1496)
