@@ -1,6 +1,5 @@
 import GL from '@luma.gl/constants';
 import {isWebGL2, assertWebGL2Context, withParameters, log} from '@luma.gl/gltools';
-import {global} from 'probe.gl/env';
 
 import Resource from './resource';
 import Buffer from './buffer';
@@ -19,7 +18,7 @@ const NPOT_MIN_FILTERS = [GL.LINEAR, GL.NEAREST];
 
 // Polyfill
 // Note (Tarek): Do we really need to support this API?
-const WebGLBuffer = global.WebGLBuffer || function WebGLBuffer() {};
+const WebGLBuffer = globalThis.WebGLBuffer || function WebGLBuffer() {};
 
 export default class Texture extends Resource {
   static isSupported(gl, opts = {}) {
