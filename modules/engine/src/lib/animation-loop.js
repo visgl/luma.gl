@@ -17,7 +17,7 @@ import {
   assert
 } from '@luma.gl/webgl';
 
-import {isBrowser} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 
 const isPage = isBrowser() && typeof document !== 'undefined';
 

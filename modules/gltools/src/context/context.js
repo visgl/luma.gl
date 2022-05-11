@@ -4,7 +4,7 @@
 
 /* eslint-disable quotes */
 import GL from '@luma.gl/constants';
-import {isBrowser as getIsBrowser} from 'probe.gl/env';
+import {isBrowser as getIsBrowser} from '@probe.gl/env';
 import {trackContextState} from '../state-tracker/track-context-state';
 
 import {log} from '../utils/log';
