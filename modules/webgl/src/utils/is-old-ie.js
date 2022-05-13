@@ -1,4 +1,4 @@
-import {getBrowser} from 'probe.gl/env';
+import {getBrowser} from '@probe.gl/env';
 
 // opts allows user agent to be overridden for testing
 export function isOldIE(opts = {}) {

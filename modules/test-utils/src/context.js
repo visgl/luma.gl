@@ -1,5 +1,5 @@
 import {createGLContext, instrumentGLContext} from '@luma.gl/gltools';
-import {isBrowser} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 
 const ERR_HEADLESSGL_FAILED =
   'Failed to create WebGL context in Node.js, headless gl returned null';

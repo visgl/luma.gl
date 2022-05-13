@@ -1,7 +1,6 @@
 const moduleExports = require('./index');
 
-const _global = typeof window === 'undefined' ? global : window;
 // @ts-ignore
-_global.luma = _global.luma || {};
+globalThis.luma = globalThis.luma || {};
 // @ts-ignore
-module.exports = Object.assign(_global.luma, moduleExports);
+module.exports = Object.assign(globalThis.luma, moduleExports);

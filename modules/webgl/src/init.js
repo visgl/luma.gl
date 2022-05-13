@@ -1,6 +1,6 @@
 import {log} from '@luma.gl/gltools';
 import {Stats} from 'probe.gl';
-import {isBrowser, global} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 
 // Version detection using babel plugin
 /* global __VERSION__ */
@@ -28,16 +28,16 @@ class StatsManager {
 
 const lumaStats = new StatsManager();
 
-if (global.luma && global.luma.VERSION !== VERSION) {
-  throw new Error(`luma.gl - multiple VERSIONs detected: ${global.luma.VERSION} vs ${VERSION}`);
+if (globalThis.luma && globalThis.luma.VERSION !== VERSION) {
+  throw new Error(`luma.gl - multiple VERSIONs detected: ${globalThis.luma.VERSION} vs ${VERSION}`);
 }
 
-if (!global.luma) {
+if (!globalThis.luma) {
   if (isBrowser()) {
     log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
   }
 
-  global.luma = global.luma || {
+  globalThis.luma = globalThis.luma || {
     VERSION,
     version: VERSION,
     log,
@@ -59,4 +59,4 @@ if (!global.luma) {
 }
 
 export {lumaStats};
-export default global.luma;
+export default globalThis.luma;

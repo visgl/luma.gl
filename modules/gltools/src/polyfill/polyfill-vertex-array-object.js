@@ -26,19 +26,17 @@
 
 // @ts-nocheck external code
 
-import {global} from 'probe.gl/env';
-
 const glErrorShadow = {};
 
 function error(msg) {
-  if (global.console && global.console.error) {
-    global.console.error(msg);
+  if (globalThis.console && globalThis.console.error) {
+    globalThis.console.error(msg);
   }
 }
 
 function log(msg) {
-  if (global.console && global.console.log) {
-    global.console.log(msg);
+  if (globalThis.console && globalThis.console.log) {
+    globalThis.console.log(msg);
   }
 }
 

@@ -36,9 +36,8 @@ export function polyfillContext(gl) {
 }
 
 // TODO - is this still required?
-const global_ = typeof global !== 'undefined' ? global : window;
 // @ts-ignore
-global_.polyfillContext = polyfillContext;
+globalThis.polyfillContext = polyfillContext;
 
 function initializeExtensions(gl) {
   gl.luma.extensions = {};

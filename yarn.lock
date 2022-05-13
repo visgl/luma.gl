@@ -2128,6 +2128,13 @@
     "@babel/runtime" "^7.0.0"
     probe.gl "3.4.0"
 
+"@probe.gl/env@^3.5.0":
+  version "3.5.0"
+  resolved "https://registry.yarnpkg.com/@probe.gl/env/-/env-3.5.0.tgz#c6d8fbf414fda3eba7b3813cc274e76245216fe0"
+  integrity sha512-YdlpZZshhyYxvWDBmZ5RIW2pTR14Pw4p9czMlt/v7F6HbFzWfAdmH7q6xVwFRYxUpQLwhWensWyv4aFysiWl4g==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+
 "@probe.gl/stats-widget@^3.4.0":
   version "3.4.0"
   resolved "https://registry.yarnpkg.com/@probe.gl/stats-widget/-/stats-widget-3.4.0.tgz#757f29ff93ba757d6f9b634cc74f21049c7a13e3"
