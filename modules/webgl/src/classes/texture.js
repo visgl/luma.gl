@@ -309,6 +309,8 @@ export default class Texture extends Resource {
 
     let gl2;
 
+    let compressedTextureSize = 0;
+
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
@@ -357,15 +359,17 @@ export default class Texture extends Resource {
               border,
               levelData.data
             );
+            compressedTextureSize += levelData.levelSize;
           }
-
           break;
         default:
           assert(false, 'Unknown image data type');
       }
     });
 
-    if (data && data.byteLength) {
+    if (dataType === 'compressed') {
+      this._trackAllocatedMemory(compressedTextureSize, 'Texture');
+    } else if (data && data.byteLength) {
       this._trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
       // NOTE(Tarek): Default to RGBA bytes
