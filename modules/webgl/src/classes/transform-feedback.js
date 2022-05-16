@@ -8,6 +8,10 @@ import {isObjectEmpty} from '../utils/utils';
 // See https://github.com/KhronosGroup/WebGL/issues/2346
 
 export default class TransformFeedback extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'TransformFeedback';
+  }
   static isSupported(gl) {
     return isWebGL2(gl);
   }

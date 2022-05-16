@@ -15,6 +15,10 @@ const GL_ANY_SAMPLES_PASSED = 0x8c2f; // Occlusion query (if drawing passed dept
 const GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8d6a; // Occlusion query less accurate/faster version
 
 export default class Query extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Query';
+  }
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
   static isSupported(gl, opts = []) {

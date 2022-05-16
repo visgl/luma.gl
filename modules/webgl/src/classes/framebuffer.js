@@ -13,6 +13,10 @@ import {assert} from '../utils/assert';
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
 export default class Framebuffer extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Framebuffer';
+  }
   static isSupported(gl, options = {}) {
     const {
       colorBufferFloat, // Whether floating point textures can be rendered and read

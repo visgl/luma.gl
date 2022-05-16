@@ -38,6 +38,10 @@ const PROP_CHECKS_SET_PROPS = {
 };
 
 export default class Buffer extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Buffer';
+  }
   constructor(gl, props = {}) {
     super(gl, props);
 

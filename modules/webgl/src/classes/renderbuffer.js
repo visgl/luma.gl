@@ -18,6 +18,10 @@ function isFormatSupported(gl, format, formats) {
 }
 
 export default class Renderbuffer extends Resource {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Renderbuffer';
+  }
   static isSupported(gl, {format} = {format: null}) {
     return !format || isFormatSupported(gl, format, RENDERBUFFER_FORMATS);
   }

@@ -4,6 +4,11 @@ import Texture from './texture';
 import {loadImage} from '../utils/load-file';
 
 export default class Texture2D extends Texture {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'Texture2D';
+  }
+
   static isSupported(gl, opts) {
     return Texture.isSupported(gl, opts);
   }

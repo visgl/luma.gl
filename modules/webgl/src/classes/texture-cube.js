@@ -12,6 +12,11 @@ const FACES = [
 ];
 
 export default class TextureCube extends Texture {
+  // eslint-disable-next-line accessor-pairs
+  get [Symbol.toStringTag]() {
+    return 'TextureCube';
+  }
+
   constructor(gl, props = {}) {
     assertWebGLContext(gl);
 
