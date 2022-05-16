@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v8.5.12
+
+- fix(minification): constructor name issue (#1631)
+- chore(texture): change compressed textures memory calculation (#1640)
+
 ## v8.5.11
 
 - Replace global from probe.gl/env with globalThis (#1643)
