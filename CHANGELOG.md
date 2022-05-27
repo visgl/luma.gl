@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.13
+
+- Export GLTFAnimator for deck.gl (#1647)
+
 ## v8.5.12
 
 - fix(minification): constructor name issue (#1631)
