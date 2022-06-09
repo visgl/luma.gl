@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.14
+
+- Add @types/offscreencanvas dependency (#1649)
+
 ## v8.5.13
 
 - Export GLTFAnimator for deck.gl (#1647)
