@@ -1,6 +1,6 @@
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {Query, Framebuffer} from '@luma.gl/webgl';
-import { Stats } from 'probe.gl'
+import { Stats } from '@probe.gl/stats'
 import { Timeline } from '../animation/timeline'
 
 import {CreateGLContextOptions} from '@luma.gl/gltools'

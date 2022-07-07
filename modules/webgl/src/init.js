@@ -1,5 +1,5 @@
 import {log} from '@luma.gl/gltools';
-import {Stats} from 'probe.gl';
+import {Stats} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
 // Version detection using babel plugin
