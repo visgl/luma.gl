@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.15
+
+- chore(webgl): separate memory stats by canvas id (#1651)
+
 ## v8.5.14
 
 - Add @types/offscreencanvas dependency (#1649)
