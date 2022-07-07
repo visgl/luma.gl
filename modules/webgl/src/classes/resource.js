@@ -295,7 +295,12 @@ export default class Resource {
   }
 
   _trackAllocatedMemory(bytes, name = this[Symbol.toStringTag]) {
-    const stats = lumaStats.get('Memory Usage');
+    this._trackAllocatedMemoryForContext(bytes, name);
+    this._trackAllocatedMemoryForContext(bytes, name, this.gl.canvas && this.gl.canvas.id);
+  }
+
+  _trackAllocatedMemoryForContext(bytes, name = this[Symbol.toStringTag], id = '') {
+    const stats = lumaStats.get(`Memory Usage${id}`);
 
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
@@ -303,7 +308,12 @@ export default class Resource {
   }
 
   _trackDeallocatedMemory(name = this[Symbol.toStringTag]) {
-    const stats = lumaStats.get('Memory Usage');
+    this._trackDeallocatedMemoryForContext(name);
+    this._trackDeallocatedMemoryForContext(name, this.gl.canvas && this.gl.canvas.id);
+  }
+
+  _trackDeallocatedMemoryForContext(name = this[Symbol.toStringTag], id = '') {
+    const stats = lumaStats.get(`Memory Usage${id}`);
 
     stats.get('GPU Memory').subtractCount(this.byteLength);
     stats.get(`${name} Memory`).subtractCount(this.byteLength);
