@@ -1,5 +1,5 @@
 import {isWebGL2, assertWebGLContext} from '@luma.gl/gltools';
-import {lumaStats} from '../init';
+import {lumaStats, StatsManager} from '../init';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
 import {assert} from '../utils/assert';
 import {uid} from '../utils/utils';
@@ -44,6 +44,7 @@ export default class Resource {
     // Only meaningful for resources that allocate GPU memory
     this.byteLength = 0;
 
+    this._initStats();
     this._addStats();
   }
 
@@ -278,6 +279,10 @@ export default class Resource {
     return this.gl.luma;
   }
 
+  _initStats() {
+    this.gl.stats = this.gl.stats || new StatsManager();
+  }
+
   _addStats() {
     const name = this[Symbol.toStringTag];
     const stats = lumaStats.get('Resource Counts');
@@ -295,26 +300,29 @@ export default class Resource {
   }
 
   _trackAllocatedMemory(bytes, name = this[Symbol.toStringTag]) {
-    this._trackAllocatedMemoryForContext(bytes, name);
-    this._trackAllocatedMemoryForContext(bytes, name, this.gl.canvas && this.gl.canvas.id);
+    this._doTrackAllocatedMemory(bytes, name);
+    this._doTrackAllocatedMemory(bytes, name, this.gl.stats.get(`Memory Usage`));
   }
 
-  _trackAllocatedMemoryForContext(bytes, name = this[Symbol.toStringTag], id = '') {
-    const stats = lumaStats.get(`Memory Usage${id}`);
-
+  _doTrackAllocatedMemory(
+    bytes,
+    name = this[Symbol.toStringTag],
+    stats = lumaStats.get(`Memory Usage`)
+  ) {
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
     this.byteLength = bytes;
   }
 
   _trackDeallocatedMemory(name = this[Symbol.toStringTag]) {
-    this._trackDeallocatedMemoryForContext(name);
-    this._trackDeallocatedMemoryForContext(name, this.gl.canvas && this.gl.canvas.id);
+    this._doTrackDeallocatedMemory(name);
+    this._doTrackDeallocatedMemory(name, this.gl.stats.get(`Memory Usage`));
   }
 
-  _trackDeallocatedMemoryForContext(name = this[Symbol.toStringTag], id = '') {
-    const stats = lumaStats.get(`Memory Usage${id}`);
-
+  _doTrackDeallocatedMemory(
+    name = this[Symbol.toStringTag],
+    stats = lumaStats.get(`Memory Usage`)
+  ) {
     stats.get('GPU Memory').subtractCount(this.byteLength);
     stats.get(`${name} Memory`).subtractCount(this.byteLength);
     this.byteLength = 0;
