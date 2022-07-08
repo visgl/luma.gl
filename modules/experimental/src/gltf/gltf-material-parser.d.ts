@@ -19,4 +19,5 @@ export default class GLTFMaterialParser {
   parseTexture(gltfTexture: any, name: any, define?: any): void;
   parsePbrMetallicRoughness(pbrMetallicRoughness: any): void;
   parseMaterial(material: any): void;
+  delete(): void;
 }
