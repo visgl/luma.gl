@@ -14,6 +14,7 @@ export default class VRDisplay extends Display {
 
     this._vrSupported = VRDisplay.isSupported();
     if (this._vrSupported) {
+      // @ts-expect-error
       this.vrFrameData = new window.VRFrameData();
       this.vrPresenting = false;
       this.vrFrame = false;
@@ -110,6 +111,7 @@ export default class VRDisplay extends Display {
       return;
     }
 
+    // @ts-expect-error
     const displays = await navigator.getVRDisplays();
     if (displays && displays.length) {
       log.info(2, 'Found VR Displays', displays)();
