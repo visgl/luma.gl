@@ -1,4 +1,4 @@
-import {Stats} from 'probe.gl';
+import {Stats} from '@probe.gl/stats';
 import TestRunner from './test-runner';
 
 export default class PerformanceTestRunner extends TestRunner {

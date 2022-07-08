@@ -4,7 +4,7 @@ import Buffer from './buffer';
 import {isWebGL2} from '@luma.gl/gltools';
 import {getScratchArray, fillArray} from '../utils/array-utils-flat';
 import {assert} from '../utils/assert';
-import {getBrowser} from 'probe.gl';
+import {getBrowser} from '@probe.gl/env';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 

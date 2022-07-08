@@ -26,6 +26,8 @@ export {
   Renderbuffer,
   Texture2D,
   TextureCube,
+  VertexShader,
+  FragmentShader,
   clear,
   // Copy and Blit
   readPixelsToArray,

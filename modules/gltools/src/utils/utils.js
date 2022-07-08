@@ -12,7 +12,10 @@ export function deepArrayEqual(x, y) {
   }
   const isArrayX = Array.isArray(x) || ArrayBuffer.isView(x);
   const isArrayY = Array.isArray(y) || ArrayBuffer.isView(y);
+
+  // @ts-expect-error DataView...
   if (isArrayX && isArrayY && x.length === y.length) {
+    // @ts-expect-error DataView...
     for (let i = 0; i < x.length; ++i) {
       if (x[i] !== y[i]) {
         return false;

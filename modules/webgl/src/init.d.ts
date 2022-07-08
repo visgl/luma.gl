@@ -1,4 +1,4 @@
-import {Stats} from 'probe.gl';
+import {Stats} from '@probe.gl/stats';
 
 export class StatsManager {
   constructor();
