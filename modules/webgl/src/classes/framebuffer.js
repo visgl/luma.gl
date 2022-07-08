@@ -442,6 +442,7 @@ export default class Framebuffer extends Resource {
     }
     message = message || `Framebuffer ${this.id}`;
     const image = copyToDataUrl(this, {targetMaxHeight: 100});
+    // @ts-expect-error
     log.image({logLevel, message, image}, message)();
     return this;
   }

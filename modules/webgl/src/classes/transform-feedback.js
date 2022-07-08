@@ -70,7 +70,7 @@ export default class TransformFeedback extends Resource {
 
     if (location < 0) {
       this.unused[locationOrName] = buffer;
-      log.warn(() => `${this.id} unused varying buffer ${locationOrName}`)();
+      log.warn(`${this.id} unused varying buffer ${locationOrName}`)();
       return this;
     }
 

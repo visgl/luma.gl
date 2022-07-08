@@ -570,6 +570,6 @@ export default class Model {
       framebuffer.log({logLevel: LOG_DRAW_PRIORITY, message: `Rendered to ${framebuffer.id}`});
     }
 
-    log.groupEnd(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`)();
+    log.groupEnd(LOG_DRAW_PRIORITY)();
   }
 }
