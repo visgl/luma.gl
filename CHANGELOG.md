@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v8.5.16
+
+- chore(gltf-material-parser.d.ts): add delete method (#1650)
+- chore: Upgrade to probe.gl@3.5.0 (#1653)
+
 ## v8.5.15
 
 - chore(webgl): separate memory stats by canvas id (#1651)
