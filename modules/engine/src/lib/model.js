@@ -297,7 +297,7 @@ export default class Model {
       logPriority = this._logDrawCallStart(LOG_DRAW_PRIORITY);
     }
 
-    const drawParams = this.vertexArray.getDrawParams();
+    const drawParams = vertexArray.getDrawParams();
     const {
       isIndexed = drawParams.isIndexed,
       indexType = drawParams.indexType,
