@@ -115,10 +115,6 @@
                 instanceOffsets: [offsetsBuffer, {divisor: 1}],
                 instanceColors: [colorsBuffer, {divisor: 1}],
                 instancePickingColors: [pickingColorsBuffer, {divisor: 1}]
-              },
-              parameters: {
-                depthWriteEnabled: true,
-                depthCompare: 'less-equal',
               }
             })
           );
@@ -134,7 +130,14 @@
           return INFO_HTML;
         }
 
-        onInitialize({device, _animationLoop}) {
+        onInitialize({gl, _animationLoop}) {
+          setParameters(gl, {
+            clearColor: [0, 0, 0, 1],
+            clearDepth: 1,
+            depthTest: true,
+            depthFunc: gl.LEQUAL
+          });
+
           this.attachTimeline(new Timeline());
           this.timeline.play();
 
@@ -156,7 +159,7 @@
             })
           };
 
-          this.cube = new InstancedCube(device);
+          this.cube = new InstancedCube(gl);
 
           const modelMatrix = mat4.create();
           const viewMatix = mat4.create();
@@ -166,7 +169,7 @@
         }
 
         onRender(animationProps) {
-          const {device, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
+          const {gl, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
           const {framebuffer, _mousePosition} = animationProps;
           const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
 
@@ -184,7 +187,7 @@
           mat4.rotateY(modelMatrix, modelMatrix, tick * 0.013);
 
           // Draw the cubes
-          clear(device, {color: [0, 0, 0, 1], depth: true});
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
           this.cube.setUniforms({
             uTime: this.timeline.getTime(timeChannel),
             uProjection: mat4.perspective(projMatrix, Math.PI / 3, aspect, 1, 2048.0),
@@ -210,6 +213,7 @@
       function pickInstance(gl, pickX, pickY, model, framebuffer) {
         framebuffer.clear({color: true, depth: true});
         // Render picking colors
+        /* eslint-disable camelcase */
         model.setUniforms({picking_uActive: 1});
         model.draw({framebuffer});
         model.setUniforms({picking_uActive: 0});

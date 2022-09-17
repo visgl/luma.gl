@@ -1,25 +1,30 @@
-import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
-
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {Texture2D, TextureCube} from '@luma.gl/gltools';
+import {Texture2D, TextureCube} from '@luma.gl/webgl';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
+import test from 'tape-catch';
+import {fixture} from 'test/setup';
 
-test('gltf#loading', async (t) => {
-  // TODO - is gl argument used?
-  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl});
-  const result = createGLTFObjects(webgl1TestDevice, gltf);
+test('gltf#loading', t => {
+  const {gl} = fixture;
 
-  t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
-  t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  load('test/data/box.glb', GLTFLoader, {gl})
+    .then(gltf => {
+      const result = createGLTFObjects(gl, gltf);
 
-  t.end();
+      t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
+      t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+
+      t.end();
+    })
+    .catch(e => t.fail(e));
 });
 
-test('gltf#environment', (t) => {
-  const environment = new GLTFEnvironment(webgl1TestDevice, {
+test('gltf#environment', t => {
+  const {gl} = fixture;
+
+  const environment = new GLTFEnvironment(gl, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9

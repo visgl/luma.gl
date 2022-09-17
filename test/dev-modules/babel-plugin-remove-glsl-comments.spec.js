@@ -1,6 +1,6 @@
 import babel from '@babel/core';
 import plugin from 'dev-modules/babel-plugin-remove-glsl-comments';
-import test from 'tape-promise/tape';
+import test from 'tape-catch';
 
 const ES6_ENV = {
   targets: {chrome: '60'},
@@ -106,12 +106,14 @@ const TEST_CASES = [
 
 // Remove whitespace before comparing
 function clean(code) {
-  return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
+  return code
+    .replace('"use strict";', '')
+    .replace(/\n\s+/g, '\n')
+    .trim();
 }
 
-// TODO - RESTORE
-test.skip('RemoveGLSLComments Babel Plugin', (t) => {
-  TEST_CASES.forEach((testCase) => {
+test('RemoveGLSLComments Babel Plugin', t => {
+  TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       comments: true,
       presets: [['@babel/env', testCase.env]],

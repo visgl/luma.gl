@@ -1,4 +1,4 @@
-import test from 'tape-promise/tape';
+import test from 'tape-catch';
 import {Geometry} from '@luma.gl/engine';
 
 const TEST_CASES = [
@@ -55,21 +55,19 @@ const TEST_CASES = [
       attributes: {
         positions: {value: new Float32Array([0, 0, 1, 0, 1, 1, 1, 0]), size: 2}
       },
-      drawMode: Geometry.DRAW_MODE.TRIANGLE_STRIP,
+      drawMode: Geometry.DRAW_MODE.TRIANGLE_FAN,
       vertexCount: 3
     },
-    drawMode: Geometry.DRAW_MODE.TRIANGLE_STRIP,
+    drawMode: Geometry.DRAW_MODE.TRIANGLE_FAN,
     vertexCount: 3
   }
 ];
 
-test('Geometry#constructor', (t) => {
+test('Geometry#constructor', t => {
   for (const testCase of TEST_CASES) {
     if (testCase.shouldThrow) {
-      // @ts-expect-error TODO fix
       t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);
     } else {
-      // @ts-expect-error TODO fix
       const geometry = new Geometry(testCase.props);
 
       t.is(geometry.mode, testCase.drawMode, `${testCase.title}: drawMode is correct`);

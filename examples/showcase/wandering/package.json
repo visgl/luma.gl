@@ -1,21 +1,21 @@
 {
   "name": "luma.gl-examples-wandering",
-  "version": "9.0.0-alpha.4",
+  "version": "8.5.16",
   "private": true,
   "scripts": {
-    "start": "vite",
-    "build": "tsc && vite build",
-    "serve": "vite preview"
+    "start": "webpack-dev-server --progress --hot --open -d",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.4",
-    "@luma.gl/gltools": "9.0.0-alpha.4",
-    "@luma.gl/shadertools": "9.0.0-alpha.4",
-    "@luma.gl/webgl": "9.0.0-alpha.4",
-    "@probe.gl/log": "^3.5.0"
+    "@luma.gl/engine": "8.5.16",
+    "@luma.gl/gltools": "8.5.16",
+    "@luma.gl/shadertools": "8.5.16",
+    "@luma.gl/webgl": "8.5.16",
+    "probe.gl": "^3.4.0"
   },
   "devDependencies": {
-    "typescript": "^4.3.2",
-    "vite": "^2.6.4"
+    "html-webpack-plugin": "^3.2.0",
+    "webpack": "^4.3.0",
+    "webpack-dev-server": "^3.1.1"
   }
 }

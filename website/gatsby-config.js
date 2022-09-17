@@ -88,42 +88,42 @@ module.exports = {
 
         EXAMPLES: [
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'Instancing',
             componentUrl: resolve(__dirname, './templates/showcase/example-instancing.jsx'),
             path: 'examples/showcase/instancing/',
             image: 'images/example-instancing.jpg'
           },
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'Persistence',
             componentUrl: resolve(__dirname, './templates/showcase/example-persistence.jsx'),
             path: 'examples/showcase/persistence/',
             image: 'images/example-persistence.jpg'
           },
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'GLTF',
             componentUrl: resolve(__dirname, './templates/showcase/example-gltf.jsx'),
             path: 'examples/showcase/gltf/',
             image: 'images/example-gltf.jpg'
           },
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'DOF',
             componentUrl: resolve(__dirname, './templates/showcase/example-dof.jsx'),
             path: 'examples/showcase/dof/',
             image: 'images/example-dof.jpg'
           },
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'Geospatial',
             componentUrl: resolve(__dirname, './templates/showcase/example-geospatial.jsx'),
             path: 'examples/showcase/geospatial/',
             image: 'images/example-geospatial.jpg'
           },
           {
-            category: 'Showcases v8',
+            category: 'Showcases',
             title: 'Wandering',
             componentUrl: resolve(__dirname, './templates/showcase/example-wandering.jsx'),
             path: 'examples/showcase/wandering/',
@@ -138,12 +138,32 @@ module.exports = {
           },
           {
             category: 'Tutorials',
-            title: 'Hello Instancing',
+            title: 'Hello Instancing - High-level',
             componentUrl: resolve(
               __dirname,
-              './templates/getting-started/example-hello-instancing.jsx'
+              './templates/getting-started/example-hello-instancing-high.jsx'
             ),
-            path: 'examples/getting-started/hello-instancing',
+            path: 'examples/getting-started/hello-instancing-high',
+            image: 'images/example-hello-instancing.png'
+          },
+          {
+            category: 'Tutorials',
+            title: 'Hello Instancing - Mid-level',
+            componentUrl: resolve(
+              __dirname,
+              './templates/getting-started/example-hello-instancing-mid.jsx'
+            ),
+            path: 'examples/getting-started/hello-instancing-mid',
+            image: 'images/example-hello-instancing.png'
+          },
+          {
+            category: 'Tutorials',
+            title: 'Hello Instancing - Low-level',
+            componentUrl: resolve(
+              __dirname,
+              './templates/getting-started/example-hello-instancing-low.jsx'
+            ),
+            path: 'examples/getting-started/hello-instancing-low',
             image: 'images/example-hello-instancing.png'
           },
           {
@@ -162,6 +182,16 @@ module.exports = {
           },
           {
             category: 'Tutorials',
+            title: 'Shader Modules - Low-level',
+            componentUrl: resolve(
+              __dirname,
+              './templates/getting-started/example-shader-modules-low.jsx'
+            ),
+            path: 'examples/getting-started/shader-modules-low',
+            image: 'images/example-shader-hooks.jpg'
+          },
+          {
+            category: 'Tutorials',
             title: 'Transform Feedback',
             componentUrl: resolve(
               __dirname,
@@ -169,6 +199,13 @@ module.exports = {
             ),
             path: 'examples/getting-started/transform-feedback',
             image: 'images/example-transform-feedback.jpg'
+          },
+          {
+            category: 'Tutorials',
+            title: 'External Context',
+            componentUrl: resolve(__dirname, './templates/getting-started/example-external-context.jsx'),
+            path: 'examples/getting-started/external-context',
+            image: 'images/example-hello-triangle.png'
           },
           {
             category: 'Tutorials',
@@ -201,13 +238,13 @@ module.exports = {
             path: 'examples/api/animation/',
             image: 'images/example-animation.png'
           },
-          // {
-          //   category: 'Tutorials',
-          //   title: 'Program Management',
-          //   componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
-          //   path: 'examples/api/program-management/',
-          //   image: 'images/example-program-management.png'
-          // },
+          {
+            category: 'Tutorials',
+            title: 'Program Management',
+            componentUrl: resolve(__dirname, './templates/api/example-program-management.jsx'),
+            path: 'examples/api/program-management/',
+            image: 'images/example-program-management.png'
+          },
           {
             category: 'Tutorials',
             title: 'Cubemap',
@@ -222,76 +259,14 @@ module.exports = {
             path: 'examples/api/texture3d/',
             image: 'images/example-texture3d.png'
           },
-          // {
-          //   category: 'Performance',
-          //   title: 'Stress Test',
-          //   componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
-          //   path: 'examples/performance/stress-test/',
-          //   image: 'images/example-stress-test.png'
-          // },
           {
-            category: 'WebGL',
-            title: 'Hello Instancing - Raw WebGL',
-            componentUrl: resolve(
-              __dirname,
-              './templates/webgl/example-hello-instancing-webgl.jsx'
-            ),
-            path: 'examples/webgl/hello-instancing-webgl/',
-            image: 'images/example-hello-instancing.png'
-          },
-          {
-            category: 'WebGL',
-            title: 'Shader Modules - Raw WebGL',
-            componentUrl: resolve(
-              __dirname,
-              './templates/webgl/example-shader-modules-webgl.jsx'
-            ),
-            path: 'examples/webgl/shader-modules-webgl/',
-            image: 'images/example-shader-hooks.jpg'
-          },
-          {
-            category: 'WebGL',
-            title: 'External Context',
-            componentUrl: resolve(__dirname, './templates/webgl/example-external-webgl-context.jsx'),
-            path: 'examples/webgl/external-webgl-context/',
-            image: 'images/example-hello-triangle.png'
-          },
-          {
-            category: 'WebGPU',
-            title: 'Hello Triangle - Shader Geometry',
-            componentUrl: resolve(__dirname, './templates/webgpu/example-hello-triangle-webgpu.jsx'),
-            path: 'examples/webgpu/hello-triangle/',
-            image: 'images/example-hello-triangle.png'
-          },
-          {
-            category: 'WebGPU',
-            title: 'Rotating Cube - Uniform Buffer',
-            componentUrl: resolve(__dirname, './templates/webgpu/example-rotating-cube-webgpu.jsx'),
-            path: 'examples/webgpu/rotating-cube/',
-            image: 'images/example-hello-triangle.png'
-          },
-          {
-            category: 'WebGPU',
-            title: 'Two Rotating Cubes - One Model, two Uniform Buffers',
-            componentUrl: resolve(__dirname, './templates/webgpu/example-two-cubes-webgpu.jsx'),
-            path: 'examples/webgpu/two-cubes/',
-            image: 'images/example-hello-triangle.png'
-          },
-          {
-            category: 'WebGPU',
-            title: 'Instanced Cubes',
-            componentUrl: resolve(__dirname, './templates/webgpu/example-instanced-cubes-webgpu.jsx'),
-            path: 'examples/webgpu/instanced-cubes/',
-            image: 'images/example-hello-triangle.png'
-          },
-          {
-            category: 'WebGPU',
-            title: 'Textured Cube',
-            componentUrl: resolve(__dirname, './templates/webgpu/example-textured-cube-webgpu.jsx'),
-            path: 'examples/webgpu/textured-cube',
-            image: 'images/example-hello-triangle.png'
+            category: 'Performance',
+            title: 'Stress Test',
+            componentUrl: resolve(__dirname, './templates/performance/example-stress-test.jsx'),
+            path: 'examples/performance/stress-test/',
+            image: 'images/example-stress-test.png'
           }
-        ]
+        ]      
       }
     },
     {

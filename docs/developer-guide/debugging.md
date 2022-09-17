@@ -1,60 +1,25 @@
 # Debugging
 
-Debugging GPU code can be quite tricky. It is not possible to put breakpoints in or 
-single step through GPU shaders, and when they fail, a black screen may not provide much
-information. The error can be in the shader, in the data that was provided to the GPU,
-or in one of the many GPU pipeline settings, or in the way the APIs were called.
-
-luma.gl provides a number of facilities for debugging your GPU code, to help you save time during development:
-
-- Object tracking via `id` fields.
-- Log levels, verbose logs display all values being passed to each draw call.
-- Detailed shader compilation logs. 
-- Parameter validation
-- Spector.js integration
-- Khronos WebGL debug integration - Synchronous WebGL error capture (optional module).
+luma.gl has a number of provisions for debugging designed to help you save time during development.
 
 ## id strings
 
-Most classes in luma.gl allow you to supply an optional `id` string to their constructors. 
-This allows you to later easily check in the debugger which object 
-(which specific instance of that class) you are looking at when debugging code.
+Most classes in luma.gl allow you to supply and optional `id` string to their constructors. This allows you to later easily check in the debugger which object (which specific instance of that class) is involved in a stack trace.
 
 ```js
-const program = device.createRenderPipeline({id: 'cube-program', ...});
-const program = device.createRenderPipeline({id: 'pyramid-program', ...});
+const program = new Program(gl, {id: 'cube-program', ...});
+const program = new Program(gl, {id: 'pyramid-program', ...});
 ```
 
-Apart from providing a human-readable `id` field when inspecting objects in the debugger,  
-the `id`s that the application provides are used in multiple places:
-
-- luma.gl's built-in logging (see next section) often includes object `id`s.
-- `id` is copied into the WebGPU object `label` field which is designed to support debugging.
-- `id` is exposed to Specter.js (luma.gl sets the [`__SPECTOR_Metadata`](https://github.com/BabylonJS/Spector.js#custom-data field on WebGL object handles).
+`id`s that you provide are also used by the built-in logging.
 
 ## Logging
 
-luma.gl logs its activities. 
-
-Set the global variable `luma.log.level` (this can be done in the browser console at any time) 
-
-```js
-luma.log.level=1 
-```
-
-| `luma.log.level` | luma.gl will print |
-| --- | --- |
-| `1` | modest amount of initialization information. |
-| `3` | tables for uniforms and attributes providing information about their values and types before each render call. This can be extremely helpful for checking that shaders are getting valid inputs. |
+luma.gl has a logging mechanism. Set the global variable luma.log.level to 3 (can be done in the browser console at any time) and luma will print tables for uniforms and attributes providing information about their values and types before each render call. This can be extremely helpful for checking that shaders are getting valid inputs.
 
 ## Shader compilation errors
 
-luma.gl takes care to extract as much information as possible about shader compiler errors etc, 
-and will throw exceptions with detailed error strings when shaders fail to compile. 
-luma.gl also injects and parses `glslify` style `#define SHADER_NAME` "shader names". 
-
-Naming shaders directly in the shader code can help identify which 
-shader is involved when debugging shader parsing errors occur.
+luma.gl takes care to extract as much information as possible about shader compiler errors etc, and will throw exceptions with very detailed error strings when shaders fail to compile. luma.gl also injects and parses `glslify` "shader names", making it possible to name shaders inside the shader code, making it easier to identify which shader is involved when e.g shader parsing errors occur.
 
 ## Parameter Validation
 
@@ -62,43 +27,12 @@ luma.gl runs checks on attributes and buffers when they are being set, catching 
 
 Buffers will also have their first values checked to ensure that they are not NaN. As an example, setting uniforms to illegal values now throws an exception containing a helpful error message including the name of the problematic uniform.
 
-## Resource Leak Detection
+## Debug Module
 
-See the chapter on Profiling for some tools that can help spot resource leaks.
-
-## Khronos WebGL developer tools integration (WebGL only)
-
-luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and luma.gl use these tools to "instrument" the `WebGLRenderingContext` which enabled:
-
-- **Inline WebGL Error Detections** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, breaking the debugger at the correct place, and also extract helpful information about the error. 
-- **WebGL Parameters Checking** - Ensure that WebGL parameters are set to valid values.
-
-Note that the developer tools module is loaded dynamically when a device is created with the debug flag set, so the developer tools can be activated in production code by opening the browser console and typing:
-
-`luma.set('debug', true)`
-
-and then reloading the browser tab.
-
-While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
+Importing `@luma.gl/debug` will enable creation of debug contexts for several **luma.gl** functions. See [@luma.gl/debug](/docs/api-reference/debug) for more information.
 
 ```js
-import {luma} from '@luma.gl/core';
+import {createGLContext} from '@luma.gl/gltools';
 import '@luma.gl/debug';
-const device = luma.createDevice({type: 'webgl', debug: true});
-```
-
-> Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.
-
-## Spector.js integration (WebGL only)
-
-luma.gl integrates with [Spector.js](https://spector.babylonjs.com/), a powerful debug tool created by the BabylonJS team.
-
-To avoid performance impact, luma.gl doesn't load or start spector.js by default. 
-
-- Add the `spector: true` option when creating a device.
-
-To display Spector.js stats when loaded.
-
-```
-luma.spector.displayUI()
+const gl = createGLContext(gl, {debug: true});
 ```

@@ -1,7 +1,6 @@
 /* eslint-disable no-var, max-statements */
 import GL from '@luma.gl/constants';
-// eslint-disable-next-line
-import {AnimationLoop, Cube} from '@luma.gl/core';
+import {AnimationLoop, CubeGeometry} from '@luma.gl/core';
 import {createTestContext} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -50,7 +49,7 @@ function makeInstancedCube(gl) {
 
   const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
-  return new Cube(gl, {
+  return new CubeGeometry(gl, {
     isInstanced: 1,
     instanceCount: SIDE * SIDE,
     attributes: {

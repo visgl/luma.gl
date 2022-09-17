@@ -1,154 +1,75 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.4
+## v8.5.16
 
-alpha.1 through alpha.3 should be avoided. Partial releases, bad dependencies.
+- chore(gltf-material-parser.d.ts): add delete method (#1650)
+- chore: Upgrade to probe.gl@3.5.0 (#1653)
 
-- (HEAD -> master, tag: v9.0.0-alpha.1, origin/master, origin/HEAD) v9.0.0-alpha.1
-- build(deps): bump follow-redirects from 1.14.7 to 1.14.8 (#1625)
-- build(deps): bump url-parse from 1.5.3 to 1.5.10 (#1629)
-- docs: website
-- feat(docs): Another docs pass (#1621)
-- feat(docs): Pass on resource docs (#1620)
-- chore(webgl): Reduce implicit typings (#1618)
-- chore(shadertools): Reduce implicit typings in shadertools module (#1614)
-- chore(webgl): WebGLDevice cleanup (#1617)
-- fix(website): Ensure all examples run again against new api (#1615)
-- chore(api): CanvasContext cleanup (#1616)
-- chore: reduce amount of implicit typings (#1613)
-- feat(engine): New portable `Model` class can now render WebGL examples (#1612)
-- Context cleanup (#1611)
-- chore(webgl): Clean up webgl utilities (#1610)
-- chore(gltools): Move legacy code from `@luma.gl/engine` to gltools (#1609)
-- chore(gltools): Collect deprecated WebGL classes in  gltools (#1608)
-- chore: Split WEBGLBuffer from Buffer (#1607)
-- build(deps): bump trim-off-newlines from 1.0.1 to 1.0.3 (#1605)
-- chore: Move to v9.0.0-alpha releases (#1606)
-- feat(examples): All WebGPU examples work under WebGL (#1604)
-- feat(webgl): support WebGPU uniform buffer examples in WebGL (#1603)
-- feat(webgl): WebGPU triangle example renders under WebGL (#1601)
-- chore(webgl): Split vertex-array, vao, renderbuffer into webgl and legacy classes (#1600)
-- chore(examples): Improve gpu-api independence of examples (#1599)
-- chore(examples): Clean up WebGPU examples (#1598)
-- chore(webgl): Program inherits from WEBGLRenderPipeline (#1597)
-- feat(webgpu): external textures (#1596)
-- feat(webgpu): RenderPass and ComputePass (#1595)
-- build(deps): bump follow-redirects from 1.13.1 to 1.14.7 (#1594)
-- feat: RenderPipeline plumbing (#1593)
-- feat(api): Refactor WEBGLFramebuffer class (#1570) (#1592)
-- chore(webgl): Cleanup for framebuffer refactor (#1591)
-- chore(webgl): isolate texture format processing (#1590)
-- feat(test-utils): Return lists of devices for testing (#1589)
-- chore(webgl): Cleanup texture format handling (#1588)
-- feat(webgl): More rigorous texture formats (#1586)
-- feat(webgl): Auto-import the WebGL developer tools (#1585)
-- feat(docs): Add inline examples with textures (#1584)
-- chore: Add website/static/images/vis-logo.png
-- feat(docs): Device selector for WebGL2, WebGL, WebGPU (#1583)
-- feat(focs): Live examples in tutorials (#1582)
-- feat(docs): Use MDX to populate tables with actual browser capabilities (#1580)
-- feat(api): Clean up DeviceFeature naming (#1581)
-- feat(docs): Reorganize docs (#1579)
-- docs(api): Device docs pass (#1578)
-- feat(webgl): Sampler anisotropy and comparison (#1576)
-- feat(webgl): Add normalized 16-bit texture formats (#1577)
-- feat(webgl): Support WebGPU texture formats (#1575)
-- chore(webgl): Texture refactor cleanups (#1574)
-- feat(webgl): Texture class unification (#1572)
-- feat(debug): Restore WebGL debug integration (#1573)
-- feat(webgl): Add spectorjs integration (#1571)
-- feat(webgpu): Add Framebuffer class (#1570)
-- docs(api): doc pass on new abstract API (#1569)
-- chore(api): utils cleanup (#1568)
-- feat(api): WebGPU style parameters in ProgramProps and ModelProps (#1567)
-- chore(examples): Two webgpu cubes using uniform buffers (#1566)
-- feat(webgpu): Add textured cube example (#1563)
-- chore: Remove type check exceptions (#1565)
-- chore: exclude modules/webgpu from coverage (#1564)
-- feat(examples): webgpu instancing sample (#1561)
-- chore(docs): Update pass (#1562)
-- feat(api): Add CanvasContext (#1560)
-- feat(webgpu): Add two cubes example (#1558)
-- feat(webgpu): webgl-independent animation loop (#1559)
-- feat(webgpu): Add rotating cube example (#1557)
-- feat(webgpu): Partial WebGPU example (#1556)
-- docs: Add initial API and WebGPU docs (#1555)
+## v8.5.15
 
-- (tag: v8.6.0-alpha.5) v8.6.0-alpha.5
-- fix(webgl): Fix gltools stubs (#1554)
+- chore(webgl): separate memory stats by canvas id (#1651)
 
-- (tag: v8.6.0-alpha.4) v8.6.0-alpha.4
-- chore: gltools cleanup (#1553)
+## v8.5.14
 
-- (tag: v8.6.0-alpha.3) v8.6.0-alpha.3
-- fix(examples): Unbreak GLTF and WebGL only examples (#1552)
-- chore: Bump to loaders.gl@3.1.1 (#1550)
-- fix: Various minor API type fixes (#1551)
-- chore: Clean up license comments (#1547)
-- chore: bump to probe.gl@3.5.0 (#1548)
-- chore(core): export cleanup (#1546)
-- feat(webgl): Platform-independent ProgramConfiguration (#1544)
-- feat(webgl): WebGPU style parameter setters (#1545)
-- chore(webgl): Separate minimal WebGLShader from luma.gl compatibility class (#1541)
+- Add @types/offscreencanvas dependency (#1649)
 
-- (tag: v8.6.0-alpha.2) v8.6.0-alpha.2
-- chore(gltf): Minor typescript improvements (#1542)
-- chore: bump to loaders.gl@3.1.0 (#1543)
-- build(deps): bump ws from 6.2.1 to 6.2.2 (#1540)
-- feat(webgl): Introduce WebGLDevice, deprecate gltools (#1539)
-- chore: Run CI on Node 16 (#1538)
-- chore: website code cleanup (#1537)
-- chore: typescript cleanup (#1536)
-- fix(api): minor fixes (#1535)
-- chore(shadertools): typescript and directory overhaul (#1523)
-- chore: Replace `global` with `globalThis`. Bump to probe.gl@3.5.0-alpha (#1534)
+## v8.5.13
 
-- (tag: v8.6.0-alpha.1) v8.6.0-alpha.1
-- chore: disable script builds (#1533)
-- feat: TypeScript monorepo setup (#1532)
-- feat(api): New API module (#1529)
-- chore(gltools): Light reorg of gltools (#1531)
-- chore(gltools): improve directory structure (#1530)
-- chore(webgl): Texture inherits from API Resource (#1528)
-- chore(webgl): Shader inherits from API class (#1527)
-- chore(webgl): webgl Buffer inherits from API Buffer and Resource (#1526)
-- chore(shadertools): Improve shader module typings (#1522)
-- chore(webgl): use new shadertools function for shader log parsing (#1516)
-- chore(engine): Initial typing improvements for Transform classes (#1521)
-- chore(engine): Inline types for `AnimationLoop` (#1520)
-- chore(engine): animation loop light refactor (#1504)
-- chore(engine): Convert Model to .ts (#1519)
-- build(deps): bump url-parse from 1.5.1 to 1.5.3 (#1514)
-- feat(shadertools): Add WebGPU compatible compiler log type and formatter (#1517)
-- fix texture binding tracking (#1515)
+- Export GLTFAnimator for deck.gl (#1647)
+
+## v8.5.12
+
+- fix(minification): constructor name issue (#1631)
+- chore(texture): change compressed textures memory calculation (#1640)
+
+## v8.5.11
+
+- Replace global from probe.gl/env with globalThis (#1643)
+- Cleanup generated textures (#1639)
+
+## v8.5.10
+
+- Revert remove overly broad platform defines (#1496)
+
+## v8.5.9
+
+- Revert Improve context state tracking (#1513)
+
+## v8.5.8
+
 - Improve context state tracking (#1513)
 - Fix outdated parameter cache (#1510)
-- Ib/ts geometry (#1507)
-- chore: Add typescript support to .nycrc (#1508)
-- fix(engine): AnimationLoop request/cancel animation frames (#1506)
-- chore(webgl): improved typings for Framebuffer, Renderbuffer, Shader (#1503)
-- chore(webgl): .ts file for Program class (#1502)
-- chore(typescript): Additional .d.ts -> .ts conversion (#1500)
-- chore: merge and rename files from {.js,d.ts} to .ts. (#1497)
-- website: adjust to new ocular version (#1498)
-- chore: upgrade to ocular@1.0.0-alpha.7 (#1484)
-- Bump tar from 4.4.15 to 4.4.19 (#1494)
-- Bump path-parse from 1.0.6 to 1.0.7 (#1487)
+
+## v8.5.7
+
+- chore(webgl): get rid of circular references (#1499)
+
+## v8.5.6
+
+- Remove overly broad platform defines (#1496)
 - Fix animation frame scheduling and cancellation (#1495)
-- remove overly broad platform defines (#1496)
-- Bump tar from 4.4.13 to 4.4.15 (#1486)
+
+## v8.5.5
+
 - Work around fp32 compile error in Safari 15 (#1491)
-- Fix CI (#1492)
-- Fix transpilation on array variables (#1485)
+
+## v8.5.4
+
+- Fix transpilation of array variables (#1485)
+
+## v8.5.3
+
 - Fix transpiling minified shader (#1482)
-- chore(docs): Reorganize docs (#1483)
-- chore: bump lerna.json to 8.6.0-alpha.0 (#1480)
+
+## v8.5.2
+
 - Bump probe.gl and loaders.gl (#1479)
 
 ## v8.5.1
 
 - chore: bump loaders.gl and probe.gl (#1478)
 - bump: math.gl@3.5.0 (#1477)
+
 ## v8.5.0
 
 - Bump dependencies to beta (#1476)

@@ -1,8 +1,8 @@
-import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
-
-import {ProgramManager} from '@luma.gl/gltools';
+/* eslint-disable camelcase */
+import {ProgramManager} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
+import {fixture} from 'test/setup';
+import test from 'tape-catch';
 
 const vs = `\
 attribute vec4 positions;
@@ -45,14 +45,16 @@ const FS_300 = `#version 300 es
   }
 `;
 
-test('ProgramManager#import', (t) => {
+test('ProgramManager#import', t => {
   t.ok(ProgramManager !== undefined, 'ProgramManager import successful');
   t.end();
 });
 
-test('ProgramManager#getDefaultProgramManager', (t) => {
-  const pm1 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
-  const pm2 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
+test('ProgramManager#getDefaultProgramManager', t => {
+  const {gl} = fixture;
+
+  const pm1 = ProgramManager.getDefaultProgramManager(gl);
+  const pm2 = ProgramManager.getDefaultProgramManager(gl);
 
   t.ok(pm1 instanceof ProgramManager, 'Default program manager created');
   t.ok(pm1 === pm2, 'Default program manager cached');
@@ -60,8 +62,9 @@ test('ProgramManager#getDefaultProgramManager', (t) => {
   t.end();
 });
 
-test('ProgramManager#basic', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+test('ProgramManager#basic', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
 
   const program1 = pm.get({vs, fs});
 
@@ -138,8 +141,9 @@ test('ProgramManager#basic', (t) => {
   t.end();
 });
 
-test('ProgramManager#hooks', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+test('ProgramManager#hooks', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
 
   const preHookProgram = pm.get({vs, fs});
 
@@ -254,8 +258,9 @@ test('ProgramManager#hooks', (t) => {
   t.end();
 });
 
-test('ProgramManager#defaultModules', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+test('ProgramManager#defaultModules', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
 
   const program = pm.get({vs, fs});
 
@@ -313,8 +318,9 @@ test('ProgramManager#defaultModules', (t) => {
   t.end();
 });
 
-test('ProgramManager#release', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+test('ProgramManager#release', t => {
+  const {gl} = fixture;
+  const pm = new ProgramManager(gl);
 
   const program1 = pm.get({vs, fs});
   const program2 = pm.get({vs, fs});
@@ -330,8 +336,10 @@ test('ProgramManager#release', (t) => {
   t.end();
 });
 
-test('ProgramManager#transpileToGLSL100', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+test('ProgramManager#transpileToGLSL100', t => {
+  const {gl} = fixture;
+
+  const pm = new ProgramManager(gl);
 
   t.throws(() => {
     pm.get({

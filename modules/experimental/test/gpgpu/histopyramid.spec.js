@@ -1,11 +1,29 @@
-// luma.gl, MIT license
-import test from 'tape-promise/tape';
+// Copyright (c) 2015 - 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the 'Software'), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+import {Buffer, Texture2D} from '@luma.gl/webgl';
+import {Transform} from '@luma.gl/engine';
+import GL from '@luma.gl/constants';
+import test from 'tape-catch';
 import {fixture} from 'test/setup';
 import {equals} from '@math.gl/core';
-
-import {Buffer, Texture2D} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/gltools';
-import GL from '@luma.gl/constants';
 import {_transform as transformModule} from '@luma.gl/shadertools';
 import {
   buildHistopyramidBaseLevel,
@@ -19,7 +37,7 @@ import {
 
 const gl = fixture.gl2;
 
-test('histopyramid#histoPyramid_getTexCoord', (t) => {
+test('histopyramid#histoPyramid_getTexCoord', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -81,7 +99,7 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
     }
   });
 
-  TEST_CASES.forEach((testCase) => {
+  TEST_CASES.forEach(testCase => {
     const {offset, expected} = testCase;
     transform.run({
       uniforms: {
@@ -89,14 +107,17 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
       }
     });
 
-    const outData = transform.getBuffer('texcoord').getData().slice(0, expected.length);
+    const outData = transform
+      .getBuffer('texcoord')
+      .getData()
+      .slice(0, expected.length);
     t.ok(equals(expected, outData), 'texcoord should match');
   });
 
   t.end();
 });
 
-test('histopyramid#histoPyramid_getPixelIndices', (t) => {
+test('histopyramid#histoPyramid_getPixelIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -149,7 +170,7 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
     elementCount: 1
   });
 
-  TEST_CASES.forEach((testCase) => {
+  TEST_CASES.forEach(testCase => {
     const {size} = testCase;
     const expected = getExpected(size);
     const elementCount = size[0] * size[1];
@@ -160,7 +181,10 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
       }
     });
 
-    const outData = transform.getBuffer('pixelIndices').getData().slice(0, expected.length);
+    const outData = transform
+      .getBuffer('pixelIndices')
+      .getData()
+      .slice(0, expected.length);
     t.ok(equals(expected, outData), 'pixelIndices should match');
   });
 
@@ -180,7 +204,7 @@ void main()
 }
 `;
 
-test('histopyramid#histoPyramid_getInput', (t) => {
+test('histopyramid#histoPyramid_getInput', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -203,15 +227,77 @@ test('histopyramid#histoPyramid_getInput', (t) => {
 
   let sourceData = new Float32Array(WIDTH * HEIGHT).map((_, index) => index % WIDTH);
 
+  /* eslint-disable no-multi-spaces */
   sourceData = new Float32Array([
-    0, 1, 10, 11, 20, 21, 30, 31, 2, 3, 12, 13, 22, 23, 32, 33,
+    0,
+    1,
+    10,
+    11,
+    20,
+    21,
+    30,
+    31,
+    2,
+    3,
+    12,
+    13,
+    22,
+    23,
+    32,
+    33,
 
-    40, 41, 50, 51, 60, 61, 70, 71, 42, 43, 52, 53, 62, 63, 72, 73,
+    40,
+    41,
+    50,
+    51,
+    60,
+    61,
+    70,
+    71,
+    42,
+    43,
+    52,
+    53,
+    62,
+    63,
+    72,
+    73,
 
-    80, 81, 90, 91, 100, 101, 110, 111, 82, 83, 92, 93, 102, 103, 112, 113,
+    80,
+    81,
+    90,
+    91,
+    100,
+    101,
+    110,
+    111,
+    82,
+    83,
+    92,
+    93,
+    102,
+    103,
+    112,
+    113,
 
-    120, 121, 130, 131, 140, 141, 150, 151, 122, 123, 132, 133, 142, 143, 152, 153
+    120,
+    121,
+    130,
+    131,
+    140,
+    141,
+    150,
+    151,
+    122,
+    123,
+    132,
+    133,
+    142,
+    143,
+    152,
+    153
   ]);
+  /* eslint-enable no-multi-spaces */
 
   const expectedArray = new Array((WIDTH * HEIGHT) / 4).fill(0);
   const TEST_CASES = [
@@ -268,7 +354,7 @@ test('histopyramid#histoPyramid_getInput', (t) => {
     elementCount: dstPixelCount
   });
 
-  TEST_CASES.forEach((testCase) => {
+  TEST_CASES.forEach(testCase => {
     const {name, offset, expected} = testCase;
     transform.run({
       uniforms: {
@@ -305,7 +391,7 @@ void main()
 }
 `;
 
-test('histopyramid#Minification to 1X1)', (t) => {
+test('histopyramid#Minification to 1X1)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -328,7 +414,7 @@ test('histopyramid#Minification to 1X1)', (t) => {
 
   const sourceData = new Float32Array([0, 1, 2, 3]);
   let expectedData = 0;
-  sourceData.forEach((value) => {
+  sourceData.forEach(value => {
     expectedData += value;
   });
 
@@ -463,7 +549,7 @@ const HISTOPYRAMID_TEST_CASES = [
   }
 ];
 
-test('histopyramid#getHistoPyramid)', (t) => {
+test('histopyramid#getHistoPyramid)', t => {
   const {gl2} = fixture;
 
   if (!gl2) {
@@ -482,7 +568,7 @@ test('histopyramid#getHistoPyramid)', (t) => {
     }
   };
 
-  HISTOPYRAMID_TEST_CASES.forEach((testCase) => {
+  HISTOPYRAMID_TEST_CASES.forEach(testCase => {
     const {width, height, name, expectedBaseLevelData, expectedTopLevelData} = testCase;
     const sourceData = new Float32Array(width * height * 4).fill(0).map((_, index) => index);
 
@@ -513,7 +599,7 @@ test('histopyramid#getHistoPyramid)', (t) => {
   t.end();
 });
 
-test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
+test('histopyramid#histopyramid_traversal_findRangeIndex', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -563,7 +649,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
   t.end();
 });
 
-test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t) => {
+test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -610,7 +696,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t)
   t.end();
 });
 
-test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
+test('histopyramid#histopyramid_traversal_mapIndexToCoord', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -647,7 +733,7 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
   t.end();
 });
 
-test('histopyramid#histopyramid_traversal_getWeight', (t) => {
+test('histopyramid#histopyramid_traversal_getWeight', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -718,7 +804,26 @@ test('histopyramid#histopyramid_traversal_getWeight', (t) => {
   const weight = new Buffer(gl, 20 * 4); // 20 floats
 
   const expectedWeight = [
-    0, 4, 16, 20, 8, 12, 24, 28, 32, 36, 48, 52, 40, 44, 56, 60, 40, 72, 168, 200
+    0,
+    4,
+    16,
+    20,
+    8,
+    12,
+    24,
+    28,
+    32,
+    36,
+    48,
+    52,
+    40,
+    44,
+    56,
+    60,
+    40,
+    72,
+    168,
+    200
   ];
 
   const transform = new Transform(gl, {
@@ -739,7 +844,7 @@ test('histopyramid#histopyramid_traversal_getWeight', (t) => {
   t.end();
 });
 
-test('histopyramid#histoPyramidGenerateIndices', (t) => {
+test('histopyramid#histoPyramidGenerateIndices', t => {
   if (!Transform.isSupported(gl)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -756,8 +861,70 @@ test('histopyramid#histoPyramidGenerateIndices', (t) => {
     }
   };
   const sourceData = new Float32Array([
-    1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
   ]);
 
   const sourceTexture = new Texture2D(
@@ -793,8 +960,8 @@ test('histopyramid#histoPyramidGenerateIndices', (t) => {
   ];
   t.ok(equals(expectedData.length, actualData.length), 'Correct number of indices are generated');
   let foundIndex = true;
-  expectedData.forEach((index) => {
-    foundIndex = foundIndex && actualData.some((actualIndex) => equals(index, actualIndex));
+  expectedData.forEach(index => {
+    foundIndex = foundIndex && actualData.some(actualIndex => equals(index, actualIndex));
   });
   t.ok(foundIndex, 'Generated indices should match');
   t.end();

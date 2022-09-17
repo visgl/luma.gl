@@ -1,15 +1,11 @@
 {
-  "name": "luma.gl-website",
+  "name": "ocular-website-gatsby",
   "version": "0.0.0",
-  "description": "A website for luma.gl built with Ocular (Gatsby version)",
-  "private": true,
+  "description": "A website for Ocular, built with Ocular (Gatsby version)",
   "license": "MIT",
   "keywords": [
     "ocular"
   ],
-  "workspaces": [
-    "react"
-  ],  
   "main": "index.js",
   "scripts": {
     "start": "yarn clean-examples && yarn clean && yarn develop",
@@ -22,7 +18,7 @@
     "clean-examples": "rm -rf examples ; (find ../examples -name node_modules -exec rm -rf {} \\; || true)"
   },
   "dependencies": {
-    "@loaders.gl/polyfills": "^3.1.3",
+    "@loaders.gl/polyfills": "^3.0.6",
     "@probe.gl/stats-widget": "^3.5.0",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
@@ -33,8 +29,5 @@
     "gatsby-theme-ocular": "^1.2.4",
     "gatsby-plugin-no-sourcemaps": "^2.1.2",
     "gh-pages": "^2.2.0"
-  },
-  "resolutions": {
-    "remark-mdx": "1.6.22"
   }
 }

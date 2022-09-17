@@ -4,13 +4,15 @@
 
 luma.gl and luma.gl provide a lot of functionality and the amount of code these libraries contain will of course impact the size of your application bundle and your startup load time.
 
+There are multiple techniques used in JavaScript.
+
 ### Choosing a dist folder
 
 When installed from npm, luma.gl and related libraries come with three separate `dist` sub folders.
 
 | Folder     | `mainField` | Description                                                                                                                                                                                                                                                                           |
 | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-browsers (e.g. not IE11 or older mobile devices). |
+| `dist/es6` | `esnext`    | The most compact distribution is with very few exceptions essentially untranspiled ES6/ES2015 code (via `babel-preset-env`). This is the smallest distribution, and is the best choice if you are only targeting modern "evergreen" browsers (e.g. not IE11 or older mobile devices). |
 | `dist/esm` | `module`    | Same as `dist/es5`, except `export` and `import` statements are left untranspiled to enable tree shaking. The main reason to use this distribution is if your are targeting older browsers (e.g. IE11 or older mobile devices).                                                       |
 | `dist/es5` | `main`      | All code is transpiled into ES5 and exports/imports are transpiled into `commonjs` requires. The main reason to use this distribution is if your bundler does not support tree-shaking using `import`/`export` syntax.                                                                |
 

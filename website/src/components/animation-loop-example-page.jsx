@@ -1,24 +1,16 @@
 import React, {Component} from 'react'; // eslint-disable-line
-import PropTypes from 'prop-types'; 
-import {isBrowser} from '@probe.gl/env';
-import {setPathPrefix} from '@luma.gl/api';
+import PropTypes from 'prop-types';
 import {lumaStats} from '@luma.gl/core';
-import {RenderLoop} from '@luma.gl/engine';
-import {luma} from '@luma.gl/api';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
-
-// import {VRDisplay} from '@luma.gl/experimental';
+import {setPathPrefix} from '@luma.gl/webgl';
+import {VRDisplay} from '@luma.gl/experimental';
 import StatsWidget from '@probe.gl/stats-widget';
 import {InfoPanel} from 'gatsby-theme-ocular/components';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.2-release';
 
-luma.registerDevices([WebGPUDevice, WebGLDevice]);
-
 // WORKAROUND FOR luma.gl VRDisplay
-if (!globalThis.navigator) {// eslint-disable-line
-  globalThis.navigator = {};// eslint-disable-line
+if (typeof global !== 'undefined' && !global.navigator) {
+  global.navigator = {};
 }
 
 if (typeof window !== 'undefined') {
@@ -59,55 +51,38 @@ const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
-    try {
-      // Render loop
-      if ('run' in this.props.AnimationLoop) {
-        this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
-      } else {
-        this.animationLoop = new this.props.AnimationLoop(props);
-      }
-    } catch (error) {
-      this.setState({error});
-    }
+    const {AnimationLoop} = this.props;
+    this.animationLoop = new AnimationLoop();
     this.state = {
-      supported: true,
-      error: null
+      supported: true
     };
   }
 
-  async componentDidMount() {
+  componentDidMount() {
     if (!this.state.supported) {
       return;
     }
 
     const {showStats} = this.props;
 
-    // this.animationLoop._setDisplay(new VRDisplay());
+    this.animationLoop._setDisplay(new VRDisplay());
 
     // Ensure the example can find its images
     // TODO - ideally gatsby-theme-ocular should extract images from example source?
-    const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/8.5-release';
     const {exampleConfig} = this.props;
     if (exampleConfig && exampleConfig.path) {
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/uber/luma.gl/8.2-release';
       setPathPrefix(`${RAW_GITHUB}/${exampleConfig.path}`);
-    } else {
-      setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
     }
 
     // Start the actual example
-    try {
-      if (isBrowser()) {
-        await this.animationLoop.start();
-        await this.animationLoop.waitForRender();
-        if (this.animationLoop.demoNotSupported) {
-          this.setState({supported: false});
-        }
-        this.setState({error: null});
-      }
-    } catch (error) {
-      this.setState({error});
-    }
+    this.animationLoop.start(this.props);
 
+    this.animationLoop.waitForRender().then(() => {
+      if (this.animationLoop.demoNotSupported) {
+        this.setState({supported: false});
+      }
+    });
 
     // animationLoop.stats.reset();
 
@@ -192,10 +167,8 @@ export default class AnimationLoopExamplePage extends Component {
     }
 
     // HTML is stored on the app
-    const controls = 
-      this.props.AnimationLoop.info ||
-      this.props.AnimationLoop.getInfo?.() ||
-      (this.animationLoop.getInfo?.());
+    const controls = this.props.AnimationLoop.getInfo() ||
+      (this.animationLoop.getInfo && this.animationLoop.getInfo());
 
     return (
       <div style={{width: '100%', height: '100%', position: 'relative'}}>
@@ -213,11 +186,6 @@ export default class AnimationLoopExamplePage extends Component {
         {panel && (
           <InfoPanel title={title} sourceLink={`${GITHUB_TREE}/${path}`}>
             <div dangerouslySetInnerHTML={{__html: controls}} />
-            {
-              this.state.error
-                ? (<div> <b style={{color: 'red', overflowWrap: 'break-word', width: 200}}> This sample failed to render: <br /> {this.state.error.message} </b></div>)
-                : (<></>)
-            }
           </InfoPanel>
         )}
       </div>

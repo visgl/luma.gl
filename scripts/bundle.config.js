@@ -1,8 +1,7 @@
-const {getOcularConfig} = require('ocular-dev-tools');
 const {resolve} = require('path');
 const webpack = require('webpack');
 
-const ALIASES = getOcularConfig({
+const ALIASES = require('ocular-dev-tools/config/ocular.config')({
   aliasMode: 'src',
   root: resolve(__dirname, '..')
 }).aliases;
@@ -43,30 +42,11 @@ const NODE = {
   crypto: 'empty'
 };
 
-const ES5_BABEL_CONFIG = {
-  presets: [
-    '@babel/preset-typescript',
-    ['@babel/preset-env', {forceAllTransforms: true}]
-  ],
-  plugins: [
-    // webpack 4 cannot parse the most recent JS syntax
-    '@babel/plugin-proposal-optional-chaining',
-    '@babel/plugin-proposal-nullish-coalescing-operator',
-    // typescript supports class properties
-    '@babel/plugin-proposal-class-properties',
-    // inject __VERSION__ from package.json
-    'version-inline',
-    ["@babel/plugin-transform-modules-commonjs", { allowTopLevelThis: true }],
-    // 'inline-webgl-constants',
-    ['remove-glsl-comments', {patterns: ['**/*.glsl.js']}]
-  ]
-};
-
 const config = {
   mode: 'production',
 
   entry: {
-    main: resolve('./src/bundle.ts')
+    main: resolve('./src/bundle')
   },
 
   output: {
@@ -78,7 +58,6 @@ const config = {
   node: NODE,
 
   resolve: {
-    extensions: ['.js', '.mjs', '.jsx', '.ts', '.tsx', '.json'],
     alias: ALIASES
   },
 
@@ -86,15 +65,19 @@ const config = {
     rules: [
       {
         // Compile ES2015 using babel
-        test: /\.(js|ts)$/,
+        test: /\.js$/,
         loader: 'babel-loader',
         include: [/src/, /esm/],
-        options: ES5_BABEL_CONFIG
-      },
-      {
-        test: /\.mjs$/,
-        include: /node_modules/,
-        type: "javascript/auto"
+        options: {
+          presets: [['@babel/preset-env', {forceAllTransforms: true}]],
+          // all of the helpers will reference the module @babel/runtime to avoid duplication
+          // across the compiled output.
+          plugins: [
+            '@babel/transform-runtime',
+            'inline-webgl-constants',
+            ['remove-glsl-comments', {patterns: ['**/*.glsl.js']}]
+          ]
+        }
       }
     ]
   },
@@ -102,7 +85,7 @@ const config = {
   externals: getExternals(PACKAGE_INFO),
 
   plugins: [
-    // This is used to define the __VERSION__ constant in api/src/init.js
+    // This is used to define the __VERSION__ constant in core/lib/init.js
     // babel-plugin-version-inline uses the package version from the working directory
     // Therefore we need to manually import the correct version from the core
     // This is called in prepublishOnly, after lerna bumps the package versions
@@ -123,7 +106,7 @@ module.exports = (env = {}) => {
     // Remove .min from the name
     config.output.filename = 'dist/dist.js';
     // Disable transpilation
-    // config.module.rules = [];
+    config.module.rules = [];
   }
 
   // NOTE uncomment to display config

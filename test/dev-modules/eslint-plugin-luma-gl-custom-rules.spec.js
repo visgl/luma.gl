@@ -1,11 +1,10 @@
-import test from 'tape-promise/tape';
+import test from 'tape-catch';
 import {rules} from 'dev-modules/eslint-plugin-luma-gl-custom-rules';
 import {RuleTester} from 'eslint';
 
 const ruleTester = new RuleTester();
 
-// TODO - RESTORE
-test.skip('EslintCustomRules#check-log-call', (t) => {
+test('EslintCustomRules#check-log-call', t => {
   ruleTester.run('check-log-call', rules['check-log-call'], {
     valid: ['log.log(1, "initialized")();', 'log.assert(gl, "error");', 'someObject.method();'],
     invalid: [

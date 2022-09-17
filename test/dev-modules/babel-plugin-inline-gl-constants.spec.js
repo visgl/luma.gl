@@ -1,6 +1,6 @@
 import babel from '@babel/core';
 import plugin from 'dev-modules/babel-plugin-inline-webgl-constants';
-import test from 'tape-promise/tape';
+import test from 'tape-catch';
 
 const ES6_ENV = {
   targets: {chrome: '60'},
@@ -48,13 +48,15 @@ const TEST_CASES = [
 
 // Remove whitespace before comparing
 function clean(code) {
-  return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
+  return code
+    .replace('"use strict";', '')
+    .replace(/\n\s+/g, '\n')
+    .trim();
 }
 
-// TODO - restore
 /* eslint-disable */
-test.skip('InlineGLSLConstants Babel Plugin', (t) => {
-  TEST_CASES.forEach((testCase) => {
+test('InlineGLSLConstants Babel Plugin', t => {
+  TEST_CASES.forEach(testCase => {
     const transform = () =>
       babel.transform(testCase.input, {
         presets: [['@babel/env', ES6_ENV]],

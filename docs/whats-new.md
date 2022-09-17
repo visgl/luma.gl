@@ -1,69 +1,12 @@
 # What's New
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
-
-## Version 9.0
-
-Target Date: Q1, 2022
-
-The v9.0 release brings WebGPU support and a modernized luma.gl API. Adoption of the new API will require applications to be updated. However, all legacy v8 APIs are still available, so it should be possible to gradually migrate luma.gl v8 applications to luma.gl v9.
-
-Highlights:
-- luma.gl is now closely aligned with WebGPU API. 
-- luma.gl is now fully rewritten in TypeScript and applications will benefit from more rigorous types. 
-- The luma.gl documentation now focuses on the new v9 API, however legacy v8 API documentation is still included.
-
-#### `@luma.gl/api` (new module)
-
-- The heart of the new cross-platform luma.gl API is the portable `Device` API that is exposed through the new `@luma.gl/api` module. 
-- Applications written against `@luma.gl/api` can run on both WebGPU, WebGL2 and WebGL devices.
-
-#### `@luma.gl/engine` (breaking changes)
-
-- The `@luma.gl/engine` module still exports th classic luma.gl classes such as `Model` and `AnimationLoop`. 
-- However all engine classes are now implemented on top of `@luma.gl/api`, allowing them to work portably on both WebGPU and WebGL.
-- For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/gltools`
-
-#### `@luma.gl/webgpu` (new module)
-
-- Provides a WebGPU implementation of the luma.gl API (`@luma.gl/api`). 
-- Importing this module enables the application to create `Device`s of type `'webgpu'` (when run in a browser that supports WebGPU API).
-
-#### `@luma.gl/webgl` (breaking changes)
-
-- Provides a WebGL / WebGL 2 implementation of the luma.gl API (`@luma.gl/api`). 
-- Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`. 
-- The legacy v8 WebGL classes have been moved to `@luma.gl/gltools`
-
-#### `@luma.gl/shadertools`
-
-- New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
-
-#### `@luma.gl/debug`
-
-- `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
-- Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
-- Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured". Also information about luma.gl objects associated with WebGL handles will be displayed in the Spector UI.
-
-#### `@luma.gl/core` ("deprecated")
-
-- The core module still re-exports the classic luma.gl v8 API (from `@luma.gl/gltools`), to avoid breaking existing applications.
-- Applications that want to start using the v9 API should import directly from `@luma.gl/engine` and `@luma.gl/api`.
-
-#### `@luma.gl/gltools` (deprecated)
-
-- The `@luma.gl/gltools` module is now deprecated. It now exports all legacy WebGL APIs and is no longer dedicate to just WebGL context-related utilities.
-- The legacy v8 WebGL classes from luma.gl v8 can now be imported directly from this module.
-- The legacy v8 WebGL-dependent `@luma.gl/engine` classes can still be imported from this module.
-- The WebGL context related APIs exported by this module in v8 are now simple wrappers for the `WebGLDevice` class.
-
 ## Version 8.5
 
 Date: Jul 15, 2021
 
 ### `@luma.gl/shadertools`
 
-- GLSL transpiler now handles `gl_FragColor` in fragment shader when transpiling from ES 1.00 to 3.00
+- GLSL transpiler now handles `gl_FragColor` in fragment shader when transpliting from ES 1.00 to 3.00
 - New `magnify` effect
 
 ### `@luma.gl/experimental`
@@ -79,10 +22,6 @@ Date: Feb 1, 2021
 
 - TypeScript definitions are available for all modules
 
-### TypeScript
-
-TypeScript definitions are now included in all luma.gl modules. There should no longer be a need to install external type packages.
-
 ### Texture
 
 - Supports continuous update from `HTMLVideoElement`.
@@ -97,7 +36,7 @@ Date: Oct 12, 2020
 
 ### TypeScript
 
-- TypeScript definitions are available for `@luma.gl/webgl` module classes (Buffer, Texture, etc.)
+- TypeScript definitions are available for @luma.gl/webgl classes (Buffer, Texture, etc.)
 
 ### glTF
 
@@ -236,7 +175,6 @@ The `KeyFrames` class allows arbitrary data to be associated with time points. T
 
 Date: April 19, 2019
 
-<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -251,12 +189,11 @@ Date: April 19, 2019
     </tr>
   </tbody>
 </table>
--->
+
 ### glTF Support
 
-<!--
 <img height="100" src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
--->
+
 luma.gl can now load 3D models and scenegraphs in the popular [glTF™](https://www.khronos.org/gltf/) asset format (with the help of the loaders.gl [GLTFLoader](https://github.com/visgl/loaders.gl/blob/master/website/docs/api-reference/gltf-loaders/gltf-loader.md). All variants of glTF 2.0 are supported, including binary `.glb` files as well as JSON `.gltf` files with binary assets in base64 encoding or in separate files. The Draco Mesh compression extension is also supported.
 
 - **Physically-based Material Support**: Ensures that PBR models display as intended.
@@ -354,7 +291,6 @@ A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop
 
 Date: September 12, 2018
 
-<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -369,7 +305,6 @@ Date: September 12, 2018
     </tr>
   </tbody>
 </table>
--->
 
 ### ShaderModulePass (Experimental)
 
@@ -383,7 +318,6 @@ Shader modules that expose "standard" filtering and sampling functions can be gi
 
 Date: Target August 31, 2018
 
-<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -398,7 +332,6 @@ Date: Target August 31, 2018
     </tr>
   </tbody>
 </table>
--->
 
 luma.gl 6.1 is a minor release that introduces a number of new experimental capabilities that are expected to be built out and become official over the next few releases.
 
@@ -426,7 +359,6 @@ luma.gl is now using the [ocular](https://github.com/uber-web/ocular) document g
 
 Date: July 18, 2018
 
-<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -437,7 +369,6 @@ Date: July 18, 2018
     </tr>
   </tbody>
 </table>
--->
 
 A major release that as always focuses on WebGL performance and code size optimizations, better support for shader/GLSL programming, improved documentation and API cleanup.
 
@@ -583,7 +514,6 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 
 Release date: July 27th, 2017
 
-<!--
 <table style="border: 0;" align="center">
   <tbody>
     <tr>
@@ -594,7 +524,6 @@ Release date: July 27th, 2017
     </tr>
   </tbody>
 </table>
--->
 
 A major release that brings full WebGL 2 support to luma.gl, as well as adding support for GL state management and a new shader module system.
 

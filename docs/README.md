@@ -1,99 +1,35 @@
-# Introduction
+# Overview
 
-<span />This is the luma.gl documentation, covering
-<a href="https://github.com/visgl/luma.gl/blob/master/docs">
-  <img style="margin-bottom: -4px" src="https://img.shields.io/badge/v-9.0-brightgreen.svg?style=flat-square" />
+luma.gl is a high-performance toolkit for WebGL-based data visualization. luma.gl is the core 3D rendering library in the [vis.gl](http://vis.gl/) framework suite.
+
+## Versions
+
+These docs are for
+<a href="https://github.com/visgl/luma.gl/blob/8.1-release/docs">
+<img style="margin-bottom: -4px" src="https://img.shields.io/badge/luma.gl-v8.1-brightgreen.svg?style=flat-square" />
+</a> Looking for an older version?
+
+<a href="https://github.com/visgl/luma.gl/blob/8.0-release/docs">
+  <img src="https://img.shields.io/badge/v-8.0-green.svg?style=flat-square" />
 </a>
-<span />Looking for an older version?
-<a href="https://github.com/visgl/luma.gl/blob/8.5-release/docs">
-  <img src="https://img.shields.io/badge/v-8.5-green.svg?style=flat-square" />
+<a href="https://github.com/visgl/luma.gl/blob/7.0-release/docs">
+  <img src="https://img.shields.io/badge/v-7.0-green.svg?style=flat-square" />
 </a>
-<a href="https://github.com/visgl/luma.gl/blob/7.3-release/docs">
-  <img src="https://img.shields.io/badge/v-7.3-green.svg?style=flat-square" />
-</a>
-<a href="https://github.com/visgl/luma.gl/blob/6.4-release/docs">
-  <img src="https://img.shields.io/badge/v-6.4-green.svg?style=flat-square" />
+<a href="https://github.com/visgl/luma.gl/blob/6.0-release/docs">
+  <img src="https://img.shields.io/badge/v-6.0-green.svg?style=flat-square" />
 </a>
 
-luma.gl is a moderns GPU toolkit for the Web, focused primarily on visualization of large datasets.
-luma.gl is the core rendering library in the [vis.gl](http://vis.gl/) framework suite, 
-and is developed under open governance through the Linux Foundation.
+luma.gl aims to provide tools for WebGL developers wether they wish to do high or low-level GPU programming. Polyfilling and shader composition utilities, for example, can be used while programming directly with the WebGL API, while resource management utilities provide higher-level 3D engine functionality.
 
-## Highlights
+The core use case for luma.gl is visualization of large datasets, but its design is generic enough for more general usage. Key strengths of luma.gl include:
 
-luma.gl facilitates processing of big data on the GPU 
-rather than providing higher level 3D engine type abstractions, 
-and lets developers stay in control of GPU programming and
-work directly with shaders and GPU data structures. The low abstraction API
-is intentionally closely aligned with the underlying WebGPU and WebGL APIs. 
+- **A WebGL 2-first API** - luma.gl polyfills WebGL 1 contexts insofar as possible to support the WebGL 2 API. This allows applications to code using the latest WebGL 2 APIs while transparently keeping the application backwards compatible with WebGL 1 (using WebGL extensions, shader transpilation and other techniques).
+- **Modular, Composable Tools** - It is left to the develop to decide what parts of luma.gl suit their application. Program at a higher level using WebGL wrapper classes or a `Model`, or simply polyfill the context and program using the WebGL 2 API.
+- **High-performance Data Visualization** - luma.gl focuses on simplifying access to APIs that are particularly useful when visualizing large data sets, such as instanced drawing and transform feedback.
 
-## Features
-
-Some key features of luma.gl are:
-
-- A device-independent GPU API that implements both WebGPU and WebGL classes.
-- Higher level classes such as `Model`, `Transform` and `AnimationLoop`.
-- A GLSL shader system supporting modules, dependencies, injection, transpilation etc.
-
-## Showcases
-
-Some examples of what can be built on top of luma.gl:
-
-- [kepler.gl](https://kepler.gl/) ([GitHub](https://github.com/keplergl/kepler.gl)) a powerful open source geospatial analysis tool for large-scale data sets
-- [deck.gl](http://deck.gl/#/) ([GitHub](https://github.com/visgl/deck.gl)) a WebGL-powered framework for visual exploratory data analysis of large data sets
-- [avs.auto](https://avs.auto/#/) and [streetscape.gl](https://github.com/uber/streetscape.gl) A visualization toolkit for autonomy and robotics data encoded in the XVIZ protocol
-
-|  <img height="200" src="https://deck.gl/images/showcase/kepler-gl.jpg" /> | <img height="200" src="https://deck.gl/images/showcase/avs.jpg" /> | <img height="200" src="https://deck.gl/images/showcase/viv.jpg" />
-| :---: | :---: | :---: |
-| <center>kepler.gl</center> | <center>AVS</center> | <center>VIV</center> |
-
-## Standards
-
-<center>
-  <img height="80" src="https://raw.githubusercontent.com/gpuweb/gpuweb/3b3a1632ff1ad6a573330a58710e341bb9d65576/logo/webgpu-horizontal.svg" />
-  <img height="80" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
-  <img height="80" src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
-</center>
-
-luma.gl supports the latest 3D web standards from Khronos and W3C.
-In addition, luma.gl integrates seamlessly with the companion [loaders.gl](https://loaders.gl) framework,
-ensuring that a long list of 3D and geospatial data format standards are supported out of the box.
-
-## Open Governance
-
-<center>
-<a href="https://vis.gl">
-  <img height="30" src="https://raw.githubusercontent.com/visgl/vis.gl/master/src/images/logos/linux-foundation.svg" />
-  <span style="padding-left: 50px;" />
-  <img height="30" src="https://raw.githubusercontent.com/visgl/vis.gl/master/src/images/logos/ucf-color-hztl.svg" />
-</a>
-</center>
-
-luma.gl is a part of the <a href="https://vis.gl"><b>vis.gl framework suite</b></a>, an open governance Linux Foundation project that is developed collaboratively by multiple organizations and individuals and the Urban Computing Foundation.
-
-Check out the [vis.gl Medium blog](https://medium.com/vis-gl), and join the community
-in the [Slack workspace](https://join.slack.com/t/deckgl/shared_invite/zt-7oeoqie8-NQqzSp5SLTFMDeNSPxi7eg) for learning and discussions.
-
-Current main contributors to the development and maintenance of luma.gl:
-
-<center>
-<p style="margin-left: auto; margin-right: auto;">
-  <a href="https://foursquare.com">
-    <img height="40" src="https://raw.githubusercontent.com/visgl/vis.gl/master/src/images/logos/unfolded-logo.png" />
-  </a>
-</p>
-</center>
-
-## History
-
-luma.gl was originally created at Uber in 2015 as an open source project to support deck.gl. It started out as a fork of the [PhiloGL](https://github.com/senchalabs/philogl) WebGL library but has evolved beyond recognition.
-
-In 2019, luma.gl was transferred to open governance in the Linux Foundation.
+For some powerful examples of what can be achieved with luma.gl, take a look at [deck.gl](http://deck.gl/#/), [kepler.gl](https://kepler.gl/) and [avs.auto](https://avs.auto/#/).
 
 ## Future
-
-luma.gl keeps evolving based on the needs of downstream frameworks and applications.
-One primary focus is supporting more advanced GPU compute use cases.
 
 We share information about the direction of luma.gl in the following ways:
 

@@ -1,5 +1,3 @@
-require('@babel/register')({
-  extensions: ['.js', '.jsx', '.ts', '.tsx']
-});
+require('reify');
 require('./dev-modules');
 require('./modules');
