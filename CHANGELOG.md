@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.17
+
+- chore(webgl): separate mem stats another way (#1660)
+
 ## v8.5.16
 
 - chore(gltf-material-parser.d.ts): add delete method (#1650)
