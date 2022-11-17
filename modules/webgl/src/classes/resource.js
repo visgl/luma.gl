@@ -294,6 +294,11 @@ export default class Resource {
     stats.get(`${name}s Active`).decrementCount();
   }
 
+  /**
+   * Track common allocated memory and memory based on particular gl context.
+   * @param {number} bytes
+   * @param {string} name
+   */
   _trackAllocatedMemory(bytes, name = this[Symbol.toStringTag]) {
     this._trackAllocatedMemoryForContext(bytes, name);
     this._trackAllocatedMemoryForContext(bytes, name, this.gl.canvas && this.gl.canvas.id);
@@ -306,6 +311,10 @@ export default class Resource {
     stats.get(`${name} Memory`).addCount(bytes);
   }
 
+  /**
+   * Deallocate memory for common statistic and for each gl context as well.
+   * @param {string} name
+   */
   _trackDeallocatedMemory(name = this[Symbol.toStringTag]) {
     this._trackDeallocatedMemoryForContext(name);
     this._trackDeallocatedMemoryForContext(name, this.gl.canvas && this.gl.canvas.id);
