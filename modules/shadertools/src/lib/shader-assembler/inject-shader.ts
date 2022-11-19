@@ -1,4 +1,5 @@
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../modules/module-injectors';
+import type { Injection } from '../shader-module/shader-module-instance';
 import {assert} from '../utils/assert';
 
 // TODO - experimental
@@ -26,14 +27,14 @@ export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 export default function injectShader(
   source: string, 
   type: 'vs' | 'fs', 
-  inject: Record<string, any>, 
+  inject: Record<string, Injection[]>, 
   injectStandardStubs = false
 ): string {
   const isVertex = type === 'vs';
 
   for (const key in inject) {
     const fragmentData = inject[key];
-    fragmentData.sort((a, b) => a.order - b.order);
+    fragmentData.sort((a: Injection, b: Injection): number => a.order - b.order);
     fragments.length = fragmentData.length;
     for (let i = 0, len = fragmentData.length; i < len; ++i) {
       fragments[i] = fragmentData[i].injection;
@@ -97,7 +98,7 @@ export default function injectShader(
 }
 
 // Takes an array of inject objects and combines them into one
-export function combineInjects(injects: {}[]): Record<string, string> {
+export function combineInjects(injects: any[]): Record<string, string> {
   const result: Record<string, string> = {};
   assert(Array.isArray(injects) && injects.length > 1);
   injects.forEach((inject) => {

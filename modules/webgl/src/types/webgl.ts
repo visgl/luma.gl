@@ -135,6 +135,7 @@ export type WebGLSamplerParameters = {
   [GL.TEXTURE_MIN_LOD]?: number;
   [GL.TEXTURE_MAX_LOD]?: number;
   [GL.TEXTURE_COMPARE_FUNC]?: number; // COMPARE_FUNC);
+  [GL.TEXTURE_COMPARE_MODE]?: GL.COMPARE_REF_TO_TEXTURE;
   [GL.TEXTURE_MAX_ANISOTROPY_EXT]?: number; //
 };
 

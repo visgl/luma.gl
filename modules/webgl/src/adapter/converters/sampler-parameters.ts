@@ -40,7 +40,7 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGL
   }
   // Note depends on WebGL extension
   if (props.maxAnisotropy) {
-    props[GL.TEXTURE_MAX_ANISOTROPY_EXT] = props.maxAnisotropy;
+    params[GL.TEXTURE_MAX_ANISOTROPY_EXT] = props.maxAnisotropy;
   }
   return params;
 }
