@@ -651,14 +651,14 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
 });
 
 if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
-test('histopyramid#histopyramid_traversal_getWeight', t => {
-  if (!Transform.isSupported(gl)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
-    return;
-  }
+  test('histopyramid#histopyramid_traversal_getWeight', (t) => {
+    if (!Transform.isSupported(gl)) {
+      t.comment('Transform not available, skipping tests');
+      t.end();
+      return;
+    }
 
-  const VS = `\
+    const VS = `\
   attribute float level;
   attribute vec2 offset;
   uniform sampler2D flatPyramid;
@@ -672,136 +672,136 @@ test('histopyramid#histopyramid_traversal_getWeight', t => {
   }
   `;
 
-  // sourceData: 4X4 texture
-  // 0 1 2 3   	  4 5 6 7	      8 9 10 11  	12 13 14 15
-  // 16 17 18 19 	20 21 22 23 	24 25 26 27	28 29 30 31
-  //
-  // 32 33 34 35	36 37 38 39	 40 41 42 43	44 45 46 47
-  // 48 49 50 51	52 53 54 55	 56 57 58 59	60 61 62 63
+    // sourceData: 4X4 texture
+    // 0 1 2 3   	  4 5 6 7	      8 9 10 11  	12 13 14 15
+    // 16 17 18 19 	20 21 22 23 	24 25 26 27	28 29 30 31
+    //
+    // 32 33 34 35	36 37 38 39	 40 41 42 43	44 45 46 47
+    // 48 49 50 51	52 53 54 55	 56 57 58 59	60 61 62 63
 
-  // level-0 2X2 (base level)
-  // 0 4 16 20     8 12 24 28
-  // 32 36 48 52	40 44 56 60
+    // level-0 2X2 (base level)
+    // 0 4 16 20     8 12 24 28
+    // 32 36 48 52	40 44 56 60
 
-  // level-1 1X1
-  // 40 72 168 200
+    // level-1 1X1
+    // 40 72 168 200
 
-  // flat pyramid texture 4X4
-  // 0 4 16 20     8 12 24 28   40 72 168 200   0 0 0 0
-  // 32 36 48 52	40 44 56 60    0 0 0 0        0 0 0 0
+    // flat pyramid texture 4X4
+    // 0 4 16 20     8 12 24 28   40 72 168 200   0 0 0 0
+    // 32 36 48 52	40 44 56 60    0 0 0 0        0 0 0 0
 
-  const width = 4;
-  const height = 4;
-  const numLevels = 2; // (2X2 and 1X1 in flat pyramid)
-  const TEX_OPTIONS = {
-    format: GL.RGBA32F,
-    dataFormat: GL.RGBA,
-    type: GL.FLOAT,
-    mipmaps: false,
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    }
-  };
-  const sourceData = new Float32Array(4 * 4 * 4).fill(0).map((_, index) => index);
+    const width = 4;
+    const height = 4;
+    const numLevels = 2; // (2X2 and 1X1 in flat pyramid)
+    const TEX_OPTIONS = {
+      format: GL.RGBA32F,
+      dataFormat: GL.RGBA,
+      type: GL.FLOAT,
+      mipmaps: false,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    };
+    const sourceData = new Float32Array(4 * 4 * 4).fill(0).map((_, index) => index);
 
-  const sourceTexture = new Texture2D(
-    gl,
-    Object.assign({}, TEX_OPTIONS, {
-      data: sourceData,
-      width,
-      height
-    })
-  );
+    const sourceTexture = new Texture2D(
+      gl,
+      Object.assign({}, TEX_OPTIONS, {
+        data: sourceData,
+        width,
+        height
+      })
+    );
 
-  const {flatPyramidTexture} = getHistoPyramid(gl, {texture: sourceTexture}); // _TODO: follow (gl, opts)
-  const size = [flatPyramidTexture.width, flatPyramidTexture.height];
+    const {flatPyramidTexture} = getHistoPyramid(gl, {texture: sourceTexture}); // _TODO: follow (gl, opts)
+    const size = [flatPyramidTexture.width, flatPyramidTexture.height];
 
-  // level 0 is 1X1
-  const level = new Buffer(gl, new Float32Array([0, 0, 0, 0, 1]));
-  const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1, 0, 0]));
-  const weight = new Buffer(gl, 20 * 4); // 20 floats
+    // level 0 is 1X1
+    const level = new Buffer(gl, new Float32Array([0, 0, 0, 0, 1]));
+    const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1, 0, 0]));
+    const weight = new Buffer(gl, 20 * 4); // 20 floats
 
-  const expectedWeight = [
-    0, 4, 16, 20, 8, 12, 24, 28, 32, 36, 48, 52, 40, 44, 56, 60, 40, 72, 168, 200
-  ];
+    const expectedWeight = [
+      0, 4, 16, 20, 8, 12, 24, 28, 32, 36, 48, 52, 40, 44, 56, 60, 40, 72, 168, 200
+    ];
 
-  const transform = new Transform(gl, {
-    sourceBuffers: {level, offset},
-    feedbackBuffers: {weight},
-    vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
-    varyings: ['weight'],
-    modules: [transformModule],
-    elementCount: 5
-  });
+    const transform = new Transform(gl, {
+      sourceBuffers: {level, offset},
+      feedbackBuffers: {weight},
+      vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
+      varyings: ['weight'],
+      modules: [transformModule],
+      elementCount: 5
+    });
 
-  transform.run({
-    uniforms: {flatPyramid: flatPyramidTexture, numLevels, size}
-  });
+    transform.run({
+      uniforms: {flatPyramid: flatPyramidTexture, numLevels, size}
+    });
 
-  const actualWeight = transform.getData({varyingName: 'weight'});
-  t.ok(equals(expectedWeight, actualWeight), 'texcoordinates should match');
-  t.end();
-});
-
-test('histopyramid#histoPyramidGenerateIndices', t => {
-  if (!Transform.isSupported(gl)) {
-    t.comment('Transform not available, skipping tests');
+    const actualWeight = transform.getData({varyingName: 'weight'});
+    t.ok(equals(expectedWeight, actualWeight), 'texcoordinates should match');
     t.end();
-    return;
-  }
-
-  const TEX_OPTIONS = {
-    format: GL.RGBA32F,
-    dataFormat: GL.RGBA,
-    type: GL.FLOAT,
-    mipmaps: false,
-    pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
-    }
-  };
-  const sourceData = new Float32Array([
-    1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-  ]);
-
-  const sourceTexture = new Texture2D(
-    gl,
-    Object.assign({}, TEX_OPTIONS, {
-      data: sourceData,
-      width: 4,
-      height: 4
-    })
-  );
-
-  const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {
-    texture: sourceTexture,
-    _readData: true
-  }); // _TODO: follow (gl, opts)
-  const locationAndIndexData = locationAndIndexBuffer.getData();
-  const actualData = [];
-  // Given order of vertex generation can be different between CPU and GPU, extract
-  // individual co-ordinates and key-index values and compare for equality.
-  for (let i = 0; i < locationAndIndexData.length; i += 4) {
-    actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
-  }
-  const expectedData = [
-    [0, 0, 0],
-    [1, 0, 0],
-    [3, 0, 0],
-    [0, 1, 0],
-    [2, 1, 0],
-    [1, 2, 0],
-    [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
-    [3, 2, 0],
-    [0, 3, 0]
-  ];
-  t.ok(equals(expectedData.length, actualData.length), 'Correct number of indices are generated');
-  let foundIndex = true;
-  expectedData.forEach((index) => {
-    foundIndex = foundIndex && actualData.some((actualIndex) => equals(index, actualIndex));
   });
-  t.ok(foundIndex, 'Generated indices should match');
-  t.end();
-});
 
+  test('histopyramid#histoPyramidGenerateIndices', (t) => {
+    if (!Transform.isSupported(gl)) {
+      t.comment('Transform not available, skipping tests');
+      t.end();
+      return;
+    }
+
+    const TEX_OPTIONS = {
+      format: GL.RGBA32F,
+      dataFormat: GL.RGBA,
+      type: GL.FLOAT,
+      mipmaps: false,
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
+    };
+    const sourceData = new Float32Array([
+      1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0
+    ]);
+
+    const sourceTexture = new Texture2D(
+      gl,
+      Object.assign({}, TEX_OPTIONS, {
+        data: sourceData,
+        width: 4,
+        height: 4
+      })
+    );
+
+    const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {
+      texture: sourceTexture,
+      _readData: true
+    }); // _TODO: follow (gl, opts)
+    const locationAndIndexData = locationAndIndexBuffer.getData();
+    const actualData = [];
+    // Given order of vertex generation can be different between CPU and GPU, extract
+    // individual co-ordinates and key-index values and compare for equality.
+    for (let i = 0; i < locationAndIndexData.length; i += 4) {
+      actualData.push(locationAndIndexData.slice(i, i + 3)); // ignore keyIndex value
+    }
+    const expectedData = [
+      [0, 0, 0],
+      [1, 0, 0],
+      [3, 0, 0],
+      [0, 1, 0],
+      [2, 1, 0],
+      [1, 2, 0],
+      [1, 2, 1], // non zero local key-index only for stream expansion case (value in 2 in texture)
+      [3, 2, 0],
+      [0, 3, 0]
+    ];
+    t.ok(equals(expectedData.length, actualData.length), 'Correct number of indices are generated');
+    let foundIndex = true;
+    expectedData.forEach((index) => {
+      foundIndex = foundIndex && actualData.some((actualIndex) => equals(index, actualIndex));
+    });
+    t.ok(foundIndex, 'Generated indices should match');
+    t.end();
+  });
 }
