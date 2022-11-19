@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-external-content",
-  "version": "8.5.17",
+  "version": "8.5.18",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
@@ -8,9 +8,9 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.5.17",
-    "@luma.gl/gltools": "8.5.17",
-    "@luma.gl/webgl": "8.5.17",
+    "@luma.gl/engine": "8.5.18",
+    "@luma.gl/gltools": "8.5.18",
+    "@luma.gl/webgl": "8.5.18",
     "core-js": "^3.5.0"
   },
   "devDependencies": {

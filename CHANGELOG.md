@@ -1,5 +1,11 @@
 # luma.gl CHANGELOG
 
+## v8.5.18
+
+- fix(resource): allocate/deallocate memory fix (#1665)
+- chore: Disable texture transform tests failing on CI (#1670)
+- [docs] update doc version badges (#1663)
+
 ## v8.5.17
 
 - chore(webgl): separate mem stats another way (#1660)
