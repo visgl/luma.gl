@@ -174,7 +174,7 @@ export default class WebGLDevice extends Device {
         message: 'Computer entered sleep mode, or too many apps or browser tabs are using the GPU.'
       });
 
-    let gl: WebGLRenderingContext | WebGL2RenderingContext | null = props.gl;
+    let gl: WebGLRenderingContext | WebGL2RenderingContext | null = props.gl || null;
     gl =
       gl ||
       (isBrowser() ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost}) : null);

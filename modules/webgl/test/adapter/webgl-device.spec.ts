@@ -82,7 +82,7 @@ test.skip('WebGLDevice#resize', (t) => {
   /*
   // update device pixel ratio
   DPR = 5;
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   // update drawing buffer size to simulate webgl1Device context
   webgl1Device.gl.drawingBufferWidth = Math.floor(webgl1Device.gl.canvas.clientWidth * DPR);
   webgl1Device.gl.drawingBufferHeight = Math.floor(webgl1Device.gl.canvas.clientHeight * DPR);
@@ -98,7 +98,7 @@ test.skip('WebGLDevice#resize', (t) => {
   // update drawing buffer size to simulate webgl1Device context
   webgl1Device.gl.drawingBufferWidth = Math.floor(webgl1Device.gl.canvas.clientWidth * DPR);
   webgl1Device.gl.drawingBufferHeight = Math.floor(webgl1Device.gl.canvas.clientHeight * DPR);
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {clientWidth: 5, clientHeight: 2, devicePixelRatio: DPR},
@@ -111,7 +111,7 @@ test.skip('WebGLDevice#resize', (t) => {
   // update drawing buffer size to simulate webgl1Device context
   webgl1Device.gl.drawingBufferWidth = Math.floor(webgl1Device.gl.canvas.width); // DPR is 1
   webgl1Device.gl.drawingBufferHeight = Math.floor(webgl1Device.gl.canvas.height); // DPR is 1
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {
@@ -123,7 +123,7 @@ test.skip('WebGLDevice#resize', (t) => {
   );
 
   // trigger resize again
-  webgl1Device.resize({useDevicePixels: DPR});
+  webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
     webgl1Device._canvasSizeInfo,
     {
@@ -142,7 +142,7 @@ test('WebGLDevice#lost (Promise)', async (t) => {
   const device = await WebGLDevice.create({webgl2: false});
 
   // Wrap in a promise to make sure tape waits for us
-  return new Promise<void>(async (resolve) => {
+  await new Promise<void>(async (resolve) => {
     setTimeout(async () => {
       const cause = await device.lost;
       t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
@@ -151,4 +151,6 @@ test('WebGLDevice#lost (Promise)', async (t) => {
     }, 0);
     device.loseDevice();
   });
+
+  device.destroy();
 });

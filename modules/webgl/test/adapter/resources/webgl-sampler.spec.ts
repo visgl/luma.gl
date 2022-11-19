@@ -1,4 +1,4 @@
-import test from 'tape-promise/tape';
+import test, {Test} from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Device, Sampler} from '@luma.gl/api';
@@ -67,7 +67,7 @@ test('WebGL#Sampler setParameters', t => {
   t.end();
 });
 
-function testSampler(t, device: Device): void {
+function testSampler(t: Test, device: Device): void {
   for (const pname in SAMPLER_PARAMETERS) {
 
     const parameter = Number(pname);

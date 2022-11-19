@@ -370,7 +370,7 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
 * Extract info about all "active" uniform blocks
  * ("Active" just means that unused (inactive) blocks may have been optimized away during linking)
  *
- function getUniformBlockBindings(gl, program): Binding[] {
+ function getUniformBlockBindings(gl: WebGLRenderingContext, program): Binding[] {
   if (!isWebGL2(gl)) {
     return;
   }

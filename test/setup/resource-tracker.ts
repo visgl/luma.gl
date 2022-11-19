@@ -8,7 +8,7 @@ export function getResourceCounts() {
   };
 }
 
-export function getLeakedResources(startCounts, endCounts) {
+export function getLeakedResources(startCounts: Record<string, number>, endCounts: Record<string, number>): number {
   let leakedResources = null;
   const info = 'leaking: ';
   for (const resourceName in endCounts) {

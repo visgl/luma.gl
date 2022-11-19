@@ -14,14 +14,14 @@ const EXT_texture_filter_anisotropic = 'EXT_texture_filter_anisotropic';
 const ERR_VAO_NOT_SUPPORTED = 'VertexArray requires WebGL2 or OES_vertex_array_object extension';
 
 // Return object with webgl2 flag and an extension
-function getExtensionData(gl, extension) {
+function getExtensionData(gl: WebGLRenderingContext, extension: string) {
   return {
     webgl2: isWebGL2(gl),
     ext: gl.getExtension(extension)
   };
 }
 
-// function mapExtensionConstant(gl, constant) {
+// function mapExtensionConstant(gl: WebGLRenderingContext, constant) {
 //   switch (constant) {
 //   case ext.FRAGMENT_SHADER_DERIVATIVE_HINT_OES: return GL.FRAGMENT_SHADER_DERIVATIVE_HINT;
 //   }
@@ -46,7 +46,7 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
       //   VERTEX_ATTRIB_ARRAY_DIVISOR: 'VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE'
       // }
     },
-    vertexAttribDivisor(location, divisor) {
+    vertexAttribDivisor(location: number, divisor: number) {
       // Accept divisor 0 even if instancing is not supported (0 = no instancing)
       assert(divisor === 0, 'WebGL instanced rendering not supported');
     },
@@ -74,11 +74,11 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
       assert(false);
     },
     endQuery: () => {},
-    getQuery(handle, pname) {
+    getQuery(handle, pname: string) {
       return this.getQueryObject(handle, pname);
     },
     // The WebGL1 extension uses getQueryObject rather then getQueryParameter
-    getQueryParameter(handle, pname) {
+    getQueryParameter(handle, pname: string) {
       return this.getQueryObject(handle, pname);
     },
     getQueryObject: (handle: unknown, pname: unknown) => {}
@@ -87,7 +87,7 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
 
 export const WEBGL2_CONTEXT_OVERRIDES = {
   // Ensure readBuffer is a no-op
-  readBuffer: (gl, originalFunc, attachment) => {
+  readBuffer: (gl: WebGLRenderingContext, originalFunc, attachment) => {
     if (isWebGL2(gl)) {
       originalFunc(attachment);
     } else {
@@ -95,7 +95,7 @@ export const WEBGL2_CONTEXT_OVERRIDES = {
     }
   },
   // Override for getVertexAttrib that returns sane values for non-WebGL1 constants
-  getVertexAttrib: (gl, originalFunc, location, pname) => {
+  getVertexAttrib: (gl: WebGLRenderingContext, originalFunc, location, pname) => {
     // const gl = this; // eslint-disable-line
     const {webgl2, ext} = getExtensionData(gl, ANGLE_instanced_arrays);
 
@@ -115,7 +115,7 @@ export const WEBGL2_CONTEXT_OVERRIDES = {
     return result !== undefined ? result : originalFunc(location, pname);
   },
   // Handle transform feedback and uniform block queries in WebGL1
-  getProgramParameter: (gl, originalFunc, program, pname) => {
+  getProgramParameter: (gl: WebGLRenderingContext, originalFunc, program, pname) => {
     if (!isWebGL2(gl)) {
       switch (pname) {
         case GL.TRANSFORM_FEEDBACK_BUFFER_MODE:
@@ -129,7 +129,7 @@ export const WEBGL2_CONTEXT_OVERRIDES = {
     }
     return originalFunc(program, pname);
   },
-  getInternalformatParameter: (gl, originalFunc, target, format, pname) => {
+  getInternalformatParameter: (gl: WebGLRenderingContext, originalFunc, target, format, pname) => {
     if (!isWebGL2(gl)) {
       switch (pname) {
         case GL.SAMPLES:
@@ -137,7 +137,8 @@ export const WEBGL2_CONTEXT_OVERRIDES = {
         default:
       }
     }
-    return gl.getInternalformatParameter(target, format, pname);
+    const gl2 = gl as WebGL2RenderingContext;
+    return gl2.getInternalformatParameter(target, format, pname);
   },
   getTexParameter(gl, originalFunc, target, pname) {
     switch (pname) {

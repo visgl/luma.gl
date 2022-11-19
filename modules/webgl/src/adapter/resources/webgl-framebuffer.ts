@@ -19,7 +19,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
 
   get texture() { return this.colorAttachments[0]; }
   readonly colorAttachments: WebGLTexture[] = [];
-  readonly depthStencilAttachment: WebGLTexture | null = null;  d 
+  readonly depthStencilAttachment: WebGLTexture | null = null;
   protected _ownResources: (WebGLTexture | Renderbuffer)[] = [];
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
@@ -251,7 +251,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
 // Helper functions
 
 // Map an index to a cube map face constant
-function mapIndexToCubeMapFace(layer) {
+function mapIndexToCubeMapFace(layer: number | GL): GL {
   // TEXTURE_CUBE_MAP_POSITIVE_X is a big value (0x8515)
   // if smaller assume layer is index, otherwise assume it is already a cube map face constant
   return layer < GL.TEXTURE_CUBE_MAP_POSITIVE_X ? layer + GL.TEXTURE_CUBE_MAP_POSITIVE_X : layer;
@@ -259,7 +259,7 @@ function mapIndexToCubeMapFace(layer) {
 
 // Helper METHODS
 // Get a string describing the framebuffer error if installed
-function _getFrameBufferStatus(status) {
+function _getFrameBufferStatus(status: GL) {
   switch (status) {
     case GL.FRAMEBUFFER_COMPLETE:
       return 'success';

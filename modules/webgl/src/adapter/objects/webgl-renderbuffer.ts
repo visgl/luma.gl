@@ -43,7 +43,7 @@ export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> 
   get samples(): number { return this.props.samples; }
 
   static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
-    return !options.format || isRenderbufferFormatSupported(gl, options.format);
+    return !options?.format || isRenderbufferFormatSupported(gl, options.format);
   }
 
   constructor(device: WebGLDevice, props: RenderbufferProps) {
