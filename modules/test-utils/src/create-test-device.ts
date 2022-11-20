@@ -1,4 +1,6 @@
-import {isBrowser} from 'probe.gl/env';
+// luma.gl, MIT license
+
+import {isBrowser} from '@probe.gl/env';
 import type {Device, DeviceProps} from '@luma.gl/api';
 import {luma} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
