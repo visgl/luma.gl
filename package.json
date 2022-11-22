@@ -67,14 +67,14 @@
     "TODO - remove when ocular upgrades",
     "Note: tape 4.12 and higher no longer compares 0 and -0 equally...",
     "Note: newer prettier breaks on typescript import type",
-    "Note: probe.gl needs to be 3.5 or higher to avoid timeouts"
+    "Note: probe.gl needs to be 3.5 or higher to avoid timeouts, but not too high to trigger puppeteer errors"
   ],
   "resolutions": {
     "tape": "4.11.0",
     "prettier": "2.3.1",
     "typescript": "4.9.3",
-    "@probe.gl/test-utils": "^3.5.2",
-    "@probe.gl/env": "^3.5.2"
+    "@probe.gl/test-utils": "3.5.2",
+    "@probe.gl/env": "3.5.2"
   },
   "pre-commit": [
     "test-fast"
