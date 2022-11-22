@@ -120,7 +120,7 @@ export function getContextDebugInfo(gl: WebGLRenderingContext): {
 }
 
 /** @deprecated Use `WebGLDevice.info` */
-export function getGLContextInfo(gl) {
+export function getGLContextInfo(gl: WebGLRenderingContext) {
   const info = getContextDebugInfo(gl);
   return {
     [GL.UNMASKED_VENDOR_WEBGL]: info.vendor,
@@ -132,7 +132,7 @@ export function getGLContextInfo(gl) {
 }
 
 /** @deprecated Use `WebGLDevice.info` and `WebGLDevice.limits` */
-export function getContextInfo(gl) {
+export function getContextInfo(gl: WebGLRenderingContext) {
   return {
     ...getContextDebugInfo(gl),
     ...getContextLimits(gl),
@@ -141,7 +141,7 @@ export function getContextInfo(gl) {
 }
 
 /** @deprecated Use `WebGLDevice.limits` */
-export function getContextLimits(gl) {
+export function getContextLimits(gl: WebGLRenderingContext) {
   const webglDevice = WebGLDevice.attach(gl);
   return {limits: webglDevice.webglLimits};
 }

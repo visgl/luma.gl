@@ -46,7 +46,7 @@ export default class ClassicTexture extends WEBGLTexture {
    * @param name
    * @return param
    */
-   getParameter(pname: number, props = {}): any {
+   getParameter(pname: number): any {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
@@ -73,13 +73,16 @@ export default class ClassicTexture extends WEBGLTexture {
 
     // If unknown parameter - Could be a valid parameter not covered by PARAMS
     // Attempt to query for it and let WebGL report errors
-    return this._getParameter(pname, props);
+    return this._getParameter(pname);
   }
 
   // Many resources support a getParameter call -
   // getParameters will get all parameters - slow but useful for debugging
   // eslint-disable-next-line complexity
-  getParameters(options: {parameters?; keys?} = {}) {
+  getParameters(options: {
+    parameters?: any; 
+    keys?: any
+  } = {}): any {
     const {parameters, keys} = options;
 
     // Get parameter definitions for this Resource
@@ -88,7 +91,7 @@ export default class ClassicTexture extends WEBGLTexture {
 
     const isWebgl2 = isWebGL2(this.gl);
 
-    const values = {};
+    const values: Record<string, unknown> = {};
 
     // Query all parameters if no list provided
     const parameterKeys = parameters || Object.keys(PARAMETERS);
@@ -105,8 +108,9 @@ export default class ClassicTexture extends WEBGLTexture {
 
       if (parameterAvailable) {
         const key = keys ? getKey(this.gl, pname) : pname;
-        values[key] = this.getParameter(pname, options);
+        values[key] = this.getParameter(pname);
         if (keys && parameter.type === 'GLenum') {
+          // @ts-expect-error
           values[key] = getKey(this.gl, values[key]);
         }
       }
@@ -115,7 +119,7 @@ export default class ClassicTexture extends WEBGLTexture {
     return values;
   }
 
-  _getParameter(pname: number, props?): any {
+  _getParameter(pname: number): any {
     switch (pname) {
       case GL.TEXTURE_WIDTH:
         return this.width;
@@ -138,7 +142,7 @@ export default class ClassicTexture extends WEBGLTexture {
    * @param {GLint|GLfloat|GLenum} value
    * @return {Resource} returns self to enable chaining
    */
-  setParameter(pname, value) {
+  setParameter(pname: string | number, value: any): this {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
@@ -175,7 +179,7 @@ export default class ClassicTexture extends WEBGLTexture {
    * Batch update resource parameters
    * Assumes the subclass supports a setParameter call
    */
-  setParameters(parameters) {
+  setParameters(parameters: any): this {
     for (const pname in parameters) {
       this.setParameter(pname, parameters[pname]);
     }

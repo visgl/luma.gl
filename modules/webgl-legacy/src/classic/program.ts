@@ -129,7 +129,7 @@ export default class Program extends WEBGLRenderPipeline {
     return this.setProps(props);
   }
 
-  setProps(props) {
+  setProps(props: ProgramProps) {
     if ('uniforms' in props) {
       this.setUniforms(props.uniforms);
     }
@@ -328,7 +328,7 @@ export default class Program extends WEBGLRenderPipeline {
 
     // If program is not named, name it after shader names
   // TODO - this.id will already have been initialized
-  _setId(id) {
+  _setId(id: string): void {
     if (!id) {
       const programName = this._getName();
       this.id = uid(programName);
@@ -336,7 +336,7 @@ export default class Program extends WEBGLRenderPipeline {
   }
 
   // Generate a default name for the program based on names of the shaders
-  _getName() {
+  _getName(): string {
     // let programName = this.vs.getName() || this.fs.getName();
     let programName = this.vs.id || this.fs.id;
     programName = programName.replace(/shader/i, '');
@@ -347,7 +347,7 @@ export default class Program extends WEBGLRenderPipeline {
   // RESOURCE METHODS
 
   // Extract opts needed to initialize a `Program` from an independently created WebGLProgram handle
-  _getOptionsFromHandle(handle) {
+  _getOptionsFromHandle(handle: WebGLProgram) {
     const shaderHandles = this.gl.getAttachedShaders(handle);
     const opts = {};
     for (const shaderHandle of shaderHandles) {
@@ -367,7 +367,7 @@ export default class Program extends WEBGLRenderPipeline {
     return opts;
   }
 
-  _getParameter(pname) {
+  _getParameter(pname: GL): any {
     return this.gl.getProgramParameter(this.handle, pname);
   }
 
@@ -375,7 +375,7 @@ export default class Program extends WEBGLRenderPipeline {
 
   // query uniform locations and build name to setter map.
   // TODO - This overlaps with ProgramConfiguration?
-  _readUniformLocationsFromLinkedProgram() {
+  _readUniformLocationsFromLinkedProgram(): void {
     const {gl} = this;
     this._uniformSetters = {};
     this._uniformCount = this._getParameter(GL.ACTIVE_UNIFORMS);
@@ -399,24 +399,24 @@ export default class Program extends WEBGLRenderPipeline {
   // Rretrieves information about active uniforms identifed by their indices (`uniformIndices`)
   // https://
   // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniforms
-  getActiveUniforms(uniformIndices, pname) {
+  getActiveUniforms(uniformIndices: number[], pname: GL): any {
     return this.gl2.getActiveUniforms(this.handle, uniformIndices, pname);
   }
 
   // Retrieves the index of a uniform block
-  getUniformBlockIndex(blockName) {
+  getUniformBlockIndex(blockName: string): number {
     return this.gl2.getUniformBlockIndex(this.handle, blockName);
   }
 
   // Retrieves information about an active uniform block (`blockIndex`)
   // https://
   // developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/getActiveUniformBlockParameter
-  getActiveUniformBlockParameter(blockIndex, pname) {
+  getActiveUniformBlockParameter(blockIndex: number, pname: GL): any {
     return this.gl2.getActiveUniformBlockParameter(this.handle, blockIndex, pname);
   }
 
   // Binds a uniform block (`blockIndex`) to a specific binding point (`blockBinding`)
-  uniformBlockBinding(blockIndex, blockBinding) {
+  uniformBlockBinding(blockIndex: number, blockBinding: number): void {
     this.gl2.uniformBlockBinding(this.handle, blockIndex, blockBinding);
   }
 }

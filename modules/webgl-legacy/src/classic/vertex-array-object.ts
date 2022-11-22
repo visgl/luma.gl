@@ -173,7 +173,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     return arrayValue;
   }
 
-  _compareConstantArrayValues(v1, v2): boolean {
+  _compareConstantArrayValues(v1: NumberArray, v2: NumberArray): boolean {
     if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
       return false;
     }
@@ -185,7 +185,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     return true;
   }
 
-  static _setConstantFloatArray(gl: WebGLRenderingContext, location, array): void {
+  static _setConstantFloatArray(gl: WebGLRenderingContext, location: number, array: NumberArray): void {
     switch (array.length) {
       case 1:
         gl.vertexAttrib1fv(location, array);
@@ -204,7 +204,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     }
   }
 
-  static _setConstantIntArray(gl: WebGL2RenderingContext, location, array) {
+  static _setConstantIntArray(gl: WebGL2RenderingContext, location: number, array: NumberArray): void {
     assert(isWebGL2(gl));
     gl.vertexAttribI4iv(location, array);
     // switch (array.length) {
@@ -224,7 +224,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     // }
   }
 
-  static _setConstantUintArray(gl: WebGL2RenderingContext, location, array) {
+  static _setConstantUintArray(gl: WebGL2RenderingContext, location: number, array: NumberArray) {
     assert(isWebGL2(gl));
     gl.vertexAttribI4uiv(location, array);
     // switch (array.length) {
@@ -248,14 +248,14 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
   // RESOURCE IMPLEMENTATION
 
   // Generic getter for information about a vertex attribute at a given position
-  _getParameter(pname: number, {location}) {
-    assert(Number.isFinite(location));
+  _getParameter(pname: number, options: {location: number}): any {
+    assert(Number.isFinite(options.location));
     return this.bind(() => {
       switch (pname) {
         case GL.VERTEX_ATTRIB_ARRAY_POINTER:
-          return this.gl.getVertexAttribOffset(location, pname);
+          return this.gl.getVertexAttribOffset(options.location, pname);
         default:
-          return this.gl.getVertexAttrib(location, pname);
+          return this.gl.getVertexAttrib(options.location, pname);
       }
     });
   }

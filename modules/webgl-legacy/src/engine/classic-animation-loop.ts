@@ -9,9 +9,12 @@ import {
   cancelAnimationFrame
 } from '@luma.gl/api';
 import {Timeline, AnimationProps} from '@luma.gl/engine';
-import {isWebGL, resetParameters, Query, Framebuffer} from '@luma.gl/webgl-legacy';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
+
+import {isWebGL, resetParameters} from '@luma.gl/webgl';
+import {default as Query} from '../classic/query';
+import {default as Framebuffer} from '../classic/framebuffer';
 
 type ContextProps = DeviceProps;
 
@@ -125,10 +128,10 @@ export default class ClassicAnimationLoop {
 
   _initialized: boolean = false;
   _running: boolean = false;
-  _animationFrameId = null;
+  _animationFrameId: any = null;
   _pageLoadPromise: Promise<{}> | null = null;
   _nextFramePromise: Promise<ClassicAnimationLoop> | null = null;
-  _resolveNextFrame: ((ClassicAnimationLoop) => void) | null = null;
+  _resolveNextFrame: ((loop: ClassicAnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
 
   _gpuTimeQuery: Query | null = null;
@@ -392,7 +395,7 @@ export default class ClassicAnimationLoop {
     return this._pageLoadPromise;
   }
 
-  _setDisplay(display) {
+  _setDisplay(display: any) {
     if (this.display) {
       this.display.delete();
       this.display.animationLoop = null;

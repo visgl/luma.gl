@@ -1,18 +1,18 @@
+// luma.gl, MIT license
+
 import type {RenderPipelineParameters} from '@luma.gl/api';
 import {Device} from '@luma.gl/api/';
-import {assembleShaders, ShaderModule} from '@luma.gl/shadertools';
+import {ShaderModule, assembleShaders} from '@luma.gl/shadertools';
 import Program from '../classic/program';
-
-type Module = 'string' | {name: string}; // TODO
 
 type GetProgramOptions = {
   vs?: string,
   fs?: string,
-  defines?: {},
-  inject?: {},
+  defines?: Record<string, string | number | boolean>,
+  inject?: Record<string, string>,
   varyings?: string[],
   bufferMode?: number,
-  modules?: Module[];
+  modules?: ShaderModule[];
   transpileToGLSL100?: boolean;
   parameters?: RenderPipelineParameters;
 };
@@ -30,13 +30,13 @@ export default class ProgramManager {
 
   stateHash = 0; // Used change hashing if hooks are modified
   private _hashCounter = 0;
-  private readonly _hashes = {};
-  private readonly _useCounts = {};
+  private readonly _hashes: Record<string, number> = {};
+  private readonly _useCounts: Record<string, number> = {};
 
-  private readonly _programCache = {};
-  private readonly _getUniforms = {};
-  private readonly _registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
-  private readonly _hookFunctions = [];
+  private readonly _programCache: Record<string, Program> = {};
+  private readonly _getUniforms: Record<string, Function> = {};
+  private readonly _registeredShaderModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
+  private readonly _hookFunctions: string[] = [];
   private _defaultModules: ShaderModule[] = [];
 
   static getDefaultProgramManager(device: Device): ProgramManager {
@@ -50,8 +50,7 @@ export default class ProgramManager {
     this.device = device;
   }
 
-  addDefaultModule(module: Module): void {
-    // @ts-expect-error
+  addDefaultModule(module: ShaderModule): void {
     if (!this._defaultModules.find((m) => m.name === module.name)) {
       this._defaultModules.push(module as ShaderModule);
     }
@@ -59,7 +58,7 @@ export default class ProgramManager {
     this.stateHash++;
   }
 
-  removeDefaultModule(module: Module): void {
+  removeDefaultModule(module: string | ShaderModule): void {
     const moduleName = typeof module === 'string' ? module : module.name;
     this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
     this.stateHash++;
@@ -90,7 +89,6 @@ export default class ProgramManager {
 
     const vsHash = this._getHash(vs);
     const fsHash = this._getHash(fs);
-    // @ts-expect-error
     const moduleHashes = modules.map((m) => this._getHash(m.name)).sort();
     const varyingHashes = varyings.map((v) => this._getHash(v));
 
@@ -101,7 +99,7 @@ export default class ProgramManager {
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));
-      defineHashes.push(this._getHash(defines[key]));
+      defineHashes.push(this._getHash(String(defines[key])));
     }
 
     for (const key of injectKeys) {
@@ -161,7 +159,7 @@ export default class ProgramManager {
     }
   }
 
-  _getHash(key: string): string {
+  _getHash(key: string): number {
     if (this._hashes[key] === undefined) {
       this._hashes[key] = this._hashCounter++;
     }
@@ -170,9 +168,9 @@ export default class ProgramManager {
   }
 
   // Dedup and combine with default modules
-  _getModuleList(appModules: Module[] = []): Module[] {
+  _getModuleList(appModules: ShaderModule[] = []): ShaderModule[] {
     const modules = new Array(this._defaultModules.length + appModules.length);
-    const seen = {};
+    const seen: Record<string, boolean> = {};
     let count = 0;
 
     for (let i = 0, len = this._defaultModules.length; i < len; ++i) {
@@ -184,7 +182,6 @@ export default class ProgramManager {
 
     for (let i = 0, len = appModules.length; i < len; ++i) {
       const module = appModules[i];
-      // @ts-expect-error
       const name = module.name;
       if (!seen[name]) {
         modules[count++] = module;
