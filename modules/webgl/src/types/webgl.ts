@@ -281,4 +281,4 @@ export type GLFunctionParameters = {
 };
 
 /** WebGL style parameters object (with both GL constants and function style fields) */
-export type GLParameters = GLValueParameters | GLFunctionParameters;
+export type GLParameters = GLValueParameters & GLFunctionParameters;

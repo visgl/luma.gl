@@ -24,19 +24,19 @@ test('WebGL#set and get', (t) => {
   const {gl} = fixture;
   resetParameters(gl);
 
-  let value = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
-  t.deepEqual(value, false, `got expected value ${stringifyTypedArray(value)}`);
+  let cullFace = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
+  t.deepEqual(cullFace, false, `got expected value ${stringifyTypedArray(cullFace)}`);
 
   setParameters(gl, {[GL.CULL_FACE]: true});
-  value = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
-  t.deepEqual(value, true, `got expected value ${stringifyTypedArray(value)}`);
+  cullFace = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
+  t.deepEqual(cullFace, true, `got expected value ${stringifyTypedArray(cullFace)}`);
 
-  value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  t.is(value, 1, `got expected value ${stringifyTypedArray(value)}`);
+  let clearValue = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
+  t.is(clearValue, 1, `got expected value ${stringifyTypedArray(clearValue)}`);
 
   setParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
-  value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  t.is(value, -1, `got expected value ${stringifyTypedArray(value)}`);
+  clearValue = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
+  t.is(clearValue, -1, `got expected value ${stringifyTypedArray(clearValue)}`);
 
   // @ts-expect-error
   t.throws(() => setParameters({}), 'throws with non WebGL context');
@@ -52,6 +52,7 @@ test('WebGL#composite setter', (t) => {
 
   // Verify default values.
   for (const key of compositeStateKeys) {
+    // @ts-expect-error
     const value = getParameters(gl, [key])[key];
     t.deepEqual(
       value,
@@ -88,11 +89,12 @@ test('WebGLState#get all parameters', (t) => {
   // Set custom values.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
+    // @ts-expect-error
     const value = getParameters(gl, [key])[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(gl, key)}`
     );
   }
 
@@ -102,7 +104,7 @@ test('WebGLState#get all parameters', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after getParameters for ${getKey(GL, key)}`
+      `got expected value ${stringifyTypedArray(value)} after getParameters for ${getKey(gl, key)}`
     );
   }
 
@@ -115,11 +117,12 @@ test('WebGL#reset', (t) => {
   // Set custom values and verify.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
+    // @ts-expect-error
     const value = getParameters(gl, [key])[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(gl, key)}`
     );
   }
 
@@ -128,12 +131,13 @@ test('WebGL#reset', (t) => {
 
   // Verify default values.
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
+    // @ts-expect-error
     const value = getParameters(gl, [key])[key];
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
       `got expected value ${stringifyTypedArray(value)} after resetParameters for ${getKey(
-        GL,
+        gl,
         key
       )}`
     );

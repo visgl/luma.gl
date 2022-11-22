@@ -6,7 +6,7 @@ export function createTestContext(opts: Record<string, any> = {}): WebGLRenderin
 }
 
   /*
-import {isBrowser} from 'probe.gl/env';
+import {isBrowser} from '@probe.gl/env';
 import {createGLContext, instrumentGLContext} from '@luma.gl/gltools';
 import {createHeadlessContext} from './create-headless-context';
 

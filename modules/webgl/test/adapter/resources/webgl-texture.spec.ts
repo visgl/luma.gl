@@ -112,7 +112,7 @@ function testFormatDeduction(t, device: Device) {
     };
     if (device.isTextureFormatSupported({format})) {
       const texture = device.createTexture(options);
-      const msg = `Texture({format: ${getKey(GL, format)}}) created`;
+      const msg = `Texture({format: ${getKey(gl, format)}}) created`;
       t.equals(texture.format, Number(format), msg);
       t.equals(texture.type, expectedType, msg);
       t.equals(texture.dataFormat, expectedDataFormat, msg);
@@ -190,7 +190,7 @@ test.skip('WebGL#Texture setParameters', (t) => {
   });
   const newValue = getParameter(texture, GL.TEXTURE_MAG_FILTER);
   t.equals(newValue, value,
-    `Texture.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}})`);
+    `Texture.setParameters({[${getKey(gl, parameter)}]: ${getKey(gl, value)}})`);
   */
 
   texture.destroy();
@@ -621,7 +621,7 @@ export function testSamplerParameters({t, texture, parameters}) {
       t.equals(
         newValue,
         value,
-        `${name}.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}}) read back OK`
+        `${name}.setParameters({[${getKey(gl, parameter)}]: ${getKey(gl, value)}}) read back OK`
       );
     }
   }

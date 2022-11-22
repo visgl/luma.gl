@@ -1,7 +1,6 @@
 // luma.gl, MIT license
 
-import {Buffer} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/gltools';
+import {Buffer, Transform} from '@luma.gl/gltools';
 import {picking} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';

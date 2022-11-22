@@ -9,6 +9,7 @@ import {
   setParameters,
   resetParameters
 } from '@luma.gl/webgl';
+import GL from '@luma.gl/constants';
 import {Texture2D} from '@luma.gl/gltools';
 
 import {
@@ -80,8 +81,7 @@ test('WebGLState#push & pop', (t) => {
   // Set custom values and verify
   setParameters(gl, ENUM_STYLE_SETTINGS_SET2);
   parameters = getParameters(gl);
-  for (const key in ENUM_STYLE_SETTINGS_SET2) {
-    const value = parameters[key];
+  for (const [key, value] of Object.entries(ENUM_STYLE_SETTINGS_SET2)) {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET2[key],
@@ -148,7 +148,8 @@ test('WebGLState#gl API', (t) => {
   parameters = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
-    if (typeof GL_PARAMETER_SETTERS[key] !== 'string') {
+    if (!isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
+      // @ts-expect-error
       const value = getParameters(gl, [key])[key];
       t.deepEqual(
         value,

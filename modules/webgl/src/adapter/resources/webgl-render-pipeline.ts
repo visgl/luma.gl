@@ -1,6 +1,5 @@
 import type {
   RenderPipelineProps,
-  RenderPipelineParameters,
   RenderPass,
   Buffer,
   Binding,
@@ -11,9 +10,11 @@ import type {
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+
+import type {GLParameters} from '../../types/webgl';
 import {getWebGLDataType} from '../converters/texture-formats';
 import {getShaderLayout} from '../helpers/get-shader-layout';
-import {withDeviceParameters} from '../converters/device-parameters';
+import {withDeviceParameters, withGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
@@ -195,8 +196,6 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this.device.gl.useProgram(this.handle);
 
     this.vertexArrayObject.bind(() => {
-      const parameters = {...this.props.parameters, framebuffer: renderPass.props.framebuffer};
-
       const primitiveMode = getGLPrimitive(this.props.topology);
       const transformFeedback: any = null;
       if (transformFeedback) {
@@ -208,31 +207,33 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       this._applyUniforms();
 
       // TODO - double context push/pop
-      withDeviceParameters(this.device, parameters, () => {
-        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-        if (isIndexed && isInstanced) {
-          // ANGLE_instanced_arrays extension
-          this.device.gl2.drawElementsInstanced(
-            drawMode,
-            vertexCount,
-            indexType,
-            firstVertex,
-            instanceCount
-          );
-          // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-          //   this.device.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-        } else if (isIndexed) {
-          this.device.gl.drawElements(drawMode, vertexCount, indexType, firstVertex);
-        } else if (isInstanced) {
-          this.device.gl2.drawArraysInstanced(drawMode, firstVertex, vertexCount, instanceCount);
-        } else {
-          this.device.gl.drawArrays(drawMode, firstVertex, vertexCount);
+      withDeviceParameters(this.device, this.props.parameters, () => {
+        withGLParameters(this.device, {framebuffer: renderPass.props.framebuffer}, () => {
+          // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+          if (isIndexed && isInstanced) {
+            // ANGLE_instanced_arrays extension
+            this.device.gl2.drawElementsInstanced(
+              drawMode,
+              vertexCount,
+              indexType,
+              firstVertex,
+              instanceCount
+            );
+            // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
+            //   this.device.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+          } else if (isIndexed) {
+            this.device.gl.drawElements(drawMode, vertexCount, indexType, firstVertex);
+          } else if (isInstanced) {
+            this.device.gl2.drawArraysInstanced(drawMode, firstVertex, vertexCount, instanceCount);
+          } else {
+            this.device.gl.drawArrays(drawMode, firstVertex, vertexCount);
+          }
+        });
+
+        if (transformFeedback) {
+          transformFeedback.end();
         }
       });
-
-      if (transformFeedback) {
-        transformFeedback.end();
-      }
     });
 
     return true;

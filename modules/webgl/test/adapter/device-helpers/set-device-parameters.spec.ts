@@ -19,7 +19,7 @@ const {gl} = fixture;
 
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
-const getGLParameter = (parameter: GL): any => {
+const getGLParameter = (parameter: keyof GLParameters): any => {
   const parameters = getParameters(gl, [parameter]);
   return parameters[parameter];
 }
