@@ -9,6 +9,7 @@ import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
 import {createTestContext} from '@luma.gl/test-utils';
+import {GLParameters} from 'modules/webgl/dist';
 
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
@@ -52,7 +53,7 @@ test('WebGLState#getParameters (WebGL2)', (t) => {
       const value = parameters[setting];
       t.ok(
         value !== undefined,
-        `${getKey(GL, setting)}: got a value ${stringifyTypedArray(value)}`
+        `${getKey(gl2, setting)}: got a value ${stringifyTypedArray(value)}`
       );
     }
   }
@@ -72,7 +73,7 @@ test('WebGLState#setParameters (Mixing enum and function style keys)', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(GL, key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(gl, key)}`
     );
   }
   t.end();
@@ -117,7 +118,7 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
     t.deepEqual(
       value,
       expectedValues[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(GL, key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(gl, key)}`
     );
   }
   t.end();
@@ -336,7 +337,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
     ['WebGL1 Context']: gl,
     ['WebGL2 Context']: gl2
   };
-  const parametersArray = [
+  const parametersArray: GLParameters[] = [
     {
       [GL.BLEND_EQUATION_RGB]: GL.MAX,
       [GL.BLEND_EQUATION_ALPHA]: GL.MIN
@@ -345,7 +346,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
       blendEquation: GL.MAX
     }
   ];
-  const expectedArray = [
+  const expectedArray: GLParameters[] = [
     {
       [GL.BLEND_EQUATION_RGB]: GL.MAX,
       [GL.BLEND_EQUATION_ALPHA]: GL.MIN
@@ -373,8 +374,8 @@ test('WebGLState#BlendEquationMinMax', (t) => {
           t.equal(
             value,
             expected[state],
-            `${contextName} : expected value, ${getKey(GL, value)} received for ${getKey(
-              GL,
+            `${contextName} : expected value, ${getKey(gl, value)} received for ${getKey(
+              gl,
               state
             )}`
           );

@@ -52,10 +52,9 @@
   "exclude":[
     "modules/**/wip",
     "modules/**/dist/**/*.js",
-    "website",
     "test/apps",
+    "website",
     "coverage",
-    "modules/dist/**/*",
     "node_modules"
   ]
 }

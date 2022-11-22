@@ -3,7 +3,6 @@ import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 import {DeviceFeature} from '@luma.gl/api';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
-/** @type {import('../../src/adapter/device-helpers/device-features').Feature[]} */
 const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
   'webgl2',
 

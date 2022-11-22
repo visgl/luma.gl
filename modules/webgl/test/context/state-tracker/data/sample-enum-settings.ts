@@ -1,10 +1,10 @@
-/** @typedef {import('@luma.gl/webgl').GLParameters} GLParameters  */
-import GL from '@luma.gl/constants';
+// luma.gl, MIT license
 
-// eslint-disable-next-line
+import GL from '@luma.gl/constants';
+import {GLParameters} from '@luma.gl/webgl';
+
 // NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1
-/** @type {GLParameters} */
-export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE = {
+export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE: GLParameters = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([0.5, 0.5, 0.5, 0]),
   [GL.COLOR_CLEAR_VALUE]: new Float32Array([0.5, 0.5, 0.5, 0]), // TBD
@@ -49,7 +49,7 @@ export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE = {
   // [GL.UNPACK_SKIP_IMAGES]: 512
 };
 
-export const ENUM_STYLE_SETTINGS_SET1 = Object.assign({}, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE, {
+export const ENUM_STYLE_SETTINGS_SET1: GLParameters = Object.assign({}, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE, {
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_SUBTRACT,
   [GL.BLEND_EQUATION_ALPHA]: GL.MIN,
   [GL.BLEND_SRC_RGB]: GL.SRC_COLOR,
@@ -77,9 +77,7 @@ export const ENUM_STYLE_SETTINGS_SET1 = Object.assign({}, ENUM_STYLE_SETTINGS_SE
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: GL.DECR
 });
 
-/** @type {GLParameters} */
-// eslint-disable-next-line
-export const ENUM_STYLE_SETTINGS_SET2 = {
+export const ENUM_STYLE_SETTINGS_SET2: GLParameters = {
   [GL.BLEND]: true,
   [GL.BLEND_COLOR]: new Float32Array([1, 1, 0.5, 0]),
   [GL.BLEND_EQUATION_RGB]: GL.FUNC_REVERSE_SUBTRACT,

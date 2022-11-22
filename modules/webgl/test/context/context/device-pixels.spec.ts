@@ -361,11 +361,13 @@ test('webgl#cssToDevicePixels', (t) => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
+        // @ts-expect-error Mock GL context
         cssToDevicePixels(tc.gl, tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
         `${tc.name}(yInvert=true): device pixel should be ${tc.devicePositionsInverted[i]} for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
+        // @ts-expect-error Mock GL context
         cssToDevicePixels(tc.gl, tc.windowPositions[i], false),
         tc.devicePositions[i],
         `${tc.name}(yInvert=false): device pixel should match`
@@ -377,6 +379,7 @@ test('webgl#cssToDevicePixels', (t) => {
 
 test('webgl#cssToDeviceRatio', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
+    // @ts-expect-error Mock GL context
     t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');
   });
 

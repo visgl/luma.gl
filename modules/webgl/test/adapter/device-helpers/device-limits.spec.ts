@@ -104,7 +104,7 @@ test('WebGLDevice#webglLimits (WebGL style limits)', async (t) => {
       if (numeric) {
         t.ok(
           Number.isFinite(actual),
-          `device.limits[${getKey(testDevice, limit)}] returns a number: ${actual}`
+          `device.limits[${getKey(testDevice.gl, limit)}] returns a number: ${actual}`
         );
       } else {
         t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);

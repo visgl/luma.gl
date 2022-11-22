@@ -8,13 +8,14 @@
 import '@luma.gl/api';
 import './init'
 
+// Types
+export {WebGLLimits} from './adapter/device-helpers/device-limits';
+
+// WebGL adapter classes
 export {default as WebGLDevice} from './adapter/webgl-device';
 export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
-// Legacy WebGL Classes - will be moved to gltools
-export {default as Accessor} from './classic/accessor';
-export type {ClassicBufferProps as BufferProps} from './classic/buffer';
-export {default as Buffer} from './classic/buffer';
+// WebGL Resource classes
 export {default as WEBGLResource, default as WebGLResource} from './adapter/objects/webgl-resource';
 export {default as WEBGLBuffer} from './adapter/resources/webgl-buffer';
 export {default as WEBGLTexture} from './adapter/resources/webgl-texture';
@@ -24,15 +25,20 @@ export {default as WEBGLSampler} from './adapter/resources/webgl-sampler';
 export {default as WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
 
 export {default as WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
-
 // export {default as WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
 export {default as WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
 export {default as WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
 //export {default as WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 
+// non-api resources
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {default as WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 export {default as WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
+
+// WebGL adapter classes (Legacy, will be moved to gltools)
+export {default as Accessor} from './classic/accessor';
+export type {ClassicBufferProps, ClassicBufferProps as BufferProps} from './classic/buffer';
+export {default as ClassicBuffer, default as Buffer} from './classic/buffer';
 
 export {
   isWebGL,

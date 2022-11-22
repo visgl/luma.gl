@@ -34,8 +34,8 @@
     "@probe.gl/env": "^3.5.0"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.0.0-alpha.4",
-    "@luma.gl/webgl": "9.0.0-alpha.4",
+    "@luma.gl/core": "9.0.0-alpha.5",
+    "@luma.gl/webgl": "9.0.0-alpha.5",
     "@probe.gl/test-utils": "^3.5.0"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"

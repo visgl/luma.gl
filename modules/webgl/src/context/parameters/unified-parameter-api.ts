@@ -21,7 +21,10 @@ export type {GLParameters};
  * @note requires a `cache` object to be set on the context (gl.state.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
-export function setParameters(device: Device | WebGLRenderingContext, parameters: GLParameters): void {
+export function setParameters(
+  device: Device | WebGLRenderingContext,
+  parameters: GLParameters
+): void {
   const webglDevice = WebGLDevice.attach(device);
   const gl = webglDevice.gl;
 
@@ -74,7 +77,10 @@ export function setParameters(device: Device | WebGLRenderingContext, parameters
 
 /**
  * Reads the entire WebGL state from a context
- * @returns - a newly created map, with values keyed by GL parameters
+
+  // default to querying all parameters
+
+  * @returns - a newly created map, with values keyed by GL parameters
  *
  * @note Copies the state from a context (gl.getParameter should not be overriden)
  * Reads the entire WebGL state from a context
@@ -83,13 +89,10 @@ export function setParameters(device: Device | WebGLRenderingContext, parameters
  * considered a very slow operation, to be used only if/when a context already manipulated
  * by external code needs to be synchronized for the first time
  */
-export function getParameters(gl: WebGLRenderingContext, parameters?: Record<keyof GLParameters, any>): GLParameters;
-export function getParameters(gl: WebGLRenderingContext, parameters?: (keyof GLParameters)[]): GLParameters;
-export function getParameters(gl: WebGLRenderingContext, parameters: keyof GLParameters): GLParameters;
-
-export function getParameters(gl, parameters) {
-  // default to querying all parameters
-  parameters = parameters || GL_PARAMETER_DEFAULTS;
+export function getParameters(
+  gl: WebGLRenderingContext,
+  parameters: keyof GLParameters | (keyof GLParameters)[] | GLParameters = GL_PARAMETER_DEFAULTS
+): GLParameters {
   // support both arrays of parameters and objects (keys represent parameters)
 
   if (typeof parameters === 'number') {
