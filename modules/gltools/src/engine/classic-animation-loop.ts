@@ -1,14 +1,28 @@
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
-import {luma, Device, DeviceProps, log, requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
+import {
+  luma,
+  Device,
+  DeviceProps,
+  log,
+  requestAnimationFrame,
+  cancelAnimationFrame
+} from '@luma.gl/api';
 import {Timeline, AnimationProps} from '@luma.gl/engine';
 import {isWebGL, resetParameters, Query, Framebuffer} from '@luma.gl/gltools';
-import { Stats, Stat } from '@probe.gl/stats'
+import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
 type ContextProps = DeviceProps;
 
 const isPage = isBrowser() && typeof document !== 'undefined';
+function getHTMLCanvasElement(
+  canvas: HTMLCanvasElement | OffscreenCanvas
+): HTMLCanvasElement | null {
+  return typeof HTMLCanvasElement !== 'undefined' && canvas instanceof HTMLCanvasElement
+    ? canvas
+    : null;
+}
 
 let statIdCounter = 0;
 
@@ -34,7 +48,7 @@ export type ClassicAnimationProps = AnimationProps & {
   _loop: ClassicAnimationLoop;
   /** @deprecated Use .animationLoop */
   _animationLoop: ClassicAnimationLoop;
-}
+};
 
 /** ClassicAnimationLoop properties */
 export type ClassicAnimationLoopProps = {
@@ -58,7 +72,7 @@ export type ClassicAnimationLoopProps = {
   useDevicePixels?: number | boolean;
 
   /** @deprecated Use .device */
-  gl?: WebGLRenderingContext
+  gl?: WebGLRenderingContext;
   /** @deprecated Will be removed */
   createFramebuffer?: boolean;
 };
@@ -88,8 +102,8 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
   createFramebuffer: false
 };
 
-/** 
- * Convenient animation loop 
+/**
+ * Convenient animation loop
  * @deprecated Use `@luma.gl/engine` AnimationLoop
  */
 export default class ClassicAnimationLoop {
@@ -123,7 +137,6 @@ export default class ClassicAnimationLoop {
   gl: WebGLRenderingContext;
 
   /*
-   * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor(props: ClassicAnimationLoopProps = {}) {
     this.props = {...DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS, ...props};
@@ -308,7 +321,7 @@ export default class ClassicAnimationLoop {
 
     await this.waitForRender();
 
-    return this.gl.canvas.toDataURL();
+    return getHTMLCanvasElement(this.gl.canvas)?.toDataURL();
   }
 
   isContextLost(): boolean {
@@ -562,7 +575,8 @@ export default class ClassicAnimationLoop {
   }
 
   _createInfoDiv() {
-    if (this.gl.canvas && this.props.onAddHTML) {
+    const canvas = getHTMLCanvasElement(this.gl.canvas)
+    if (canvas && this.props.onAddHTML) {
       const wrapperDiv = document.createElement('div');
       document.body.appendChild(wrapperDiv);
       wrapperDiv.style.position = 'relative';
@@ -572,7 +586,9 @@ export default class ClassicAnimationLoop {
       div.style.bottom = '10px';
       div.style.width = '300px';
       div.style.background = 'white';
-      wrapperDiv.appendChild(this.gl.canvas);
+      if (canvas) {
+        wrapperDiv.appendChild(canvas);
+      }
       wrapperDiv.appendChild(div);
       const html = this.props.onAddHTML(div);
       if (html) {
@@ -588,8 +604,8 @@ export default class ClassicAnimationLoop {
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const {canvas} = this.gl;
 
+    const canvas = getHTMLCanvasElement(this.gl.canvas);
     if (canvas && canvas.clientHeight) {
       aspect = canvas.clientWidth / canvas.clientHeight;
     } else if (width > 0 && height > 0) {

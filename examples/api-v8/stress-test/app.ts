@@ -250,5 +250,5 @@ function createDrawcall(gl, offsets, texture, alpha) {
 if (typeof window !== 'undefined' && !window.website) {
   document.body.style.overflow = 'hidden';
   document.body.style.margin = '0';
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }
