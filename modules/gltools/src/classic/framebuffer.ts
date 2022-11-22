@@ -193,6 +193,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
       for (const attachment in attachments) {
         const target = attachments[attachment];
         const object = Array.isArray(target) ? target[0] : target;
+        // @ts-ignore-error
         object.resize({width, height});
       }
     } else {
