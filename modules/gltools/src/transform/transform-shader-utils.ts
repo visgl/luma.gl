@@ -1,5 +1,8 @@
-import {assert} from '@luma.gl/api';
+// luma.gl, MIT license
+
+import {assert, Texture} from '@luma.gl/api';
 import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
+import Texture2D from '../classic/texture-2d';
 
 const SAMPLER_UNIFORM_PREFIX = 'transform_uSampler_';
 const SIZE_UNIFORM_PREFIX = 'transform_uSize_';
@@ -9,10 +12,10 @@ const VS_POS_VARIABLE = 'transform_position';
 // for each texture attribute, inject sampler instructions and build uniforms for sampler
 // for texture target, get varying type and inject position instruction
 export function updateForTextures(options: {
-  vs: any;
-  sourceTextureMap: any;
-  targetTextureVarying?: any;
-  targetTexture?: any;
+  vs: string;
+  sourceTextureMap: Record<string, any>;
+  targetTextureVarying?: string;
+  targetTexture?: string | Texture;
 }): {
   vs: any;
   targetTextureType: any;
@@ -22,7 +25,7 @@ export function updateForTextures(options: {
   const {vs, sourceTextureMap, targetTextureVarying, targetTexture} = options;
   const texAttributeNames = Object.keys(sourceTextureMap);
   let sourceCount = texAttributeNames.length;
-  let targetTextureType = null;
+  let targetTextureType: string | null = null;
   const samplerTextureMap = {};
   let updatedVs = vs;
   let finalInject = {};
@@ -79,27 +82,32 @@ export function updateForTextures(options: {
 
 // builds and returns an object contaning size uniform for each texture
 export function getSizeUniforms(options: {
-  sourceTextureMap: any;
-  targetTextureVarying: any;
-  targetTexture: any;
-}): {} {
-  const uniforms = {};
+  sourceTextureMap: Record<string, any>;
+  targetTextureVarying: string;
+  targetTexture: Texture2D;
+}):  Record<string, any> {
+  const uniforms: Record<string, any> = {};
   let width;
   let height;
+
   if (options.targetTextureVarying) {
     ({width, height} = options.targetTexture);
-    uniforms[`${SIZE_UNIFORM_PREFIX}${options.targetTextureVarying}`] = [width, height];
+    const uniformName = `${SIZE_UNIFORM_PREFIX}${options.targetTextureVarying}`;
+    uniforms[uniformName] = [width, height];
   }
+
   for (const textureName in options.sourceTextureMap) {
     ({width, height} = options.sourceTextureMap[textureName]);
-    uniforms[`${SIZE_UNIFORM_PREFIX}${textureName}`] = [width, height];
+    const uniformName = `${SIZE_UNIFORM_PREFIX}${textureName}`;
+    uniforms[uniformName] = [width, height];
   }
+
   return uniforms;
 }
 
 // Return size (float, vec2 etc) of a given varying, null if doens't exist.
 
-export function getVaryingType(line: any, varying: any): any {
+export function getVaryingType(line: string, varying: string): string | null {
   const qualiferDetails = getQualifierDetails(line, ['varying', 'out']);
   if (!qualiferDetails) {
     return null;
@@ -119,7 +127,7 @@ export function processAttributeDefinition(
   };
   samplerTextureMap: {};
 } {
-  const samplerTextureMap = {};
+  const samplerTextureMap: Record<string, string> = {};
   const attributeData = getAttributeDefinition(line);
   if (!attributeData) {
     return null;
@@ -155,11 +163,11 @@ export function processAttributeDefinition(
 // HELPERS
 
 // Checks if provided line is defining an attribute, if so returns details otherwise null
-function getAttributeDefinition(line) {
+function getAttributeDefinition(line: string) {
   return getQualifierDetails(line, ['attribute', 'in']);
 }
 
-function getSamplerDeclarations(textureName) {
+function getSamplerDeclarations(textureName: string) {
   const samplerName = `${SAMPLER_UNIFORM_PREFIX}${textureName}`;
   const sizeName = `${SIZE_UNIFORM_PREFIX}${textureName}`;
   const uniformDeclerations = `\

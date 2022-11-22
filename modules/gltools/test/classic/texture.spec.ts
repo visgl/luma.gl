@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
@@ -194,18 +193,18 @@ function testFormatCreation(t, glContext, withData = false) {
         const texture = new Texture2D(glContext, options);
         t.ok(
           texture,
-          `Texture2D({format: ${getKey(GL, texture.format)}, type: ${getKey(
-            GL,
+          `Texture2D({format: ${getKey(glContext, texture.format)}, type: ${getKey(
+            glContext,
             type
-          )}, dataFormat: ${getKey(GL, options.dataFormat)}) created`
+          )}, dataFormat: ${getKey(glContext, options.dataFormat)}) created`
         );
         // t.equals(
         //   texture.format,
         //   format,
-        //   `Texture2D({format: ${getKey(GL, format)}, type: ${getKey(
+        //   `Texture2D({format: ${getKey(gl, format)}, type: ${getKey(
         //     GL,
         //     type
-        //   )}, dataFormat: ${getKey(GL, options.dataFormat)}) created`
+        //   )}, dataFormat: ${getKey(gl, options.dataFormat)}) created`
         // );
         texture.delete();
       }
@@ -226,7 +225,7 @@ function testFormatDeduction(t, glContext) {
     };
     if (Texture2D.isSupported(glContext, {format: Number(format)})) {
       const texture = new Texture2D(glContext, options);
-      const msg = `Texture2D({format: ${getKey(GL, format)}}) created`;
+      const msg = `Texture2D({format: ${getKey(glContext, format)}}) created`;
       t.equals(texture.format, Number(format), msg);
       t.equals(texture.type, expectedType, msg);
       t.equals(texture.dataFormat, expectedDataFormat, msg);
@@ -318,7 +317,7 @@ test('WebGL#Texture2D setParameters', (t) => {
   });
   const newValue = texture.getParameter(GL.TEXTURE_MAG_FILTER);
   t.equals(newValue, value,
-    `Texture2D.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}})`);
+    `Texture2D.setParameters({[${getKey(gl, parameter)}]: ${getKey(gl, value)}})`);
   */
 
   texture = texture.delete();
@@ -755,7 +754,8 @@ export function testSamplerParameters({t, texture, parameters}) {
       t.equals(
         newValue,
         value,
-        `${name}.setParameters({[${getKey(GL, parameter)}]: ${getKey(GL, value)}}) read back OK`
+        // `${name}.setParameters({[${getKey(gl, parameter)}]: ${getKey(gl, value)}}) read back OK`
+        `${name}.setParameters({[${parameter}]: ${value}}) read back OK`
       );
     }
   }

@@ -10,6 +10,7 @@ import {
   Sampler,
   SamplerProps,
   SamplerParameters,
+  TypedArray,
   isObjectEmpty
 } from '@luma.gl/api';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';
@@ -31,22 +32,31 @@ import WEBGLSampler from './webgl-sampler';
 
 export type {TextureProps};
 
+export type TextureSourceData = 
+  TypedArray |
+  ImageData |
+  HTMLImageElement |
+  HTMLCanvasElement |
+  ImageBitmap |
+  HTMLVideoElement
+  ;
+
 type SetImageDataOptions = {
   target?: number;
   level?: number;
   dataFormat?: any;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   depth?: number;
-  format: any;
+  format?: any;
   type?: any;
   offset?: number;
-  data: any;
+  data: any; // TextureSourceData;
   compressed?: boolean;
   parameters?: Record<GL, any>;
   /** @deprecated */
   pixels?: any;
-};
+}
 
 /**
  * @param {*} pixels, data -
@@ -92,10 +102,10 @@ type SetSubImageDataOptions = {
 type SetImageData3DOptions = {
   level?: number;
   dataFormat?: any;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   depth?: number;
-  format: any;
+  format?: any;
   type?: any;
   offset?: number;
   data: any;
@@ -714,7 +724,7 @@ export default class WEBGLTexture extends Texture {
 
   // HELPER METHODS
 
-  _deduceParameters(opts) {
+  _deduceParameters(opts: TextureProps) {
     const {format, data} = opts;
     let {width, height, dataFormat, type, compressed} = opts;
 
@@ -857,18 +867,20 @@ export default class WEBGLTexture extends Texture {
   }
 
   /** Image 3D copies from Typed Array or WebGLBuffer */
-  setImageData3D({
-    level = 0,
-    dataFormat,
-    format,
-    type, // = GL.UNSIGNED_BYTE,
-    width,
-    height,
-    depth = 1,
-    offset = 0,
-    data,
-    parameters = {}  as Record<GL, any> as Record<GL, any>
-  }: SetImageData3DOptions) {
+  setImageData3D(options: SetImageData3DOptions) {
+    const {
+      level = 0,
+      dataFormat,
+      format,
+      type, // = GL.UNSIGNED_BYTE,
+      width,
+      height,
+      depth = 1,
+      offset = 0,
+      data,
+      parameters = {}
+    } = options;
+
     this.trackDeallocatedMemory('Texture');
 
     this.gl.bindTexture(this.target, this.handle);

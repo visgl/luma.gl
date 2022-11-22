@@ -9,7 +9,7 @@ import '@luma.gl/api';
 import './init'
 
 // Types
-export {WebGLLimits} from './adapter/device-helpers/device-limits';
+export type {WebGLLimits} from './adapter/device-helpers/device-limits';
 
 // WebGL adapter classes
 export {default as WebGLDevice} from './adapter/webgl-device';

@@ -129,8 +129,8 @@ function testCopyToArray(t, gl) {
         for (const index in color) {
           t.ok(
             Math.abs(color[index] - expectedColor[index]) < EPSILON,
-            `Readpixels({format: ${getKey(GL, format)}, type: ${getKey(
-              GL,
+            `Readpixels({format: ${getKey(gl, format)}, type: ${getKey(
+              gl,
               type
             )}) returned expected value for channel:${index}`
           );

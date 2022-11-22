@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+import { WebGLLimits } from '@luma.gl/webgl';
 import {getKey, getContextInfo} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
 import test from 'tape-promise/tape';
@@ -5,7 +7,7 @@ import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
 /** WebGL context limits */
-export const WEBGL_LIMITS = {
+export const WEBGL_LIMITS: Partial<Record<keyof WebGLLimits, boolean>> = {
   [GL.ALIASED_LINE_WIDTH_RANGE]: false,
   [GL.ALIASED_POINT_SIZE_RANGE]: false,
   [GL.MAX_TEXTURE_SIZE]: true,
@@ -75,7 +77,7 @@ test('WebGL1#getContextInfo#limits', (t) => {
 
   for (const limit in WEBGL_LIMITS) {
     const actual = info.limits[limit];
-    t.ok(actual !== undefined, `${getKey(gl, limit)}: limit ${actual}`);
+    t.ok(actual !== undefined, `${getKey(gl, Number(limit) as GL)}: limit ${actual}`);
   }
 
   t.end();
