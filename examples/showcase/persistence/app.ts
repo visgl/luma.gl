@@ -264,5 +264,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop);
+  RenderLoop.run(AppRenderLoop).start();
 }

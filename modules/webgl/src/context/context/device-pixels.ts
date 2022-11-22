@@ -53,16 +53,22 @@ export function cssToDeviceRatio(gl: WebGLRenderingContext): number {
 
 // use devicePixelRatio to set canvas width and height
 export function setDevicePixelRatio(gl: WebGLRenderingContext, devicePixelRatio: number, options: {width?: number, height?: number} = {}) {
+  if (!(gl.canvas instanceof HTMLCanvasElement)) {
+    return;
+  }
+
+  const canvas: HTMLCanvasElement = gl.canvas;
+
   // NOTE: if options.width and options.height not used remove in v8
-  let clientWidth = 'width' in options ? options.width : gl.canvas.clientWidth;
-  let clientHeight = 'height' in options ? options.height : gl.canvas.clientHeight;
+  let clientWidth = 'width' in options ? options.width : canvas.clientWidth;
+  let clientHeight = 'height' in options ? options.height : canvas.clientHeight;
 
   if (!clientWidth || !clientHeight) {
     log.log(1, 'Canvas clientWidth/clientHeight is 0')();
-    // by forcing devicePixel ratio to 1, we do not scale gl.canvas.width and height in each frame.
+    // by forcing devicePixel ratio to 1, we do not scale canvas.width and height in each frame.
     devicePixelRatio = 1;
-    clientWidth = gl.canvas.width || 1;
-    clientHeight = gl.canvas.height || 1;
+    clientWidth = canvas.width || 1;
+    clientHeight = canvas.height || 1;
   }
 
   const contextState = getContextState(gl);
@@ -77,8 +83,8 @@ export function setDevicePixelRatio(gl: WebGLRenderingContext, devicePixelRatio:
 
     const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
     const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
-    gl.canvas.width = canvasWidth;
-    gl.canvas.height = canvasHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
 
     // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
     // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
@@ -90,8 +96,8 @@ export function setDevicePixelRatio(gl: WebGLRenderingContext, devicePixelRatio:
         gl.drawingBufferHeight / clientHeight
       );
 
-      gl.canvas.width = Math.floor(clientWidth * clampedPixelRatio);
-      gl.canvas.height = Math.floor(clientHeight * clampedPixelRatio);
+      canvas.width = Math.floor(clientWidth * clampedPixelRatio);
+      canvas.height = Math.floor(clientHeight * clampedPixelRatio);
     }
 
     Object.assign(contextState._canvasSizeInfo, {clientWidth, clientHeight, devicePixelRatio});

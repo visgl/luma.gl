@@ -308,7 +308,8 @@ export default class ClassicAnimationLoop {
 
     await this.waitForRender();
 
-    return this.gl.canvas.toDataURL();
+    return this.gl.canvas instanceof HTMLCanvasElement 
+      ? this.gl.canvas.toDataURL() : null;
   }
 
   isContextLost(): boolean {
@@ -572,7 +573,9 @@ export default class ClassicAnimationLoop {
       div.style.bottom = '10px';
       div.style.width = '300px';
       div.style.background = 'white';
-      wrapperDiv.appendChild(this.gl.canvas);
+      if (this.gl.canvas instanceof HTMLCanvasElement) {
+        wrapperDiv.appendChild(this.gl.canvas);
+      }
       wrapperDiv.appendChild(div);
       const html = this.props.onAddHTML(div);
       if (html) {
@@ -590,7 +593,7 @@ export default class ClassicAnimationLoop {
     let aspect = 1;
     const {canvas} = this.gl;
 
-    if (canvas && canvas.clientHeight) {
+    if (canvas instanceof HTMLCanvasElement && canvas.clientHeight) {
       aspect = canvas.clientWidth / canvas.clientHeight;
     } else if (width > 0 && height > 0) {
       aspect = width / height;
