@@ -83,7 +83,7 @@ ${moduleSource}\
     }
     // Build uniforms from the uniforms array
     if (this.uniforms) {
-      return getValidatedProperties(userProps, this.uniforms);
+      return getValidatedProperties(userProps, this.uniforms, this.name);
     }
     return {};
   }

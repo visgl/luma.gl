@@ -70,16 +70,16 @@ export function makePropValidators(propTypes: Record<string, PropType>): Record<
  */
 export function getValidatedProperties(
   properties: Record<string, unknown>,
-  propValidators: Record<string, PropValidator>
+  propValidators: Record<string, PropValidator>,
+  errorMessage: string
 ): Record<string, unknown> {
 
   const validated: Record<string, unknown> = {};
 
   for (const [key, propsValidator] of Object.entries(propValidators)) {
-    const propsValidator = propValidators[key];
-    if (key in properties && !propsValidator.private) {
+    if (properties && key in properties && !propsValidator.private) {
       if (propsValidator.validate) {
-        assert(propsValidator.validate(properties[key], propsValidator), `${this.name}: invalid ${key}`);
+        assert(propsValidator.validate(properties[key], propsValidator), `${errorMessage}: invalid ${key}`);
       }
       validated[key] = properties[key];
     } else {
