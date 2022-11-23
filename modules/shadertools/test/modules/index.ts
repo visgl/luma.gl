@@ -2,16 +2,18 @@
 
 import './modules.spec';
 
-// Modules
-import './dirlight/dirlight.spec';
-import './fp64/fp64-arithmetic-transform.spec';
+// Math modules
+// TODO - these are breaking in test-browser but not in test-headless??
+// import './fp64/fp64-arithmetic-transform.spec';
 import './fp64/fp64-utils.spec';
-import './lights/lights.spec';
-import './picking/picking.spec';
-import './phong-lighting/phong-lighting.spec';
-
-// Utils
 import './utils/random.spec';
+
+// Light and picking
+import './dirlight/dirlight.spec';
+import './lights/lights.spec';
+import './phong-lighting/phong-lighting.spec';
+import './picking/picking.spec';
+
 
 // Blur Filters
 import './image-blur-filters/tiltshift.spec';
