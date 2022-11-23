@@ -1,5 +1,5 @@
 import {assert} from '../utils/assert';
-import type {ShaderModule} from '../../types';
+import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
 // Instantiate shader modules and any dependencies resolve dependencies

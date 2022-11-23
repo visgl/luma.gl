@@ -1,12 +1,15 @@
+// luma.gl, MIT license
+
 import {assert} from '../utils/assert';
-import {parsePropTypes} from '../filters/prop-types';
-import {ShaderModule, ShaderModuleDeprecation} from '../../types';
+import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
+import {ShaderModule, ShaderModuleDeprecation} from './shader-module';
 
 export type Injection = {
   injection: string;
   order: number;
 }
 
+/** A processed ShaderModule, ready to use with `assembleShaders()` */
 export class ShaderModuleInstance {
   name: string;
   vs: string;
@@ -19,7 +22,7 @@ export class ShaderModuleInstance {
     vs: Record<string, Injection>;
     fs: Record<string, Injection>;
   };
-  uniforms: Record<string, any>;
+  uniforms: Record<string, PropValidator>;
 
   constructor(props: ShaderModule) {
     const {
@@ -31,13 +34,9 @@ export class ShaderModuleInstance {
       getUniforms,
       deprecations = [],
       defines = {},
-      // @ts-expect-error
       inject = {},
-      /** @deprecated */
-      // @ts-expect-error
+      // deprecated props
       vertexShader,
-      /** @deprecated */
-      // @ts-expect-error
       fragmentShader
     } = props;
 
@@ -52,7 +51,7 @@ export class ShaderModuleInstance {
     this.injections = normalizeInjections(inject);
 
     if (uniforms) {
-      this.uniforms = parsePropTypes(uniforms);
+      this.uniforms = makePropValidators(uniforms);
     }
   }
 
@@ -78,13 +77,13 @@ ${moduleSource}\
 `;
   }
 
-  getUniforms(opts: Record<string, any>, uniforms: Record<string, any>): Record<string, any> {
+  getUniforms(userProps: Record<string, any>, uniforms: Record<string, any>): Record<string, any> {
     if (this.getModuleUniforms) {
-      return this.getModuleUniforms(opts, uniforms);
+      return this.getModuleUniforms(userProps, uniforms);
     }
     // Build uniforms from the uniforms array
     if (this.uniforms) {
-      return this._defaultGetUniforms(opts);
+      return getValidatedProperties(userProps, this.uniforms, this.name);
     }
     return {};
   }
