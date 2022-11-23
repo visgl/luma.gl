@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {assert} from '../utils/assert';
 
 /** 
  * For use by shader module and shader pass writers to describe the types of the 
@@ -8,7 +9,7 @@ export type PropType = {
   type?: string;
   max?: number;
   min?: number;
-  value?: any;
+  value?: unknown;
 } | number;
 
 /**
@@ -18,15 +19,17 @@ export type PropType = {
  */
 export type PropValidator = {
   type: string;
-  value: any;
+  value?: unknown;
   max?: number;
   min?: number;
   private?: boolean;
-  validate?(value: any, propDef: PropValidator): boolean;
+  validate?(value: unknown, propDef: PropValidator): boolean;
 };
 
-const DEFAULT_PROP_VALIDATORS: Record<string, {validate: (value: unknown, propType: PropType) => boolean}> = {
+/** Minimal validators for number and array types */
+const DEFAULT_PROP_VALIDATORS: Record<string, PropValidator> = {
   number: {
+    type: 'number',
     validate(value: unknown, propType: PropType) {
       return (
         Number.isFinite(value) &&
@@ -37,6 +40,7 @@ const DEFAULT_PROP_VALIDATORS: Record<string, {validate: (value: unknown, propTy
     }
   },
   array: {
+    type: 'array',
     validate(value: unknown, propType: PropType) {
       return Array.isArray(value) || ArrayBuffer.isView(value);
     }
@@ -49,39 +53,73 @@ const DEFAULT_PROP_VALIDATORS: Record<string, {validate: (value: unknown, propTy
  * @param propTypes 
  * @returns 
  */
-
-export function parsePropTypes(propTypes: Record<string, PropType>): Record<string, PropValidator> {
+export function makePropValidators(propTypes: Record<string, PropType>): Record<string, PropValidator> {
   const propValidators: Record<string, PropValidator> = {};
   for (const [name, propType] of Object.entries(propTypes)) {
-    propValidators[name] = createPropValidator(propType);
+    propValidators[name] = makePropValidator(propType);
   }
   return propValidators;
 }
+
+/**
+ * Validate a map of user supplied properties against a map of validators
+ * Inject default values when user doesn't supply a property
+ * @param properties 
+ * @param propValidators 
+ * @returns 
+ */
+export function getValidatedProperties(
+  properties: Record<string, unknown>,
+  propValidators: Record<string, PropValidator>
+): Record<string, unknown> {
+
+  const validated: Record<string, unknown> = {};
+
+  for (const [key, propsValidator] of Object.entries(propValidators)) {
+    const propsValidator = propValidators[key];
+    if (key in properties && !propsValidator.private) {
+      if (propsValidator.validate) {
+        assert(propsValidator.validate(properties[key], propsValidator), `${this.name}: invalid ${key}`);
+      }
+      validated[key] = properties[key];
+    } else {
+      // property not supplied - use default value
+      validated[key] = propsValidator.value;
+    }
+  }
+
+  // TODO - warn for unused properties that don't match a validator?
+
+  return validated;
+}
+
 
 /**
  * Creates a property validator for a prop type. Either contains:
  * - a valid prop type object ({type, ...})
  * - or just a default value, in which case type and name inference is used
  */
-function createPropValidator(propType: PropType): PropValidator {
+function makePropValidator(propType: PropType): PropValidator {
   let type = getTypeOf(propType);
+
   if (type !== 'object') {
     return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
   }
+
+  // Special handling for objects
   if (typeof propType === 'object') {
     if (!propType) {
       return {type: 'object', value: null};
     }
     if ('type' in propType) {
-    // @ts-expect-error
-    return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
+      return {type: propType.type, ...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
     }
     if (!('value' in propType)) {
       // If no type and value this object is likely the value
       return {type: 'object', value: propType};
     }
+
     type = getTypeOf(propType.value);
-    // @ts-expect-error
     return {type, ...propType, ...DEFAULT_PROP_VALIDATORS[type]};
   }
 }

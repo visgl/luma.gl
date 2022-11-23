@@ -1,7 +1,9 @@
 // shadertools exports
 
 // DOCUMENTED APIS
-export type {ShaderModule, ShaderPass} from './types';
+export type {ShaderModule} from './lib/shader-module/shader-module';
+export type {ShaderPass} from './lib/shader-module/shader-pass';
+
 export {assembleShaders} from './lib/shader-assembler/assemble-shaders';
 
 // HELPERS
