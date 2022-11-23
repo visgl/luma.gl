@@ -67,6 +67,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.transform = new Transform(device, {
       vs: transformVs,
       sourceBuffers: {
+        // @ts-expect-error TODO fix transform so it can use luma/api buffers
         position: positionBuffer
       },
       feedbackMap: {

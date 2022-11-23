@@ -1,14 +1,40 @@
 import {Device, assert, isObjectEmpty} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import {WebGLDevice} from '@luma.gl/webgl';
-import type Framebuffer from '../classic/framebuffer';
+import GL from '@luma.gl/constants';
+import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 import type Buffer from '../classic/buffer';
+import type Framebuffer from '../classic/framebuffer';
+import {default as Texture2D} from '../classic/texture-2d';
 
 import Model from '../engine/classic-model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
-import {TransformProps, TransformRunOptions, TransformDrawOptions} from './transform-types';
+import {TransformRunOptions, TransformDrawOptions} from './transform-types';
+
+/** Properties for creating Transforms */
+export type TransformProps = {
+  id?: string;
+  vs?: string;
+  elementCount?: number;
+  sourceBuffers?: Record<string, Buffer>;
+  feedbackBuffers?: Record<string, string | Buffer | {buffer: Buffer, byteOffset?: number}>;
+  varyings?: string[];
+  feedbackMap?: Record<string, string>;
+  modules?: object[]; // TODO use ShaderModule type
+  attributes?: Record<string, any>;
+  uniforms?: Record<string, any>;
+  parameters?: GLParameters;
+  discard?: boolean;
+  isIndexed?: boolean;
+  _sourceTextures?: Record<string, Texture2D>;
+  _targetTexture?: string | Texture2D;
+  _targetTextureVarying?: string;
+  _swapTexture?: string | null;
+  _fs?: string;
+  fs?: string;
+  inject?: Record<string, string>;
+  drawMode?: number;
+};
 
 /**
  * Takes source and target buffers/textures and sets up the pipeline
@@ -125,6 +151,7 @@ export default class Transform {
     this._buildResourceTransforms(gl, props);
 
     props = this._updateModelProps(props);
+    // @ts-expect-error TODO this is valid type error for params
     this.model = new Model(this.device, {
       ...props,
       fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
@@ -183,5 +210,5 @@ function canCreateBufferTransform(props: TransformProps): boolean {
 function canCreateTextureTransform(props: TransformProps): boolean {
   const canCreate =
     !isObjectEmpty(props._sourceTextures) || props._targetTexture || props._targetTextureVarying;
-  return canCreate;
+  return Boolean(canCreate);
 }

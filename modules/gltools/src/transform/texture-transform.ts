@@ -1,6 +1,6 @@
-import GL from '@luma.gl/constants';
+// luma.gl, MIT license
 
-import {cloneTextureFrom, readPixelsToArray, Buffer, Texture2D, Framebuffer} from '@luma.gl/gltools';
+import GL from '@luma.gl/constants';
 
 import {
   _transform as transformModule,
@@ -10,9 +10,16 @@ import {
   combineInjects
 } from '@luma.gl/shadertools';
 
+import Buffer from '../classic/buffer';
+import Texture2D from '../classic/texture-2d';
+import Framebuffer from '../classic/framebuffer';
+import {readPixelsToArray} from '../classic/copy-and-blit';
+import {cloneTextureFrom} from '../webgl-utils/texture-utils';
+
+import type {TransformProps} from './transform';
+import type {TransformDrawOptions, TransformRunOptions} from './transform-types';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
-import type {TransformProps, TransformDrawOptions} from './transform-types';
 
 // TODO: move these constants to transform-shader-utils
 // Texture parameters needed so sample can precisely pick pixel for given element id.
@@ -24,16 +31,23 @@ const SRC_TEX_PARAMETER_OVERRIDES = {
 };
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
+type TextureBinding = {
+  sourceBuffers: Record<string, Buffer>;
+  sourceTextures: Record<string, Texture2D>;
+  targetTexture: Texture2D;
+  framebuffer?: Framebuffer;
+};
+
 export default class TextureTransform {
   gl: WebGL2RenderingContext;
   id = 0;
   currentIndex = 0;
-  _swapTexture = null;
-  targetTextureVarying = null;
-  targetTextureType = null;
-  samplerTextureMap = null;
-  bindings = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
-  resources = {}; // resources to be deleted
+  _swapTexture: string | null = null;
+  targetTextureVarying: string | null = null;
+  targetTextureType: string | null = null;
+  samplerTextureMap: Record<string, any> | null = null;
+  bindings: TextureBinding[] = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
+  resources: Record<string, any> = {}; // resources to be deleted
 
   hasTargetTexture: boolean = false;
   hasSourceTextures: boolean = false;
@@ -44,15 +58,6 @@ export default class TextureTransform {
 
   constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
     this.gl = gl;
-    this.id = this.currentIndex = 0;
-    this._swapTexture = null;
-    this.targetTextureVarying = null;
-    this.targetTextureType = null;
-    this.samplerTextureMap = null;
-    this.bindings = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
-
-    this.resources = {}; // resources to be deleted
-
     this._initialize(props);
     Object.seal(this);
   }
@@ -154,7 +159,7 @@ export default class TextureTransform {
 
   // Private
 
-  _initialize(props: TransformProps = {}) {
+  _initialize(props: TransformProps = {}): void {
     const {_targetTextureVarying, _swapTexture} = props;
     this._swapTexture = _swapTexture;
     this.targetTextureVarying = _targetTextureVarying;
@@ -163,7 +168,10 @@ export default class TextureTransform {
   }
 
   // auto create target texture if requested
-  _createTargetTexture(props) {
+  _createTargetTexture(props: {
+    sourceTextures: Record<string, Texture2D>;
+    textureOrReference: string | Texture2D;
+  }): Texture2D {
     const {sourceTextures, textureOrReference} = props;
     if (textureOrReference instanceof Texture2D) {
       return textureOrReference;
@@ -215,7 +223,11 @@ export default class TextureTransform {
     this.elementCount = elementCount;
   }
 
-  _updateBindings(opts) {
+  _updateBindings(opts: {
+    sourceBuffers: Record<string, Buffer>;
+    sourceTextures: Record<string, Texture2D>;
+    targetTexture: Texture2D;
+  }) {
     this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
       const {sourceTextures, targetTexture} = this._swapTextures(this.bindings[this.currentIndex]);
@@ -227,7 +239,14 @@ export default class TextureTransform {
     }
   }
 
-  _updateBinding(binding, opts) {
+  _updateBinding(
+    binding: TextureBinding,
+    opts: {
+      sourceBuffers?: Record<string, Buffer>;
+      sourceTextures: Record<string, Texture2D>;
+      targetTexture: Texture2D;
+    }
+  ): TextureBinding {
     const {sourceBuffers, sourceTextures, targetTexture} = opts;
     if (!binding) {
       binding = {
@@ -266,7 +285,7 @@ export default class TextureTransform {
   }
 
   // set texture filtering parameters on source textures.
-  _setSourceTextureParameters() {
+  _setSourceTextureParameters(): void {
     const index = this.currentIndex;
     const {sourceTextures} = this.bindings[index];
     for (const name in sourceTextures) {
@@ -274,7 +293,9 @@ export default class TextureTransform {
     }
   }
 
-  _swapTextures(opts) {
+  _swapTextures(
+    opts: {sourceTextures: Record<string, Texture2D>; targetTexture: Texture2D}
+  ): {sourceTextures: Record<string, Texture2D>; targetTexture: Texture2D} | null {
     if (!this._swapTexture) {
       return null;
     }
@@ -336,8 +357,8 @@ export default class TextureTransform {
       });
     const modules =
       this.hasSourceTextures || this.targetTextureVarying
-        // @ts-expect-error
-        ? [transformModule].concat(props.modules || [])
+        ? // @ts-expect-error
+          [transformModule].concat(props.modules || [])
         : props.modules;
     return {vs, fs, modules, uniforms, inject: combinedInject};
   }
