@@ -1,3 +1,9 @@
+// luma.gl, MIT license
+
+/** 
+ * For use by shader modules and shader passes to describe the types of the 
+ * properties they expose (properties ultimately map to uniforms).
+ */
 export type PropType = {
   type?: string;
   max?: number;
@@ -5,6 +11,10 @@ export type PropType = {
   value?: any;
 } | number;
 
+/**
+ * Internal parsed property type definition, that can be used to validate the type of properties passed in to
+ * shader module or shader pass
+ */
 export type PropDef = {
   type: string;
   value: any;
@@ -32,7 +42,12 @@ const TYPE_DEFINITIONS: Record<string, {validate: (value: unknown, propType: Pro
   }
 };
 
-
+/**
+ * Parse a list of property types into property definitions that can be used to validate
+ * values passed in by applications.
+ * @param propDefs 
+ * @returns 
+ */
 
 export function parsePropTypes(propDefs: Record<string, PropType>): Record<string, PropDef> {
   const propTypes: Record<string, PropDef> = {};
@@ -43,7 +58,7 @@ export function parsePropTypes(propDefs: Record<string, PropType>): Record<strin
 }
 
 /**
- * Parses one property definition entry. Either contains:
+ * Parses one property type in to a property definition. Either contains:
  * - a valid prop type object ({type, ...})
  * - or just a default value, in which case type and name inference is used
  */
@@ -70,7 +85,9 @@ function parsePropType(propDef: PropType): PropDef {
   }
 }
 
-// improved version of javascript typeof that can distinguish arrays and null values
+/** 
+ * "improved" version of javascript typeof that can distinguish arrays and null values
+ */
 function getTypeOf(value: unknown): string {
   if (Array.isArray(value) || ArrayBuffer.isView(value)) {
     return 'array';
