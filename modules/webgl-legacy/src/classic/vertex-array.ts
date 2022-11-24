@@ -4,7 +4,7 @@ import Accessor from './accessor';
 import Program from './program';
 import ProgramConfiguration from './program-configuration';
 import VertexArrayObject from './vertex-array-object';
-import {Buffer as ClassicBuffer, WEBGLBuffer} from '@luma.gl/webgl';
+import {Buffer, Buffer as ClassicBuffer, WEBGLBuffer} from '@luma.gl/webgl';
 
 const ERR_ATTRIBUTE_TYPE =
   'VertexArray: attributes must be Buffers or constants (i.e. typed array)';
@@ -57,7 +57,7 @@ export default class VertexArray {
   values = null;
   unused = null;
   drawParams = null;
-  buffer = null; // For attribute 0 on desktops, and created when unbinding buffers
+  buffer: Buffer | null = null; // For attribute 0 on desktops, and created when unbinding buffers
 
   bindOnUse = false;
 

@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import {Device, assert, isObjectEmpty} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
@@ -18,7 +20,7 @@ export type TransformProps = {
   vs?: string;
   elementCount?: number;
   sourceBuffers?: Record<string, Buffer>;
-  feedbackBuffers?: Record<string, string | Buffer | {buffer: Buffer, byteOffset?: number}>;
+  feedbackBuffers?: Record<string, string | Buffer | {buffer: Buffer; byteOffset?: number}>;
   varyings?: string[];
   feedbackMap?: Record<string, string>;
   modules?: object[]; // TODO use ShaderModule type
@@ -86,17 +88,32 @@ export default class Transform {
 
   readonly device: WebGLDevice;
   readonly gl: WebGL2RenderingContext;
-  model: Model | null = null;
+  model: Model;
   elementCount = 0;
-  bufferTransform: BufferTransform = null;
-  textureTransform: TextureTransform = null;
-  elementIDBuffer: Buffer = null;
+  bufferTransform: BufferTransform | null = null;
+  textureTransform: TextureTransform | null = null;
+  elementIDBuffer: Buffer | null = null;
 
   constructor(device: Device | WebGLRenderingContext, props: TransformProps = {}) {
     this.device = WebGLDevice.attach(device);
     // TODO assert webgl2?
     this.gl = this.device.gl2;
-    this._initialize(props);
+    const {gl} = this;
+    this._buildResourceTransforms(gl, props);
+
+    props = this._updateModelProps(props);
+    // @ts-expect-error TODO this is valid type error for params
+    this.model = new Model(this.device, {
+      ...props,
+      fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
+      id: props.id || 'transform-model',
+      drawMode: props.drawMode || GL.POINTS,
+      vertexCount: props.elementCount
+    });
+
+    if (this.bufferTransform) {
+      this.bufferTransform.setupResources({model: this.model});
+    }
     Object.seal(this);
   }
 
@@ -137,13 +154,13 @@ export default class Transform {
     let swapped = false;
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      swapped = swapped || resourceTransform.swap();
+      swapped = swapped || Boolean(resourceTransform?.swap());
     }
     assert(swapped, 'Nothing to swap');
   }
 
   /** Return Buffer object for given varying name. */
-  getBuffer(varyingName: string = null): Buffer {
+  getBuffer(varyingName: string): Buffer | null {
     return this.bufferTransform && this.bufferTransform.getBuffer(varyingName);
   }
 
@@ -151,7 +168,7 @@ export default class Transform {
   getData(options: {packed?: boolean; varyingName?: string} = {}) {
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      const data = resourceTransform.getData(options);
+      const data = resourceTransform?.getData(options);
       if (data) {
         return data;
       }
@@ -161,44 +178,28 @@ export default class Transform {
 
   /** Return framebuffer object if rendering to textures */
   getFramebuffer(): Framebuffer | null {
-    return this.textureTransform && this.textureTransform.getFramebuffer();
+    return this.textureTransform?.getFramebuffer() || null;
   }
 
   /** Update some or all buffer/texture bindings. */
   update(props: TransformProps): void {
-    if ('elementCount' in props) {
+    if (props.elementCount !== undefined) {
       this.model.setVertexCount(props.elementCount);
     }
     const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
     for (const resourceTransform of resourceTransforms) {
-      resourceTransform.update(props);
+      resourceTransform?.update(props);
     }
   }
 
   // Private
 
-  _initialize(props: TransformProps): void {
-    const {gl} = this;
-    this._buildResourceTransforms(gl, props);
-
-    props = this._updateModelProps(props);
-    // @ts-expect-error TODO this is valid type error for params
-    this.model = new Model(this.device, {
-      ...props,
-      fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
-      id: props.id || 'transform-model',
-      drawMode: props.drawMode || GL.POINTS,
-      vertexCount: props.elementCount
-    });
-
-    if (this.bufferTransform) {
-      this.bufferTransform.setupResources({model: this.model});
-    }
-  }
-
   _updateModelProps(props: TransformProps): TransformProps {
-    let updatedProps = {...props};
-    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    let updatedProps: TransformProps = {...props};
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) as (
+      | BufferTransform
+      | TextureTransform
+    )[];
     for (const resourceTransform of resourceTransforms) {
       updatedProps = resourceTransform.updateModelProps(updatedProps);
     }
@@ -220,7 +221,10 @@ export default class Transform {
 
   _updateDrawOptions(options: TransformRunOptions): TransformDrawOptions {
     let updatedOpts = {...options};
-    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean);
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) as (
+      | BufferTransform
+      | TextureTransform
+    )[];
     for (const resourceTransform of resourceTransforms) {
       updatedOpts = Object.assign(updatedOpts, resourceTransform.getDrawOptions(updatedOpts));
     }
@@ -232,14 +236,16 @@ export default class Transform {
 
 function canCreateBufferTransform(props: TransformProps): boolean {
   const canCreate =
-    !isObjectEmpty(props.feedbackBuffers) ||
-    !isObjectEmpty(props.feedbackMap) ||
+    (props.feedbackBuffers && !isObjectEmpty(props.feedbackBuffers)) ||
+    (props.feedbackMap && !isObjectEmpty(props.feedbackMap)) ||
     (props.varyings && props.varyings.length > 0);
   return Boolean(canCreate);
 }
 
 function canCreateTextureTransform(props: TransformProps): boolean {
   const canCreate =
-    !isObjectEmpty(props._sourceTextures) || props._targetTexture || props._targetTextureVarying;
+    (props._sourceTextures && !isObjectEmpty(props._sourceTextures)) ||
+    props._targetTexture ||
+    props._targetTextureVarying;
   return Boolean(canCreate);
 }

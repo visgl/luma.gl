@@ -19,7 +19,11 @@ export function uid(id: string = 'id'): string {
  * @return  Returns true if the given number is power of 2, false otherwise.
  **/
 export function isPowerOfTwo(n: number): boolean {
+<<<<<<< HEAD
   return (n > 0) && (n & (n - 1)) === 0;
+=======
+  return n !== 0 && (n & (n - 1)) === 0;
+>>>>>>> 05f09d2f2 (wip)
 }
 
 /** Returns true if given object is empty, false otherwise. */

@@ -1,6 +1,6 @@
 import type {RenderPipelineParameters} from '@luma.gl/api';
 import {Device} from '@luma.gl/api/';
-import {assembleShaders} from '@luma.gl/shadertools';
+import {assembleShaders, ShaderModule} from '@luma.gl/shadertools';
 import Program from '../classic/program';
 
 type Module = 'string' | {name: string}; // TODO
@@ -37,7 +37,7 @@ export default class ProgramManager {
   private readonly _getUniforms = {};
   private readonly _registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
   private readonly _hookFunctions = [];
-  private _defaultModules = [];
+  private _defaultModules: ShaderModule[] = [];
 
   static getDefaultProgramManager(device: Device): ProgramManager {
     // @ts-expect-error
@@ -96,8 +96,8 @@ export default class ProgramManager {
 
     const defineKeys = Object.keys(defines).sort();
     const injectKeys = Object.keys(inject).sort();
-    const defineHashes = [];
-    const injectHashes = [];
+    const defineHashes: string[] = [];
+    const injectHashes: string[] = [];
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));

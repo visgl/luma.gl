@@ -26,8 +26,8 @@ export default ({model, draw, colorMode = COLOR_MODE.NONE}) => {
   // iterate through all instances
   for (let i = 0; i < instanceCount; i++) {
     const ai = getAttributeAtIndex(instancedAttributes, i, attributeValues);
-    const positions = [];
-    const colors = [];
+    const positions: number[] = [];
+    const colors: number[] = [];
 
     // iterate through all vertices
     for (let j = 0; j < vertexCount; j++) {
@@ -66,7 +66,7 @@ function sortAttributes(attributes) {
   const attributeValues = {};
   const instancedAttributes = {};
   const vertexAttributes = {};
-  let indexAttribute = null;
+  let indexAttribute: any | null = null;
   let vertexCount = 1;
 
   for (const attributeName in attributes) {

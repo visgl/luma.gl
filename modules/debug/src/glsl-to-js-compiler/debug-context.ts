@@ -19,7 +19,11 @@ export default class DebugContext {
     }
 
     this.canvas = this._createCanvas(container);
-    this.context = this.canvas.getContext('2d');
+    const context = this.canvas.getContext('2d');
+    if (!context) {
+      throw new Error('failed to get context');
+    }
+    this.context = context;
 
     this._draw = this._draw.bind(this);
   }
