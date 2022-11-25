@@ -15,7 +15,7 @@ import {
 } from '@luma.gl/api';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type {WebGLSamplerParameters} from '../../types/webgl';
+import type {GLSamplerParameters} from '../../types/webgl';
 import {withParameters} from '../../context/state-tracker/with-parameters';
 import {
   getWebGLTextureFormat,
@@ -940,7 +940,7 @@ export default class WEBGLTexture extends Texture {
    * Sets sampler parameters on texture
    * @note: Applies NPOT workaround if appropriate
    */
-  _setSamplerParameters(parameters: WebGLSamplerParameters) {
+  _setSamplerParameters(parameters: GLSamplerParameters) {
     // Work around WebGL1 sampling restrictions on NPOT textures
     if (this.device.isWebGL1 && isNPOT(this.width, this.height)) {
       parameters = updateSamplerParametersForNPOT(parameters);

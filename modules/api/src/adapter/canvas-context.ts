@@ -9,7 +9,7 @@ const isPageLoaded: () => boolean = () => isPage && document.readyState === 'com
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
   /** If canvas not supplied, will be created and added to the DOM. If string, will be looked up in the DOM */
-  canvas?: HTMLCanvasElement | OffscreenCanvas | string;
+  canvas?: HTMLCanvasElement | OffscreenCanvas | string | null;
   /** Width in pixels of the canvas */
   width?: number;
   /** Height in pixels of the canvas */
@@ -19,7 +19,7 @@ export type CanvasContextProps = {
   /** Whether to track resizes (if not ) */
   autoResize?: boolean;
   /** Parent DOM element. If omitted, added as first child of document.body (only used if new canvas is created) */
-  container?: HTMLElement;
+  container?: HTMLElement | null;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
@@ -29,12 +29,12 @@ export type CanvasContextProps = {
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
-  canvas: undefined,
+  canvas: null,
   width: 800, // width are height are only used by headless gl
   height: 600,
   useDevicePixels: true,
   autoResize: true,
-  container: undefined,
+  container: null,
   visible: true,
   colorSpace: 'srgb',
   compositingAlphaMode: 'opaque'
@@ -54,8 +54,8 @@ export default abstract class CanvasContext {
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
 
-  width: number;
-  height: number;
+  width: number = 1;
+  height: number = 1;
 
   readonly resizeObserver: ResizeObserver | undefined;
 
@@ -81,8 +81,10 @@ export default abstract class CanvasContext {
     if (!isBrowser()) {
       this.id = 'node.js';
       this.type = 'node';
-      this.width = props.width;
-      this.height = props.height;
+      this.width = this.props.width;
+      this.height = this.props.height;
+      // TODO - does this prevent app from using jsdom style polyfills?
+      this.canvas = null!;
       return;
     }
 

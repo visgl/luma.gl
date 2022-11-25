@@ -18,22 +18,22 @@ export type ShaderProps = ResourceProps & {
   stage: 'vertex' | 'fragment' | 'compute'; // Required by WebGL and GLSL transpiler
   // code: string;
   source: string;
-  sourceMap?: string; // WebGPU only
+  sourceMap?: string | null; // WebGPU only
   language?: 'glsl' | 'wgsl'; // wgsl in WebGPU only
   // entryPoint?: string;
 
   // WEBGL
   /** @deprecated use props.stage */
-  shaderType?: 0x8b30 | 0x8b31; // GL_FRAGMENT_SHADER | GL_VERTEX_SHADER
+  shaderType?: 0x8b30 | 0x8b31 | 0; // GL_FRAGMENT_SHADER | GL_VERTEX_SHADER
 };
 
 const DEFAULT_SHADER_PROPS: Required<ShaderProps> = {
   ...DEFAULT_RESOURCE_PROPS,
   stage: 'vertex',
   source: '',
-  sourceMap: undefined,
-  language: undefined,
-  shaderType: undefined
+  sourceMap: null,
+  language: 'glsl',
+  shaderType: 0
 };
 
 /**

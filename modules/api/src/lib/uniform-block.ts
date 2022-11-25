@@ -5,10 +5,10 @@ import {log} from '../utils/log';
 import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
 
 /** A uniform block holds a number of uniforms */
-export default class UniformBlock<TUniforms = Record<string, any>> {
+export default class UniformBlock<TUniforms extends object = Record<string, unknown>> {
   // readonly layout: UniformBufferLayout;
   readonly layout: Record<string, UniformInfo> = {};
-  uniforms: TUniforms;
+  uniforms: Record<string, unknown> = {};
 
   protected size: number;
   protected data: ArrayBuffer;
@@ -21,10 +21,12 @@ export default class UniformBlock<TUniforms = Record<string, any>> {
   constructor(layout: ShaderLayout, blockName: string) {
     const binding = layout.bindings
       .find(binding => binding.type === 'uniform' && binding.name === blockName);
-    assert(binding, blockName);
+    if (!binding) {
+      throw new Error(blockName);
+    }
 
     const uniformBlock = binding as UniformBufferBindingLayout;
-    for (const uniform of uniformBlock.uniforms) {
+    for (const uniform of uniformBlock.uniforms || []) {
       this.layout[uniform.name] = uniform;
     }
 

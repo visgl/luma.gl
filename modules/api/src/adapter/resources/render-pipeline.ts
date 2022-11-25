@@ -12,20 +12,20 @@ export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
 
   /** Compiled vertex shader */
-  vs?: Shader;
+  vs?: Shader | null;
   /** Vertex shader entry point (defaults to 'main'). WGSL only */
   vsEntryPoint?: string; //
   /** Constants to apply to compiled vertex shader (WGSL only) */
   vsConstants?: Record<string, number>; // WGSL only
   /** Compiled fragment shader */
-  fs?: Shader;
+  fs?: Shader | null;
   /** Fragment shader entry point (defaults to 'main'). WGSL only */
   fsEntryPoint?: string; // WGSL only
   /** Constants to apply to compiled fragment shader (WGSL only) */
   fsConstants?: Record<string, number>;
 
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
-  layout?: ShaderLayout;
+  layout?: ShaderLayout | null;
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
@@ -49,7 +49,7 @@ export type RenderPipelineProps = ResourceProps & {
   /** Number of "rows" in 'instance' buffers */
   instanceCount?: number;
   /** Optional index buffer */
-  indices?: Buffer;
+  indices?: Buffer | null;
   /** Buffers for attributes */
   attributes?: Record<string, Buffer>;
   /** Buffers, Textures, Samplers for the shader bindings */
@@ -61,15 +61,15 @@ export type RenderPipelineProps = ResourceProps & {
 export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
   ...DEFAULT_RESOURCE_PROPS,
 
-  vs: undefined,
-  vsEntryPoint: undefined,
-  vsConstants: undefined,
+  vs: null,
+  vsEntryPoint: '', // main
+  vsConstants: {},
 
-  fs: undefined,
-  fsEntryPoint: undefined,
-  fsConstants: undefined,
+  fs: null,
+  fsEntryPoint: '', // main
+  fsConstants: {},
 
-  layout: undefined, // {attributes: [], bindings: []},
+  layout: null, // {attributes: [], bindings: []},
 
   topology: 'triangle-list',
   // targets:
@@ -80,7 +80,7 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
   vertexCount: 0,
   instanceCount: 0,
 
-  indices: undefined,
+  indices: null,
   attributes: {},
   bindings: {},
   uniforms: {}
@@ -92,7 +92,7 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
 export default abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
-  hash: string;
+  hash: string = '';
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, DEFAULT_RENDER_PIPELINE_PROPS);

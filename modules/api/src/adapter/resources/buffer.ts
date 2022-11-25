@@ -7,7 +7,7 @@ export type BufferProps = ResourceProps & {
   handle?: WebGLBuffer;
   usage?: number;
   byteLength?: number;
-  data?: ArrayBuffer | ArrayBufferView;
+  data?: ArrayBuffer | ArrayBufferView | null;
   byteOffset?: number;
   /** If props.usage & Buffer.INDEX */
   indexType?: 'uint16' | 'uint32';
@@ -33,11 +33,11 @@ export type BufferProps = ResourceProps & {
 
 const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
   ...DEFAULT_RESOURCE_PROPS,
-  usage: undefined, // Buffer.COPY_DST | Buffer.COPY_SRC
+  usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
   byteLength: 0,
   byteOffset: 0,
-  data: undefined,
-  indexType: undefined,
+  data: null,
+  indexType: 'uint16',
   mappedAtCreation: false
 };
 
@@ -58,7 +58,18 @@ export default abstract class Buffer extends Resource<BufferProps> {
   get [Symbol.toStringTag](): string { return 'Buffer'; }
 
   constructor(device: Device, props: BufferProps) {
-    super(device, props, DEFAULT_BUFFER_PROPS);
+    const deducedProps = {...props};
+
+    // Deduce indexType
+    if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
+      if (props.data instanceof Uint32Array) {
+        deducedProps.indexType = 'uint32';
+      } else if (props.data instanceof Uint16Array) {
+        deducedProps.indexType = 'uint16';
+      }
+    }
+
+    super(device, deducedProps, DEFAULT_BUFFER_PROPS);
   }
 
   write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }

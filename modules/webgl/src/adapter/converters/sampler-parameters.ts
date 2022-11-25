@@ -1,7 +1,7 @@
 // SAMPLER FILTERS
 import {SamplerParameters} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {WebGLSamplerParameters} from '../../types/webgl';
+import {GLSamplerParameters} from '../../types/webgl';
 import {convertCompareFunction, convertToCompareFunction} from './device-parameters';
 
 /**
@@ -9,7 +9,7 @@ import {convertCompareFunction, convertToCompareFunction} from './device-paramet
  * @param props
  * @returns
  */
-export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGLSamplerParameters {
+export function convertSamplerParametersToWebGL(props: SamplerParameters): GLSamplerParameters {
   const params: Record<number, number> = {};
   if (props.addressModeU) {
     params[GL.TEXTURE_WRAP_S] = convertAddressMode(props.addressModeU);
@@ -33,10 +33,12 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): WebGL
   if (props.lodMaxClamp !== undefined) {
     params[GL.TEXTURE_MAX_LOD] = props.lodMaxClamp;
   }
-  if (props.compare) {
+  if (props.type === 'comparison-sampler') {
     // Setting prop.compare turns this into a comparison sampler
     params[GL.TEXTURE_COMPARE_MODE] = GL.COMPARE_REF_TO_TEXTURE;
-    params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('compare', props.compare);
+  }
+  if (props.compare) {
+      params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('compare', props.compare);
   }
   // Note depends on WebGL extension
   if (props.maxAnisotropy) {
@@ -82,7 +84,7 @@ function convertMinFilterMode(minFilter: 'nearest' | 'linear', mipmapFilter?: 'n
  * @param props
  * @returns
  */
- export function convertToSamplerParameters(params: WebGLSamplerParameters): SamplerParameters {
+ export function convertToSamplerParameters(params: GLSamplerParameters): SamplerParameters {
   const props: SamplerParameters = {};
   if (params[GL.TEXTURE_WRAP_S]) {
     props.addressModeU = convertToAddressMode(params[GL.TEXTURE_WRAP_S]);
@@ -162,7 +164,7 @@ function convertToMipmapFilterMode(filterMode: number): 'nearest' | 'linear' {
 /**
  * Override sampler settings that are not supported by Non-Power-of-Two textures in WebGL1.
 */
-export function updateSamplerParametersForNPOT(parameters: WebGLSamplerParameters): WebGLSamplerParameters {
+export function updateSamplerParametersForNPOT(parameters: GLSamplerParameters): GLSamplerParameters {
   const newParameters = {...parameters};
   if (parameters[GL.TEXTURE_MIN_FILTER] !== GL.NEAREST) {
     // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();

@@ -33,7 +33,7 @@ export type TextureProps = ResourceProps & {
   depth?: number;
   usage?: number;
 
-  data?: TextureData | Promise<TextureData> | CubeTextureData | string | HTMLVideoElement;
+  data?: TextureData | Promise<TextureData> | CubeTextureData | string | HTMLVideoElement | null;
   mipmaps?: boolean;
   sampler?: Sampler | SamplerProps;
 
@@ -78,22 +78,32 @@ export type TextureViewProps = {
   baseMipLevel?: number;
 };
 
-// @ts-expect-error
 const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
   ...DEFAULT_RESOURCE_PROPS,
-  data: undefined,
+  data: null,
   dimension: '2d',
   format: 'rgba8unorm',
-  width: undefined,
-  height: undefined,
+  width: 1,
+  height: 1,
   depth: 1,
   mipmaps: true,
   sampler: {},
-  parameters: {},
-  type: undefined,
+  // parameters: {},
+  type: 0, // TODO - what is this?
   compressed: false,
-  // mipLevels: 1,
-  usage: 0
+  samples: 1,
+  mipLevels: 1,
+  usage: 0,
+
+  /** @deprecated */
+  parameters: {},
+  pixels: null,
+  dataFormat: 0,
+  border: 0,
+  pixelStore: {},
+  textureUnit: 0,
+  target: 0,
+  recreate: false
 };
 
 // const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {

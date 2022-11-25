@@ -120,7 +120,7 @@ export type GLStencilOp =
   | GL.INVERT;
 
 /** Parameters for textures and samplers */
-export type WebGLSamplerParameters = {
+export type GLSamplerParameters = {
   [GL.TEXTURE_WRAP_S]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
   [GL.TEXTURE_WRAP_T]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
   [GL.TEXTURE_WRAP_R]?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;

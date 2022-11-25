@@ -23,7 +23,7 @@ export type DeviceProps = {
   type?: 'webgl' | 'webgl1' | 'webgl2' | 'webgpu' | 'best-available';
 
   // Common parameters
-  canvas?: HTMLCanvasElement | OffscreenCanvas | string; // A canvas element or a canvas string id
+  canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
   onContextLost?: (event: Event) => void;
@@ -34,45 +34,45 @@ export type DeviceProps = {
   webgl1?: boolean; // set to false to not create a WebGL1 context (fails if webgl2 not available)
 
   // WebGLContext PARAMETERS - Can only be set on context creation...
-  alpha?: boolean; // Default render target has an alpha buffer.
-  depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
-  stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
-  antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
-  premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
-  preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
-  failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
+  // alpha?: boolean; // Default render target has an alpha buffer.
+  // depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
+  // stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
+  // antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
+  // premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
+  // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
+  // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
 
   // Unclear if these are still supported
   debug?: boolean; // Instrument context (at the expense of performance)
   manageState?: boolean; // Set to false to disable WebGL state management instrumentation
-  break?: Array<any>; // TODO: types
+  break?: string[]; // TODO: types
 
   // Attach to existing context
-  gl?: WebGLRenderingContext | WebGL2RenderingContext;
+  gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
 };
 
 export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
-  id: undefined,
+  id: 'undefined',
   type: 'best-available',
-  canvas: undefined, // A canvas element or a canvas string id
-  gl: undefined,
+  canvas: null, // A canvas element or a canvas string id
+  gl: null,
   webgl2: true, // Attempt to create a WebGL2 context
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   manageState: true,
   width: 800, // width are height are only used by headless gl
   height: 600,
   debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-  break: undefined,
+  break: [],
   onContextLost: () => console.error('WebGL context lost'),
   onContextRestored: () => console.info('WebGL context restored'),
 
-  alpha: undefined,
-  depth: undefined,
-  stencil: undefined,
-  antialias: undefined,
-  premultipliedAlpha: undefined,
-  preserveDrawingBuffer: undefined,
-  failIfMajorPerformanceCaveat: undefined
+  // alpha: undefined,
+  // depth: undefined,
+  // stencil: undefined,
+  // antialias: undefined,
+  // premultipliedAlpha: undefined,
+  // preserveDrawingBuffer: undefined,
+  // failIfMajorPerformanceCaveat: undefined
 };
 
 export type ShadingLanguage = 'glsl' | 'wgsl';
@@ -260,8 +260,11 @@ export default abstract class Device {
       return this._createBuffer({data: props});
     }
 
+    // TODO - fragile, as this is done before we merge with default options
+    // inside the Buffer constructor
+
     // Deduce indexType
-    if (props.usage & Buffer.INDEX && !props.indexType) {
+    if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
       if (props.data instanceof Uint32Array) {
         props.indexType = 'uint32';
       } else if (props.data instanceof Uint16Array) {

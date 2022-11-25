@@ -15,6 +15,13 @@ export default class WebGPUSampler extends Sampler {
   constructor(device: WebGPUDevice, props: WebGPUSamplerProps) {
     super(device, props);
     this.device = device;
+
+    // Prepare sampler props
+    const samplerProps = this.props;
+    if (samplerProps.type !== 'comparison-sampler') {
+      delete samplerProps.compare;
+    }
+
     this.handle = this.handle || this.device.handle.createSampler(this.props);
     this.handle.label = this.props.id;
   }
