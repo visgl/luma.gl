@@ -27,15 +27,15 @@ export type PropValidator = {
 };
 
 /** Minimal validators for number and array types */
-const DEFAULT_PROP_VALIDATORS: Record<string, PropValidator> = {
+const DEFAULT_PROP_VALIDATORS: {[key: string]: PropValidator} = {
   number: {
     type: 'number',
     validate(value: unknown, propType: PropType) {
       return (
-        Number.isFinite(value) &&
+        typeof value === 'number' &&
         typeof propType === 'object' &&
-        (!('max' in propType) || value <= propType.max) &&
-        (!('min' in propType) || value >= propType.min)
+        (typeof propType.max !== 'number' || value <= propType.max) &&
+        (typeof propType.min !== 'number' || value >= propType.min)
       );
     }
   },
@@ -100,28 +100,29 @@ export function getValidatedProperties(
  * - or just a default value, in which case type and name inference is used
  */
 function makePropValidator(propType: PropType): PropValidator {
-  let type = getTypeOf(propType);
 
-  if (type !== 'object') {
-    return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
-  }
+  switch (typeof propType) {
+    // A prop type definition can be either an object or just a value
+    case 'object':
+      if (!propType) {
+        return {type: 'object', value: null};
+      }
+      if (propType.type !== undefined) {
+        return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
+      }
+      if (propType.value === undefined) {
+        // If no type and value this object is likely the value
+        return {type: 'object', value: propType};
+      }
 
-  // Special handling for objects
-  if (typeof propType === 'object') {
-    if (!propType) {
-      return {type: 'object', value: null};
+      let type = getTypeOf(propType.value);
+      // @ts-ignore-error Not sure why this is an issue
+      return {type, ...propType, ...DEFAULT_PROP_VALIDATORS[type]};
+    default:
+      type = getTypeOf(propType);
+      // @ts-ignore-error Not sure why this is an issue
+      return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
     }
-    if ('type' in propType) {
-      return {type: propType.type, ...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
-    }
-    if (!('value' in propType)) {
-      // If no type and value this object is likely the value
-      return {type: 'object', value: propType};
-    }
-
-    type = getTypeOf(propType.value);
-    return {type, ...propType, ...DEFAULT_PROP_VALIDATORS[type]};
-  }
 }
 
 /** 

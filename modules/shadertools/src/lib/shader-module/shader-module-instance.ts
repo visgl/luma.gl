@@ -12,8 +12,8 @@ export type Injection = {
 /** A processed ShaderModule, ready to use with `assembleShaders()` */
 export class ShaderModuleInstance {
   name: string;
-  vs: string;
-  fs: string;
+  vs?: string;
+  fs?: string;
   getModuleUniforms;
   dependencies: ShaderModule[];
   deprecations: ShaderModuleDeprecation[];
@@ -22,7 +22,7 @@ export class ShaderModuleInstance {
     vs: Record<string, Injection>;
     fs: Record<string, Injection>;
   };
-  uniforms: Record<string, PropValidator>;
+  uniforms: Record<string, PropValidator> = {};
 
   constructor(props: ShaderModule) {
     const {
@@ -30,20 +30,17 @@ export class ShaderModuleInstance {
       vs,
       fs,
       dependencies = [],
-      uniforms,
+      uniforms = {},
       getUniforms,
       deprecations = [],
       defines = {},
       inject = {},
-      // deprecated props
-      vertexShader,
-      fragmentShader
     } = props;
 
     assert(typeof name === 'string');
     this.name = name;
-    this.vs = vs || vertexShader;
-    this.fs = fs || fragmentShader;
+    this.vs = vs;
+    this.fs = fs;
     this.getModuleUniforms = getUniforms;
     this.dependencies = dependencies;
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
@@ -82,10 +79,7 @@ ${moduleSource}\
       return this.getModuleUniforms(userProps, uniforms);
     }
     // Build uniforms from the uniforms array
-    if (this.uniforms) {
-      return getValidatedProperties(userProps, this.uniforms, this.name);
-    }
-    return {};
+    return getValidatedProperties(userProps, this.uniforms, this.name);
   }
 
   getDefines(): Record<string, string | number> {
@@ -95,7 +89,7 @@ ${moduleSource}\
   // Warn about deprecated uniforms or functions
   checkDeprecations(shaderSource: string, log: any): void {
     this.deprecations.forEach((def) => {
-      if (def.regex.test(shaderSource)) {
+      if (def.regex?.test(shaderSource)) {
         if (def.deprecated) {
           log.deprecated(def.old, def.new)();
         } else {

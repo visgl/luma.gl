@@ -3,7 +3,7 @@ import {NumberArray} from '../../types';
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 export type PickingOptions = {
-  pickingSelectedColor?: NumberArray, //  Set to a picking color to visually highlight that item
+  pickingSelectedColor?: NumberArray | null, //  Set to a picking color to visually highlight that item
   pickingHighlightColor?: NumberArray, // Color of visual highlight of "selected" item
   pickingActive?: boolean, // Set to true when rendering to off-screen "picking" buffer
   pickingAttribute: boolean // Set to true when picking an attribute value instead of object index

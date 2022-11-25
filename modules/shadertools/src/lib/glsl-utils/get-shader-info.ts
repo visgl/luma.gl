@@ -27,7 +27,7 @@ function getShaderName(shader: string, defaultName: string = 'unnamed'): string 
 function getShaderVersion(source: string): number {
   let version = 100;
   const words = source.match(/[^\s]+/g);
-  if (words.length >= 2 && words[0] === '#version') {
+  if (words && words.length >= 2 && words[0] === '#version') {
     const v = parseInt(words[1], 10);
     if (Number.isFinite(v)) {
       version = v;
