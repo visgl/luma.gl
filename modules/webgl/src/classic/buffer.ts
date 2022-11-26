@@ -112,6 +112,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
       this.trackDeallocatedMemory();
       this.gl.deleteBuffer(this.handle);
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 

@@ -78,6 +78,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     if (this.handle) {
       this.device.gl.deleteProgram(this.handle);
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 

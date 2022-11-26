@@ -27,7 +27,8 @@ export default abstract class Resource<Props extends ResourceProps> {
   abstract readonly device: Device;
   private _device: Device;
 
-  // For resources that allocate GPU memory
+  destroyed: boolean = false;
+  /** For resources that allocate GPU memory */
   private allocatedBytes: number = 0;
 
   /**

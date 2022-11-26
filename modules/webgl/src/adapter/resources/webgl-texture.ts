@@ -200,6 +200,7 @@ export default class WEBGLTexture extends Texture {
       this.removeStats();
       this.trackDeallocatedMemory('Texture');
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 

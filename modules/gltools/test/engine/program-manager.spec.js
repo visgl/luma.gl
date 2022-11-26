@@ -325,7 +325,7 @@ test('ProgramManager#release', (t) => {
 
   pm.release(program2);
 
-  t.ok(program2.handle === null, 'Program deleted when all references released.');
+  t.ok(program2.destroyed, 'Program deleted when all references released.');
 
   t.end();
 });

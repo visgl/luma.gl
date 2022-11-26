@@ -33,6 +33,7 @@ import WebGLDevice from '../webgl-device';
       this.removeStats();
       this.device.gl.deleteShader(this.handle);
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 

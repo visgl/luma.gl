@@ -69,6 +69,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
       }
       this.gl.deleteFramebuffer(this.handle);
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 
