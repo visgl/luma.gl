@@ -5,7 +5,7 @@ import {getWebGL2Context} from '../../context/context/webgl-checks';
 
 /** Populate a WebGPU style device limits */
 export function getDeviceLimits(gl: WebGLRenderingContext): DeviceLimits {
-  const gl2: WebGL2RenderingContext = getWebGL2Context(gl);
+  const gl2: WebGL2RenderingContext | null = getWebGL2Context(gl);
   return {
     maxTextureDimension1D: 0, // WebGL does not support 1D textures
     maxTextureDimension2D: gl.getParameter(GL.MAX_TEXTURE_SIZE),

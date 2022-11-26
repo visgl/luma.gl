@@ -54,7 +54,7 @@ class GLState {
     let valueChanged = false;
     let oldValue; // = undefined
 
-    const oldValues: {[key: number | string]: any} = this.stateStack.length > 0 && this.stateStack[this.stateStack.length - 1];
+    const oldValues: {[key: number | string]: any} | null = this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1] : null;
 
     for (const key in values) {
       assert(key !== undefined);

@@ -64,7 +64,7 @@ const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, (gl: WebGLRenderingC
 };
 
 export function checkTextureFeature(gl: WebGLRenderingContext, feature: DeviceFeature): boolean {
-  return TEXTURE_FEATURE_CHECKS[feature]?.(gl);
+  return TEXTURE_FEATURE_CHECKS[feature]?.(gl) || false;
 }
 
 const checkTextureFeatures = (gl: WebGLRenderingContext, features: DeviceFeature[]): boolean =>
@@ -520,8 +520,8 @@ export function _checkFloat32ColorAttachment(
   srcFormat = GL.RGBA,
   srcType = GL.UNSIGNED_BYTE
 ) {
-  let texture: WebGLTexture;
-  let framebuffer: WebGLFramebuffer;
+  let texture: WebGLTexture | null = null;
+  let framebuffer: WebGLFramebuffer | null = null;
   try {
     texture = gl.createTexture();
     gl.bindTexture(GL.TEXTURE_2D, texture);

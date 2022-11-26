@@ -127,7 +127,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
   }
 
-  if (parameters.stencilPassOperation) {
+  if (parameters.stencilPassOperation && parameters.stencilFailOperation && parameters.stencilDepthFailOperation) {
     const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
     const sfail = convertStencilOperation('stencilFailOperation', parameters.stencilFailOperation);
     const dpfail = convertStencilOperation('stencilDepthFailOperation', parameters.stencilDepthFailOperation);

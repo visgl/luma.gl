@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import {Sampler, SamplerProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {GLSamplerParameters} from '../../types/webgl';

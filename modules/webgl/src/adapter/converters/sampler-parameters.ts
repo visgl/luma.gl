@@ -110,7 +110,10 @@ function convertMinFilterMode(minFilter: 'nearest' | 'linear', mipmapFilter?: 'n
   if (params[GL.TEXTURE_MAX_LOD]) {
     props.lodMaxClamp = params[GL.TEXTURE_MAX_LOD];
   }
-  if (params[GL.TEXTURE_COMPARE_MODE] === GL.COMPARE_REF_TO_TEXTURE) {
+  if (params[GL.TEXTURE_COMPARE_MODE]) {
+    props.type = params[GL.TEXTURE_COMPARE_MODE]  === GL.COMPARE_REF_TO_TEXTURE ? 'comparison-sampler' : 'color-sampler';
+  }
+  if (params[GL.TEXTURE_COMPARE_FUNC]) {
     props.compare = convertToCompareFunction('compare', params[GL.TEXTURE_COMPARE_FUNC]);
   }
   // NOTE depends on extension (very common)
@@ -126,6 +129,7 @@ function convertToAddressMode(addressMode: number): 'clamp-to-edge' | 'repeat' |
     case GL.CLAMP_TO_EDGE: return 'clamp-to-edge';
     case GL.REPEAT: return 'repeat';
     case GL.MIRRORED_REPEAT: return 'mirror-repeat';
+    default: throw new Error('address');
   }
 }
 
@@ -133,6 +137,7 @@ function convertToMaxFilterMode(filterMode: number): 'nearest' | 'linear' {
   switch (filterMode) {
     case GL.NEAREST: return 'nearest';
     case GL.LINEAR: return 'linear';
+    default: throw new Error('maxfilter');
   }
 }
 
@@ -146,6 +151,7 @@ function convertToMinFilterMode(filterMode: number): 'nearest' | 'linear' {
     case GL.LINEAR_MIPMAP_NEAREST: return 'linear';
     case GL.NEAREST_MIPMAP_LINEAR: return 'nearest';
     case GL.LINEAR_MIPMAP_LINEAR: return 'linear';
+    default: throw new Error('minfilter');
   }
 }
 
@@ -158,6 +164,7 @@ function convertToMipmapFilterMode(filterMode: number): 'nearest' | 'linear' {
     case GL.LINEAR_MIPMAP_NEAREST: return 'nearest';
     case GL.NEAREST_MIPMAP_LINEAR: return 'linear';
     case GL.LINEAR_MIPMAP_LINEAR: return 'linear';
+    default: throw new Error('mipmap');
   }
 }
 

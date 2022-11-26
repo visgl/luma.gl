@@ -36,7 +36,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
 
   // configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
-  varyings: string[];
+  varyings: string[] | null = null;
   vertexArrayObject: WEBGLVertexArrayObject;
   _indexBuffer?: Buffer;
   uniforms: Record<string, any> = {};
@@ -44,7 +44,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   _textureUniforms: Record<string, any> = {};
   _textureIndexCounter: number = 0;
   _uniformCount: number = 0;
-  _uniformSetters: Record<string, Function>;
+  _uniformSetters: Record<string, Function> = {}; // TODO are these used?
 
   constructor(device: WebGLDevice, props: RenderPipelineProps) {
     super(device, props);
@@ -65,7 +65,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     if (varyings && varyings.length > 0) {
       this.device.assertWebGL2();
       this.varyings = varyings;
-      this.device.gl2.transformFeedbackVaryings(this.handle, varyings, bufferMode);
+      this.device.gl2?.transformFeedbackVaryings(this.handle, varyings, bufferMode);
     }
 
     this._compileAndLink();
@@ -77,7 +77,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   destroy(): void {
     if (this.handle) {
       this.device.gl.deleteProgram(this.handle);
-      this.handle = null;
+      // this.handle = null;
     }
   }
 
@@ -122,6 +122,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const binding = this.layout.bindings.find((binding) => binding.name === name);
       if (!binding) {
         log.warn(`Unknown binding ${name} in render pipeline ${this.id}`)();
+        continue;
       }
       if (!value) {
         log.warn(`Unsetting binding ${name} in render pipeline ${this.id}`)();
@@ -182,7 +183,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     const drawMode = getDrawMode(this.props.topology);
     const isIndexed: boolean = Boolean(this._indexBuffer);
     const indexType = this._indexBuffer?.props.indexType === 'uint16' ? GL.UNSIGNED_SHORT : GL.UNSIGNED_INT;
-    const isInstanced: boolean = options.instanceCount > 0;
+    const isInstanced: boolean = Number(options.instanceCount) > 0;
 
     // Avoid WebGL draw call when not rendering any data or values are incomplete
     // Note: async textures set as uniforms might still be loading.
@@ -212,21 +213,21 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
           // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
           if (isIndexed && isInstanced) {
             // ANGLE_instanced_arrays extension
-            this.device.gl2.drawElementsInstanced(
+            this.device.gl2?.drawElementsInstanced(
               drawMode,
-              vertexCount,
+              vertexCount || 0, // indexCount?
               indexType,
               firstVertex,
-              instanceCount
+              instanceCount || 0
             );
             // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
             //   this.device.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
           } else if (isIndexed) {
-            this.device.gl.drawElements(drawMode, vertexCount, indexType, firstVertex);
+            this.device.gl.drawElements(drawMode, vertexCount || 0, indexType, firstVertex); // indexCount?
           } else if (isInstanced) {
-            this.device.gl2.drawArraysInstanced(drawMode, firstVertex, vertexCount, instanceCount);
+            this.device.gl2?.drawArraysInstanced(drawMode, firstVertex, vertexCount || 0, instanceCount || 0);
           } else {
-            this.device.gl.drawArrays(drawMode, firstVertex, vertexCount);
+            this.device.gl.drawArrays(drawMode, firstVertex, vertexCount || 0);
           }
         });
 
@@ -296,6 +297,9 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this.device.gl.useProgram(this.handle);
 
     const {gl2} = this.device;
+    if (!gl2) {
+      throw new Error('bindings');
+    }
 
     let textureUnit = 0;
     let uniformBufferIndex = 0;
@@ -396,13 +400,15 @@ function getAttributesByLocation(
   const byLocation: Record<number, Buffer> = {};
   for (const [name, buffer] of Object.entries(attributes)) {
     const attribute = getAttributeLayout(layout, name);
-    byLocation[attribute.location] = buffer;
+    if (attribute) {
+      byLocation[attribute.location] = buffer;
+    }
   }
   return byLocation;
 }
 
-function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | undefined {
-  return layout.attributes.find((binding) => binding.name === name);
+function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
+  return layout.attributes.find((binding) => binding.name === name) || null;
 }
 
 function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {

@@ -81,7 +81,7 @@ export const WEBGL2_CONTEXT_POLYFILLS = {
     getQueryParameter(handle, pname) {
       return this.getQueryObject(handle, pname);
     },
-    getQueryObject: () => {}
+    getQueryObject: (handle: unknown, pname: unknown) => {}
   }
 };
 

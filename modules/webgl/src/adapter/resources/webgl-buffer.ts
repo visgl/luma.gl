@@ -15,7 +15,7 @@ export default class WEBGLBuffer extends Buffer {
 
   byteLength: number;
   bytesUsed: number;
-  debugData: ArrayBuffer;
+  debugData: ArrayBuffer | null = null;
 
   webglUsage: number;
 
@@ -106,8 +106,7 @@ export default class WEBGLBuffer extends Buffer {
       this.removeStats();
       this.trackDeallocatedMemory();
       this.gl.deleteBuffer(this.handle);
-      // @ts-expect-error
-      this.handle = null;
+      // this.handle = null;
     }
   }
 

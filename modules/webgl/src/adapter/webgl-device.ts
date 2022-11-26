@@ -1,12 +1,6 @@
 // luma.gl, MIT license
-import type {
-  DeviceProps,
-  DeviceInfo,
-  DeviceLimits,
-  DeviceFeature,
-  CanvasContextProps,
-  TextureFormat
-} from '@luma.gl/api';
+import type {DeviceProps, DeviceInfo, DeviceLimits, DeviceFeature} from '@luma.gl/api';
+import type {CanvasContextProps, TextureFormat} from '@luma.gl/api';
 import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
@@ -29,13 +23,11 @@ import {
 import type {
   BufferProps,
   ShaderProps,
-  Sampler,
   SamplerProps,
   TextureProps,
   ExternalTexture,
   ExternalTextureProps,
   FramebufferProps,
-  RenderPipeline,
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
@@ -70,7 +62,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  readonly lost = new Promise<{reason: 'destroyed'; message: string}>((resolve) => this._resolveContextLost = resolve);
   readonly handle: WebGLRenderingContext;
 
   get features(): Set<DeviceFeature> {
@@ -88,7 +80,7 @@ export default class WebGLDevice extends Device implements ContextState {
   /** WebGL1 typed context. Can always be used. */
   readonly gl: WebGLRenderingContext;
   /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
-  readonly gl2: WebGL2RenderingContext;
+  readonly gl2: WebGL2RenderingContext | null = null;
   readonly debug: boolean = false;
 
   /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
@@ -101,9 +93,10 @@ export default class WebGLDevice extends Device implements ContextState {
     return this._webglLimits;
   }
 
-  private _features: Set<DeviceFeature>;
-  private _limits: DeviceLimits;
-  private _webglLimits: WebGLLimits;
+  private _resolveContextLost: (value: {reason: 'destroyed'; message: string}) => void = () => {};
+  private _features?: Set<DeviceFeature>;
+  private _limits?: DeviceLimits;
+  private _webglLimits?: WebGLLimits;
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
@@ -135,7 +128,7 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WebGLDevice({gl: gl as WebGLRenderingContext});
   }
 
-  static async create(props?: DeviceProps): Promise<WebGLDevice> {
+  static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
     log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created');
 
     // Wait for page to load. Only wait when props. canvas is string
@@ -164,14 +157,18 @@ export default class WebGLDevice extends Device implements ContextState {
     // @ts-expect-error device is attached to context
     const device: WebGLDevice | undefined = props.gl?.device;
     if (device) {
-      log.warn(`WebGL context already attached to device ${device.id}`);
-      return device;
+      throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, props);
 
-    this.handle = props.gl || createBrowserContext(this.canvasContext.canvas, props);
+    const onContextLost = (event: Event) => this._resolveContextLost( {
+      reason: 'destroyed', 
+      message: 'Computer entered sleep mode or too many apps or browser tabs are using the GPU.'
+    });
+
+    this.handle = props.gl || createBrowserContext(this.canvasContext.canvas, {onContextLost, ...props});
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
@@ -182,7 +179,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // @ts-expect-error Link webgl context back to device
     this.gl.device = this;
-    // @ts-expect-error Annotate webgl context to handle 
+    // @ts-expect-error Annotate webgl context to handle
     this.gl._version = this.isWebGL2 ? 2 : 1;
 
     // Add subset of WebGL2 methods to WebGL1 context
@@ -254,7 +251,9 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
 
   /** Returns a WebGL2RenderingContext or throws an error */
   assertWebGL2(): WebGL2RenderingContext {
-    assert(this.isWebGL2, 'Requires WebGL2');
+    if (!this.gl2) {
+      throw new Error('Requires WebGL2');
+    }
     return this.gl2;
   }
 
@@ -264,7 +263,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     throw new Error('WebGL only supports a single canvas');
   }
 
-  _createBuffer(props: BufferProps): WEBGLBuffer {
+  _createBuffer(props: BufferProps): ClassicBuffer {
     return new ClassicBuffer(this, props);
   }
 
@@ -304,9 +303,9 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     throw new Error('compute shaders not supported in WebGL');
   }
 
-  private renderPass: WEBGLRenderPass;
+  private renderPass: RenderPass | null = null;
 
-  getDefaultRenderPass(): WEBGLRenderPass {
+  getDefaultRenderPass(): RenderPass {
     this.renderPass =
       this.renderPass ||
       this.beginRenderPass({
@@ -338,7 +337,6 @@ function isWebGL(gl: any): boolean {
   // Look for debug contexts, headless gl etc
   return Boolean(gl && Number.isFinite(gl._version));
 }
-
 
 /** Check if supplied parameter is a WebGL2RenderingContext */
 function isWebGL2(gl: any): boolean {

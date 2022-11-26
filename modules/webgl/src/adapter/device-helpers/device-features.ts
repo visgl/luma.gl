@@ -47,7 +47,12 @@ export function getWebGLFeatures(gl: WebGLRenderingContext): Set<DeviceFeature> 
 }
 
 function isFeatureSupported(gl: WebGLRenderingContext, feature: DeviceFeature): boolean {
-  const [webgl1Feature, webgl2Feature] = WEBGL_FEATURES[feature];;
+  const featureInfo = WEBGL_FEATURES[feature];
+  if (!featureInfo) {
+    return false;
+  }
+
+  const [webgl1Feature, webgl2Feature] = featureInfo || [];
 
   // Get extension name from table
   const featureDefinition = isWebGL2(gl) ? webgl2Feature : webgl1Feature;
@@ -100,6 +105,9 @@ export function canCompileGLSLExtension(gl: WebGLRenderingContext, extensionName
   const source = `#extension GL_${extensionName} : ${behavior}\nvoid main(void) {}`;
 
   const shader = gl.createShader(gl.VERTEX_SHADER);
+  if (!shader) {
+    throw new Error('shader');
+  }
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   const canCompile = gl.getShaderParameter(shader, gl.COMPILE_STATUS);

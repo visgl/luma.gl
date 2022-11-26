@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import type {FramebufferProps, DepthStencilTextureFormat, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
@@ -17,7 +19,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
 
   get texture() { return this.colorAttachments[0]; }
   readonly colorAttachments: WebGLTexture[] = [];
-  readonly depthStencilAttachment: WebGLTexture | undefined = undefined;
+  readonly depthStencilAttachment: WebGLTexture | null = null;  d 
   protected _ownResources: (WebGLTexture | Renderbuffer)[] = [];
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
@@ -66,7 +68,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
         resource.destroy();
       }
       this.gl.deleteFramebuffer(this.handle);
-      this.handle = null;
+      // this.handle = null;
     }
   }
 
@@ -224,7 +226,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
         this.device.assertWebGL2();
-        gl2.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        gl2?.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:
