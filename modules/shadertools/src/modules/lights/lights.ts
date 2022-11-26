@@ -104,10 +104,10 @@ function getUniforms(opts: LightsOptions = INITIAL_MODULE_OPTIONS): Record<strin
           lightSources.ambientLight = light;
           break;
         case 'directional':
-          lightSources.directionalLights.push(light);
+          lightSources.directionalLights?.push(light);
           break;
         case 'point':
-          lightSources.pointLights.push(light);
+          lightSources.pointLights?.push(light);
           break;
         default:
         // eslint-disable-next-line

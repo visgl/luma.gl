@@ -34,8 +34,8 @@ const DEFAULT_PROP_VALIDATORS: Record<string, PropValidator> = {
       return (
         Number.isFinite(value) &&
         typeof propType === 'object' &&
-        (!('max' in propType) || value <= propType.max) &&
-        (!('min' in propType) || value >= propType.min)
+        (propType.max === undefined || value as number <= propType.max) &&
+        (propType.min === undefined || value as number >= propType.min)
       );
     }
   },
@@ -103,7 +103,7 @@ function makePropValidator(propType: PropType): PropValidator {
   let type = getTypeOf(propType);
 
   if (type !== 'object') {
-    return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
+    return {value: propType, ...DEFAULT_PROP_VALIDATORS[type], type};
   }
 
   // Special handling for objects
@@ -111,17 +111,19 @@ function makePropValidator(propType: PropType): PropValidator {
     if (!propType) {
       return {type: 'object', value: null};
     }
-    if ('type' in propType) {
-      return {type: propType.type, ...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
+    if (propType.type !== undefined) {
+      return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type], type: propType.type};
     }
-    if (!('value' in propType)) {
       // If no type and value this object is likely the value
+      if (propType.value === undefined) {
       return {type: 'object', value: propType};
     }
 
     type = getTypeOf(propType.value);
-    return {type, ...propType, ...DEFAULT_PROP_VALIDATORS[type]};
+    return {...propType, ...DEFAULT_PROP_VALIDATORS[type], type};
   }
+
+  throw new Error('props');
 }
 
 /** 

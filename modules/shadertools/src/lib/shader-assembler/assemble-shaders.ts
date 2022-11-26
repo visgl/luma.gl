@@ -128,7 +128,7 @@ function assembleShader(
   let assembledSource = prologue
     ? `\
 ${versionLine}
-${getShaderName({id, source, type})}
+${getShaderNameDefine({id, source, type})}
 ${getShaderType(type)}
 ${getPlatformShaderDefines(platformInfo)}
 ${getVersionDefines(platformInfo)}
@@ -244,9 +244,9 @@ function getShaderType(type: 'fs' | 'vs') {
  * These are understood by the GLSL error parsing function
  * If id is provided and no SHADER_NAME constant is present in source, create one
  */
-function getShaderName(options: {id: string, source: string, type: 'vs' | 'fs'}): string {
+function getShaderNameDefine(options: {id?: string, source: string, type: 'vs' | 'fs'}): string {
   const {id, source, type} = options;
-  const injectShaderName = id && typeof id === 'string' && source.indexOf('SHADER_NAME') === -1;
+  const injectShaderName = id && source.indexOf('SHADER_NAME') === -1;
   return injectShaderName
     ? `
 #define SHADER_NAME ${id}_${SHADER_TYPE[type]}

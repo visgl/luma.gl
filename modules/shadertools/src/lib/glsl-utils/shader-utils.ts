@@ -14,7 +14,7 @@ type QualifierInfo = {
 }
 
 // Prase given glsl line and return qualifier details or null
-export function getQualifierDetails(line: string, qualifiers: string | string[]): QualifierInfo {
+export function getQualifierDetails(line: string, qualifiers: string | string[]): QualifierInfo | null {
   qualifiers = Array.isArray(qualifiers) ? qualifiers : [qualifiers];
   const words = line.replace(/^\s+/, '').split(/\s+/);
   // TODO add support for precession qualifiers (highp, mediump and lowp)
@@ -47,6 +47,9 @@ export function getPassthroughFS(options?: {
     }
     // Fast-path for WebGL 1.0
     return FS100;
+  }
+  if (!inputType) {
+    throw new Error('inputType');
   }
   const outputValue = convertToVec4(input, inputType);
   if (version >= 300) {

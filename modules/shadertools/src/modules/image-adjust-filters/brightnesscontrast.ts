@@ -11,19 +11,6 @@ const uniforms = {
   contrast: {value: 0, min: -1, max: 1}
 };
 
-/**
- * Brightness / Contrast -
- * Provides additive brightness and multiplicative contrast control.
- * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
- * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
- */
- export const brightnessContrast = {
-  name: 'brightnessContrast',
-  uniforms,
-  fs,
-  passes: [{filter: true}]
-};
-
 var fs = `\
 uniform float brightness;
 uniform float contrast;
@@ -42,3 +29,17 @@ vec4 brightnessContrast_filterColor(vec4 color, vec2 texSize, vec2 texCoords) {
   return brightnessContrast_filterColor(color);
 }
 `;
+
+
+/**
+ * Brightness / Contrast -
+ * Provides additive brightness and multiplicative contrast control.
+ * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
+ * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
+ */
+ export const brightnessContrast = {
+  name: 'brightnessContrast',
+  uniforms,
+  fs,
+  passes: [{filter: true}]
+};
