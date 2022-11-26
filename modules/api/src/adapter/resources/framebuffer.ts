@@ -8,7 +8,7 @@ export type FramebufferProps = ResourceProps & {
   width?: number;
   height?: number;
   colorAttachments?: (Texture | ColorTextureFormat)[];
-  depthStencilAttachment?: Texture | DepthStencilTextureFormat;
+  depthStencilAttachment?: Texture | DepthStencilTextureFormat | null;
 };
 
 const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
@@ -16,7 +16,7 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
   width: 1,
   height: 1,
   colorAttachments: [], // ['rgba8unorm-unsized'],
-  depthStencilAttachment: undefined // 'depth24plus-stencil8'
+  depthStencilAttachment: null // 'depth24plus-stencil8'
 };
 
 /**
@@ -43,22 +43,14 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
    * Resizes all attachments
    * @note resize() destroys existing textures (if size has changed).
    */
-  resize(width: number, height: number): void;
-  /** @deprecated backwards compatibility*/
-  resize(options?: {width: number, height: number}): void;
-
-  resize(widthOrOptions: number | {width: number, height: number} | undefined, height: number = undefined): void {
-    let width;
-    if (typeof widthOrOptions === 'number') {
-      width = widthOrOptions;
-    } else {
-      width = widthOrOptions?.width;
-      height = widthOrOptions?.height;
+  resize(size?: {width: number, height: number}): void {
+    const updateSize = !size || (size.height !== this.height || size.width !== this.width);
+    if (size) {
+      this.width = size?.width;
+      this.height = size?.height;
     }
-    if (height !== this.height || width !== this.width) {
-      this.width = width;
-      this.height = height;
-      this._resizeAttachments(width, height);
+    if (updateSize) {
+      this._resizeAttachments(this.width, this.height);
     }
   }
 

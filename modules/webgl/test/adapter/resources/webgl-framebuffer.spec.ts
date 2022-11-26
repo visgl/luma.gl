@@ -96,11 +96,11 @@ test('WebGLFramebuffer create and resize attachments', async (t) => {
       const testFramebufferOpts = () => {
         const framebuffer = testDevice.createFramebuffer(props);
 
-        framebuffer.resize(1000, 1000);
+        framebuffer.resize({width: 1000, height: 1000});
         t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
         t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
 
-        framebuffer.resize(100, 100);
+        framebuffer.resize({width: 100, height: 100});
         t.equals(framebuffer.width, 100, 'Framebuffer width updated correctly on resize');
         t.equals(framebuffer.height, 100, 'Framebuffer height updated correctly on resize');
 
@@ -131,11 +131,11 @@ test.skip('WebGLFramebuffer resize', (t) => {
 
   const framebuffer = webgl1TestDevice.createFramebuffer(frameBufferOptions);
 
-  framebuffer.resize(1000, 1000);
+  framebuffer.resize({width: 1000,height:  1000});
   t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
   t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
 
-  framebuffer.resize(100, 100);
+  framebuffer.resize({width: 100, height: 100});
   t.equals(framebuffer.width, 100, 'Framebuffer width updated correctly on resize');
   t.equals(framebuffer.height, 100, 'Framebuffer height updated correctly on resize');
   t.end();

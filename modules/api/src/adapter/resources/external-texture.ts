@@ -2,13 +2,13 @@ import type Device from '../device';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type ExternalTextureProps = ResourceProps & {
-  source: HTMLVideoElement;
+  source: HTMLVideoElement | null;
   colorSpace?: 'srgb';
 }
 
 const DEFAULT_TEXTURE_PROPS: Required<ExternalTextureProps> = {
   ...DEFAULT_RESOURCE_PROPS,
-  source: undefined,
+  source: null,
   colorSpace: 'srgb'
 };
 

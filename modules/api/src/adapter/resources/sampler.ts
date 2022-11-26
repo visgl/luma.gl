@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import type Device from '../device';
 import {CompareFunction} from '../types/parameters';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
@@ -5,7 +7,11 @@ import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 export type SamplerFilterMode = 'nearest' | 'linear';
 
-export type SamplerParameters = {
+/**
+ * Properties for initializing a sampler
+ */
+export type SamplerProps = ResourceProps & {
+  type?: 'color-sampler' | 'comparison-sampler';
   addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
   addressModeV?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
   addressModeW?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
@@ -14,17 +20,15 @@ export type SamplerParameters = {
   mipmapFilter?: 'nearest' | 'linear';
   lodMinClamp?: number;
   lodMaxClamp?: number;
+  maxAnisotropy?: number;  
   compare?: CompareFunction;
-  maxAnisotropy?: number;
 };
 
-/**
- * Properties for initializing a sampler
- */
-export type SamplerProps = ResourceProps & SamplerParameters;
+export type SamplerParameters = Omit<SamplerProps, keyof ResourceProps>;
 
 const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
   ...DEFAULT_RESOURCE_PROPS,
+  type: 'color-sampler',
   addressModeU: 'clamp-to-edge',
   addressModeV: 'clamp-to-edge',
   addressModeW: 'clamp-to-edge',
@@ -33,9 +37,7 @@ const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
   mipmapFilter: 'nearest',
   lodMinClamp: 0,
   lodMaxClamp: 32, // Per WebGPU spec
-  // Avoid setting compare default value:
-  // Per WebGPU spec: If `compare` is provided, the sampler will be a "comparison sampler" with the specified GPUCompareFunction.
-  compare: undefined,
+  compare: 'less-equal',
   maxAnisotropy: 1
 };
 

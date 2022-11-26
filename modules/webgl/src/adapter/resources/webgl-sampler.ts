@@ -1,6 +1,6 @@
 import {Sampler, SamplerProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type {WebGLSamplerParameters} from '../../types/webgl';
+import type {GLSamplerParameters} from '../../types/webgl';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import type WebGLDevice from '../webgl-device';
 
@@ -14,7 +14,7 @@ import type WebGLDevice from '../webgl-device';
 export default class WEBGLSampler extends Sampler {
   readonly device: WebGLDevice;
   readonly handle: WebGLSampler;
-  readonly parameters: WebGLSamplerParameters;
+  readonly parameters: GLSamplerParameters;
 
   constructor(device: WebGLDevice, props: SamplerProps) {
     super(device, props);
@@ -35,7 +35,7 @@ export default class WEBGLSampler extends Sampler {
   }
 
   /** Set sampler parameters on the sampler */
-  private _setSamplerParameters(parameters: WebGLSamplerParameters): void {
+  private _setSamplerParameters(parameters: GLSamplerParameters): void {
     for (const [pname, value] of Object.entries(parameters)) {
       // Apparently there are integer/float conversion issues requires two parameter setting functions in JavaScript.
       // For now, pick the float version for parameters specified as GLfloat.

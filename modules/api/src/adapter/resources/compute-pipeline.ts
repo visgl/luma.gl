@@ -28,7 +28,7 @@ export default abstract class ComputePipeline extends Resource<ComputePipelinePr
     return 'ComputePipeline';
   }
 
-  hash: string;
+  hash: string = '';
 
   constructor(device: Device, props: ComputePipelineProps) {
     super(device, props, DEFAULT_COMPUTE_PIPELINE_PROPS);

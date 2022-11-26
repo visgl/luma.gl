@@ -27,7 +27,7 @@ export function decodeTextureFormat(format: TextureFormat): {
     return {
       format,
       components: 0,
-      dataType,
+      // dataType - overwritten by decodedType
       srgb: srgb === '-srgb',
       unsized: suffix === '-unsized',
       webgl: suffix === '-webgl',

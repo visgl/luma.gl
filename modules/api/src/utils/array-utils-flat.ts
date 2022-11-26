@@ -1,6 +1,8 @@
+// luma.gl, MIT license
+
 import type {TypedArray, NumberArray} from '../types';
 
-let arrayBuffer: ArrayBuffer = null;
+let arrayBuffer: ArrayBuffer;
 
 export function getScratchArrayBuffer(byteLength: number): ArrayBuffer {
   if (!arrayBuffer || arrayBuffer.byteLength < byteLength) {

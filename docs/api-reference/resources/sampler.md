@@ -6,15 +6,15 @@ A `Sampler` is an immutable object that holds a set of sampling parameters for t
 Sampling parameters are applied during shader execution and control how values ("texels")
 are read from textures.
 
-Note that luma.gl automatically creates a default `Sampler` for each `Texture`. 
+Note that luma.gl automatically creates a default `Sampler` for each `Texture`.
 A texture's default sampler parameters can be specified creating the texture via `device.createTexture({sampler: SamplerProps}))`.
 Unless an application needs to render the same texture with different sampling parameters,
 an application typically does not need to explicitly instantiate samplers.
 
-Finally, a **Comparison sampler** is a special type of `Sampler` that compares against the depth buffer.
+Note that a **Comparison sampler** is a special type of `Sampler` that compares against the depth buffer.
 During comparison sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
 and the result of the comparison (`0` or `1`) is assigned to the red channel.
-Specifying the `compare` sampler property creates a comparison sampler.
+Specifying the `type: 'comparison-sampler'` sampler property creates a comparison sampler.
 
 ## Usage
 
@@ -49,23 +49,23 @@ const sampler = device.createSampler(gl, {
 });
 ```
 
-
 ## Types
 
 ### SamplerProps
 
-| Sampler Parameter | Values                                               | Description                                                         |
-| ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
-| `addressModeU?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`)                   |
-| `addressModeV?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`)                   |
-| `addressModeW?`   | `'clamp-to-edge'` \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
-| `magFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
-| `minFilter?`      | `'nearest'` \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
-| `mipmapFilter?`   | `'nearest'` \| `'linear'`                            | Sample closest mipmap, or interpolate two closest mipmaps           |
-| `maxAnisotropy?`  | `number`                                             | Combine samples from multiple mipmap levels when appropriate        |
-| `lodMinClamp?`    | `number`                                             | Minimum level of detail to use when sampling                        |
-| `lodMaxClamp?`    | `number`                                             | Maximum level of detail to use when sampling                        |
-| `compare?`        | `lequal` etc (see below)                             | Create a depth "comparison sampler" with specified compare function |
+| Sampler Parameter | Values                                                  | Description                                                         |
+| ----------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `type`            | `'color-sampler'` \* \| `'comparison-sampler'`          | Specify `'comparison-sampler'` to create a depth comparison sampler |
+| `addressModeU?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`)                   |
+| `addressModeV?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`)                   |
+| `addressModeW?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
+| `magFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
+| `minFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
+| `mipmapFilter?`   | `'nearest'` \* \| `'linear'`                            | Sample closest mipmap, or interpolate two closest mipmaps           |
+| `maxAnisotropy?`  | `number`                                                | Combine samples from multiple mipmap levels when appropriate        |
+| `lodMinClamp?`    | `number`                                                | Minimum level of detail to use when sampling                        |
+| `lodMaxClamp?`    | `number`                                                | Maximum level of detail to use when sampling                        |
+| `compare?`        | `less-equal` etc (see below)                            | Specifies compare function for a depth "comparison sampler"         |
 
 #### Texture Wrapping
 
@@ -87,8 +87,8 @@ Parameter: `magFilter`
 
 | Value               | Description        |
 | ------------------- | ------------------ |
-| `linear`            | interpolated texel |
 | `nearest` (default) | nearest texel      |
+| `linear`            | interpolated texel |
 
 - `nearest` is faster than `linear`, but is not as smooth.
 
@@ -98,22 +98,22 @@ Controls how a pixel is textured when it maps to more than one texel.
 
 Parameter: `minFilter`
 
-| Value     | Description        |
-| --------- | ------------------ |
-| `linear`  | interpolated texel |
-| `nearest` | nearest texel      |
+| Value               | Description        |
+| ------------------- | ------------------ |
+| `nearest` (default) | nearest texel      |
+| `linear`            | interpolated texel |
 
 #### Texture Mipmap Filter
 
 Controls if a pixel is textured by referencing more than one mipmap level.
 
-ParameterL `mipmapFilter`
+Parameter: `mipmapFilter`
 
-| Value     | Description                 |
-| --------- | --------------------------- |
-| `linear`  | interpolate between mipmaps |
-| `nearest` | nearest mipmap              |
-| N/A       | no mipmaps                  |
+| Value               | Description                 |
+| ------------------- | --------------------------- |
+| `nearest` (default) | nearest mipmap              |
+| `linear`            | interpolate between mipmaps |
+| N/A                 | no mipmaps                  |
 
 #### Texture Max Anisotropy
 
@@ -122,20 +122,20 @@ Controls multiple mipmap level can be consulted when texturing a pixel.
 #### Texture Comparison Function
 
 > Specifying the `compare` sampler property creates a comparison sampler.
-> Comparison samplers are special samplers that compare against the depth buffer.
+> Comparison samplers are special samplers that compare a value against the depth buffer.
 
 Parameter: `compare`
 
-| `Value             | Computed result                    |
-| ------------------ | ---------------------------------- |
-| `lequal` (default) | result = 1.0 0.0, r <= D t r > D t |
-| `gequal`           | result = 1.0 0.0, r >= D t r < D t |
-| `less`             | result = 1.0 0.0, r < D t r >= D t |
-| `greater`          | result = 1.0 0.0, r > D t r <= D t |
-| `equal`            | result = 1.0 0.0, r = D t r ≠ D t  |
-| `notequal`         | result = 1.0 0.0, r ≠ D t r = D t  |
-| `always`           | result = 1.0                       |
-| `never`            | result = 0.0                       |
+| `Value                 | Computed result                    |
+| ---------------------- | ---------------------------------- |
+| `less-equal` (default) | result = 1.0 0.0, r <= D t r > D t |
+| `greater-equal`        | result = 1.0 0.0, r >= D t r < D t |
+| `less`                 | result = 1.0 0.0, r < D t r >= D t |
+| `greater`              | result = 1.0 0.0, r > D t r <= D t |
+| `equal`                | result = 1.0 0.0, r = D t r ≠ D t  |
+| `not-equal`            | result = 1.0 0.0, r ≠ D t r = D t  |
+| `always`               | result = 1.0                       |
+| `never`                | result = 0.0                       |
 
 During sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
 and the result of the comparison (`0` or `1`) is assigned to the red channel.
@@ -159,6 +159,7 @@ device.createSampler({...})
 ### `destroy(): void`
 
 Free up any GPU resources associated with this sampler immediately (instead of waiting for garbage collection).
+
 ## Methods
 
 `Sampler` inherits methods and members from [Resource](/docs/modules/api/api-reference/resources/resource.md).

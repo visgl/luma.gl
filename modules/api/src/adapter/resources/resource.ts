@@ -9,7 +9,7 @@ export type ResourceProps = {
 }
 
 export const DEFAULT_RESOURCE_PROPS: Required<ResourceProps> = {
-  id: undefined,
+  id: 'undefined',
   handle: undefined,
   userData: {}
 };
@@ -23,7 +23,7 @@ export default abstract class Resource<Props extends ResourceProps> {
   /** props.id, for debugging. */
   id: string;
   readonly props: Required<Props>;
-  readonly userData: {[key: string]: any} = {};
+  readonly userData: Record<string, unknown> = {};
   abstract readonly device: Device;
   private _device: Device;
 
@@ -39,9 +39,11 @@ export default abstract class Resource<Props extends ResourceProps> {
     }
     this._device = device;
     this.props = selectivelyMerge<Props>(props, defaultProps);
-    this.props.id = this.props.id || uid(this[Symbol.toStringTag]);
 
-    this.id = this.props.id;
+    const id = this.props.id !== 'undefined' ? this.props.id as string : uid(this[Symbol.toStringTag]);
+    this.props.id = id;
+    this.id = id;
+
     this.userData = this.props.userData || {};
     this.addStats();
   }

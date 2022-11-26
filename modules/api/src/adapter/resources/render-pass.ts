@@ -9,14 +9,14 @@ import CommandEncoder from './command-encoder';
 import Framebuffer from './framebuffer';
 
 export type RenderPassProps = ResourceProps & {
-  framebuffer?: Framebuffer;
-  parameters?: RenderPassParameters
+  framebuffer?: Framebuffer | null;
+  parameters?: RenderPassParameters | null
 };
 
 const DEFAULT_RENDERPASS_PROPS: Required<RenderPassProps> = {
   ...DEFAULT_RESOURCE_PROPS,
-  framebuffer: undefined,
-  parameters: undefined
+  framebuffer: null,
+  parameters: null
 }
 
 export default abstract class RenderPass extends Resource<RenderPassProps> {
