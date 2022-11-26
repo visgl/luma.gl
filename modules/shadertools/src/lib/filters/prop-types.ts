@@ -100,29 +100,30 @@ export function getValidatedProperties(
  * - or just a default value, in which case type and name inference is used
  */
 function makePropValidator(propType: PropType): PropValidator {
-  if (typeof propType !== 'object') {
-    let type = getTypeOf(propType);
-    // @ts-ignore-error
-    return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
+  let type = getTypeOf(propType);
+
+  if (type !== 'object') {
+    return {value: propType, ...DEFAULT_PROP_VALIDATORS[type], type};
   }
 
-  // Nullable property?
-  if (!propType) {
-    return {type: 'object', value: null};
+  // Special handling for objects
+  if (typeof propType === 'object') {
+    if (!propType) {
+      return {type: 'object', value: null};
+    }
+    if (propType.type !== undefined) {
+      return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type], type: propType.type};
+    }
+      // If no type and value this object is likely the value
+      if (propType.value === undefined) {
+      return {type: 'object', value: propType};
+    }
+
+    type = getTypeOf(propType.value);
+    return {...propType, ...DEFAULT_PROP_VALIDATORS[type], type};
   }
 
-  // Object type is provided
-  if (propType.type !== undefined) {
-    return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type], type: propType.type};
-  }
-  // object is the value
-  if (propType.value === undefined) {
-    // If no type and value this object is likely the value
-    return {type: 'object', value: propType};
-  }
-
-  let type = getTypeOf(propType.value);
-  return {...propType, ...DEFAULT_PROP_VALIDATORS[type], type};
+  throw new Error('props');
 }
 
 /** 
