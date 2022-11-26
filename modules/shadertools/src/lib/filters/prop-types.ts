@@ -27,15 +27,15 @@ export type PropValidator = {
 };
 
 /** Minimal validators for number and array types */
-const DEFAULT_PROP_VALIDATORS: {[key: string]: PropValidator} = {
+const DEFAULT_PROP_VALIDATORS: Record<string, PropValidator> = {
   number: {
     type: 'number',
     validate(value: unknown, propType: PropType) {
       return (
-        typeof value === 'number' &&
+        Number.isFinite(value) &&
         typeof propType === 'object' &&
-        (typeof propType.max !== 'number' || value <= propType.max) &&
-        (typeof propType.min !== 'number' || value >= propType.min)
+        (propType.max === undefined || value as number <= propType.max) &&
+        (propType.min === undefined || value as number >= propType.min)
       );
     }
   },
@@ -100,29 +100,29 @@ export function getValidatedProperties(
  * - or just a default value, in which case type and name inference is used
  */
 function makePropValidator(propType: PropType): PropValidator {
+  if (typeof propType !== 'object') {
+    let type = getTypeOf(propType);
+    // @ts-ignore-error
+    return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
+  }
 
-  switch (typeof propType) {
-    // A prop type definition can be either an object or just a value
-    case 'object':
-      if (!propType) {
-        return {type: 'object', value: null};
-      }
-      if (propType.type !== undefined) {
-        return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type]};
-      }
-      if (propType.value === undefined) {
-        // If no type and value this object is likely the value
-        return {type: 'object', value: propType};
-      }
+  // Nullable property?
+  if (!propType) {
+    return {type: 'object', value: null};
+  }
 
-      let type = getTypeOf(propType.value);
-      // @ts-ignore-error Not sure why this is an issue
-      return {type, ...propType, ...DEFAULT_PROP_VALIDATORS[type]};
-    default:
-      type = getTypeOf(propType);
-      // @ts-ignore-error Not sure why this is an issue
-      return {type, value: propType, ...DEFAULT_PROP_VALIDATORS[type]};
-    }
+  // Object type is provided
+  if (propType.type !== undefined) {
+    return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type], type: propType.type};
+  }
+  // object is the value
+  if (propType.value === undefined) {
+    // If no type and value this object is likely the value
+    return {type: 'object', value: propType};
+  }
+
+  let type = getTypeOf(propType.value);
+  return {...propType, ...DEFAULT_PROP_VALIDATORS[type], type};
 }
 
 /** 
