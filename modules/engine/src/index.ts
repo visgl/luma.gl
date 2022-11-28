@@ -1,10 +1,16 @@
 // luma.gl Engine API
 export type {AnimationProps} from './lib/animation-props';
+export type {AnimationLoopProps} from './lib/animation-loop';
+export {AnimationLoop} from './lib/animation-loop';
 export {RenderLoop} from './lib/render-loop';
 export type {ModelProps} from './lib/model';
 export {default as Model} from './lib/model';
-export type {AnimationLoopProps} from './lib/animation-loop';
-export {default as AnimationLoop} from './lib/animation-loop';
+
+export {PipelineFactory} from './lib/pipeline-factory';
+
+// Animation
+export {Timeline} from './animation/timeline';
+export {KeyFrames} from './animation/key-frames';
 
 // Utils
 // export {default as ClipSpace} from './lib/clip-space';
@@ -27,8 +33,4 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
-
-// Animation
-export {Timeline} from './animation/timeline';
-export {KeyFrames} from './animation/key-frames';
 

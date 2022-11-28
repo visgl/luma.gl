@@ -51,7 +51,7 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
 };
 
 /** Convenient animation loop */
-export default class AnimationLoop {
+export class AnimationLoop {
   device: Device;
   canvas: HTMLCanvasElement; // | OffscreenCanvas;
 

@@ -46,7 +46,7 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
 };
 
 /** Efficiently create shared pipelines with varying parameters */
-export default class PipelineFactory {
+export class PipelineFactory {
   readonly device: Device;
 
   stateHash: number = 0; // Used to change hashing if hooks are modified
