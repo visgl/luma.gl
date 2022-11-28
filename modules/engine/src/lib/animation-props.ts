@@ -22,10 +22,10 @@ export type AnimationProps = {
   tock: number;
 
   // Initial values
-  needsRedraw?: string;
+  needsRedraw?: string | false;
 
-  timeline: Timeline;
+  timeline: Timeline | null;
 
   // Experimental
-  _mousePosition?: [number, number]; // [offsetX, offsetY],
+  _mousePosition?: [number, number] | null; // [offsetX, offsetY],
 };

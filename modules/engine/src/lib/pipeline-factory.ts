@@ -7,7 +7,7 @@ export type GetRenderPipelineOptions = {
   vs: string;
   fs: string;
   topology: PrimitiveTopology;
-  layout?: ShaderLayout;
+  layout?: ShaderLayout | null;
   parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
@@ -47,6 +47,8 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
   parameters: {} 
 };
 
+type GetUniformsFunc = (props?: Record<string, any>) => Record<string, any>;
+
 /** Efficiently create shared pipelines with varying parameters */
 export class PipelineFactory {
   readonly device: Device;
@@ -58,7 +60,7 @@ export class PipelineFactory {
 
   private readonly _pipelineCache: Record<string, RenderPipeline> = {};
 
-  private readonly _getUniforms: Record<string, any> = {};
+  private readonly _getUniforms: Record<string, GetUniformsFunc> = {};
   private readonly _hookFunctions: any[] = [];
   private _defaultModules: any[] = [];
   // private readonly _registeredModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
@@ -97,7 +99,7 @@ export class PipelineFactory {
 
   createRenderPipeline(options: GetRenderPipelineOptions): {
     pipeline: RenderPipeline;
-    getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>;
+    getUniforms: GetUniformsFunc;
   } {
     const props: Required<GetRenderPipelineOptions> = {...DEFAULT_RENDER_PIPELINE_OPTIONS, ...options};
 
@@ -109,7 +111,7 @@ export class PipelineFactory {
       const {pipeline, getUniforms} = this._createRenderPipeline({...props, modules});
       pipeline.hash = hash;
       this._pipelineCache[hash] = pipeline;
-      this._getUniforms[hash] = getUniforms || ((x: Record<string, Record<string, any>>) => {});
+      this._getUniforms[hash] = getUniforms || ((x?: unknown) => ({}));
       this._useCounts[hash] = 0;
     }
 
@@ -140,7 +142,7 @@ export class PipelineFactory {
 
   _createRenderPipeline(props: GetRenderPipelineOptions): {
     pipeline: RenderPipeline,
-    getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>
+    getUniforms: GetUniformsFunc
   } {
     const platformInfo = {
       gpu: this.device.info.gpu,
@@ -152,7 +154,7 @@ export class PipelineFactory {
     const pipeline = this.device.createRenderPipeline({
       ...props,
       vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
-      fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
+      fs: assembled.fs ? this.device.createShader({stage: 'fragment', source: assembled.fs}) : null,
     });
 
     return {pipeline, getUniforms: assembled.getUniforms};
@@ -160,29 +162,30 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   _hashRenderPipeline(props: GetRenderPipelineOptions): string {
-    const vsHash = this._getHash(props.vs);
+    const {modules = [], varyings = [], defines = [], inject = [], parameters = []} = props;
+     const vsHash = this._getHash(props.vs);
     const fsHash = this._getHash(props.fs);
 
-    const moduleHashes = props.modules.map((m) => this._getHash(typeof m === 'string' ? m : m.name)).sort();
-    const varyingHashes = props.varyings.map((v) => this._getHash(v));
+    const moduleHashes = modules.map((m) => this._getHash(typeof m === 'string' ? m : m.name)).sort();
+    const varyingHashes = varyings.map((v) => this._getHash(v));
 
-    const defineKeys = Object.keys(props.defines).sort();
-    const injectKeys = Object.keys(props.inject).sort();
+    const defineKeys = Object.keys(defines).sort();
+    const injectKeys = Object.keys(inject).sort();
     const defineHashes: number[] = [];
     const injectHashes: number[] = [];
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));
-      defineHashes.push(this._getHash(String(props.defines[key])));
+      defineHashes.push(this._getHash(defines[key]));
     }
 
     for (const key of injectKeys) {
       injectHashes.push(this._getHash(key));
-      injectHashes.push(this._getHash(props.inject[key]));
+      injectHashes.push(this._getHash(inject[key]));
     }
 
     // TODO - hash parameters!
-    const parameterHash = JSON.stringify(props.parameters);
+    const parameterHash = JSON.stringify(parameters);
 
     return `${vsHash}/${fsHash}D${defineHashes.join('/')}M${moduleHashes.join(
       '/'

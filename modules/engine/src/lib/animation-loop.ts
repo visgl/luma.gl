@@ -33,7 +33,7 @@ export type AnimationLoopProps = {
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
-  onAddHTML: undefined,
+  onAddHTML: () => '',
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
@@ -52,12 +52,12 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
 
 /** Convenient animation loop */
 export class AnimationLoop {
-  device: Device;
-  canvas: HTMLCanvasElement; // | OffscreenCanvas;
+  device: Device | null = null;
+  canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 
   props: Required<AnimationLoopProps>;
-  animationProps: AnimationProps;
-  timeline: Timeline = null;
+  animationProps: AnimationProps | null = null;
+  timeline: Timeline | null = null;
   stats: Stats;
   cpuTime: Stat;
   gpuTime: Stat;
@@ -69,7 +69,7 @@ export class AnimationLoop {
 
   _initialized: boolean = false;
   _running: boolean = false;
-  _animationFrameId = null;
+  _animationFrameId: any = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
@@ -86,11 +86,11 @@ export class AnimationLoop {
     let {useDevicePixels = true} = this.props;
 
     // state
-    this.device = props.device;
+    this.device = props.device || null;
     // @ts-expect-error
     this.gl = (this.device && this.device.gl) || props.gl;
 
-    this.stats = props.stats;
+    this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
     this.frameRate = this.stats.get('Frame Rate');
@@ -127,13 +127,13 @@ export class AnimationLoop {
   // TODO - move to CanvasContext
   setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
-      this.props.autoResizeViewport = props.autoResizeViewport;
+      this.props.autoResizeViewport = props.autoResizeViewport || false;
     }
     if ('autoResizeDrawingBuffer' in props) {
-      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
+      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer || false;
     }
     if ('useDevicePixels' in props) {
-      this.props.useDevicePixels = props.useDevicePixels;
+      this.props.useDevicePixels = props.useDevicePixels || false;
     }
     return this;
   }
@@ -185,14 +185,14 @@ export class AnimationLoop {
 
   /** Explicitly draw a frame */
   redraw(): this {
-    if (this.device.isLost) {
+    if (this.device?.isLost) {
       return this;
     }
 
     this._beginTimers();
 
     this._setupFrame();
-    this._updateCallbackData();
+    this._updateAnimationProps();
 
     this._renderFrame(this.animationProps);
 
@@ -273,8 +273,8 @@ export class AnimationLoop {
     this._startEventHandling();
 
     // Initialize the callback data
-    this._initializeCallbackData();
-    this._updateCallbackData();
+    this._initializeAnimationProps();
+    this._updateAnimationProps();
 
     // Default viewport setup, in case onInitialize wants to render
     this._resizeCanvasDrawingBuffer();
@@ -358,7 +358,10 @@ export class AnimationLoop {
   }
 
   // Initialize the  object that will be passed to app callbacks
-  _initializeCallbackData() {
+  _initializeAnimationProps() {
+    if (!this.device) {
+      throw new Error('loop');
+    }
     this.animationProps = {
       animationLoop: this,
       device: this.device,
@@ -367,7 +370,7 @@ export class AnimationLoop {
 
       // Initial values
       useDevicePixels: this.props.useDevicePixels,
-      needsRedraw: null,
+      needsRedraw: false,
 
       // Placeholders
       width: 1,
@@ -387,7 +390,7 @@ export class AnimationLoop {
   }
 
   // Update the context object that will be passed to app callbacks
-  _updateCallbackData() {
+  _updateAnimationProps() {
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
