@@ -6,6 +6,7 @@ export default class WEBGLRenderPass extends RenderPass {
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
+    this.device = device;
   }
 
   endPass(): void {}

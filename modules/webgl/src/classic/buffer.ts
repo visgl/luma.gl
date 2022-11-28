@@ -111,8 +111,8 @@ export default class ClassicBuffer extends WEBGLBuffer {
       this.removeStats();
       this.trackDeallocatedMemory();
       this.gl.deleteBuffer(this.handle);
-      // @ts-expect-error
-      this.handle = null;
+      // this.handle = null;
+      this.destroyed = true;
     }
   }
 
@@ -264,7 +264,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
     // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
     gl.bindBuffer(GL.COPY_READ_BUFFER, sourceBuffer.handle);
     gl.bindBuffer(GL.COPY_WRITE_BUFFER, this.handle);
-    gl2.copyBufferSubData(GL.COPY_READ_BUFFER, GL.COPY_WRITE_BUFFER, readOffset, writeOffset, size);
+    gl2?.copyBufferSubData(GL.COPY_READ_BUFFER, GL.COPY_WRITE_BUFFER, readOffset, writeOffset, size);
     gl.bindBuffer(GL.COPY_READ_BUFFER, null);
     gl.bindBuffer(GL.COPY_WRITE_BUFFER, null);
 
@@ -314,7 +314,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
 
     // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
-    this.gl2.getBufferSubData(GL.COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
+    this.gl2?.getBufferSubData(GL.COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
 
     // TODO - update local `data` if offsets are 0
@@ -340,10 +340,10 @@ export default class ClassicBuffer extends WEBGLBuffer {
     // uniform buffer state. Instead indexed bindings need to be made.
     if (target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER) {
       if (size !== undefined) {
-        this.gl2.bindBufferRange(target, index, this.handle, offset, size);
+        this.gl2?.bindBufferRange(target, index, this.handle, offset, size);
       } else {
         assert(offset === 0); // Make sure offset wasn't supplied
-        this.gl2.bindBufferBase(target, index, this.handle);
+        this.gl2?.bindBufferBase(target, index, this.handle);
       }
     } else {
       this.gl.bindBuffer(target, this.handle);
@@ -356,7 +356,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
     const {target = this.target, index = this.accessor && this.accessor.index} = options || {};
     const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {
-      this.gl2.bindBufferBase(target, index, null);
+      this.gl2?.bindBufferBase(target, index, null);
     } else {
       this.gl.bindBuffer(target, null);
     }

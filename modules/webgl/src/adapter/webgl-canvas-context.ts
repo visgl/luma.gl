@@ -12,7 +12,7 @@ import WEBGLFramebuffer from './resources/webgl-framebuffer';
 export default class WebGLCanvasContext extends CanvasContext {
   readonly device: WebGLDevice;
   presentationSize: [number, number];
-  private _framebuffer: WEBGLFramebuffer;
+  private _framebuffer: WEBGLFramebuffer | null = null;
 
   constructor(device: WebGLDevice, props: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)

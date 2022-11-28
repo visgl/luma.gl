@@ -83,11 +83,11 @@ test('WebGL#Program caching', (t) => {
 
   program._isCached = true;
   program.delete();
-  t.ok(program.handle, 'Program should not be deleted');
+  t.ok(!program.destroyed, 'Program should not be deleted');
 
   program._isCached = false;
   program.delete();
-  t.ok(!program.handle, 'Program should be deleted');
+  t.ok(program.destroyed, 'Program should be deleted');
 
   t.end();
 });

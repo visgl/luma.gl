@@ -163,6 +163,7 @@ export type UniformBufferBindingLayout = {
 export type UniformInfo = {
   name: string;
   format: UniformFormat;
+  type?: string;
   arrayLength: number;
   byteOffset: number;
   byteStride: number;

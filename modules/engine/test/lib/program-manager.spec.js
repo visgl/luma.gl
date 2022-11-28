@@ -321,11 +321,11 @@ test('ProgramManager#release', (t) => {
 
   pm.release(program1);
 
-  t.ok(program1.handle !== null, 'Program not deleted when still referenced.');
+  t.ok(!program1.destroyed, 'Program not deleted when still referenced.');
 
   pm.release(program2);
 
-  t.ok(program2.handle === null, 'Program deleted when all references released.');
+  t.ok(program2.destroyed, 'Program deleted when all references released.');
 
   t.end();
 });

@@ -32,7 +32,7 @@ export async function loadSpectorJS(props?: SpectorProps) {
     try {
       await loadScript(SPECTOR_CDN_URL);
     } catch(error) {
-      log.warn(error)
+      log.warn(String(error))
     }
   }
 }

@@ -43,7 +43,7 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
 
   // Set (bind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
-  setElementBuffer(elementBuffer: Buffer = null, opts = {}) {
+  setElementBuffer(elementBuffer: Buffer | null = null, opts = {}) {
     assert(!elementBuffer || elementBuffer.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
     // The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject...

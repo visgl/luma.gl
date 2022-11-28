@@ -14,7 +14,7 @@ type DebugContextProps = {
 const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
   debug: true,
   throwOnError: false,
-  break: undefined,
+  break: [],
   webgl2: false,
 }
 

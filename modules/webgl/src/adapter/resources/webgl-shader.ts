@@ -32,14 +32,14 @@ import WebGLDevice from '../webgl-device';
     if (this.handle) {
       this.removeStats();
       this.device.gl.deleteShader(this.handle);
-      // @ts-expect-error
-      this.handle = null;
+      // this.handle = null;
+      this.destroyed = true;
     }
   }
 
   async compilationInfo(): Promise<readonly CompilerMessage[]> {
     const log = this.device.gl.getShaderInfoLog(this.handle);
-    return parseShaderCompilerLog(log);
+    return log ? parseShaderCompilerLog(log) : [];
   }
 
   // PRIVATE METHODS
@@ -58,7 +58,8 @@ import WebGLDevice from '../webgl-device';
     const compileStatus = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
     if (!compileStatus) {
       const shaderLog = gl.getShaderInfoLog(this.handle);
-      const messages = parseShaderCompilerLog(shaderLog).filter(message => message.type === 'error');
+      const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
+      const messages = parsedLog.filter(message => message.type === 'error');
       const formattedLog = formatCompilerLog(messages, source);
       const shaderName: string = getShaderInfo(source).name;
       const shaderDescription = `${this.stage} shader ${shaderName}`;

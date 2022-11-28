@@ -65,7 +65,7 @@ function polyfillExtension(gl: WebGLRenderingContext, {extension, target, target
   for (const key of Object.keys(defaults)) {
     const extKey = `${key}${suffix}`;
 
-    let polyfill = null;
+    let polyfill: Function | null = null;
     if (key === 'meta') {
       // ignore
     } else if (typeof gl[key] === 'function') {

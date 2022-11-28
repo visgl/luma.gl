@@ -65,8 +65,8 @@ test('Model#construct/destruct', (t) => {
   t.ok(model.getProgram().handle, 'Created new program');
 
   model.destroy();
-  t.notOk(model.vertexArray.handle, 'Deleted vertexArray');
-  t.notOk(model.program.handle, 'Deleted program');
+  // t.notOk(model.vertexArray.handle, 'Deleted vertexArray');
+  t.ok(model.program.destroyed, 'Deleted program');
 
   t.end();
 });
@@ -91,11 +91,11 @@ test('Model#multiple delete', (t) => {
   });
 
   model1.delete();
-  t.ok(model2.program.handle, 'program still in use');
+  t.ok(!model2.program.destroyed, 'program still in use');
   model1.delete();
-  t.ok(model2.program.handle, 'program still in use');
+  t.ok(!model2.program.destroyed, 'program still in use');
   model2.delete();
-  t.notOk(model2.program.handle, 'program is released');
+  t.ok(model2.program.destroyed, 'program is released');
 
   t.end();
 });
@@ -261,7 +261,7 @@ test('Model#program management', (t) => {
 
   model3.draw();
   t.ok(model3.program !== oldProgram, 'Program updated after draw.');
-  t.ok(oldProgram.handle === null, 'Old program released after update');
+  t.ok(oldProgram.destroyed, 'Old program released after update');
 
   t.end();
 });

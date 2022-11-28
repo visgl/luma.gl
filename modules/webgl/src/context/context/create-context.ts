@@ -55,7 +55,7 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
   canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
   // Create the desired context
-  let gl = null;
+  let gl: WebGLRenderingContext | null = null;
 
   if (props.type === 'webgl2') {
     props = {...props, webgl1: false};
@@ -66,10 +66,10 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
 
   // Prefer webgl2 over webgl1 if both are acceptable
   if (props.webgl2) {
-    gl = gl || canvas.getContext('webgl2', props);
+    gl = gl || canvas.getContext('webgl2', props) as WebGL2RenderingContext | null;
   }
   if (props.webgl1) {
-    gl = gl || canvas.getContext('webgl', props);
+    gl = gl || canvas.getContext('webgl', props) as WebGLRenderingContext | null;
   }
 
   // TODO are we removing this listener before giving it a chance to fire?
@@ -83,8 +83,12 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
     );
   }
 
-  canvas.addEventListener('webglcontextlost', props.onContextLost, false);
-  canvas.addEventListener('webglcontextrestored', props.onContextRestored, false);
+  if (props.onContextLost) {
+    canvas.addEventListener('webglcontextlost', props.onContextLost, false);
+  }
+  if (props.onContextRestored) {
+    canvas.addEventListener('webglcontextrestored', props.onContextRestored, false);
+  }
 
   return gl;
 }

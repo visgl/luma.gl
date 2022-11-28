@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import {
   ShaderLayout,
   BindingLayout,
@@ -123,12 +125,16 @@ function readAttributeBindings(
   const count = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
   for (let index = 0; index < count; index++) {
-    const {name, type: compositeType, size} = gl.getActiveAttrib(program, index);
+    const activeInfo = gl.getActiveAttrib(program, index);
+    if (!activeInfo) {
+      throw new Error('activeInfo');
+    }
+    const {name, type: compositeType, size} = activeInfo;
     const location = gl.getAttribLocation(program, name);
     // Add only user provided attributes, for built-in attributes like
     // `gl_InstanceID` locaiton will be < 0
     if (location >= 0) {
-      const {glType, components} = decodeAttributeType(compositeType);
+      const {glType, components} = decodeAttributeType(compositeType);;
       const accessor: AccessorObject = {type: glType, size: size * components};
       // Any attribute name containing the word "instance" will be assumed to be instanced
       if (/instance/i.test(name)) {
@@ -158,8 +164,12 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
 
   const count = gl.getProgramParameter(program, GL.TRANSFORM_FEEDBACK_VARYINGS);
   for (let location = 0; location < count; location++) {
-    const {name, type: compositeType, size} = gl2.getTransformFeedbackVarying(program, location);
-    const {glType, components} = decodeUniformType(compositeType);
+    const activeInfo = gl2.getTransformFeedbackVarying(program, location);
+    if (!activeInfo) {
+      throw new Error('activeInfo');
+    }
+    const {name, type: compositeType, size} = activeInfo;
+    const {glType, components} = decodeUniformType(compositeType);;
     const accessor = new Accessor({type: glType, size: size * components});
     const varying = {location, name, accessor}; // Base values
     varyings.push(varying);
@@ -179,7 +189,11 @@ function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): 
 
   const uniformCount = gl.getProgramParameter(program, GL.ACTIVE_UNIFORMS);
   for (let i = 0; i < uniformCount; i++) {
-    const {name: rawName, size, type} = gl.getActiveUniform(program, i);
+    const activeInfo = gl.getActiveUniform(program, i);
+    if (!activeInfo) {
+      throw new Error('activeInfo');
+    }
+    const {name: rawName, size, type} = activeInfo;
     const {name, isArray} = parseUniformName(rawName);
     let webglLocation = gl.getUniformLocation(program, name);
     const uniformInfo = {
@@ -234,8 +248,8 @@ function readUniformBlocks(
 
   const blockCount = gl2.getProgramParameter(program, GL.ACTIVE_UNIFORM_BLOCKS);
   for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
-    const blockInfo = {
-      name: gl2.getActiveUniformBlockName(program, blockIndex),
+    const blockInfo: UniformBlockBinding = {
+      name: gl2.getActiveUniformBlockName(program, blockIndex) || '',
       location: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_BINDING),
       byteLength: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_DATA_SIZE),
       vertex: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
@@ -244,7 +258,7 @@ function readUniformBlocks(
       uniforms: [] as any[]
     };
 
-    const uniformIndices = getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES);
+    const uniformIndices = getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES) as number[] || [];
 
     const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
     const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
@@ -262,15 +276,20 @@ function readUniformBlocks(
     ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
     const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
+      const activeInfo = gl2.getActiveUniform(program, uniformIndices[i]);
+      if (!activeInfo) {
+        throw new Error('activeInfo');
+      }
+  
       blockInfo.uniforms.push({
-        name: gl2.getActiveUniform(program, uniformIndices[i]).name,
+        name: activeInfo.name,
         format: decodeUniformType(uniformType[i]).format,
         type: uniformType[i],
         arrayLength: uniformArrayLength[i],
         byteOffset: uniformOffset[i],
         byteStride: uniformStride[i],
-        matrixStride: uniformStride[i],
-        rowMajor: uniformRowMajor[i]
+        // matrixStride: uniformStride[i],
+        // rowMajor: uniformRowMajor[i]
       });
     }
 
@@ -305,18 +324,18 @@ const SAMPLER_UNIFORMS_GL_TO_GPU: Record<
   [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint']
 };
 
-function getSamplerInfo(type: GL):
-  | {
-      viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-      sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-    }
-  | undefined {
+type SamplerInfo =   | {
+  viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+};
+
+function getSamplerInfo(type: GL): SamplerInfo {
   let sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
-  if (sampler) {
-    const [viewDimension, sampleType] = sampler;
-    return {viewDimension, sampleType};
+  if (!sampler) {
+    throw new Error('sampler');
   }
-  return null;
+  const [viewDimension, sampleType] = sampler;
+  return {viewDimension, sampleType};
 }
 
 // HELPERS
