@@ -24,12 +24,31 @@ export type CubeTextureData =
 
 export type ExternalTextureData = HTMLVideoElement;
 
+export type DeprecatedWebGLTextureProps = {
+  /** @deprecated use props.sampler */
+  parameters?: Record<number, number>;
+  /** @deprecated use props.data */
+  pixels?: any;
+  /** @deprecated use props.format */
+  dataFormat?: number | null;
+  /** @deprecated rarely supported */
+  border?: number;
+  /** @deprecated WebGL only. */
+  pixelStore?: object;
+  /** @deprecated WebGL only. */
+  textureUnit?: number;
+  /** @deprecated WebGL only. Use dimension. */
+  target?: number;
+  /** @deprecated not supported */
+  recreate?: boolean;
+};
+
 /** Abstract Texture interface */
-export type TextureProps = ResourceProps & {
+export type TextureProps = ResourceProps & DeprecatedWebGLTextureProps & {
   format?: TextureFormat | number;
   dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  width?: number;
-  height?: number;
+  width?: number | undefined;
+  height?: number | undefined;
   depth?: number;
   usage?: number;
 
@@ -41,23 +60,6 @@ export type TextureProps = ResourceProps & {
   samples?: number;
   type?: number;
   compressed?: boolean;
-
-  /** @deprecated use props.sampler */
-  parameters?: Record<number, number>;
-  /** @deprecated use props.data */
-  pixels?: any;
-  /** @deprecated use props.format */
-  dataFormat?: number;
-  /** @deprecated rarely supported */
-  border?: number;
-  /** @deprecated WebGL only. */
-  pixelStore?: object;
-  /** @deprecated WebGL only. */
-  textureUnit?: number;
-  /** @deprecated WebGL only. Use dimension. */
-  target?: number;
-  /** @deprecated not supported */
-  recreate?: boolean;
 };
 
 export type WebGPUTextureProps = ResourceProps & {
@@ -78,31 +80,26 @@ export type TextureViewProps = {
   baseMipLevel?: number;
 };
 
-const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
+type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+const DEFAULT_TEXTURE_PROPS: PartialBy<Required<TextureProps>, 'width' | 'height' | 'type' | 'samples' | 'mipLevels' | 'textureUnit' | 'target' | 'dataFormat'> = {
   ...DEFAULT_RESOURCE_PROPS,
   data: null,
   dimension: '2d',
   format: 'rgba8unorm',
-  width: 1,
-  height: 1,
+  // width: undefined,
+  // height: undefined,
   depth: 1,
   mipmaps: true,
   sampler: {},
-  // parameters: {},
-  type: 0, // TODO - what is this?
+  // type: undefined,
   compressed: false,
-  samples: 1,
-  mipLevels: 1,
+  // mipLevels: 1,
   usage: 0,
-
-  /** @deprecated */
   parameters: {},
-  pixels: null,
-  dataFormat: 0,
-  border: 0,
   pixelStore: {},
-  textureUnit: 0,
-  target: 0,
+  pixels: null,
+  border: 0,
   recreate: false
 };
 
@@ -129,6 +126,7 @@ export default abstract class Texture extends Resource<TextureProps> {
   get [Symbol.toStringTag](): string { return 'Texture'; }
 
   constructor(device: Device, props: TextureProps) {
+    // @ts-expect-error
     super(device, props, DEFAULT_TEXTURE_PROPS);
   }
 
