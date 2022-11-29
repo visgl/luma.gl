@@ -164,7 +164,7 @@ export class PipelineFactory {
   _hashRenderPipeline(props: GetRenderPipelineOptions): string {
     const {modules = [], varyings = [], defines = [], inject = [], parameters = []} = props;
      const vsHash = this._getHash(props.vs);
-    const fsHash = this._getHash(props.fs);
+    const fsHash = props.fs ? this._getHash(props.fs) : 0;
 
     const moduleHashes = modules.map((m) => this._getHash(typeof m === 'string' ? m : m.name)).sort();
     const varyingHashes = varyings.map((v) => this._getHash(v));

@@ -1,5 +1,3 @@
-import headlessGL from 'gl';
-
 const ERR_HEADLESSGL_FAILED =
   'Failed to create WebGL context in Node.js, headless gl returned null';
 
@@ -15,9 +13,23 @@ const CONTEXT_DEFAULTS = {
   throwOnError: false
 };
 
-// Create headless gl context (for running under Node.js)
-// Create headless gl context (for running under Node.js)
-export function createHeadlessContext(options?: any): WebGLRenderingContext {
+/** Duck typing for the main headless gl export, a function to create contexts */
+export type HeadlessGL = (width: number, height: number, options: Record<string, unknown>) => WebGLRenderingContext;
+
+let headlessGL: HeadlessGL | null = null; 
+
+/** By importing `gl` and registering it with this function, contexts can be created under Node.js */
+export function registerHeadlessGL(headlessgl: HeadlessGL) {
+  headlessGL = headlessgl;
+}
+
+/** @returns true if headless gl is registered */
+export function isHeadlessGLRegistered(): boolean {
+  return headlessGL !== null;
+}
+
+/** Create headless gl context (for running under Node.js) */
+export function createHeadlessContext(options?: Record<string, any>): WebGLRenderingContext {
   options = {...CONTEXT_DEFAULTS, ...options};
 
   const {width, height, webgl1, webgl2} = options;

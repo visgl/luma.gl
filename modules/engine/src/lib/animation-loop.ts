@@ -215,7 +215,10 @@ export class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       // call callback
-      this.props.onFinalize(this._getAnimationProps());
+      // If stop is called immediately, we can end up in a state where props haven't been initialized...
+      if (this.animationProps) {
+        this.props.onFinalize(this.animationProps);
+      }
 
       this._cancelAnimationFrame();
       this._nextFramePromise = null;

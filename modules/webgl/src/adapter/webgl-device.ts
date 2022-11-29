@@ -12,7 +12,8 @@ import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import {ContextState} from '../context/context/context-state';
-import {createBrowserContext} from '../context/context/create-context';
+import {createBrowserContext} from '../context/context/create-browser-context';
+import {createHeadlessContext, isHeadlessGLRegistered} from '../context/context/create-headless-context';
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
@@ -65,7 +66,7 @@ export default class WebGLDevice extends Device implements ContextState {
   static type: string = 'webgl';
 
   static isSupported(): boolean {
-    return typeof WebGLRenderingContext !== 'undefined';
+    return typeof WebGLRenderingContext !== 'undefined' || isHeadlessGLRegistered();
   }
 
   readonly info: DeviceInfo;
@@ -171,7 +172,11 @@ export default class WebGLDevice extends Device implements ContextState {
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, props);
 
-    this.handle = props.gl || createBrowserContext(this.canvasContext.canvas, props);
+    let gl = props.gl;
+    gl = gl || (isBrowser() && createBrowserContext(this.canvasContext.canvas, props));
+    gl = gl || (!isBrowser() && createHeadlessContext(props));
+
+    this.handle = gl;
     this.gl = this.handle;
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
@@ -187,8 +192,15 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // Add subset of WebGL2 methods to WebGL1 context
     polyfillContext(this.gl);
+
     // Install context state tracking
-    trackContextState(this.gl, {copyState: false, log: (...args: any[]) => log.log(1, ...args)()});
+    // @ts-expect-error - hidden parameters
+    const {enable = true, copyState = false} = props;
+    trackContextState(this.gl, {
+      enable,
+      copyState, 
+      log: (...args: any[]) => log.log(1, ...args)()
+    });
 
     // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
     if (isBrowser() && props.debug) {

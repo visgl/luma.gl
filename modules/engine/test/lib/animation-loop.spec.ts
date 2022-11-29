@@ -94,7 +94,7 @@ test('engine#AnimationLoop two start()s should only run one loop', async (t) => 
   t.end();
 });
 
-test('engine#AnimationLoop start followed immediately by stop() should stop', (t) => {
+test.skip('engine#AnimationLoop start followed immediately by stop() should stop', (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({

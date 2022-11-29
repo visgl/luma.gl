@@ -1,19 +1,9 @@
 // luma.gl, MIT license
 
-import {isBrowser} from '@probe.gl/env';
 import type {Device, DeviceProps} from '@luma.gl/api';
 import {luma} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
-import {createHeadlessContext} from './create-headless-context';
-
-const ERR_HEADLESSGL_FAILED =
-  'Failed to create WebGL context in Node.js, headless gl returned null';
-
-const ERR_HEADLESSGL_LOAD = `\
-  luma.gl: loaded under Node.js without headless gl installed, meaning that WebGL \
-  contexts can not be created. This may not be an error. For example, this is a \
-  typical configuration for isorender applications running on the server.`;
 
 const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
   width: 1,
@@ -21,10 +11,16 @@ const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
   debug: true
 };
 
+/** Create a test WebGL context */
+export function createTestContext(opts: Record<string, any> = {}): WebGLRenderingContext | null {
+  const device = createTestDevice(opts);
+  return device && device.gl;
+}
+
+/** Create a test WebGLDevice */
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
-    const gl = !isBrowser() ? createHeadlessContext(props) : undefined;
-    props = {...CONTEXT_DEFAULTS, ...props, gl, debug: true};
+    props = {...CONTEXT_DEFAULTS, ...props, debug: true};
     // We dont use luma.createDevice since this tests current expect this context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
