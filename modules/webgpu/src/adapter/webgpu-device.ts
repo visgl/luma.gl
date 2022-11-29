@@ -38,10 +38,10 @@ export default class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
   readonly lost: Promise<{reason: 'destroyed', message: string}>;
-  canvasContext: WebGPUCanvasContext | undefined;
+  canvasContext: WebGPUCanvasContext | null = null;
 
-  commandEncoder: GPUCommandEncoder;
-  renderPass: WebGPURenderPass;
+  commandEncoder: GPUCommandEncoder | null = null;
+  renderPass: WebGPURenderPass | null = null;
 
   private _info: DeviceInfo;
   private _isLost: boolean = false;
@@ -212,14 +212,14 @@ export default class WebGPUDevice extends Device {
    */
   getDefaultRenderPass(): WebGPURenderPass {
     this.renderPass = this.renderPass || this.beginRenderPass({
-      framebuffer: this.canvasContext.getCurrentFramebuffer()
+      framebuffer: this.canvasContext?.getCurrentFramebuffer()
     });
     return this.renderPass;
   }
 
   submit(): void {
-    this.renderPass.endPass();
-    const commandBuffer = this.commandEncoder.finish();
+    this.renderPass?.endPass();
+    const commandBuffer = this.commandEncoder?.finish();
     this.handle.queue.submit([commandBuffer]);
     this.commandEncoder = null;
     this.renderPass = null;

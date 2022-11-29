@@ -7,13 +7,13 @@ import WebGPUComputePipeline from './webgpu-compute-pipeline';
 export default class WebGPUComputePass extends ComputePass {
   readonly device: WebGPUDevice;
   readonly handle: GPUComputePassEncoder;
-  _bindGroupLayout: GPUBindGroupLayout;
+  _bindGroupLayout: GPUBindGroupLayout | null = null;
 
   constructor(device: WebGPUDevice, props: ComputePassProps) {
     super(device, props);
     this.device = device;
 
-    this.handle = this.props.handle || device.commandEncoder.beginComputePass({
+    this.handle = this.props.handle || device.commandEncoder?.beginComputePass({
       label: this.props.id,
       // timestampWrites?: GPUComputePassTimestampWrites;
     });
