@@ -1,4 +1,4 @@
-import type {Binding, RenderPass} from '@luma.gl/api';
+import type {Binding, RenderPass, Shader} from '@luma.gl/api';
 import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -20,6 +20,9 @@ export default class WebGPURenderPipeline extends RenderPipeline {
   device: WebGPUDevice;
   handle: GPURenderPipeline;
 
+  vs: WebGPUShader;
+  fs: WebGPUShader | null = null;
+
   private _bufferSlots: Record<string, number>;
   private _buffers: Buffer[];
   private _indexBuffer: WebGPUBuffer;
@@ -35,6 +38,9 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     this.device = device;
     this.handle = (this.props.handle as GPURenderPipeline) || this.createHandle();
     this.handle.label = this.props.id;
+
+    this.vs = cast<WebGPUShader>(props.vs);
+    this.fs = cast<WebGPUShader>(props.fs);
 
     this._bufferSlots = getBufferSlots(this.props.layout, this.props.bufferMap);
     this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);

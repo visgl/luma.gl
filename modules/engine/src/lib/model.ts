@@ -1,9 +1,11 @@
+// luma.gl, MIT license
+
 import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding} from '@luma.gl/api';
 import {RenderPipeline, Shader, cast} from '@luma.gl/api';
 import type { ShaderModule } from '@luma.gl/shadertools';
 import type Geometry from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
-import PipelineFactory from './pipeline-factory';
+import {PipelineFactory} from './pipeline-factory';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
@@ -59,7 +61,7 @@ export default class Model {
       this.topology = this.props.geometry.topology;
     }
 
-    const {renderPipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
+    const {pipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
       ...this.props,
       vs: this.vs,
       fs: this.fs,
@@ -70,7 +72,7 @@ export default class Model {
       layout: props.layout
     });
 
-    this.pipeline = renderPipeline;
+    this.pipeline = pipeline;
     this._getModuleUniforms = getUniforms;
 
     if (this.props.geometry) {

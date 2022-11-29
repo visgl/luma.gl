@@ -10,7 +10,7 @@ export type GetRenderPipelineOptions = {
   parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
-  defines?: Record<string, string>,
+  defines?: Record<string, string | number | boolean>,
   inject?: Record<string, string>,
   transpileToGLSL100?: boolean;
 
@@ -46,7 +46,7 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
 };
 
 /** Efficiently create shared pipelines with varying parameters */
-export default class PipelineFactory {
+export class PipelineFactory {
   readonly device: Device;
 
   stateHash: number = 0; // Used to change hashing if hooks are modified
@@ -72,18 +72,18 @@ export default class PipelineFactory {
     this.device = device;
   }
 
-  // addDefaultModule(module: ShaderModule): void {
-  //   if (!this._defaultModules.find((m) => m.name === (typeof module === 'string' ? module : module.name))) {
-  //     this._defaultModules.push(module);
-  //   }
-  //   this.stateHash++;
-  // }
+  addDefaultModule(module: ShaderModule): void {
+    if (!this._defaultModules.find((m) => m.name === (typeof module === 'string' ? module : module.name))) {
+      this._defaultModules.push(module);
+    }
+    this.stateHash++;
+  }
 
-  // removeDefaultModule(module: ShaderModule): void {
-  //   const moduleName = typeof module === 'string' ? module : module.name;
-  //   this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
-  //   this.stateHash++;
-  // }
+  removeDefaultModule(module: ShaderModule): void {
+    const moduleName = typeof module === 'string' ? module : module.name;
+    this._defaultModules = this._defaultModules.filter((m) => m.name !== moduleName);
+    this.stateHash++;
+  }
 
   addShaderHook(hook, opts?): void {
     if (opts) {
@@ -94,7 +94,7 @@ export default class PipelineFactory {
   }
 
   createRenderPipeline(options: GetRenderPipelineOptions): {
-    renderPipeline: RenderPipeline;
+    pipeline: RenderPipeline;
     getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>;
   } {
     const props: Required<GetRenderPipelineOptions> = {...DEFAULT_RENDER_PIPELINE_OPTIONS, ...options};
@@ -104,9 +104,9 @@ export default class PipelineFactory {
     const hash = this._hashRenderPipeline({...props, modules});
 
     if (!this._pipelineCache[hash]) {
-      const {renderPipeline, getUniforms} = this._createRenderPipeline({...props, modules});
-      renderPipeline.hash = hash;
-      this._pipelineCache[hash] = renderPipeline;
+      const {pipeline, getUniforms} = this._createRenderPipeline({...props, modules});
+      pipeline.hash = hash;
+      this._pipelineCache[hash] = pipeline;
       this._getUniforms[hash] = getUniforms || ((x: Record<string, Record<string, any>>) => {});
       this._useCounts[hash] = 0;
     }
@@ -114,7 +114,7 @@ export default class PipelineFactory {
     this._useCounts[hash]++;
 
     return {
-      renderPipeline: this._pipelineCache[hash],
+      pipeline: this._pipelineCache[hash],
       getUniforms: this._getUniforms[hash]
     };
   }
@@ -137,7 +137,7 @@ export default class PipelineFactory {
   // PRIVATE
 
   _createRenderPipeline(props: GetRenderPipelineOptions): {
-    renderPipeline: RenderPipeline,
+    pipeline: RenderPipeline,
     getUniforms: (props: Record<string, Record<string, any>>) => Record<string, any>
   } {
     const platformInfo = {
@@ -147,13 +147,13 @@ export default class PipelineFactory {
 
     const assembled = assembleShaders(platformInfo, {...props, hookFunctions: this._hookFunctions});
 
-    const renderPipeline = this.device.createRenderPipeline({
+    const pipeline = this.device.createRenderPipeline({
       ...props,
       vs: this.device.createShader({stage: 'vertex', source: assembled.vs}),
       fs: assembled.fs && this.device.createShader({stage: 'fragment', source: assembled.fs}),
     });
 
-    return {renderPipeline, getUniforms: assembled.getUniforms};
+    return {pipeline, getUniforms: assembled.getUniforms};
   }
 
   /** Calculate a hash based on all the inputs for a render pipeline */
@@ -166,12 +166,12 @@ export default class PipelineFactory {
 
     const defineKeys = Object.keys(props.defines).sort();
     const injectKeys = Object.keys(props.inject).sort();
-    const defineHashes = [];
-    const injectHashes = [];
+    const defineHashes: number[] = [];
+    const injectHashes: number[] = [];
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));
-      defineHashes.push(this._getHash(props.defines[key]));
+      defineHashes.push(this._getHash(String(props.defines[key])));
     }
 
     for (const key of injectKeys) {
