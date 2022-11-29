@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-webgpu-two-cubes",
-  "version": "9.0.0-alpha.5",
+  "version": "9.0.0-alpha.6",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.5",
-    "@luma.gl/webgpu": "9.0.0-alpha.5",
+    "@luma.gl/engine": "9.0.0-alpha.6",
+    "@luma.gl/webgpu": "9.0.0-alpha.6",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {
