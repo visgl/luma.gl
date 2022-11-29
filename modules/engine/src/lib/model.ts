@@ -9,7 +9,7 @@ import {PipelineFactory} from './pipeline-factory';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
-  vs: {glsl?: string; wgsl?: string} | string | null;
+  vs?: {glsl?: string; wgsl?: string} | string | null;
   fs?: {glsl?: string; wgsl?: string} | string | null;
   modules?: ShaderModule[];
   moduleSettings?: Record<string, Record<string, any>>;
@@ -34,13 +34,8 @@ export default class Model {
   readonly pipeline: RenderPipeline;
   readonly id: string;
   readonly vs: string;
-<<<<<<< HEAD
-  readonly fs: string | undefined;
-  readonly topology: PrimitiveTopology;
-=======
   readonly fs: string | null = null;
-  readonly topology: string;
->>>>>>> cfc17d10 (chore(engine): strict typescript option)
+  readonly topology: PrimitiveTopology;
   readonly vertexCount;
   props: Required<ModelProps>;
 

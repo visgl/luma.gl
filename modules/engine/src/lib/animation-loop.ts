@@ -245,10 +245,13 @@ export class AnimationLoop {
     return this._nextFramePromise;
   }
 
-  async toDataURL() {
+  async toDataURL(): Promise<string> {
     this.setNeedsRedraw('toDataURL');
     await this.waitForRender();
-    return this.canvas.toDataURL();
+    if (this.canvas instanceof HTMLCanvasElement) {
+      return this.canvas.toDataURL();
+    }
+    throw new Error('OffscreenCanvas');
   }
 
   onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
@@ -425,7 +428,6 @@ export class AnimationLoop {
   async _createDevice() {
     const deviceProps = {...this.props, ...this.props.deviceProps};
     this.device = await this.onCreateDevice(deviceProps);
-    // @ts-expect-error
     this.canvas = this.device.canvasContext.canvas;
     this._createInfoDiv();
   }
@@ -441,7 +443,9 @@ export class AnimationLoop {
       div.style.bottom = '10px';
       div.style.width = '300px';
       div.style.background = 'white';
-      wrapperDiv.appendChild(this.canvas);
+      if (this.canvas instanceof HTMLCanvasElement) {
+        wrapperDiv.appendChild(this.canvas);
+      }
       wrapperDiv.appendChild(div);
       const html = this.props.onAddHTML(div);
       if (html) {
