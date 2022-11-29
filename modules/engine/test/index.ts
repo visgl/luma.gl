@@ -1,6 +1,6 @@
 // import './lib/model.spec';
 // import './lib/animation-loop.spec';
-// import './lib/program-manager.spec';
+import './lib/pipeline-factory.spec';
 
 import './geometry/geometries.spec';
 import './geometry/geometry.spec';

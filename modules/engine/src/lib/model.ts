@@ -61,7 +61,7 @@ export default class Model {
       this.topology = this.props.geometry.topology;
     }
 
-    const {renderPipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
+    const {pipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
       ...this.props,
       vs: this.vs,
       fs: this.fs,
@@ -72,7 +72,7 @@ export default class Model {
       layout: props.layout
     });
 
-    this.pipeline = renderPipeline;
+    this.pipeline = pipeline;
     this._getModuleUniforms = getUniforms;
 
     if (this.props.geometry) {

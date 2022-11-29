@@ -93,6 +93,8 @@ export default abstract class RenderPipeline extends Resource<RenderPipelineProp
   get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   hash: string = '';
+  abstract vs: Shader;
+  abstract fs: Shader | null;
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, DEFAULT_RENDER_PIPELINE_PROPS);

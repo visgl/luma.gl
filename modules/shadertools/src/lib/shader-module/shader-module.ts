@@ -12,7 +12,7 @@ export type ShaderModule = {
   uniforms?: Record<string, PropType>;
   getUniforms?: any;
   defines?: Record<string, string | number>;
-  inject?: Record<string, string>;
+  inject?: Record<string, string | {injection: string; order: number;}>;
   dependencies?: ShaderModule[];
   deprecations?: ShaderModuleDeprecation[];
   /** @deprecated Use vs */
