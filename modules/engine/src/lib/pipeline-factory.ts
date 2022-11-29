@@ -1,34 +1,35 @@
-import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
+import type {RenderPipelineProps, RenderPipelineParameters, PrimitiveTopology, ShaderLayout} from '@luma.gl/api';
 import {Device, RenderPipeline, ComputePipeline} from '@luma.gl/api/';
 import type { ShaderModule } from '@luma.gl/shadertools';
 import {assembleShaders} from '@luma.gl/shadertools';
 
 export type GetRenderPipelineOptions = {
-  vs: string,
-  fs: string,
-  topology;
+  vs: string;
+  fs: string;
+  topology: PrimitiveTopology;
+  layout?: ShaderLayout;
   parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
-  defines?: Record<string, string | number | boolean>,
-  inject?: Record<string, string>,
+  defines?: Record<string, string | number | boolean>;
+  inject?: Record<string, string>;
   transpileToGLSL100?: boolean;
 
-  varyings?: string[],
+  varyings?: string[];
   bufferMode?: number,  
 };
 
 export type GetComputePipelineOptions = {
-  cs: string,
-  parameters?: RenderPipelineParameters;
+  cs: string;
+    parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
-  defines?: Record<string, string>,
-  inject?: Record<string, string>,
+  defines?: Record<string, string>;
+  inject?: Record<string, string>;
   transpileToGLSL100?: boolean;
 
-  varyings?: string[],
-  bufferMode?: number,
+  varyings?: string[];
+  bufferMode?: number;
 };
 
 const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
@@ -38,6 +39,7 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
   defines: {},
   inject: {},
   transpileToGLSL100: false,
+  layout: null,
 
   varyings: [],
   bufferMode: 0x8c8d, // // varyings/bufferMode for xform feedback, 0x8c8d: SEPARATE_ATTRIBS

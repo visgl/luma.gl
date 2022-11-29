@@ -60,7 +60,6 @@ export function buildHistopyramidBaseLevel(
   });
 
   // build individual pyramid textures
-  // @ts-expect-error
   const transform = new Transform(gl, {
     _sourceTextures: {
       inTexture: texture
@@ -137,7 +136,6 @@ export function getHistoPyramid(
     }
 
     // build individual pyramid textures
-    // @ts-expect-error
     const transform = new Transform(gl, {
       _sourceTextures: {
         inTexture: pyramidTextures[0]
@@ -194,7 +192,6 @@ export function histoPyramidGenerateIndices(
   );
   const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
 
-  // @ts-expect-error
   const transform = new Transform(gl, {
     sourceBuffers: {
       keyIndex

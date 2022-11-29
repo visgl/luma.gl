@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type Device from '../device';
-import type {TypedArray} from '../../types';
+import type {TypedArray, PartialBy} from '../../types';
 import type {TextureFormat} from '../types/texture-formats';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import Sampler, {SamplerProps} from './sampler';
@@ -79,8 +79,6 @@ export type TextureViewProps = {
   mipLevels?: number;
   baseMipLevel?: number;
 };
-
-type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 const DEFAULT_TEXTURE_PROPS: PartialBy<Required<TextureProps>, 'width' | 'height' | 'type' | 'samples' | 'mipLevels' | 'textureUnit' | 'target' | 'dataFormat'> = {
   ...DEFAULT_RESOURCE_PROPS,
