@@ -60,11 +60,11 @@ export default class AppRenderLoop extends RenderLoop {
     });
   }
 
-  destroy() {
+  onFinalize() {
     this.model.destroy();
   }
 
-  frame({device}: AnimationProps) {
+  onRender({device}: AnimationProps) {
     this.model.draw();
     device.submit();
   }

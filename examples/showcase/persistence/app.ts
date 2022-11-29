@@ -188,6 +188,15 @@ export default class AppRenderLoop extends RenderLoop {
     }
   }
 
+  onFinalize(animationProps: AnimationProps): void {
+    this.mainFramebuffer.destroy();
+    this.pingpongFramebuffers[0].destroy();
+    this.pingpongFramebuffers[1].destroy();
+    this.quad.destroy();
+    this.persistenceQuad.destroy();
+    this.sphere.destroy();
+  }
+
   onRender({device, tick, width, height, aspect}: AnimationProps) {
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});

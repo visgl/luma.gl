@@ -285,6 +285,8 @@ export default class AppRenderLoop extends RenderLoop {
     this.initalizeEventHandling(canvas);
   }
 
+  onFinalize(animationProps: AnimationProps): void {}
+
   onRender({device, time, aspect}) {
     clear(device, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 

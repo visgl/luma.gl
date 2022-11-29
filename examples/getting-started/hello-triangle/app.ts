@@ -53,13 +53,13 @@ export default class AppRenderLoop extends RenderLoop {
     });
   }
 
-  destroy() {
+  onFinalize() {
     this.model.destroy();
     this.positionBuffer.destroy();
     this.colorBuffer.destroy();
   }
 
-  frame({device}: AnimationProps): void {
+  onRender({device}: AnimationProps): void {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }

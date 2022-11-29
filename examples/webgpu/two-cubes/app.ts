@@ -143,13 +143,13 @@ export default class AppRenderLoop extends RenderLoop {
     });
   }
 
-  destroy() {
+  onFinalize() {
     this.cubeModel.destroy();
     this.uniformBuffer1.destroy();
     this.uniformBuffer2.destroy();
   }
 
-  frame({device}: AnimationProps) {
+  onRender({device}: AnimationProps): void {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();
@@ -173,7 +173,6 @@ export default class AppRenderLoop extends RenderLoop {
     this.cubeModel.draw();
     device.submit();
   }
-
 }
 
 if (!globalThis.website) {
