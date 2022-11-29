@@ -422,7 +422,6 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       framebuffer: framebuffer.handle
     });
 
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
     t.equal(
@@ -431,7 +430,6 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
     );
 
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
@@ -439,10 +437,8 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING'
     );
 
-    // @ts-expect-error
     gl2.bindFramebuffer(gl2.DRAW_FRAMEBUFFER, framebufferTwo.handle);
 
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
@@ -450,7 +446,6 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
     );
 
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
@@ -458,9 +453,7 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING'
     );
 
-    // @ts-expect-error
     gl2.bindFramebuffer(gl2.READ_FRAMEBUFFER, framebufferThree.handle);
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.DRAW_FRAMEBUFFER_BINDING])[gl2.DRAW_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,
@@ -468,7 +461,6 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
       'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING'
     );
 
-    // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
     t.equal(
       fbHandle,

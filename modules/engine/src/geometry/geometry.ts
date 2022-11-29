@@ -6,7 +6,7 @@ import GL from '@luma.gl/constants';
 /**
  * Rendering primitives - "topology" specifies how to extract primitives from vertices.
  */
-export type Topology =
+export type GLTopology =
   GL.POINTS |  // draw single points.
   GL.LINES |  // draw lines. Each vertex connects to the one after it.
   GL.LINE_LOOP |  // draw lines. Each set of two vertices is treated as a separate line segment.
@@ -16,22 +16,28 @@ export type Topology =
   GL.TRIANGLE_FAN // draw a connected group of triangles.
   ;
 
-export type GeometryProps = {
+  export type GeometryAttribute = {
+    size?: number;
+    value: TypedArray;
+    [key: string]: any
+  }
+  
+  export type GeometryProps = {
   id?: string;
-  attributes?: {},
-  indices?;
+  attributes?: Record<string, GeometryAttribute>,
+  indices?: GeometryAttribute;
   vertexCount?: number;
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   /** @deprecated */
-  drawMode?: Topology;
+  drawMode?: GLTopology;
 };
 
 type GeometryAttributes = {
-  POSITION: {size: number, value: TypedArray, [key: string]: any},
-  NORMAL: {size: number, value: TypedArray, [key: string]: any},
-  TEXCOORD_0: {size: number, value: TypedArray, [key: string]: any},
-  COLOR_0?: {size: number, value: TypedArray, [key: string]: any},
+  POSITION: GeometryAttribute,
+  NORMAL: GeometryAttribute,
+  TEXCOORD_0: GeometryAttribute,
+  COLOR_0?: GeometryAttribute,
   indices?: {size?: number, value: Uint32Array | Uint16Array};
 };
 
@@ -48,19 +54,19 @@ export default class Geometry {
   };
 
   readonly id: string;
-  userData: Record<string, any> = {};
+  userData: Record<string, unknown> = {};
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   /** @deprecated */
-  readonly drawMode: Topology = GL.TRIANGLES;
+  readonly drawMode: GLTopology = GL.TRIANGLES;
 
   readonly vertexCount: number;
   readonly attributes: {
-    POSITION: {size: number, value: TypedArray, [key: string]: any},
-    NORMAL: {size: number, value: TypedArray, [key: string]: any},
-    TEXCOORD_0: {size: number, value: TypedArray, [key: string]: any},
-    COLOR_0?: {size: number, value: TypedArray, [key: string]: any},
+    POSITION: GeometryAttribute,
+    NORMAL: GeometryAttribute,
+    TEXCOORD_0: GeometryAttribute,
+    COLOR_0?: GeometryAttribute,
   };
   readonly indices?: Uint16Array | Uint32Array;
 
@@ -77,36 +83,6 @@ export default class Geometry {
     this.drawMode = drawMode;
     this.topology = props.topology || convertToTopology(drawMode);
 
-    this._setAttributes(attributes, indices);
-
-    this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
-  }
-
-  get mode() {
-    return this.drawMode;
-  }
-
-  getVertexCount(): number {
-    return this.vertexCount;
-  }
-
-  // Return an object with all attributes plus indices added as a field.
-  // getAttributes(): GeometryAttributes {
-  //   return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
-  // }
-
-  // PRIVATE
-
-  _print(attributeName): string {
-    return `Geometry ${this.id} attribute ${attributeName}`;
-  }
-
-  // Attribute
-  // value: typed array
-  // type: indices, vertices, uvs
-  // size: elements per vertex
-  // target: WebGL buffer type (string or constant)
-  _setAttributes(attributes, indices): this {
     if (indices) {
       // @ts-expect-error
       this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
@@ -115,11 +91,10 @@ export default class Geometry {
     // @ts-expect-error
     this.attributes = {};
 
-    for (const attributeName in attributes) {
-      let attribute = attributes[attributeName];
+    for (const [attributeName, attributeValue] of Object.entries(attributes)) {
 
       // Wrap "unwrapped" arrays and try to autodetect their type
-      attribute = ArrayBuffer.isView(attribute) ? {value: attribute} : attribute;
+      const attribute = ArrayBuffer.isView(attributeValue) ? {value: attributeValue} : attributeValue;
 
       assert(
         ArrayBuffer.isView(attribute.value),
@@ -148,6 +123,35 @@ export default class Geometry {
       delete this.indices.isIndexed;
     }
 
+    this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
+  }
+
+  get mode() {
+    return this.drawMode;
+  }
+
+  getVertexCount(): number {
+    return this.vertexCount;
+  }
+
+  // Return an object with all attributes plus indices added as a field.
+  // getAttributes(): GeometryAttributes {
+  //   return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
+  // }
+
+  // PRIVATE
+
+  _print(attributeName: string): string {
+    return `Geometry ${this.id} attribute ${attributeName}`;
+  }
+
+  // GeometryAttribute
+  // value: typed array
+  // type: indices, vertices, uvs
+  // size: elements per vertex
+  // target: WebGL buffer type (string or constant)
+  _setAttributes(attributes: Record<string, GeometryAttribute>, indices): this {
+
     return this;
   }
 
@@ -169,7 +173,7 @@ export default class Geometry {
   }
 }
 
-function convertToTopology(drawMode: GL): 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip' {
+function convertToTopology(drawMode: GLTopology): 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip' {
   switch (drawMode) {
     case GL.POINTS: return 'point-list'; // draw single points.
     case GL.LINES: return 'line-list'; // draw lines. Each vertex connects to the one after it.

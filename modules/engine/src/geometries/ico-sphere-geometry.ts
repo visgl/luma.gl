@@ -75,7 +75,7 @@ function tesselateIcosaHedron(props: IcoSphereGeometryProps) {
   })();
 
   for (let i = 0; i < iterations; i++) {
-    const indices2 = [];
+    const indices2: number[] = [];
     for (let j = 0; j < indices.length; j += 3) {
       const a = getMiddlePoint(indices[j + 0], indices[j + 1]);
       const b = getMiddlePoint(indices[j + 1], indices[j + 2]);

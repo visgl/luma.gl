@@ -38,5 +38,6 @@
     "@probe.gl/log": "^3.5.0",
     "@probe.gl/stats": "^3.5.0"
   },
+
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

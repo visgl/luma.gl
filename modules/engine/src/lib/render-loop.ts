@@ -25,7 +25,7 @@ export abstract class RenderLoop {
 /** Instantiates the RenderLoop once the device is created */
 class SyncInitAnimationLoop extends AnimationLoop {
   RenderLoopConstructor: typeof RenderLoop;
-  renderLoop: RenderLoop;
+  renderLoop: RenderLoop | null = null;
 
   getInfo() {
     // @ts-ignore
@@ -38,7 +38,7 @@ class SyncInitAnimationLoop extends AnimationLoop {
   }
 
   onInitialize(animationProps: AnimationProps) {
-    // @ts-expect-error
+    // @ts-expect-error abstract to prevent instantiation
     this.renderLoop = new this.RenderLoopConstructor(animationProps);
   }
 

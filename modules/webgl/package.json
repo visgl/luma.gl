@@ -39,8 +39,6 @@
     "@luma.gl/constants": "9.0.0-alpha.6",
     "@probe.gl/env": "^3.5.0"
   },
-  "devDependencies": {
-    "@luma.gl/test-utils": "9.0.0-alpha.6"
-  },
+
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

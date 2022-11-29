@@ -20,7 +20,7 @@ export type AnimationLoopProps = {
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
 
-  device?: Device;
+  device?: Device | null;
   deviceProps?: DeviceProps;
   stats?: Stats;
 
@@ -39,7 +39,7 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
-  device: undefined,
+  device: null,
   deviceProps: {},
   debug: false,
   stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
@@ -65,7 +65,7 @@ export class AnimationLoop {
 
   display: any;
 
-  needsRedraw: string | null = 'initialized';
+  needsRedraw: string | false = 'initialized';
 
   _initialized: boolean = false;
   _running: boolean = false;
@@ -159,7 +159,7 @@ export class AnimationLoop {
         this._initialize();
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
-        await this.onInitialize(this.animationProps);
+        await this.onInitialize(this._getAnimationProps());
       }
 
       // check that we haven't been stopped
@@ -194,7 +194,7 @@ export class AnimationLoop {
     this._setupFrame();
     this._updateAnimationProps();
 
-    this._renderFrame(this.animationProps);
+    this._renderFrame(this._getAnimationProps());
 
     // clear needsRedraw flag
     this._clearNeedsRedraw();
@@ -215,7 +215,7 @@ export class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       // call callback
-      this.onFinalize(this.animationProps);
+      this.onFinalize(this._getAnimationProps());
 
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
@@ -352,7 +352,7 @@ export class AnimationLoop {
   }
 
   _clearNeedsRedraw() {
-    this.needsRedraw = null;
+    this.needsRedraw = false;
   }
 
   _setupFrame() {
@@ -392,8 +392,19 @@ export class AnimationLoop {
     };
   }
 
+  _getAnimationProps(): AnimationProps {
+    if (!this.animationProps) {
+      throw new Error('animationProps');
+    }
+    return this.animationProps;
+  }
+
   // Update the context object that will be passed to app callbacks
-  _updateAnimationProps() {
+  _updateAnimationProps(): void {
+    if (!this.animationProps) {
+      return;
+    }
+
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
@@ -454,7 +465,10 @@ export class AnimationLoop {
     }
   }
 
-  _getSizeAndAspect() {
+  _getSizeAndAspect(): {width: number; height: number; aspect: number}  {
+    if (!this.device) {
+      return {width: 1, height: 1, aspect: 1};
+    }
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     const [width, height] = this.device.canvasContext.getPixelSize();
 
@@ -488,7 +502,7 @@ export class AnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device?.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 
@@ -534,9 +548,10 @@ export class AnimationLoop {
   }
 
   _onMousemove(e) {
-    this.animationProps._mousePosition = [e.offsetX, e.offsetY];
+    this._getAnimationProps()._mousePosition = [e.offsetX, e.offsetY];
   }
+
   _onMouseleave(e) {
-    this.animationProps._mousePosition = null;
+    this._getAnimationProps()._mousePosition = null;
   }
 }

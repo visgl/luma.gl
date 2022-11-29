@@ -5,7 +5,7 @@ import {assembleShaders} from '@luma.gl/shadertools';
 
 export type GetRenderPipelineOptions = {
   vs: string;
-  fs: string;
+  fs: string | null;
   topology: PrimitiveTopology;
   layout?: ShaderLayout | null;
   parameters?: RenderPipelineParameters;

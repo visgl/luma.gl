@@ -8,8 +8,9 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../core"},
+    {"path": "../api"},
     {"path": "../debug"},
-    {"path": "../webgl"}
+    {"path": "../webgl"},
+    {"path": "../webgpu"}
   ]
 }

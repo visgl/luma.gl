@@ -10,5 +10,6 @@
     "outDir": "dist"
   },
   "references": [
+    {"path": "../test-utils"}
   ]
 }

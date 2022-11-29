@@ -147,7 +147,6 @@ test.skip('WebGL#getShaderLayout#varyings', async (t) => {
       const vs = device.createShader({stage: 'vertex', source: tc.vs});
       const fs = device.createShader({stage: 'fragment', source: tc.fs});
 
-      // @ts-expect-error (varyings)
       const program = device.createRenderPipeline({vs, fs, varyings: tc.varyings});
       const shaderLayout = getShaderLayout(device.gl, program.handle);
 
