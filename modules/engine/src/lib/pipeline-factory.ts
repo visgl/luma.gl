@@ -149,7 +149,11 @@ export class PipelineFactory {
       features: this.device.features
     };
 
-    const assembled = assembleShaders(platformInfo, {...props, hookFunctions: this._hookFunctions});
+    if (!props.fs) {
+      throw new Error('fs');
+    }
+
+    const assembled = assembleShaders(platformInfo, {...props, fs: props.fs, hookFunctions: this._hookFunctions});
 
     const pipeline = this.device.createRenderPipeline({
       ...props,
