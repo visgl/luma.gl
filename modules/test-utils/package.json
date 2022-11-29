@@ -31,7 +31,8 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
-    "@probe.gl/env": "^3.5.0"
+    "@probe.gl/env": "^3.5.0",
+    "gl": "^5.0.3"
   },
   "peerDependencies": {
     "@luma.gl/api": "9.0.0-alpha.5",
