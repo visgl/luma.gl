@@ -159,7 +159,7 @@ export class AnimationLoop {
         this._initialize();
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
-        await this.onInitialize(this._getAnimationProps());
+        await this.props.onInitialize(this._getAnimationProps());
       }
 
       // check that we haven't been stopped
@@ -215,7 +215,7 @@ export class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       // call callback
-      this.onFinalize(this._getAnimationProps());
+      this.props.onFinalize(this._getAnimationProps());
 
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
@@ -252,22 +252,6 @@ export class AnimationLoop {
       return this.canvas.toDataURL();
     }
     throw new Error('OffscreenCanvas');
-  }
-
-  onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
-    return this.props.onCreateDevice(deviceProps);
-  }
-
-  onInitialize(animationProps: AnimationProps): {} | void {
-    return this.props.onInitialize(animationProps);
-  }
-
-  onRender(animationProps: AnimationProps) {
-    return this.props.onRender(animationProps);
-  }
-
-  onFinalize(animationProps: AnimationProps) {
-    return this.props.onFinalize(animationProps);
   }
 
   // PRIVATE METHODS
@@ -347,7 +331,7 @@ export class AnimationLoop {
     }
 
     // call callback
-    this.onRender(props);
+    this.props.onRender(props);
     // end callback
   }
 
@@ -438,7 +422,7 @@ export class AnimationLoop {
   /** Either uses supplied or existing context, or calls provided callback to create one */
   async _createDevice() {
     const deviceProps = {...this.props, ...this.props.deviceProps};
-    this.device = await this.onCreateDevice(deviceProps);
+    this.device = await this.props.onCreateDevice(deviceProps);
     this.canvas = this.device.canvasContext.canvas;
     this._createInfoDiv();
   }

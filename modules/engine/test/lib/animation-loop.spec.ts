@@ -15,15 +15,15 @@ test('core#AnimationLoop start,stop', (t) => {
   let renderCalled = 0;
   let finalizeCalled = 0;
 
-  const animationLoop = new AnimationLoop({
+  new AnimationLoop({
     device,
     onInitialize: () => {
       initializeCalled++;
     },
-    onRender: () => {
+    onRender: ({animationLoop}) => {
       renderCalled++;
 
-      t.is(animationLoop.device.isContextLost(), false, 'isContextLost returns false');
+      t.is(animationLoop.device.isLost, false, 'isContextLost returns false');
 
       animationLoop.stop();
 
@@ -42,9 +42,9 @@ test('core#AnimationLoop start,stop', (t) => {
 test('core#AnimationLoop redraw', (t) => {
   let renderCalled = 0;
 
-  const animationLoop = new AnimationLoop({
+  new AnimationLoop({
     device,
-    onInitialize: () => {
+    onInitialize: ({animationLoop}) => {
       animationLoop.redraw();
       animationLoop.stop();
 

@@ -136,7 +136,7 @@ void main(void) {
   }
 ];
 
-// TODO - hard to make this work consistently across local env and CI
+/** TODO - hard to make this work consistently across local env and CI
 test.skip('WebGL#getShaderLayout#varyings', async (t) => {
 
   for (const tc of TEST_CASES) {
@@ -164,3 +164,4 @@ test.skip('WebGL#getShaderLayout#varyings', async (t) => {
   }
   t.end();
 });
+ */

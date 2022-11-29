@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {createTestContext} from '@luma.gl/test-utils';
+import {gl, gl2} from '../../test-utils/test-devices';
 
 import {setParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 
@@ -10,18 +10,12 @@ import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-par
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
-const fixture = {
-  gl: createTestContext({debug: true}),
-  gl2: createTestContext({debug: true, webgl2: true, webgl1: false})
-};
-
 function stringifyTypedArray(v) {
   v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
   return JSON.stringify(v);
 }
 
 test('WebGL#set and get', (t) => {
-  const {gl} = fixture;
   resetParameters(gl);
 
   let cullFace = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
@@ -45,7 +39,6 @@ test('WebGL#set and get', (t) => {
 });
 
 test('WebGL#composite setter', (t) => {
-  const {gl} = fixture;
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
 
   resetParameters(gl);
@@ -82,7 +75,6 @@ test('WebGL#composite setter', (t) => {
 });
 
 test('WebGLState#get all parameters', (t) => {
-  const {gl} = fixture;
 
   resetParameters(gl);
 
@@ -112,7 +104,6 @@ test('WebGLState#get all parameters', (t) => {
 });
 
 test('WebGL#reset', (t) => {
-  const {gl} = fixture;
 
   // Set custom values and verify.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
@@ -147,7 +138,6 @@ test('WebGL#reset', (t) => {
 });
 
 test('WebGLState#setParameters framebuffer', (t) => {
-  const {gl} = fixture;
 
   resetParameters(gl);
 
@@ -172,7 +162,6 @@ test('WebGLState#setParameters framebuffer', (t) => {
 });
 
 test('WebGLState#setParameters read-framebuffer (WebGL2 only)', (t) => {
-  const {gl2} = fixture;
   // const gl2 = createTestContext({webgl2: true, webgl1: false});
   if (gl2) {
     resetParameters(gl2);

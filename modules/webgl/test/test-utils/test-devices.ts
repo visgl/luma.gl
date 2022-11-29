@@ -37,7 +37,7 @@ export const webgl2TestDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-
 
 export const gl = webgl1TestDevice.gl;
 export const gl1 = webgl1TestDevice.gl;
-export const gl2 = webgl2TestDevice?.gl;
+export const gl2: WebGL2RenderingContext = webgl2TestDevice?.gl as WebGL2RenderingContext;
 
 /** Synchronously get test devices (only WebGLDevices) */
 export function getWebGLTestDevices(): WebGLDevice[] {

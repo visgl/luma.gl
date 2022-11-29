@@ -1,4 +1,6 @@
 import test from 'tape-promise/tape';
+import {gl, gl2} from '../../test-utils/test-devices';
+
 import GL from '@luma.gl/constants';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/webgl';
 
@@ -8,7 +10,6 @@ import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/par
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
-import {createTestContext} from '@luma.gl/test-utils';
 import {GLParameters} from 'modules/webgl/dist';
 
 function stringifyTypedArray(v) {
@@ -16,10 +17,7 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-const fixture = {
-  gl: createTestContext(),
-  gl2: createTestContext({webgl2: true, webgl1: false})
-};
+const fixture = {gl, gl2};
 
 test('WebGL#state', (t) => {
   t.ok(getParameters, 'getParameters imported ok');

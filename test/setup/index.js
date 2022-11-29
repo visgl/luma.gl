@@ -4,7 +4,6 @@ import tapePromise from 'tape-promise';
 export default tapePromise(test_);
 export {default as deepCopy} from './deep-copy';
 
-// @ts-expect-error
 import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 
 export {getResourceCounts, getLeakedResources} from './resource-tracker.js';
