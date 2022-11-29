@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding} from '@luma.gl/api';
+import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding, PrimitiveTopology} from '@luma.gl/api';
 import {RenderPipeline, Shader, cast} from '@luma.gl/api';
 import type { ShaderModule } from '@luma.gl/shadertools';
 import type Geometry from '../geometry/geometry';
@@ -35,7 +35,7 @@ export default class Model {
   readonly id: string;
   readonly vs: string;
   readonly fs: string | undefined;
-  readonly topology: string;
+  readonly topology: PrimitiveTopology;
   readonly vertexCount;
   props: Required<ModelProps>;
 
@@ -61,14 +61,13 @@ export default class Model {
       this.topology = this.props.geometry.topology;
     }
 
-    const {pipeline, getUniforms} = PipelineFactory.getDefaultPipelineFactory(this.device).createRenderPipeline({
+    const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(this.device);
+    const {pipeline, getUniforms} = pipelineFactory.createRenderPipeline({
       ...this.props,
       vs: this.vs,
       fs: this.fs,
       topology: this.topology,
       parameters: props.parameters,
-      // Geometry in the vertex shader!
-      // @ts-expect-error
       layout: props.layout
     });
 

@@ -241,7 +241,7 @@ export type GLFunctionParameters = {
   clearDepth?: number;
   clearStencil?: number;
 
-  colorMask?: [boolean, boolean, boolean, boolean];
+  colorMask?: [boolean, boolean, boolean, boolean] | boolean[];
 
   cull?: boolean;
   cullFace?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;

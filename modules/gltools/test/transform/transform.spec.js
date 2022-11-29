@@ -85,7 +85,6 @@ test('WebGL#Transform constructor/delete', (t) => {
   // @ts-expect-error
   t.throws(() => new Transform(), 'Transform throws on missing gl context');
 
-  // @ts-expect-error
   t.throws(() => new Transform(gl), 'Transform throws on gl1 context');
 
   if (!gl2) {

@@ -1,4 +1,6 @@
-import {TypedArray} from '@luma.gl/api/types';
+// luma.gl, MIT license
+
+import {TypedArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {GLType} from '../types/webgl'
 

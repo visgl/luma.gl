@@ -10,7 +10,6 @@ export {default as Device} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {default as CanvasContext} from './adapter/canvas-context';
 
-
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resources/resource';
 export {default as Resource} from './adapter/resources/resource';
@@ -64,7 +63,7 @@ export type {UniformFormat} from './adapter/types/uniform-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
-  DepthStencilTextureFormat,
+  DepthStencilTextureFormat
 } from './adapter/types/texture-formats';
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
@@ -90,9 +89,17 @@ export {default as UniformBlock} from './lib/uniform-block';
 export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/utils/decode-texture-format';
 
-
 // GENERAL TYPES
-export type {TypedArray, TypedArrayConstructor, NumberArray} from './types';
+export type {
+  TypedArray,
+  TypedArrayConstructor,
+  NumberArray,
+  NumericArray,
+  BigIntOrNumberArray,
+  BigIntOrNumericArray,
+  ConstructorOf,
+  PartialBy
+} from './types';
 
 // GENERAL UTILS
 

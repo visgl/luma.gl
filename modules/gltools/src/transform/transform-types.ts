@@ -33,6 +33,7 @@ export type TransformProps = {
 
 /** Options that can be provided when running a Transform */
 export type TransformRunOptions = {
+  framebuffer?: Framebuffer;
   clearRenderTarget?: boolean;
   uniforms?: Record<string, any>;
   parameters?: Record<string, any>;

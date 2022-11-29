@@ -66,18 +66,18 @@ test('PipelineFactory#getDefaultPipelineFactory', (t) => {
 test('PipelineFactory#basic', (t) => {
   const pipelineFactory = new PipelineFactory(webgl1TestDevice);
 
-  const {pipeline: program1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: program1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.ok(program1, 'Got a pipeline');
 
-  const {pipeline: pipeline2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: pipeline2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.ok(program1 === pipeline2, 'Got cached pipeline');
 
   const {pipeline: definePipeline1} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     defines: {
       MY_DEFINE: true
     }
@@ -88,7 +88,7 @@ test('PipelineFactory#basic', (t) => {
   const {pipeline: definePipeline2} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     defines: {
       MY_DEFINE: true
     }
@@ -99,7 +99,7 @@ test('PipelineFactory#basic', (t) => {
   const {pipeline: modulePipeline1} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [picking]
   });
 
@@ -109,7 +109,7 @@ test('PipelineFactory#basic', (t) => {
   const {pipeline: modulePipeline2} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [picking]
   });
 
@@ -118,7 +118,7 @@ test('PipelineFactory#basic', (t) => {
   const {pipeline: defineModulePipeline1} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [picking],
     defines: {
       MY_DEFINE: true
@@ -132,7 +132,7 @@ test('PipelineFactory#basic', (t) => {
   const {pipeline: defineModulePipeline2} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [picking],
     defines: {
       MY_DEFINE: true
@@ -150,7 +150,7 @@ test('PipelineFactory#basic', (t) => {
 test('PipelineFactory#hooks', (t) => {
   const pipelineFactory = new PipelineFactory(webgl1TestDevice);
 
-  const {pipeline: preHookPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: preHookPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   pipelineFactory.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   pipelineFactory.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
@@ -158,7 +158,7 @@ test('PipelineFactory#hooks', (t) => {
     footer: 'color.a *= 1.2;\n'
   });
 
-  const {pipeline: postHookPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: postHookPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.ok(preHookPipeline !== postHookPipeline, 'Adding hooks changes hash');
 
@@ -175,7 +175,7 @@ test('PipelineFactory#hooks', (t) => {
     picking
   );
 
-  const {pipeline: noModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: noModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.ok(preHookPipeline !== noModulePipeline, 'Adding hooks changes hash');
 
@@ -200,7 +200,7 @@ test('PipelineFactory#hooks', (t) => {
   const {pipeline: modulesPipeline} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [pickingInjection]
   });
   const modulesVs = modulesPipeline.vs.source;
@@ -232,7 +232,7 @@ test('PipelineFactory#hooks', (t) => {
   const {pipeline: injectPipeline} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     inject: {
       'vs:LUMAGL_pickColor': 'color *= 0.1;',
       'fs:LUMAGL_fragmentColor': 'color += 0.1;'
@@ -247,7 +247,7 @@ test('PipelineFactory#hooks', (t) => {
   const {pipeline: injectDefinePipeline1} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     inject: {
       'vs:LUMAGL_pickColor': 'color *= 0.1;'
     }
@@ -256,7 +256,7 @@ test('PipelineFactory#hooks', (t) => {
   const {pipeline: injectDefinePipeline2} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     defines: {
       'vs:LUMAGL_pickColor': 'color *= 0.1;'
     }
@@ -270,12 +270,12 @@ test('PipelineFactory#hooks', (t) => {
 test('PipelineFactory#defaultModules', (t) => {
   const pipelineFactory = new PipelineFactory(webgl1TestDevice);
 
-  const {pipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   const  {pipeline: preDefaultModulePipeline} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [dirlight]
   });
 
@@ -283,11 +283,11 @@ test('PipelineFactory#defaultModules', (t) => {
 
   pipelineFactory.addDefaultModule(dirlight);
 
-  const {pipeline: defaultModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: defaultModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const {pipeline: modulePipeline} = pipelineFactory.createRenderPipeline({
     vs,
     fs,
-    topology: 'triangles',
+    topology: 'triangle-list',
     modules: [dirlight]
   });
 
@@ -307,7 +307,7 @@ test('PipelineFactory#defaultModules', (t) => {
 
   pipelineFactory.removeDefaultModule(dirlight);
 
-  const {pipeline: noDefaultModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: noDefaultModulePipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.ok(pipeline.fs.source === noDefaultModulePipeline.fs.source, 'Default module was removed');
   t.ok(modulePipeline.fs.source !== noDefaultModulePipeline.fs.source, 'Default module was removed');
@@ -319,7 +319,7 @@ test('PipelineFactory#defaultModules', (t) => {
   pipelineFactory.release(noDefaultModulePipeline);
 
   pipelineFactory.addDefaultModule(dirlight);
-  const {pipeline: uncachedPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: uncachedPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const defaultModuleSource = uncachedPipeline.fs.source;
 
   t.ok(defaultModulePipeline !== uncachedPipeline, 'Pipeline is not cached');
@@ -331,8 +331,8 @@ test('PipelineFactory#defaultModules', (t) => {
 test('PipelineFactory#release', (t) => {
   const pipelineFactory = new PipelineFactory(webgl1TestDevice);
 
-  const {pipeline: pipeline1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
-  const {pipeline: pipeline2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
+  const {pipeline: pipeline1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+  const {pipeline: pipeline2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   pipelineFactory.release(pipeline1);
   t.ok(!pipeline1.destroyed, 'Pipeline not deleted when still referenced.');
@@ -350,7 +350,7 @@ test('PipelineFactory#transpileToGLSL100', (t) => {
     pipelineFactory.createRenderPipeline({
       vs: VS_300,
       fs: FS_300,
-      topology: 'triangles'
+      topology: 'triangle-list'
     });
   }, "Can't compile 300 shader with WebGL 1");
 
@@ -358,14 +358,14 @@ test('PipelineFactory#transpileToGLSL100', (t) => {
     pipelineFactory.createRenderPipeline({
       vs: VS_300,
       fs: FS_300,
-      topology: 'triangles',
+      topology: 'triangle-list',
       transpileToGLSL100: true
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
-  const {pipeline: programTranspiled} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles', transpileToGLSL100: true});
-  const {pipeline: programUntranspiled} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles'});
-  const {pipeline: programTranspiled2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangles', transpileToGLSL100: true});
+  const {pipeline: programTranspiled} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list', transpileToGLSL100: true});
+  const {pipeline: programUntranspiled} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+  const {pipeline: programTranspiled2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list', transpileToGLSL100: true});
 
   t.equals(programTranspiled, programTranspiled2, 'Transpiled programs match');
   t.notEquals(

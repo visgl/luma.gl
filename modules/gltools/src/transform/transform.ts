@@ -44,7 +44,7 @@ export default class Transform {
    * Check if Transforms are supported (they are not under WebGL1)
    * @todo differentiate writing to buffer vs not
    */
-  static isSupported(device: Device | WebGL2RenderingContext): boolean {
+  static isSupported(device: Device | WebGLRenderingContext): boolean {
     try {
       const webglDevice = WebGLDevice.attach(device);
       return webglDevice.isWebGL2;
@@ -61,7 +61,7 @@ export default class Transform {
   textureTransform: TextureTransform = null;
   elementIDBuffer: Buffer = null;
 
-  constructor(device: Device | WebGL2RenderingContext, props: TransformProps = {}) {
+  constructor(device: Device | WebGLRenderingContext, props: TransformProps = {}) {
     this.device = WebGLDevice.attach(device);
     // TODO assert webgl2?
     this.gl = this.device.gl2;
