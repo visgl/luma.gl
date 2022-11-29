@@ -9,6 +9,7 @@
   },
   "references": [
     {"path": "../constants"},
-    {"path": "../webgl"}
+    {"path": "../webgl"},
+    {"path": "../test-utils"}
   ]
 }

@@ -34,6 +34,7 @@
     "@math.gl/core": "^3.5.0",
     "earcut": "^2.0.6"
   },
+
   "peerDependencies": {
     "@loaders.gl/gltf": "^3.2.12",
     "@loaders.gl/images": "^3.2.12",

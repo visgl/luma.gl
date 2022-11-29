@@ -1,32 +1,29 @@
-/*
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
+import {webgl1TestDevice as device} from '@luma.gl/test-utils';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
-test('core#AnimationLoop constructor', (t) => {
+test('engine#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
-  const {gl} = fixture;
-  const animationLoop = new AnimationLoop({gl});
+  const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
   t.end();
 });
 
-test('core#AnimationLoop start,stop', (t) => {
-  const {gl} = fixture;
+test('engine#AnimationLoop start,stop', (t) => {
   let initializeCalled = 0;
   let renderCalled = 0;
   let finalizeCalled = 0;
 
-  const animationLoop = new AnimationLoop({
-    gl,
+  new AnimationLoop({
+    device,
     onInitialize: () => {
       initializeCalled++;
     },
-    onRender: () => {
+    onRender: ({animationLoop}) => {
       renderCalled++;
 
-      t.is(animationLoop.isContextLost(), false, 'isContextLost returns false');
+      t.is(animationLoop.device.isLost, false, 'isContextLost returns false');
 
       animationLoop.stop();
 
@@ -42,13 +39,12 @@ test('core#AnimationLoop start,stop', (t) => {
   }).start();
 });
 
-test('core#AnimationLoop redraw', (t) => {
-  const {gl} = fixture;
+test('engine#AnimationLoop redraw', (t) => {
   let renderCalled = 0;
 
-  const animationLoop = new AnimationLoop({
-    gl,
-    onInitialize: () => {
+  new AnimationLoop({
+    device,
+    onInitialize: ({animationLoop}) => {
       animationLoop.redraw();
       animationLoop.stop();
 
@@ -62,12 +58,11 @@ test('core#AnimationLoop redraw', (t) => {
   }).start();
 });
 
-test('core#AnimationLoop should not call initialize more than once', async (t) => {
-  const {gl} = fixture;
+test('engine#AnimationLoop should not call initialize more than once', async (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
-    gl,
+    device,
     onInitialize: () => {
       initializeCalled++;
     }
@@ -80,12 +75,11 @@ test('core#AnimationLoop should not call initialize more than once', async (t) =
   t.end();
 });
 
-test('core#AnimationLoop two start()s should only run one loop', async (t) => {
-  const {gl} = fixture;
+test('engine#AnimationLoop two start()s should only run one loop', async (t) => {
   let renderCalled = 0;
 
   const animationLoop = new AnimationLoop({
-    gl,
+    device,
     onRender: () => {
       renderCalled++;
     }
@@ -100,12 +94,11 @@ test('core#AnimationLoop two start()s should only run one loop', async (t) => {
   t.end();
 });
 
-test('core#AnimationLoop start followed immediately by stop() should stop', (t) => {
-  const {gl} = fixture;
+test.skip('engine#AnimationLoop start followed immediately by stop() should stop', (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
-    gl,
+    device,
     onInitialize: () => {
       initializeCalled++;
     }
@@ -118,12 +111,11 @@ test('core#AnimationLoop start followed immediately by stop() should stop', (t) 
   }, 100);
 });
 
-test('core#AnimationLoop a start/stop/start should not call initialize again', (t) => {
-  const {gl} = fixture;
+test('engine#AnimationLoop a start/stop/start should not call initialize again', (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
-    gl,
+    device,
     onInitialize: () => {
       initializeCalled++;
     }
@@ -137,4 +129,3 @@ test('core#AnimationLoop a start/stop/start should not call initialize again', (
     t.end();
   }, 150);
 });
-*/

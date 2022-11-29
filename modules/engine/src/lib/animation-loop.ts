@@ -20,7 +20,7 @@ export type AnimationLoopProps = {
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
 
-  device?: Device;
+  device?: Device | null;
   deviceProps?: DeviceProps;
   stats?: Stats;
 
@@ -33,13 +33,13 @@ export type AnimationLoopProps = {
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
-  onAddHTML: undefined,
+  onAddHTML: () => '',
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
-  device: undefined,
+  device: null,
   deviceProps: {},
   debug: false,
   stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
@@ -52,12 +52,12 @@ const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
 
 /** Convenient animation loop */
 export class AnimationLoop {
-  device: Device;
-  canvas: HTMLCanvasElement; // | OffscreenCanvas;
+  device: Device | null = null;
+  canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 
   props: Required<AnimationLoopProps>;
-  animationProps: AnimationProps;
-  timeline: Timeline = null;
+  animationProps: AnimationProps | null = null;
+  timeline: Timeline | null = null;
   stats: Stats;
   cpuTime: Stat;
   gpuTime: Stat;
@@ -65,11 +65,11 @@ export class AnimationLoop {
 
   display: any;
 
-  needsRedraw: string | null = 'initialized';
+  needsRedraw: string | false = 'initialized';
 
   _initialized: boolean = false;
   _running: boolean = false;
-  _animationFrameId = null;
+  _animationFrameId: any = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
@@ -86,11 +86,11 @@ export class AnimationLoop {
     let {useDevicePixels = true} = this.props;
 
     // state
-    this.device = props.device;
+    this.device = props.device || null;
     // @ts-expect-error
     this.gl = (this.device && this.device.gl) || props.gl;
 
-    this.stats = props.stats;
+    this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
     this.frameRate = this.stats.get('Frame Rate');
@@ -127,13 +127,13 @@ export class AnimationLoop {
   // TODO - move to CanvasContext
   setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
-      this.props.autoResizeViewport = props.autoResizeViewport;
+      this.props.autoResizeViewport = props.autoResizeViewport || false;
     }
     if ('autoResizeDrawingBuffer' in props) {
-      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer;
+      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer || false;
     }
     if ('useDevicePixels' in props) {
-      this.props.useDevicePixels = props.useDevicePixels;
+      this.props.useDevicePixels = props.useDevicePixels || false;
     }
     return this;
   }
@@ -159,7 +159,7 @@ export class AnimationLoop {
         this._initialize();
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
-        await this.onInitialize(this.animationProps);
+        await this.props.onInitialize(this._getAnimationProps());
       }
 
       // check that we haven't been stopped
@@ -185,16 +185,16 @@ export class AnimationLoop {
 
   /** Explicitly draw a frame */
   redraw(): this {
-    if (this.device.isLost) {
+    if (this.device?.isLost) {
       return this;
     }
 
     this._beginTimers();
 
     this._setupFrame();
-    this._updateCallbackData();
+    this._updateAnimationProps();
 
-    this._renderFrame(this.animationProps);
+    this._renderFrame(this._getAnimationProps());
 
     // clear needsRedraw flag
     this._clearNeedsRedraw();
@@ -215,7 +215,10 @@ export class AnimationLoop {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
       // call callback
-      this.onFinalize(this.animationProps);
+      // If stop is called immediately, we can end up in a state where props haven't been initialized...
+      if (this.animationProps) {
+        this.props.onFinalize(this.animationProps);
+      }
 
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
@@ -245,26 +248,13 @@ export class AnimationLoop {
     return this._nextFramePromise;
   }
 
-  async toDataURL() {
+  async toDataURL(): Promise<string> {
     this.setNeedsRedraw('toDataURL');
     await this.waitForRender();
-    return this.canvas.toDataURL();
-  }
-
-  onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
-    return this.props.onCreateDevice(deviceProps);
-  }
-
-  onInitialize(animationProps: AnimationProps): {} | void {
-    return this.props.onInitialize(animationProps);
-  }
-
-  onRender(animationProps: AnimationProps) {
-    return this.props.onRender(animationProps);
-  }
-
-  onFinalize(animationProps: AnimationProps) {
-    return this.props.onFinalize(animationProps);
+    if (this.canvas instanceof HTMLCanvasElement) {
+      return this.canvas.toDataURL();
+    }
+    throw new Error('OffscreenCanvas');
   }
 
   // PRIVATE METHODS
@@ -273,8 +263,8 @@ export class AnimationLoop {
     this._startEventHandling();
 
     // Initialize the callback data
-    this._initializeCallbackData();
-    this._updateCallbackData();
+    this._initializeAnimationProps();
+    this._updateAnimationProps();
 
     // Default viewport setup, in case onInitialize wants to render
     this._resizeCanvasDrawingBuffer();
@@ -344,12 +334,12 @@ export class AnimationLoop {
     }
 
     // call callback
-    this.onRender(props);
+    this.props.onRender(props);
     // end callback
   }
 
   _clearNeedsRedraw() {
-    this.needsRedraw = null;
+    this.needsRedraw = false;
   }
 
   _setupFrame() {
@@ -358,7 +348,10 @@ export class AnimationLoop {
   }
 
   // Initialize the  object that will be passed to app callbacks
-  _initializeCallbackData() {
+  _initializeAnimationProps() {
+    if (!this.device) {
+      throw new Error('loop');
+    }
     this.animationProps = {
       animationLoop: this,
       device: this.device,
@@ -367,7 +360,7 @@ export class AnimationLoop {
 
       // Initial values
       useDevicePixels: this.props.useDevicePixels,
-      needsRedraw: null,
+      needsRedraw: false,
 
       // Placeholders
       width: 1,
@@ -386,8 +379,19 @@ export class AnimationLoop {
     };
   }
 
+  _getAnimationProps(): AnimationProps {
+    if (!this.animationProps) {
+      throw new Error('animationProps');
+    }
+    return this.animationProps;
+  }
+
   // Update the context object that will be passed to app callbacks
-  _updateCallbackData() {
+  _updateAnimationProps(): void {
+    if (!this.animationProps) {
+      return;
+    }
+
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
@@ -421,8 +425,7 @@ export class AnimationLoop {
   /** Either uses supplied or existing context, or calls provided callback to create one */
   async _createDevice() {
     const deviceProps = {...this.props, ...this.props.deviceProps};
-    this.device = await this.onCreateDevice(deviceProps);
-    // @ts-expect-error
+    this.device = await this.props.onCreateDevice(deviceProps);
     this.canvas = this.device.canvasContext.canvas;
     this._createInfoDiv();
   }
@@ -438,7 +441,9 @@ export class AnimationLoop {
       div.style.bottom = '10px';
       div.style.width = '300px';
       div.style.background = 'white';
-      wrapperDiv.appendChild(this.canvas);
+      if (this.canvas instanceof HTMLCanvasElement) {
+        wrapperDiv.appendChild(this.canvas);
+      }
       wrapperDiv.appendChild(div);
       const html = this.props.onAddHTML(div);
       if (html) {
@@ -447,7 +452,10 @@ export class AnimationLoop {
     }
   }
 
-  _getSizeAndAspect() {
+  _getSizeAndAspect(): {width: number; height: number; aspect: number}  {
+    if (!this.device) {
+      return {width: 1, height: 1, aspect: 1};
+    }
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     const [width, height] = this.device.canvasContext.getPixelSize();
 
@@ -481,7 +489,7 @@ export class AnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device?.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 
@@ -527,9 +535,10 @@ export class AnimationLoop {
   }
 
   _onMousemove(e) {
-    this.animationProps._mousePosition = [e.offsetX, e.offsetY];
+    this._getAnimationProps()._mousePosition = [e.offsetX, e.offsetY];
   }
+
   _onMouseleave(e) {
-    this.animationProps._mousePosition = null;
+    this._getAnimationProps()._mousePosition = null;
   }
 }

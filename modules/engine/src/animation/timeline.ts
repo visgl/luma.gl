@@ -27,7 +27,7 @@ export type AnimationOptions = {
 }
 
 type Animation = {
-  channel: number;
+  channel?: number;
   animation: {
     setTime: (time: number) => void
   }

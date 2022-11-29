@@ -12,7 +12,7 @@ surface
 `;
 
 class RoomCube extends Model {
-  constructor(device: Device, props: ModelProps) {
+  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = `\
 attribute vec3 positions;
 
@@ -44,7 +44,7 @@ void main(void) {
 }
 
 class Prism extends Model {
-  constructor(device: Device, props: ModelProps) {
+  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = `\
 attribute vec3 positions;
 attribute vec3 normals;

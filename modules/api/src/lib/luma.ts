@@ -41,7 +41,7 @@ export default class luma {
     Object.assign(DEFAULT_DEVICE_PROPS, props);
   }
 
-  /** Creates a device. Asynchronous. */
+  /** Creates a device. Asynchronously. */
   static async createDevice(props: DeviceProps = {}): Promise<Device> {
     props = {...DEFAULT_DEVICE_PROPS, ...props}
     if (props.gl) {

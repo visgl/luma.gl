@@ -136,7 +136,7 @@ void main(void) {
   }
 ];
 
-// TODO - hard to make this work consistently across local env and CI
+/** TODO - hard to make this work consistently across local env and CI
 test.skip('WebGL#getShaderLayout#varyings', async (t) => {
 
   for (const tc of TEST_CASES) {
@@ -147,7 +147,6 @@ test.skip('WebGL#getShaderLayout#varyings', async (t) => {
       const vs = device.createShader({stage: 'vertex', source: tc.vs});
       const fs = device.createShader({stage: 'fragment', source: tc.fs});
 
-      // @ts-expect-error (varyings)
       const program = device.createRenderPipeline({vs, fs, varyings: tc.varyings});
       const shaderLayout = getShaderLayout(device.gl, program.handle);
 
@@ -165,3 +164,4 @@ test.skip('WebGL#getShaderLayout#varyings', async (t) => {
   }
   t.end();
 });
+ */

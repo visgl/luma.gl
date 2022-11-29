@@ -9,23 +9,23 @@ import {PipelineFactory} from './pipeline-factory';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
-  vs?: {glsl?: string; wgsl?: string} | string;
-  fs?: {glsl?: string; wgsl?: string} | string;
+  vs?: {glsl?: string; wgsl?: string} | string | null;
+  fs?: {glsl?: string; wgsl?: string} | string | null;
   modules?: ShaderModule[];
   moduleSettings?: Record<string, Record<string, any>>;
-  geometry?: Geometry;
+  geometry?: Geometry | null;
 };
 
 const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
   ...RenderPipeline._DEFAULT_PROPS,
-  vs: undefined,
-  fs: undefined,
+  vs: null,
+  fs: null,
   id: 'unnamed',
   handle: undefined,
   userData: {},
   modules: [],
   moduleSettings: {},
-  geometry: undefined
+  geometry: null
 };
 
 /** v9 API */
@@ -34,7 +34,7 @@ export default class Model {
   readonly pipeline: RenderPipeline;
   readonly id: string;
   readonly vs: string;
-  readonly fs: string | undefined;
+  readonly fs: string | null = null;
   readonly topology: PrimitiveTopology;
   readonly vertexCount;
   props: Required<ModelProps>;
@@ -44,10 +44,13 @@ export default class Model {
   constructor(device: Device, props: ModelProps) {
     this.props = {...DEFAULT_MODEL_PROPS, ...props};
     props = this.props;
-    this.id = props.id;
+    this.id = this.props.id;
     this.device = device;
 
     // Create the pipeline
+    if (!props.vs) {
+      throw new Error('no vertex shader');
+    }
     this.vs = getShaderSource(this.device, props.vs);
     if (props.fs) {
       this.fs = getShaderSource(this.device, props.fs);
@@ -58,7 +61,7 @@ export default class Model {
 
     if (this.props.geometry) {
       this.vertexCount = this.props.geometry.vertexCount;
-      this.topology = this.props.geometry.topology;
+      this.topology = this.props.geometry.topology || 'triangle-list';
     }
 
     const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(this.device);

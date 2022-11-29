@@ -11,6 +11,8 @@ import './init'
 // Types
 export type {WebGLLimits} from './adapter/device-helpers/device-limits';
 
+export {registerHeadlessGL} from './context/context/create-headless-context';
+
 // WebGL adapter classes
 export {default as WebGLDevice} from './adapter/webgl-device';
 export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
