@@ -3,14 +3,14 @@ import {webgl1TestDevice as device} from '@luma.gl/test-utils';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
-test('core#AnimationLoop constructor', (t) => {
+test('engine#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
   t.end();
 });
 
-test('core#AnimationLoop start,stop', (t) => {
+test('engine#AnimationLoop start,stop', (t) => {
   let initializeCalled = 0;
   let renderCalled = 0;
   let finalizeCalled = 0;
@@ -39,7 +39,7 @@ test('core#AnimationLoop start,stop', (t) => {
   }).start();
 });
 
-test('core#AnimationLoop redraw', (t) => {
+test('engine#AnimationLoop redraw', (t) => {
   let renderCalled = 0;
 
   new AnimationLoop({
@@ -58,7 +58,7 @@ test('core#AnimationLoop redraw', (t) => {
   }).start();
 });
 
-test('core#AnimationLoop should not call initialize more than once', async (t) => {
+test('engine#AnimationLoop should not call initialize more than once', async (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -75,7 +75,7 @@ test('core#AnimationLoop should not call initialize more than once', async (t) =
   t.end();
 });
 
-test('core#AnimationLoop two start()s should only run one loop', async (t) => {
+test('engine#AnimationLoop two start()s should only run one loop', async (t) => {
   let renderCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -94,7 +94,7 @@ test('core#AnimationLoop two start()s should only run one loop', async (t) => {
   t.end();
 });
 
-test('core#AnimationLoop start followed immediately by stop() should stop', (t) => {
+test('engine#AnimationLoop start followed immediately by stop() should stop', (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -111,7 +111,7 @@ test('core#AnimationLoop start followed immediately by stop() should stop', (t) 
   }, 100);
 });
 
-test('core#AnimationLoop a start/stop/start should not call initialize again', (t) => {
+test('engine#AnimationLoop a start/stop/start should not call initialize again', (t) => {
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({

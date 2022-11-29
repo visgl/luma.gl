@@ -19,6 +19,7 @@ export class CubeGeometry extends Geometry {
     } : {
       ...props,
       id,
+      indices: undefined,
       attributes: {...NON_INDEXED_ATTRIBUTES, ...props.attributes}
     });
   }

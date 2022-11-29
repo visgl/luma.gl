@@ -5,6 +5,7 @@ import GL from '@luma.gl/constants';
 
 /**
  * Rendering primitives - "topology" specifies how to extract primitives from vertices.
+ * @deprecated - use string constants instead
  */
 export type GLTopology =
   GL.POINTS |  // draw single points.
@@ -16,16 +17,16 @@ export type GLTopology =
   GL.TRIANGLE_FAN // draw a connected group of triangles.
   ;
 
-  export type GeometryAttribute = {
-    size?: number;
-    value: TypedArray;
-    [key: string]: any
-  }
-  
-  export type GeometryProps = {
+export type GeometryAttribute = {
+  size?: number;
+  value: TypedArray;
+  [key: string]: any
+}
+
+export type GeometryProps = {
   id?: string;
-  attributes?: Record<string, GeometryAttribute>,
-  indices?: GeometryAttribute;
+  attributes?: Record<string, GeometryAttribute | TypedArray>,
+  indices?: GeometryAttribute | TypedArray;
   vertexCount?: number;
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
@@ -94,7 +95,7 @@ export default class Geometry {
     for (const [attributeName, attributeValue] of Object.entries(attributes)) {
 
       // Wrap "unwrapped" arrays and try to autodetect their type
-      const attribute = ArrayBuffer.isView(attributeValue) ? {value: attributeValue} : attributeValue;
+      const attribute: GeometryAttribute = ArrayBuffer.isView(attributeValue) ? {value: attributeValue} : attributeValue;
 
       assert(
         ArrayBuffer.isView(attribute.value),
@@ -125,6 +126,7 @@ export default class Geometry {
     this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);
   }
 
+  /** @deprecated Use string topology constants instead */
   get mode() {
     return this.drawMode;
   }
