@@ -169,7 +169,13 @@ export default class WebGLDevice extends Device implements ContextState {
       await loadSpectorJS();
     }
 
-    log.probe(LOG_LEVEL, 'DOM is loaded')();
+    log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
+
+    // @ts-expect-error
+    if (props.gl && props.gl.device) {
+      return WebGLDevice.attach(props.gl);
+    }
+
     return new WebGLDevice(props);
   }
 
