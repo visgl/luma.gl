@@ -17,7 +17,7 @@ export default class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
   readonly view: GPUTextureView;
-  sampler: WebGPUSampler | null = null;
+  sampler: WebGPUSampler = null;
 
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');
@@ -41,7 +41,8 @@ export default class WebGPUTexture extends Texture {
     }
 
     // Create a default sampler. This mimics the WebGL1 API where sampler props are stored on the texture
-    this.setSampler(props.sampler);
+    // this.setSampler(props.sampler);
+    this.sampler = props.sampler instanceof WebGPUSampler ? props.sampler : new WebGPUSampler(this.device, props.sampler);
 
     // TODO - To support texture arrays we need to create custom views...
     // But we are not ready to expose TextureViews to the public API.

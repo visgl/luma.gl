@@ -16,7 +16,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   depthStencilFormat: TextureFormat = 'depth24plus';
   sampleCount: number = 1;
 
-  private depthStencilAttachment: Texture;
+  private depthStencilAttachment: Texture | null = null;
 
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
@@ -64,7 +64,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
 
       if (this.depthStencilAttachment) {
         this.depthStencilAttachment.destroy();
-        this.depthStencilAttachment = undefined;
+        this.depthStencilAttachment = null;
       }
 
       // Reconfigure the canvas size.

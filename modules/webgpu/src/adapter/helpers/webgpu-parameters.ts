@@ -116,17 +116,16 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
   // COLOR
 
   colorMask: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    addColorState(descriptor);
-    const targets = descriptor.fragment?.targets as GPUColorTargetState[];
+    const targets = addColorState(descriptor);
     targets[0].writeMask = value;
   },
 
   blendColorOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    addColorState(descriptor);
-    const targets = descriptor.fragment?.targets as GPUColorTargetState[];
-    targets[0].blend = targets[0].blend || {};
-    targets[0].blend.color = targets[0].blend.color || {};
-    targets[0].blend.color.operation = value;
+    const targets = addColorState(descriptor);
+    const target = targets[0];
+    // const blend: GPUBlendState = target.blend || {color: {alpha: 0}};
+    // blend.color = blend.color || {};
+    // target.blend.color.operation = value;
   }
 
   /*
@@ -182,12 +181,12 @@ const DEFAULT_PIPELINE_DESCRIPTOR: GPURenderPipelineDescriptor = {
   },
 
   vertex: {
-    module: undefined,
+    module: undefined!,
     entryPoint: 'main'
   },
 
   fragment: {
-    module: undefined,
+    module: undefined!,
     entryPoint: 'main',
     targets: [
       // { format: props.color0Format || 'bgra8unorm' }
@@ -218,11 +217,13 @@ function setParameters(
   }
 }
 
-function addColorState(descriptor: GPURenderPipelineDescriptor): void {
-  descriptor.fragment.targets = descriptor.fragment.targets || [];
-  // @ts-expect-error
-  if (descriptor.fragment.targets.length === 0) {
-    // @ts-expect-error
-    descriptor.fragment.targets.push({});
+function addColorState(descriptor: GPURenderPipelineDescriptor): GPUColorTargetState[] {
+  descriptor.fragment!.targets = descriptor.fragment?.targets || [];
+  if (!Array.isArray(descriptor.fragment?.targets)) {
+    throw new Error('colorstate');
   }
+  if (descriptor.fragment?.targets?.length === 0) {
+    descriptor.fragment.targets?.push({});
+  }
+  return descriptor.fragment?.targets as GPUColorTargetState[];
 }

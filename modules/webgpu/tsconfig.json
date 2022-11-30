@@ -4,7 +4,6 @@
   "exclude": ["node_modules"],
   "compilerOptions": {
     "noImplicitAny": true,
-    "strict": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
