@@ -46,7 +46,7 @@ export async function loadWebGLDeveloperTools(): Promise<void> {
 
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
-export function makeDebugContext(gl: WebGLRenderingContext, props: DebugContextProps = {}): WebGLRenderingContext {
+export function makeDebugContext(gl: WebGLRenderingContext, props: DebugContextProps = {}): WebGLRenderingContext | null {
   // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
   if (!gl) {
     return null;
@@ -133,7 +133,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
 
 // Don't generate function string until it is needed
 function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs: any[]): void {
-  let functionString: string;
+  let functionString: string = '';
   if (log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
     log.log(1, functionString)();
