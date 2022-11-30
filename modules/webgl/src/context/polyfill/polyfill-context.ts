@@ -38,8 +38,6 @@ function initializeExtensions(gl: WebGLRenderingContext): void {
   for (const extensionName of EXTENSIONS) {
     const extension = gl.getExtension(extensionName);
     contextState._extensions[extensionName] = extension;
-    // TODO - this looks like a mistake?
-    contextState[extensionName] = extension;
   }
 }
 
