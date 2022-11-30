@@ -26,8 +26,6 @@ export type DeviceProps = {
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
-  onContextLost?: (event: Event) => void;
-  onContextRestored?: (event: Event) => void;
 
   // WebGLDevice parameters
   webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
@@ -63,8 +61,6 @@ export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   height: 600,
   debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
   break: [],
-  onContextLost: () => console.error('WebGL context lost'),
-  onContextRestored: () => console.info('WebGL context restored'),
 
   // alpha: undefined,
   // depth: undefined,

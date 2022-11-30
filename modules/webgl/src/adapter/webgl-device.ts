@@ -13,7 +13,10 @@ import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {trackContextState} from '../context/state-tracker/track-context-state';
 import {ContextState} from '../context/context/context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
-import {createHeadlessContext, isHeadlessGLRegistered} from '../context/context/create-headless-context';
+import {
+  createHeadlessContext,
+  isHeadlessGLRegistered
+} from '../context/context/create-headless-context';
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
@@ -61,7 +64,9 @@ let counter = 0;
 
 /** WebGPU style Device API for a WebGL context */
 export default class WebGLDevice extends Device implements ContextState {
-  // Public API
+  //
+  // Public `Device` API
+  //
 
   static type: string = 'webgl';
 
@@ -71,7 +76,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+
   readonly handle: WebGLRenderingContext;
 
   get features(): Set<DeviceFeature> {
@@ -84,12 +89,20 @@ export default class WebGLDevice extends Device implements ContextState {
     return this._limits;
   }
 
-  // WebGL specific API
+  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+
+  private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
+  private _features?: Set<DeviceFeature>;
+  private _limits?: DeviceLimits;
+
+  //
+  // WebGL-only API (not part of `Device` API)
+  //
 
   /** WebGL1 typed context. Can always be used. */
   readonly gl: WebGLRenderingContext;
   /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
-  readonly gl2: WebGL2RenderingContext;
+  readonly gl2: WebGL2RenderingContext | null = null;
   readonly debug: boolean = false;
 
   /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
@@ -102,9 +115,7 @@ export default class WebGLDevice extends Device implements ContextState {
     return this._webglLimits;
   }
 
-  private _features: Set<DeviceFeature>;
-  private _limits: DeviceLimits;
-  private _webglLimits: WebGLLimits;
+  private _webglLimits?: WebGLLimits;
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
@@ -114,6 +125,10 @@ export default class WebGLDevice extends Device implements ContextState {
 
   /** Instance of Spector.js (if initialized) */
   spector;
+
+  //
+  // Static methods, expected to be present by `luma.createDevice()`
+  //
 
   /**
    * Get a device instance from a GL context
@@ -136,7 +151,7 @@ export default class WebGLDevice extends Device implements ContextState {
     return new WebGLDevice({gl: gl as WebGLRenderingContext});
   }
 
-  static async create(props?: DeviceProps): Promise<WebGLDevice> {
+  static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
     log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created');
 
     // Wait for page to load. Only wait when props. canvas is string
@@ -154,9 +169,19 @@ export default class WebGLDevice extends Device implements ContextState {
       await loadSpectorJS();
     }
 
-    log.probe(LOG_LEVEL, 'DOM is loaded')();
+    log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
+
+    // @ts-expect-error
+    if (props.gl && props.gl.device) {
+      return WebGLDevice.attach(props.gl);
+    }
+
     return new WebGLDevice(props);
   }
+
+  //
+  // Public API
+  //
 
   constructor(props: DeviceProps) {
     super(props);
@@ -165,16 +190,31 @@ export default class WebGLDevice extends Device implements ContextState {
     // @ts-expect-error device is attached to context
     const device: WebGLDevice | undefined = props.gl?.device;
     if (device) {
-      log.warn(`WebGL context already attached to device ${device.id}`);
-      return device;
+      throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, props);
 
-    let gl = props.gl;
-    gl = gl || (isBrowser() && createBrowserContext(this.canvasContext.canvas, props));
-    gl = gl || (!isBrowser() && createHeadlessContext(props));
+    this.lost = new Promise<{reason: 'destroyed'; message: string}>((resolve) => {
+      this._resolveContextLost = resolve;
+    });
+
+    const onContextLost = (event: Event) =>
+      this._resolveContextLost?.({
+        reason: 'destroyed',
+        message: 'Computer entered sleep mode, or too many apps or browser tabs are using the GPU.'
+      });
+
+    let gl: WebGLRenderingContext | WebGL2RenderingContext | null = props.gl;
+    gl =
+      gl ||
+      (isBrowser() ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost}) : null);
+    gl = gl || (!isBrowser() ? createHeadlessContext({...props, onContextLost}) : null);
+
+    if (!gl) {
+      throw new Error('WebGL context creation failed');
+    }
 
     this.handle = gl;
     this.gl = this.handle;
@@ -187,7 +227,7 @@ export default class WebGLDevice extends Device implements ContextState {
 
     // @ts-expect-error Link webgl context back to device
     this.gl.device = this;
-    // @ts-expect-error Annotate webgl context to handle 
+    // @ts-expect-error Annotate webgl context to handle
     this.gl._version = this.isWebGL2 ? 2 : 1;
 
     // Add subset of WebGL2 methods to WebGL1 context
@@ -198,7 +238,7 @@ export default class WebGLDevice extends Device implements ContextState {
     const {enable = true, copyState = false} = props;
     trackContextState(this.gl, {
       enable,
-      copyState, 
+      copyState,
       log: (...args: any[]) => log.log(1, ...args)()
     });
 
@@ -231,15 +271,26 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * @note Has no effect for browser contexts, there is no browser API for destroying contexts
    */
   destroy() {
-    let ext = this.gl.getExtension('STACKGL_destroy_context');
+    const ext = this.gl.getExtension('STACKGL_destroy_context');
     if (ext) {
       ext.destroy();
     }
-    // ext = this.gl.getExtension('WEBGL_lose_context');
-    // if (ext) {
-    //   // TODO - disconnect context lost callbacks?
-    //   ext.loseContext();
-    // }
+  }
+
+  /**
+   * Loses the context
+   * @note Triggers context loss, mainly for testing
+   */
+  loseDevice() {
+    const ext = this.gl.getExtension('WEBGL_lose_context');
+    if (ext) {
+      ext.loseContext();
+    }
+    // loseContext should trigger context loss callback but 
+    this._resolveContextLost?.({
+      reason: 'destroyed',
+      message: 'Application triggered context loss'
+    });
   }
 
   get isLost(): boolean {
@@ -266,7 +317,9 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
 
   /** Returns a WebGL2RenderingContext or throws an error */
   assertWebGL2(): WebGL2RenderingContext {
-    assert(this.isWebGL2, 'Requires WebGL2');
+    if (!this.gl2) {
+      throw new Error('Requires WebGL2');
+    }
     return this.gl2;
   }
 
@@ -316,7 +369,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     throw new Error('compute shaders not supported in WebGL');
   }
 
-  private renderPass: WEBGLRenderPass;
+  private renderPass: WEBGLRenderPass | null = null;
 
   getDefaultRenderPass(): WEBGLRenderPass {
     this.renderPass =
@@ -333,7 +386,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * Chrome's offscreen canvas does not require gl.commit
    */
   submit(): void {
-    this.renderPass.endPass();
+    this.renderPass?.endPass();
     this.renderPass = null;
     // this.canvasContext.commit();
   }
@@ -350,7 +403,6 @@ function isWebGL(gl: any): boolean {
   // Look for debug contexts, headless gl etc
   return Boolean(gl && Number.isFinite(gl._version));
 }
-
 
 /** Check if supplied parameter is a WebGL2RenderingContext */
 function isWebGL2(gl: any): boolean {

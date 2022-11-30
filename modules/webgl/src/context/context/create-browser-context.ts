@@ -84,10 +84,14 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
   }
 
   if (props.onContextLost) {
-    canvas.addEventListener('webglcontextlost', props.onContextLost, false);
+    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
+    const {onContextLost} = props;
+    canvas.addEventListener('webglcontextlost',(event: Event) => onContextLost(event), false);
   }
   if (props.onContextRestored) {
-    canvas.addEventListener('webglcontextrestored', props.onContextRestored, false);
+    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
+    const {onContextRestored} = props;
+    canvas.addEventListener('webglcontextrestored', (event: Event) => onContextRestored(event), false);
   }
 
   return gl;

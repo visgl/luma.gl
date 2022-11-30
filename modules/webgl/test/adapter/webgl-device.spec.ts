@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
 import {createTestDevice, webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
-import {isWebGL, isWebGL2} from '@luma.gl/webgl';
+import {WebGLDevice, isWebGL, isWebGL2} from '@luma.gl/webgl';
 
 const webgl1Device = webgl1TestDevice;
 const webgl2Device = webgl2TestDevice;
@@ -138,4 +138,19 @@ test.skip('WebGLDevice#resize', (t) => {
   */
 
   t.end();
+});
+
+test('WebGLDevice#lost (Promise)', async (t) => {
+  const device = await WebGLDevice.create({webgl2: false});
+
+  // Wrap in a promise to make sure tape waits for us
+  return new Promise<void>(async (resolve) => {
+    setTimeout(async () => {
+      const cause = await device.lost;
+      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
+      t.end();
+      resolve();
+    }, 0);
+    device.loseDevice();
+  });
 });
