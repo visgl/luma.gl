@@ -25,13 +25,13 @@ export default class WebGPURenderPipeline extends RenderPipeline {
 
   private _bufferSlots: Record<string, number>;
   private _buffers: Buffer[];
-  private _indexBuffer: WebGPUBuffer;
+  private _indexBuffer: WebGPUBuffer | null = null;
   // private _firstIndex: number;
   // private _lastIndex: number;
 
   /** For internal use to create BindGroups */
   private _bindGroupLayout: GPUBindGroupLayout;
-  private _bindGroup: GPUBindGroup = null;
+  private _bindGroup: GPUBindGroup | null = null;
 
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
@@ -130,7 +130,8 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         entryPoint: this.props.fsEntryPoint || 'main',
         targets: [
           {
-            format: getWebGPUTextureFormat(this.device.canvasContext.format)
+            // TODO exclamation mark hack!
+            format: getWebGPUTextureFormat(this.device?.canvasContext?.format!)
           }
         ]
       };
@@ -186,7 +187,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       );
     } else {
       webgpuRenderPass.handle.draw(
-        options.vertexCount,
+        options.vertexCount || 0,
         options.instanceCount,
         options.firstIndex,
         options.firstInstance

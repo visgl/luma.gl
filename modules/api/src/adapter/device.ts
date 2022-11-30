@@ -241,7 +241,7 @@ export default abstract class Device {
   abstract readonly lost: Promise<{reason: 'destroyed', message: string}>;
 
   /** default canvas context */
-  abstract canvasContext: CanvasContext;
+  abstract canvasContext: CanvasContext | null;
 
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;

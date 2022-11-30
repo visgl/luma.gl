@@ -355,7 +355,7 @@ export class AnimationLoop {
     this.animationProps = {
       animationLoop: this,
       device: this.device,
-      canvas: this.device.canvasContext.canvas,
+      canvas: this.device?.canvasContext?.canvas!,
       timeline: this.timeline,
 
       // Initial values
@@ -426,7 +426,7 @@ export class AnimationLoop {
   async _createDevice() {
     const deviceProps = {...this.props, ...this.props.deviceProps};
     this.device = await this.props.onCreateDevice(deviceProps);
-    this.canvas = this.device.canvasContext.canvas;
+    this.canvas = this.device.canvasContext?.canvas!;
     this._createInfoDiv();
   }
 
@@ -457,11 +457,11 @@ export class AnimationLoop {
       return {width: 1, height: 1, aspect: 1};
     }
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device.canvasContext.getPixelSize();
+    const [width, height] = this.device?.canvasContext?.getPixelSize() || [1, 1];
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const canvas = this.device.canvasContext.canvas;
+    const canvas = this.device?.canvasContext?.canvas;
 
     // @ts-expect-error
     if (canvas && canvas.clientHeight) {
@@ -489,7 +489,7 @@ export class AnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device?.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device?.canvasContext?.resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

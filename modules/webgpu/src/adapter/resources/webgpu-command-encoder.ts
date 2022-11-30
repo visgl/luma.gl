@@ -10,14 +10,10 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
   constructor(device: WebGPUDevice, props: CommandEncoderProps) {
     super(props);
     this.device = device;
-    this.handle = this.handle || this.createHandle();
-    this.handle.label = this.props.id;
-  }
-
-  protected createHandle(): GPUCommandEncoder {
-    return this.device.handle.createCommandEncoder({
+    this.handle = props.handle || this.device.handle.createCommandEncoder({
       measureExecutionTime: this.props.measureExecutionTime
     });
+    this.handle.label = this.props.id;
   }
 
   destroy() {}
@@ -71,7 +67,12 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
         origin: options.origin ?? {},
         // aspect: options.aspect
       },
-      options.extent // default depth?
+      {
+        // TODO exclamation mark hack
+        width: options.extent![0],
+        height: options.extent![1],
+        depthOrArrayLayers: options.extent![2]
+      }
     );
   }
 

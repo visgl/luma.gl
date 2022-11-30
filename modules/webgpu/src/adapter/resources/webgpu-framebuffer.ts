@@ -17,7 +17,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
   readonly device: WebGPUDevice;
 
   colorAttachments: WebGPUTexture[] = [];
-  depthStencilAttachment: WebGPUTexture;
+  depthStencilAttachment: WebGPUTexture | null = null;
 
   /** Partial render pass descriptor. Used by WebGPURenderPass */
   renderPassDescriptor: {

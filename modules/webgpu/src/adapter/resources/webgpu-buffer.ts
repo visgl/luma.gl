@@ -36,10 +36,6 @@ export default class WebGPUBuffer extends Buffer {
     }
   }
 
-  protected createHandle(mapBuffer: boolean): GPUBuffer {
-    return
-  }
-
   destroy(): void {
     this.handle.destroy();
   }

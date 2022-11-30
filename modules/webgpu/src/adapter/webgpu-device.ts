@@ -37,11 +37,11 @@ import WebGPUCanvasContext from './webgpu-canvas-context';
 export default class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
-  readonly lost: Promise<{reason: 'destroyed', message: string}>;
-  canvasContext: WebGPUCanvasContext | undefined;
+  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  canvasContext: WebGPUCanvasContext | null = null;
 
-  commandEncoder: GPUCommandEncoder;
-  renderPass: WebGPURenderPass;
+  commandEncoder: GPUCommandEncoder | null = null;
+  renderPass: WebGPURenderPass | null = null;
 
   private _info: DeviceInfo;
   private _isLost: boolean = false;
@@ -55,29 +55,35 @@ export default class WebGPUDevice extends Device {
 
   static async create(props: DeviceProps): Promise<WebGPUDevice> {
     if (!navigator.gpu) {
-      throw new Error('WebGPU not available. Open in Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu');
+      throw new Error(
+        'WebGPU not available. Open in Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu'
+      );
     }
     log.groupCollapsed(1, 'WebGPUDevice created')();
     const adapter = await navigator.gpu.requestAdapter({
-      powerPreference: "high-performance"
+      powerPreference: 'high-performance'
       // forceSoftware: false
     });
-    log.probe(1, "Adapter available")();
+    if (!adapter) {
+      throw new Error('Failed to request WebGPU adapter');
+    }
+
+    log.probe(1, 'Adapter available')();
 
     const gpuDevice = await adapter.requestDevice({
-      requiredFeatures: adapter.features as ReadonlySet<GPUFeatureName>,
+      requiredFeatures: adapter.features as ReadonlySet<GPUFeatureName>
       // TODO ensure we obtain best limits
       // requiredLimits: adapter.limits
     });
-    log.probe(1, "GPUDevice available")();
+    log.probe(1, 'GPUDevice available')();
 
     if (typeof props.canvas === 'string') {
       await CanvasContext.pageLoaded;
-      log.probe(1, "DOM is loaded")();
+      log.probe(1, 'DOM is loaded')();
     }
 
     const device = new WebGPUDevice(gpuDevice, adapter, props);
-    log.probe(1, "Device created", device.info)();
+    log.probe(1, 'Device created', device.info)();
     log.table(1, device.info)();
     log.groupEnd(1)();
     return device;
@@ -103,9 +109,11 @@ export default class WebGPUDevice extends Device {
       rendererMasked: ''
     };
 
-    this.lost = this.handle.lost;
-    this.lost.then(_ => {
+    // "Context" loss handling
+    this.lost = new Promise<{reason: 'destroyed'; message: string}>(async (resolve) => {
+      const lostInfo = await this.handle.lost;
       this._isLost = true;
+      resolve({reason: 'destroyed', message: lostInfo.message});
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
@@ -141,12 +149,12 @@ export default class WebGPUDevice extends Device {
 
   /** @todo implement proper check? */
   isTextureFormatFilterable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format); 
+    return this.isTextureFormatSupported(format);
   }
 
   /** @todo implement proper check? */
   isTextureFormatRenderable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format); 
+    return this.isTextureFormatSupported(format);
   }
 
   get isLost(): boolean {
@@ -187,40 +195,44 @@ export default class WebGPUDevice extends Device {
 
   // WebGPU specifics
 
-  /** 
+  /**
    * Allows a render pass to begin against a canvas context
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
-  beginRenderPass(props?: RenderPassProps): WebGPURenderPass {
+  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
     this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
     return new WebGPURenderPass(this, props);
   }
 
-  beginComputePass(props?: ComputePassProps): WebGPUComputePass {
+  beginComputePass(props: ComputePassProps): WebGPUComputePass {
     this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
     return new WebGPUComputePass(this, props);
   }
 
-  createCanvasContext(props?: CanvasContextProps): WebGPUCanvasContext {
+  createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
-  /** 
+  /**
    * Gets default renderpass encoder.
-   * Creates a new encoder against default canvasContext if not already created 
+   * Creates a new encoder against default canvasContext if not already created
    * @note Called internally by Model.
    */
   getDefaultRenderPass(): WebGPURenderPass {
-    this.renderPass = this.renderPass || this.beginRenderPass({
-      framebuffer: this.canvasContext.getCurrentFramebuffer()
-    });
+    this.renderPass =
+      this.renderPass ||
+      this.beginRenderPass({
+        framebuffer: this.canvasContext?.getCurrentFramebuffer()
+      });
     return this.renderPass;
   }
 
   submit(): void {
-    this.renderPass.endPass();
-    const commandBuffer = this.commandEncoder.finish();
-    this.handle.queue.submit([commandBuffer]);
+    this.renderPass?.endPass();
+    const commandBuffer = this.commandEncoder?.finish();
+    if (commandBuffer) {
+      this.handle.queue.submit([commandBuffer]);
+    }
     this.commandEncoder = null;
     this.renderPass = null;
   }
@@ -253,24 +265,24 @@ export default class WebGPUDevice extends Device {
     features.add('index-uint32-webgl1');
     features.add('blend-minmax-webgl1');
     features.add('texture-blend-float-webgl1');
-  
+
     // TEXTURES, RENDERBUFFERS
     features.add('texture-formats-srgb-webgl1');
-  
+
     // TEXTURES
     features.add('texture-formats-depth-webgl1');
     features.add('texture-formats-float32-webgl1');
     features.add('texture-formats-float16-webgl1');
-  
+
     features.add('texture-filter-linear-float32-webgl');
     features.add('texture-filter-linear-float16-webgl');
     features.add('texture-filter-anisotropic-webgl');
-  
+
     // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
     features.add('texture-renderable-rgba32float-webgl');
     features.add('texture-renderable-float32-webgl');
     features.add('texture-renderable-float16-webgl');
-  
+
     // GLSL extensions
     features.add('glsl-frag-data');
     features.add('glsl-frag-depth');

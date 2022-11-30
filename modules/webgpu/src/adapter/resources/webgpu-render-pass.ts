@@ -35,8 +35,11 @@ export default class WebGPURenderPass extends RenderPass {
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
   setBindings(bindings: Record<string, Binding>): void {
-    this.pipeline.setBindings(bindings);
-    this.handle.setBindGroup(0, this.pipeline._getBindGroup());
+    this.pipeline?.setBindings(bindings);
+    const bindGroup = this.pipeline?._getBindGroup();
+    if (bindGroup) {
+      this.handle.setBindGroup(0, bindGroup);
+    }
   }
 
   setIndexBuffer(
@@ -71,7 +74,7 @@ export default class WebGPURenderPass extends RenderPass {
       );
     } else {
       this.handle.draw(
-        options.vertexCount,
+        options.vertexCount || 0,
         options.instanceCount,
         options.firstIndex,
         options.firstInstance
