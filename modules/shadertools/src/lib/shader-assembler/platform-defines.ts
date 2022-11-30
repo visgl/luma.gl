@@ -77,7 +77,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
     versionDefines += `\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
-#ifdef GL_OES_standard_derivatives
+#if defined(GL_OES_standard_derivatives) || defined(FEATURE_GLSL_DERIVATIVES)
 #extension GL_OES_standard_derivatives : enable
 # define FEATURE_GLSL_DERIVATIVES
 # define DERIVATIVES

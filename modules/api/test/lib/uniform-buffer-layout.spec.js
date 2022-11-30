@@ -44,7 +44,7 @@ void main(void) {
 }
 `;
 
-test.only('api#UniformBufferLayout', (t) => {
+test('api#UniformBufferLayout', (t) => {
   const std140 = new UniformBufferLayout({
     uEnabled: 'u32',
     uProjectionMatrix: 'mat4x4<f32>'

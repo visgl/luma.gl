@@ -3,6 +3,7 @@ import {Device} from '@luma.gl/api';
 import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
+import {isBrowser} from '@probe.gl/env';
 
 function getInfo(device: Device) {
   return {
@@ -83,7 +84,7 @@ void main(void) {
 
 // deck.gl mesh layer shaders
 // TODO - broken tests
-/*
+
 const VS_GLSL_300_DECK = `#version 300 es
 #define SHADER_NAME simple-mesh-layer-vs
 
@@ -159,7 +160,6 @@ void main(void) {
   fragColor = vec4(lightColor, color.a * opacity);
 }
 `;
-*/
 
 const VS_GLSL_300_GLTF = `#version 300 es
 
@@ -548,8 +548,10 @@ test('assembleShaders#transpilation', (t) => {
 
   t.ok(compileAndLinkShaders(t, webgl1TestDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
-  /* TODO - broken test, common_space varying broken
-  if (gl.getExtension('OES_standard_derivatives')) {
+  const extension = webgl1TestDevice.gl.getExtension('OES_standard_derivatives');
+  // TODO - this doesn't work in headless gl
+  if (isBrowser() && extension) {
+    t.comment(JSON.stringify(extension));
     assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK,
@@ -562,7 +564,6 @@ test('assembleShaders#transpilation', (t) => {
     );
 
   }
-  */
 
   assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
     vs: VS_GLSL_300_GLTF,
@@ -597,27 +598,27 @@ test('assembleShaders#transpilation', (t) => {
 
 function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   const gl = device.gl;
-  let vShader = gl.createShader(gl.VERTEX_SHADER);
+  let vShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader;
   gl.shaderSource(vShader, assembleResult.vs);
   gl.compileShader(vShader);
   let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
   if (!compileStatus) {
     const infoLog = gl.getShaderInfoLog(vShader);
-    t.comment(`VS COMPILATION LOG: ${infoLog}`);
+    t.comment(`VS COMPILATION FAILED LOG: ${infoLog}`);
     return false;
   }
 
-  let fShader = gl.createShader(gl.FRAGMENT_SHADER);
+  let fShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader;
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
   compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
   if (!compileStatus) {
     const infoLog = gl.getShaderInfoLog(fShader);
-    t.comment(`FS COMPLIATION LOG: ${infoLog}`);
+    t.comment(`FS COMPILATION FAILED, LOG: ${infoLog}`);
     return false;
   }
 
-  let program = gl.createProgram();
+  let program = gl.createProgram() as WebGLProgram;;
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);
@@ -625,7 +626,8 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   const linkStatus = gl.getProgramParameter(program, gl.LINK_STATUS);
   if (!linkStatus) {
     const infoLog = gl.getProgramInfoLog(program);
-    t.comment(`LINKLOG ${infoLog}`);
+    t.comment(`LINK FAILED, LOG ${infoLog}`);
+    // t.comment(assembleResult.fs.slice(1000))
   }
 
   gl.deleteShader(vShader);

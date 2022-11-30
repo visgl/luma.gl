@@ -1,9 +1,11 @@
+// luma.gl, MIT license
+
 import {Stats, Stat} from '@probe.gl/stats';
-import TestRunner, {TestRunnerOptions} from './test-runner';
+import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
 
 export default class PerformanceTestRunner extends TestRunner {
-  private _stats: Stats;
-  private _fps: Stat;
+  private _stats: Stats | null = null;
+  private _fps: Stat | null = null;
 
   constructor(props: TestRunnerOptions) {
     super(props);
@@ -14,15 +16,15 @@ export default class PerformanceTestRunner extends TestRunner {
     });
   }
 
-  initTestCase(testCase) {
+  initTestCase(testCase: TestRunnerTestCase): void {
     super.initTestCase(testCase);
     this._stats = new Stats({id: testCase.name});
     this._fps = this._stats.get('fps');
   }
 
-  shouldRender(animationProps) {
-    this._fps.timeEnd();
-    this._fps.timeStart();
+  shouldRender(animationProps: Record<string, any>): boolean {
+    this._fps?.timeEnd();
+    this._fps?.timeStart();
 
     // @ts-expect-error
     if (this._fps.count > this.testOptions.maxFramesToRender) {
@@ -32,11 +34,11 @@ export default class PerformanceTestRunner extends TestRunner {
     return true;
   }
 
-  assert(testCase) {
+  assert(testCase: TestRunnerTestCase): void {
     // @ts-expect-error
     const targetFPS = testCase.targetFPS || this.testOptions.targetFPS;
-    const count = this._fps.count;
-    const fps = this._fps.getHz();
+    const count = this._fps?.count;
+    const fps = this._fps?.getHz() || 0;
 
     if (fps >= targetFPS) {
       this._pass({fps, framesRendered: count});
