@@ -16,8 +16,12 @@ export type PrimitiveTopology =
   "point-list" |
   "line-list" |
   "line-strip" |
+  /** @deprecated */
+  'line-loop' |
   "triangle-list" |
-  "triangle-strip";
+  "triangle-strip" |
+  /** @deprecated */
+  'triangle-fan';
 
 export type IndexFormat = 'uint16' | 'uint32';
 

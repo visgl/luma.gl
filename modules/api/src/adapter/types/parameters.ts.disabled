@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import { PrimitiveTopology } from "./types/parameters";
 
 export type CompareFunction =
   'never' |
@@ -11,13 +12,6 @@ export type CompareFunction =
   'always';
 
 // Primitive state
-
-export type PrimitiveTopology =
-  "point-list" |
-  "line-list" |
-  "line-strip" |
-  "triangle-list" |
-  "triangle-strip";
 
 export type IndexFormat = 'uint16' | 'uint32';
 
