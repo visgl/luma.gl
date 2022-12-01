@@ -37,6 +37,7 @@ export type TransformRunOptions = {
   clearRenderTarget?: boolean;
   uniforms?: Record<string, any>;
   parameters?: Record<string, any>;
+  discard?: boolean;
 };
 
 /** Options that control drawing a Transform. Used by subclasses to return draw parameters */

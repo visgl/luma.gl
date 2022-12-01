@@ -9,6 +9,7 @@ import {
   typeToChannelCount,
   combineInjects
 } from '@luma.gl/shadertools';
+import {AccessorObject} from '@luma.gl/webgl';
 
 import Buffer from '../classic/buffer';
 import Texture2D from '../classic/texture-2d';
@@ -17,7 +18,7 @@ import {readPixelsToArray} from '../classic/copy-and-blit';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
 import type {TransformProps} from './transform';
-import type {TransformDrawOptions, TransformRunOptions} from './transform-types';
+import type {TransformDrawOptions} from './transform-types';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 
