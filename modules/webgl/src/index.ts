@@ -39,6 +39,7 @@ export {default as WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-
 
 // WebGL adapter classes (Legacy, will be moved to gltools)
 export {default as Accessor} from './classic/accessor';
+export type {AccessorObject} from './types';
 export type {ClassicBufferProps, ClassicBufferProps as BufferProps} from './classic/buffer';
 export {default as ClassicBuffer, default as Buffer} from './classic/buffer';
 

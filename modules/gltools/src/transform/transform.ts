@@ -1,7 +1,9 @@
 import {Device, assert, isObjectEmpty} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
-import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
+import {WebGLDevice, GLParameters, Accessor} from '@luma.gl/webgl';
+import {AccessorObject} from '@luma.gl/webgl';
+
 import type Buffer from '../classic/buffer';
 import type Framebuffer from '../classic/framebuffer';
 import {default as Texture2D} from '../classic/texture-2d';
@@ -26,14 +28,15 @@ export type TransformProps = {
   parameters?: GLParameters;
   discard?: boolean;
   isIndexed?: boolean;
+  inject?: Record<string, string>;
+  drawMode?: number;
+  framebuffer?: Framebuffer;
   _sourceTextures?: Record<string, Texture2D>;
   _targetTexture?: string | Texture2D;
   _targetTextureVarying?: string;
   _swapTexture?: string | null;
   _fs?: string;
   fs?: string;
-  inject?: Record<string, string>;
-  drawMode?: number;
 };
 
 /**

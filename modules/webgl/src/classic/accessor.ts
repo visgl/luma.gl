@@ -2,19 +2,6 @@ import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
 
-// export interface AccessorObject {
-//   offset?: number;
-//   stride?: number;
-//   type?: number;
-//   size?: number;
-//   divisor?: number;
-//   normalized?: boolean;
-//   integer?: boolean;
-
-//   buffer?: Buffer;
-//   index?: number;
-// }
-
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,
   stride: 0,
