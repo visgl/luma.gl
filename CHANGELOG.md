@@ -1,6 +1,10 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.7
+## v9.0.0-alpha.9
+
+- chore: Minor fixes for deck.gl
+
+## v9.0.0-alpha.8
 
 - chore(gltools): Add missing fields to Transform types (#1693)
 - chore(webgl): handle added topologies (#1692)
@@ -9,10 +13,13 @@
 - feat(webgl): Implement WebGPU style `lost` promise for WebGLDevice. (#1689)
 - chore(webgpu): strict typescript (part 1) (#1688)
 
-## v9.0.0-alpha.6
+## v9.0.0-alpha.7
 
 - chore(engine): strict typescript (#1686)
 - chore: various type fixes addressing deck.gl integration (#1685)
+
+## v9.0.0-alpha.6
+
 - chore(webgl): strict typescript part 1 (#1683)
 - chore(shadertools): enable "strict" typescript checking (#1682)
 - chore(api): strict typescript (#1681)
