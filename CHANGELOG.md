@@ -1,8 +1,40 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.4
+## v9.0.0-alpha.7
 
-alpha.1 through alpha.3 should be avoided. Partial releases, bad dependencies.
+- chore(gltools): Add missing fields to Transform types (#1693)
+- chore(webgl): handle added topologies (#1692)
+- fix(api): Support more topologies for WebGL (#1691)
+- chore(webgl): Avoid storing WebGL extensions on the Device object  (#1690)
+- feat(webgl): Implement WebGPU style `lost` promise for WebGLDevice. (#1689)
+- chore(webgpu): strict typescript (part 1) (#1688)
+
+## v9.0.0-alpha.6
+
+- chore(engine): strict typescript (#1686)
+- chore: various type fixes addressing deck.gl integration (#1685)
+- chore(webgl): strict typescript part 1 (#1683)
+- chore(shadertools): enable "strict" typescript checking (#1682)
+- chore(api): strict typescript (#1681)
+- chore: Address prop-types feedback (#1679)
+- chore(gltools): Initial attempt to add types to Transform class (#1680)
+- chore: Temporarily disable fp64 tests since they fail in browser-test (#1678)
+- chore: Various typescript fixes (#1677)
+- chore: Fix examples (#1676)
+
+## v9.0.0-alpha.5
+
+- chore: bump to loaders.gl@3.2.12 (#1675)
+- chore: bump to math.gl@v3.6 (#1674)
+- chore(shadertools): Fully eliminate implicit typings (#1619)    chore: revert gl to v5, pin probe to >3.5 (#1671
+- chore: bump headless-gl to v6 (#1666)
+- build(deps): bump minimatch from 3.0.4 to 3.1.2 (#1668)
+- chore: drop Node 12 from CI. Use current node version for Node setup (#1667)
+- build(deps): bump async from 2.6.3 to 2.6.4 (#1641)
+- chore(gltf-material-parser): add cleanup method (#1633)
+- Update peerDependencies
+
+- ## v9.0.0-alpha.4
 
 - (HEAD -> master, tag: v9.0.0-alpha.1, origin/master, origin/HEAD) v9.0.0-alpha.1
 - build(deps): bump follow-redirects from 1.14.7 to 1.14.8 (#1625)
