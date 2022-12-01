@@ -137,6 +137,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       };
     }
 
+    // WebGPU has more restrictive topology support than WebGL
     switch (this.props.topology) {
       case 'triangle-fan':
       case 'line-loop':
@@ -149,7 +150,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       vertex,
       fragment,
       primitive: {
-        topology: this.props.topology as GPUPrimitiveTopology
+        topology: this.props.topology
       }
     };
 
