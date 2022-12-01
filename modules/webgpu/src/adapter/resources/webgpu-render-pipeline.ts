@@ -137,12 +137,19 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       };
     }
 
+    switch (this.props.topology) {
+      case 'triangle-fan':
+      case 'line-loop':
+        throw new Error(`WebGPU does not support primitive topology ${this.props.topology}`);
+      default:
+    }
+
     // Create a partially populated descriptor
     let descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
       primitive: {
-        topology: this.props.topology
+        topology: this.props.topology as GPUPrimitiveTopology
       }
     };
 

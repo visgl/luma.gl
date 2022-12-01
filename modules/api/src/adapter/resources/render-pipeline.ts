@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type Device from '../device';
-import type {RenderPipelineParameters} from '../types/parameters';
+import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
@@ -28,7 +28,7 @@ export type RenderPipelineProps = ResourceProps & {
   layout?: ShaderLayout | null;
 
   /** Determines how vertices are read from the 'vertex' attributes */
-  topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  topology?: PrimitiveTopology;
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
   // targets...
