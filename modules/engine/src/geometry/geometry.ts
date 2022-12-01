@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type {TypedArray} from '@luma.gl/api';
+import type {PrimitiveTopology, TypedArray} from '@luma.gl/api';
 import {uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
@@ -58,7 +58,7 @@ export default class Geometry {
   userData: Record<string, unknown> = {};
 
   /** Determines how vertices are read from the 'vertex' attributes */
-  topology?: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  topology?: PrimitiveTopology;
   /** @deprecated */
   readonly drawMode: GLTopology = GL.TRIANGLES;
 
@@ -174,7 +174,7 @@ export default class Geometry {
   }
 }
 
-function convertToTopology(drawMode: GLTopology): 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip' {
+function convertToTopology(drawMode: GLTopology): PrimitiveTopology {
   switch (drawMode) {
     case GL.POINTS: return 'point-list'; // draw single points.
     case GL.LINES: return 'line-list'; // draw lines. Each vertex connects to the one after it.
@@ -182,8 +182,8 @@ function convertToTopology(drawMode: GLTopology): 'point-list' | 'line-list' | '
     case GL.TRIANGLES: return 'triangle-list'; // draw triangles. Each set of three vertices creates a separate triangle.
     case GL.TRIANGLE_STRIP: return 'triangle-strip'; // draw a connected group of triangles.
 
-    case GL.TRIANGLE_FAN: // draw a connected group of triangles.
-    case GL.LINE_LOOP:  // draw lines. Each set of two vertices is treated as a separate line segment.
+    case GL.TRIANGLE_FAN: return 'triangle-fan'; // draw a connected group of triangles.
+    case GL.LINE_LOOP: return 'line-loop'; // draw lines. Each set of two vertices is treated as a separate line segment.
     default:
       throw new Error(String(drawMode));
   }

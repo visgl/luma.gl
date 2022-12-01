@@ -17,8 +17,7 @@ import Framebuffer from '../classic/framebuffer';
 import {readPixelsToArray} from '../classic/copy-and-blit';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
-import type {TransformProps} from './transform';
-import type {TransformDrawOptions} from './transform-types';
+import type {TransformProps, TransformDrawOptions} from './transform';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
 
