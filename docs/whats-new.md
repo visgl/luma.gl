@@ -4,7 +4,7 @@
 
 ## Version 9.0
 
-Target Date: Q1, 2022
+Target Date: Q1, 2023
 
 The v9.0 release brings WebGPU support and a modernized luma.gl API. Adoption of the new API will require applications to be updated. However, all legacy v8 APIs are still available, so it should be possible to gradually migrate luma.gl v8 applications to luma.gl v9.
 
