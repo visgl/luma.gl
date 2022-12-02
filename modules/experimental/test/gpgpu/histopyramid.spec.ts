@@ -1,6 +1,6 @@
-// luma.gl, MIT license
+// luma.webgl2Device, MIT license
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
+import {webgl2Device} from '@luma.gl/test-utils';
 import {equals} from '@math.gl/core';
 
 import {Buffer, Texture2D} from '@luma.gl/gltools';
@@ -20,10 +20,8 @@ import {
 // TODO - these tests have started failing on CI, we need to debug and fix
 const DISABLE_FLAKY_TRANSFORM_TESTS = true;
 
-const gl = fixture.gl2;
-
 test('histopyramid#histoPyramid_getTexCoord', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -61,12 +59,12 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
     }
   ];
 
-  const texcoord = new Buffer(gl, 2 * 4); // 2 floats
+  const texcoord = new Buffer(webgl2Device, 2 * 4); // 2 floats
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     _sourceTextures: {
       // dummy attribute to enable texture functionality
-      inTexture: new Texture2D(gl)
+      inTexture: new Texture2D(webgl2Device)
     },
     feedbackBuffers: {
       texcoord
@@ -100,7 +98,7 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
 });
 
 test('histopyramid#histoPyramid_getPixelIndices', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -137,11 +135,11 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
     }
   ];
 
-  const pixelIndices = new Buffer(gl, 10 * 10 * 2 * 4); // enough to hold 10X10 size
-  const transform = new Transform(gl, {
+  const pixelIndices = new Buffer(webgl2Device, 10 * 10 * 2 * 4); // enough to hold 10X10 size
+  const transform = new Transform(webgl2Device, {
     _sourceTextures: {
       // dummy attribute to enable texture functionality
-      inTexture: new Texture2D(gl)
+      inTexture: new Texture2D(webgl2Device)
     },
     feedbackBuffers: {
       pixelIndices
@@ -184,9 +182,7 @@ void main()
 `;
 
 test('histopyramid#histoPyramid_getInput', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -241,7 +237,7 @@ test('histopyramid#histoPyramid_getInput', (t) => {
   ];
 
   const sourceTexture = new Texture2D(
-    gl2,
+    webgl2Device,
     Object.assign({}, TEX_OPTIONS, {
       data: sourceData,
       width: WIDTH,
@@ -250,7 +246,7 @@ test('histopyramid#histoPyramid_getInput', (t) => {
   );
 
   const destinationTexture = new Texture2D(
-    gl2,
+    webgl2Device,
     Object.assign({}, TEX_OPTIONS, {
       width: WIDTH / 2,
       height: HEIGHT / 2
@@ -261,7 +257,7 @@ test('histopyramid#histoPyramid_getInput', (t) => {
 
   const dstPixelCount = (WIDTH * HEIGHT) / 4;
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     _sourceTextures: {
       inTexture: sourceTexture
     },
@@ -309,9 +305,7 @@ void main()
 `;
 
 test('histopyramid#Minification to 1X1)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -336,7 +330,7 @@ test('histopyramid#Minification to 1X1)', (t) => {
   });
 
   const sourceTexture = new Texture2D(
-    gl2,
+    webgl2Device,
     Object.assign({}, TEX_OPTIONS, {
       data: sourceData,
       width: WIDTH,
@@ -345,7 +339,7 @@ test('histopyramid#Minification to 1X1)', (t) => {
   );
 
   const destinationTexture = new Texture2D(
-    gl2,
+    webgl2Device,
     Object.assign({}, TEX_OPTIONS, {
       width: WIDTH / 2,
       height: HEIGHT / 2
@@ -356,7 +350,7 @@ test('histopyramid#Minification to 1X1)', (t) => {
 
   const elementCount = WIDTH * HEIGHT;
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     _sourceTextures: {
       inTexture: sourceTexture
     },
@@ -467,9 +461,7 @@ const HISTOPYRAMID_TEST_CASES = [
 ];
 
 test('histopyramid#getHistoPyramid)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -490,7 +482,7 @@ test('histopyramid#getHistoPyramid)', (t) => {
     const sourceData = new Float32Array(width * height * 4).fill(0).map((_, index) => index);
 
     const sourceTexture = new Texture2D(
-      gl2,
+      webgl2Device,
       Object.assign({}, TEX_OPTIONS, {
         data: sourceData,
         width,
@@ -498,14 +490,14 @@ test('histopyramid#getHistoPyramid)', (t) => {
       })
     );
 
-    const {textureData} = buildHistopyramidBaseLevel(gl2, {
+    const {textureData} = buildHistopyramidBaseLevel(webgl2Device, {
       texture: sourceTexture,
       _readData: true
     });
 
     t.deepEqual(textureData, expectedBaseLevelData, `${name}: should return corret base texture`);
 
-    const {topLevelData} = getHistoPyramid(gl2, {texture: sourceTexture});
+    const {topLevelData} = getHistoPyramid(webgl2Device, {texture: sourceTexture});
     t.deepEqual(
       topLevelData,
       expectedTopLevelData,
@@ -517,7 +509,7 @@ test('histopyramid#getHistoPyramid)', (t) => {
 });
 
 test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -535,14 +527,14 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
   }
   `;
 
-  const weights = new Buffer(gl, new Float32Array([3, 2, 3, 1, 1, 2, 0, 5, 0, 1, 2, 3]));
-  const currentKey = new Buffer(gl, new Float32Array([4, 3, 1]));
-  const relativeIndex = new Buffer(gl, 3 * 4); // 3 floats
-  const lowerBound = new Buffer(gl, 3 * 4);
+  const weights = new Buffer(webgl2Device, new Float32Array([3, 2, 3, 1, 1, 2, 0, 5, 0, 1, 2, 3]));
+  const currentKey = new Buffer(webgl2Device, new Float32Array([4, 3, 1]));
+  const relativeIndex = new Buffer(webgl2Device, 3 * 4); // 3 floats
+  const lowerBound = new Buffer(webgl2Device, 3 * 4);
   const expectedRelativeIndex = [1, 3, 2];
   const expectedLowerBound = [3, 3, 1];
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       weights,
       currentKey
@@ -567,7 +559,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
 });
 
 test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -590,10 +582,10 @@ test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t)
   }
   `;
 
-  const lowerBound1 = new Buffer(gl, 4);
-  const lowerBound2 = new Buffer(gl, 4);
+  const lowerBound1 = new Buffer(webgl2Device, 4);
+  const lowerBound2 = new Buffer(webgl2Device, 4);
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     feedbackBuffers: {
       lowerBound1,
       lowerBound2
@@ -614,7 +606,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t)
 });
 
 test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -630,11 +622,11 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
   }
   `;
 
-  const index = new Buffer(gl, new Float32Array([0, 1, 2, 3]));
-  const coord = new Buffer(gl, 8 * 4); // 8 floats
+  const index = new Buffer(webgl2Device, new Float32Array([0, 1, 2, 3]));
+  const coord = new Buffer(webgl2Device, 8 * 4); // 8 floats
   const expectedCoord = [0, 0, 1, 0, 0, 1, 1, 1];
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {index},
     feedbackBuffers: {coord},
     vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
@@ -652,7 +644,7 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
 
 if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
   test('histopyramid#histopyramid_traversal_getWeight', (t) => {
-    if (!Transform.isSupported(gl)) {
+    if (!Transform.isSupported(webgl2Device)) {
       t.comment('Transform not available, skipping tests');
       t.end();
       return;
@@ -705,7 +697,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
     const sourceData = new Float32Array(4 * 4 * 4).fill(0).map((_, index) => index);
 
     const sourceTexture = new Texture2D(
-      gl,
+      webgl2Device,
       Object.assign({}, TEX_OPTIONS, {
         data: sourceData,
         width,
@@ -713,19 +705,19 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
       })
     );
 
-    const {flatPyramidTexture} = getHistoPyramid(gl, {texture: sourceTexture}); // _TODO: follow (gl, opts)
+    const {flatPyramidTexture} = getHistoPyramid(webgl2Device, {texture: sourceTexture}); // _TODO: follow (webgl2Device, opts)
     const size = [flatPyramidTexture.width, flatPyramidTexture.height];
 
     // level 0 is 1X1
-    const level = new Buffer(gl, new Float32Array([0, 0, 0, 0, 1]));
-    const offset = new Buffer(gl, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1, 0, 0]));
-    const weight = new Buffer(gl, 20 * 4); // 20 floats
+    const level = new Buffer(webgl2Device, new Float32Array([0, 0, 0, 0, 1]));
+    const offset = new Buffer(webgl2Device, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1, 0, 0]));
+    const weight = new Buffer(webgl2Device, 20 * 4); // 20 floats
 
     const expectedWeight = [
       0, 4, 16, 20, 8, 12, 24, 28, 32, 36, 48, 52, 40, 44, 56, 60, 40, 72, 168, 200
     ];
 
-    const transform = new Transform(gl, {
+    const transform = new Transform(webgl2Device, {
       sourceBuffers: {level, offset},
       feedbackBuffers: {weight},
       vs: `${HISTOPYRAMID_TRAVERSAL_UTILS}${VS}`,
@@ -744,7 +736,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
   });
 
   test('histopyramid#histoPyramidGenerateIndices', (t) => {
-    if (!Transform.isSupported(gl)) {
+    if (!Transform.isSupported(webgl2Device)) {
       t.comment('Transform not available, skipping tests');
       t.end();
       return;
@@ -766,7 +758,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
     ]);
 
     const sourceTexture = new Texture2D(
-      gl,
+      webgl2Device,
       Object.assign({}, TEX_OPTIONS, {
         data: sourceData,
         width: 4,
@@ -774,10 +766,10 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
       })
     );
 
-    const {locationAndIndexBuffer} = histoPyramidGenerateIndices(gl, {
+    const {locationAndIndexBuffer} = histoPyramidGenerateIndices(webgl2Device, {
       texture: sourceTexture,
       _readData: true
-    }); // _TODO: follow (gl, opts)
+    }); // _TODO: follow (webgl2Device, opts)
     const locationAndIndexData = locationAndIndexBuffer.getData();
     const actualData = [];
     // Given order of vertex generation can be different between CPU and GPU, extract

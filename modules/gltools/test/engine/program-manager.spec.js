@@ -1,4 +1,4 @@
-import {webgl1TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 
 import {ProgramManager} from '@luma.gl/gltools';
@@ -51,8 +51,8 @@ test('ProgramManager#import', (t) => {
 });
 
 test('ProgramManager#getDefaultProgramManager', (t) => {
-  const pm1 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
-  const pm2 = ProgramManager.getDefaultProgramManager(webgl1TestDevice);
+  const pm1 = ProgramManager.getDefaultProgramManager(webgl1Device);
+  const pm2 = ProgramManager.getDefaultProgramManager(webgl1Device);
 
   t.ok(pm1 instanceof ProgramManager, 'Default program manager created');
   t.ok(pm1 === pm2, 'Default program manager cached');
@@ -61,7 +61,7 @@ test('ProgramManager#getDefaultProgramManager', (t) => {
 });
 
 test('ProgramManager#basic', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const program1 = pm.get({vs, fs});
 
@@ -139,7 +139,7 @@ test('ProgramManager#basic', (t) => {
 });
 
 test('ProgramManager#hooks', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const preHookProgram = pm.get({vs, fs});
 
@@ -255,7 +255,7 @@ test('ProgramManager#hooks', (t) => {
 });
 
 test('ProgramManager#defaultModules', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const program = pm.get({vs, fs});
 
@@ -314,7 +314,7 @@ test('ProgramManager#defaultModules', (t) => {
 });
 
 test('ProgramManager#release', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const program1 = pm.get({vs, fs});
   const program2 = pm.get({vs, fs});
@@ -331,7 +331,7 @@ test('ProgramManager#release', (t) => {
 });
 
 test('ProgramManager#transpileToGLSL100', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   t.throws(() => {
     pm.get({

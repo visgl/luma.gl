@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice as device} from '@luma.gl/test-utils';
+import {webgl1Device as device} from '@luma.gl/test-utils';
 
 import {AnimationLoop} from '@luma.gl/engine';
 

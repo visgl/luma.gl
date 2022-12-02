@@ -1,10 +1,10 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {getContextDebugInfo, isWebGL, isWebGL2, resizeGLContext} from '@luma.gl/gltools';
 
-const gl1 = webgl1TestDevice.gl;
-const gl2 = webgl2TestDevice?.gl2;
+const gl1 = webgl1Device.gl;
+const gl2 = webgl2Device?.gl2;
 
 test('WebGL#getContextDebugInfo', (t) => {
   const info = getContextDebugInfo(gl1);
@@ -52,7 +52,7 @@ test.skip('WebGL#resizeGLContext', (t) => {
 
   resizeGLContext(gl1);
   t.deepEqual(
-    webgl1TestDevice._canvasSizeInfo,
+    webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
     'Canvas size info should be cached'
   );
@@ -64,7 +64,7 @@ test.skip('WebGL#resizeGLContext', (t) => {
   // gl.drawingBufferHeight = Math.floor(gl.canvas.clientHeight * DPR);
   resizeGLContext(gl1, {useDevicePixels: DPR});
   t.deepEqual(
-    webgl1TestDevice._canvasSizeInfo,
+    webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
     'Cached canvas size info should be updated'
   );
@@ -72,7 +72,7 @@ test.skip('WebGL#resizeGLContext', (t) => {
   // trigger again without any changes
   resizeGLContext(gl1, {useDevicePixels: 12.5});
   t.deepEqual(
-    webgl1TestDevice._canvasSizeInfo,
+    webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
     'Cached canvas size should remain same'
   );
@@ -84,7 +84,7 @@ test.skip('WebGL#resizeGLContext', (t) => {
   // gl.drawingBufferHeight = Math.floor(gl.canvas.clientHeight * DPR);
   resizeGLContext(gl1, {useDevicePixels: DPR});
   t.deepEqual(
-    webgl1TestDevice._canvasSizeInfo,
+    webgl1Device._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
     'Cached canvas size info should be updated'
   );
@@ -96,7 +96,7 @@ test.skip('WebGL#resizeGLContext', (t) => {
   // gl.drawingBufferHeight = Math.floor(gl.canvas.clientHeight * DPR);
   resizeGLContext(gl1, {useDevicePixels: DPR});
   t.deepEqual(
-    webgl1TestDevice._canvasSizeInfo,
+    webgl1Device._canvasSizeInfo,
     {clientWidth: 5, clientHeight: 2, devicePixelRatio: DPR},
     'Cached canvas size info should be updated'
   );

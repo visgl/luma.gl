@@ -3,7 +3,7 @@
 // DEPRECATED API - may be removed in luma.gl v9 or v10.
 
 /* eslint-disable quotes */
-import type {DeviceProps} from '@luma.gl/api';
+import type {Device, DeviceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {DEPRECATED_FEATURES, DEPRECATED_TO_CLASSIC_FEATURES} from './features';
@@ -43,14 +43,14 @@ export function instrumentGLContext(gl: WebGLRenderingContext | WebGL2RenderingC
  * @deprecated Use WebGLDevice.resize()
  */
 export function resizeGLContext(
-  gl: WebGLRenderingContext,
+  device: Device | WebGLRenderingContext,
   options?: {
     width?: number;
     height?: number;
     useDevicePixels?: boolean | number;
   }
 ) {
-  const webglDevice = WebGLDevice.attach(gl);
+  const webglDevice = WebGLDevice.attach(device);
   webglDevice.canvasContext.resize(options);
 }
 

@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/api';
-import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
@@ -258,7 +258,7 @@ test('assembleShaders#import', (t) => {
 });
 
 test('assembleShaders#version_directive', (t) => {
-  const assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  const assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking]
@@ -285,7 +285,7 @@ test('assembleShaders#getUniforms', (t) => {
   let assembleResult;
 
   // Without shader modules
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300
   });
@@ -305,7 +305,7 @@ test('assembleShaders#getUniforms', (t) => {
     dependencies: [picking]
   };
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking, testModule, fp64]
@@ -318,7 +318,7 @@ test('assembleShaders#getUniforms', (t) => {
 });
 
 test('assembleShaders#defines', (t) => {
-  const assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  const assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     defines: {IS_TEST: true}
@@ -361,7 +361,7 @@ test('assembleShaders#shaderhooks', (t) => {
     }
   };
 
-  let assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  let assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     hookFunctions
@@ -393,7 +393,7 @@ test('assembleShaders#shaderhooks', (t) => {
     'regex injection code not included in fragment shader without module'
   );
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [pickingInject],
@@ -426,7 +426,7 @@ test('assembleShaders#shaderhooks', (t) => {
     'regex injection code included in fragment shader with module'
   );
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     inject: {
@@ -451,7 +451,7 @@ test('assembleShaders#shaderhooks', (t) => {
     'argument injection code injected in the correct order'
   );
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [pickingInject, testInject],
@@ -468,7 +468,7 @@ test('assembleShaders#shaderhooks', (t) => {
     'module injection code injected in the correct order'
   );
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     inject: {
@@ -486,7 +486,7 @@ test('assembleShaders#shaderhooks', (t) => {
 });
 
 test('assembleShaders#injection order', (t) => {
-  let assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  let assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
     inject: {
@@ -503,11 +503,11 @@ test('assembleShaders#injection order', (t) => {
   });
 
   t.ok(
-    compileAndLinkShaders(t, webgl1TestDevice, assembleResult),
+    compileAndLinkShaders(t, webgl1Device, assembleResult),
     'Hook functions have access to injected variables.'
   );
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
     modules: [TEST_MODULE],
@@ -516,7 +516,7 @@ test('assembleShaders#injection order', (t) => {
   });
 
   t.ok(
-    compileAndLinkShaders(t, webgl1TestDevice, assembleResult),
+    compileAndLinkShaders(t, webgl1Device, assembleResult),
     'Hook functions have access to injected variables through modules.'
   );
 
@@ -524,7 +524,7 @@ test('assembleShaders#injection order', (t) => {
 });
 
 test('assembleShaders#transpilation', (t) => {
-  let assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  let assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking],
@@ -537,35 +537,35 @@ test('assembleShaders#transpilation', (t) => {
   t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
   t.ok(!assembleResult.fs.match(/\bout vec4\b/), '"out" keyword removed');
 
-  t.ok(compileAndLinkShaders(t, webgl1TestDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
+  t.ok(compileAndLinkShaders(t, webgl1Device, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_2,
     fs: FS_GLSL_300_2,
     modules: [picking],
     transpileToGLSL100: true
   });
 
-  t.ok(compileAndLinkShaders(t, webgl1TestDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
+  t.ok(compileAndLinkShaders(t, webgl1Device, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
-  const extension = webgl1TestDevice.gl.getExtension('OES_standard_derivatives');
+  const extension = webgl1Device.gl.getExtension('OES_standard_derivatives');
   // TODO - this doesn't work in headless gl
   if (isBrowser() && extension) {
     t.comment(JSON.stringify(extension));
-    assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+    assembleResult = assembleShaders(getInfo(webgl1Device), {
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK,
       transpileToGLSL100: true
     });
 
     t.ok(
-      compileAndLinkShaders(t, webgl1TestDevice, assembleResult),
+      compileAndLinkShaders(t, webgl1Device, assembleResult),
       'Deck shaders transpile 300 to 100 valid program'
     );
 
   }
 
-  assembleResult = assembleShaders(getInfo(webgl1TestDevice), {
+  assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
     modules: [pbr],
@@ -573,12 +573,12 @@ test('assembleShaders#transpilation', (t) => {
   });
 
   t.ok(
-    compileAndLinkShaders(t, webgl1TestDevice, assembleResult),
+    compileAndLinkShaders(t, webgl1Device, assembleResult),
     'assemble GLSL300 + PBR assemble to 100'
   );
 
-  if (webgl2TestDevice) {
-    assembleResult = assembleShaders(getInfo(webgl2TestDevice), {
+  if (webgl2Device) {
+    assembleResult = assembleShaders(getInfo(webgl2Device), {
       vs: VS_GLSL_300_GLTF,
       fs: FS_GLSL_300_GLTF,
       modules: [pbr],
@@ -586,7 +586,7 @@ test('assembleShaders#transpilation', (t) => {
     });
 
     t.ok(
-      compileAndLinkShaders(t, webgl2TestDevice, assembleResult),
+      compileAndLinkShaders(t, webgl2Device, assembleResult),
       'assemble GLSL300 + PBR assemble to 100, WebGL2'
     );
   }

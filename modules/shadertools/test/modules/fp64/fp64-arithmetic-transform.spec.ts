@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import { webgl2TestDevice } from '@luma.gl/test-utils';
+import { webgl2Device } from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';
-const gl = webgl2TestDevice && webgl2TestDevice.gl2;
+const gl = webgl2Device && webgl2Device.gl2;
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
 // ignoreFor: [{gpu: ['glslFunc-1', 'glslFunc-2']}] => ignores for `'glslFunc-1' and 'glslFunc-2` when running on `gpu`
@@ -55,7 +55,7 @@ function getTestCasesFor(glslFunc) {
   if (!gl) {
     return [];
   }
-  const debugInfo = webgl2TestDevice.info;
+  const debugInfo = webgl2Device.info;
   const testCases = commonTestCases.filter((testCase) => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {

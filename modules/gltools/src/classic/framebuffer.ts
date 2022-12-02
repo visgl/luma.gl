@@ -104,21 +104,22 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
    * @param options.colorBufferFloat  Whether floating point textures can be rendered and read
    * @param options.colorBufferHalfFloat Whether half float textures can be rendered and read
    */
-  static isSupported(gl: WebGLRenderingContext, options: ColorBufferFloatOptions): boolean {
-    return isFloatColorBufferSupported(gl, options);
+  static isSupported(device: Device | WebGLRenderingContext, options: ColorBufferFloatOptions): boolean {
+    const webglDevice = WebGLDevice.attach(device);
+    return isFloatColorBufferSupported(webglDevice.gl, options);
   }
 
   /**
    * returns the default Classic
    * Creates a Framebuffer object wrapper for the default WebGL framebuffer (target === null)
    */
-  static getDefaultFramebuffer(gl: WebGLRenderingContext): ClassicFramebuffer {
-    const webglDevice = WebGLDevice.attach(gl);
+  static getDefaultFramebuffer(device: Device | WebGLRenderingContext): ClassicFramebuffer {
+    const webglDevice = WebGLDevice.attach(device);
     // @ts-expect-error
     webglDevice.defaultFramebuffer =
     // @ts-expect-error
     webglDevice.defaultFramebuffer ||
-      new ClassicFramebuffer(gl, {
+      new ClassicFramebuffer(device, {
         id: 'default-framebuffer',
         handle: null,
         attachments: {},
@@ -139,8 +140,8 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
     return gl2.getParameter(gl2.MAX_DRAW_BUFFERS);
   }
 
-  constructor(gl: Device | WebGLRenderingContext, props: ClassicFramebufferProps = {}) {
-    super(WebGLDevice.attach(gl), getDefaultProps(props));
+  constructor(device: Device | WebGLRenderingContext, props: ClassicFramebufferProps = {}) {
+    super(WebGLDevice.attach(device), getDefaultProps(props));
     this.initialize(props);
     Object.seal(this);
   }
@@ -536,23 +537,24 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
  * @param options.colorBufferHalfFloat Whether half float textures can be rendered and read
  */
 function isFloatColorBufferSupported(
-  gl: WebGLRenderingContext,
+  device: Device | WebGLRenderingContext,
   options: {colorBufferFloat?: boolean; colorBufferHalfFloat?: boolean}
 ): boolean {
   const {
     colorBufferFloat, // Whether floating point textures can be rendered and read
     colorBufferHalfFloat // Whether half float textures can be rendered and read
   } = options;
+  const webglDevice = WebGLDevice.attach(device);
   let supported = true;
 
   if (colorBufferFloat) {
     supported = Boolean(
       // WebGL 2
-      gl.getExtension('EXT_color_buffer_float') ||
-        // WebGL 1, not exposed on all platforms
-        gl.getExtension('WEBGL_color_buffer_float') ||
-        // WebGL 1, implicitly enables float render targets https://www.khronos.org/registry/webgl/extensions/OES_texture_float/
-        gl.getExtension('OES_texture_float')
+      webglDevice.gl.getExtension('EXT_color_buffer_float') ||
+      // WebGL 1, not exposed on all platforms
+      webglDevice.gl.getExtension('WEBGL_color_buffer_float') ||
+      // WebGL 1, implicitly enables float render targets https://www.khronos.org/registry/webgl/extensions/OES_texture_float/
+      webglDevice.gl.getExtension('OES_texture_float')
     );
   }
 
@@ -561,9 +563,9 @@ function isFloatColorBufferSupported(
       supported &&
       Boolean(
         // WebGL 2
-        gl.getExtension('EXT_color_buffer_float') ||
-          // WebGL 1
-          gl.getExtension('EXT_color_buffer_half_float')
+        webglDevice.gl.getExtension('EXT_color_buffer_float') ||
+        // WebGL 1
+        webglDevice.gl.getExtension('EXT_color_buffer_half_float')
       );
   }
 

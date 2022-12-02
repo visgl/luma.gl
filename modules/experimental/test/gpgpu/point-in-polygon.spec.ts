@@ -224,6 +224,7 @@ test('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
   TEST_CASES.forEach((tc) => {
     const scales = tc.scales || [1];
     scales.forEach((scale) => {
+      // @ts-expect-error
       const polygons = tc.polygons || [tc.polygon];
       const points = tc.points.map((xy) => [xy[0] * scale, xy[1] * scale]);
       const name = `${tc.name} scale:${scale}`;
@@ -250,6 +251,7 @@ test('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
       filterValueIndexBuffer.delete();
 
       // cpu
+      // @ts-expect-error
       let cpuResults = tc.cpuResults;
       if (!cpuResults) {
         cpuResults = cpuPointInPolygon({polygons, points});
