@@ -1,3 +1,5 @@
+import type {Device} from '@luma.gl/api';
+import {WebGLDevice} from '../..';
 import {GLParameters, setParameters} from '../parameters/unified-parameter-api';
 import {pushContextState, popContextState} from './track-context-state';
 
@@ -9,10 +11,13 @@ import {pushContextState, popContextState} from './track-context-state';
  * - Restores parameters
  * - Returns the return value of the supplied function
  */
- export function withParameters(gl: WebGLRenderingContext, parameters: GLParameters & {nocatch?: boolean}, func: any): any {
+ export function withParameters(device: Device | WebGLRenderingContext, parameters: GLParameters & {nocatch?: boolean}, func: any): any {
+  const webglDevice = WebGLDevice.attach(device);
+  const gl = webglDevice.gl;
+
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
-    return func(gl);
+    return func(device);
   }
 
   const {nocatch = true} = parameters;

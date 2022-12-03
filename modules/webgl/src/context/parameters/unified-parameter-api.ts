@@ -90,9 +90,12 @@ export function setParameters(
  * by external code needs to be synchronized for the first time
  */
 export function getParameters(
-  gl: WebGLRenderingContext,
+  device: Device | WebGLRenderingContext,
   parameters: keyof GLParameters | (keyof GLParameters)[] | GLParameters = GL_PARAMETER_DEFAULTS
 ): GLParameters {
+  const webglDevice = WebGLDevice.attach(device);
+  const gl = webglDevice.gl;
+
   // support both arrays of parameters and objects (keys represent parameters)
 
   if (typeof parameters === 'number') {
@@ -118,8 +121,8 @@ export function getParameters(
  * NOT the canvas size dimensions, so they will have to be properly set after
  * calling this function.
  */
-export function resetParameters(gl: WebGLRenderingContext): void {
-  setParameters(gl, GL_PARAMETER_DEFAULTS);
+export function resetParameters(device: Device | WebGLRenderingContext): void {
+  setParameters(device, GL_PARAMETER_DEFAULTS);
 }
 
 // Helpers
