@@ -534,11 +534,13 @@ export class AnimationLoop {
     }
   }
 
-  _onMousemove(e) {
-    this._getAnimationProps()._mousePosition = [e.offsetX, e.offsetY];
+  _onMousemove(event: Event) {
+    if (event instanceof MouseEvent) {
+      this._getAnimationProps()._mousePosition = [event.offsetX, event.offsetY];
+    }
   }
 
-  _onMouseleave(e) {
+  _onMouseleave(event: Event) {
     this._getAnimationProps()._mousePosition = null;
   }
 }

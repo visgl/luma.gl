@@ -89,7 +89,7 @@ export class PipelineFactory {
     this.stateHash++;
   }
 
-  addShaderHook(hook, opts?): void {
+  addShaderHook(hook: string, opts?): void {
     if (opts) {
       hook = Object.assign(opts, {hook});
     }
@@ -166,7 +166,7 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   _hashRenderPipeline(props: GetRenderPipelineOptions): string {
-    const {modules = [], varyings = [], defines = [], inject = [], parameters = []} = props;
+    const {modules = [], varyings = [], defines = {}, inject = {}, parameters = {}} = props;
      const vsHash = this._getHash(props.vs);
     const fsHash = props.fs ? this._getHash(props.fs) : 0;
 
@@ -180,7 +180,7 @@ export class PipelineFactory {
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));
-      defineHashes.push(this._getHash(defines[key]));
+      defineHashes.push(this._getHash(String(defines[key])));
     }
 
     for (const key of injectKeys) {

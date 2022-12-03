@@ -32,11 +32,14 @@
   },
   "dependencies": {
     "@probe.gl/env": "^3.5.0",
-    "gl": "^5.0.3"
+    "gl": "^5.0.3",
+    "@types/gl": "^6.0.2"
   },
   "peerDependencies": {
-    "@luma.gl/api": "9.0.0-alpha.5",
-    "@luma.gl/webgl": "9.0.0-alpha.5",
+    "@luma.gl/api": "9.0.0-alpha.7",
+    "@luma.gl/engine": "9.0.0-alpha.7",
+    "@luma.gl/webgl": "9.0.0-alpha.7",
+    "@luma.gl/webgpu": "9.0.0-alpha.7",
     "@probe.gl/test-utils": "^3.5.0"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
