@@ -1,6 +1,6 @@
 /*
 import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device} from '@luma.gl/test-utils';
 
 import GL from '@luma.gl/constants';
 import {luma} from '@luma.gl/api';
@@ -54,7 +54,7 @@ test('Model#construct/destruct', (t) => {
   const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
   const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
 
-  const model = new Model(webgl1TestDevice, {
+  const model = new Model(webgl1Device, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
@@ -77,14 +77,14 @@ test('Model#multiple delete', (t) => {
   const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
   const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
 
-  const model1 = new Model(webgl1TestDevice, {
+  const model1 = new Model(webgl1Device, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
     fs
   });
 
-  const model2 = new Model(webgl1TestDevice, {
+  const model2 = new Model(webgl1Device, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
@@ -102,15 +102,15 @@ test('Model#multiple delete', (t) => {
 });
 
 test('Model#setAttribute', (t) => {
-  const buffer1 = webgl1TestDevice.createBuffer({
+  const buffer1 = webgl1Device.createBuffer({
     accessor: {size: 2},
     data: new Float32Array(4).fill(1)
   });
-  const buffer2 = webgl1TestDevice.createBuffer({data: new Float32Array(8)});
+  const buffer2 = webgl1Device.createBuffer({data: new Float32Array(8)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
-  const model = new Model(webgl1TestDevice, {
+  const model = new Model(webgl1Device, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     geometry: new CubeGeometry()
@@ -142,7 +142,7 @@ test('Model#setAttribute', (t) => {
 });
 
 test('Model#setters, getters', (t) => {
-  const model = new Model(webgl1TestDevice, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const model = new Model(webgl1Device, {vs: DUMMY_VS, fs: DUMMY_FS});
 
   model.setUniforms({
     isPickingActive: 1
@@ -161,7 +161,7 @@ test('Model#setters, getters', (t) => {
 });
 
 test('Model#draw', (t) => {
-  const model = new Model(webgl1TestDevice, {
+  const model = new Model(webgl1Device, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     geometry: new CubeGeometry(),
@@ -179,7 +179,7 @@ test('Model#draw', (t) => {
 });
 
 test('Model#program management', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const vs = `
     uniform float x;
@@ -195,7 +195,7 @@ test('Model#program management', (t) => {
     }
   `;
 
-  const model1 = new Model(webgl1TestDevice, {
+  const model1 = new Model(webgl1Device, {
     programManager: pm,
     vs,
     fs,
@@ -204,7 +204,7 @@ test('Model#program management', (t) => {
     }
   });
 
-  const model2 = new Model(webgl1TestDevice, {
+  const model2 = new Model(webgl1Device, {
     programManager: pm,
     vs,
     fs,
@@ -237,7 +237,7 @@ test('Model#program management', (t) => {
 
   // This part is checking that the use counts
   // don't get bloated by multiple checks.
-  const model3 = new Model(webgl1TestDevice, {
+  const model3 = new Model(webgl1Device, {
     programManager: pm,
     vs,
     fs,
@@ -268,12 +268,12 @@ test('Model#program management', (t) => {
 });
 
 test('Model#program management - getModuleUniforms', (t) => {
-  const pm = new ProgramManager(webgl1TestDevice);
+  const pm = new ProgramManager(webgl1Device);
 
   const vs = 'void main() {}';
   const fs = 'void main() {}';
 
-  const model = new Model(webgl1TestDevice, {
+  const model = new Model(webgl1Device, {
     programManager: pm,
     vs,
     fs
@@ -297,7 +297,7 @@ test('Model#program management - getModuleUniforms', (t) => {
 });
 
 test('Model#getBuffersFromGeometry', (t) => {
-  let buffers = getBuffersFromGeometry(webgl1TestDevice.gl, {
+  let buffers = getBuffersFromGeometry(webgl1Device.gl, {
     indices: new Uint16Array([0, 1, 2, 3]),
     attributes: {
       positions: {size: 3, value: new Float32Array(12)},
@@ -318,7 +318,7 @@ test('Model#getBuffersFromGeometry', (t) => {
   buffers.indices[0].delete();
 
   // Inferring attribute size
-  buffers = getBuffersFromGeometry(webgl1TestDevice.gl, {
+  buffers = getBuffersFromGeometry(webgl1Device.gl, {
     attributes: {
       indices: {value: new Uint16Array([0, 1, 2, 3])},
       normals: {value: new Float32Array(12)},
@@ -335,7 +335,7 @@ test('Model#getBuffersFromGeometry', (t) => {
 
   t.throws(
     () =>
-      getBuffersFromGeometry(webgl1TestDevice.gl, {
+      getBuffersFromGeometry(webgl1Device.gl, {
         indices: [0, 1, 2, 3]
       }),
     'invalid indices'
@@ -343,7 +343,7 @@ test('Model#getBuffersFromGeometry', (t) => {
 
   t.throws(
     () =>
-      getBuffersFromGeometry(webgl1TestDevice.gl, {
+      getBuffersFromGeometry(webgl1Device.gl, {
         attributes: {
           heights: {value: new Float32Array([0, 1, 2, 3])}
         }
@@ -358,14 +358,14 @@ test('Model#transpileToGLSL100', (t) => {
   let model;
 
   t.throws(() => {
-    model = new Model(webgl1TestDevice, {
+    model = new Model(webgl1Device, {
       vs: VS_300,
       fs: FS_300
     });
   }, "Can't compile 300 shader with WebGL 1");
 
   t.doesNotThrow(() => {
-    model = new Model(webgl1TestDevice, {
+    model = new Model(webgl1Device, {
       vs: VS_300,
       fs: FS_300,
       transpileToGLSL100: true

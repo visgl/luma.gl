@@ -2,8 +2,8 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
-import {DeviceFeature, assert} from '@luma.gl/api';
-import {isWebGL2, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
+import {Device, DeviceFeature, assert} from '@luma.gl/api';
+import {isWebGL2, WebGLDevice, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
 
 // TODO - this should be the default export, test cases need updating
 export const DEPRECATED_FEATURES = {
@@ -91,37 +91,40 @@ export const DEPRECATED_TO_CLASSIC_FEATURES: Record<string, DeviceFeature> = {
  * Extract all WebGL features 
  * @deprecated Use `device.features.has(...)`
  */
-export function getWebGLFeatures(gl: WebGLRenderingContext): Set<string> {
+export function getWebGLFeatures(device: Device | WebGLRenderingContext): Set<string> {
+  const webglDevice = WebGLDevice.attach(device);
   // Enable EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
-  gl.getExtension('EXT_color_buffer_float');
-  gl.getExtension('WEBGL_color_buffer_float');
-  gl.getExtension('EXT_float_blend');
+  webglDevice.gl.getExtension('EXT_color_buffer_float');
+  webglDevice.gl.getExtension('WEBGL_color_buffer_float');
+  webglDevice.gl.getExtension('EXT_float_blend');
 
   const features = new Set<string>();
   for (const feature in WEBGL_FEATURES) {
-    if (isFeatureSupported(gl, feature)) {
+    if (isFeatureSupported(webglDevice.gl, feature)) {
       features.add(feature);
     }
   }
   return features;
 }
 
-function isFeatureSupported(gl: WebGLRenderingContext, cap: string): boolean {
+function isFeatureSupported(device: Device | WebGLRenderingContext, cap: string): boolean {
+  const webglDevice = WebGLDevice.attach(device);
+
   const feature = WEBGL_FEATURES[cap];
   assert(feature, cap);
 
   const [webgl1Feature, webgl2Feature] = feature;
 
   // Get extension name from table
-  const featureDefinition = isWebGL2(gl) ? webgl2Feature : webgl1Feature;
+  const featureDefinition = webglDevice.isWebGL2 ? webgl2Feature : webgl1Feature;
 
-  if (cap === DEPRECATED_FEATURES.COLOR_ATTACHMENT_RGBA32F && !isWebGL2(gl)) {
-    return _checkFloat32ColorAttachment(gl);
+  if (cap === DEPRECATED_FEATURES.COLOR_ATTACHMENT_RGBA32F && !webglDevice.isWebGL2) {
+    return _checkFloat32ColorAttachment(webglDevice.gl);
   }
 
   // Check if the value is dependent on checking one or more extensions
   if (typeof featureDefinition === 'string') {
-    return Boolean(gl.getExtension(featureDefinition));
+    return Boolean(webglDevice.gl.getExtension(featureDefinition));
   }
 
   return featureDefinition;

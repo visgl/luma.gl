@@ -25,8 +25,18 @@ void main()
 
 test('WebGL#TransformFeedback isSupported', (t) => {
   const {gl, gl2} = fixture;
-  t.notok(TransformFeedback.isSupported(gl), 'isSupported returns correct result');
-  t.is(TransformFeedback.isSupported(gl2), Boolean(gl2), 'isSupported returns correct result');
+  t.equal(
+    TransformFeedback.isSupported(gl),
+    false,
+    'isSupported returns correct result for WebGL1'
+  );
+  if (gl2) {
+    t.equal(
+      TransformFeedback.isSupported(gl2),
+      true,
+      'isSupported returns correct result for WebGL2'
+    );
+  }
   t.end();
 });
 

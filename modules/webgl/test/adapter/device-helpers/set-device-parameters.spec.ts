@@ -1,18 +1,18 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {setDeviceParameters, GLParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 
 // import {createTestDevice} from '@luma.gl/test-utils';
-// const webgl1TestDevice = createTestDevice({debug: true, webgl2: false});
-// const webgl2TestDevice = createTestDevice({debug: true, webgl2: true, webgl1: false});
+// const webgl1Device = createTestDevice({debug: true, webgl2: false});
+// const webgl2Device = createTestDevice({debug: true, webgl2: true, webgl1: false});
 
 // Settings test, could be beneficial to not reuse a context
 const fixture = {
-  gl: webgl1TestDevice.gl,
-  gl2: webgl2TestDevice?.gl2
+  gl: webgl1Device.gl,
+  gl2: webgl2Device?.gl2
 };
 
 const {gl} = fixture;
@@ -29,15 +29,15 @@ test('setDeviceParameters#cullMode', (t) => {
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {cullMode: 'front'});
+  setDeviceParameters(webgl1Device, {cullMode: 'front'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), true, `got expected value`);
   t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.FRONT, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {cullMode: 'back'});
+  setDeviceParameters(webgl1Device, {cullMode: 'back'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), true, `got expected value`);
   t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.BACK, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {cullMode: 'none'});
+  setDeviceParameters(webgl1Device, {cullMode: 'none'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, `got expected value`);
 
   t.end();
@@ -48,10 +48,10 @@ test('setDeviceParameters#frontFace', (t) => {
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {frontFace: 'cw'});
+  setDeviceParameters(webgl1Device, {frontFace: 'cw'});
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CW, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {frontFace: 'ccw'});
+  setDeviceParameters(webgl1Device, {frontFace: 'ccw'});
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, `got expected value`);
 
   t.end();
@@ -62,10 +62,10 @@ test('setDeviceParameters#depthWriteEnabled', (t) => {
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {depthWriteEnabled: false});
+  setDeviceParameters(webgl1Device, {depthWriteEnabled: false});
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), false, `got expected value`);
 
-  setDeviceParameters(webgl1TestDevice, {depthWriteEnabled: true});
+  setDeviceParameters(webgl1Device, {depthWriteEnabled: true});
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, `got expected value`);
 
   t.end();
@@ -115,7 +115,7 @@ function testClauses(t: test, name: string, clauses: TestClause[]): void {
     }
 
     if (clause.set) {
-      setDeviceParameters(webgl1TestDevice, clause.set);
+      setDeviceParameters(webgl1Device, clause.set);
     }
   }
 }

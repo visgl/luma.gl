@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice, webgl2TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Device, Sampler} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
@@ -61,9 +61,9 @@ export const SAMPLER_PARAMETERS = {
 };
 
 test('WebGL#Sampler setParameters', t => {
-  testSampler(t, webgl1TestDevice);
-  testSampler(t, webgl2TestDevice);
-  // testSampler(t, webgpuTestDevice);
+  testSampler(t, webgl1Device);
+  testSampler(t, webgl2Device);
+  // testSampler(t, webgpuDevice);
   t.end();
 });
 

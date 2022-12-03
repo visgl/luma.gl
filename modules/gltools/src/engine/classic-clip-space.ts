@@ -1,4 +1,5 @@
 // ClipSpace
+import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import Model, {ClassicModelProps as ModelProps} from './classic-model';
 import {Geometry} from '@luma.gl/engine';
@@ -26,12 +27,13 @@ const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 /** @deprecated Use new class in `@luma.gl/engine` */
 
 export default class ClipSpace extends Model {
-  constructor(gl: WebGLRenderingContext, opts?: ModelProps) {
+  constructor(device: Device | WebGLRenderingContext, opts?: ModelProps) {
     const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
 
     super(
-      gl,
-      Object.assign({}, opts, {
+      device,
+      {
+        ...opts,
         vs: CLIPSPACE_VERTEX_SHADER,
         geometry: new Geometry({
           drawMode: GL.TRIANGLE_STRIP,
@@ -42,7 +44,7 @@ export default class ClipSpace extends Model {
             aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
           }
         })
-      })
+      }
     );
     this.setVertexCount(4);
   }

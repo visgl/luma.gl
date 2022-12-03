@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+
+import type { Device } from '@luma.gl/api';
 import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/gltools';
 import {Transform} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
@@ -41,7 +44,7 @@ const channelToIndexMap = {
  * R -> lower left, G -> lower right B -> upper left A -> upper right
  */
 export function buildHistopyramidBaseLevel(
-  gl: WebGLRenderingContext,
+  device: Device,
   opts: any
 ): {
   textureData: any;
@@ -60,7 +63,7 @@ export function buildHistopyramidBaseLevel(
   });
 
   // build individual pyramid textures
-  const transform = new Transform(gl, {
+  const transform = new Transform(device, {
     _sourceTextures: {
       inTexture: texture
     },
@@ -108,7 +111,7 @@ export function buildHistopyramidBaseLevel(
  * * flatPyramidTexture: Texture with all mip levels laid out horizontally
  */
 export function getHistoPyramid(
-  gl: WebGLRenderingContext,
+  device: Device,
   opts: any
 ): {
   pyramidTextures: any[];
@@ -116,7 +119,7 @@ export function getHistoPyramid(
   levelCount: number;
   topLevelData: any;
 } {
-  const {textureData, baseTexture, flatPyramidTexture} = buildHistopyramidBaseLevel(gl, opts);
+  const {textureData, baseTexture, flatPyramidTexture} = buildHistopyramidBaseLevel(device, opts);
   const {width} = baseTexture;
   // assert(width === height && isPowerOfTwo(width));
   const levelCount = Math.log2(width) + 1;
@@ -136,7 +139,7 @@ export function getHistoPyramid(
     }
 
     // build individual pyramid textures
-    const transform = new Transform(gl, {
+    const transform = new Transform(device, {
       _sourceTextures: {
         inTexture: pyramidTextures[0]
       },
@@ -178,21 +181,21 @@ export function getHistoPyramid(
  * *locationAndIndexBuffer : Buffer contains one vec4 for each non zero weight. XY represent loation, Z represents local-key index and W represent key-index
  */
 export function histoPyramidGenerateIndices(
-  gl: WebGLRenderingContext,
+  device: Device,
   opts: any
 ): {
   locationAndIndexBuffer: any;
 } {
-  const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(gl, opts);
+  const {flatPyramidTexture, levelCount, topLevelData} = getHistoPyramid(device, opts);
 
   const keyIndexCount = topLevelData[0] + topLevelData[1] + topLevelData[2] + topLevelData[3];
   const keyIndex = new Buffer(
-    gl,
+    device,
     new Float32Array(keyIndexCount).map((_, index) => index)
   );
-  const locationAndIndex = new Buffer(gl, keyIndexCount * 4 * 4); // 4 floats for each key index
+  const locationAndIndex = new Buffer(device, keyIndexCount * 4 * 4); // 4 floats for each key index
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(device, {
     sourceBuffers: {
       keyIndex
     },

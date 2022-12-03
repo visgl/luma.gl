@@ -1,7 +1,7 @@
-import {log, isObjectEmpty, ResourceProps} from '@luma.gl/api';
+import {Device, ResourceProps, log, isObjectEmpty} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
-import {isWebGL2, assertWebGL2Context} from '@luma.gl/webgl';
+import {isWebGL2} from '@luma.gl/webgl';
 import Buffer from './buffer';
 
 export type TransformFeedbackProps = ResourceProps & {
@@ -18,13 +18,14 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
   // See https://github.com/KhronosGroup/WebGL/issues/2346
   bindOnUse = true;
 
-  static isSupported(gl: WebGLRenderingContext): boolean {
-    return isWebGL2(gl);
+  static isSupported(device: Device | WebGLRenderingContext): boolean {
+    const webglDevice = WebGLDevice.attach(device);
+    return isWebGL2(webglDevice.gl);
   }
 
-  constructor(gl: WebGLRenderingContext, props: TransformFeedbackProps = {}) {
-    super(WebGLDevice.attach(gl), props, {} as any);
-    assertWebGL2Context(gl);
+  constructor(device: Device | WebGLRenderingContext, props: TransformFeedbackProps = {}) {
+    super(WebGLDevice.attach(device), props, {} as any);
+    this.device.assertWebGL2();
 
     this.initialize(props);
     this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);

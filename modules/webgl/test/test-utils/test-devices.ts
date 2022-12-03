@@ -31,20 +31,20 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   }
 }
 
-export const webgl1TestDevice: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false});
-export const webgl2TestDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true});
+export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false});
+export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true});
 /** Only available after getTestDevices() has completed */
 
-export const gl = webgl1TestDevice.gl;
-export const gl1 = webgl1TestDevice.gl;
-export const gl2: WebGL2RenderingContext = webgl2TestDevice?.gl as WebGL2RenderingContext;
+export const gl = webgl1Device.gl;
+export const gl1 = webgl1Device.gl;
+export const gl2: WebGL2RenderingContext = webgl2Device?.gl as WebGL2RenderingContext;
 
 /** Synchronously get test devices (only WebGLDevices) */
 export function getWebGLTestDevices(): WebGLDevice[] {
-  return [webgl2TestDevice, webgl1TestDevice].filter(Boolean);
+  return [webgl2Device, webgl1Device].filter(Boolean);
 }
 
 /** Includes WebGPU device if available */
 export async function getTestDevices() : Promise<Device[]> {
-  return [webgl2TestDevice, webgl1TestDevice].filter(Boolean);
+  return [webgl2Device, webgl1Device].filter(Boolean);
 }

@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
@@ -9,8 +9,8 @@ import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 
 test('gltf#loading', async (t) => {
   // TODO - is gl argument used?
-  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1TestDevice.gl});
-  const result = createGLTFObjects(webgl1TestDevice, gltf);
+  const gltf = await load('test/data/box.glb', GLTFLoader, {gl: webgl1Device.gl});
+  const result = createGLTFObjects(webgl1Device, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
@@ -19,7 +19,7 @@ test('gltf#loading', async (t) => {
 });
 
 test('gltf#environment', (t) => {
-  const environment = new GLTFEnvironment(webgl1TestDevice, {
+  const environment = new GLTFEnvironment(webgl1Device, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9

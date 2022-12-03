@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webgl1TestDevice} from '@luma.gl/test-utils';
+import {webgl1Device} from '@luma.gl/test-utils';
 
 import {PipelineFactory} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
@@ -54,8 +54,8 @@ test('PipelineFactory#import', (t) => {
 });
 
 test('PipelineFactory#getDefaultPipelineFactory', (t) => {
-  const pm1 = PipelineFactory.getDefaultPipelineFactory(webgl1TestDevice);
-  const pm2 = PipelineFactory.getDefaultPipelineFactory(webgl1TestDevice);
+  const pm1 = PipelineFactory.getDefaultPipelineFactory(webgl1Device);
+  const pm2 = PipelineFactory.getDefaultPipelineFactory(webgl1Device);
 
   t.ok(pm1 instanceof PipelineFactory, 'Default pipeline manager created');
   t.ok(pm1 === pm2, 'Default pipeline manager cached');
@@ -64,7 +64,7 @@ test('PipelineFactory#getDefaultPipelineFactory', (t) => {
 });
 
 test('PipelineFactory#basic', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1TestDevice);
+  const pipelineFactory = new PipelineFactory(webgl1Device);
 
   const {pipeline: program1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -148,7 +148,7 @@ test('PipelineFactory#basic', (t) => {
 });
 
 test('PipelineFactory#hooks', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1TestDevice);
+  const pipelineFactory = new PipelineFactory(webgl1Device);
 
   const {pipeline: preHookPipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -268,7 +268,7 @@ test('PipelineFactory#hooks', (t) => {
 });
 
 test('PipelineFactory#defaultModules', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1TestDevice);
+  const pipelineFactory = new PipelineFactory(webgl1Device);
 
   const {pipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -329,7 +329,7 @@ test('PipelineFactory#defaultModules', (t) => {
 });
 
 test('PipelineFactory#release', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1TestDevice);
+  const pipelineFactory = new PipelineFactory(webgl1Device);
 
   const {pipeline: pipeline1} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const {pipeline: pipeline2} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
@@ -344,7 +344,7 @@ test('PipelineFactory#release', (t) => {
 });
 
 test('PipelineFactory#transpileToGLSL100', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1TestDevice);
+  const pipelineFactory = new PipelineFactory(webgl1Device);
 
   t.throws(() => {
     pipelineFactory.createRenderPipeline({

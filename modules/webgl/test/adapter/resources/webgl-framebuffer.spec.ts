@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
 import {Framebuffer} from '@luma.gl/api';
-import {webgl1TestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {webgl1Device, getTestDevices} from '@luma.gl/test-utils';
 
 const TEST_CASES = [
   {
@@ -35,8 +35,8 @@ const TEST_CASES = [
     title: 'Simple Stencil Renderbuffer + Color Texture',
     getOpts: (gl) => ({
       attachments: {
-        colorAttachment0: webgl1TestDevice.createTexture(gl),
-        depthStencilAttachment: webgl1TestDevice.createTexture({format: 'stencil8'})
+        colorAttachment0: webgl1Device.createTexture(gl),
+        depthStencilAttachment: webgl1Device.createTexture({format: 'stencil8'})
       }
     }),
     pass: true
@@ -45,8 +45,8 @@ const TEST_CASES = [
     title: 'Combined Depth/Stencil Renderbuffer + Color Texture',
     getOpts: (gl) => ({
       attachments: {
-        colorAttachment0: webgl1TestDevice.createTexture(gl),
-        depthStencilAttachment: webgl1TestDevice.createTexture({format: 'depth24plus'})
+        colorAttachment0: webgl1Device.createTexture(gl),
+        depthStencilAttachment: webgl1Device.createTexture({format: 'depth24plus'})
       }
     }),
     pass: true
@@ -56,9 +56,9 @@ const TEST_CASES = [
   //   features: FEATURES.MULTIPLE_RENDER_TARGETS,
   //   getOpts(gl) {
   //     attachments: {
-  //       [GL.COLOR_ATTACHMENT0]: webgl1TestDevice.createTexture(gl),
-  //       [GL.COLOR_ARTTACHMENT1]: webgl1TestDevice.createTexture(gl),
-  //       [GL.DEPTH]: webgl1TestDevice.createRenderbuffer(gl)
+  //       [GL.COLOR_ATTACHMENT0]: webgl1Device.createTexture(gl),
+  //       [GL.COLOR_ARTTACHMENT1]: webgl1Device.createTexture(gl),
+  //       [GL.DEPTH]: webgl1Device.createRenderbuffer(gl)
   //     }
   //   },
   //   pass: true
@@ -125,11 +125,11 @@ test('WebGLFramebuffer create and resize attachments', async (t) => {
 
 test.skip('WebGLFramebuffer resize', (t) => {
   const frameBufferOptions = {
-    colorAttachments: [webgl1TestDevice.createTexture({})]
-    // depthStencilAttachment: webgl1TestDevice.createRenderbuffer({format: GL.DEPTH_STENCIL})
+    colorAttachments: [webgl1Device.createTexture({})]
+    // depthStencilAttachment: webgl1Device.createRenderbuffer({format: GL.DEPTH_STENCIL})
   };
 
-  const framebuffer = webgl1TestDevice.createFramebuffer(frameBufferOptions);
+  const framebuffer = webgl1Device.createFramebuffer(frameBufferOptions);
 
   framebuffer.resize({width: 1000,height:  1000});
   t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
@@ -143,7 +143,7 @@ test.skip('WebGLFramebuffer resize', (t) => {
 
 /*
 test.skip('Framebuffer#getDefaultFramebuffer', (t) => {
-  const framebuffer = webgl1TestDevice.getDefaultCanvasContext().getCurrentFramebuffer();
+  const framebuffer = webgl1Device.getDefaultCanvasContext().getCurrentFramebuffer();
   t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
   t.throws(
@@ -169,10 +169,10 @@ const RGB_TO = {
 
 const DATA = [1, 0.5, 0.25, 0.125];
 const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: webgl1TestDevice.createUint8Array(RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: webgl1TestDevice.createUint16Array(RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  [GL.UNSIGNED_BYTE]: webgl1Device.createUint8Array(RGB_TO[GL.UNSIGNED_BYTE](DATA)),
+  [GL.UNSIGNED_SHORT_5_6_5]: webgl1Device.createUint16Array(RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
 };
-const DEFAULT_TEXTURE_DATA = webgl1TestDevice.createUint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+const DEFAULT_TEXTURE_DATA = webgl1Device.createUint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
 test('WebGL2#Framebuffer texture attach and read', t => {
   const {gl2} = fixture;
@@ -183,7 +183,7 @@ test('WebGL2#Framebuffer texture attach and read', t => {
     return;
   }
 
-  const framebuffer = webgl1TestDevice.createFramebuffer(gl2, {depth: true, width: 1, height: 1, check: false});
+  const framebuffer = webgl1Device.createFramebuffer(gl2, {depth: true, width: 1, height: 1, check: false});
 
   for (let format in TEXTURE_FORMATS) {
     const textureFormat = TEXTURE_FORMATS[format];
@@ -196,12 +196,12 @@ test('WebGL2#Framebuffer texture attach and read', t => {
       let texture;
 
       for (const type of types) {
-        // texture = webgl1TestDevice.createTexture(gl2, Object.assign({format, dataFormat, type}));
+        // texture = webgl1Device.createTexture(gl2, Object.assign({format, dataFormat, type}));
         // t.equals(texture.format, format,
         //   `Texture2D({format: ${getKey(format)}, type: ${getKey(type)}, dataFormat: ${getKey(dataFormat)}) created`);
         // texture.destroy()
         const data = TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA;
-        texture = webgl1TestDevice.createTexture(gl2, {format, dataFormat, type, data, width: 1, height: 1});
+        texture = webgl1Device.createTexture(gl2, {format, dataFormat, type, data, width: 1, height: 1});
         t.equals(texture.format, format,
           `Texture2D({format: ${getKey(format)}, type: ${getKey(type)}, dataFormat: ${getKey(dataFormat)}) created`);
 
