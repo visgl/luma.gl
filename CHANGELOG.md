@@ -1,5 +1,8 @@
 # luma.gl CHANGELOG
 
+## v8.5.19
+
+
 ## v8.5.18
 
 - fix(resource): allocate/deallocate memory fix (#1665)
