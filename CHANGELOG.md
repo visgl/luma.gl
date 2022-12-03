@@ -1,6 +1,14 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.9
+## v9.0.0-alpha.10
+
+- chore(gltools/webgl): Support `Device` parameter in more places (#1695)
+- chore(webgl): Accept `Device` in all parameter functions (#1696)
+- chore(test-utils): Cleaner types (#1697)
+- build(deps): bump decode-uri-component from 0.2.0 to 0.2.2 (#1703)
+- chore: Fix CI (#1702)
+- (tag: v9.0.0-alpha.9) v9.0.0-alpha.9
+- chore: Minor fixes for deck.gl (#1694)
 
 - chore: Minor fixes for deck.gl
 

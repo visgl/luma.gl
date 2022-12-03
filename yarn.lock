@@ -2577,6 +2577,11 @@
   resolved "https://registry.yarnpkg.com/@types/geojson/-/geojson-7946.0.8.tgz#30744afdb385e2945e22f3b033f897f76b1f12ca"
   integrity sha512-1rkryxURpr6aWP7R786/UQOkJ3PcpQiWkAXBmdWc7ryFWqN6a4xfK7BtjXvFBKO9LjQ+MWQSWxYeZX1OApnArA==
 
+"@types/gl@^6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@types/gl/-/gl-6.0.2.tgz#c334f6b62fd6b7ea6f53d0741279ae081b129bb1"
+  integrity sha512-5vlkHzpu25w2zJ6i41rYbglH3sSTvkFPi34J5p/kYhlS3hF31GaDGWif1jSiKSy8+UCuFlejXPya0hkLKIn++A==
+
 "@types/glob@^7.1.1":
   version "7.1.3"
   resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.1.3.tgz#e6ba80f36b7daad2c685acd9266382e68985c183"
