@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests
         run: |
-          xvfb-run -s "-ac -screen 0 1280x1024x16" yarn test node
+          xvfb-run -s "-ac -screen 0 1280x1024x16" yarn test browser
 
       - name: Coveralls
         uses: coverallsapp/github-action@master
