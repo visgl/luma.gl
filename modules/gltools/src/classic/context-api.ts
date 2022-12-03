@@ -10,8 +10,6 @@ import {DEPRECATED_FEATURES, DEPRECATED_TO_CLASSIC_FEATURES} from './features';
 
 export type GLContextOptions = DeviceProps & {
   throwOnError?: boolean; // If set to false, return `null` if context creation fails.
-  onContextLost?: (event: Event) => void;
-  onContextRestored?: (event: Event) => void;
 };
 
 /** @deprecated Use `new WebGLDevice()` or `luma.createDevice()` */

@@ -1,16 +1,17 @@
 import {Device, assert, isObjectEmpty} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
-import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
-// import {AccessorObject} from '@luma.gl/webgl';
+import {WebGLDevice, GLParameters, Accessor} from '@luma.gl/webgl';
+import {AccessorObject} from '@luma.gl/webgl';
 
 import type Buffer from '../classic/buffer';
 import type Framebuffer from '../classic/framebuffer';
 import {default as Texture2D} from '../classic/texture-2d';
-import {default as TransformFeedback} from '../classic/transform-feedback';
+
 import Model from '../engine/classic-model';
 import BufferTransform from './buffer-transform';
 import TextureTransform from './texture-transform';
+import {TransformRunOptions, TransformDrawOptions} from './transform-types';
 
 /** Properties for creating Transforms */
 export type TransformProps = {
@@ -24,7 +25,6 @@ export type TransformProps = {
   modules?: object[]; // TODO use ShaderModule type
   attributes?: Record<string, any>;
   uniforms?: Record<string, any>;
-  defines?: Record<string, any>
   parameters?: GLParameters;
   discard?: boolean;
   isIndexed?: boolean;
@@ -37,34 +37,6 @@ export type TransformProps = {
   _swapTexture?: string | null;
   _fs?: string;
   fs?: string;
-};
-
-/** Options that can be provided when running a Transform */
-export type TransformRunOptions = {
-  framebuffer?: Framebuffer;
-  clearRenderTarget?: boolean;
-  uniforms?: Record<string, any>;
-  parameters?: Record<string, any>;
-  discard?: boolean;
-};
-
-/** Options that control drawing a Transform. Used by subclasses to return draw parameters */
-export type TransformDrawOptions = {
-  attributes?: Record<string, any>;
-  framebuffer?: any;
-  uniforms?: object;
-  discard?: boolean;
-  parameters?: object;
-  transformFeedback?: any;
-};
-
-export type TransformBinding = {
-  sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture2D>;
-  feedbackBuffers?: Record<string, Buffer | {buffer: Buffer}>;
-  transformFeedback?: TransformFeedback;
-  framebuffer?: Framebuffer;
-  targetTexture?: Texture2D;
 };
 
 /**

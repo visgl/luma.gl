@@ -3,7 +3,8 @@
 import {assert, Resource} from '@luma.gl/api';
 import {isWebGL2} from '@luma.gl/webgl';
 
-import type {TransformProps, TransformDrawOptions, TransformRunOptions} from './transform';
+import type {TransformProps} from './transform';
+import type {TransformDrawOptions, TransformRunOptions} from './transform-types';
 import Buffer, {BufferProps} from '../classic/buffer';
 import TransformFeedback from '../classic/transform-feedback';
 import Model from '../engine/classic-model';
