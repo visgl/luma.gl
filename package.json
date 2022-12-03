@@ -73,7 +73,8 @@
     "tape": "4.11.0",
     "prettier": "2.3.1",
     "@probe.gl/test-utils": "3.5.2",
-    "@probe.gl/env": "3.5.2"
+    "@probe.gl/env": "^3.5.2",
+    "puppeteer": "19.3.0"
   },
   "pre-commit": [
     "test-fast"
