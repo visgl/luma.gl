@@ -1,7 +1,7 @@
 /* eslint-disable no-inline-comments */
+import type {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type {RenderbufferProps} from '@luma.gl/webgl';
-import {WebGLDevice, WEBGLRenderbuffer} from '@luma.gl/webgl';
+import {WebGLDevice, WEBGLRenderbuffer, RenderbufferProps} from '@luma.gl/webgl';
 
 export type {RenderbufferProps}
 
@@ -18,16 +18,19 @@ export type {RenderbufferProps}
  * @deprecated Use WEBGLRenderBuffer
  */
 export default class Renderbuffer extends WEBGLRenderbuffer {
-  static isSupported(gl: WebGLRenderingContext, options?: {format?: number}): boolean {
+  static isSupported(device: Device | WebGLRenderingContext, options?: {format?: number}): boolean {
+    const gl = WebGLDevice.attach(device).gl;
     return WEBGLRenderbuffer.isSupported(gl, options);
   }
 
-  static getSamplesForFormat(gl: WebGL2RenderingContext, options: {format: number}): number{
+  static getSamplesForFormat(device: Device | WebGL2RenderingContext, options: {format: number}): number{
+    const gl2 = WebGLDevice.attach(device).gl as WebGL2RenderingContext;
     // Polyfilled to return [0] under WebGL1
-    return gl.getInternalformatParameter(GL.RENDERBUFFER, options.format, GL.SAMPLES);
+    return gl2.getInternalformatParameter(GL.RENDERBUFFER, options.format, GL.SAMPLES);
   }
 
-  constructor(gl: WebGLRenderingContext, props?: RenderbufferProps) {
+  constructor(device: Device | WebGLRenderingContext, props?: RenderbufferProps) {
+    const gl = WebGLDevice.attach(device).gl;
     super(WebGLDevice.attach(gl), props);
   }
 

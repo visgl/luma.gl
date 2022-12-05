@@ -58,8 +58,8 @@ export function resizeGLContext(
  * Check one or more features
  * @deprecated Use `WebGLDevice.features.has()`
 */
-export function hasFeatures(gl: WebGLRenderingContext, features: string | string[]): boolean {
-  const webglDevice = WebGLDevice.attach(gl);
+export function hasFeatures(device: Device | WebGLRenderingContext, features: string | string[]): boolean {
+  const webglDevice = WebGLDevice.attach(device);
   const normalizedFeatures = Array.isArray(features) ? features : [features];
   const deviceFeatures = normalizedFeatures.map(feature => classicToDeviceFeature(feature));
   // @ts-expect-error Feature is a string enum
@@ -79,16 +79,16 @@ function classicToDeviceFeature(feature: string): string {
  * Check one feature
  * @deprecated Use `WebGLDevice.features`
  */
-export function hasFeature(gl: WebGLRenderingContext, feature: string): boolean {
-  return hasFeatures(gl, feature);
+export function hasFeature(device: Device | WebGLRenderingContext, feature: string): boolean {
+  return hasFeatures(device, feature);
 }
 
 /**
  * Return a map of supported features
  * @deprecated Use `WebGLDevice.features`
  */
-export function getFeatures(gl: WebGLRenderingContext): Record<string, boolean>  {
-  const webglDevice = WebGLDevice.attach(gl);
+export function getFeatures(device: Device | WebGLRenderingContext): Record<string, boolean>  {
+  const webglDevice = WebGLDevice.attach(device);
   const featureMap: Record<string, boolean> = {};
   for (const feature in DEPRECATED_FEATURES) {
     // @ts-expect-error Feature is a string enum
