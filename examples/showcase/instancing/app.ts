@@ -201,7 +201,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.cube.draw();
   }
 
-  onFinalize({gl}) {
+  onFinalize(animationProps: AnimationProps): void {
     this.cube.delete();
   }
 }

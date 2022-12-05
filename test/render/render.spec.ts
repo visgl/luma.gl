@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import test from 'tape-promise/tape';
 import {SnapshotTestRunner} from '@luma.gl/test-utils';
 
@@ -10,7 +12,7 @@ test('RenderTest', (t) => {
   // tape's default timeout is 500ms
   t.timeoutAfter(renderTestCaseCount * 4000);
 
-  // @ts-expect-error Seems width and height are not part of the type...
+  // @ts-ignore-error
   new SnapshotTestRunner({width: 600, height: 400})
     .add(EXAMPLE_TEST_CASES)
     // .add(GLTF_TEST_CASES)

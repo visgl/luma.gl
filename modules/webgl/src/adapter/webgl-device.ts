@@ -10,7 +10,7 @@ import type {
 import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
-import {trackContextState} from '../context/state-tracker/track-context-state';
+import {popContextState, pushContextState, trackContextState} from '../context/state-tracker/track-context-state';
 import {ContextState} from '../context/context/context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
 import {
@@ -94,37 +94,6 @@ export default class WebGLDevice extends Device implements ContextState {
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
   private _features?: Set<DeviceFeature>;
   private _limits?: DeviceLimits;
-
-  //
-  // WebGL-only API (not part of `Device` API)
-  //
-
-  /** WebGL1 typed context. Can always be used. */
-  readonly gl: WebGLRenderingContext;
-  /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
-  readonly gl2: WebGL2RenderingContext | null = null;
-  readonly debug: boolean = false;
-
-  /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
-  readonly isWebGL1: boolean;
-  /** `true` if this is a WebGL2 context. @note `false` if WebGL1 */
-  readonly isWebGL2: boolean;
-
-  get webglLimits(): WebGLLimits {
-    this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
-    return this._webglLimits;
-  }
-
-  private _webglLimits?: WebGLLimits;
-
-  /** State used by luma.gl classes: TODO - move to canvasContext*/
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-  /** State used by luma.gl classes */
-  readonly _extensions: Record<string, any> = {};
-  _polyfilled: boolean = false;
-
-  /** Instance of Spector.js (if initialized) */
-  spector;
 
   //
   // Static methods, expected to be present by `luma.createDevice()`
@@ -277,22 +246,6 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     }
   }
 
-  /**
-   * Loses the context
-   * @note Triggers context loss, mainly for testing
-   */
-  loseDevice() {
-    const ext = this.gl.getExtension('WEBGL_lose_context');
-    if (ext) {
-      ext.loseContext();
-    }
-    // loseContext should trigger context loss callback but 
-    this._resolveContextLost?.({
-      reason: 'destroyed',
-      message: 'Application triggered context loss'
-    });
-  }
-
   get isLost(): boolean {
     return this.gl.isContextLost();
   }
@@ -389,6 +342,65 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     this.renderPass?.endPass();
     this.renderPass = null;
     // this.canvasContext.commit();
+  }
+
+    //
+  // WebGL-only API (not part of `Device` API)
+  //
+
+  /** WebGL1 typed context. Can always be used. */
+  readonly gl: WebGLRenderingContext;
+  /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
+  readonly gl2: WebGL2RenderingContext | null = null;
+  readonly debug: boolean = false;
+
+  /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
+  readonly isWebGL1: boolean;
+  /** `true` if this is a WebGL2 context. @note `false` if WebGL1 */
+  readonly isWebGL2: boolean;
+
+  /** State used by luma.gl classes: TODO - move to canvasContext*/
+  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+  /** State used by luma.gl classes */
+  readonly _extensions: Record<string, any> = {};
+  _polyfilled: boolean = false;
+
+  /** Instance of Spector.js (if initialized) */
+  spector;
+
+  private _webglLimits?: WebGLLimits;
+
+  /** Return WebGL specific limits */
+  get webglLimits() : WebGLLimits {
+    this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
+    return this._webglLimits;
+  }
+
+  /**
+   * Loses the context
+   * @note Triggers context loss, mainly for testing
+   * @todo Promote to `Device` API?
+   */
+   loseDevice(): void {
+    const ext = this.gl.getExtension('WEBGL_lose_context');
+    if (ext) {
+      ext.loseContext();
+    }
+    // loseContext should trigger context loss callback but 
+    this._resolveContextLost?.({
+      reason: 'destroyed',
+      message: 'Application triggered context loss'
+    });
+  }
+
+  /** Save current WebGL context state onto an internal stack */
+  pushState(): void {
+    pushContextState(this.gl);
+  }
+
+  /** Restores previously saved context state */
+  popState(): void {
+    popContextState(this.gl);
   }
 }
 

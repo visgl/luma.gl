@@ -16,11 +16,11 @@ import transformFeedback from '../../examples/getting-started/transform-feedback
 
 // API
 import animation from '../../examples/api/animation/app';
-import texture3d from '../../examples/api/texture-3d/app';
+// import texture3d from '../../examples/api/texture-3d/app';
 // import programManagement from '../../examples/api/program-management/app';
 
 // showcases
-import instancing from '../../examples/showcase/instancing/app';
+// import instancing from '../../examples/showcase/instancing/app';
 import persistence from '../../examples/showcase/persistence/app';
 import wandering from '../../examples/showcase/wandering/app';
 
@@ -47,37 +47,49 @@ const examples = {
   wandering,
 
   // webgl - TODO - animation loop issue
-  // helloInstancingWebGL,
-  // shaderModulesWebGL,
+  // helloInstancingWebGL
+  // shaderModulesWebGL
 };
 
+/**
+ * Wraps the imported RenderLoops from the examples into SnapshotTestRunner test cases
+ * We don't start the loops but manually trigger their lifecycle methods
+ * 
+ * @returns a list of test cases for the SnapshotTestRunner
+ */
 function getTestCases(): SnapshotTestRunnerTestCase[] {
   const testCases: SnapshotTestRunnerTestCase[] = [];
-  for (const [name, AppRenderLoop] of Object.entries(examples)) {
-    // @ts-expect-error AnimationLoop vs RenderLoop 
-    const animationLoop: AnimationLoop = RenderLoop.run 
-      ? RenderLoop.run(AppRenderLoop as typeof RenderLoop) 
-      // @ts-expect-error actually a an AnimationLoop
-      : new AppRenderLoop({});
+
+  for (const [name, ExampleRenderLoop] of Object.entries(examples)) {
+    let animationLoop: AnimationLoop | null = null;  
     testCases.push({
       name,
+
+      // Construct the renderloop, but don't start it. Manually call its OnInitialize
       onInitialize: (params) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        return animationLoop.onInitialize && animationLoop.onInitialize(params);
+        animationLoop = RenderLoop.run(ExampleRenderLoop);
+        return animationLoop.props?.onInitialize(params);
       },
+
+      // Manually trigger an animationLoop onRender. Unless it returns false, we are done.
       onRender: (params) => {
-        // remove animation in the example
+        // override animation in the example so we get a well-defined time
         params.tick = 0;
-        const result = animationLoop.onRender && animationLoop.onRender(params);
-        // @ts-expect-error
+        const result = animationLoop?.props?.onRender(params);
         if (result !== false) {
           params.done();
         }
       },
-      onFinalize: animationLoop.onFinalize.bind(animationLoop),
+
+      // Make sure to let the RenderLoop clean up
+      onFinalize: (params) => animationLoop?.props.onFinalize(params),
+
+      // The target image
       goldenImage: `./test/render/golden-images/${name}.png`
     });
   };
+
   return testCases;
 }
 

@@ -17,7 +17,7 @@ test('engine#AnimationLoop start,stop', (t) => {
 
   new AnimationLoop({
     device,
-    onInitialize: () => {
+    onInitialize: async () => {
       initializeCalled++;
     },
     onRender: ({animationLoop}) => {
@@ -44,7 +44,7 @@ test('engine#AnimationLoop redraw', (t) => {
 
   new AnimationLoop({
     device,
-    onInitialize: ({animationLoop}) => {
+    onInitialize: async ({animationLoop}) => {
       animationLoop.redraw();
       animationLoop.stop();
 
@@ -63,7 +63,7 @@ test('engine#AnimationLoop should not call initialize more than once', async (t)
 
   const animationLoop = new AnimationLoop({
     device,
-    onInitialize: () => {
+    onInitialize: async () => {
       initializeCalled++;
     }
   });
@@ -99,7 +99,7 @@ test.skip('engine#AnimationLoop start followed immediately by stop() should stop
 
   const animationLoop = new AnimationLoop({
     device,
-    onInitialize: () => {
+    onInitialize: async () => {
       initializeCalled++;
     }
   });
@@ -116,7 +116,7 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
 
   const animationLoop = new AnimationLoop({
     device,
-    onInitialize: () => {
+    onInitialize: async () => {
       initializeCalled++;
     }
   });

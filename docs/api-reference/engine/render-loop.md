@@ -1,46 +1,56 @@
-# AnimationLoop
+# RenderLoop
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
-An optional helper class to manage the applications render loop,
-`AnimationLoop` provides a number of conveniences related to
-initialization of a `Device` and update of per-frame animation parameters.
+`RenderLoop` is a helper class that manages the applications render loop.
+provides a number of conveniences related to initialization of a `Device` 
+and update of per-frame animation parameters.
+
+It is a wrapper of the [`AnimationLoop`](./animation-loop) class that is easier
+to work with in TypeScript.
 
 ## Usage
 
 ```typescript
-import {AnimationLoop} from `@luma.gl/engine`;
+import {RenderLoop} from `@luma.gl/engine`;
 ```
 
 Autocreates a canvas/context
 
 ```js
-import {AnimationLoop, ClipSpace} from '@luma.gl/engine';
+import {RenderLoop, ClipSpace} from '@luma.gl/engine';
 
-const animationLoop = new AnimationLoop({
-  onInitialize({device}) {
+class AppRenderLoop extends RenderLoop {
+  clipSpaceQuad: ClipSpace;
+
+  constructor({device) {
     // Keys in the object returned here will be available in onRender
-    this.clipSpaceQuad = new ClipSpace({device, fs: FRAGMENT_SHADER});
+    this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
   }
+
+  onFinalize() {
+    this.clipSpaceQuad.destroy();
+  }
+
   onRender({tick}) {
-    // Tick is autoupdated by AnimationLoop
+    // Tick is auto updated by RenderLoop
     this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
-     this.clipSpaceQuad.draw();
+    this.clipSpaceQuad.draw();
   }
 });
 
-animationLoop.start();
+new AppRenderLoop().start();
 ```
 
 Use a canvas in the existing DOM through its HTML id
 
 ```js
-new AppAnimationLoop({canvas: 'my-canvas'}).start();
+new AppRenderLoop({canvas: 'my-canvas'}).start();
 ```
 
 ## Types
 
-### `AnimationLoopProps`
+### `RenderLoopProps`
 
 | Parameter                        | Type                    | Description                                                                                                                                                                 |
 | -------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -57,19 +67,19 @@ new AppAnimationLoop({canvas: 'my-canvas'}).start();
 
 ### `AnimationProps`
 
-The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters:
+The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `RenderLoop`, will be called with an object containing named parameters:
 
 | Parameter         | Type                                     | Description                                                                         |
 | ----------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `animationLoop`  | `AnimationLoop`                          |  The calling `AnimationLoop` instance                             |
-| `device`          | `Device`                  | This `AnimationLoop`'s gl context.                                                  |
+| `animationLoop`  | `RenderLoop`                          |  The calling `RenderLoop` instance                             |
+| `device`          | `Device`                  | This `RenderLoop`'s gl context.                                                  |
 | `canvas`          | `HTMLCanvasElement` or `OffscreenCanvas` | The canvas associated with this context.                                            |
 | `aspect`          | `number`                                         | The canvas aspect ratio (width/height) to update projection matrices                |
 | `width`           |                                          | The drawing buffer width, in "device" pixels (can be different from canvas.width).  |
 | `height`          |                                          | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
 | `useDevicePixels` | `boolean`                                         | Boolean indicating if canvas is utilizes full resolution of Retina/                 |
 | `needsRedraw`     | `String`                                 | Redraw flag (will be automatically set if drawingBuffer resizes)                    |
-| `time`            | `Number`                                 | Milliseconds since `AnimationLoop` was created (monotonic).                         |
+| `time`            | `Number`                                 | Milliseconds since `RenderLoop` was created (monotonic).                         |
 | `tick`            | `Number`                                 | Counter that updates for every frame rendered (monotonic).                          |
 | `renderPass`      | `RenderPass`                            | Availabel if `createFrameBuffer: true` was passed to the constructor.               |
 | `_mousePosition`  | `[x, y]` or `null`                       | (**experimental**) Current mouse position over the canvas.                          |
@@ -80,7 +90,7 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 ### constructor(props : Object)
 
 ```js
-new AnimationLoop({
+new RenderLoop({
   onCreateContext,
   onInitialize,
   onFinalize,
@@ -90,7 +100,7 @@ new AnimationLoop({
 });
 ```
 
-### start([options : Object]) : AnimationLoop
+### start([options : Object]) : RenderLoop
 
 Restarts the animation
 
@@ -98,7 +108,7 @@ Restarts the animation
 
 - `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context).
 
-### stop() : AnimationLoop
+### stop() : RenderLoop
 
 Stops the animation
 
@@ -114,11 +124,11 @@ const loop = await animationLoop.waitForRender()
 loop.gl.readPixels(...)
 ```
 
-### redraw() : AnimationLoop
+### redraw() : RenderLoop
 
 Immediately invokes a redraw (call `onRender` with updated animation props). Only use if the canvas must be updated synchronously.
 
-### setNeedsRedraw(reason : String) : AnimationLoop
+### setNeedsRedraw(reason : String) : RenderLoop
 
 `animationLoop.setNeedsRedraw(reason)`
 
@@ -130,9 +140,9 @@ Notes:
 
 - `onRender` will be called for each animation frame regardless of whether this flag is set, and the redraw reason is automatically cleared.
 - If called multiple times, the `reason` provided in the first call will be remembered.
-- `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
+- `RenderLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
-### setProps(props : Object) : AnimationLoop
+### setProps(props : Object) : RenderLoop
 
 `animationLoop.setProps({...props})`
 
@@ -168,12 +178,12 @@ Returns the current state of the WebGL context used by the animation loop.
 
 ## Remarks
 
-- You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
+- You can instantiate multiple `RenderLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 - Works both in browser and under Node.js.
-- All `AnimationLoop` methods can be chained.
+- All `RenderLoop` methods can be chained.
 - Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference/gltools/context).
 - The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
-- This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
+- This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the RenderLoop constructor.
 
 - When running in the browser, this class uses [`requestAnimationFrame`](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame)
 - [WebGL Fundamentals](https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html#drawingbuffer) contains excellent information on the subtleties of the how the WebGL context's drawing buffer and the HTML canvas interact.

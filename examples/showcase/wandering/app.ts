@@ -239,7 +239,7 @@ export default class AppRenderLoop extends RenderLoop {
     this.transform.delete();
   }
 
-  onRender({gl, width, height, time}): void {
+  onRender({width, height, time}: AnimationProps): void {
     this.transform.run({
       uniforms: {
         u_time: time

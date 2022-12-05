@@ -55,7 +55,6 @@
     "esbuild": "^0.13.13",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.9.2",
-    "gl": "^5.0.3",
     "mjolnir.js": "^2.1.2",
     "mkdirp": "^0.5.1",
     "npm-normalize-package-bin": "^1.0.0",

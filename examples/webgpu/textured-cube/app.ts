@@ -156,12 +156,13 @@ export default class AppRenderLoop extends RenderLoop {
     });
   }
 
-  destroy() {
+  onFinalize() {
+    super.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
 
-  frame({device}: AnimationProps) {
+  onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();

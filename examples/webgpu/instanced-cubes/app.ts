@@ -141,10 +141,14 @@ export default class AppRenderLoop extends RenderLoop {
       instanceCount: NUMBER_OF_INSTANCES,
       parameters: CUBE_RENDER_PARAMETERS
     });
-
   }
 
-  frame({device}: AnimationProps) {
+  onFinalize(animationProps: AnimationProps): void {
+    this.uniformBuffer.destroy();
+    this.cubeModel.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;

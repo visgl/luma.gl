@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import {luma, Device, DeviceProps} from '@luma.gl/api';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
 import {Timeline} from '../animation/timeline';
@@ -15,8 +17,8 @@ type ContextProps = DeviceProps;
 export type AnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
-  onInitialize?: (animationProps: AnimationProps) => void;
-  onRender?: (animationProps: AnimationProps) => void;
+  onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
+  onRender?: (animationProps: AnimationProps) => unknown;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
 
@@ -25,7 +27,6 @@ export type AnimationLoopProps = {
   stats?: Stats;
 
   // view parameters
-  debug?: boolean;
   autoResizeViewport?: boolean;
   autoResizeDrawingBuffer?: boolean;
   useDevicePixels?: number | boolean;
@@ -34,14 +35,13 @@ export type AnimationLoopProps = {
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
   onAddHTML: () => '',
-  onInitialize: () => ({}),
+  onInitialize: async () => { return null; },
   onRender: () => {},
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
   device: null,
   deviceProps: {},
-  debug: false,
   stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
 
   // view parameters
@@ -326,15 +326,15 @@ export class AnimationLoop {
 
   // Called on each frame, can be overridden to call onRender multiple times
   // to support e.g. stereoscopic rendering
-  _renderFrame(props: AnimationProps) {
+  _renderFrame(animationProps: AnimationProps) {
     // Allow e.g. VR display to render multiple frames.
     if (this.display) {
-      this.display._renderFrame(props);
+      this.display._renderFrame(animationProps);
       return;
     }
 
     // call callback
-    this.props.onRender(props);
+    this.props.onRender(this._getAnimationProps());
     // end callback
   }
 
