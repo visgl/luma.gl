@@ -57,10 +57,6 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `indirect-first-instance`              | <F f="indirect-first-instance"/>               | Specify via GPU buffer         |
 | `timestamp-query`                      | <F f="timestamp-query"/>                       |                                |
 | `timer-query-webgl`                    | <F f="timer-query-webgl"/>                     | GPU timer support              |
-| `instanced-rendering-webgl1`           | <F f="instanced-rendering-webgl1"/>            | Instanced rendering available  |
-| `multiple-render-targets-webgl1`       | <F f="multiple-render-targets-webgl1"/>        | Multiple render targets        |
-| `index-uint32-webgl1`                  | <F f="index-uint32-webgl1"/>                   | 32 bit indexing supported      |
-| `blend-minmax-webgl1`                  | <F f="blend-minmax-webgl1"/>                   | `min` and `max` blending       |
 | **Textures**                           |
 | `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                 | `UNSIGNED_INT_24_8_WEBGL`      |
 | `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                 | WebGPU only                    |
@@ -71,10 +67,10 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `texture-renderable-float16-webgl`     | <F f="texture-renderable-float16-webgl"/>      | float16 textures renderable    |
 | `texture-renderable-rgba32float-webgl` | <F f="texture-renderable-rgba32float-webgl"/>  | float32 textures renderable    |
 | `texture-blend-float-webgl1`           | <F f="texture-blend-float-webgl1"/>            | float texture blending         |
-| `texture-formats-float32-webgl1`               | <F f="texture-formats-float32-webgl1"/>                | float32 texture support        |
-| `texture-formats-float16-webgl1`               | <F f="texture-formats-float16-webgl1"/>                | float16 texture support        |
-| `texture-formats-srgb-webgl1`                  | <F f="texture-formats-srgb-webgl1"/>                   | SRGB format support            |
-| `texture-formats-depth-webgl1`                 | <F f="texture-formats-depth-webgl1"/>                  | depth texture supports         |
+| `texture-formats-float32-webgl1`       | <F f="texture-formats-float32-webgl1"/>        | float32 texture support        |
+| `texture-formats-float16-webgl1`       | <F f="texture-formats-float16-webgl1"/>        | float16 texture support        |
+| `texture-formats-srgb-webgl1`          | <F f="texture-formats-srgb-webgl1"/>           | SRGB format support            |
+| `texture-formats-depth-webgl1`         | <F f="texture-formats-depth-webgl1"/>          | depth texture supports         |
 | **Compressed Textures**                |
 | `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>         | DXT (BC1-BC5). Desktops.       |
 | `texture-compression-bc`               | <F f="texture-compression-bc"/>                | DXT (BC1-BC7). Desktops.       |
@@ -83,14 +79,15 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>        | Qualcomm Snapdragon. Android.  |
 | `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>       | PowerVR GPUs, iOS devices.     |
 | `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>         | Qualcomm Adreno GPUs. Android. |
-| **GLSL**                               |
-| `glsl-frag-data`                       | <F f="glsl-frag-data"/>                        |                                |
-| `glsl-frag-depth`                      | <F f="glsl-frag-depth"/>                       |                                |
-| `glsl-derivatives`                     | <F f="glsl-derivatives"/>                      |                                |
-| `glsl-texture-lod`                     | <F f="glsl-texture-lod"/>                      |                                |
-
-
-
+| **WebGL1 checks**                      |
+| `instanced-rendering-webgl1`           | <F f="instanced-rendering-webgl1"/>            | Instanced rendering available? |
+| `multiple-render-targets-webgl1`       | <F f="multiple-render-targets-webgl1"/>        | Multiple render targets        |
+| `index-uint32-webgl1`                  | <F f="index-uint32-webgl1"/>                   | 32 bit indexing supported      |
+| `blend-minmax-webgl1`                  | <F f="blend-minmax-webgl1"/>                   | `min` and `max` blending       |
+| `glsl-frag-data-webgl1`                | <F f="glsl-frag-data"/>                        |                                |
+| `glsl-frag-depth-webgl1`               | <F f="glsl-frag-depth"/>                       |                                |
+| `glsl-derivatives-webgl1`              | <F f="glsl-derivatives"/>                      |                                |
+| `glsl-texture-lod-webgl1`              | <F f="glsl-texture-lod"/>                      |                                |
 
 ## Usage
 
@@ -128,43 +125,44 @@ On your current browser, this would yield:
 
 <WebGLExtensions />
 
-> Caveat: WebGL extensions can be onerous to work with directly. They are very granular,
+The following table illustrates how WebGL extensions map to luma.gl features.
+
+> Caveat: It is mainly included for reference purposes.
+> WebGL extensions can be demanding to work with directly. They are very granular,
+> they often require functions to be invoked on the extension instead of the context,
 > and WebGL1 extensions are not listed as supported on WebGL2 contexts even though the
-> corresponding features are supported.
+> corresponding features are supported by WebGL2.
 
+| `luma.gl feature`                           | WebGL Extension                                                | Description                                                                                                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| **General WebGL Features**                  |                                                                |                                                                                                                                                                | ß   |
+| `webgl2`                                    | True for WebGL 2 Context                                       |                                                                                                                                                                |
+| `timer-query-webgl` (WebGL1)                | [`EXTx_disjoint_timer_query`][timer_query_webgl]               | [`Query`](/docs/api-reference/webgl/query.md) support asynchronous GPU timings                                                                                 |
+| `timer-query-webgl` (WebGL2)                | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        | \* (Same feature has different extension under WebGL1 and WebGL2)                                                                                              |
+| `instanced-rendering-webgl1`                | [`ANGLE_instanced_arrays`][instanced_arrays]                   | Instanced rendering (instanced vertex attributes)                                                                                                              |
+| `vertex-array-object-webgl1`                | [`OES_vertex_array_object`][vertex_array_object]               | `VertexArrayObjects` can be created                                                                                                                            |
+| `index-uint32-webgl1`                       | [`OES_element_index_uint`][element_index_uint]                 | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                                                                                                        |
+| `blend-minmax-webgl1`                       | [`EXT_blend_minmax`][blend_minmax]                             | `GL.MIN`, `GL.MAX` blending modes are available                                                                                                                |
+| \*\* GLSL extensions\*\*                    |                                                                |                                                                                                                                                                |
+| `webgl-shader_texture_lod`                  | [`EXT_shader_texture_lod`][shader_texture_lod]                 | Enables shader control of LOD                                                                                                                                  |
+| `webgl-fragment-shader-draw-buffers`        | [`WEBGL_draw_buffers`][draw_buffers]                           | Fragment shader can draw to multiple render targets                                                                                                            |
+| `webgl-fragment-shader-depth`               | [`EXT_frag_depth`][frag_depth]                                 | Fragment shader can control fragment depth value                                                                                                               |
+| `webgl-fragment-shader-derivatives`         | [`OES_standard_derivatives`][standard_derivatives]             | Derivative functions are available in GLSL                                                                                                                     |
+| **`Texture`s and `Framebuffer`s**           |                                                                |                                                                                                                                                                |
+| `texture-float32-webgl1`                    | [`OES_texture_float`][texture_float]                           | Floating point (`Float32Array`) textures can be created and set as samplers (Note that filtering and rendering need to be queried separately, even in WebGL 2) |
+| `texture-float16-webgl1` (Extension 1 of 2) | [`OES_texture_half_float`][texture_half_float]                 | Half float (`Uint16Array`) textures can be created and set as samplers                                                                                         |
+| `texture-float16-webgl1` (Extension 2 of 2) | [`WEBGL_color_buffer_float`][webgl_color_buffer_float]         | \* (This feature depends on 2 extensions)                                                                                                                      |
+| `multiple-render-targets-webgl1`            | [`WEBGL_draw_buffers`][draw_buffers]                           | `Framebuffer`s can have multiple color attachments that fragment shaders can access, see `Framebuffer.drawBuffers`                                             |
+| `texture-renderable-rgba32float-webgl`      |                                                                | Floating point `Texture`s using the `GL.RGBA32F` format are renderable and readable                                                                            |
+| `texture-renderable-float32-webgl`          | [`EXT_color_buffer_float`]color_buffer_float)                  | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`s and write from fragment shaders, read from with `readPixels` etc. `GL.RGBA32F`.   |
+| `texture-renderable-float16-webgl`          | [`EXT_color_buffer_half_float`]color_buffer_half_float)        | Half float format `Texture`s are renderable and readable                                                                                                       |
+| `float-blend-webgl1`                        | [`EXT_float_blend`]float_blend)                                | Blending with 32-bit floating point color buffers                                                                                                              |
+| `depth_buffers`                             | [`WEBGL_depth_texture`][depth_texture]                         | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations                                                                                    |
+| `texture-filter-linear-float`               | [`OES_texture_float_linear`][texture_float_linear]             | Linear texture filtering for floating point textures                                                                                                           |
+| `texture-filter-linear-half-float-webgl`    | [`OES_texture_half_float_linear`][texture_half_float_linear]   | Linear texture filtering for half float textures                                                                                                               |
+| `texture_filter-anisotropic-webgl`          | [`EXT_texture_filter_anisotropic`][texture_filter_anisotropic] | Anisotropic texture filtering                                                                                                                                  |
+| `texture-srgb-webgl1`                       | [`EXT_sRGB`][srgb]                                             | sRGB encoded rendering is available                                                                                                                            |
 
-
-# Features
-
-| `FEATURE`                                | Description                                                                                                                                                                                                                                                                                                              |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **General WebGL Features**               |                                                                                                                                                                                                                                                                                                                          |
-| `webgl2`                                 | True for WebGL 2 Context                                                                                                                                                                                                                                                                                                 |
-| `instanced-rendering-webgl1`             | Instanced rendering (via instanced vertex attributes) [`ANGLE_instanced_arrays`][instanced_arrays]                                                                                                                                                                                                                       |
-| `vertex-array-object-webgl1`             | `VertexArrayObjects` can be created [`OES_vertex_array_object`][vertex_array_object]                                                                                                                                                                                                                                     |
-| `index-uint32-webgl1`                    | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s [`OES_element_index_uint`][element_index_uint]                                                                                                                                                                                                                   |
-| `webgl-blend-minmax`                     | `GL.MIN`, `GL.MAX` blending modes are available: [`EXT_blend_minmax`][blend_minmax]                                                                                                                                                                                                                                      |
-| `timer-query-webgl`                      | [`Query`](/docs/api-reference/webgl/query.md) objects support asynchronous GPU timings [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2], [`EXT_disjoint_timer_query`][timer_query_webgl]                                                                                                                          |
-| **`Texture`s and `Framebuffer`s**        |                                                                                                                                                                                                                                                                                                                          |
-| `texture-float32-webgl1`                 | Floating point (`Float32Array`) textures can be created and set as samplers (Note that filtering and rendering need to be queried separately, even in WebGL 2) [`OES_texture_float`][texture_float])                                                                                                                     |
-| `texture-float16-webgl1`                 | Half float (`Uint16Array`) textures can be created and set as samplers [`OES_texture_half_float`](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float) [`WEBGL_color_buffer_float`](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float)                                       |
-| `multiple-render-targets-webgl1`         | `Framebuffer`s can have multiple color attachments that fragment shaders can access, see `Framebuffer.drawBuffers` [`WEBGL_draw_buffers`](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers)                                                                                                           |
-| `texture-renderable-rgba32float-webgl`   | Floating point `Texture`s using the `GL.RGBA32F` format are renderable and readable [`EXT_color_buffer_float`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float) [`WEBGL_color_buffer_float`](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float)                          |
-| `texture-renderable-float32-webgl`       | Floating point `Texture`s are renderable and readable, i.e. can be attached to `Framebuffer`s and written to from fragment shaders, and read from with `readPixels` etc. Note that the formats include `GL.RGBA32F`. [`EXT_color_buffer_float`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float) |
-| `texture-renderable-float16-webgl`       | Half float format `Texture`s are renderable and readable[`EXT_color_buffer_half_float`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_half_float)                                                                                                                                                    |
-| `float-blend-webgl1`                     | Blending with 32-bit floating point color buffers[`EXT_float_blend`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend)                                                                                                                                                                                   |
-| `depth_buffers`                           | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations [`WEBGL_depth_texture`][depth_url]                                                                                                                                                                                                          |
-| `texture-filter-linear-float`            | Linear texture filtering for floating point textures [`OES_texture_float_linear`](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float_linear)                                                                                                                                                             |
-| `webgl-texture-filter-linear-half-float` | Linear texture filtering for half float textures [`OES_texture_half_float_linear`](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float_linear)                                                                                                                                                       |
-| `webgl-texture_filter-anisotropic`       | Anisotropic texture filtering [`EXT_texture_filter_anisotropic`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic)                                                                                                                                                                        |
-| `texture-srgb-webgl`                     | sRGB encoded rendering is available [`EXT_sRGB`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB)                                                                                                                                                                                                              |
-|  \*\* GLSL extensions\*\*                |                                                                                                                                                                                                                                                                                                                          |
-| `webgl-shader_texture_lod`               | Enables shader control of LOD [`EXT_shader_texture_lod`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_shader_texture_lod)                                                                                                                                                                                        |
-| `webgl-fragment-shader-draw-buffers`     | Fragment shader can draw to multiple render targets [`WEBGL_draw_buffers`](https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers)                                                                                                                                                                          |
-| `webgl-fragment-shader-depth`            | Fragment shader can control fragment depth value [`EXT_frag_depth`](https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth)                                                                                                                                                                                     |
-| `webgl-fragment-shader-derivatives`      | Derivative functions are available in GLSL [`OES_standard_derivatives`](https://developer.mozilla.org/en-US/docs/Web/API/OES_standard_derivatives)                                                                                                                                                                       |
-
-[depth_url]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
 [instanced_arrays]: https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays
 [vertex_array_object]: https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object
 [element_index_uint]: https://developer.mozilla.org/en-US/docs/Web/API/OES_element_index_uint
@@ -173,7 +171,25 @@ On your current browser, this would yield:
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/
 [texture_compression_bptc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_bptc
 [texture_compression_rgtc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_rgtc
-[texture_float]: (https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float
+[texture_float]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float
+[texture_half_float]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float
+[color_buffer_float]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float
+[draw_buffers]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers
+[ext_color_buffer_float`]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float
+[webgl_color_buffer_float`]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float
+[shader_texture_lod]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_shader_texture_lod
+[draw_buffers]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers
+
+[frag_depth]; https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
+[standard_derivatives]: https://developer.mozilla.org/en-US/docs/Web/API/OES_standard_derivatives
+[color_buffer_float](https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float)
+[color_buffer_half_float](https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_half_float)
+[float_blend](https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend)
+[depth_texture]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
+[texture_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float_linear
+[texture_half_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float_linear
+[texture_filter_anisotropic]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
+[sRGB]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
 
 ## Remarks
 
@@ -233,5 +249,3 @@ A list of luma classes that can only be instantiated under WebGL 2:
 - `Sync` -
 
 The WebGL standard comes with an elaborate "extension" system allowing applications to check for the availability of features beyond the base WebGL 1 and WebGL 2 standards. These extensions tend to be rather technical, plus they have to be used differently in WebGL 1 and WebGL 2, so luma provides a simplified feature detection system. Following table lists all the available features, and their support under WebGL 1 and WebGL 2 , `NO` implies not supported, 'YES' implies supported and `*` implies supported through an extension.
-
-
