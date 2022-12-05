@@ -8,10 +8,11 @@ import EXAMPLE_TEST_CASES from './example-test-cases';
 
 const renderTestCaseCount = EXAMPLE_TEST_CASES.length; //  + GLTF_TEST_CASES.length;
 
-test.only('RenderTest', (t) => {
+test('RenderTest', (t) => {
   // tape's default timeout is 500ms
   t.timeoutAfter(renderTestCaseCount * 4000);
 
+  // @ts-ignore-error
   new SnapshotTestRunner({width: 600, height: 400})
     .add(EXAMPLE_TEST_CASES)
     // .add(GLTF_TEST_CASES)

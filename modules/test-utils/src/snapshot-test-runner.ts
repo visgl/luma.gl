@@ -17,50 +17,49 @@ export default class SnapshotTestRunner extends TestRunner {
     this.testOptions.imageDiffOptions = {};
   }
 
-  initTestCase(testCase: SnapshotTestRunnerTestCase): void {
+  initTestCase(testCase) {
     super.initTestCase(testCase);
     if (!testCase.goldenImage) {
       throw new Error(`Test case ${testCase.name} does not have golden image`);
     }
   }
 
-  shouldRender(): boolean {
+  shouldRender() {
     // wait for the current diffing to finish
     return !this.isDiffing;
   }
 
-  async assert(testCase): Promise<void> {
+  assert(testCase) {
     if (this.isDiffing) {
       // Already performing diffing
       return;
     }
     this.isDiffing = true;
 
-    const canvas = this._animationProps?.canvas;
-    if (!(canvas instanceof HTMLCanvasElement)) {
-      throw new Error('canvas');
-    }
-
-    const diffOptions = {
+    const diffOptions = Object.assign(
+      {},
       // @ts-expect-error
-      ...this.testOptions.imageDiffOptions,
-      ...testCase.imageDiffOptions,
-      goldenImage: testCase.goldenImage,
-      region: getBoundingBoxInPage(canvas)
-    };
+      this.testOptions.imageDiffOptions,
+      testCase.imageDiffOptions,
+      {
+        goldenImage: testCase.goldenImage,
+        // @ts-expect-error
+        region: getBoundingBoxInPage(this._animationProps.canvas)
+      }
+    );
 
     // Take screenshot and compare
     // @ts-expect-error
-    const result = await window.browserTestDriver_captureAndDiffScreen(diffOptions);
+    window.browserTestDriver_captureAndDiffScreen(diffOptions).then((result) => {
+      // invoke user callback
+      if (result.success) {
+        this._pass(result);
+      } else {
+        this._fail(result);
+      }
 
-    // invoke user callback
-    if (result.success) {
-      this._pass(result);
-    } else {
-      this._fail(result);
-    }
-
-    this.isDiffing = false;
-    this._next();
+      this.isDiffing = false;
+      this._next();
+    });
   }
 }
