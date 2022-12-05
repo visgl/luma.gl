@@ -113,9 +113,9 @@ export default class TestRunner {
     const {animationLoop} = testCase;
     if (animationLoop) {
       // TODO this likely no longer works - use animationLoop.props.onInitialize
-      testCase.onInitialize = animationLoop.onInitialize.bind(animationLoop);
-      testCase.onRender = animationLoop.onRender.bind(animationLoop);
-      testCase.onFinalize = animationLoop.onFinalize.bind(animationLoop);
+      testCase.onInitialize = animationLoop.props.onInitialize.bind(animationLoop);
+      testCase.onRender = animationLoop.props.onRender.bind(animationLoop);
+      testCase.onFinalize = animationLoop.props.onFinalize.bind(animationLoop);
     }
     for (const key in DEFAULT_TEST_CASE) {
       testCase[key] = testCase[key] || DEFAULT_TEST_CASE[key];
