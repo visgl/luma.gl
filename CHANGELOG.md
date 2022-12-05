@@ -1,5 +1,12 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.11
+
+- chore: Refactor device pixel handling into CanvasContext (#1706)
+- chore(test-utils): Clean up test utils (#1707)
+- docs: Improve v9 upgrade guide (#1705)
+- chore(gltools): Allow `Device` to be passed to context and renderbuffer APIs (#1704)
+
 ## v9.0.0-alpha.10
 
 - chore(gltools/webgl): Support `Device` parameter in more places (#1695)
