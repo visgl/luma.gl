@@ -7,7 +7,8 @@
         { "entry": "docs" },
         { "entry": "docs/whats-new" },
         { "entry": "docs/public-review" },
-        { "entry": "docs/upgrade-guide" }
+        { "entry": "docs/upgrade-guide" },
+        { "entry": "docs/upgrade-guide-v9" }
       ]
     },
     {

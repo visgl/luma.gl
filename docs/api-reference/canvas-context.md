@@ -8,9 +8,9 @@ Canvas contexts are created using `device.createCanvasContext()`. Depending on o
 
 a `CanvasContext` handles the following responsibilities:
 
-- manages the "swap chain" (provides a `Framebuffer` representing the display, with freshly updated and resized textures for every render frame)
-- manages canvas resizing
-- manages device pixel ratio
+- Provides a `Framebuffer` representing the display, with freshly updated and resized textures for every render frame. On WebGPU it manages the "swap chain".
+- Handles canvas resizing
+- Manages device pixel ratio (mapping between device and CSS pixels)
 
 ## Usage
 
@@ -51,7 +51,16 @@ const renderPass = device.beginRenderPass({
 
 ### `CanvasContext.isPageLoaded: boolean`
 
+A boolean that indicates if the web page has been loaded. This is sometimes useful as a canvas element specified in the page HTML will not be available until the page has loaded.
+
 ### `CanvasContext.pageLoaded: Promise<void>`
+
+A promise that resolves when the page is loaded.
+
+```typescript
+  await CanvasContex.isPageLoaded;
+  const canvas = document.getElementById('canvas');
+```
 
 ## Fields
 
@@ -59,23 +68,31 @@ const renderPass = device.beginRenderPass({
 
 ### `useDevicePixels: boolean | number`
 
+Whether the framebuffer backing this canvas context is sized using device pixels.
+
+- `false` - Framebuffer is sized according to CSS pixel size.
+- `true` - Framebuffer is sized according to the device pixel ratio reported by the browser.
+- `number` - Framebuffer is sized according to the provided ratio.
+
 ## Methods
 
 ### constructor
 
-A `CanvasContext` can not be constructed directly. It must be created by instantiating a `WebGPUDevice` or a `WebGLDevice`, or through `WebGPUDevice.createCanvasContext()`.
+> A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice`, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
 
 ### `getDevicePixelResolution(): [number, number]`
+
+T
 
 ### `getPixelSize(): [number, number]`
 
 Returns the size in pixels required to cover the canvas at the current device pixel resolution.
 
-### `resize()`
+### `resize(): void`
 
 Resize the drawing surface.
 
-```
+```typescript
 canvasContext.resize(options)
 ```
 
@@ -85,5 +102,6 @@ canvasContext.resize(options)
 
 ## Remarks
 
-- Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute). However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of the WebGL API.)
-- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).
+- Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute). 
+- However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of WebGL.)
+- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](<(/docs/api-reference/gltools/device-pixels)>).
