@@ -51,9 +51,6 @@ export {
   assertWebGL2Context
 } from './context/context/webgl-checks';
 
-// Device ratio
-export {cssToDeviceRatio, cssToDevicePixels} from './context/context/device-pixels';
-
 // Unified parameter API
 
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';

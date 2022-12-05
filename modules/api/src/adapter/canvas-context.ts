@@ -2,6 +2,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type Device from './device';
 import type Framebuffer from './resources/framebuffer';
+import {log} from '@luma.gl/api';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
@@ -23,9 +24,9 @@ export type CanvasContextProps = {
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-  colorSpace?: 'srgb', // GPUPredefinedColorSpace
+  colorSpace?: 'srgb'; // GPUPredefinedColorSpace
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-  compositingAlphaMode?: 'opaque' | 'premultiplied'
+  compositingAlphaMode?: 'opaque' | 'premultiplied';
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
@@ -52,6 +53,8 @@ export default abstract class CanvasContext {
   readonly id: string;
   readonly props: Required<CanvasContextProps>;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
+  readonly htmlCanvas?: HTMLCanvasElement;
+  readonly offscreenCanvas?: OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
 
   width: number = 1;
@@ -59,12 +62,15 @@ export default abstract class CanvasContext {
 
   readonly resizeObserver: ResizeObserver | undefined;
 
+  /** State used by luma.gl classes: TODO - move to canvasContext*/
+  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+
   /** Check if the DOM is loaded */
   static get isPageLoaded(): boolean {
     return isPageLoaded();
   }
 
-  /** 
+  /**
    * Get a 'lazy' promise that resolves when the DOM is loaded.
    * @note Since there may be limitations on number of `load` event listeners,
    * it is recommended avoid calling this function until actually needed.
@@ -79,7 +85,7 @@ export default abstract class CanvasContext {
     props = this.props;
 
     if (!isBrowser()) {
-      this.id = 'node.js';
+      this.id = 'node-canvas-context';
       this.type = 'node';
       this.width = this.props.width;
       this.height = this.props.height;
@@ -103,12 +109,19 @@ export default abstract class CanvasContext {
     } else {
       this.canvas = props.canvas;
     }
-    this.id = this.canvas instanceof HTMLCanvasElement ? this.canvas.id : 'offscreen-canvas';
-    this.type = this.canvas instanceof HTMLCanvasElement ? 'html-canvas' : 'offscreen-canvas';
+    if (this.canvas instanceof HTMLCanvasElement) {
+      this.id = this.canvas.id;
+      this.type = 'html-canvas';
+      this.htmlCanvas = this.canvas;
+    } else {
+      this.id = 'offscreen-canvas';
+      this.type = 'offscreen-canvas';
+      this.offscreenCanvas = this.canvas;
+    }
 
     // React to size changes
     if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {
-      this.resizeObserver = new ResizeObserver(entries => {
+      this.resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           if (entry.target === this.canvas) {
             this.update();
@@ -126,17 +139,23 @@ export default abstract class CanvasContext {
    * Returns the current DPR, if props.useDevicePixels is true
    * Device refers to physical
    */
-  getDevicePixelRatio(): number {
+  getDevicePixelRatio(useDevicePixels?: boolean | number): number {
     if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
       return 1;
     }
-    if (typeof this.props.useDevicePixels === 'number') {
-      return this.props.useDevicePixels;
+    // The param was mainly provide to support the test cases, could be removed
+    if (typeof useDevicePixels === 'number') {
+      return useDevicePixels > 0 ? useDevicePixels : 1;
     }
-    return this.props.useDevicePixels ? window.devicePixelRatio || 1 : 1;
+    if (typeof this.props.useDevicePixels === 'number') {
+      return this.props.useDevicePixels > 0 ? this.props.useDevicePixels : 1;
+    }
+    return useDevicePixels || this.props.useDevicePixels
+      ? (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+      : 1;
   }
 
-  /** 
+  /**
    * Returns the size of drawing buffer in device pixels.
    * @note This can be different from the 'CSS' size of a canvas, and also from the
    * canvas' internal drawing buffer size (.width, .height).
@@ -153,7 +172,7 @@ export default abstract class CanvasContext {
         const canvas = this.canvas as HTMLCanvasElement;
         // If not attached to DOM client size can be 0
         return canvas.parentElement
-          ? [canvas.clientWidth * dpr,  canvas.clientHeight * dpr]
+          ? [canvas.clientWidth * dpr, canvas.clientHeight * dpr]
           : [this.canvas.width, this.canvas.height];
     }
   }
@@ -163,13 +182,139 @@ export default abstract class CanvasContext {
     return width / height;
   }
 
-  abstract resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void;
+  /**
+   * Returns multiplier need to convert CSS size to Device size
+   */
+  cssToDeviceRatio(): number {
+    try {
+      // For headless gl we might have used custom width and height
+      // hence use cached clientWidth
+      const [drawingBufferWidth] = this.getDrawingBufferSize();
+      const {clientWidth} = this._canvasSizeInfo;
+      return clientWidth ? drawingBufferWidth / clientWidth : 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  /**
+   * Maps CSS pixel position to device pixel position
+   */
+  cssToDevicePixels(
+    cssPixel: number[],
+    yInvert: boolean = true
+  ): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } {
+    const ratio = this.cssToDeviceRatio();
+    const [width, height] = this.getDrawingBufferSize();
+    return scalePixels(cssPixel, ratio, width, height, yInvert);
+  }
+
+  /**
+   * Use devicePixelRatio to set canvas width and height
+   * @note this is a raw port of luma.gl v8 code. Might be worth a review
+   */
+  setDevicePixelRatio(
+    devicePixelRatio: number,
+    options: {width?: number; height?: number} = {}
+  ): void {
+    if (!this.htmlCanvas) {
+      return;
+    }
+
+    // NOTE: if options.width and options.height not used remove in v8
+    let clientWidth = 'width' in options ? options.width : this.htmlCanvas.clientWidth;
+    let clientHeight = 'height' in options ? options.height : this.htmlCanvas.clientHeight;
+
+    if (!clientWidth || !clientHeight) {
+      log.log(1, 'Canvas clientWidth/clientHeight is 0')();
+      // by forcing devicePixel ratio to 1, we do not scale canvas.width and height in each frame.
+      devicePixelRatio = 1;
+      clientWidth = this.htmlCanvas.width || 1;
+      clientHeight = this.htmlCanvas.height || 1;
+    }
+
+    const cachedSize = this._canvasSizeInfo;
+    // Check if canvas needs to be resized
+    if (
+      cachedSize.clientWidth !== clientWidth ||
+      cachedSize.clientHeight !== clientHeight ||
+      cachedSize.devicePixelRatio !== devicePixelRatio
+    ) {
+      let clampedPixelRatio = devicePixelRatio;
+
+      const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
+      const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
+      this.htmlCanvas.width = canvasWidth;
+      this.htmlCanvas.height = canvasHeight;
+
+      // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
+      // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
+      // for those cases, reduce devicePixelRatio.
+      const [drawingBufferWidth, drawingBufferHeight] = this.getDrawingBufferSize();
+
+      if (drawingBufferWidth !== canvasWidth || drawingBufferHeight !== canvasHeight) {
+        clampedPixelRatio = Math.min(
+          drawingBufferWidth / clientWidth,
+          drawingBufferHeight / clientHeight
+        );
+
+        this.htmlCanvas.width = Math.floor(clientWidth * clampedPixelRatio);
+        this.htmlCanvas.height = Math.floor(clientHeight * clampedPixelRatio);
+
+        log.warn(`Device pixel ratio clamped`)();
+      }
+
+      this._canvasSizeInfo.clientWidth = clientWidth;
+      this._canvasSizeInfo.clientHeight = clientHeight;
+      this._canvasSizeInfo.devicePixelRatio = devicePixelRatio;
+    }
+  }
+
+  // PRIVATE
+
+  /** @todo Major hack done to port the CSS methods above, base canvas context should not depend on WebGL */
+  getDrawingBufferSize(): [number, number] {
+    // @ts-expect-error This only works for WebGL
+    const gl = this.device.gl;
+    if (!gl) {
+      // use default device pixel ratio
+      throw new Error('canvas size');
+    }
+    return [gl.drawingBufferWidth, gl.drawingBufferHeight];
+  }
+
+  abstract resize(options?: {
+    width?: number;
+    height?: number;
+    useDevicePixels?: boolean | number;
+  }): void;
 
   /** Perform platform specific updates (WebGPU vs WebGL) */
-  abstract update(): void;
+  protected abstract update(): void;
 }
 
-// Internal API
+// HELPER FUNCTIONS
+
+let pageLoadPromise: Promise<void> | null = null;
+
+/** Returns a promise that resolves when the page is loaded */
+function getPageLoadPromise(): Promise<void> {
+  if (!pageLoadPromise) {
+    if (isPageLoaded()) {
+      pageLoadPromise = Promise.resolve();
+    } else {
+      pageLoadPromise = new Promise((resolve, reject) => {
+        window.addEventListener('load', () => resolve());
+      });
+    }
+  }
+  return pageLoadPromise;
+}
 
 /** Create a new canvas */
 function createCanvas(props: CanvasContextProps) {
@@ -195,20 +340,67 @@ function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
   return canvas as HTMLCanvasElement;
 }
 
-// HELPER FUNCTIONS
+/**
+ *
+ * @param pixel
+ * @param ratio
+ * @param width
+ * @param height
+ * @param yInvert
+ * @returns
+ */
+function scalePixels(
+  pixel: number[],
+  ratio: number,
+  width: number,
+  height: number,
+  yInvert: boolean
+): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const x = scaleX(pixel[0], ratio, width);
+  let y = scaleY(pixel[1], ratio, height, yInvert);
 
-let pageLoadPromise: Promise<void> | null = null;
+  // Find boundaries of next pixel to provide valid range of device pixel locations
 
-/** Returns a promise that resolves when the page is loaded */
-function getPageLoadPromise(): Promise<void> {
-  if (!pageLoadPromise) {
-    if (isPageLoaded()) {
-      pageLoadPromise = Promise.resolve();
-    } else {
-      pageLoadPromise = new Promise((resolve, reject) => {
-        window.addEventListener('load', () => resolve());
-      });
-    }
+  let t = scaleX(pixel[0] + 1, ratio, width);
+  // If next pixel's position is clamped to boundary, use it as is, otherwise subtract 1 for current pixel boundary
+  const xHigh = t === width - 1 ? t : t - 1;
+
+  t = scaleY(pixel[1] + 1, ratio, height, yInvert);
+  let yHigh;
+  if (yInvert) {
+    // If next pixel's position is clamped to boundary, use it as is, otherwise clamp it to valid range
+    t = t === 0 ? t : t + 1;
+    // swap y and yHigh
+    yHigh = y;
+    y = t;
+  } else {
+    // If next pixel's position is clamped to boundary, use it as is, otherwise clamp it to valid range
+    yHigh = t === height - 1 ? t : t - 1;
+    // y remains same
   }
-  return pageLoadPromise;
+  return {
+    x,
+    y,
+    // when ratio < 1, current css pixel and next css pixel may point to same device pixel, set width/height to 1 in those cases.
+    width: Math.max(xHigh - x + 1, 1),
+    height: Math.max(yHigh - y + 1, 1)
+  };
+}
+
+function scaleX(x: number, ratio: number, width: number): number {
+  // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
+  const r = Math.min(Math.round(x * ratio), width - 1);
+  return r;
+}
+
+function scaleY(y: number, ratio: number, height: number, yInvert: boolean): number {
+  // since we are rounding to nearest, when ratio > 1, edge pixels may point to out of bounds value, clamp to the limit
+  return yInvert
+    ? Math.max(0, height - 1 - Math.round(y * ratio))
+    : Math.min(Math.round(y * ratio), height - 1);
 }

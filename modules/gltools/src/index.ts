@@ -30,31 +30,25 @@ export {
 } from '@luma.gl/webgl';
 
 // Device ratio
-export {cssToDeviceRatio, cssToDevicePixels} from '@luma.gl/webgl';
+export {
+  cssToDeviceRatio,
+  cssToDevicePixels,
+  getDevicePixelRatio,
+  setDevicePixelRatio
+} from './classic/device-pixels';
 
 // Unified parameter API
 
 export type {GLParameters} from '@luma.gl/webgl';
-export {
-  getParameters,
-  setParameters,
-  resetParameters
-} from '@luma.gl/webgl';
+export {getParameters, setParameters, resetParameters} from '@luma.gl/webgl';
 
-export {
-  withParameters
-} from '@luma.gl/webgl';
+export {withParameters} from '@luma.gl/webgl';
 
 // State tracking
-export {
-  trackContextState,
-  pushContextState,
-  popContextState
-} from '@luma.gl/webgl';
+export {trackContextState, pushContextState, popContextState} from '@luma.gl/webgl';
 
 // Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
 export {polyfillContext} from '@luma.gl/webgl';
-
 
 // Features
 export {DEPRECATED_FEATURES as FEATURES} from './classic/features';
@@ -116,7 +110,10 @@ export {getDebugTableForVertexArray} from './debug/debug-vertex-array';
 export {getDebugTableForProgramConfiguration} from './debug/debug-program-configuration';
 
 // luma.gl v8 Engine API
-export type {ClassicAnimationLoopProps, ClassicAnimationProps} from './engine/classic-animation-loop';
+export type {
+  ClassicAnimationLoopProps,
+  ClassicAnimationProps
+} from './engine/classic-animation-loop';
 export {default as ClassicAnimationLoop} from './engine/classic-animation-loop';
 export type {ClassicModelProps} from './engine/classic-model';
 export {default as ClassicModel} from './engine/classic-model';

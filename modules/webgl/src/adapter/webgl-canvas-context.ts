@@ -1,7 +1,6 @@
 // luma.gl, MIT license
 import type {CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext} from '@luma.gl/api';
-import {getDevicePixelRatio, setDevicePixelRatio} from '../context/context/device-pixels';
 import WebGLDevice from './webgl-device';
 import WEBGLFramebuffer from './resources/webgl-framebuffer';
 
@@ -52,8 +51,7 @@ export default class WebGLCanvasContext extends CanvasContext {
    resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     // Resize browser context .
     if (this.canvas) {
-      const devicePixelRatio = getDevicePixelRatio(options?.useDevicePixels);
-      setDevicePixelRatio(this.device.gl, devicePixelRatio, options);
+      this.setDevicePixelRatio(devicePixelRatio, options);
       return;
     }
 

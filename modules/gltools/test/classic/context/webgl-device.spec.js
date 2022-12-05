@@ -56,7 +56,7 @@ test.skip('WebGLDevice#resize', (t) => {
   // update drawing buffer size to simulate webgl1Device context
   webgl1Device.canvasContext.resize({width: 10, height: 20, useDevicePixels: 1});
   t.deepEqual(
-    webgl1Device._canvasSizeInfo,
+    webgl1Device.canvasContext._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 1},
     'Canvas size info should be cached'
   );
@@ -66,7 +66,7 @@ test.skip('WebGLDevice#resize', (t) => {
   const DPR = 12.5;
   webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
-    webgl1Device._canvasSizeInfo,
+    webgl1Device.canvasContext._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: DPR},
     'Cached canvas size info should be updated'
   );
@@ -74,7 +74,7 @@ test.skip('WebGLDevice#resize', (t) => {
   // trigger again without any changes
   webgl1Device.canvasContext.resize({useDevicePixels: DPR});
   t.deepEqual(
-    webgl1Device._canvasSizeInfo,
+    webgl1Device.canvasContext._canvasSizeInfo,
     {clientWidth: 10, clientHeight: 20, devicePixelRatio: 12.5},
     'Cached canvas size should remain same'
   );
