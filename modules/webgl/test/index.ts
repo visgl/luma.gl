@@ -29,6 +29,7 @@ import './adapter/device-helpers/device-limits.spec';
 import './adapter/device-helpers/set-device-parameters.spec';
 
 import './adapter/webgl-device.spec';
+import './adapter/webgl-canvas-context.spec';
 
 // Resources - TODO these tests only depend on Device and could move to API...
 import './adapter/resources/webgl-sampler.spec';

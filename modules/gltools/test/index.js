@@ -1,3 +1,11 @@
+// features
+
+// Context API
+import './classic/context/device-pixels.spec';
+import './classic/context/context-api.spec';
+import './classic/context/features.spec';
+// import './_deprecated/features/limits.spec';
+
 // helpers
 import './classic/accessor.spec';
 
@@ -26,13 +34,6 @@ import './classic/query.spec';
 // webgl2
 import './classic/uniform-buffer-layout.spec';
 import './classic/transform-feedback.spec';
-
-// features
-import './classic/context/features.spec';
-// import './_deprecated/features/limits.spec';
-
-// Context API
-import './classic/context/context-api.spec';
 
 // luma v8 engine API
 import './engine/model.spec';

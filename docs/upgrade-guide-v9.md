@@ -83,11 +83,11 @@ canvas DOM element (`HTLMCanvasElement`).
 | ------------------------------ | -------------------------------------------- | -------------------------------------------------- |
 | `resizeGLContext(gl, options)` | `device.canvasContext.resize(options)`       | Same options: `{width, height, useDevicePixels}`   |
 | `getDevicePixelRatio()`        | `device.canvasContext.getDevicePixelRatio()` | Uses `useDevicePixels` prop on the `CanvasContext` |
-| `setDevicePixelRatio()`        | TBD                                          | TBD                                                |
+| `setDevicePixelRatio()`        | `device.canvasContext.setDevicePixelRatio()` |                                                    |
 |                                | `device.canvasContext.getPixelSize()`        |
 |                                | `device.canvasContext.getAspect()`           |
-| `cssToDeviceRatio()`           | TBA                                          | TBA                                                |
-| `cssToDevicePixels()`          | TBA                                          | TBA                                                |
+| `cssToDeviceRatio()`           | `device.canvasContext.cssToDeviceRatio()`    |                                                    |
+| `cssToDevicePixels()`          | `device.canvasContext.cssToDevicePixels()`   |                                                    |
 
 ### Features
 

@@ -1,5 +1,5 @@
-import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/webgl';
-import {getDevicePixelRatio} from '@luma.gl/webgl/context/context/device-pixels';
+import {cssToDevicePixels, cssToDeviceRatio, getDevicePixelRatio} from '@luma.gl/gltools';
+import {} from '@luma.gl/gltools';
 
 import test from 'tape-promise/tape';
 const LOW_DPR = 0.5;
@@ -315,7 +315,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('webgl#getDevicePixelRatio', (t) => {
+test('gltools#getDevicePixelRatio', (t) => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -356,7 +356,7 @@ test('webgl#getDevicePixelRatio', (t) => {
   t.end();
 });
 
-test('webgl#cssToDevicePixels', (t) => {
+test('gltools#cssToDevicePixels', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
@@ -377,7 +377,7 @@ test('webgl#cssToDevicePixels', (t) => {
   t.end();
 });
 
-test('webgl#cssToDeviceRatio', (t) => {
+test('gltools#cssToDeviceRatio', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
     // @ts-expect-error Mock GL context
     t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');
