@@ -11,7 +11,7 @@ export type GLTFEnvironmentProps = {
   specularMipLevels?: number;
 }
 
-export default class GLTFEnvironment {
+export class GLTFEnvironment {
   // TODO - Use Device
   device: WebGLDevice;
   brdfLutUrl: any;

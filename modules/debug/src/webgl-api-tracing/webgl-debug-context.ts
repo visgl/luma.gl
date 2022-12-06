@@ -8,7 +8,7 @@ import WebGLDebug from 'webgl-debug';
 globalThis.WebGLDebugUtils = WebGLDebug;
 
 // Helper to get shared context data
-function getContextData(gl) {
+function getContextDebugData(gl) {
   gl.luma = gl.luma || {};
   return gl.luma;
 }
@@ -31,14 +31,14 @@ export function makeDebugContext(
 
 // Returns the real context from either of the real/debug contexts
 function getRealContext(gl) {
-  const data = getContextData(gl);
+  const data = getContextDebugData(gl);
   // If the context has a realContext member, it is a debug context so return the realContext
   return data.realContext ? data.realContext : gl;
 }
 
 // Returns the debug context from either of the real/debug contexts
 function getDebugContext(gl, opts) {
-  const data = getContextData(gl);
+  const data = getContextDebugData(gl);
 
   // If this already has a debug context, return it.
   if (data.debugContext) {

@@ -11,7 +11,7 @@ export type ScenegraphNodeProps = {
   update?: boolean
 };
 
-export default class ScenegraphNode {
+export class ScenegraphNode {
   readonly id: string;
   matrix: Matrix4 = new Matrix4();
 

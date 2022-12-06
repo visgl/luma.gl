@@ -1,7 +1,7 @@
 /**
  * Stores luma.gl specific state associated with a context
  */
-export interface ContextState {
+export interface WebGLContextData {
   _polyfilled: boolean;
   _extensions: Record<string, any>;
 }
@@ -10,22 +10,18 @@ export interface ContextState {
  * Gets luma.gl specific state from a context
  * @returns context state
  */
-export function getContextState(gl: WebGLRenderingContext): ContextState {
+export function getContextData(gl: WebGLRenderingContext): WebGLContextData {
   // @ts-expect-error
-  const {device, luma} = gl;
-  if (device) {
-    return device as ContextState;
-  }
+  const luma = gl.luma as WebGLContextData | null;
   if (!luma) {
-    const contextState: ContextState = {
+    const contextState: WebGLContextData = {
       _polyfilled: false,
       _extensions: {}
     };
     // @ts-expect-error
     gl.luma = contextState;
   }
-  throw new Error('context state without device');
 
-  // // @ts-expect-error
-  // return gl.luma;
+  // @ts-expect-error
+  return gl.luma;
 }

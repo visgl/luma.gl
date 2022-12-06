@@ -1,12 +1,12 @@
 import {Matrix4} from '@math.gl/core';
 import {log} from '@luma.gl/gltools';
-import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
+import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 
 export type GroupNodeProps = ScenegraphNodeProps & {
   children?: ScenegraphNode[];
 }
 
-export default class GroupNode extends ScenegraphNode {
+export class GroupNode extends ScenegraphNode {
   children: ScenegraphNode[];
 
   constructor(children: ScenegraphNode[]);

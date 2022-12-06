@@ -136,9 +136,10 @@ export default class Geometry {
   }
 
   // Return an object with all attributes plus indices added as a field.
-  // getAttributes(): GeometryAttributes {
-  //   return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
-  // }
+  getAttributes(): GeometryAttributes {
+    // @ts-expect-error Geometry types are a mess
+    return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
+  }
 
   // PRIVATE
 

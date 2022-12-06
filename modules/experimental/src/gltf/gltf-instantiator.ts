@@ -2,11 +2,11 @@ import {Device, log} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Buffer, Accessor} from '@luma.gl/gltools';
 import {Matrix4} from '@math.gl/core';
-import GroupNode from '../scenegraph/group-node';
-import ModelNode from '../scenegraph/model-node';
+import {GroupNode} from '../scenegraph/group-node';
+import {ModelNode} from '../scenegraph/model-node';
 
-import GLTFAnimator from './gltf-animator';
-import createGLTFModel from './create-gltf-model';
+import {GLTFAnimator} from './gltf-animator';
+import {createGLTFModel} from './create-gltf-model';
 
 // TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
 const ATTRIBUTE_TYPE_TO_COMPONENTS = {
@@ -29,7 +29,7 @@ const DEFAULT_OPTIONS = {
 
 // GLTF instantiator for luma.gl
 // Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
-export default class GLTFInstantiator {
+export class GLTFInstantiator {
   // TODO - replace with Device
   device: WebGLDevice;
   options;

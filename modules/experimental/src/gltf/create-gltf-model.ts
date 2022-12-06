@@ -1,7 +1,7 @@
 import {Device, log} from '@luma.gl/api';
 import {pbr} from '@luma.gl/shadertools';
-import ModelNode from '../scenegraph/model-node';
-import GLTFMaterialParser from './gltf-material-parser';
+import {ModelNode} from '../scenegraph/model-node';
+import {GLTFMaterialParser} from './gltf-material-parser';
 
 const vs = `
 #pragma vscode_glsllint_stage: vert
@@ -60,7 +60,7 @@ const fs = `
   }
 `;
 
-export default function createGLTFModel(device: Device, options: any): ModelNode {
+export function createGLTFModel(device: Device, options: any): ModelNode {
   const {id, drawMode, vertexCount, attributes, modelOptions} = options;
   const materialParser = new GLTFMaterialParser(device, options);
 

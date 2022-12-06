@@ -1,8 +1,8 @@
 import {Device} from '@luma.gl/api';
-import GLTFInstantiator from './gltf-instantiator';
-import GLTFAnimator from './gltf-animator';
+import {GLTFInstantiator} from './gltf-instantiator';
+import {GLTFAnimator} from './gltf-animator';
 
-export default function createGLTFObjects(
+export function createGLTFObjects(
   device: Device,
   gltf: any,
   options?: any
