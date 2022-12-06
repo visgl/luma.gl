@@ -1,8 +1,8 @@
 import {log} from '@luma.gl/api';
-import Display from './display';
+import {Display} from './display';
 import {createEnterVRButton} from './vr-button';
 
-export default class VRDisplay extends Display {
+export class VRDisplay extends Display {
   private _vrSupported: boolean;
   vrDisplay;
   vrFrameData;

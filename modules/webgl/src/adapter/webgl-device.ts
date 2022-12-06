@@ -11,7 +11,6 @@ import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {popContextState, pushContextState, trackContextState} from '../context/state-tracker/track-context-state';
-import {ContextState} from '../context/context/context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
 import {
   createHeadlessContext,
@@ -63,7 +62,7 @@ const LOG_LEVEL = 1;
 let counter = 0;
 
 /** WebGPU style Device API for a WebGL context */
-export default class WebGLDevice extends Device implements ContextState {
+export default class WebGLDevice extends Device {
   //
   // Public `Device` API
   //
@@ -361,10 +360,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-  /** State used by luma.gl classes */
-  readonly _extensions: Record<string, any> = {};
-  _polyfilled: boolean = false;
-
+  
   /** Instance of Spector.js (if initialized) */
   spector;
 

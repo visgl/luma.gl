@@ -1,12 +1,12 @@
 import {Device} from '@luma.gl/api';
 import {ClassicModel as Model, ClassicModelProps as ModelProps} from '@luma.gl/gltools';
-import ScenegraphNode, {ScenegraphNodeProps} from './scenegraph-node';
+import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 
 export type ModelNodeProps = ScenegraphNodeProps & ModelProps & {
   managedResources?: any[];
 }
 
-export default class ModelNode extends ScenegraphNode {
+export class ModelNode extends ScenegraphNode {
   readonly model: Model;
 
   AfterRender = null;

@@ -11,13 +11,13 @@ import {assert} from '@luma.gl/api';
 import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';
-import {getContextState} from '../context/context-state';
+import {getContextData} from './context-data';
 
 /**
  * Registers extensions, polyfills or mock functions for extensions in the polyfills list
  */
 export function polyfillContext(gl: WebGLRenderingContext): WebGL2RenderingContext {
-  const contextState = getContextState(gl);
+  const contextState = getContextData(gl);
 
   if (!contextState._polyfilled) {
     polyfillVertexArrayObject(gl);
@@ -32,7 +32,7 @@ export function polyfillContext(gl: WebGLRenderingContext): WebGL2RenderingConte
 }
 
 function initializeExtensions(gl: WebGLRenderingContext): void {
-  const contextState = getContextState(gl);
+  const contextState = getContextData(gl);
   // `getSupportedExtensions` can return null when context is lost.
   const EXTENSIONS = gl.getSupportedExtensions() || [];
   for (const extensionName of EXTENSIONS) {
@@ -42,7 +42,7 @@ function initializeExtensions(gl: WebGLRenderingContext): void {
 }
 
 function installPolyfills(gl: WebGLRenderingContext, polyfills): void {
-  const contextState = getContextState(gl);
+  const contextState = getContextData(gl);
   for (const extension of Object.getOwnPropertyNames(polyfills)) {
     if (extension !== 'overrides') {
       polyfillExtension(gl, {extension, target: contextState, target2: gl});

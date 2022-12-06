@@ -9,7 +9,7 @@ const TEXTURE_SIZE = 512;
 
 export type GPUPointInPolygonProps = {polygons?, textureSize?};
 
-export default class GPUPointInPolygon {
+export class GPUPointInPolygon {
   gl: WebGL2RenderingContext;
   textureSize = TEXTURE_SIZE;
 

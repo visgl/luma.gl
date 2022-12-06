@@ -187,7 +187,7 @@ class GLTFAnimation {
   }
 }
 
-export default class GLTFAnimator {
+export class GLTFAnimator {
   animations;
 
   constructor(gltf) {

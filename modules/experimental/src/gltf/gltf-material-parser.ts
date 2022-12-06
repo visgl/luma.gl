@@ -2,7 +2,7 @@ import type {Device, Texture} from '@luma.gl/api';
 import {log} from '@luma.gl/api';
 
 import GL from '@luma.gl/constants';
-import GLTFEnvironment from './gltf-environment';
+import {GLTFEnvironment} from './gltf-environment';
 
 export type GLTFMaterialParserProps = {
   attributes: any;
@@ -12,7 +12,7 @@ export type GLTFMaterialParserProps = {
   lights: any;
   useTangents?: boolean;
 };
-export default class GLTFMaterialParser {
+export class GLTFMaterialParser {
   readonly device: Device;
 
   readonly defines: Record<string, number | boolean>;

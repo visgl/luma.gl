@@ -37,7 +37,7 @@
     "webgl-debug": "^2.0.1"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.0.0-alpha.7"
+    "@luma.gl/core": "9.0.0-alpha.11"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

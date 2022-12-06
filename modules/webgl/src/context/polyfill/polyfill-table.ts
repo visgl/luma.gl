@@ -3,7 +3,7 @@ import GL from '@luma.gl/constants';
 import {isWebGL2} from '../context/webgl-checks';
 
 import {getParameterPolyfill} from './get-parameter-polyfill';
-import {getContextState} from '../context/context-state';
+import {getContextData} from './context-data';
 
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
@@ -142,8 +142,8 @@ export const WEBGL2_CONTEXT_OVERRIDES = {
   getTexParameter(gl, originalFunc, target, pname) {
     switch (pname) {
       case GL.TEXTURE_MAX_ANISOTROPY_EXT:
-        const contextState = getContextState(gl);
-        const {_extensions} = contextState;
+        const contextData = getContextData(gl);
+        const {_extensions} = contextData;
         const ext = _extensions[EXT_texture_filter_anisotropic];
         pname = (ext && ext.TEXTURE_MAX_ANISOTROPY_EXT) || GL.TEXTURE_MAX_ANISOTROPY_EXT;
         break;
