@@ -10,7 +10,7 @@ export type MakeAnimationLoopProps = Omit<AnimationLoopProps, 'onCreateDevice' |
 export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoopTemplate, props?: MakeAnimationLoopProps): AnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
-  const device = props?.device || luma.createDevice({width: 800, height: 600});
+  const device = props?.device || luma.createDevice();
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({

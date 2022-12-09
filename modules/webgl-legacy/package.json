@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/webgl-legacy",
   "version": "9.0.0-alpha.11",
-  "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
+  "description": "The legacy luma.gl v8 API",
   "license": "MIT",
   "repository": {
     "type": "git",
