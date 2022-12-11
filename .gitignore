@@ -20,9 +20,19 @@ tsconfig.tsbuildinfo
 test/data/test.png
 
 package-lock.json
+lerna-debug.log
+
 */**/yarn.lock
 yarn-error.log
-lerna-debug.log
+
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
 
 .project
 .DS_Store
@@ -34,3 +44,4 @@ TODO
 
 # editor files
 .idea
+
