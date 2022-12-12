@@ -18,7 +18,7 @@ module.exports = {
     // debug is an optional dependency
     'modules/debug',
     // deprecated module
-    'modules/gltools',
+    'modules/webgl-legacy',
     // we don't have a test setup for WebGPU yet
     'modules/webgpu',
     // these are test utilities
