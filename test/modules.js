@@ -27,4 +27,4 @@ import '../modules/engine/test/';
 import '../modules/experimental/test/';
 
 // DEPRECATED TESTS
-import '../modules/gltools/test';
+import '../modules/webgl-legacy/test';

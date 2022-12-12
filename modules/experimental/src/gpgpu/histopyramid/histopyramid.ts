@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 
 import type { Device } from '@luma.gl/api';
-import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/gltools';
+import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl-legacy';
+import {Transform} from '@luma.gl/webgl-legacy';
 import GL from '@luma.gl/constants';
 import {
   HISTOPYRAMID_BUILD_VS_UTILS,

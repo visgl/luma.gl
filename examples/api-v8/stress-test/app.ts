@@ -2,7 +2,7 @@ import {Device, getRandom} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
-import {clear, withParameters, Model, ModelProps} from '@luma.gl/gltools';
+import {clear, withParameters, Model, ModelProps} from '@luma.gl/webgl-legacy';
 import {Matrix4, radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 

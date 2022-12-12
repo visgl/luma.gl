@@ -11,7 +11,7 @@
     "@luma.gl/core": "9.0.0-alpha.11",
     "@luma.gl/engine": "9.0.0-alpha.11",
     "@luma.gl/experimental": "9.0.0-alpha.11",
-    "@luma.gl/gltools": "9.0.0-alpha.11",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.11",
     "@luma.gl/webgl": "9.0.0-alpha.11",
     "@math.gl/core": "^3.5.0"
   },

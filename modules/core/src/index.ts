@@ -15,7 +15,7 @@ export {
   Transform,
   ProgramManager,
   ClipSpace
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl-legacy';
 
 export {
   Geometry,
@@ -39,7 +39,7 @@ export {
   FEATURES,
   hasFeature,
   hasFeatures
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl-legacy';
 
 import {luma} from '@luma.gl/api';
 /** @deprecated Use luma.stats */
@@ -67,7 +67,7 @@ export {
   copyToTexture,
   Texture3D,
   TransformFeedback
-} from '@luma.gl/gltools';
+} from '@luma.gl/webgl-legacy';
 
 // SHADERTOOLS - importing from `@luma.gl/core` is deprecated
 

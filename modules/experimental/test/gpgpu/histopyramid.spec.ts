@@ -3,8 +3,8 @@ import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 import {equals} from '@math.gl/core';
 
-import {Buffer, Texture2D} from '@luma.gl/gltools';
-import {Transform} from '@luma.gl/gltools';
+import {Buffer, Texture2D} from '@luma.gl/webgl-legacy';
+import {Transform} from '@luma.gl/webgl-legacy';
 import GL from '@luma.gl/constants';
 import {_transform as transformModule} from '@luma.gl/shadertools';
 import {

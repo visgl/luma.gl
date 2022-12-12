@@ -1,6 +1,6 @@
 import {Buffer} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/gltools';
+import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Re-using shader code with shader modules

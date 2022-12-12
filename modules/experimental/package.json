@@ -38,7 +38,7 @@
     "@loaders.gl/gltf": "^3.2.12",
     "@loaders.gl/images": "^3.2.12",
     "@luma.gl/engine": "9.0.0-alpha.11",
-    "@luma.gl/gltools": "9.0.0-alpha.11",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.11",
     "@luma.gl/shadertools": "9.0.0-alpha.11",
     "@luma.gl/webgl": "9.0.0-alpha.11"
   },

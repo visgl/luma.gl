@@ -1,5 +1,5 @@
 import {DeviceProps} from '@luma.gl/api';
-import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/gltools';
+import {ClassicAnimationLoop, ClassicAnimationProps} from '@luma.gl/webgl-legacy';
 import {assembleShaders} from '@luma.gl/shadertools';
 
 const INFO_HTML = `

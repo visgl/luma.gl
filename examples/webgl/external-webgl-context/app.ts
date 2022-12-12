@@ -1,6 +1,6 @@
-import {AnimationLoop, AnimationProps, Model} from '@luma.gl/gltools';
-import {Buffer, clear} from '@luma.gl/gltools';
-import {GLContextOptions, instrumentGLContext} from '@luma.gl/gltools';
+import {AnimationLoop, AnimationProps, Model} from '@luma.gl/webgl-legacy';
+import {Buffer, clear} from '@luma.gl/webgl-legacy';
+import {GLContextOptions, instrumentGLContext} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Using an externally created context with luma.gl

@@ -7,7 +7,7 @@ const alias = {
   '@luma.gl/debug': `${__dirname}/../../../modules/debug/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
-  '@luma.gl/gltools': `${__dirname}/../../../modules/gltools/src`,
+  '@luma.gl/webgl-legacy': `${__dirname}/../../../modules/webgl-legacy/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`

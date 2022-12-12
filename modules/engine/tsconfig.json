@@ -10,8 +10,8 @@
   },
   "references": [
     {"path": "../constants"},
-    {"path": "../gltools"},
     {"path": "../shadertools"},
-    {"path": "../webgl"}
+    {"path": "../webgl"},
+    {"path": "../webgl-legacy"}
   ]
 }

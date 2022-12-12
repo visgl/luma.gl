@@ -1,6 +1,6 @@
 import {Device, log} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
-import {Buffer, Accessor} from '@luma.gl/gltools';
+import {Buffer, Accessor} from '@luma.gl/webgl-legacy';
 import {Matrix4} from '@math.gl/core';
 import {GroupNode} from '../scenegraph/group-node';
 import {ModelNode} from '../scenegraph/model-node';

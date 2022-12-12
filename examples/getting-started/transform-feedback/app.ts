@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
-import {clear, Transform} from '@luma.gl/gltools';
+import {clear, Transform} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Animation via transform feedback.
