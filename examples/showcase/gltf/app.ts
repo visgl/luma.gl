@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 // import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import {Device, log, luma} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, Timeline} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
 import {clear} from '@luma.gl/gltools';
@@ -170,7 +170,7 @@ async function loadGLTF(urlOrPromise, device: Device, options) {
   return {scenes, animator, gltf};
 }
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   // TODO - not used at the moment
@@ -488,9 +488,9 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 
   const infoDiv = document.createElement('div');
-  infoDiv.innerHTML = AppRenderLoop.info;
+  infoDiv.innerHTML = AppAnimationLoopTemplate.info;
   document.body.appendChild(infoDiv);
 }

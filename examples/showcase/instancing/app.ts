@@ -1,5 +1,5 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, AnimationProps, CubeGeometry, Timeline} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Timeline} from '@luma.gl/engine';
 import {ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/gltools';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {readPixelsToArray} from '@luma.gl/gltools';
@@ -140,7 +140,7 @@ class InstancedCube extends Model {
   }
 }
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
   static props = {createFramebuffer: true, debug: true};
 
@@ -237,5 +237,5 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

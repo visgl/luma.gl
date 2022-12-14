@@ -1,4 +1,4 @@
-import {RenderLoop, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/gltools';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -87,7 +87,7 @@ const fs = `\
   }
 `;
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   projectionMatrix = new Matrix4();

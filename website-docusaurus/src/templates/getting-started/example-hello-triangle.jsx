@@ -1,6 +1,6 @@
 import React from 'react';
 import {LumaExample} from '../../react-luma';
-import RenderLoop from '../../../../examples/getting-started/hello-triangle/app';
+import AnimationLoopTemplate from '../../../../examples/getting-started/hello-triangle/app';
 
 export class HelloTriangleExample extends React.Component {
   render() {
@@ -8,7 +8,7 @@ export class HelloTriangleExample extends React.Component {
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
       <div id='hello-triangle'>
-        <LumaExample name='hello-triangle' RenderLoop={RenderLoop} exampleConfig={exampleConfig} />
+        <LumaExample name='hello-triangle' AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
       </div>
     );
   }

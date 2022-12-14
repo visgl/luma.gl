@@ -3,7 +3,7 @@
 import {luma, Device, DeviceProps} from '@luma.gl/api';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
 import {Timeline} from '../animation/timeline';
-import {AnimationProps} from '../lib/animation-props';
+import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 

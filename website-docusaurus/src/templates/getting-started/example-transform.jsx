@@ -1,6 +1,6 @@
 import React from 'react';
 import {LumaExample} from '../../react-luma';
-// import RenderLoop from '../../../../examples/getting-started/transform/app';
+// import AnimationLoopTemplate from '../../../../examples/getting-started/transform/app';
 
 export class TransformExample extends React.Component {
   render() {
@@ -9,6 +9,6 @@ export class TransformExample extends React.Component {
     return (
       <div />
     );
-    // LumaExample name="transform" RenderLoop={RenderLoop} exampleConfig={exampleConfig} />
+    // LumaExample name="transform" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
   }
 }

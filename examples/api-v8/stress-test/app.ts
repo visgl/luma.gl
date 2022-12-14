@@ -1,5 +1,5 @@
 import {Device, getRandom} from '@luma.gl/api';
-import {RenderLoop, makeAnimationLoop, AnimationProps, CubeGeometry} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {clear, withParameters, Model, ModelProps} from '@luma.gl/gltools';
@@ -94,7 +94,7 @@ class InstancedCube extends Model {
   }
 }
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   projectionMatrix;
@@ -250,5 +250,5 @@ function createDrawcall(gl, offsets, texture, alpha) {
 if (typeof window !== 'undefined' && !window.website) {
   document.body.style.overflow = 'hidden';
   document.body.style.margin = '0';
-  makeAnimationLoop(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

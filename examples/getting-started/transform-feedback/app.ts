@@ -1,4 +1,4 @@
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -49,7 +49,7 @@ void main() {
 }
 `;
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   transform: Transform;

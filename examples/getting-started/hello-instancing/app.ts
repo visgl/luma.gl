@@ -1,5 +1,5 @@
 import type {Buffer} from '@luma.gl/api';
-import {RenderLoop, makeAnimationLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -24,7 +24,7 @@ const colorShaderModule = {
   `
 };
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model: Model;

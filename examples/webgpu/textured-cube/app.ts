@@ -1,5 +1,5 @@
 import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
-import {Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {Model, CubeGeometry, AnimationLoopTemplate, makeAnimationLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -98,7 +98,7 @@ const SHADER_LAYOUT: ShaderLayout = {
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;
   uniformBuffer: Buffer;
 
@@ -157,7 +157,6 @@ export default class AppRenderLoop extends RenderLoop {
   }
 
   onFinalize() {
-    super.destroy();
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
@@ -181,7 +180,7 @@ export default class AppRenderLoop extends RenderLoop {
   }
 }
 
-if (!globalThis.website) {
-  makeAnimationLoop(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'});
-}
+// if (!globalThis.website) {
+//   makeAnimationLoop(AppAnimationLoopTemplate, {type: 'webgpu', canvas: 'canvas'});
+// }
 

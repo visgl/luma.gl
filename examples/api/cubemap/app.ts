@@ -1,5 +1,5 @@
 import {Device, loadImage} from '@luma.gl/api';
-import {RenderLoop, makeAnimationLoop, CubeGeometry, AnimationProps, Model, ModelProps} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
 import {clear, ClassicModel, ClassicModelProps} from '@luma.gl/gltools';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
@@ -88,7 +88,7 @@ void main(void) {
   }
 }
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   cube: RoomCube;
@@ -175,5 +175,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

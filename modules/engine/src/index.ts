@@ -3,20 +3,20 @@
 // Animation
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
-export type {AnimationProps} from './lib/animation-props';
+export type {AnimationProps} from './animation-loop/animation-props';
 
-export type {AnimationLoopProps} from './lib/animation-loop';
-export {AnimationLoop} from './lib/animation-loop';
+export {AnimationLoopTemplate} from './animation-loop/render-loop';
 
-export type {RenderLoopProps} from './lib/render-loop';
-export {RenderLoop} from './lib/render-loop';
-export {makeAnimationLoop} from './lib/render-loop';
+export type {AnimationLoopProps} from './animation-loop/animation-loop';
+export {AnimationLoop} from './animation-loop/animation-loop';
+
+export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
+export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
 export type {ModelProps} from './lib/model';
 export {Model} from './lib/model';
 
 export {PipelineFactory} from './lib/pipeline-factory';
-
 
 // Utils
 // export {default as ClipSpace} from './lib/clip-space';
