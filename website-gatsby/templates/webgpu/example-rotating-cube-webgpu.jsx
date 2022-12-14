@@ -1,5 +1,5 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
+import AnimationLoopExamplePage from '../../src/components/animation-loop-example-page';
 import AnimationLoop from '../../../examples/webgpu/rotating-cube/app';
 
 export default class Example extends React.Component {
@@ -7,7 +7,7 @@ export default class Example extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
+      <AnimationLoopExamplePage AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
     );
   }
 }

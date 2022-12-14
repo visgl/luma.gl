@@ -35,7 +35,6 @@
     "gh-pages": "^2.2.0"
   },
   "resolutions": {
-    "remark-mdx": "1.6.22",
-    "sharp": "0.31.2"
+    "remark-mdx": "1.6.22"
   }
 }

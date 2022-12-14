@@ -56,13 +56,13 @@ const defaultProps = {
 
 const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 
-export default class LumaExample extends Component {
+export default class AnimationLoopExamplePage extends Component {
   constructor(props) {
     super(props);
     try {
       // Render loop
       if ('run' in this.props.AnimationLoop) {
-        this.animationLoop = makeAnimationLoop(this.props.AnimationLoop, props);
+        this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
       } else {
         this.animationLoop = new this.props.AnimationLoop(props);
       }
@@ -225,6 +225,6 @@ export default class LumaExample extends Component {
   }
 }
 
-LumaExample.propTypes = propTypes;
-LumaExample.defaultProps = defaultProps;
-LumaExample.displayName = 'AnimationLoop';
+AnimationLoopExamplePage.propTypes = propTypes;
+AnimationLoopExamplePage.defaultProps = defaultProps;
+AnimationLoopExamplePage.displayName = 'AnimationLoop';
