@@ -4,8 +4,8 @@ import {gl, gl2} from '../../test-utils/test-devices';
 import {setParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 
 import GL from '@luma.gl/constants';
-import {Framebuffer} from '@luma.gl/gltools';
-import {getKey} from '@luma.gl/gltools';
+import {Framebuffer} from '@luma.gl/webgl-legacy';
+import {getKey} from '@luma.gl/webgl-legacy';
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 

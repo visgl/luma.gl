@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
-import {getKey} from '@luma.gl/gltools';
+import {getKey} from '@luma.gl/webgl-legacy';
 import {getTestDevices, getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const DEVICE_LIMITS = {

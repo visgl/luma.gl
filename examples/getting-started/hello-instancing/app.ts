@@ -1,6 +1,6 @@
 import type {Buffer} from '@luma.gl/api';
 import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/gltools';
+import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API

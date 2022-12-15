@@ -1,5 +1,5 @@
 import {RenderLoop, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
-import {clear, ClassicModel} from '@luma.gl/gltools';
+import {clear, ClassicModel} from '@luma.gl/webgl-legacy';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 

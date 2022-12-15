@@ -1,5 +1,5 @@
 import {Matrix4} from '@math.gl/core';
-import {log} from '@luma.gl/gltools';
+import {log} from '@luma.gl/webgl-legacy';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 
 export type GroupNodeProps = ScenegraphNodeProps & {

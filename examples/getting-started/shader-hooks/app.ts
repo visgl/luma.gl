@@ -1,6 +1,6 @@
 import {Buffer} from '@luma.gl/api';
 import {RenderLoop, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model, ProgramManager} from '@luma.gl/gltools';
+import {clear, ClassicModel as Model, ProgramManager} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Modifying shader behavior with shader hooks

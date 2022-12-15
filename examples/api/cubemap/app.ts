@@ -1,6 +1,6 @@
 import {Device, loadImage} from '@luma.gl/api';
 import {RenderLoop, CubeGeometry, AnimationProps, Model, ModelProps} from '@luma.gl/engine';
-import {clear, ClassicModel, ClassicModelProps} from '@luma.gl/gltools';
+import {clear, ClassicModel, ClassicModelProps} from '@luma.gl/webgl-legacy';
 import GL from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
 
