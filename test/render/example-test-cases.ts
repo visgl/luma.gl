@@ -1,5 +1,5 @@
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-import {AnimationLoopTemplate, AnimationLoop} from '@luma.gl/engine';
+import {RenderLoop, AnimationLoop} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/api';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
@@ -52,7 +52,7 @@ const examples = {
 };
 
 /**
- * Wraps the imported AnimationLoopTemplates from the examples into SnapshotTestRunner test cases
+ * Wraps the imported RenderLoops from the examples into SnapshotTestRunner test cases
  * We don't start the loops but manually trigger their lifecycle methods
  * 
  * @returns a list of test cases for the SnapshotTestRunner
@@ -60,7 +60,7 @@ const examples = {
 function getTestCases(): SnapshotTestRunnerTestCase[] {
   const testCases: SnapshotTestRunnerTestCase[] = [];
 
-  for (const [name, ExampleAnimationLoopTemplate] of Object.entries(examples)) {
+  for (const [name, ExampleRenderLoop] of Object.entries(examples)) {
     let animationLoop: AnimationLoop | null = null;  
     testCases.push({
       name,
@@ -68,7 +68,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // Construct the renderloop, but don't start it. Manually call its OnInitialize
       onInitialize: (params) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        animationLoop = makeAnimationLoop(ExampleAnimationLoopTemplate);
+        animationLoop = RenderLoop.run(ExampleRenderLoop);
         return animationLoop.props?.onInitialize(params);
       },
 
@@ -82,7 +82,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
         }
       },
 
-      // Make sure to let the AnimationLoopTemplate clean up
+      // Make sure to let the RenderLoop clean up
       onFinalize: (params) => animationLoop?.props.onFinalize(params),
 
       // The target image
