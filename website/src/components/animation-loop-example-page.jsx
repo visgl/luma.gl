@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {isBrowser} from '@probe.gl/env';
 import {setPathPrefix} from '@luma.gl/api';
 import {lumaStats} from '@luma.gl/core';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
+import {RenderLoop} from '@luma.gl/engine';
 import {luma} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
@@ -62,7 +62,7 @@ export default class AnimationLoopExamplePage extends Component {
     try {
       // Render loop
       if ('run' in this.props.AnimationLoop) {
-        this.animationLoop = AnimationLoopTemplate.run(this.props.AnimationLoop, props);
+        this.animationLoop = RenderLoop.run(this.props.AnimationLoop, props);
       } else {
         this.animationLoop = new this.props.AnimationLoop(props);
       }
