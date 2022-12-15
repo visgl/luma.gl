@@ -5,7 +5,7 @@
 // @ts-nocheck
 
 import GL from '@luma.gl/constants';
-import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
   Framebuffer,
   clear,
@@ -238,7 +238,7 @@ let focusDistance = 3.0;
 let fStop = 2.8;
 const texelOffset = new Float32Array(2);
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   projMat = new Matrix4();
@@ -517,5 +517,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

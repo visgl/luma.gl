@@ -1,4 +1,4 @@
-import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
@@ -49,7 +49,7 @@ void main() {
 }
 `;
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   transform: Transform;
@@ -105,9 +105,4 @@ export default class AppRenderLoop extends RenderLoop {
 
     this.transform.swap();
   }
-}
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
 }
