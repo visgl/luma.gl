@@ -1,5 +1,5 @@
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-import {RenderLoop, AnimationLoop} from '@luma.gl/engine';
+import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/api';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
@@ -52,7 +52,7 @@ const examples = {
 };
 
 /**
- * Wraps the imported RenderLoops from the examples into SnapshotTestRunner test cases
+ * Wraps the imported AnimationLoopTemplates from the examples into SnapshotTestRunner test cases
  * We don't start the loops but manually trigger their lifecycle methods
  * 
  * @returns a list of test cases for the SnapshotTestRunner
@@ -60,30 +60,29 @@ const examples = {
 function getTestCases(): SnapshotTestRunnerTestCase[] {
   const testCases: SnapshotTestRunnerTestCase[] = [];
 
-  for (const [name, ExampleRenderLoop] of Object.entries(examples)) {
-    let animationLoop: AnimationLoop | null = null;  
+  for (const [name, ExampleAnimationLoopTemplate] of Object.entries(examples)) {
+    let animationLoopTemplate: AnimationLoopTemplate | null = null;  
     testCases.push({
       name,
 
       // Construct the renderloop, but don't start it. Manually call its OnInitialize
       onInitialize: (params) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        animationLoop = RenderLoop.run(ExampleRenderLoop);
-        return animationLoop.props?.onInitialize(params);
+        animationLoopTemplate = new ExampleAnimationLoopTemplate(params);
       },
 
       // Manually trigger an animationLoop onRender. Unless it returns false, we are done.
       onRender: (params) => {
         // override animation in the example so we get a well-defined time
         params.tick = 0;
-        const result = animationLoop?.props?.onRender(params);
+        const result = animationLoopTemplate?.onRender(params);
         if (result !== false) {
           params.done();
         }
       },
 
-      // Make sure to let the RenderLoop clean up
-      onFinalize: (params) => animationLoop?.props.onFinalize(params),
+      // Make sure to let the AnimationLoopTemplate clean up
+      onFinalize: (params) => animationLoopTemplate?.onFinalize(params),
 
       // The target image
       goldenImage: `./test/render/golden-images/${name}.png`

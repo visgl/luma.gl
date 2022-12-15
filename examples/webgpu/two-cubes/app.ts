@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import {ShaderLayout, RenderPipelineParameters, Buffer} from '@luma.gl/api';
-import {Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -102,13 +102,13 @@ const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   cullMode: 'back',
 };
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   cubeModel: Model;
   uniformBuffer1: Buffer;
   uniformBuffer2: Buffer;
 
-  constructor({device}) {
+  constructor({device}: AnimationProps) {
     super();
     // Create a vertex buffer from the cube data.
     // Create vertex buffers for the cube data.
@@ -176,5 +176,6 @@ export default class AppRenderLoop extends RenderLoop {
 }
 
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {type: 'webgpu', canvas: 'canvas'}).start();
+  // {type: 'webgpu', canvas: 'canvas'}
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

@@ -1,5 +1,5 @@
 import {Buffer} from '@luma.gl/api';
-import {Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -79,7 +79,7 @@ fn main([[location(0)]] fragUV: vec2<f32>,
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;
   uniformBuffer: Buffer;
 
@@ -160,5 +160,6 @@ export default class AppRenderLoop extends RenderLoop {
 
 // Create device and run
 if (!globalThis.website) {
-  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
+  // , {canvas: 'canvas'}
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

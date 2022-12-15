@@ -1,5 +1,5 @@
 import {Framebuffer, getRandom} from '@luma.gl/api';
-import {RenderLoop, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
+import {makeAnimationLoop, AnimationLoopTemplate, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
 import {clear, setParameters, ClassicModel as Model} from '@luma.gl/webgl-legacy';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -87,7 +87,7 @@ const eRot = [];
 const nPos = [];
 
 /* eslint-disable max-statements */
-export default class AppRenderLoop extends RenderLoop {
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   mainFramebuffer: Framebuffer;
@@ -273,5 +273,5 @@ export default class AppRenderLoop extends RenderLoop {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  RenderLoop.run(AppRenderLoop).start();
+  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }
