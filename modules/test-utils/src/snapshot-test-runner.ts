@@ -1,4 +1,4 @@
-import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
+import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 
 /** A snapshot test case */
@@ -10,7 +10,7 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
 export default class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;
 
-  constructor(props: TestRunnerProps) {
+  constructor(props: TestRunnerOptions) {
     super(props);
 
     // @ts-expect-error
@@ -36,6 +36,7 @@ export default class SnapshotTestRunner extends TestRunner {
     }
     this.isDiffing = true;
 
+    // @ts-expect-error
     const canvas = this._animationProps?.canvas;
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error('canvas');

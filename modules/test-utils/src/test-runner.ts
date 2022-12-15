@@ -1,17 +1,18 @@
 // @ts-nocheck TODO remove
 /* eslint-disable no-console */
-import {AnimationLoop, AnimationProps} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/core';
+import {pushContextState, popContextState} from '@luma.gl/webgl';
 
 /** Describes a test case */
 export type TestRunnerTestCase = {
   /** Name of the test case (for logging) */
   name: string;
   /** Initialize the test case. Can return a promise */
-  onInitialize: (props: Record<string, any>) => Promise<unknown>;
+  onInitialize: any;
   /** Perform rendering */
-  onRender: (props: Record<string, any>) => unknown;
+  onRender: any;
   /** Clean up after the test case */
-  onFinalize: (props: Record<string, any>) => void;
+  onFinalize: any;
 };
 
 function noop() {}
@@ -24,23 +25,21 @@ const DEFAULT_TEST_CASE: TestRunnerTestCase = {
 };
 
 /** Options for a TestRunner */
-export type TestRunnerProps = {
-  width?: number; 
-  height?: number;  
+export type TestRunnerOptions = {
   // test lifecycle callback
-  onTestStart?: (testCase: TestRunnerTestCase) => void;
-  onTestPass?: (testCase: TestRunnerTestCase) => void;
-  onTestFail?: (testCase: TestRunnerTestCase) => void;
+  onTestStart?: any;
+  onTestPass?: any;
+  onTestFail?: any;
 
   /** milliseconds to wait for each test case before aborting */
   timeout?: number;
 };
 
-const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
+const DEFAULT_TEST_OPTIONS: Required<TestRunnerOptions> = {
   // test lifecycle callback
-  onTestStart: (testCase: TestRunnerTestCase) => console.log(`# ${testCase.name}`),
-  onTestPass: (testCase: TestRunnerTestCase) => console.log(`ok ${testCase.name} passed`),
-  onTestFail: (testCase: TestRunnerTestCase) => console.log(`not ok ${testCase.name} failed`),
+  onTestStart: (testCase) => console.log(`# ${testCase.name}`),
+  onTestPass: (testCase) => console.log(`ok ${testCase.name} passed`),
+  onTestFail: (testCase) => console.log(`not ok ${testCase.name} failed`),
 
   // milliseconds to wait for each test case before aborting
   timeout: 2000
@@ -48,13 +47,12 @@ const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
 
 /** Runs an array of test cases */
 export default class TestRunner {
-  props: Record<string, any>;
-  isRunning: boolean = false;
-  readonly testOptions: TestRunnerProps = {...DEFAULT_TEST_PROPS};
-  readonly _animationProps?: AnimationProps;
-  private _animationLoop: AnimationLoop | null;
+  props;
+  isRunning = false;
+  readonly testOptions: object = {...DEFAULT_TEST_OPTIONS};
+  readonly _animationProps: object = {};
   private _testCases: TestRunnerTestCase[] = [];
-  private _testCaseData: any = null;
+  private _testCaseData = null;
 
   // @ts-expect-error
   isHeadless: boolean = Boolean(window.browserTestDriver_isHeadless);
@@ -63,10 +61,13 @@ export default class TestRunner {
    * props
    *   AnimationLoop props
    */
-  constructor(props: Record<string, any> = {}) {
+  constructor(props = {}) {
     this.props = props;
   }
 
+  /**
+   * Add testCase(s)
+   */
   /**
    * Add testCase(s)
    */
@@ -83,75 +84,72 @@ export default class TestRunner {
    /**
     * Returns a promise that resolves when all the test cases are done
     */
-  async run(options: object = {}): Promise<void>  {
-    this.testOptions = {...this.testOptions, ...options};
+  run(options: object = {}): Promise<void>  {
+    Object.assign(this.testOptions, options);
 
-    try {
-      return await new Promise<void>(resolve => {
-        const props = {
-          ...this.props,
+    return new Promise<void>(resolve => {
+      this._animationLoop = new AnimationLoop(
+        // @ts-expect-error TODO
+        Object.assign({}, this.props, {
           onRender: this._onRender.bind(this),
           onFinalize: () => {
             this.isRunning = false;
             resolve();
           }
-        };
+        })
+      );
+      this._animationLoop.start(this.props);
 
-        this._animationLoop = new AnimationLoop(props);
-        this._animationLoop.start(this.props);
-
-        this.isRunning = true;
-        this.isDiffing = false;
-        this._currentTestCase = null;
-      });
-    } catch (error) {
+      this.isRunning = true;
+      this.isDiffing = false;
+      this._currentTestCase = null;
+    }).catch((error) => {
       this._fail({error: error.message});
-    }
+    });
   }
 
   /* Lifecycle methods for subclassing */
 
-  initTestCase(testCase: TestRunnerTestCase): void {
+  initTestCase(testCase) {
     const {animationLoop} = testCase;
     if (animationLoop) {
-      // TODO this likely no longer works - use animationLoop.props.onInitialize
-      testCase.onInitialize = animationLoop.props.onInitialize.bind(animationLoop);
-      testCase.onRender = animationLoop.props.onRender.bind(animationLoop);
-      testCase.onFinalize = animationLoop.props.onFinalize.bind(animationLoop);
+      testCase.onInitialize = animationLoop.onInitialize.bind(animationLoop);
+      testCase.onRender = animationLoop.onRender.bind(animationLoop);
+      testCase.onFinalize = animationLoop.onFinalize.bind(animationLoop);
     }
     for (const key in DEFAULT_TEST_CASE) {
       testCase[key] = testCase[key] || DEFAULT_TEST_CASE[key];
     }
   }
 
-  shouldRender(animationProps): boolean {
-    return !isDone;
+  shouldRender(animationProps) {
+    return true;
   }
 
-  assert(testCase: TestRunnerTestCase): void {
+  assert(testCase) {
     this._pass(testCase);
     this._next();
   }
 
   /* Utilities */
 
-  _pass(result: unknown): void {
+  _pass(result) {
+    // @ts-expect-error
     this.testOptions.onTestPass(this._currentTestCase, result);
-    // this._animationLoop?.stop();
   }
 
-  _fail(result: unknown): void {
+  _fail(result) {
+    // @ts-expect-error
     this.testOptions.onTestFail(this._currentTestCase, result);
-    // this._animationLoop?.stop();
   }
 
-  _next(): void {
+  _next() {
     this._nextTestCase();
   }
 
   /* Private methods */
 
-  _onRender(animationProps): void {
+  _onRender(animationProps) {
     this._animationProps = animationProps;
 
     const testCase = this._currentTestCase || this._nextTestCase();
@@ -162,9 +160,7 @@ export default class TestRunner {
     }
 
     let isDone = false;
-    const testCaseAnimationProps: AnimationProps = {
-      ...animationProps, 
-      ...this._testCaseData,
+    const testCaseAnimationProps = Object.assign({}, animationProps, this._testCaseData, {
       // tick/time starts from 0 for each test case
       startTime: this._currentTestCaseStartTime,
       time: animationProps.time - this._currentTestCaseStartTime,
@@ -173,15 +169,11 @@ export default class TestRunner {
       done: () => {
         isDone = true;
       }
-    };
+    });
 
     if (this._testCaseData && this.shouldRender(testCaseAnimationProps)) {
-      try {
-        // test case is initialized, render frame
-        testCase.onRender(testCaseAnimationProps);
-      } catch {
-        isDone = true;
-      }
+      // test case is initialized, render frame
+      testCase.onRender(testCaseAnimationProps);
     }
 
     const timeout = testCase.timeout || this.testOptions.timeout;
@@ -194,7 +186,7 @@ export default class TestRunner {
     }
   }
 
-  async _nextTestCase(): Promise<TestRunnerTestCase> {
+  _nextTestCase() {
     const animationProps = this._animationProps;
 
     // finalize the current test case
@@ -208,7 +200,7 @@ export default class TestRunner {
       this._currentTestCase.onFinalize(Object.assign({}, animationProps, this._testCaseData));
 
       // reset WebGL context
-      animationProps.device.popState();
+      popContextState(animationProps.gl);
 
       this._currentTestCase = null;
       this._testCaseData = null;
@@ -226,26 +218,24 @@ export default class TestRunner {
       // initialize test case
 
       // save WebGL context
-      animationProps.device.pushState();
+      pushContextState(animationProps.gl);
 
       // aligned with the behavior of AnimationLoop.onInitialized
       // onInitialized could return a plain object or a promise
-      const props = {
-        ...animationProps,
-        // tick/time starts from 0 for each test case
-        startTime: animationProps.time,
-        time: 0,
-        tick: 0
-      };
-
-      try {
-        const userData = await testCase.onInitialize(props);
+      Promise.resolve(
+        testCase.onInitialize(
+          Object.assign({}, animationProps, {
+            // tick/time starts from 0 for each test case
+            startTime: animationProps.time,
+            time: 0,
+            tick: 0
+          })
+        )
+      ).then((userData) => {
         this._testCaseData = userData || {};
-        // invoke user callback
-        this.testOptions.onTestStart(testCase);
-      } catch (error) {
-        this._fail(error.message);
-      }
+      });
+      // invoke user callback
+      this.testOptions.onTestStart(testCase);
     }
     return testCase;
   }
