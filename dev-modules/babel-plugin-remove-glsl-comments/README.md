@@ -6,7 +6,7 @@ Remove comments in glsl shader source.
 
 #### in
 
-```js
+```typescript
 // vertex.glsl.js
 const vs = `
 /* Projection uniforms */
@@ -27,7 +27,7 @@ main() {
 
 #### out
 
-```js
+```typescript
 // vertex.glsl.js
 const vs =
   '\nuniform mat4 viewMatrix;\nuniform mat4 projectionMatrix;\nuniform mat3 modelMatrix;\n\nattribute vec3 positions;\nattribute vec3 instancePositions;\n\nmain() {\n  vec4 worldPosition = vec4(instancePositions + modelMatrix * positions, 1.);\n  gl_Position = projectionMatrix * viewMatrix * worldPosition;\n}\n';
@@ -35,11 +35,11 @@ const vs =
 
 Note: for safety, this plugin does not remove dynamically generated comments, e.g.
 
-```js
+```typescript
 const vs = `/* MODULE ${name} STARTS */`;
 ```
 
-```js
+```typescript
 const vs = `// END OF ${name}`;
 ```
 
@@ -84,7 +84,7 @@ $ babel --plugins remove-glsl-comments script.js
 
 ### Via Node API
 
-```js
+```typescript
 require('babel-core').transform('code', {
   plugins: ['remove-glsl-comments']
 });

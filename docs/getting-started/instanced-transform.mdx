@@ -1,5 +1,5 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {InstancedTransformExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {InstancedTransformExample} from '@site';
 
 # Instanced Transform
 
@@ -9,7 +9,7 @@ import {InstancedTransformExample} from '../../website';
 In this final tutorial, we'll pull together almost everything we've learned 
 in past tutorials into a single scene: lighing, textures, geometry, shader modules, 
 instancing and transform feedback. Whew! This will build on the 
-[previous tutorial](/examples/getting-started/lighting), 
+previous tutorial, 
 so it might be helpful to start with its source code.
 
 We'll be drawing 4 instanced cubes, textured and lit in the same way as in the 
@@ -17,7 +17,7 @@ lighting tutorial, but with the animations updated by transform feedback.
 
 The `Transform` class is the only addition we need for our imports:
 
-```js
+```typescript
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
 import {Buffer, Texture2D, clear, setParameters, isWebGL2} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';
@@ -26,7 +26,7 @@ import {Matrix4} from '@math.gl/core';
 
 The vertex shader for our transform feedback is quite simple. It just increments a scalar rotation value on each run:
 
-```js
+```typescript
 const transformVs = `
   attribute float rotations;
 
@@ -40,7 +40,7 @@ const transformVs = `
 
 In order to handle rotation updates in the transform feedback, we have to move construction of the rotation matrix into the vertex shader. We'll use an [axis-angle](https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle), passing the axis and rotation angle as instanced attributes (with the rotation angles being updated by transform feedback):
 
-```js
+```typescript
 const vs = `\
   attribute vec3 positions;
   attribute vec3 normals;
@@ -91,7 +91,7 @@ We also pass an `offsets` instanced attribute to position each cube.
 
 Our fragment shader doesn't change at all:
 
-```js
+```typescript
 const fs = `\
   precision highp float;
 
@@ -113,7 +113,7 @@ const fs = `\
 
 Our `onInitialize` method will need several updates. First we create buffers for our instanced data:
 
-```js
+```typescript
 const offsetBuffer = device.createBuffer(new Float32Array([3, 3, -3, 3, 3, -3, -3, -3]));
 
 const axisBufferData = new Float32Array(12);
@@ -144,7 +144,7 @@ The `offsetBuffer` sets positions so the cubes will be in a square formation. Th
 
 The `Transform` is straightforward to set up, simply taking the `rotationBuffer` and our vertex shader as input:
 
-```js
+```typescript
 const transform = new Transform(device, {
   vs: transformVs,
   sourceBuffers: {
@@ -159,7 +159,7 @@ const transform = new Transform(device, {
 
 And the `Model` needs to be updated to take the instanced attributes and `instanceCount`:
 
-```js
+```typescript
 const model = new Model(device, {
   vs,
   fs,
@@ -197,7 +197,7 @@ const model = new Model(device, {
 
 Our `onRender` needs an update to perform the transform feedback and pass the transformed rotation buffer to the `Model`:
 
-```js
+```typescript
   onRender({device, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
@@ -213,9 +213,9 @@ Our `onRender` needs an update to perform the transform feedback and pass the tr
   }
 ```
 
-If all went well, you should see 4 rotating cubes. This scene is significantly more complex than anything we've seen before, so take some time to play around with it and get to know the various parts. The live demo is available [here](/examples/getting-started/instanced-transform), and the full source code is listed below for reference:
+If all went well, you should see 4 rotating cubes. This scene is significantly more complex than anything we've seen before, so take some time to play around with it and get to know the various parts.
 
-```js
+```typescript
 import {AnimationLoop, Model, Transform, CubeGeometry} from '@luma.gl/engine';
 import {Buffer, Texture2D, clear, setParameters, isWebGL2} from '@luma.gl/webgl';
 import {phongLighting} from '@luma.gl/shadertools';

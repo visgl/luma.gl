@@ -1,5 +1,5 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {HelloInstancingExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {HelloInstancingExample} from '@site';
 
 # Hello Instancing
 
@@ -8,7 +8,7 @@ import {HelloInstancingExample} from '../../website';
 
 In this tutorial, we'll work through how to do instanced drawing with luma.gl's high-level APIs. We'll also take this opportunity to introduce luma.gl shader modules. We'll begin with our [hello triangle](/docs/getting-started/hello-triangle) app and make some modifications. First let's create a shader module:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
@@ -35,7 +35,7 @@ A shader module is essentially just some GLSL code that will be inserted into ou
 
 Now let's update our vertex and fragment shaders to use the module functions:
 
-```js
+```typescript
 const vs = `
   attribute vec2 position;
   attribute vec3 color;
@@ -55,7 +55,7 @@ const fs = `
 
 Now we update the `Model` to use the module:
 
-```js
+```typescript
 const model = new Model(gl, {
   vs,
   fs,
@@ -72,7 +72,7 @@ If you rerun the app, it should render as it did before.
 
 Now let's add some instancing to this scene! First we'll modify the position and color buffers we created before, and add an offset buffer to set the position of each instance:
 
-```js
+```typescript
 const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
 
 const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
@@ -84,7 +84,7 @@ For this scene, the positions are vertex attributes, while the colors and offset
 
 Now add the offsets to the vertex shader:
 
-```js
+```typescript
 const vs = `
   attribute vec2 position;
   attribute vec3 color;
@@ -99,7 +99,7 @@ const vs = `
 
 Finally, we need to add the new buffer to the `Model`, and describe the parameters of the instanced draw:
 
-```js
+```typescript
 const model = new Model(device, {
   vs,
   fs,
@@ -116,11 +116,11 @@ const model = new Model(device, {
 
 Note the new syntax used for the attributes. The second element in each array is an `accessor` that describes how the buffer should be traversed during a draw. luma.gl will try to infer these parameters from the data or the shader when possible, but when it can't (or when we want to override the inferred values), we have to provide an explicit accessor. We also provide the model with the number of instances we want to draw.
 
-If all went well, running the app now should draw four triangles, each a different color. See the live demo [here](/examples/getting-started/hello-instancing-high).
+If all went well, running the app now should draw four triangles, each a different color.
 
 For reference the complete code is provided below:
 
-```js
+```typescript
 import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 

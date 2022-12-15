@@ -1,4 +1,4 @@
-# Getting Started
+# Setup
 
 This tutorial will walk you through setting up a basic development project for luma.gl applications using [Vite](https://vitejs.dev/) tooling. Later tutorials will build on this one, so we recommend going through it first.
 
@@ -39,8 +39,8 @@ Open the file `package.json` (created when we initialized npm), and add the foll
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "^9.0.0-alpha.3",
-    "@luma.gl/webgl": "^9.0.0-alpha.3",
+    "@luma.gl/engine": "9.0.0-alpha.11",
+    "@luma.gl/webgl": "9.0.0-alpha.11",
   },
   "devDependencies": {
     "typescript": "^4.3.2",
@@ -56,17 +56,17 @@ The full contents of the `package.json` should be the following (dependency vers
   "name": "luma-demo",
   "version": "1.0.0",
   "description": "",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "main": "index.js",
   "scripts": {
     "start": "vite",
     "serve": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@luma.gl/engine": "^9.0.0-alpha.3",
-    "@luma.gl/webgl": "^9.0.0-alpha.3",
+    "@luma.gl/engine": "9.0.0-alpha.11",
+    "@luma.gl/webgl": "9.0.0-alpha.11",
   },
   "devDependencies": {
     "typescript": "^4.3.2",
@@ -78,11 +78,10 @@ The full contents of the `package.json` should be the following (dependency vers
 
 Create a file [`vite.config.js`](https://vitejs.dev/config/) in the project root and add the following to it:
 
-```js
+```typescript
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  resolve: {alias},
   server: {open: true}
 })
 ```
@@ -102,7 +101,7 @@ Create a minimal `index.html` web page to start the app:
 
 Now create a file `app.ts` in the project root and add the following to it:
 
-```js
+```typescript
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -112,7 +111,7 @@ const loop = new AnimationLoop({
   },
 
   onFinalize({device}: AnimationProps) {
-    // Setup logic goes here
+    // Teardown logic goes here
   },
 
   onRender({device}: AnimationProps) {
@@ -123,20 +122,17 @@ const loop = new AnimationLoop({
 loop.start();
 ```
 
-This will be the basic structure of most luma.gl applications. To make sure everything works, let's add a draw command:
+This will be the basic structure of most luma.gl applications. 
+To make sure everything works, let's add a draw command:
 
-```js
+```typescript
 import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
-    // Setup logic goes here
-  },
-
   onRender({device}) {
     // Drawing logic goes here
-    clear(gl, {color: [0, 0, 0, 1]});
+    clear(device, {color: [0, 0, 0, 1]});
   }
 });
 
@@ -149,4 +145,5 @@ and run
 npm start
 ```
 
-from the command line. If all went well, a tab should open in your default browser, and you should see a black rectangle at the top left of your screen.
+from the command line. If all went well, a tab should open in your default browser, 
+and you should see a black rectangle at the top left of your screen.

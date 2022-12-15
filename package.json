@@ -21,7 +21,7 @@
     "fs": false
   },
   "scripts": {
-    "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn && ocular-bootstrap",
+    "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_SKIP_DOWNLOAD=true yarn && ocular-bootstrap",
     "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
     "build": "ocular-clean && yarn tsclean && yarn tsbuild && ocular-build --dist esm",

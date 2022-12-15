@@ -1,6 +1,6 @@
 # API Overview
 
-# luma.gl API
+## luma.gl API
 
 The luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 

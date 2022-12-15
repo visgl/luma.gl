@@ -8,19 +8,19 @@ When used on luma.gl applications, also removes any import of the `GL` namespace
 
 #### in
 
-```js
+```typescript
 const max = gl.MAX_VERTEX_ATTRIBS;
 ```
 
 #### out
 
-```js
+```typescript
 const max = 34921;
 ```
 
 #### in
 
-```js
+```typescript
 import GL from '@luma.gl/constants';
 ...
 const max = GL.MAX_VERTEX_ATTRIBS;
@@ -28,7 +28,7 @@ const max = GL.MAX_VERTEX_ATTRIBS;
 
 #### out
 
-```js
+```typescript
 ...
 const max = 34921;
 ```
@@ -59,7 +59,7 @@ $ babel --plugins inline-webgl-constants script.js
 
 ### Via Node API
 
-```js
+```typescript
 require('babel-core').transform('code', {
   plugins: ['inline-webgl-constants']
 });

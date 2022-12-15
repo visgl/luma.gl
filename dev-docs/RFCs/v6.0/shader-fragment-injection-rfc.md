@@ -42,7 +42,7 @@ An application can currently specify a list of modules to be injected into its s
 
 Shaders can leave hints in comments representing injection points, that can be used as keys for injection. It does mean that main shaders need to be modified.
 
-```js
+```typescript
 new Model(gl, {
   vs,
   fs: `void main() {
@@ -60,7 +60,7 @@ new Model(gl, {
 
 To avoid the need for adding hints to existing shaders, one could also do pattern matching against the existing code. It is recommended that the injections would always happen on the next line.
 
-```js
+```typescript
 new Model(gl, {
   vs,
   fs: `void main() {

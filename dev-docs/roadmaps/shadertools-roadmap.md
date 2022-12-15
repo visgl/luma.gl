@@ -76,7 +76,7 @@ Dependency resolution rules:
 
 ### Example
 
-```js
+```typescript
 export const fp64 = {
   name: 'fp64',
   cs: `...` // can be used both in vertex and fragment shaders, so expose as `cs`

@@ -1,5 +1,5 @@
-import {DeviceTabs} from '@luma.gl/react-website';
-import {HelloCubeExample} from '../../website';
+import {DeviceTabs} from '@site/src/react-luma';
+import {HelloCubeExample} from '@site';
 
 # Hello Cube
 
@@ -15,7 +15,7 @@ a cube mesh and handle 3D math using [math.gl](https://math.gl/).
 
 As always, we'll start with our imports:
 
-```js
+```typescript
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear, setParameters} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
@@ -23,7 +23,7 @@ import {Matrix4} from '@math.gl/core';
 
 Our shaders are somewhat more involved that we've seen before:
 
-```js
+```typescript
 const vs = `\
   attribute vec3 positions;
   attribute vec2 texCoords;
@@ -58,7 +58,7 @@ the positions to rotate our model and create the 3D perspective effect
 
 The set up to render in 3D involves a few extra steps compared to the triangles we've been drawing so far:
 
-```js
+```typescript
   model;
   viewMatrix;
   mvpMatrix;
@@ -96,7 +96,7 @@ Some of the new techniques we're leveraging here are:
 
 Our `onRender` is similar to what we've seen before with the extra step of setting up the transform matrix and passing it as a uniform to the `Model`:
 
-```js
+```typescript
   onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     mvpMatrix.perspective({fov: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
@@ -115,9 +115,9 @@ We use `Matrix4`'s matrix operations to create our final transformation matrix, 
 - `aspect` is the aspect ratio of the canvas and is used to set up the perspective projection.
 - `tick` is simply a counter that increments each frame. We use it to drive the rotation animation.
 
-If all went well, you should see a rotating cube with the vis.gl logo painted on each side. The live demo is available [here](/examples/getting-started/hello-cube), and the full source code is listed below for reference:
+If all went well, you should see a rotating cube with the vis.gl logo painted on each side. The full source code is listed below for reference:
 
-```js
+```typescript
 import {AnimationLoop, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear, setParameters} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';

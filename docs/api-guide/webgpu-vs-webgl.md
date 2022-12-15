@@ -1,16 +1,24 @@
 # WebGPU vs WebGL
 
-This pages collects notes on some of the notable differences between WebGPU and WebGL. This is not intended to be a complete list but is essentially a set of author's notes, included because they may be useful to understanding why some of the breaking changes in the luma.gl v9 API were made, and provide more detail on the differences between the WebGPU and WebGL implementations.
+This page attempts to list out the notable differences between WebGPU and WebGL. 
+This is not intended to be a complete list but is essentially a set of luma.gl developer 
+notes, included because they may be useful to understanding how the differences between the WebGPU and WebGL implementations. 
 
-- The imminent completion of the WebGPU standard and launch of WebGPU support in the Chrome browser.
-- Announcements that no further evolution of the WebGL standard is taking place.
-- WebGPU essentially exposes the latest next-gen GPU APIs (Vulkan, Metal, DX12) in the browser. A primary characteristic of these APIs is that they are designed to ensure GPU usage can be optimized "to the bone" (by e.g. minimization CPU-side validation overhead, enabling multi-threading etc) and wrapping WebGPU APIs under a backwards-compatible WebGL-centric API does not make much sense.
-
-**Decision: Convert luma.gl into a "WebGPU first" API**
+These notes also exp;lain why some of the breaking changes in the luma.gl v9 API were made, and provide more detail on the 
 
 ## Background
 
-WebGPU is the next generation GPU API for the browser, standardized by W3C. Given the high profile of the project and how WebGPU was designed to embrace all the proprietary next-gen APIs from the major manufacturers (Vulkan, Metal, DX12) it seems reasonable to assume that the WebGPU API will be widely adopted and  represents the future of GPU programming on the Web. 
+WebGPU is the next generation GPU API for the browser, standardized by W3C. 
+Given the high profile of the project and how WebGPU was designed to embrace
+all the proprietary next-gen APIs from the major manufacturers (Vulkan, Metal, DX12) 
+it seems reasonable to assume that the WebGPU API will be widely adopted and 
+represents the future of GPU programming on the Web. 
+
+- The imminent completion of the WebGPU standard 
+- The launch of WebGPU support in the Chrome browser.
+- Announcements that no further evolution of the WebGL standard is taking place.
+
+WebGPU essentially exposes the latest next-gen GPU APIs (Vulkan, Metal, DX12) in the browser. A primary characteristic of these APIs is that they are designed to ensure GPU usage can be optimized "to the bone" (by e.g. minimization CPU-side validation overhead, enabling multi-threading etc) and wrapping WebGPU APIs under a backwards-compatible WebGL-centric API does not make much sense.
 
 ## WebGL compatibility
 

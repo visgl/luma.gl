@@ -123,7 +123,22 @@
         {
           "title": "@luma.gl/api",
           "entries": [
-            { "entry": "docs/modules/api" }
+            { "entry": "docs/modules/api" },
+            { "entry": "docs/modules/api/resources/buffer" },
+            { "entry": "docs/modules/api/resources/compute-pipeline" },
+            { "entry": "docs/modules/api/resources/framebuffer" },
+            { "entry": "docs/modules/api/resources/pipeline" },
+            { "entry": "docs/modules/api/resources/render-pipeline" },
+            { "entry": "docs/modules/api/resources/sampler" },
+            { "entry": "docs/modules/api/resources/shader" },
+            { "entry": "docs/modules/api/resources/texture" },
+            { "entry": "docs/modules/api/types/shader-layout" },
+            { "entry": "docs/modules/api/context/feature-checking" },
+            { "entry": "docs/modules/api/canvas-context" },
+            { "entry": "docs/modules/api/device" },
+            { "entry": "docs/modules/api/features" },
+            { "entry": "docs/modules/api/parameters" },
+            { "entry": "docs/modules/api/texture-formats" }
           ]
         },
         {
@@ -167,7 +182,29 @@
         {
           "title": "@luma.gl/webgl",
           "entries": [
-            { "entry": "docs/modules/webgl" }
+            { "entry": "docs/modules/webgl" },
+            { "entry": "docs/modules/webgl/legacy/accessor" },
+            { "entry": "docs/modules/webgl/legacy/buffer" },
+            { "entry": "docs/modules/webgl/legacy/framebuffer" },
+            { "entry": "docs/modules/webgl/legacy/program" },
+            { "entry": "docs/modules/webgl/legacy/query" },
+            { "entry": "docs/modules/webgl/legacy/renderbuffer" },
+            { "entry": "docs/modules/webgl/legacy/shader" },
+            { "entry": "docs/modules/webgl/legacy/texture" },
+            { "entry": "docs/modules/webgl/legacy/texture-2d" },
+            { "entry": "docs/modules/webgl/legacy/texture-3d" },
+            { "entry": "docs/modules/webgl/legacy/texture-cube" },
+            { "entry": "docs/modules/webgl/legacy/transform-feedback" },
+            { "entry": "docs/modules/webgl/legacy/uniform-buffer-layout" },
+            { "entry": "docs/modules/webgl/legacy/vertex-array" },
+            { "entry": "docs/modules/webgl/legacy/vertex-array-object" },
+            { "entry": "docs/modules/webgl/legacy/resource" },
+            { "entry": "docs/modules/webgl/legacy/context/feature-checking" },
+            { "entry": "docs/modules/webgl/legacy/context/context-properties" },
+            { "entry": "docs/modules/webgl/legacy/moving-data" },
+            { "entry": "docs/modules/webgl/legacy/context" },
+            { "entry": "docs/modules/webgl/legacy/parameter-setting" },
+            { "entry": "docs/modules/webgl/legacy/device-pixels" }
           ]
         },
         {

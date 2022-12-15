@@ -53,7 +53,7 @@ A `ProgramManager` that supports the following methods:
 
 ## Example
 
-```js
+```typescript
 const pm = new ProgramManager(gl);
 
 const vs = `
