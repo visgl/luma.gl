@@ -1,5 +1,5 @@
 import {Buffer} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps} from '@luma.gl/engine';
 import {clear, ClassicModel as Model, ProgramManager} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -38,7 +38,7 @@ const offsetRightModule = {
   }
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
   positionBuffer: Buffer;
@@ -93,4 +93,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model1.draw();
     this.model2.draw();
   }
+}
+
+// @ts-ignore
+if (typeof window !== 'undefined' && !window.website) {
+  RenderLoop.run(AppRenderLoop).start();
 }

@@ -21,7 +21,6 @@ export default class WebGPUCanvasContext extends CanvasContext {
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
     this.device = device;
-    this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.gpuCanvasContext = this.canvas.getContext('webgpu') as GPUCanvasContext;
     this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
   }

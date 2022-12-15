@@ -18,7 +18,6 @@ export default class WebGLCanvasContext extends CanvasContext {
     super(props);
     this.device = device;
     this.presentationSize = [-1, -1];
-    this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.update();
   }
 

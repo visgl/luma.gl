@@ -11,8 +11,6 @@ const isPageLoaded: () => boolean = () => isPage && document.readyState === 'com
 export type CanvasContextProps = {
   /** If canvas not supplied, will be created and added to the DOM. If string, will be looked up in the DOM */
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null;
-  /** If new canvas is created, it will be created in the specified container, otherwise appended to body */
-  container?: HTMLElement | string | null;
   /** Width in pixels of the canvas */
   width?: number;
   /** Height in pixels of the canvas */
@@ -21,6 +19,8 @@ export type CanvasContextProps = {
   useDevicePixels?: boolean | number;
   /** Whether to track resizes (if not ) */
   autoResize?: boolean;
+  /** Parent DOM element. If omitted, added as first child of document.body (only used if new canvas is created) */
+  container?: HTMLElement | null;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
@@ -76,7 +76,9 @@ export default abstract class CanvasContext {
    * it is recommended avoid calling this function until actually needed.
    * I.e. don't call it until you know that you will be looking up a string in the DOM.
    */
-  static pageLoaded: Promise<void> = getPageLoadPromise();
+  static get pageLoaded(): Promise<void> {
+    return getPageLoadPromise();
+  }
 
   constructor(props?: CanvasContextProps) {
     this.props = {...DEFAULT_CANVAS_CONTEXT_PROPS, ...props};
@@ -93,12 +95,12 @@ export default abstract class CanvasContext {
     }
 
     if (!props.canvas) {
-      const canvas = createCanvas(props);
-      const container = getContainer(props?.container || null);
-      container.insertBefore(canvas, container.firstChild);
-
-      this.canvas = canvas;
-
+      this.canvas = createCanvas(props);
+      if (props?.container) {
+        props?.container.appendChild(this.canvas);
+      } else {
+        document.body.insertBefore(this.canvas, document.body.firstChild);
+      }
       if (!props?.visible) {
         this.canvas.style.visibility = 'hidden';
       }
@@ -107,7 +109,6 @@ export default abstract class CanvasContext {
     } else {
       this.canvas = props.canvas;
     }
-
     if (this.canvas instanceof HTMLCanvasElement) {
       this.id = this.canvas.id;
       this.type = 'html-canvas';
@@ -295,68 +296,48 @@ export default abstract class CanvasContext {
 
   /** Perform platform specific updates (WebGPU vs WebGL) */
   protected abstract update(): void;
-
-  /**
-   * Allows subclass constructor to override the canvas id for auto created canvases.
-   * This can really help when debugging DOM in apps that create multiple devices
-   */
-  protected _setAutoCreatedCanvasId(id: string) {
-    if (this.htmlCanvas?.id === 'lumagl-auto-created-canvas') {
-      this.htmlCanvas.id = id;
-    }
-  }
 }
 
 // HELPER FUNCTIONS
 
+let pageLoadPromise: Promise<void> | null = null;
+
 /** Returns a promise that resolves when the page is loaded */
 function getPageLoadPromise(): Promise<void> {
-  if (isPageLoaded() || typeof window === 'undefined') {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    window.addEventListener('load', () => resolve());
-  });
-}
-
-function getContainer(container: HTMLElement | string | null): HTMLElement {
-  if (typeof container === 'string') {
-    const element = document.getElementById(container);
-    if (!element && !isPageLoaded()) {
-      throw new Error(`Accessing '${container}' before page was loaded`);
+  if (!pageLoadPromise) {
+    if (isPageLoaded()) {
+      pageLoadPromise = Promise.resolve();
+    } else {
+      pageLoadPromise = new Promise((resolve, reject) => {
+        window.addEventListener('load', () => resolve());
+      });
     }
-    if (!element) {
-      throw new Error(`${container} is not an HTML element`);
-    }
-    return element;
-  } else if (container) {
-    return container;
   }
-  return document.body;
-}
-
-/** Get a Canvas element from DOM id */
-function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas && !isPageLoaded()) {
-    throw new Error(`Accessing '${canvasId}' before page was loaded`);
-  }
-  if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error(`'${canvas}' is not a canvas element`);
-  }
-  return canvas;
+  return pageLoadPromise;
 }
 
 /** Create a new canvas */
 function createCanvas(props: CanvasContextProps) {
   const {width, height} = props;
   const targetCanvas = document.createElement('canvas');
-  targetCanvas.id = 'lumagl-auto-created-canvas';
+  targetCanvas.id = 'lumagl-canvas';
   targetCanvas.width = width || 1;
   targetCanvas.height = height || 1;
   targetCanvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
   targetCanvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
   return targetCanvas;
+}
+
+/** Get a Canvas element from DOM id */
+function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
+  if (!isPageLoaded()) {
+    throw new Error(`Accessing '${canvasId}' before page was loaded`);
+  }
+  const canvas = document.getElementById(canvasId);
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    throw new Error(`'${canvas}' is not a canvas element`);
+  }
+  return canvas as HTMLCanvasElement;
 }
 
 /**

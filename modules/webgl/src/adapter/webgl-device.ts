@@ -7,7 +7,7 @@ import type {
   CanvasContextProps,
   TextureFormat
 } from '@luma.gl/api';
-import {Device, CanvasContext, log, uid} from '@luma.gl/api';
+import {Device, CanvasContext, log, assert} from '@luma.gl/api';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {popContextState, pushContextState, trackContextState} from '../context/state-tracker/track-context-state';
@@ -152,7 +152,7 @@ export default class WebGLDevice extends Device {
   //
 
   constructor(props: DeviceProps) {
-    super({...props, id: props.id || uid('webgl-device')});
+    super(props);
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context

@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear} from '@luma.gl/gltools';
 import {Matrix4} from '@math.gl/core';
 
@@ -34,7 +34,7 @@ const fs = `\
 
 const eyePosition = [0, 0, 5];
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
   mvpMatrix  = new Matrix4();
@@ -75,4 +75,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize() {
     this.model.destroy();
   }
+}
+
+// @ts-ignore
+if (typeof window !== 'undefined' && !window.website) {
+  RenderLoop.run(AppRenderLoop).start();
 }

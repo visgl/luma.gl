@@ -1,5 +1,5 @@
 import {Buffer} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/gltools';
 
 const INFO_HTML = `
@@ -50,7 +50,7 @@ const colorModule = {
   `
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
   model1: Model;
@@ -100,4 +100,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model1.draw();
     this.model2.draw();
   }
+}
+
+// @ts-ignore
+if (typeof window !== 'undefined' && !window.website) {
+  RenderLoop.run(AppRenderLoop).start();
 }

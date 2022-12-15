@@ -29,7 +29,7 @@ const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
 };
 
 /** v9 API */
-export class Model {
+export default class Model {
   readonly device: Device;
   readonly pipeline: RenderPipeline;
   readonly id: string;

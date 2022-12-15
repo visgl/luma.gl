@@ -3,7 +3,7 @@
 import {luma, Device, DeviceProps} from '@luma.gl/api';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
 import {Timeline} from '../animation/timeline';
-import {AnimationProps} from './animation-props';
+import {AnimationProps} from '../lib/animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
@@ -11,47 +11,43 @@ const isPage = isBrowser() && typeof document !== 'undefined';
 
 let statIdCounter = 0;
 
+type ContextProps = DeviceProps;
+
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
-  device: Device | Promise<Device>;
-
+  onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
   onRender?: (animationProps: AnimationProps) => unknown;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
 
+  device?: Device | null;
+  deviceProps?: DeviceProps;
   stats?: Stats;
 
-  // view parameters - TODO move to CanvasContext?
+  // view parameters
   autoResizeViewport?: boolean;
   autoResizeDrawingBuffer?: boolean;
   useDevicePixels?: number | boolean;
 };
 
-export type MutableAnimationLoopProps = {
-  // view parameters
-  autoResizeViewport?: boolean;
-  autoResizeDrawingBuffer?: boolean;
-  useDevicePixels?: number | boolean;
-}
-
-
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
-  device: null!,
-
+  onCreateDevice: (props: DeviceProps): Promise<Device> => luma.createDevice(props),
   onAddHTML: () => '',
   onInitialize: async () => { return null; },
   onRender: () => {},
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
+  device: null,
+  deviceProps: {},
   stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
 
   // view parameters
   useDevicePixels: true,
-  autoResizeViewport: false,
-  autoResizeDrawingBuffer: false,
+  autoResizeViewport: true,
+  autoResizeDrawingBuffer: true,
 };
 
 /** Convenient animation loop */
@@ -83,17 +79,17 @@ export class AnimationLoop {
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
-  constructor(props: AnimationLoopProps) {
+  constructor(props: AnimationLoopProps = {}) {
     this.props = {...DEFAULT_ANIMATION_LOOP_PROPS, ...props};
     props = this.props;
-
-    if (!props.device) {
-      throw new Error('No device provided');
-    }
 
     let {useDevicePixels = true} = this.props;
 
     // state
+    this.device = props.device || null;
+    // @ts-expect-error
+    this.gl = (this.device && this.device.gl) || props.gl;
+
     this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
@@ -129,7 +125,7 @@ export class AnimationLoop {
   }
 
   // TODO - move to CanvasContext
-  setProps(props: MutableAnimationLoopProps): this {
+  setProps(props: AnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport || false;
     }
@@ -159,7 +155,7 @@ export class AnimationLoop {
       if (!this._initialized) {
         this._initialized = true;
         // Create the WebGL context
-        await this._initDevice();
+        await this._createDevice();
         this._initialize();
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
@@ -426,14 +422,12 @@ export class AnimationLoop {
       : this.animationProps.engineTime;
   }
 
-  /** Wait for supplied device */
-  async _initDevice() {
-    this.device = await this.props.device;
-    if (!this.device) {
-      throw new Error('No device provided');
-    }
-    this.canvas = this.device.canvasContext?.canvas || null;
-    // this._createInfoDiv();
+  /** Either uses supplied or existing context, or calls provided callback to create one */
+  async _createDevice() {
+    const deviceProps = {...this.props, ...this.props.deviceProps};
+    this.device = await this.props.onCreateDevice(deviceProps);
+    this.canvas = this.device.canvasContext?.canvas!;
+    this._createInfoDiv();
   }
 
   _createInfoDiv() {

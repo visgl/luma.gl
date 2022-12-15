@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {Model, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
@@ -44,7 +44,7 @@ fn main() -> [[location(0)]] vec4<f32> {
   }
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   model: Model;
 
   constructor({device}: AnimationProps) {
@@ -71,5 +71,5 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 }
 
 if (!globalThis.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
 }

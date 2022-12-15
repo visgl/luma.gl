@@ -3,7 +3,7 @@
 */
 
 import {getRandom} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model} from '@luma.gl/engine';
 import GL from '@luma.gl/constants';
 import {setParameters, clear} from '@luma.gl/gltools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -48,7 +48,7 @@ const NEAR = 0.1;
 const FAR = 10.0;
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
   static props = {useDevicePixels: true};
 
@@ -172,5 +172,5 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+  RenderLoop.run(AppRenderLoop).start();
 }

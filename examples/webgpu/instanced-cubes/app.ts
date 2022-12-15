@@ -1,5 +1,5 @@
-import {Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {luma, Device, Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
+import {Model, CubeGeometry, RenderLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -107,7 +107,7 @@ const CUBE_RENDER_PARAMETERS: RenderPipelineParameters = {
   cullMode: 'back',
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   cubeModel: Model;
   uniformBuffer: Buffer;
 
@@ -200,6 +200,5 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
 
 // Create device and run
 if (!globalThis.website) {
-  // , {canvas: 'canvas'}
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+  RenderLoop.run(AppRenderLoop, {canvas: 'canvas'}).start();
 }

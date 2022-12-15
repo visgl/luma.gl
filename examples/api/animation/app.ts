@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
 import {clear, ClassicModel} from '@luma.gl/gltools';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -46,7 +46,7 @@ void main(void) {
 }
 `;
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
   timeline: Timeline;
@@ -209,5 +209,5 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+  RenderLoop.run(AppRenderLoop).start();
 }

@@ -1,7 +1,7 @@
 /* eslint-enable camelcase */
 // import {Buffer} from '@luma.gl/api';
 import {Buffer} from '@luma.gl/gltools';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
+import {RenderLoop, AnimationProps} from '@luma.gl/engine';
 import {ClassicModel as Model, Transform} from '@luma.gl/gltools';
 import {readPixelsToArray, Framebuffer} from '@luma.gl/gltools';
 import {picking} from '@luma.gl/shadertools';
@@ -145,7 +145,7 @@ function mouseleave(e) {
   pickPosition = null;
 }
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+export default class AppRenderLoop extends RenderLoop {
   static info = INFO_HTML;
 
   positionBuffer: Buffer;
@@ -314,5 +314,5 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+  RenderLoop.run(AppRenderLoop).start();
 }
