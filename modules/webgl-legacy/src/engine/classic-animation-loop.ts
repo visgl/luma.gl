@@ -332,26 +332,31 @@ export default class ClassicAnimationLoop {
   }
 
   onCreateDevice(deviceProps: DeviceProps): Promise<Device> {
-    return this.props.onCreateDevice(deviceProps);
+    const {onCreateDevice} = this.props;
+    return onCreateDevice(deviceProps);
   }
 
   onInitialize(animationProps: ClassicAnimationProps): {} | void {
-    return this.props.onInitialize(animationProps);
+    const {onInitialize} = this.props;
+    return onInitialize(animationProps);
   }
 
   onRender(animationProps: ClassicAnimationProps) {
-    return this.props.onRender(animationProps);
+    const {onRender} = this.props;
+    return onRender(animationProps);
   }
 
   onFinalize(animationProps: ClassicAnimationProps) {
-    return this.props.onFinalize(animationProps);
+    const {onFinalize} = this.props;
+    return onFinalize(animationProps);
   }
 
   // DEPRECATED/REMOVED METHODS
 
   /** @deprecated Use .onCreateDevice() */
   onCreateContext(props: ContextProps) {
-    return this.props.onCreateContext(props);
+    const {onCreateContext} = this.props;
+    return onCreateContext(props);
   }
 
   /** @deprecated */
