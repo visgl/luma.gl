@@ -21,13 +21,11 @@ Autocreates a canvas/context
 import {AnimationLoop, ClipSpace} from '@luma.gl/engine';
 
 const animationLoop = new AnimationLoop({
-  onInitialize({gl}) {
+  onInitialize({device}) {
     // Keys in the object returned here will be available in onRender
-    return {
-      clipSpaceQuad: new ClipSpace({gl, fs: FRAGMENT_SHADER})
-    };
-  },
-  onRender({tick, clipSpaceQuad}) {
+    this.clipSpaceQuad = new ClipSpace({device, fs: FRAGMENT_SHADER});
+  }
+  onRender({tick}) {
     // Tick is autoupdated by AnimationLoop
     clipSpaceQuad.setUniforms({uTime: tick * 0.01}).draw();
   }

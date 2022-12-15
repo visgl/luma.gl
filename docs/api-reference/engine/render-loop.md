@@ -87,7 +87,7 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 
 ## Methods
 
-### constructor(props : Object)
+### constructor(props: Object)
 
 ```typescript
 new AnimationLoopTemplate({
@@ -100,7 +100,7 @@ new AnimationLoopTemplate({
 });
 ```
 
-### start([options : Object]) : AnimationLoopTemplate
+### start([options: Object]): AnimationLoopTemplate
 
 Restarts the animation
 
@@ -108,13 +108,13 @@ Restarts the animation
 
 - `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context/context-api).
 
-### stop() : AnimationLoopTemplate
+### stop(): AnimationLoopTemplate
 
 Stops the animation
 
 `animationLoop.stop()`
 
-### waitForRender() : Promise
+### waitForRender(): Promise
 
 Returns a promise which resolves in the next frame after rendering and the `onRender` callback have completed.
 
@@ -124,11 +124,11 @@ const loop = await animationLoop.waitForRender()
 loop.gl.readPixels(...)
 ```
 
-### redraw() : AnimationLoopTemplate
+### redraw(): AnimationLoopTemplate
 
 Immediately invokes a redraw (call `onRender` with updated animation props). Only use if the canvas must be updated synchronously.
 
-### setNeedsRedraw(reason : String) : AnimationLoopTemplate
+### setNeedsRedraw(reason: String): AnimationLoopTemplate
 
 `animationLoop.setNeedsRedraw(reason)`
 
@@ -142,7 +142,7 @@ Notes:
 - If called multiple times, the `reason` provided in the first call will be remembered.
 - `AnimationLoopTemplate` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
-### setProps(props : Object) : AnimationLoopTemplate
+### setProps(props: Object): AnimationLoopTemplate
 
 `animationLoop.setProps({...props})`
 

@@ -7,7 +7,6 @@ Testing webgl programs can be tricky...
 - headless gl
 - puppeteer
 - ...
-<<<<<<< HEAD
 
 ## Test device creation
 
