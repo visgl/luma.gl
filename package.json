@@ -15,8 +15,7 @@
   ],
   "workspaces": [
     "examples/**",
-    "modules/*",
-    "website-docusaurus"
+    "modules/*"
   ],
   "browser": {
     "fs": false
