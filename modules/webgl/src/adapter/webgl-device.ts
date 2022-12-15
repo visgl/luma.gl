@@ -360,7 +360,11 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-  
+
+  /** State used by luma.gl classes */
+  readonly _extensions: Record<string, any> = {};
+  _polyfilled: boolean = false;
+
   /** Instance of Spector.js (if initialized) */
   spector;
 

@@ -1,13 +1,13 @@
 // luma.gl, MIT license
 
 import {Stats, Stat} from '@probe.gl/stats';
-import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
+import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
 
 export default class PerformanceTestRunner extends TestRunner {
   private _stats: Stats | null = null;
   private _fps: Stat | null = null;
 
-  constructor(props: TestRunnerOptions) {
+  constructor(props: TestRunnerProps) {
     super(props);
 
     Object.assign(this.testOptions, {

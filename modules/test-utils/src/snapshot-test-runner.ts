@@ -1,4 +1,4 @@
-import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
+import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 
 /** A snapshot test case */
@@ -10,56 +10,57 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
 export default class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;
 
-  constructor(props: TestRunnerOptions) {
+  constructor(props: TestRunnerProps) {
     super(props);
 
     // @ts-expect-error
     this.testOptions.imageDiffOptions = {};
   }
 
-  initTestCase(testCase) {
+  initTestCase(testCase: SnapshotTestRunnerTestCase): void {
     super.initTestCase(testCase);
     if (!testCase.goldenImage) {
       throw new Error(`Test case ${testCase.name} does not have golden image`);
     }
   }
 
-  shouldRender() {
+  shouldRender(): boolean {
     // wait for the current diffing to finish
     return !this.isDiffing;
   }
 
-  assert(testCase) {
+  async assert(testCase): Promise<void> {
     if (this.isDiffing) {
       // Already performing diffing
       return;
     }
     this.isDiffing = true;
 
-    const diffOptions = Object.assign(
-      {},
+    const canvas = this._animationProps?.canvas;
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      throw new Error('canvas');
+    }
+
+    const diffOptions = {
       // @ts-expect-error
-      this.testOptions.imageDiffOptions,
-      testCase.imageDiffOptions,
-      {
-        goldenImage: testCase.goldenImage,
-        // @ts-expect-error
-        region: getBoundingBoxInPage(this._animationProps.canvas)
-      }
-    );
+      ...this.testOptions.imageDiffOptions,
+      ...testCase.imageDiffOptions,
+      goldenImage: testCase.goldenImage,
+      region: getBoundingBoxInPage(canvas)
+    };
 
     // Take screenshot and compare
     // @ts-expect-error
-    window.browserTestDriver_captureAndDiffScreen(diffOptions).then((result) => {
-      // invoke user callback
-      if (result.success) {
-        this._pass(result);
-      } else {
-        this._fail(result);
-      }
+    const result = await window.browserTestDriver_captureAndDiffScreen(diffOptions);
 
-      this.isDiffing = false;
-      this._next();
-    });
+    // invoke user callback
+    if (result.success) {
+      this._pass(result);
+    } else {
+      this._fail(result);
+    }
+
+    this.isDiffing = false;
+    this._next();
   }
 }

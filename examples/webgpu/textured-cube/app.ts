@@ -157,6 +157,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
+<<<<<<< HEAD
+=======
+    super.destroy();
+>>>>>>> 7ae90c935 (chore(test-utils): Clean up test utils (#1707))
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
