@@ -1,6 +1,6 @@
 // @ts-nocheck TODO remove
 /* eslint-disable no-console */
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop, AnimationProps} from '@luma.gl/core';
 import {pushContextState, popContextState} from '@luma.gl/webgl';
 
 /** Describes a test case */
@@ -8,11 +8,11 @@ export type TestRunnerTestCase = {
   /** Name of the test case (for logging) */
   name: string;
   /** Initialize the test case. Can return a promise */
-  onInitialize: any;
+  onInitialize: (props: AnimationProps) => Promise<unknown>;
   /** Perform rendering */
-  onRender: any;
+  onRender: (props: AnimationProps & {done}) => void;
   /** Clean up after the test case */
-  onFinalize: any;
+  onFinalize: (props: AnimationProps) => void;
 };
 
 function noop() {}

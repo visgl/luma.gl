@@ -1,5 +1,5 @@
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-import {AnimationLoopTemplate} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/api';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
@@ -66,23 +66,23 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       name,
 
       // Construct the renderloop, but don't start it. Manually call its OnInitialize
-      onInitialize: (params) => {
+      onInitialize: (props: AnimationProps) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        animationLoopTemplate = new ExampleAnimationLoopTemplate(params);
+        animationLoopTemplate = new ExampleAnimationLoopTemplate(props);
       },
 
       // Manually trigger an animationLoop onRender. Unless it returns false, we are done.
-      onRender: (params) => {
+      onRender: (props: AnimationProps) => {
         // override animation in the example so we get a well-defined time
-        params.tick = 0;
-        const result = animationLoopTemplate?.onRender(params);
+        props.tick = 0;
+        const result = animationLoopTemplate?.onRender(props);
         if (result !== false) {
-          params.done();
+          props.done();
         }
       },
 
       // Make sure to let the AnimationLoopTemplate clean up
-      onFinalize: (params) => animationLoopTemplate?.onFinalize(params),
+      onFinalize: (props: AnimationProps) => animationLoopTemplate?.onFinalize(props),
 
       // The target image
       goldenImage: `./test/render/golden-images/${name}.png`
