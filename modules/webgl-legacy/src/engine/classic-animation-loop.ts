@@ -79,16 +79,13 @@ export type ClassicAnimationLoopProps = {
 
 const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
-  // @ts-expect-error
   onCreateContext: undefined,
-  // @ts-expect-error
   onAddHTML: undefined,
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
   onError: (error) => console.error(error), // eslint-disable-line no-console
 
-  // @ts-expect-error
   device: null,
   // debug: true,
 
@@ -100,7 +97,6 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
 
   // deprecated
   // onCreateContext: (opts) => createGLContext(opts),
-  // @ts-expect-error
   gl: undefined,
   glOptions: {},
   createFramebuffer: false

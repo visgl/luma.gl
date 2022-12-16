@@ -53,7 +53,7 @@ export default class ProgramManager {
   addDefaultModule(module: Module): void {
     // @ts-expect-error
     if (!this._defaultModules.find((m) => m.name === module.name)) {
-      this._defaultModules.push(module);
+      this._defaultModules.push(module as ShaderModule);
     }
 
     this.stateHash++;
