@@ -1,13 +1,13 @@
 // import type Geometry from './geometry';
 
-export function unpackIndexedGeometry(geometry) {
+export function unpackIndexedGeometry(geometry: any) {
   const {indices, attributes} = geometry;
   if (!indices) {
     return geometry;
   }
 
   const vertexCount = indices.value.length;
-  const unpackedAttributes = {};
+  const unpackedAttributes: Record<string, any> = {};
 
   for (const attributeName in attributes) {
     const attribute = attributes[attributeName];

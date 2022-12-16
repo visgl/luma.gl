@@ -75,7 +75,7 @@ export class AnimationLoop {
   _running: boolean = false;
   _animationFrameId: any = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
-  _resolveNextFrame: ((AnimationLoop) => void) | null = null;
+  _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
 
   // _gpuTimeQuery: Query | null = null;
@@ -277,7 +277,7 @@ export class AnimationLoop {
     // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
   }
 
-  _setDisplay(display) {
+  _setDisplay(display: any) {
     if (this.display) {
       this.display.delete();
       this.display.animationLoop = null;

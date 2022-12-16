@@ -5,7 +5,7 @@ import Geometry from '../geometry/geometry';
 export type CubeGeometryProps = {
   id?: string;
   indices?: boolean;
-  attributes?;
+  attributes?: any;
 };
 
 export class CubeGeometry extends Geometry {

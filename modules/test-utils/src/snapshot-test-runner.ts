@@ -5,6 +5,8 @@ import {getBoundingBoxInPage} from './utils';
 export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
   /** URL to golden image */
   goldenImage: string;
+  /** Diff options */
+  imageDiffOptions?: {[key: string]: any}; 
 }
 
 export default class SnapshotTestRunner extends TestRunner {
@@ -29,7 +31,7 @@ export default class SnapshotTestRunner extends TestRunner {
     return !this.isDiffing;
   }
 
-  async assert(testCase): Promise<void> {
+  async assert(testCase: SnapshotTestRunnerTestCase): Promise<void> {
     if (this.isDiffing) {
       // Already performing diffing
       return;

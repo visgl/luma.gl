@@ -68,6 +68,7 @@ export default class Geometry {
     NORMAL: GeometryAttribute,
     TEXCOORD_0: GeometryAttribute,
     COLOR_0?: GeometryAttribute,
+    [key: string]: GeometryAttribute | undefined
   };
   readonly indices?: Uint16Array | Uint32Array;
 
@@ -109,8 +110,8 @@ export default class Geometry {
       // Move indices to separate field
       if (attributeName === 'indices') {
         assert(!this.indices);
-      // @ts-expect-error
-      this.indices = attribute;
+        // @ts-expect-error
+        this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;
       }
@@ -152,12 +153,12 @@ export default class Geometry {
   // type: indices, vertices, uvs
   // size: elements per vertex
   // target: WebGL buffer type (string or constant)
-  _setAttributes(attributes: Record<string, GeometryAttribute>, indices): this {
+  _setAttributes(attributes: Record<string, GeometryAttribute>, indices: any): this {
 
     return this;
   }
 
-  _calculateVertexCount(attributes, indices): number {
+  _calculateVertexCount(attributes: any, indices: any): number {
     if (indices) {
       return indices.value.length;
     }

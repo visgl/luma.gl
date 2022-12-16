@@ -4,7 +4,7 @@ import {TruncatedConeGeometry} from './truncated-cone-geometry';
 export type CylinderGeometryProps = {
   id?: string;
   radius?: number;
-  attributes?
+  attributes?: any;
 };
 
 export class CylinderGeometry extends TruncatedConeGeometry {

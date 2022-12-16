@@ -1,9 +1,7 @@
+// luma.gl, MIT license 
+
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-<<<<<<< HEAD
 import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-=======
-import {AnimationLoopTemplate} from '@luma.gl/engine';
->>>>>>> 6f415581c (chore(engine): AnimationLoopTemplate)
 import {setPathPrefix} from '@luma.gl/api';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';

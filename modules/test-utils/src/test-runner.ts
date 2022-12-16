@@ -1,6 +1,6 @@
 // @ts-nocheck TODO remove
 /* eslint-disable no-console */
-import {AnimationLoop, AnimationProps} from '@luma.gl/core';
+import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 import {pushContextState, popContextState} from '@luma.gl/webgl';
 
 /** Describes a test case */
