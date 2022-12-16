@@ -31,7 +31,7 @@ const WEBGL_PARAMETERS = {
   [GL.SAMPLES]: getWebGL2ValueOrZero,
 
   // WebGL2 extension context parameters
-  [GL_GPU_DISJOINT_EXT]: (gl, getParameter) => {
+  [GL_GPU_DISJOINT_EXT]: (gl: WebGLRenderingContext, getParameter) => {
     const ext = isWebGL2(gl)
       ? gl.getExtension(EXT_disjoint_timer_query_webgl2)
       : gl.getExtension(EXT_disjoint_timer_query);
@@ -39,18 +39,19 @@ const WEBGL_PARAMETERS = {
   },
 
   // Extension fixed values
-  [GL_UNMASKED_VENDOR_WEBGL]: (gl, getParameter) => {
+  [GL_UNMASKED_VENDOR_WEBGL]: (gl: WebGLRenderingContext, getParameter) => {
     const ext = gl.getExtension(WEBGL_debug_renderer_info);
     return getParameter((ext && ext.UNMASKED_VENDOR_WEBGL) || GL.VENDOR);
   },
 
-  [GL_UNMASKED_RENDERER_WEBGL]: (gl, getParameter) => {
+  [GL_UNMASKED_RENDERER_WEBGL]: (gl: WebGLRenderingContext, getParameter) => {
     const ext = gl.getExtension(WEBGL_debug_renderer_info);
     return getParameter((ext && ext.UNMASKED_RENDERER_WEBGL) || GL.RENDERER);
   },
 
   // Extension LIMITS
-  [GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT]: (gl, getParameter) => {
+  [GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT]: (gl: WebGLRenderingContext, getParameter) => {
+    // @ts-ignore TODO - store these on the device instance instead...
     const ext = gl.luma?.extensions?.[EXT_texture_filter_anisotropic] ||
       gl.getExtension('EXT_texture_filter_anisotropic');
     return ext ? getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) : 1.0;
@@ -60,7 +61,7 @@ const WEBGL_PARAMETERS = {
   [GL.MAX_3D_TEXTURE_SIZE]: getWebGL2ValueOrZero,
   [GL.MAX_ARRAY_TEXTURE_LAYERS]: getWebGL2ValueOrZero,
   [GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL]: getWebGL2ValueOrZero,
-  [GL.MAX_COLOR_ATTACHMENTS]: (gl, getParameter) => {
+  [GL.MAX_COLOR_ATTACHMENTS]: (gl: WebGLRenderingContext, getParameter) => {
     if (!isWebGL2(gl)) {
       const ext = gl.getExtension(WEBGL_draw_buffers);
       return ext ? getParameter(ext.MAX_COLOR_ATTACHMENTS_WEBGL) : 0;
@@ -108,7 +109,7 @@ const WEBGL_PARAMETERS = {
 
 // A "replacement" gl.getParameter that accepts "enums" from extensions and WebGL2
 // and returns reasonably safe defaults
-export function getParameterPolyfill(gl, originalGetParameter, pname) {
+export function getParameterPolyfill(gl: WebGLRenderingContext, originalGetParameter, pname) {
   // Return mock limits (usually 0) for WebGL2 constants to ensure these
   // can be queries without error
   const limit = WEBGL_PARAMETERS[pname];

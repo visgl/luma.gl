@@ -130,7 +130,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
    * @param name
    * @return param
    */
-  getParameter(pname: number, props = {}): any {
+  getParameter(pname: number, props: any = {}): any {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 
@@ -163,7 +163,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
   // Many resources support a getParameter call -
   // getParameters will get all parameters - slow but useful for debugging
   // eslint-disable-next-line complexity
-  getParameters(options: {parameters?, keys?} = {}) {
+  getParameters(options: {parameters?: any, keys?: any} = {}) {
     const {parameters, keys} = options;
 
     // Get parameter definitions for this Resource

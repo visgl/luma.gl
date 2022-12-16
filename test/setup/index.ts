@@ -7,7 +7,7 @@ import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 export default tapePromise(test_);
 export {default as deepCopy} from './deep-copy';
 
-export {getResourceCounts, getLeakedResources} from './resource-tracker.js';
+export {getResourceCounts, getLeakedResources} from './resource-tracker';
 
 /** @type {{gl: WebGLRenderingContext, gl2: WebGL2RenderingContext}} */
 export const fixture = {

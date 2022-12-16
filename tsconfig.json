@@ -8,6 +8,7 @@
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",
+    // "noImplicitAny": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true,

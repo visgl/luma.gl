@@ -1,4 +1,4 @@
-import test from 'tape-promise/tape';
+import test, {Test} from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/api';
@@ -103,7 +103,7 @@ test.skip('setDeviceParameters#depthClearValue', (t) => {
 // type TestClause = {check: GLParameters} | {set: Parameters};
 type TestClause = {check?: GLParameters, set?: Parameters};
 
-function testClauses(t: test, name: string, clauses: TestClause[]): void {
+function testClauses(t: Test, name: string, clauses: TestClause[]): void {
   resetParameters(gl);
 
   for (const clause of clauses) {

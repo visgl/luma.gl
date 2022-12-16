@@ -84,7 +84,7 @@ function polyfillExtension(gl: WebGLRenderingContext, {extension, target, target
 }
 
 /** Install simple overrides (mostly get* functions) */
-function installOverrides(gl, {target, target2}) {
+function installOverrides(gl: WebGLRenderingContext, {target, target2}) {
   Object.keys(WEBGL2_CONTEXT_OVERRIDES).forEach((key) => {
     if (typeof WEBGL2_CONTEXT_OVERRIDES[key] === 'function') {
       // install an override, if no implementation was detected
