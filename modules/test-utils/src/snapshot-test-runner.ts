@@ -38,7 +38,6 @@ export default class SnapshotTestRunner extends TestRunner {
     }
     this.isDiffing = true;
 
-    // @ts-expect-error
     const canvas = this._animationProps?.canvas;
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error('canvas');
