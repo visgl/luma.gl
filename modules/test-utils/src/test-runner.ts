@@ -1,7 +1,7 @@
 // @ts-nocheck TODO remove
 /* eslint-disable no-console */
-import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
-import {pushContextState, popContextState} from '@luma.gl/webgl';
+import {AnimationLoop, AnimationProps} from '@luma.gl/core';
+import {webglDevice} from './create-test-device';
 
 /** Describes a test case */
 export type TestRunnerTestCase = {
@@ -49,8 +49,10 @@ const DEFAULT_TEST_OPTIONS: Required<TestRunnerOptions> = {
 export default class TestRunner {
   props;
   isRunning = false;
-  readonly testOptions: object = {...DEFAULT_TEST_OPTIONS};
-  readonly _animationProps: object = {};
+  readonly testOptions: Required<TestRunnerOptions> = {...DEFAULT_TEST_OPTIONS};
+  readonly _animationProps: AnimationProps = {};
+
+  device = webglDevice;
   private _testCases: TestRunnerTestCase[] = [];
   private _testCaseData = null;
 
@@ -91,6 +93,7 @@ export default class TestRunner {
       this._animationLoop = new AnimationLoop(
         // @ts-expect-error TODO
         Object.assign({}, this.props, {
+          device: this.device,
           onRender: this._onRender.bind(this),
           onFinalize: () => {
             this.isRunning = false;
@@ -110,12 +113,12 @@ export default class TestRunner {
 
   /* Lifecycle methods for subclassing */
 
-  initTestCase(testCase) {
+  initTestCase(testCase: TestRunnerTestCase) {
     const {animationLoop} = testCase;
     if (animationLoop) {
-      testCase.onInitialize = animationLoop.onInitialize.bind(animationLoop);
-      testCase.onRender = animationLoop.onRender.bind(animationLoop);
-      testCase.onFinalize = animationLoop.onFinalize.bind(animationLoop);
+      testCase.onInitialize = animationLoop.props.onInitialize.bind(animationLoop);
+      testCase.onRender = animationLoop.props.onRender.bind(animationLoop);
+      testCase.onFinalize = animationLoop.props.onFinalize.bind(animationLoop);
     }
     for (const key in DEFAULT_TEST_CASE) {
       testCase[key] = testCase[key] || DEFAULT_TEST_CASE[key];
@@ -200,7 +203,7 @@ export default class TestRunner {
       this._currentTestCase.onFinalize(Object.assign({}, animationProps, this._testCaseData));
 
       // reset WebGL context
-      popContextState(animationProps.gl);
+      this.device.popState();
 
       this._currentTestCase = null;
       this._testCaseData = null;
@@ -218,7 +221,7 @@ export default class TestRunner {
       // initialize test case
 
       // save WebGL context
-      pushContextState(animationProps.gl);
+      this.device.pushState();
 
       // aligned with the behavior of AnimationLoop.onInitialized
       // onInitialized could return a plain object or a promise
