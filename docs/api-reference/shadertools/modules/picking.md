@@ -1,12 +1,12 @@
-# Core Shader Modules
+# picking (Shader Module)
 
-## picking
+Provides support for color-based picking. 
 
-Provides support for color-coding-based picking. In particular, supports picking a specific instance in an instanced draw call.
+Color based picking lets the application draw each primitive with a picking color that can later be used to retrieve the index of this specific primitive.
 
-Color based picking lets the application draw a primitive with a color that can later be used to index this specific primitive.
+In particular, supports picking a specific instance in an instanced draw call.
 
-### Usage
+## Usage
 
 In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
 
@@ -37,9 +37,9 @@ main() {
 }
 ```
 
-### JavaScript Functions
+## JavaScript Functions
 
-#### getUniforms
+### getUniforms
 
 `getUniforms` returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
 
@@ -50,15 +50,15 @@ main() {
 - `pickingHighlightColor`= `[0, 255, 255, 255]` (_array_) - Color used to highlight the currently selected object.
 - `pickingAttribute`=`false` (_boolean_) - Renders a color that encodes an attribute value. Normally only used with an off-screen framebuffer during picking.
 
-### Vertex Shader Functions
+## Vertex Shader Functions
 
-#### picking_setPickingColor
+### picking_setPickingColor
 
 Sets the color that will be returned by the fragment shader if color based picking is enabled. Typically set from a `pickingColor` uniform or a `pickingColors` attribute (e.g. when using instanced rendering, to identify the actual instance that was picked).
 
 `void picking_setPickingColor(vec3 pickingColor)`
 
-#### picking_setPickingAttribute
+### picking_setPickingAttribute
 
 Sets the attribute value that needs to be picked.
 
@@ -66,20 +66,20 @@ Sets the attribute value that needs to be picked.
 `void picking_setPickingAttribute(vec2 value)`
 `void picking_setPickingAttribute(vec3 value)`
 
-### Fragment Shader Functions
+## Fragment Shader Functions
 
-#### picking_filterPickingColor
+### picking_filterPickingColor
 
 If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns its argument unmodified.
 
 `vec4 picking_filterPickingColor(vec4 color)`
 
-#### picking_filterHighlightColor
+### picking_filterHighlightColor
 
 Returns picking highlight color if the pixel belongs to currently selected model, otherwise returns its argument unmodified.
 
 `vec4 picking_filterHighlightColor(vec4 color)`
 
-### Remarks
+## Remarks
 
 - It is strongly recommended that `picking_filterPickingColor` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
