@@ -1,29 +1,12 @@
 // luma.gl, MIT license
 
 // MATH TYPES
-// TODO - these types could be imported from math.gl
+export {TypedArray, NumberArray, NumericArray} from '@math.gl/types';
 
-/** TypeScript type covering all typed arrays */
-export type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Uint8ClampedArray
-  | Float32Array
-  | Float64Array;
-
-export type BigIntTypedArray = BigInt64Array | BigUint64Array;
-
-/** type covering all typed arrays and classic arrays consisting of numbers */
-export type NumberArray = number[] | TypedArray;
-
-export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
+// export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
 
 // UNIFORM TYPES 
-// These are "duplicated" from API module to avoid cross-dependencies
+// These are "duplicated" from core module to avoid cross-dependencies
 
 export type UniformDataType =
   'uint32' |

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
@@ -9,7 +9,9 @@ Modifying shader behavior with shader hooks
 `;
 
 // Base vertex and fragment shader code
-const vs = `
+const vs = `\
+#version 300 es
+
   attribute vec2 position;
 
   void main() {
@@ -18,11 +20,15 @@ const vs = `
   }
 `;
 
-const fs = `
-  uniform vec3 color;
+const fs = `\
+#version 300 es
+
+  uniform AppUniforms {  
+    vec3 color;
+  } app;
 
   void main() {
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(app.color, 1.0);
   }
 `;
 
@@ -43,9 +49,23 @@ const offsetRightModule = {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  positionBuffer: Buffer;
   model1: Model;
   model2: Model;
+  positionBuffer: Buffer;
+  uniformBuffer1: Buffer;
+  uniformBuffer2: Buffer;
+
+  uniformStore = new UniformStore<{
+    app: {
+      color: NumberArray;
+    };
+  }>({
+    app: {
+      uniformTypes: {
+        color: 'vec3<f32>'
+      }
+    }
+  });
 
   constructor({device}: AnimationProps) {
     super();
@@ -55,6 +75,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
+    const byteLength = this.uniformStore.getUniformBufferByteLength('app');
+    this.uniformBuffer1 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+    this.uniformBuffer2 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+
+    // Now we can fill the uniform buffers after they are registered with the model
+    this.uniformStore.setUniforms({
+      app: {
+        color: [1, 0, 0]
+      }
+    });
+
+    let uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    this.uniformBuffer1.write(uniformBufferData);
+
+    this.uniformStore.setUniforms({
+      app: {
+        color: [0, 0, 1]
+      }
+    });
+    uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    this.uniformBuffer2.write(uniformBufferData);
+
     this.model1 = new Model(device, {
       vs,
       fs,
@@ -63,12 +105,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       bufferLayout: [
         {name: 'position', format: 'float32x2'},
       ],
-      vertexCount: 3,
       attributes: {
         position: this.positionBuffer
       },
-      uniforms: {
-        color: [1.0, 0.0, 0.0]
+      vertexCount: 3,
+      bindings: {
+        AppUniforms: this.uniformBuffer1
       }
     });
 
@@ -76,27 +118,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
-      vertexCount: 3,
       modules: [offsetRightModule],
       bufferLayout: [
         {name: 'position', format: 'float32x2'},
       ],
+      vertexCount: 3,
       attributes: {
         position: this.positionBuffer
       },
-      uniforms: {
-        color: [0.0, 0.0, 1.0]
+      bindings: {
+        AppUniforms: this.uniformBuffer2
       }
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model1.destroy();
     this.model2.destroy();
     this.positionBuffer.destroy();
+    this.uniformStore.destroy();
+    this.uniformBuffer1.destroy();
+    this.uniformBuffer2.destroy();
   }
 
-  override onRender({device}: AnimationProps) {
+  onRender({device}: AnimationProps) {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model1.draw(renderPass);
     this.model2.draw(renderPass);

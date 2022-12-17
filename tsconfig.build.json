@@ -6,9 +6,9 @@
     // "listEmittedFiles": true
   },
   "references": [
-    {"path": "modules/api-tests"},
     {"path": "modules/constants"},
     {"path": "modules/core"},
+    {"path": "modules/core-tests"},
     {"path": "modules/engine"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},

@@ -5,6 +5,51 @@ const INFO_HTML = `
 Have to start somewhere...
 `;
 
+const vsglsl = `
+attribute vec2 position;
+attribute vec3 color;
+
+varying vec3 vColor;
+
+void main() {
+  vColor = color;
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
+
+const fsglsl = `
+varying vec3 vColor;
+
+void main() {
+  gl_FragColor = vec4(vColor, 1.0);
+}
+`;
+
+// export const vs_wgsl = /* WGSL */`\
+// struct VertexOutput {
+// @builtin(position) Position : vec4<f32>;
+// @location(0) fragColor : vec3<f32>;
+// };
+
+// @vertex
+// fn main(@location(0) position : vec2<f32>, @location(1) color : vec3<f32>) -> VertexOutput {
+//   var output : VertexOutput;
+//   output.Position = uniforms.modelViewProjectionMatrix * position;
+//   output.fragColor = color;
+//   return output;
+// }
+// `;
+
+// export const fs_wgsl = /* WGSL */`\
+// @fragment
+// fn main(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
+//   return vec4<f32>(fragColor, 1.0);
+// }
+// `;
+
+const vs = vsglsl;
+const fs = fsglsl;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
@@ -13,26 +58,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device}: AnimationProps) {
     super();
-
-    const vs = `
-      attribute vec2 position;
-      attribute vec3 color;
-
-      varying vec3 vColor;
-
-      void main() {
-        vColor = color;
-        gl_Position = vec4(position, 0.0, 1.0);
-      }
-    `;
-
-    const fs = `
-      varying vec3 vColor;
-
-      void main() {
-        gl_FragColor = vec4(vColor, 1.0);
-      }
-    `;
 
     // prettier-ignore
     const interleavedData = new Float32Array([

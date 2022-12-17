@@ -17,7 +17,7 @@ export function generateWGSLUniformDeclarations(module: ShaderModule, options: W
   // => uniform UniformBlockName {
   wgsl.push(`struct ${capitalize(module.name)} {`);
 
-  for (const [uniformName, uniformFormat] of Object.entries(module?.uniformFormats || {})) {
+  for (const [uniformName, uniformFormat] of Object.entries(module?.uniformTypes || {})) {
     const wgslUniformType = uniformFormat;
     wgsl.push(`  ${uniformName} : ${wgslUniformType};`);
   }

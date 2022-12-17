@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@luma.gl/engine": "9.0.0-alpha.35",
-    "@luma.gl/webgl": "9.0.0-alpha.35"
+    "@luma.gl/webgl": "9.0.0-alpha.35",
+    "@luma.gl/webgpu": "9.0.0-alpha.35"
   },
   "devDependencies": {
     "typescript": "^5.1.6",

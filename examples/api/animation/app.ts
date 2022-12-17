@@ -1,42 +1,73 @@
-import {glsl} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
+import {glsl, UniformStore, ShaderUniformType} from '@luma.gl/core';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  CubeGeometry,
+  Timeline,
+  KeyFrames
+} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-import {getRandom} from '@luma.gl/core';
+import {makeRandomNumberGenerator} from '@luma.gl/core';
 
 // Ensure repeatable rendertests
-const random = getRandom();
+const random = makeRandomNumberGenerator();
 
-const INFO_HTML = `
+const INFO_HTML = `\
 Key frame animation based on multiple hierarchical timelines.
 <button id="play">Play</button>
 <button id="pause">Pause</button><BR>
 Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
 `;
 
+// SHADERS
+
+type AppUniforms = {
+  uColor: number[];
+  uModel: number[];
+  uView: number[];
+  uProjection: number[];
+};
+
+const appUniforms: {uniformTypes: Record<string, ShaderUniformType>} = {
+  uniformTypes: {
+    uColor: 'vec3<f32>',
+    uModel: 'mat4x4<f32>',
+    uView: 'mat4x4<f32>',
+    uProjection: 'mat4x4<f32>'
+  }
+};
+
 const vs = glsl`\
+#version 300 es
+
 attribute vec3 positions;
 attribute vec3 normals;
 
-uniform vec3 uColor;
-uniform mat4 uModel;
-uniform mat4 uView;
-uniform mat4 uProjection;
+uniform AppUniforms {
+  vec3 uColor;
+  mat4 uModel;
+  mat4 uView;
+  mat4 uProjection;
+} app;
 
 varying vec3 color;
 
 void main(void) {
-  vec3 normal = vec3(uModel * vec4(normals, 0.0));
+  vec3 normal = vec3(app.uModel * vec4(normals, 0.0));
 
   // Set up data for modules
-  color = uColor;
-  project_setNormal(normal);
-  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+  color = app.uColor;
+  dirlight_setNormal(normal);
+  gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
 }
 `;
 
 const fs = glsl`\
+#version 300 es
+
 precision highp float;
 
 varying vec3 color;
@@ -54,11 +85,41 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timeSlider;
 
   cubes: {
-    translation: number[],
-    rotation: number[],
-    keyFrames: KeyFrames<number>,
-    model: Model
+    translation: number[];
+    rotation: number[];
+    keyFrames: KeyFrames<number>;
+    model: Model;
+    uniformStore: UniformStore<{app: AppUniforms}>;
   }[];
+
+  readonly translations = [
+    [2, -2, 0],
+    [2, 2, 0],
+    [-2, 2, 0],
+    [-2, -2, 0]
+  ];
+
+  readonly rotations = [
+    [random(), random(), random()],
+    [random(), random(), random()],
+    [random(), random(), random()],
+    [random(), random(), random()]
+  ];
+
+  readonly colors = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+    [1, 1, 0]
+  ];
+
+  readonly keyFrameData: [number, number][] = [
+    [0, 0],
+    [1000, 2 * Math.PI],
+    [2000, Math.PI],
+    [3000, 2 * Math.PI],
+    [4000, 0]
+  ];
 
   constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
@@ -67,50 +128,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const pauseButton = document.getElementById('pause');
     this.timeSlider = document.getElementById('time');
 
-    if (playButton) {
+    if (playButton && pauseButton) {
       playButton.addEventListener('click', () => this.timeline.play());
       pauseButton.addEventListener('click', () => this.timeline.pause());
-      this.timeSlider.addEventListener('input', (event) => this.timeline.setTime(parseFloat(event.target.value)));
+      this.timeSlider.addEventListener('input', event =>
+        this.timeline.setTime(parseFloat(event.target.value))
+      );
     }
-
-    const translations = [
-      [2, -2, 0],
-      [2, 2, 0],
-      [-2, 2, 0],
-      [-2, -2, 0]
-    ];
-
-    const rotations = [
-      [random(), random(), random()],
-      [random(), random(), random()],
-      [random(), random(), random()],
-      [random(), random(), random()]
-    ];
-
-    const colors = [
-      [1, 0, 0],
-      [0, 1, 0],
-      [0, 0, 1],
-      [1, 1, 0]
-    ];
 
     this.timeline = new Timeline();
     animationLoop.attachTimeline(this.timeline);
     this.timeline.play();
 
     const channels = [
-      this.timeline.addChannel({
-        delay: 2000,
-        rate: 0.5,
-        duration: 8000,
-        repeat: 2
-      }),
-      this.timeline.addChannel({
-        delay: 10000,
-        rate: 0.2,
-        duration: 20000,
-        repeat: 1
-      }),
+      this.timeline.addChannel({delay: 2000, rate: 0.5, duration: 8000, repeat: 2}),
+      this.timeline.addChannel({delay: 10000, rate: 0.2, duration: 20000, repeat: 1}),
       this.timeline.addChannel({
         delay: 7000,
         rate: 1,
@@ -125,29 +157,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     ];
 
-    const keyFrameData: [number, number][] = [
-      [0, 0],
-      [1000, 2 * Math.PI],
-      [2000, Math.PI],
-      [3000, 2 * Math.PI],
-      [4000, 0]
-    ];
+    this.cubes = new Array(4);
 
     const keyFrames = [
-      new KeyFrames(keyFrameData),
-      new KeyFrames(keyFrameData),
-      new KeyFrames(keyFrameData),
-      new KeyFrames(keyFrameData)
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData),
+      new KeyFrames(this.keyFrameData)
     ];
-
-    this.cubes = new Array(4);
+  
 
     for (let i = 0; i < 4; ++i) {
       this.timeline.attachAnimation(keyFrames[i], channels[i]);
 
+      const uniformStore = new UniformStore<{app: AppUniforms}>({
+        app: appUniforms
+      });
+
+      uniformStore.setUniforms({
+        app: {
+          uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
+          uView: new Matrix4().lookAt({
+            center: [0, 0, 0],
+            eye: [0, 0, -8]
+          }),
+          uColor: this.colors[i]
+        }
+      });
+
       this.cubes[i] = {
-        translation: translations[i],
-        rotation: rotations[i],
+        uniformStore,
+        translation: this.translations[i],
+        rotation: this.rotations[i],
         keyFrames: keyFrames[i],
         model: new Model(device, {
           vs,
@@ -155,18 +196,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modules: [dirlight],
           geometry: new CubeGeometry(),
           parameters: {
-            // @ts-expect-error
-            id: `hack-to-prevent-pipeline-sharing-${i}`,
             depthWriteEnabled: true,
             depthCompare: 'less-equal'
           },
-          uniforms: {
-            uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
-            uView: new Matrix4().lookAt({
-              center: [0, 0, 0],
-              eye: [0, 0, -8]
-            }),
-            uColor: colors[i]
+          bindings: {
+            AppUniforms: uniformStore.getManagedUniformBuffer(device, 'app')
           }
         })
       };
@@ -186,12 +220,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const modelMatrix = new Matrix4();
 
-    // Draw the cubes
-    const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1], 
-      clearDepth: true
-    });
-
     for (const cube of this.cubes) {
       const startRotation = cube.keyFrames.getStartData();
       const endRotation = cube.keyFrames.getEndData();
@@ -203,12 +231,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .identity()
         .translate(cube.translation)
         .rotateXYZ([rotationX, rotationY, rotationZ]);
-      cube.model.setUniforms({
-        uModel: modelMatrix
-      });
-      cube.model.draw(renderPass);
 
-      renderPass.end();
+      cube.model.setUniforms({});
+      cube.uniformStore.setUniforms({
+        app: {
+          uModel: modelMatrix
+        }
+      });
+
+      cube.uniformStore.updateUniformBuffers();
     }
+
+    // Draw the cubes
+    const renderPass = device.beginRenderPass({
+      // clearColor: [0, 0, 0, 1],
+      // clearDepth: true
+    });
+    for (const cube of this.cubes) {
+      cube.model.draw(renderPass);
+    }
+    renderPass.end();
   }
 }

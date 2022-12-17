@@ -3,13 +3,14 @@ import {normalizeShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools'
 // import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
 
 test('ShaderModuleInstance', (t) => {
-  let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module'});
+  let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module', uniformTypes: {}});
 
   t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
   t.ok(shaderModule.getModuleSource('fragment'), 'returns frqgment shader');
 
   shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
+    uniformTypes: {},
     vs: `
 uniform mat4 uProjectMatrix;
 uniform mat4 uViewMatrix;
@@ -31,6 +32,7 @@ varying float vClipped;
 test('ShaderModuleInstance#checkDeprecations', (t) => {
   const shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
+    uniformTypes: {},
     deprecations: [
       {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
       {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}

@@ -1,6 +1,5 @@
 import {Buffer, glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Rotating Cube';
@@ -40,15 +39,17 @@ struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
   @location(0) fragUV : vec2<f32>,
   @location(1) fragPosition: vec4<f32>,
-};
+}
 
 @vertex
-fn main(@location(0) position : vec4<f32>,
-        @location(1) uv : vec2<f32>) -> VertexOutput {
+fn main(
+  @location(0) position : vec4<f32>,
+  @location(1) uv : vec2<f32>
+) -> VertexOutput {
   var output : VertexOutput;
   output.Position = uniforms.modelViewProjectionMatrix * position;
   output.fragUV = uv;
-  output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
+  output.fragPosition = 0.5 * (position + vec4(1.0, 1.0, 1.0, 1.0));
   return output;
 }
 `
@@ -69,8 +70,10 @@ void main() {
     `,
     wgsl: /* WGSL */`\
 @fragment
-fn main(@location(0) fragUV: vec2<f32>,
-        @location(1) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
+fn main(
+  @location(0) fragUV: vec2<f32>,
+  @location(1) fragPosition: vec4<f32>
+) -> @location(0) vec4<f32> {
   return fragPosition;
 }
 `
@@ -152,8 +155,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     this.uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
   
-    const renderPass = device.beginRenderPass({});
+    const renderPass = device.beginRenderPass({clearColor: [0.5, 0.5, 0, 1]});
     this.model.draw(renderPass);
     renderPass.end();
+    device.submit();
   }
 }

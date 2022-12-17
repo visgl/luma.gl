@@ -1,4 +1,5 @@
 <script type="module">
+  import {WebGLDevice} from '@luma.gl/webgl';
   import {WebGPUDevice} from '@luma.gl/webgpu';
   import {luma} from '@luma.gl/core';
   import {makeAnimationLoop} from '@luma.gl/engine';
@@ -7,6 +8,5 @@
   luma.registerDevices([WebGPUDevice]);
   makeAnimationLoop(AnimationLoopTemplate).start({canvas: 'canvas'});
 </script>
-<body style="margin: 0;">
-  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+<body>
 </body>

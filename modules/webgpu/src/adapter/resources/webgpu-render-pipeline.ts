@@ -32,13 +32,20 @@ export class WebGPURenderPipeline extends RenderPipeline {
   // private _lastIndex: number;
 
   /** For internal use to create BindGroups */
-  private _bindGroupLayout: GPUBindGroupLayout;
+  private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
-    this.handle = (this.props.handle as GPURenderPipeline) || this.createHandle();
+    this.handle = this.props.handle as GPURenderPipeline;
+    if (!this.handle) {
+      const descriptor = this._getRenderPipelineDescriptor();
+      log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
+      log.probe(1, JSON.stringify(descriptor, null, 2))();
+      log.groupEnd(1)();
+      this.handle = this.device.handle.createRenderPipeline(descriptor);  
+    }
     this.handle.label = this.props.id;
 
     this.vs = cast<WebGPUShader>(props.vs);
@@ -46,16 +53,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     this._bufferSlots = getBufferSlots(this.props.shaderLayout, this.props.bufferLayout);
     this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
-    this._bindGroupLayout = this.handle.getBindGroupLayout(0);
-  }
-
-  protected createHandle(): GPURenderPipeline {
-    const descriptor = this._getRenderPipelineDescriptor();
-    const renderPipeline = this.device.handle.createRenderPipeline(descriptor);
-    log.groupCollapsed(1, `new WebGPRenderPipeline(${this.id})`)();
-    log.log(1, JSON.stringify(descriptor, null, 2))();
-    log.groupEnd(1)();
-    return renderPipeline;
   }
 
   override destroy(): void {
@@ -91,7 +88,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   setBindings(bindings: Record<string, Binding>): void {
     if (!isObjectEmpty(this.props.bindings)) {
+      // Do we want to save things on CPU side?
       Object.assign(this.props.bindings, bindings);
+
+      // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
+      this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
+
       // Set up the bindings
       this._bindGroup = getBindGroup(
         this.device.handle,
@@ -205,8 +207,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     } else {
       webgpuRenderPass.handle.draw(
         options.vertexCount || 0,
-        options.instanceCount,
-        options.firstIndex,
+        options.instanceCount || 1, // If 0, nothing will be drawn
         options.firstInstance
       );
     }

@@ -1,14 +1,7 @@
 /** TypeScript type covering all typed arrays */
-export type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Uint8ClampedArray
-  | Float32Array
-  | Float64Array;
+import {TypedArray, NumberArray} from '@math.gl/types';
+
+export {TypedArray, NumberArray};
 
 /** TypeScript type covering constructors of any of the typed arrays */
 export type TypedArrayConstructor =
@@ -25,12 +18,7 @@ export type TypedArrayConstructor =
 /** Keep big int arrays separate as they are still problematic, can't be indexed and don't work well on Safari */
 export type BigIntTypedArray = BigInt64Array | BigUint64Array;
 
-/** type covering all typed arrays and classic arrays consisting of numbers */
-export type NumberArray = number[] | TypedArray;
-export type NumericArray = number[] | TypedArray;
-
 export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
-export type BigIntOrNumericArray = NumberArray | BigIntTypedArray;
 
 /** Get the constructor type of a type */
 export interface ConstructorOf<T> {

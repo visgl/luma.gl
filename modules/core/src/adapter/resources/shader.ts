@@ -1,15 +1,7 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
-
-export type CompilerMessageType = 'error' | 'warning' | 'info';
-
-export type CompilerMessage = {
-  type: CompilerMessageType;
-  message: string;
-  lineNum: number;
-  linePos: number;
-}
+import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
 
 /**
  * Properties for a Shader
@@ -40,7 +32,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     language: 'auto',
     shaderType: 0
   };
-  
+
   override get [Symbol.toStringTag](): string { return 'Shader'; }
 
   readonly stage: 'vertex' | 'fragment' | 'compute';

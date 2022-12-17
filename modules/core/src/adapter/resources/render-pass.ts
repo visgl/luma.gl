@@ -7,7 +7,7 @@ import {Resource, ResourceProps} from './resource';
 // import {RenderPipeline} from './render-pipeline';
 // import {CommandEncoder} from './command-encoder';
 import {Framebuffer} from './framebuffer';
-import {NumericArray} from '../..';
+import {NumberArray} from '../..';
 
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
@@ -18,7 +18,7 @@ export type RenderPassProps = ResourceProps & {
   /** Control viewport, scissor rect, blend constant and stencil ref */
   parameters?: RenderPassParameters;
   /** Clear value for color attachment, or `load` to preserve the previous value */
-  clearColor?: NumericArray | false;
+  clearColor?: NumberArray | false;
   /** Clear value for depth attachment, or `load` to preserve the previous value */
   clearDepth?: number | false;
   /** Clear value for stencil attachment, or `load` to preserve the previous value */

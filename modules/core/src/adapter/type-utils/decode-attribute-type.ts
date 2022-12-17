@@ -1,5 +1,5 @@
 // luma.gl, MIT licese
-import {ShaderDataType, ShaderAttributeType} from '../types/shader-formats';
+import {ShaderDataType, ShaderAttributeType} from '../types/shader-types';
 import {VertexFormat, VertexType} from '../types/vertex-formats';
 
 /** Information extracted from a ShaderAttributeInfo constant */

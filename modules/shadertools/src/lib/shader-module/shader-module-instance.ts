@@ -19,7 +19,7 @@ export class ShaderModuleInstance {
     fragment: Record<string, ShaderInjection>;
   };
   uniforms: Record<string, PropValidator> = {};
-  uniformFormats: Record<string, PropValidator> = {};
+  uniformTypes: Record<string, PropValidator> = {};
 
   static instantiateModules(
     modules: (ShaderModule | ShaderModuleInstance)[]

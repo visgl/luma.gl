@@ -1,0 +1,73 @@
+// luma.gl, MIT license
+import type {ShaderUniformType} from '../../adapter/types/shader-types';
+import type {UniformValue} from '../../adapter/types/types';
+import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../../adapter/types/shader-layout';
+import { arrayEqual } from '../utils/array-equal';
+
+/** 
+ * A uniform block holds values of the of uniform values for one uniform block / buffer.
+ * It also does some book keeping on what has changed, to minimize unnecessary writes to uniform buffers.
+ * @todo - Track changes to individual uniforms (for WebGL1)
+ */
+export class UniformBlock<TUniforms extends Record<string, UniformValue>> {
+  name: string;
+
+  uniforms: Record<keyof TUniforms, UniformValue> = {} as Record<keyof TUniforms, UniformValue>;
+  modifiedUniforms: Record<keyof TUniforms, boolean> = {} as Record<keyof TUniforms, boolean>;
+  modified: boolean = true;
+
+  readonly bindingLayout: Record<string, UniformInfo> = {};
+  needsRedraw: string | false = 'initialized';
+
+  constructor(props?: {
+    name?: string;
+    shaderLayout?: ShaderLayout; 
+    uniformTypes?: Record<keyof TUniforms, Record<string, ShaderUniformType>>
+  }) {
+    this.name = props?.name;
+
+    // TODO - Extract uniform layout from the shaderLayout object
+    if (props?.name && props?.shaderLayout) {
+      const binding = props?.shaderLayout.bindings
+        ?.find(binding => binding.type === 'uniform' && binding.name === props?.name);
+      if (!binding) {
+        throw new Error(props?.name);
+      }
+
+      const uniformBlock = binding as UniformBufferBindingLayout;
+      for (const uniform of uniformBlock.uniforms || []) {
+        this.bindingLayout[uniform.name] = uniform;
+      }
+    }
+  }
+
+  /** Set a map of uniforms */
+  setUniforms(uniforms: Partial<TUniforms>): void {
+    for (const [key, value] of Object.entries(uniforms)) {
+      this._setUniform(key, value);
+      this.setNeedsRedraw(key);
+    }
+  }
+
+  setNeedsRedraw(reason: string): void {
+    this.needsRedraw = this.needsRedraw || reason;
+  }
+
+  /** Returns all uniforms */
+  getAllUniforms(): Record<string, UniformValue> {
+    // @ts-expect-error
+    this.modifiedUniforms = {};
+    this.needsRedraw = false;
+    return (this.uniforms || {}) as Record<string, UniformValue>;
+  }
+
+  /** Set a single uniform */
+  private _setUniform(key: keyof TUniforms, value: UniformValue) {
+    if (arrayEqual(this.uniforms[key], value)) {
+      return;
+    }
+    this.uniforms[key] = value;
+    this.modifiedUniforms[key] = true;
+    this.modified = true;
+  }
+}

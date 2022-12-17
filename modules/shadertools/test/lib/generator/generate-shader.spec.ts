@@ -5,10 +5,10 @@ import {ShaderModule, generateShaderForModule, ShaderGenerationOptions} from '@l
 
 const module: ShaderModule = {
   name: 'test',
-  uniforms: {
-    uProjectMatrix: {format: 'mat4x4<f32>'},
-    uViewMatrix: {format: 'mat4x4<f32>'},
-    uClipped: {format: 'f32'},
+  uniformTypes: {
+    uProjectMatrix: 'mat4x4<f32>',
+    uViewMatrix: 'mat4x4<f32>',
+    uClipped: 'f32',
   },
 };
 
@@ -45,7 +45,6 @@ uniform Test {
 `
   },
 ];
-
 
 test('shadertools#generateGLSLForModule', (t) => {
   for (const tc of TEST_CASES) {

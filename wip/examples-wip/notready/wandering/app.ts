@@ -1,13 +1,18 @@
 /* eslint-enable camelcase */
+<<<<<<< HEAD:wip/examples-wip/notready/wandering/app.ts
 // import {Buffer} from '@luma.gl/core';
 import {Framebuffer, getRandom, glsl} from '@luma.gl/core';
+=======
+// import {Buffer} from '@luma.gl/api';
+import {Framebuffer, getRandomNumberGenerator, glsl} from '@luma.gl/api';
+>>>>>>> 29be19a97 (chore(shadertools): interface block generation):examples-wip/notready/wandering/app.ts
 import {AnimationLoopTemplate, AnimationProps, Model, Transform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
 
 // Ensure repeatable rendertests
-const random = getRandom();
+const random = getRandomNumberGenerator();
 
 // eslint-disable-next-line max-len
 const INFO_HTML = `

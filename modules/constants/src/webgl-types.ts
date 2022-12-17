@@ -1,8 +1,11 @@
 // luma.gl, MIT license
-
+/* eslint-disable camelcase */
 import {GL} from './constants-enum';
 
-/* eslint-disable camelcase */ // TODO is this needed?
+/** Type covering all typed arrays and classic arrays consisting of numbers */
+export type NumberArray = number[] | TypedArray;
+/** Type covering all typed arrays and classic arrays consisting of numbers */
+export type NumericArray = TypedArray | number[];
 
 /** TypeScript type covering all typed arrays */
 export type TypedArray =
@@ -17,7 +20,6 @@ export type TypedArray =
   | Float64Array;
 
 /** type covering all typed arrays and classic arrays consisting of numbers */
-export type NumberArray = number[] | TypedArray;
 
 /** We don't know the type of Framebuffer at this stage */
 type Framebuffer = unknown;

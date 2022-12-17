@@ -35,9 +35,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   introspectedLayout: ShaderLayout;
 
   /** Uniforms set on this model */
-  uniforms: Record<string, any> = {};
+  uniforms: Record<string, UniformValue> = {};
   /** Bindings set on this model */
-  bindings: Record<string, any> = {};
+  bindings: Record<string, Binding> = {};
   /** WebGL varyings */
   varyings: string[] | null = null;
 
@@ -84,6 +84,39 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       this.destroyed = true;
     }
   }
+
+  // setIndexBuffer(indexBuffer: Buffer): void {
+  //   const webglBuffer = cast<WEBGLBuffer>(indexBuffer);
+  //   this.vertexArrayObject.setElementBuffer(webglBuffer);
+  //   this._indexBuffer = indexBuffer;
+  // }
+
+  // /** @todo needed for portable model */
+  // setAttributes(attributes: Record<string, Buffer>): void {
+  //   for (const [name, buffer] of Object.entries(attributes)) {
+  //     const webglBuffer = cast<WEBGLBuffer>(buffer);
+  //     const attribute = getAttributeLayout(this.layout, name);
+  //     if (!attribute) {
+  //       log.warn(
+  //         `Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`
+  //       )();
+  //       continue;
+  //     }
+  //     const decoded = decodeVertexFormat(attribute.format);
+  //     const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
+  //     const divisor = attribute.stepMode === 'instance' ? 1 : 0;
+  //     const type = getWebGLDataType(typeString);
+  //     this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
+  //       size,
+  //       type,
+  //       stride,
+  //       offset: 0,
+  //       normalized,
+  //       integer,
+  //       divisor
+  //     });
+  //   }
+  // }
 
   /**
    * Bindings include: textures, samplers and uniform buffers
@@ -189,11 +222,36 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this._applyUniforms();
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
+    // // TODO - double context push/pop
+    //     // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
+    //     if (isIndexed && isInstanced) {
+    //       // ANGLE_instanced_arrays extension
+    //       this.device.gl2?.drawElementsInstanced(
+    //         drawMode,
+    //         vertexCount || 0, // indexCount?
+    //         indexType,
+    //         firstVertex,
+    //         instanceCount || 0
+    //       );
+    //       // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
+    //       //   this.device.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+    //     } else if (isIndexed) {
+    //       this.device.gl.drawElements(drawMode, vertexCount || 0, indexType, firstVertex); // indexCount?
+    //     } else if (isInstanced) {
+    //       this.device.gl2?.drawArraysInstanced(
+    //         drawMode,
+    //         firstVertex,
+    //         vertexCount || 0,
+    //         instanceCount || 0
+    //       );
+    //     } else {
+    //       this.device.gl.drawArrays(drawMode, firstVertex, vertexCount || 0);
+    //     }
+    //   });
 
     // TODO - double context push/pop
     withDeviceParameters(this.device, this.props.parameters, () => {
       withGLParameters(this.device, webglRenderPass.glParameters, () => {
-        // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
         if (isIndexed && isInstanced) {
           // ANGLE_instanced_arrays extension
           this.device.gl2?.drawElementsInstanced(
@@ -242,17 +300,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     // Avoid checking program linking error in production
     // @ts-expect-error
-    if (gl.debug || log.level > 0) {
-      const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
-      if (!linked) {
-        throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
-      }
+    if (!gl.debug && log.level === 0) {
+      // return;
+    }
 
-      gl.validateProgram(this.handle);
-      const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
-      if (!validated) {
-        throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
-      }
+    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+    if (!linked) {
+      throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
+    }
+
+    gl.validateProgram(this.handle);
+    const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
+    if (!validated) {
+      throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
     }
   }
 
@@ -273,7 +333,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     for (const [, texture] of Object.entries(this.bindings)) {
       // texture.update();
+      // @ts-expect-error
       if (texture.loaded !== undefined) {
+        // @ts-expect-error
         texturesRenderable = texturesRenderable && texture.loaded;
       }
     }
@@ -335,8 +397,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             gl2.bindBufferRange(
               GL.UNIFORM_BUFFER,
               uniformBufferIndex,
+              // @ts-expect-error
               value.buffer.handle,
+              // @ts-expect-error
               value.offset || 0,
+              // @ts-expect-error
               value.size || value.buffer.byteLength - value.offset
             );
           }

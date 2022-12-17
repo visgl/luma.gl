@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type {Device, Buffer, VertexArrayProps, TypedArray, NumericArray} from '@luma.gl/core';
+import type {Device, Buffer, VertexArrayProps, TypedArray, NumberArray} from '@luma.gl/core';
 import {VertexArray, getScratchArray, fillArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
@@ -241,7 +241,7 @@ export class WEBGLVertexArray extends VertexArray {
  * TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
  * TODO - handle single values for size 1 attributes?
  */
-function normalizeConstantArrayValue(arrayValue: NumericArray) {
+function normalizeConstantArrayValue(arrayValue: NumberArray) {
   if (Array.isArray(arrayValue)) {
     return new Float32Array(arrayValue);
   }
@@ -251,7 +251,7 @@ function normalizeConstantArrayValue(arrayValue: NumericArray) {
 /**
  *
  */
-function compareConstantArrayValues(v1: NumericArray, v2: NumericArray): boolean {
+function compareConstantArrayValues(v1: NumberArray, v2: NumberArray): boolean {
   if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
     return false;
   }
