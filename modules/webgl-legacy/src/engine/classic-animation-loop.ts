@@ -79,8 +79,8 @@ export type ClassicAnimationLoopProps = {
 
 const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
   onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
-  onCreateContext: null,
-  onAddHTML: null,
+  onCreateContext: undefined,
+  onAddHTML: undefined,
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
@@ -97,7 +97,7 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
 
   // deprecated
   // onCreateContext: (opts) => createGLContext(opts),
-  gl: null,
+  gl: undefined,
   glOptions: {},
   createFramebuffer: false
 };
@@ -108,7 +108,7 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
  */
 export default class ClassicAnimationLoop {
   device: Device;
-  canvas: HTMLCanvasElement | OffscreenCanvas;
+  canvas?: HTMLCanvasElement | OffscreenCanvas;
 
   props: Required<ClassicAnimationLoopProps>;
   animationProps: ClassicAnimationProps;

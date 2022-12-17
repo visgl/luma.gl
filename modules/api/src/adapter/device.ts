@@ -70,6 +70,7 @@ export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   // premultipliedAlpha: undefined,
   // preserveDrawingBuffer: undefined,
   // failIfMajorPerformanceCaveat: undefined
+  
   gl: null
 };
 

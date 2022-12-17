@@ -195,7 +195,7 @@ export default class BufferTransform {
     return binding;
   }
 
-  _swapBuffers(opts): {sourceBuffers: Record<string, Buffer>; feedbackBuffers: Record<string, Buffer>} {
+  _swapBuffers(opts): {sourceBuffers: Record<string, Buffer>; feedbackBuffers: Record<string, Buffer>} | null {
     if (!this.feedbackMap) {
       return null;
     }

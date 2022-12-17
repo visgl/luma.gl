@@ -3,6 +3,8 @@
 // - Copyright (c) 2012 The Khronos Group Inc, MIT license
 // - Node port Marcin Ignac, 2016-05-20
 
+// @ts-nocheck External, untyped code
+
 import {makePropertyWrapper} from './khronos-webgl-error';
 
 /**

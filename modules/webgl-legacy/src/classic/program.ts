@@ -171,15 +171,13 @@ export default class Program extends WEBGLRenderPipeline {
 
     let {parameters = {}} = options;
 
-
-
     if (uniforms || samplers) {
       // DEPRECATED: v7.0 (deprecated earlier but warning not properly implemented)
       log.deprecated('Program.draw({uniforms})', 'Program.setUniforms(uniforms)')();
       this.setUniforms(uniforms || {});
     }
 
-    if (log.priority >= logPriority) {
+    if (typeof logPriority === 'number' && log.priority >= logPriority) {
       const fb = framebuffer ? framebuffer.id : 'default';
       const message =
         `mode=${getKey(this.gl, drawMode)} verts=${vertexCount} ` +

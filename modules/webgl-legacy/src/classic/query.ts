@@ -48,9 +48,9 @@ export default class Query extends WebGLResource<QueryProps> {
     return supported;
   }
 
-  target = null;
+  target: number | null = null;
   _queryPending = false;
-  _pollingPromise = null;
+  _pollingPromise: Promise<any> | null = null;
 
   // Create a query class
   constructor(gl: WebGLRenderingContext, opts: QueryProps = {}) {
