@@ -29,8 +29,13 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   }
 }
 
-export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false});
-export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true});
+/** A WebGL 1 Device intended for testing */
+export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false}) as WebGLDevice;
+/** A WebGL 2 Device intended for testing. Can be null */
+export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true}) as WebGLDevice;
+/** A WebGL 2 or WebGL 1 Device intended for testing. Best available. */
+export const webglDevice: WebGLDevice = webgl2Device || webgl1Device;
+
 /** Only available after getTestDevices() has completed */
 export let webgpuDevice: WebGPUDevice;
 

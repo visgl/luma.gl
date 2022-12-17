@@ -5,7 +5,7 @@ import {unpackIndexedGeometry} from '../geometry/geometry-utils';
 export type PlaneGeometryProps = {
   id?: string;
   radius?: number;
-  attributes?
+  attributes?: any
 };
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,
@@ -26,7 +26,7 @@ export class PlaneGeometry extends Geometry {
 }
 
 /* eslint-disable complexity, max-statements */
-function tesselatePlane(props) {
+function tesselatePlane(props: any) {
   const {type = 'x,y', offset = 0, flipCull = false, unpack = false} = props;
 
   const coords = type.split(',');

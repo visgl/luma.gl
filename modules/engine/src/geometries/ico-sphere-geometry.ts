@@ -11,7 +11,7 @@ export type IcoSphereGeometryProps = {
   id?: string;
   radius?: number;
   iterations?: number;
-  attributes?
+  attributes?: any
 };
 
 export class IcoSphereGeometry extends Geometry {
@@ -40,9 +40,9 @@ function tesselateIcosaHedron(props: IcoSphereGeometryProps) {
   indices.push();
 
   const getMiddlePoint = (() => {
-    const pointMemo = {};
+    const pointMemo: Record<string, number> = {};
 
-    return (i1, i2) => {
+    return (i1: number, i2: number) => {
       i1 *= 3;
       i2 *= 3;
       const mini = i1 < i2 ? i1 : i2;

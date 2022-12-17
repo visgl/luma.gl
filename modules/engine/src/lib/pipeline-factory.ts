@@ -89,7 +89,7 @@ export class PipelineFactory {
     this.stateHash++;
   }
 
-  addShaderHook(hook: string, opts?): void {
+  addShaderHook(hook: string, opts?: any): void {
     if (opts) {
       hook = Object.assign(opts, {hook});
     }

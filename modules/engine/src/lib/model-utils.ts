@@ -72,10 +72,10 @@ export function getAttributeBuffersFromGeometry(device: Device, geometry: Geomet
 
   for (const [name, attribute] of Object.entries(geometry.attributes)) {
     const remappedName = mapAttributeName(name);
-    if (attribute.constant) {
+    if (attribute?.constant) {
       throw new Error('constant attributes not supported');
     } else {
-      const typedArray = attribute.value;
+      const typedArray = attribute?.value;
       buffers[remappedName] = device.createBuffer({data: typedArray, id: `${remappedName}-buffer`});
     }
   }
@@ -84,6 +84,7 @@ export function getAttributeBuffersFromGeometry(device: Device, geometry: Geomet
 }
 
 function mapAttributeName(name: string): string {
+  // @ts-ignore-error
   return GLTF_TO_LUMA_ATTRIBUTE_MAP[name] || name;
 }
 

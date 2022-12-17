@@ -1,3 +1,5 @@
+// luma.gl, MIT license 
+
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
 import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 import {setPathPrefix} from '@luma.gl/api';
@@ -72,7 +74,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       },
 
       // Manually trigger an animationLoop onRender. Unless it returns false, we are done.
-      onRender: (props: AnimationProps) => {
+      onRender: (props: AnimationProps & {done}) => {
         // override animation in the example so we get a well-defined time
         props.tick = 0;
         const result = animationLoopTemplate?.onRender(props);

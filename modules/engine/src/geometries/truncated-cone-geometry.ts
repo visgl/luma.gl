@@ -34,7 +34,7 @@ export function makeTruncatedConeGeometry(props?: TruncatedConeGeometryProps): G
 }
 
 export class TruncatedConeGeometry extends Geometry {
-  constructor(props: TruncatedConeGeometryProps & {id?: string; attributes?} = {}) {
+  constructor(props: TruncatedConeGeometryProps & {id?: string; attributes?: any} = {}) {
     const {id = uid('truncated-code-geometry')} = props;
     const {indices, attributes} = tesselateTruncatedCone(props);
     super({
