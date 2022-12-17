@@ -1,15 +1,7 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-
-export type CompilerMessageType = 'error' | 'warning' | 'info';
-
-export type CompilerMessage = {
-  type: CompilerMessageType;
-  message: string;
-  lineNum: number;
-  linePos: number;
-}
+import {Resource, ResourceProps} from './resource';
+import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
 
 /**
  * Properties for a Shader
@@ -27,27 +19,27 @@ export type ShaderProps = ResourceProps & {
   shaderType?: 0x8b30 | 0x8b31 | 0; // GL_FRAGMENT_SHADER | GL_VERTEX_SHADER
 };
 
-const DEFAULT_SHADER_PROPS: Required<ShaderProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  stage: 'vertex',
-  source: '',
-  sourceMap: null,
-  language: 'glsl',
-  shaderType: 0
-};
-
 /**
  * Immutable Shader object
  * In WebGPU the handle can be copied between threads
  */
 export abstract class Shader extends Resource<ShaderProps> {
+  static override defaultProps: Required<ShaderProps> = {
+    ...Resource.defaultProps,
+    stage: 'vertex',
+    source: '',
+    sourceMap: null,
+    language: 'glsl',
+    shaderType: 0
+  };
+
   override get [Symbol.toStringTag](): string { return 'Shader'; }
 
   readonly stage: 'vertex' | 'fragment' | 'compute';
   readonly source: string;
 
   constructor(device: Device, props: ShaderProps) {
-    super(device, props, DEFAULT_SHADER_PROPS);
+    super(device, props, Shader.defaultProps);
     this.stage = this.props.stage;
     this.source = this.props.source;
   }

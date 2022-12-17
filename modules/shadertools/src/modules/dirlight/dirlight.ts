@@ -1,13 +1,14 @@
 // luma.gl, MIT license
 import {glsl} from '../../lib/glsl-utils/highlight';
 import type {NumberArray} from '../../types';
+import {ShaderModule} from '../../lib/shader-module/shader-module';
 import {project} from '../project/project';
 
 /* eslint-disable camelcase */
 
 export type DirlightOptions = {
-  lightDirection?: NumberArray
-}
+  lightDirection?: NumberArray;
+};
 
 const DEFAULT_MODULE_OPTIONS: Required<DirlightOptions> = {
   lightDirection: new Float32Array([1, 1, 2])
@@ -38,10 +39,13 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
-export const dirlight = {
+export const dirlight: ShaderModule = {
   name: 'dirlight',
+  dependencies: [project],
   // vs // TODO - reuse normal from geometry module
   fs,
-  getUniforms,
-  dependencies: [project]
+  uniformFormats: {
+    lightDirection: 'vec3<f32>'
+  },
+  getUniforms
 };

@@ -5,10 +5,10 @@ import {ShaderModule, generateShaderForModule, ShaderGenerationOptions} from '@l
 
 const module: ShaderModule = {
   name: 'test',
-  uniforms: {
-    uProjectMatrix: {format: 'mat4x4<f32>'},
-    uViewMatrix: {format: 'mat4x4<f32>'},
-    uClipped: {format: 'f32'},
+  uniformFormats: {
+    uProjectMatrix: 'mat4x4<f32>',
+    uViewMatrix: 'mat4x4<f32>',
+    uClipped: 'f32',
   },
 };
 

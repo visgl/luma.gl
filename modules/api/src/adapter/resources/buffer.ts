@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {TypedArray} from '../..';
 import type {Device} from '../device';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 
 export type BufferProps = ResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
@@ -37,7 +37,7 @@ export type BufferProps = ResourceProps & {
 }
 
 const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
+  ...Resource.defaultProps,
   usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
   byteLength: 0,
   byteOffset: 0,

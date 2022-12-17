@@ -1,17 +1,25 @@
 // shadertools exports
 
-// DOCUMENTED APIS
-export type {ShaderModule} from './lib/shader-module/shader-module';
-export type {ShaderPass} from './lib/shader-module/shader-pass';
-
-export {assembleShaders} from './lib/shader-assembler/assemble-shaders';
-
-// HELPERS
-export {combineInjects} from './lib/shader-assembler/inject-shader';
-export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
+/**
+ * Marks GLSL shaders for syntax highlighting: glsl`...`
+ * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
+ */
+export {glsl} from './lib/glsl-utils/highlight';
 
 // Shader source introspection
 export {getShaderInfo} from './lib/glsl-utils/get-shader-info';
+
+// Shader assembly
+export {assembleShaders} from './lib/shader-assembler/assemble-shaders';
+export {combineInjects} from './lib/shader-assembler/inject-shader';
+export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
+
+// Shader Generation - experimental
+export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shader';
+export {generateShaderForModule} from './lib/shader-generator/generate-shader';
+export {capitalize} from './lib/generator/utils/capitalize';
+
+// Transform support
 export {
   getQualifierDetails,
   getPassthroughFS,
@@ -20,20 +28,15 @@ export {
   convertToVec4
 } from './lib/glsl-utils/shader-utils';
 
-// SHADER HELPERS
-
-/**
- * Marks GLSL shaders for syntax highlighting: glsl`...`
- * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
- */
-export {glsl} from './lib/glsl-utils/highlight';
-
-// TODO - experimental
-export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shader';
-export {generateShaderForModule} from './lib/shader-generator/generate-shader';
-export {capitalize} from './lib/shader-generator/utils/capitalize';
+// EXPERIMENTAL / TEST EXPORTS
+export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
+export {resolveModules as _resolveModules} from './lib/shader-assembler/resolve-modules';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembler/resolve-modules';
 
 // SHADER MODULES
+
+export type {ShaderModule} from './lib/shader-module/shader-module';
+export type {ShaderPass} from './lib/shader-module/shader-pass';
 
 // utils
 export {random} from './modules/utils/random';
@@ -83,8 +86,3 @@ export {fxaa} from './modules/fxaa/fxaa';
 // experimental
 export {warp as _warp} from './modules/image-warp-filters/warp';
 export {transform as _transform} from './modules/transform/transform';
-
-// TEST EXPORTS
-export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
-export {resolveModules as _resolveModules} from './lib/shader-assembler/resolve-modules';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembler/resolve-modules';

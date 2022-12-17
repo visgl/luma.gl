@@ -14,8 +14,8 @@ export type ShaderModule<Uniforms extends Record<string, unknown> = {}> = {
   name: string;
   fs?: string;
   vs?: string;
-  uniforms?: Record<string, UniformInfo>;
-  uniformFormats?: Record<string, UniformInfo>;
+  uniforms?: Record<string, PropType>;
+  uniformFormats?: Record<string, UniformFormat>;
   getUniforms?: any;
   defines?: Record<string, string | number>;
   inject?: Record<string, string | {injection: string; order: number;}>;
