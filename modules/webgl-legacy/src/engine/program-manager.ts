@@ -94,8 +94,8 @@ export default class ProgramManager {
 
     const defineKeys = Object.keys(defines).sort();
     const injectKeys = Object.keys(inject).sort();
-    const defineHashes: string[] = [];
-    const injectHashes: string[] = [];
+    const defineHashes: number[] = [];
+    const injectHashes: number[] = [];
 
     for (const key of defineKeys) {
       defineHashes.push(this._getHash(key));

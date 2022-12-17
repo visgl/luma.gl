@@ -75,15 +75,9 @@ function getDefaultProps(props: ClassicFramebufferProps): FramebufferProps {
 
 /** @deprecated Use device.createFramebuffer() */
 export default class ClassicFramebuffer extends WEBGLFramebuffer {
-<<<<<<< HEAD:modules/webgl-legacy/src/classic/framebuffer.ts
-  width: number = null;
-  height: number = null;
-  attachments = {};
-=======
   width: number | null = null;
   height: number | null = null;
   attachments: Attachments = {};
->>>>>>> f1d9327eb (chore(gltools): No implicit any):modules/gltools/src/classic/framebuffer.ts
   readBuffer = GL.COLOR_ATTACHMENT0;
   drawBuffers = [GL.COLOR_ATTACHMENT0];
   ownResources: unknown[] = [];
