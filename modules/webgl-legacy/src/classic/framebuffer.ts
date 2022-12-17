@@ -297,7 +297,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
     const {
       attachments = {},
       readBuffer,
-      drawBuffers = [],
+      drawBuffers,
       clearAttachments = false,
       resizeAttachments = true
     } = options;
