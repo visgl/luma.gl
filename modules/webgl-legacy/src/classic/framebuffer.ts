@@ -1,7 +1,7 @@
 import type {FramebufferProps, ColorAttachment} from '@luma.gl/api';
 import {Device, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getWebGL2Context, assertWebGL2Context} from '@luma.gl/webgl';
+import {getWebGL2Context, assertWebGL2Context, WEBGLTexture} from '@luma.gl/webgl';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import Renderbuffer from './renderbuffer';
 import {clear, clearBuffer} from './clear';
@@ -11,13 +11,15 @@ import Texture from './texture';
 import {WebGLDevice, WEBGLFramebuffer} from '@luma.gl/webgl';
 
 export type TextureAttachment = [Texture, number?, number?];
-export type Attachment = WebGLTexture | Renderbuffer | TextureAttachment;
+export type Attachment = WEBGLTexture | Renderbuffer | TextureAttachment | null;
+
+export type Attachments = Record<string, Attachment | Renderbuffer>;
 
 const ERR_MULTIPLE_RENDERTARGETS = 'Multiple render targets not supported';
 
 /** @deprecated backwards compatibility props */
 export type ClassicFramebufferProps = FramebufferProps & {
-  attachments?: Record<number, Attachment | Renderbuffer>;
+  attachments?: Attachments;
   readBuffer?: number;
   drawBuffers?: number[];
   check?: boolean;
@@ -73,12 +75,12 @@ function getDefaultProps(props: ClassicFramebufferProps): FramebufferProps {
 
 /** @deprecated Use device.createFramebuffer() */
 export default class ClassicFramebuffer extends WEBGLFramebuffer {
-  width: number = null;
-  height: number = null;
-  attachments = {};
+  width: number | null = null;
+  height: number | null = null;
+  attachments: Attachments = {};
   readBuffer = GL.COLOR_ATTACHMENT0;
   drawBuffers = [GL.COLOR_ATTACHMENT0];
-  ownResources = [];
+  ownResources: unknown[] = [];
 
   static readonly FRAMEBUFFER_ATTACHMENT_PARAMETERS = [
     GL.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, // WebGLRenderbuffer or WebGLTexture
@@ -272,22 +274,22 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   // RESOURCE METHODS
 
-  _createHandle() {
+  _createHandle(): WebGLFramebuffer {
     return this.gl.createFramebuffer();
   }
 
-  _deleteHandle() {
+  _deleteHandle(): void {
     this.gl.deleteFramebuffer(this.handle);
   }
 
-  _bindHandle(handle) {
+  _bindHandle(handle: WebGLFramebuffer): unknown {
     return this.gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   }
 
   update(options: {
     attachments: Record<string, Attachment | Renderbuffer>,
     readBuffer?: number,
-    drawBuffers?,
+    drawBuffers?: number[],
     clearAttachments?: boolean,
     resizeAttachments?: boolean
   }): this {
@@ -320,8 +322,8 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
   }
 
   /** Attach from a map of attachments */
-  attach(attachments, {clearAttachments = false, resizeAttachments = true} = {}) {
-    const newAttachments = {};
+  attach(attachments: Attachments, {clearAttachments = false, resizeAttachments = true} = {}) {
+    const newAttachments: Attachments = {};
 
     // Any current attachments need to be removed, add null values to map
     if (clearAttachments) {
@@ -347,12 +349,14 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
       if (!object) {
         this._unattach(attachment);
       } else {
+        // @ts-expect-error TODO looks like a valid type mismatch
         object = this._attachOne(attachment, object);
         this.attachments[attachment] = object;
       }
 
       // Resize objects
       if (resizeAttachments && object) {
+        // @ts-expect-error TODO looks like a valid type mismatch
         object.resize({width: this.width, height: this.height});
       }
     }
@@ -418,7 +422,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   // Return the value for `pname` of the specified attachment.
   // The type returned is the type of the requested pname
-  getAttachmentParameter(attachment, pname, keys) {
+  getAttachmentParameter(attachment: number, pname: GL, keys?: boolean) {
     let value = this._getAttachmentParameterFallback(pname);
     if (value === null) {
       this.gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
@@ -434,11 +438,11 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   getAttachmentParameters(
     attachment = GL.COLOR_ATTACHMENT0,
-    keys,
+    keys?: boolean,
     // @ts-expect-error
     parameters = this.constructor.ATTACHMENT_PARAMETERS || []
   ) {
-    const values = {};
+    const values: Record<string, number> = {};
     for (const pname of parameters) {
       const key = keys ? getKey(this.gl, pname) : pname;
       values[key] = this.getAttachmentParameter(attachment, pname, keys);
@@ -451,10 +455,11 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
     // if (this === this.gl.luma.defaultFramebuffer) {
     //   attachments = [GL.COLOR_ATTACHMENT0, GL.DEPTH_STENCIL_ATTACHMENT];
     // }
-    const parameters = {};
+    const parameters: Record<string, number> = {};
     for (const attachmentName of attachments) {
       const attachment = Number(attachmentName);
       const key = keys ? getKey(this.gl, attachment) : attachment;
+      // @ts-expect-error - this looks wrong?
       parameters[key] = this.getAttachmentParameters(attachment, keys);
     }
     return parameters;
@@ -481,7 +486,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   // PRIVATE METHODS
 
-  _unattach(attachment) {
+  _unattach(attachment: GL) {
     const oldAttachment = this.attachments[attachment];
     if (!oldAttachment) {
       return;
@@ -504,7 +509,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
    * @returns
    */
   // eslint-disable-next-line complexity
-  _getAttachmentParameterFallback(pname) {
+  _getAttachmentParameterFallback(pname: GL): number {
     const webglDevice = WebGLDevice.attach(this.gl);
     const features = webglDevice.features;
 

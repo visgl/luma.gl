@@ -43,19 +43,19 @@ export default class Renderbuffer extends WEBGLRenderbuffer {
 
   // PRIVATE
 
-  _syncHandle(handle) {
-    this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
-    Object.assign(this.props, {
-      format: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_INTERNAL_FORMAT),
-      width: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_WIDTH),
-      height: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_HEIGHT),
-      samples: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_SAMPLES)
-    });
-  }
+  // _syncHandle() {
+  //   this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
+  //   Object.assign(this.props, {
+  //     format: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_INTERNAL_FORMAT),
+  //     width: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_WIDTH),
+  //     height: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_HEIGHT),
+  //     samples: this.gl.getRenderbufferParameter(GL.RENDERBUFFER, GL.RENDERBUFFER_SAMPLES)
+  //   });
+  // }
 
   // @param {Boolean} opt.autobind=true - method call will bind/unbind object
   // @returns {GLenum|GLint} - depends on pname
-  _getParameter(pname) {
+  _getParameter(pname: GL): number {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
     // this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);

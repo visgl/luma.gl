@@ -2,17 +2,17 @@
 import type {RenderPipelineParameters, Shader} from '@luma.gl/api';
 import {Device, Buffer, log, isObjectEmpty, uid, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 import type {ProgramProps} from '../classic/program';
-import {
-  Program,
-  VertexArray,
-  clear,
-  TransformFeedback,
-  getDebugTableForUniforms,
-  getDebugTableForVertexArray,
-  getDebugTableForProgramConfiguration
-} from '@luma.gl/webgl-legacy';
+
+import Program from '../classic/program';
+import VertexArray from '../classic/vertex-array';
+import {clear} from '../classic/clear';
+import TransformFeedback from '../classic/transform-feedback';
+import {getDebugTableForUniforms} from '../debug/debug-uniforms';
+import {getDebugTableForVertexArray} from '../debug/debug-vertex-array';
+import {getDebugTableForProgramConfiguration} from '../debug/debug-program-configuration';
+
 import ProgramManager from './program-manager';
 import {getBuffersFromGeometry} from './model-utils';
 
@@ -33,7 +33,7 @@ export type ClassicModelProps = Omit<ProgramProps, 'attributes'> & {
   varyings?: string[];
   bufferMode?;
 
-  parameters?: RenderPipelineParameters;
+  parameters?: Omit<RenderPipelineParameters, 'frontFace'> & GLParameters;
 
   program?: Program;
   modules?: any[];
