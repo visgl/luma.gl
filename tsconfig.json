@@ -2,26 +2,31 @@
   "compilerOptions": {
     "target": "es2020",
     "jsx": "react",
+
+    // BEGIN TYPE CHECK SETTINGS
     "strict": false,
-    // "noImplicitAny": false, // covered by strict
+
+    // "noImplicitAny": true, // covered by strict
+    "noImplicitThis": true, // covered by strict
+    "strictBindCallApply": true, // covered by strict
+    "strictFunctionTypes": true, // covered by strict
+    "useUnknownInCatchVariables": true,  // covered by strict
+    // "strictNullChecks": true, // covered by strict
+    // "strictPropertyInitialization": true, // covered by strict, requires strict null checks
+
     // "exactOptionalPropertyTypes": true, - requires strictNullChecks
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    // "noImplicitThis": true, // covered by strict
     // "noPropertyAccessFromIndexSignature": true,
     // "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
-    // "strictBindCallApply": false // covered by strict
-    // "strictFunctionTypes": false // covered by strict
-    // "strictNullChecks" // covered by strict
-    // "strictPropertyInitialization" // covered by strict
-    // "useUnknownInCatchVariables"  // covered by strict
+    // END TYPE CHECK SETTINGS
+
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",
-    // "noImplicitAny": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true,

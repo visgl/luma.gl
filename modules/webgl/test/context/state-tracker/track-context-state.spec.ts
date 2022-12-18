@@ -1,5 +1,6 @@
 import test from 'tape-promise/tape';
 import {createTestContext} from '@luma.gl/test-utils';
+import {stringifyTypedArray} from './context-state.spec';
 
 import {
   trackContextState,
@@ -17,12 +18,6 @@ import {
 } from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
-
-// utils
-function stringifyTypedArray(v) {
-  v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
-  return JSON.stringify(v);
-}
 
 // Settings test, don't reuse a context
 const fixture = {

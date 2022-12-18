@@ -2,6 +2,9 @@ import test from 'tape-promise/tape';
 import {gl, gl2} from '../../test-utils/test-devices';
 
 import GL from '@luma.gl/constants';
+
+import type {TypedArray} from '@luma.gl/api'
+import type {GLParameters} from '@luma.gl/webgl';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/webgl';
 
 import {getKey} from '@luma.gl/webgl-legacy';
@@ -10,10 +13,13 @@ import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/par
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
-import {GLParameters} from 'modules/webgl';
+function isTypedArray(v: unknown): TypedArray | null {
+  return (ArrayBuffer.isView(v) && !(v instanceof DataView)) ? v as TypedArray : null;
+}
 
-function stringifyTypedArray(v) {
-  v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
+export function stringifyTypedArray(v: unknown) {
+  const typedArray = isTypedArray(v);
+  v = typedArray ? Array.from(typedArray) : v;
   return JSON.stringify(v);
 }
 
