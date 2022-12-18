@@ -32,9 +32,11 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
   };
 
   for (const attribute of programBindings.attributes) {
+    // TODO - multicolumn attributes like a matrix4 can be up to 16 elts...
+    const size = Math.min(attribute.accessor.size, 4);
     const format =
       // attribute.accessor.format ||
-      getVertexFormat(attribute.accessor.type || GL.FLOAT, attribute.accessor.size);
+      getVertexFormat(attribute.accessor.type || GL.FLOAT, size);
     shaderLayout.attributes.push({
       name: attribute.name,
       location: attribute.location,
