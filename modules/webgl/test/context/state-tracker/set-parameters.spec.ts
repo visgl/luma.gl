@@ -1,5 +1,6 @@
 import test from 'tape-promise/tape';
 import {gl, gl2} from '../../test-utils/test-devices';
+import {stringifyTypedArray} from './context-state.spec';
 
 import {setParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 
@@ -10,11 +11,6 @@ import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-par
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
-function stringifyTypedArray(v) {
-  v = ArrayBuffer.isView(v) ? Array.apply([], v) : v;
-  return JSON.stringify(v);
-}
-
 test('WebGL#set and get', (t) => {
   resetParameters(gl);
 

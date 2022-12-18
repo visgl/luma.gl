@@ -18,7 +18,7 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
     // We dont use luma.createDevice since this tests current expect this context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
-    console.error(`Failed to created device '${props.id}': ${error.message}`);
+    console.error(`Failed to created device '${props.id}': ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }
