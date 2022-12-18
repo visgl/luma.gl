@@ -4,7 +4,7 @@ import './modules.spec';
 
 // Math modules
 // TODO - these are breaking in test-browser but not in test-headless??
-// import './fp64/fp64-arithmetic-transform.spec';
+import './fp64/fp64-arithmetic-transform.spec';
 import './fp64/fp64-utils.spec';
 import './utils/random.spec';
 

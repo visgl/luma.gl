@@ -6,6 +6,16 @@ export type PlatformInfo = {
 /** Adds defines to help identify GPU architecture / platform */
 export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
   switch (platformInfo?.gpu.toLowerCase()) {
+    case 'apple':
+      return `\
+#define APPLE_GPU
+// Apple optimizes away the calculation necessary for emulated fp64
+#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
+#define LUMA_FP32_TAN_PRECISION_WORKAROUND 1
+// Intel GPU doesn't have full 32 bits precision in same cases, causes overflow
+#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1
+`;
+
     case 'nvidia':
       return `\
 #define NVIDIA_GPU

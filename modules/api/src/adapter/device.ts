@@ -86,7 +86,7 @@ export type DeviceInfo = {
   vendor: string;
   renderer: string;
   version: string;
-  gpu: 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown';
+  gpu: 'nvidia' | 'amd' | 'intel' | 'apple' | 'software' | 'unknown';
   shadingLanguages: ShadingLanguage[];
   shadingLanguageVersions: Record<string, string>;
   vendorMasked?: string;
