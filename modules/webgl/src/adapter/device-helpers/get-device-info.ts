@@ -27,7 +27,7 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   };
 }
 
-function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel' | 'apple' | 'amd' | 'unknown' {
+function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel' | 'apple' | 'amd' | 'software' | 'unknown' {
   if (vendor.match(/NVIDIA/i) || renderer.match(/NVIDIA/i)) {
     return 'nvidia';
   }
@@ -45,5 +45,9 @@ function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel'
   ) {
     return 'amd';
   }
+  if (vendor.match(/SwiftShader/i) || renderer.match(/SwiftShader/i)) {
+    return 'software';
+  }
+  
   return 'unknown';
 }

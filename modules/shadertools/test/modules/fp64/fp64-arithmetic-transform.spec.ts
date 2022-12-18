@@ -1,8 +1,7 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import { webgl2Device } from '@luma.gl/test-utils';
+import {webgl2Device} from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';
-const gl = webgl2Device && webgl2Device.gl2;
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
 // ignoreFor: [{gpu: ['glslFunc-1', 'glslFunc-2']}] => ignores for `'glslFunc-1' and 'glslFunc-2` when running on `gpu`
@@ -73,31 +72,56 @@ function getTestCasesFor(glslFunc) {
 }
 
 test('fp64#sum_fp64', (t) => {
-  const glslFunc = 'sum_fp64';
-  const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
+  if (webgl2Device?.info.gpu === 'apple') {
+    t.comment('apple GPU has precision issues')
+  } else {
+    const glslFunc = 'sum_fp64';
+    const testCases = getTestCasesFor(glslFunc);
+    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
+  }
+  t.end();
 });
 
 test('fp64#sub_fp64', (t) => {
-  const glslFunc = 'sub_fp64';
-  const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
+  if (webgl2Device?.info.gpu === 'apple') {
+    t.comment('apple GPU has precision issues')
+  } else {
+    const glslFunc = 'sub_fp64';
+    const testCases = getTestCasesFor(glslFunc);
+    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
+  }
+  t.end();
 });
 
 test('fp64#mul_fp64', (t) => {
-  const glslFunc = 'mul_fp64';
-  const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
+  if (webgl2Device?.info.gpu === 'apple') {
+    t.comment('apple GPU has precision issues')
+  } else {
+    const glslFunc = 'mul_fp64';
+    const testCases = getTestCasesFor(glslFunc);
+    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
+  }
+  t.end();
 });
 
 test('fp64#div_fp64', (t) => {
-  const glslFunc = 'div_fp64';
-  const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
+  if (webgl2Device?.info.gpu === 'apple') {
+    t.comment('apple GPU has precision issues')
+  } else {
+    const glslFunc = 'div_fp64';
+    const testCases = getTestCasesFor(glslFunc);
+    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
+  }
+  t.end();
 });
 
 test('fp64#sqrt_fp64', (t) => {
-  const glslFunc = 'sqrt_fp64';
-  const testCases = getTestCasesFor(glslFunc);
-  runTests(gl, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
+  if (webgl2Device?.info.gpu === 'apple') {
+    t.comment('apple GPU has precision issues')
+  } else {
+    const glslFunc = 'sqrt_fp64';
+    const testCases = getTestCasesFor(glslFunc);
+    runTests(webgl2Device, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
+  }
+  t.end();
 });

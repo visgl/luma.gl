@@ -3,13 +3,14 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
+import {Device} from '@luma.gl/api';
 import {Buffer} from '@luma.gl/webgl-legacy';
 import {Transform} from '@luma.gl/webgl-legacy';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
 
-function getBinaryShader(operation) {
+function getBinaryShader(operation: string): string {
   const shader = `\
 attribute vec2 a;
 attribute vec2 b;
@@ -21,7 +22,7 @@ void main(void) {
   return shader;
 }
 
-function getUnaryShader(operation) {
+function getUnaryShader(operation: string): string {
   return `\
 attribute vec2 a;
 attribute vec2 b;
@@ -55,13 +56,13 @@ function setupFloatData({limit, op, testCases}) {
   return {a, b, expected, a_fp64, b_fp64, expected_fp64};
 }
 
-function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op, testCases}) {
+function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, op, testCases}) {
   const {a, b, expected, a_fp64, b_fp64, expected_fp64} = setupFloatData({limit, op, testCases});
   const vs = binary ? getBinaryShader(glslFunc) : getUnaryShader(glslFunc);
-  const transform = new Transform(gl, {
+  const transform = new Transform(device, {
     sourceBuffers: {
-      a: new Buffer(gl, {data: a_fp64}),
-      b: new Buffer(gl, {data: b_fp64})
+      a: new Buffer(device, {data: a_fp64}),
+      b: new Buffer(device, {data: b_fp64})
     },
     vs,
     modules: [fp64],
@@ -74,14 +75,14 @@ function setupFloatTest(gl, {glslFunc, binary = false, limit = 256, op, testCase
   return {a, b, expected, a_fp64, b_fp64, expected_fp64, transform};
 }
 
-export function runTests(gl, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
-  if (!Transform.isSupported(gl)) {
+export function runTests(device: Device, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
+  if (!Transform.isSupported(device)) {
     t.comment('Transform not supported, skipping tests');
     t.end();
     return;
   }
 
-  const {a, b, a_fp64, b_fp64, expected_fp64, transform} = setupFloatTest(gl, {
+  const {a, b, a_fp64, b_fp64, expected_fp64, transform} = setupFloatTest(device, {
     glslFunc,
     binary,
     op,
@@ -104,5 +105,4 @@ export function runTests(gl, {glslFunc, binary = false, op, limit = 256, testCas
       t.comment(` (tested ${a_fp64.toString()}, ${b_fp64.toString()})`);
     }
   }
-  t.end();
 }
