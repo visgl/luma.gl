@@ -1,11 +1,11 @@
 // luma.gl, MIT license
 import type Device from '../device'
 import type { RenderPassParameters } from '../types/parameters';
-import {Binding} from '../types/shader-layout';
+// import {Binding} from '../types/shader-layout';
 import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import Buffer from './buffer';
-import RenderPipeline from './render-pipeline';
-import CommandEncoder from './command-encoder';
+// import Buffer from './buffer';
+// import RenderPipeline from './render-pipeline';
+// import CommandEncoder from './command-encoder';
 import Framebuffer from './framebuffer';
 
 export type RenderPassProps = ResourceProps & {
@@ -20,7 +20,7 @@ const DEFAULT_RENDERPASS_PROPS: Required<RenderPassProps> = {
 }
 
 export default abstract class RenderPass extends Resource<RenderPassProps> {
-  get [Symbol.toStringTag](): string {
+ override get [Symbol.toStringTag](): string {
     return 'RenderPass';
   }
 

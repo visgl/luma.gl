@@ -194,7 +194,7 @@ export default class WEBGLTexture extends Texture {
     Object.seal(this);
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.gl.deleteTexture(this.handle);
       this.removeStats();
@@ -204,7 +204,7 @@ export default class WEBGLTexture extends Texture {
     }
   }
 
-  toString(): string {
+  override toString(): string {
     return `Texture(${this.id},${this.width}x${this.height})`;
   }
 
@@ -383,7 +383,7 @@ export default class WEBGLTexture extends Texture {
   }
 
   /** Update external texture (video frame) */
-  update(): this {
+  update(): void {
     if (this._video) {
       const {video, parameters, lastTime} = this._video;
       // @ts-expect-error
@@ -940,7 +940,7 @@ export default class WEBGLTexture extends Texture {
    * Sets sampler parameters on texture
    * @note: Applies NPOT workaround if appropriate
    */
-  _setSamplerParameters(parameters: GLSamplerParameters) {
+  _setSamplerParameters(parameters: GLSamplerParameters): void {
     // Work around WebGL1 sampling restrictions on NPOT textures
     if (this.device.isWebGL1 && isNPOT(this.width, this.height)) {
       parameters = updateSamplerParametersForNPOT(parameters);
@@ -972,7 +972,7 @@ export default class WEBGLTexture extends Texture {
       }
     }
     this.gl.bindTexture(this.target, null);
-    return this;
+    return;
   }
 
   /** @deprecated For LegacyTexture subclass */
@@ -1031,6 +1031,4 @@ function isNPOT(width: number, height: number): boolean {
 
 function logParameters(parameters: Record<number, GL | number>) {
   log.log(1, 'texture sampler parameters', parameters)();
-  for (const [pname, pvalue] of Object.entries(parameters)) {
-  }
 }

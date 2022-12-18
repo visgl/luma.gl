@@ -32,13 +32,13 @@ export class ModelNode extends ScenegraphNode {
     this.managedResources = props.managedResources || [];
   }
 
-  setProps(props: ModelNodeProps) {
+  override setProps(props: ModelNodeProps) {
     super.setProps(props);
     this._setModelNodeProps(props);
     return this;
   }
 
-  destroy() {
+  override destroy(): void {
     if (this.model) {
       this.model.delete();
       // @ts-expect-error

@@ -9,7 +9,6 @@ import {
   typeToChannelCount,
   combineInjects
 } from '@luma.gl/shadertools';
-import {AccessorObject} from '@luma.gl/webgl';
 
 import Buffer from '../classic/buffer';
 import Texture2D from '../classic/texture-2d';

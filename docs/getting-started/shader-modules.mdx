@@ -73,7 +73,7 @@ Shader modules are simply JavaScript objects that contain at least a name and so
 In the `onInitialize` method of our `AnimationLoop`, we create two models with different vertex and fragment shader sources, but both including the our `colorModule`.
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = new Buffer(device, new Float32Array([
       -0.3, -0.5,
       0.3, -0.5,
@@ -113,7 +113,7 @@ In the `onInitialize` method of our `AnimationLoop`, we create two models with d
 In `onRender`, we simply draw both models:
 
 ```typescript
-  onRender({device, model1, model2}) {
+  override onRender({device, model1, model2}) {
     clear(device, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();
@@ -171,7 +171,7 @@ const colorModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = new Buffer(device, new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     const model1 = new Model(device, {
@@ -197,7 +197,7 @@ const loop = new AnimationLoop({
     return {model1, model2};
   },
 
-  onRender({device, model}) {
+  override onRender({device, model}) {
     clear(device, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();

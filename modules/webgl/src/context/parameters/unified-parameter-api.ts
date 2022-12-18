@@ -10,7 +10,6 @@ import {
   GL_PARAMETER_GETTERS
 } from './webgl-parameter-tables';
 
-import {isWebGL} from '../context/webgl-checks';
 import WebGLDevice from '../../adapter/webgl-device';
 
 export type {GLParameters};
@@ -129,6 +128,7 @@ export function resetParameters(device: Device | WebGLRenderingContext): void {
 
 // Returns true if given object is empty, false otherwise.
 function isObjectEmpty(object) {
+  // @ts-ignore dummy key variable
   for (const key in object) {
     return false;
   }

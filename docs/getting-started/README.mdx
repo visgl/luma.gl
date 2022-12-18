@@ -106,15 +106,15 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoop} from '@luma.gl/engine';
 
 const loop = new AnimationLoop({
-  onInitialize({device}: AnimationProps) {
+  override onInitialize({device}: AnimationProps) {
     // Setup logic goes here
   },
 
-  onFinalize({device}: AnimationProps) {
+  override onFinalize({device}: AnimationProps) {
     // Teardown logic goes here
   },
 
-  onRender({device}: AnimationProps) {
+  override onRender({device}: AnimationProps) {
     // Drawing logic goes here
   }
 });
@@ -130,7 +130,7 @@ import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const loop = new AnimationLoop({
-  onRender({device}) {
+  override onRender({device}) {
     // Drawing logic goes here
     clear(device, {color: [0, 0, 0, 1]});
   }

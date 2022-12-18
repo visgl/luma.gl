@@ -2,13 +2,13 @@
 
 import {
   ShaderLayout,
-  BindingLayout,
+  // BindingLayout,
   UniformBinding,
   UniformBlockBinding,
   ProgramBindings,
   AttributeBinding,
   VaryingBinding,
-  AttributeLayout,
+  // AttributeLayout,
   AccessorObject
 } from '@luma.gl/api';
 import GL from '@luma.gl/constants';
@@ -17,6 +17,7 @@ import Accessor from '../../classic/accessor'; // TODO - should NOT depend on cl
 import {decodeUniformType, decodeAttributeType} from './uniforms';
 import {getVertexFormat} from '../converters/vertex-formats';
 import {isSamplerUniform} from './uniforms';
+
 /**
  * Extract metadata describing binding information for a program's shaders
  * Note: `linkProgram()` needs to have been called
@@ -31,9 +32,11 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
   };
 
   for (const attribute of programBindings.attributes) {
+    // TODO - multicolumn attributes like a matrix4 can be up to 16 elts...
+    const size = Math.min(attribute.accessor.size, 4);
     const format =
       // attribute.accessor.format ||
-      getVertexFormat(attribute.accessor.type || GL.FLOAT, attribute.accessor.size);
+      getVertexFormat(attribute.accessor.type || GL.FLOAT, size);
     shaderLayout.attributes.push({
       name: attribute.name,
       location: attribute.location,
@@ -262,19 +265,19 @@ function readUniformBlocks(
 
     const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
     const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
-    const uniformBlockIndex = gl2.getActiveUniforms(
-      program,
-      uniformIndices,
-      GL.UNIFORM_BLOCK_INDEX
-    ); // Array of GLint indicating the block indices of the uniforms.
+    // const uniformBlockIndex = gl2.getActiveUniforms(
+    //   program,
+    //   uniformIndices,
+    //   GL.UNIFORM_BLOCK_INDEX
+    // ); // Array of GLint indicating the block indices of the uniforms.
     const uniformOffset = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
     const uniformStride = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
-    const uniformMatrixStride = gl2.getActiveUniforms(
-      program,
-      uniformIndices,
-      GL.UNIFORM_MATRIX_STRIDE
-    ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
-    const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
+    // const uniformMatrixStride = gl2.getActiveUniforms(
+    //   program,
+    //   uniformIndices,
+    //   GL.UNIFORM_MATRIX_STRIDE
+    // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
+    // const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
       const activeInfo = gl2.getActiveUniform(program, uniformIndices[i]);
       if (!activeInfo) {

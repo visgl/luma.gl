@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/webgl-legacy';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -179,12 +179,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.transform.destroy();
     this.model.destroy();
   }
 
-  onRender({device, aspect}: AnimationProps) {
+  override onRender({device, aspect}: AnimationProps) {
     this.projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     this.transform.run();

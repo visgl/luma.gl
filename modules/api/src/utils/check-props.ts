@@ -61,9 +61,8 @@ export function checkProps(className: string, props: Record<string, any>, propCh
   // replacedProps: Deprecated props that can be autosubstituted
   // print warning and return updated props object
   let newProps = null;
-  for (const propName in replacedProps) {
+  for (const [propName, replacementProp] of Object.entries(replacedProps)) {
     if (propName in props) {
-      const replacementProp = replacedProps[propName];
       log.deprecated(`${className}.${propName}`, `${className}.${replacementProp}`)();
       newProps = newProps || Object.assign({}, props);
       newProps[replacementProp] = props[propName];

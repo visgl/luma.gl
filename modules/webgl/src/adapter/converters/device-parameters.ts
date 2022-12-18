@@ -62,7 +62,7 @@ export function withDeviceParameters<T = unknown>(device: Device, parameters: Pa
 /** Set WebGPU Style Parameters */
 export function setDeviceParameters(device: Device, parameters: Parameters) {
   const webglDevice = WebGLDevice.attach(device);
-  const {gl, gl2} = webglDevice;
+  const {gl} = webglDevice;
 
   // RASTERIZATION SETTINGS
   if (parameters.cullMode) {
@@ -224,16 +224,16 @@ function convertStencilOperation(parameter: string, value: StencilOperation): GL
   });
 }
 
-function convertBlendOperationToEquation(parameter: string, value: string): number {
-  return map(parameter, value, {
-    'add': GL.FUNC_ADD,
-    'sub': GL.FUNC_SUBTRACT,
-    'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
-    // When using a WebGL 2 context, the following values are available additionally:
-    'min': GL.MIN,
-    'max': GL.MAX
-  });
-}
+// function convertBlendOperationToEquation(parameter: string, value: string): number {
+//   return map(parameter, value, {
+//     'add': GL.FUNC_ADD,
+//     'sub': GL.FUNC_SUBTRACT,
+//     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
+//     // When using a WebGL 2 context, the following values are available additionally:
+//     'min': GL.MIN,
+//     'max': GL.MAX
+//   });
+// }
 
 function message(parameter: string, value: any): string {
   return `Illegal parameter ${value} for ${parameter}`;

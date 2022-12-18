@@ -48,6 +48,7 @@ import {pushContextState, popContextState} from './track-context-state';
 
 // Returns true if given object is empty, false otherwise.
 function isObjectEmpty(object) {
+  // @ts-ignore - dummy key variable
   for (const key in object) {
     return false;
   }

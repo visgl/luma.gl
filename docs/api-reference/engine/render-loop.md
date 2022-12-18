@@ -28,11 +28,11 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.clipSpaceQuad.destroy();
   }
 
-  onRender({tick}) {
+  override onRender({tick}) {
     // Tick is auto updated by AnimationLoopTemplate
     this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
     this.clipSpaceQuad.draw();

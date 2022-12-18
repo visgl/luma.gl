@@ -1,5 +1,5 @@
 import type {Buffer} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
@@ -66,14 +66,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.model.destroy();
     this.positionBuffer.destroy();
     this.colorBuffer.destroy();
     this.offsetBuffer.destroy();
   }
 
-  onRender({device}: AnimationProps) {
+  override onRender({device}: AnimationProps) {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }

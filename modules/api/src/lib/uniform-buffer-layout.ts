@@ -1,7 +1,8 @@
 // luma.gl, MIT license
 import type {UniformFormat, UniformDataType} from '../adapter/types/uniform-formats';
 import {decodeUniformFormat, alignTo} from '../adapter/utils/decode-uniform-format';
-const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
+
+// const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 
 /**
  * Std140 layout for uniform buffers
@@ -37,7 +38,7 @@ export default class UniformBufferLayout {
     return Boolean(this.layout[name]);
   }
 
-  get(name: string): {offset: number, size: number} {
+  get(name: string): {offset: number, size: number} | undefined {
     const layout = this.layout[name];
     return layout;
   }

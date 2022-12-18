@@ -24,7 +24,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
 
     // interleaved mapping {..., attributes: [{...}, ...]}
     if ('attributes' in mapping) {
-      const arrayStride = mapping.byteStride;
+      // const arrayStride = mapping.byteStride; TODO 
       for (const interleaved of mapping.attributes) {
         const attributeLayout = findAttributeLayout(layout, interleaved.name, usedAttributes);
 

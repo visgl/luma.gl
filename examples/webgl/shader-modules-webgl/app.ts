@@ -41,13 +41,13 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
 
   resources;
 
-  onCreateContext({canvas}: DeviceProps): WebGLRenderingContext {
+  override onCreateContext({canvas}: DeviceProps): WebGLRenderingContext {
     /** @type {WebGLRenderingContext} */
     // @ts-ignore
     return canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
   }
 
-  onInitialize({gl}: ClassicAnimationProps) {
+  override onInitialize({gl}: ClassicAnimationProps) {
     gl.clearColor(0, 0, 0, 1);
 
     // Program 1
@@ -124,7 +124,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
     };
   }
 
-  onRender({gl}: ClassicAnimationProps) {
+  override onRender({gl}: ClassicAnimationProps) {
     const {program1, program2} = this.resources;
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program1);
@@ -138,7 +138,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
     // gl.deleteShader(fShader2);
   }
 
-  onFinalize({gl}: ClassicAnimationProps): void {
+  override onFinalize({gl}: ClassicAnimationProps): void {
     const {positionBuffer, program1, program2} = this.resources;
     gl.deleteBuffer(positionBuffer);
     gl.deleteProgram(program1);

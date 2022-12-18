@@ -24,7 +24,7 @@ const DEFAULT_COMPUTE_PIPELINE_PROPS: Required<ComputePipelineProps> = {
 /**
  */
 export default abstract class ComputePipeline extends Resource<ComputePipelineProps> {
-  get [Symbol.toStringTag](): string {
+ override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }
 

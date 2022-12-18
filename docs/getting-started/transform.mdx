@@ -66,7 +66,7 @@ Internally, we'll be using two separate programs, one for transform feedback and
 In `onInitialize`, we create our `Transform` instance:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([
       -0.5, -0.5,
       0.5, -0.5,
@@ -94,7 +94,7 @@ We pass the vertex shader we defined, as well as the initial input buffer in the
 Finally, we create a model instance to perform the rendering:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     // Transform setup...
 
     const colorBuffer = device.createBuffer(new Float32Array([
@@ -122,7 +122,7 @@ We set up the `Model` similarly to how we've done in other tutorials, with the e
 Our `onRender` involves a few additional steps compared to what we've seen before:
 
 ```typescript
-  onRender({device, transform, model}) {
+  override onRender({device, transform, model}) {
     transform.run();
 
     clear(device, {color: [0, 0, 0, 1]});
@@ -187,7 +187,7 @@ void main() {
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
     const transform = new Transform(device, {
@@ -216,7 +216,7 @@ const loop = new AnimationLoop({
     return {transform, model};
   },
 
-  onRender({device, transform, model}) {
+  override onRender({device, transform, model}) {
     transform.run();
 
     clear(device, {color: [0, 0, 0, 1]});

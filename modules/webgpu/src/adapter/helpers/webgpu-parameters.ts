@@ -121,8 +121,9 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
   },
 
   blendColorOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
-    const targets = addColorState(descriptor);
-    const target = targets[0];
+    addColorState(descriptor);
+    // const targets = addColorState(descriptor);
+    // const target = targets[0];
     // const blend: GPUBlendState = target.blend || {color: {alpha: 0}};
     // blend.color = blend.color || {};
     // target.blend.color.operation = value;

@@ -22,17 +22,19 @@ export function decodeTextureFormat(format: TextureFormat): {
   const matches = (format as string).match(REGEX);
   if (matches) {
     const [, format, length, type, srgb, suffix] = matches;
-    const dataType = `${type}${length}` as VertexType;
-    const decodedType = decodeVertexType(dataType);
-    return {
-      format,
-      components: 0,
-      // dataType - overwritten by decodedType
-      srgb: srgb === '-srgb',
-      unsized: suffix === '-unsized',
-      webgl: suffix === '-webgl',
-      ...decodedType
-    };
+    if (format) {
+      const dataType = `${type}${length}` as VertexType;
+      const decodedType = decodeVertexType(dataType);
+      return {
+        format,
+        components: 0,
+        // dataType - overwritten by decodedType
+        srgb: srgb === '-srgb',
+        unsized: suffix === '-unsized',
+        webgl: suffix === '-webgl',
+        ...decodedType
+      };
+    }
   }
   throw new Error(`Unknown format ${format}`);
 }

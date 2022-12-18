@@ -1,3 +1,4 @@
+/*
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 import {getShaderLayout} from '@luma.gl/webgl';
@@ -135,6 +136,7 @@ void main(void) {
     }
   }
 ];
+*/
 
 /** TODO - hard to make this work consistently across local env and CI
 test.skip('WebGL#getShaderLayout#varyings', async (t) => {

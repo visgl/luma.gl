@@ -1,5 +1,7 @@
+// luma.gl, MIT license
+
 import type {Device, BufferProps, TypedArray} from '@luma.gl/api';
-import {Buffer, log, assert, checkProps} from '@luma.gl/api';
+import {assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
@@ -106,7 +108,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
     Object.seal(this);
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.removeStats();
       this.trackDeallocatedMemory();
@@ -116,9 +118,10 @@ export default class ClassicBuffer extends WEBGLBuffer {
     }
   }
 
-  write(data: TypedArray, byteOffset?: number): void {
+  override write(data: TypedArray, byteOffset?: number): void {
     this.subData({data, offset: byteOffset});
   }
+
   // returns number of elements in the buffer (assuming that the full buffer is used)
   getElementCount(accessor: AccessorObject = this.accessor): number {
     return Math.round(this.byteLength / Accessor.getBytesPerElement(accessor));
@@ -278,7 +281,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
    * Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
    * @note WEBGL2 ONLY
    */
-  getData(options?: {
+  override getData(options?: {
     dstData?: any;
     srcByteOffset?: number;
     dstOffset?: number;

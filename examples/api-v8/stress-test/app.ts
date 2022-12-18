@@ -3,7 +3,7 @@ import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} 
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {clear, withParameters, Model, ModelProps} from '@luma.gl/webgl-legacy';
-import {Matrix4, radians} from '@math.gl/core';
+import {radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 
 const INFO_HTML = `
@@ -115,8 +115,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // @ts-expect-error
     const {gl} = device;
 
-    const projectionMatrix = new Matrix4();
-    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
+    // const projectionMatrix = new Matrix4();
+    // const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 8]});
 
     const texture = device.createTexture({
       data: 'vis-logo.png',
@@ -160,12 +160,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.opaqueCubes.forEach((c) => c.delete());
     this.transparentCubes.forEach((c) => c.delete());
   }
 
-  onRender({device, aspect, tick}: AnimationProps) {
+  override onRender({device, aspect, tick}: AnimationProps) {
     this.rotationAngle += 0.01;
     this.statsWidget.update();
 

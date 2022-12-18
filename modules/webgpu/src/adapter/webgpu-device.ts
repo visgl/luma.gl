@@ -129,7 +129,7 @@ export default class WebGPUDevice extends Device {
   // const {glsl = true} = props;
   // this.glslang = glsl && await loadGlslangModule();
 
-  destroy() {
+  destroy(): void {
     this.handle.destroy();
   }
 

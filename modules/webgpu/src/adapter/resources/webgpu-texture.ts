@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Texture, TextureProps, Sampler, SamplerProps, assert} from '@luma.gl/api';
+import {Texture, TextureProps, Sampler, SamplerProps} from '@luma.gl/api';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type WebGPUDevice from '../webgpu-device';
 import WebGPUSampler from './webgpu-sampler';
@@ -82,7 +82,7 @@ export default class WebGPUTexture extends Texture {
     });
   }
 
-  destroy(): void {
+  override destroy(): void {
     this.handle.destroy();
   }
 

@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl-legacy';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -96,11 +96,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.model.destroy();
   }
 
-  onRender({device, aspect, tick}) {
+  override onRender({device, aspect, tick}) {
     this.modelMatrix
       .identity()
       .rotateX(tick * 0.01)

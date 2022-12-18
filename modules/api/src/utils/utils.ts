@@ -1,4 +1,4 @@
-import assert from './assert';
+// luma.gl, MIT license
 
 const uidCounters: Record<string, number> = {};
 
@@ -25,6 +25,7 @@ export function isPowerOfTwo(n: number): boolean {
 /** Returns true if given object is empty, false otherwise. */
 export function isObjectEmpty(obj: object): boolean {
   let isEmpty = true;
+  // @ts-ignore key is unused
   // eslint-disable-next-line no-unused-vars
   for (const key in obj) {
     isEmpty = false;

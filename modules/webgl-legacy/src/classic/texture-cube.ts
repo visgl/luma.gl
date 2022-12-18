@@ -7,7 +7,7 @@ import Texture, {TextureProps} from './texture';
  * @deprecated Use device.createTexture({dimension: 'cube'})
  */
 export default class TextureCube extends Texture {
-  static FACES: number[] = [
+  static override FACES: number[] = [
     GL.TEXTURE_CUBE_MAP_POSITIVE_X,
     GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
     GL.TEXTURE_CUBE_MAP_POSITIVE_Y,

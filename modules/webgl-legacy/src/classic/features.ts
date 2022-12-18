@@ -3,7 +3,7 @@
 // available in an WebGL1 or WebGL2 environment.
 
 import {Device, DeviceFeature, assert} from '@luma.gl/api';
-import {isWebGL2, WebGLDevice, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
+import {WebGLDevice, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
 
 // TODO - this should be the default export, test cases need updating
 export const DEPRECATED_FEATURES = {

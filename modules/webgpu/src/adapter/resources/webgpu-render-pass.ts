@@ -1,5 +1,5 @@
 import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/api';
-import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/api';
+import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/api';
 import WebGPUDevice from '../webgpu-device';
 import WebGPUBuffer from './webgpu-buffer';
 // import WebGPUCommandEncoder from './webgpu-command-encoder';
@@ -22,7 +22,7 @@ export default class WebGPURenderPass extends RenderPass {
     this.handle.label = this.props.id;
   }
 
-  destroy() {}
+  override destroy(): void {}
 
   endPass(): void {
     this.handle.endPass();

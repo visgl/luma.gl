@@ -172,13 +172,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onFinalize() {
+  override onFinalize() {
     for (const cube of this.cubes) {
       cube.model.destroy();
     }
   }
 
-  onRender({device}) {
+  override onRender({device}) {
     if (this.timeSlider) {
       this.timeSlider.value = this.timeline.getTime();
     }

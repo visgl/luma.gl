@@ -2,7 +2,6 @@ import test, {Test} from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Device, Sampler} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
 
 // Sampler Parameters
 

@@ -17,7 +17,6 @@ export type {ShaderProps};
  */
 export class Shader extends WEBGLShader {
   shaderType: GL.FRAGMENT_SHADER | GL.VERTEX_SHADER;
-  source: string;
 
   static getTypeName(shaderType: any): 'vertex-shader' | 'fragment-shader' | 'unknown' {
     switch (shaderType) {
@@ -36,7 +35,9 @@ export class Shader extends WEBGLShader {
     assert(typeof props.source === 'string', ERR_SOURCE);
     super(WebGLDevice.attach(gl), {...props, stage: props.shaderType === GL.VERTEX_SHADER ? 'vertex' : 'fragment'});
 
+    // @ts-ignore read only
     this.shaderType = props.shaderType;
+    // @ts-ignore read only
     this.source = props.source;
 
     const shaderName = getShaderInfo(props.source).name;
@@ -60,7 +61,7 @@ export class Shader extends WEBGLShader {
     return this.device.gl.getShaderParameter(this.handle, pname);
   }
 
-  toString(): string {
+  override toString(): string {
     return `${Shader.getTypeName(this.shaderType)}:${this.id}`;
   }
 

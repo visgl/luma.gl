@@ -60,7 +60,7 @@ export function setUniform(
     case GL.BOOL: return gl.uniform1iv(location, arrayValue);
     case GL.BOOL_VEC2: return gl.uniform2iv(location, arrayValue);
     case GL.BOOL_VEC3: return gl.uniform3iv(location, arrayValue);
-    case GL.BOOL_VEC4: gl.uniform4iv(location, arrayValue);
+    case GL.BOOL_VEC4: return gl.uniform4iv(location, arrayValue);
 
     // WEBGL2 - unsigned integers
     case GL.UNSIGNED_INT: return gl2.uniform1uiv(location, arrayValue, 1);

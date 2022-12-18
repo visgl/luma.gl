@@ -11,7 +11,7 @@ const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER D
 export default class AppAnimationLoop extends ClassicAnimationLoop {
   static info = INFO_HTML;
 
-  onCreateContext(props: DeviceProps): WebGLRenderingContext {
+  override onCreateContext(props: DeviceProps): WebGLRenderingContext {
     const canvas = props.canvas as HTMLCanvasElement;
     const gl = canvas.getContext('webgl');
     if (!gl) {
@@ -20,7 +20,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
     return polyfillContext(gl);
   }
 
-  onInitialize({gl}: ClassicAnimationProps): void {
+  override onInitialize({gl}: ClassicAnimationProps): void {
     gl.clearColor(0, 0, 0, 1);
 
     const vs = `
@@ -116,7 +116,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
     };
   }
 
-  onRender({gl}: ClassicAnimationProps): void {
+  override onRender({gl}: ClassicAnimationProps): void {
     gl.clear(gl.COLOR_BUFFER_BIT);
     // @ts-expect-error WebGL2
     gl.bindVertexArray(this.resources.vertexArray);
@@ -126,7 +126,7 @@ export default class AppAnimationLoop extends ClassicAnimationLoop {
     gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, 4);
   }
 
-  onFinalize({gl}: ClassicAnimationProps) {
+  override onFinalize({gl}: ClassicAnimationProps) {
     // @ts-expect-error
     const {positionBuffer, colorBuffer, offsetBuffer, program, vertexArray} = this.resources;
     gl.deleteBuffer(positionBuffer);

@@ -28,12 +28,16 @@ export default class WEBGLSampler extends Sampler {
     }
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.device.gl2.deleteSampler(this.handle);
       // @ts-expect-error
       this.handle = undefined;
     }
+  }
+
+  override toString(): string {
+    return `Sampler(${this.id},${JSON.stringify(this.props)})`;
   }
 
   /** Set sampler parameters on the sampler */

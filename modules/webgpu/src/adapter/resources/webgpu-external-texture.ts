@@ -22,7 +22,7 @@ export default class WebGPUExternalTexture extends ExternalTexture {
     this.sampler = null;
   }
 
-  destroy(): void {
+  override destroy(): void {
     // External textures are destroyed automatically,
     // as a microtask, instead of manually or upon garbage collection like other resources.
     // this.handle.destroy();

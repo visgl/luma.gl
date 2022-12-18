@@ -11,8 +11,6 @@ export default class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly gpuCanvasContext: GPUCanvasContext;
   readonly format: TextureFormat;
-  width: number = -1;
-  height: number = -1;
   depthStencilFormat: TextureFormat = 'depth24plus';
   sampleCount: number = 1;
 
@@ -21,12 +19,16 @@ export default class WebGPUCanvasContext extends CanvasContext {
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
     this.device = device;
+    // TODO - hack to trigger resize?
+    this.width = -1;
+    this.height = -1;
+  
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.gpuCanvasContext = this.canvas.getContext('webgpu') as GPUCanvasContext;
     this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
   }
 
-  destroy() {
+  destroy(): void {
     this.gpuCanvasContext.unconfigure();
   }
 

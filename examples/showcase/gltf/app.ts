@@ -2,7 +2,7 @@
 // import '@loaders.gl/polyfills'; // text-encoding polyfill for older MS browsers
 import {Device, log, luma} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Timeline} from '@luma.gl/engine';
-import {createGLTFObjects, GLTFEnvironment, VRDisplay} from '@luma.gl/experimental';
+import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
 import GL from '@luma.gl/constants';
 import {clear} from '@luma.gl/webgl-legacy';
 
@@ -285,9 +285,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.initalizeEventHandling(canvas);
   }
 
-  onFinalize(animationProps: AnimationProps): void {}
+  override onFinalize(animationProps: AnimationProps): void {}
 
-  onRender({device, time, aspect}) {
+  override onRender({device, time, aspect}) {
     clear(device, {color: [0.2, 0.2, 0.2, 1.0], depth: true});
 
     const [pitch, roll] = this.rotation;

@@ -18,7 +18,7 @@ export type {RenderbufferProps}
  * @deprecated Use WEBGLRenderBuffer
  */
 export default class Renderbuffer extends WEBGLRenderbuffer {
-  static isSupported(device: Device | WebGLRenderingContext, options?: {format?: number}): boolean {
+  static override isSupported(device: Device | WebGLRenderingContext, options?: {format?: number}): boolean {
     const gl = WebGLDevice.attach(device).gl;
     return WEBGLRenderbuffer.isSupported(gl, options);
   }
@@ -35,7 +35,7 @@ export default class Renderbuffer extends WEBGLRenderbuffer {
   }
 
   /** Creates and initializes a renderbuffer object's data store */
-  initialize(props: RenderbufferProps): this {
+  override initialize(props: RenderbufferProps): this {
     Object.assign(this.props, props);
     this._initialize(this.props);
     return this;
@@ -55,7 +55,7 @@ export default class Renderbuffer extends WEBGLRenderbuffer {
 
   // @param {Boolean} opt.autobind=true - method call will bind/unbind object
   // @returns {GLenum|GLint} - depends on pname
-  _getParameter(pname: GL): number {
+  override _getParameter(pname: GL): number {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
     const value = this.gl.getRenderbufferParameter(GL.RENDERBUFFER, pname);
     // this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);

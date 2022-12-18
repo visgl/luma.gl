@@ -7,7 +7,7 @@ import WebGPUTexture from './webgpu-texture';
 
 // const DEFAULT_DEPTH_STENCIL_FORMAT: DepthStencilTextureFormat = 'depth24plus';
 
-const MAX_COLOR_ATTACHMENTS = 8;
+// const MAX_COLOR_ATTACHMENTS = 8;
 
 /**
  * Create new textures with correct size for all attachments. 

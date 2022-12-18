@@ -47,7 +47,7 @@ export function readPixelsToArray(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const {gl, handle, attachments} = framebuffer;
+  const {gl, handle} = framebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 

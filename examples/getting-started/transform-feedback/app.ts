@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
@@ -89,12 +89,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.transform.destroy();
     this.model.destroy();
   }
 
-  onRender({device}) {
+  override onRender({device}) {
     this.transform.run();
     this.model.setAttributes({
       position: this.transform.getBuffer('vPosition')

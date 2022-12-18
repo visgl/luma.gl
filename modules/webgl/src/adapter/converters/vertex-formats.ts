@@ -8,6 +8,7 @@ export function getVertexFormat(type: GL, components: number): VertexFormat {
     case 2: return `${base}x2`;
     case 3: return `${base}x3`;
     case 4: return `${base}x4`;
+    default: throw new Error(String(components));
   }
 }
 

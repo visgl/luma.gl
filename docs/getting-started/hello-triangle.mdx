@@ -16,11 +16,11 @@ import {AnimationLoop} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 class AppAnimationLoop extends AnimationLoop ({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     // Setup logic goes here
   },
 
-  onRender({device}) {
+  override onRender({device}) {
     // Drawing logic goes here
     clear(device, {color: [0, 0, 0, 1]});
   }
@@ -40,7 +40,7 @@ import {clear} from '@luma.gl/webgl';
 Now let's create some buffers in the `onInitialize` method to hold our attribute data:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     // Setup logic goes here
     const positionBuffer = device.createBuffer(new Float32Array([
       -0.5, -0.5,
@@ -59,7 +59,7 @@ Now let's create some buffers in the `onInitialize` method to hold our attribute
 Next let's add the vertex and fragment shader code we'll be using to draw:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     // Setup logic goes here
 
     // Buffers...
@@ -90,7 +90,7 @@ Next let's add the vertex and fragment shader code we'll be using to draw:
 As a final step in our initialization, we'll create a `Model` in `onInitialize`:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     // Setup logic goes here
 
     // Buffers...
@@ -116,7 +116,7 @@ A `Model` can be thought of as gathering all the WebGL pieces necessary for a si
 Our `onRender` method is comparitavely much simpler:
 
 ```typescript
-  onRender({device}) {
+  override onRender({device}) {
     clear(device, {color: [0, 0, 0, 1]});
     this.model.draw();
   }
@@ -131,7 +131,7 @@ import {AnimationLoop, Model} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 class AppAnimationLoop extends AnimationLoop {
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
 
     const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
@@ -169,7 +169,7 @@ class AppAnimationLoop extends AnimationLoop {
     return {model};
   },
 
-  onRender({device, model}) {
+  override onRender({device, model}) {
     clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }

@@ -108,7 +108,6 @@ function getContextState(gl: WebGLRenderingContext): GLState {
   assert(copyState !== undefined);
   // @ts-expect-error
   if (!gl.state) {
-    const global_ = typeof global !== 'undefined' ? global : window;
     // @ts-ignore
     // const {polyfillContext} = global_;
     // if (polyfillContext) {

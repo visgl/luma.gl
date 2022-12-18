@@ -380,16 +380,18 @@ function scalePixels(
   width: number;
   height: number;
 } {
-  const x = scaleX(pixel[0], ratio, width);
-  let y = scaleY(pixel[1], ratio, height, yInvert);
+  const point = pixel as [number, number];
+  
+  const x = scaleX(point[0], ratio, width);
+  let y = scaleY(point[1], ratio, height, yInvert);
 
   // Find boundaries of next pixel to provide valid range of device pixel locations
 
-  let t = scaleX(pixel[0] + 1, ratio, width);
+  let t = scaleX(point[0] + 1, ratio, width);
   // If next pixel's position is clamped to boundary, use it as is, otherwise subtract 1 for current pixel boundary
   const xHigh = t === width - 1 ? t : t - 1;
 
-  t = scaleY(pixel[1] + 1, ratio, height, yInvert);
+  t = scaleY(point[1] + 1, ratio, height, yInvert);
   let yHigh;
   if (yInvert) {
     // If next pixel's position is clamped to boundary, use it as is, otherwise clamp it to valid range

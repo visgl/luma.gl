@@ -23,7 +23,7 @@ export class GroupNode extends ScenegraphNode {
     this.children = children;
   }
 
-  destroy() {
+  override destroy(): void {
     this.children.forEach((child) => child.destroy());
     this.removeAll();
     super.destroy();

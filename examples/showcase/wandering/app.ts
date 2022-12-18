@@ -3,10 +3,9 @@
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 import {Buffer} from '@luma.gl/webgl-legacy';
 import {ClassicModel as Model, Transform} from '@luma.gl/webgl-legacy';
-import {readPixelsToArray, Framebuffer} from '@luma.gl/webgl-legacy';
+import {Framebuffer} from '@luma.gl/webgl-legacy';
 import {picking} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
-import {Log} from '@probe.gl/log';
 
 import {getRandom} from '@luma.gl/api';
 // Ensure repeatable rendertests
@@ -131,19 +130,19 @@ void main()
 `;
 
 const NUM_INSTANCES = 1000;
-const RED = new Uint8Array([255, 0, 0, 255]);
-const log = new Log({id: 'transform'}).enable();
+// const RED = new Uint8Array([255, 0, 0, 255]);
+// const log = new Log({id: 'transform'}).enable();
 
 // TODO PICKING TEMPORARILY DISABLED
-let pickPosition = [0, 0];
+// let pickPosition = [0, 0];
 
-function mousemove(e) {
-  pickPosition = [e.offsetX, e.offsetY];
-}
+// function mousemove(e) {
+//   pickPosition = [e.offsetX, e.offsetY];
+// }
 
-function mouseleave(e) {
-  pickPosition = null;
-}
+// function mouseleave(e) {
+//   pickPosition = null;
+// }
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
@@ -164,8 +163,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (device.info.type !== 'webgl2') {
       throw new Error(ALT_TEXT);
     }
-    device.canvasContext.canvas.addEventListener('mousemove', mousemove);
-    device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
+    // device.canvasContext.canvas.addEventListener('mousemove', mousemove);
+    // device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);
@@ -234,12 +233,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.pickingFramebuffer = new Framebuffer(device, {width, height});
   }
 
-  onFinalize(): void {
+  override onFinalize(): void {
     this.renderModel.delete();
     this.transform.delete();
   }
 
-  onRender({width, height, time}: AnimationProps): void {
+  override onRender({width, height, time}: AnimationProps): void {
     this.transform.run({
       uniforms: {
         u_time: time
@@ -282,6 +281,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
+/*
 function pickInstance(gl, pickX, pickY, model, framebuffer) {
   if (framebuffer) {
     framebuffer.clear({color: true, depth: true});
@@ -311,6 +311,7 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
     });
   }
 }
+*/
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {

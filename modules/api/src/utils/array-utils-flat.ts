@@ -18,22 +18,22 @@ export function getScratchArray(Type: any, length: number): TypedArray {
 
 // Uses copyWithin to significantly speed up typed array value filling
 export function fillArray(options: {target: NumberArray, source: NumberArray, start?: number, count?: number}): NumberArray {
-  const {start = 0, count = 1} = options;
-  const length = options.source.length;
+  const {target, source, start = 0, count = 1} = options;
+  const length = source.length;
   const total = count * length;
   let copied = 0;
   for (let i = start; copied < length; copied++) {
-    options.target[i++] = options.source[copied];
+    target[i++] = source[copied] as number;
   }
 
   while (copied < total) {
     // If we have copied less than half, copy everything we got
     // else copy remaining in one operation
     if (copied < total - copied) {
-      options.target.copyWithin(start + copied, start, start + copied);
+      target.copyWithin(start + copied, start, start + copied);
       copied *= 2;
     } else {
-      options.target.copyWithin(start + copied, start, start + total - copied);
+      target.copyWithin(start + copied, start, start + total - copied);
       copied = total;
     }
   }

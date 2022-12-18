@@ -143,12 +143,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize(animationProps: AnimationProps): void {
+  override onFinalize(animationProps: AnimationProps): void {
     this.uniformBuffer.destroy();
     this.cubeModel.destroy();
   }
 
-  onRender({device}: AnimationProps) {
+  override onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;

@@ -188,7 +188,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onFinalize(animationProps: AnimationProps): void {
+  override onFinalize(animationProps: AnimationProps): void {
     this.mainFramebuffer.destroy();
     this.pingpongFramebuffers[0].destroy();
     this.pingpongFramebuffers[1].destroy();
@@ -197,7 +197,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sphere.destroy();
   }
 
-  onRender({device, tick, width, height, aspect}: AnimationProps) {
+  override onRender({device, tick, width, height, aspect}: AnimationProps) {
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});

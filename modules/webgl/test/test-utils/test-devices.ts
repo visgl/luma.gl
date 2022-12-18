@@ -5,14 +5,6 @@ import type {Device, DeviceProps} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {createHeadlessContext} from './create-headless-context';
 
-const ERR_HEADLESSGL_FAILED =
-  'Failed to create WebGL context in Node.js, headless gl returned null';
-
-const ERR_HEADLESSGL_LOAD = `\
-  luma.gl: loaded under Node.js without headless gl installed, meaning that WebGL \
-  contexts can not be created. This may not be an error. For example, this is a \
-  typical configuration for isorender applications running on the server.`;
-
 const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
   width: 1,
   height: 1,

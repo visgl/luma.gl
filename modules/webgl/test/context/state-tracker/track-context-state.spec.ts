@@ -9,7 +9,6 @@ import {
   setParameters,
   resetParameters
 } from '@luma.gl/webgl';
-import GL from '@luma.gl/constants';
 import {Texture2D} from '@luma.gl/webgl-legacy';
 
 import {

@@ -60,11 +60,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.model.destroy();
   }
 
-  onRender({device}: AnimationProps) {
+  override onRender({device}: AnimationProps) {
     this.model.draw();
     device.submit();
   }
