@@ -34,6 +34,8 @@ export type TestRunnerProps = {
   /** milliseconds to wait for each test case before aborting */
   timeout?: number;
   maxFramesToRender?: number;
+  // HACK - this is used by snapshot test runner
+  imageDiffOptions: any;
 };
 
 const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
