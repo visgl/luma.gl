@@ -1,4 +1,4 @@
-import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
+import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 
 /** A snapshot test case */
@@ -9,13 +9,13 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
   imageDiffOptions?: {[key: string]: any}; 
 }
 
+export type SnapshotTestRunnerProps = TestRunnerProps;
+
 export default class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;
 
-  constructor(props: TestRunnerOptions) {
+  constructor(props: SnapshotTestRunnerProps) {
     super(props);
-
-    // @ts-expect-error
     this.testOptions.imageDiffOptions = {};
   }
 
@@ -44,7 +44,6 @@ export default class SnapshotTestRunner extends TestRunner {
     }
 
     const diffOptions = {
-      // @ts-expect-error
       ...this.testOptions.imageDiffOptions,
       ...testCase.imageDiffOptions,
       goldenImage: testCase.goldenImage,

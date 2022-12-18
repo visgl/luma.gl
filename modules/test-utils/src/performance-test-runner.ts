@@ -1,13 +1,15 @@
 // luma.gl, MIT license
 
 import {Stats, Stat} from '@probe.gl/stats';
-import TestRunner, {TestRunnerOptions, TestRunnerTestCase} from './test-runner';
+import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
+
+export type PerformanceTestRunnerProps = TestRunnerProps;
 
 export default class PerformanceTestRunner extends TestRunner {
   private _stats: Stats | null = null;
   private _fps: Stat | null = null;
 
-  constructor(props: TestRunnerOptions) {
+  constructor(props: PerformanceTestRunnerProps) {
     super(props);
 
     Object.assign(this.testOptions, {
@@ -26,7 +28,6 @@ export default class PerformanceTestRunner extends TestRunner {
     this._fps?.timeEnd();
     this._fps?.timeStart();
 
-    // @ts-expect-error
     if (this._fps.count > this.testOptions.maxFramesToRender) {
       animationProps.done();
     }
