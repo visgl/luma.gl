@@ -17,7 +17,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 
 /** VertexArrayObject wrapper */
 export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
-  get [Symbol.toStringTag](): string {
+ override get [Symbol.toStringTag](): string {
     return 'BaseVertexArrayObject';
   }
 
@@ -26,18 +26,18 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
     super(device, props, {});
   }
 
-  _createHandle() {
+  override _createHandle() {
     return this.gl2.createVertexArray();
   }
 
-  _deleteHandle(): void {
+  override _deleteHandle(): void {
     this.gl2.deleteVertexArray(this.handle);
     // @ts-expect-error
     return [this.elements];
     // return [this.elements, ...this.buffers];
   }
 
-  _bindHandle(handle: WEBGLVertexArrayObject): void {
+  override _bindHandle(handle: WEBGLVertexArrayObject): void {
     this.gl2.bindVertexArray(handle);
   }
 

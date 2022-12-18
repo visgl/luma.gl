@@ -413,7 +413,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onRender({
+  override onRender({
     device,
     tick,
     width,

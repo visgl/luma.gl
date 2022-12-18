@@ -19,19 +19,19 @@ export default class SnapshotTestRunner extends TestRunner {
     this.testOptions.imageDiffOptions = {};
   }
 
-  initTestCase(testCase: SnapshotTestRunnerTestCase): void {
+  override initTestCase(testCase: SnapshotTestRunnerTestCase): void {
     super.initTestCase(testCase);
     if (!testCase.goldenImage) {
       throw new Error(`Test case ${testCase.name} does not have golden image`);
     }
   }
 
-  shouldRender(): boolean {
+  override shouldRender(): boolean {
     // wait for the current diffing to finish
     return !this.isDiffing;
   }
 
-  async assert(testCase: SnapshotTestRunnerTestCase): Promise<void> {
+  override async assert(testCase: SnapshotTestRunnerTestCase): Promise<void> {
     if (this.isDiffing) {
       // Already performing diffing
       return;

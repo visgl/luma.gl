@@ -11,12 +11,12 @@ type DebugContextProps = {
   webgl2?: boolean;
 };
 
-const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
-  debug: true,
-  throwOnError: false,
-  break: [],
-  webgl2: false,
-}
+// const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
+//   debug: true,
+//   throwOnError: false,
+//   break: [],
+//   webgl2: false,
+// }
 
 // Helper to get shared context data
 function getContextData(gl: any) {

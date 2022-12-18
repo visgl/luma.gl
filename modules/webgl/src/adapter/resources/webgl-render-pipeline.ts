@@ -5,13 +5,12 @@ import type {
   Binding,
   ShaderLayout,
   PrimitiveTopology,
-  BindingLayout,
+  // BindingLayout,
   AttributeLayout
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
-import type {GLParameters} from '../../types/webgl';
 import {getWebGLDataType} from '../converters/texture-formats';
 import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceParameters, withGLParameters} from '../converters/device-parameters';
@@ -74,7 +73,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     this.vertexArrayObject = new WEBGLVertexArrayObject(this.device);
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.device.gl.deleteProgram(this.handle);
       // this.handle = null;
@@ -108,7 +107,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
         offset: 0,
         normalized,
         integer,
-        divisor: attribute.stepMode === 'instance' ? 1 : 0
+        divisor
       });
     }
   }
@@ -173,12 +172,12 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     const {
       renderPass = this.device.getDefaultRenderPass(),
       vertexCount,
-      indexCount,
+      // indexCount,
       instanceCount,
       firstVertex = 0,
-      firstIndex,
-      firstInstance,
-      baseVertex
+      // firstIndex,
+      // firstInstance,
+      // baseVertex
     } = options;
 
     const drawMode = getDrawMode(this.props.topology);
@@ -278,12 +277,12 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
   _areTexturesRenderable() {
     let texturesRenderable = true;
 
-    for (const [name, texture] of Object.entries(this._textureUniforms)) {
+    for (const [, texture] of Object.entries(this._textureUniforms)) {
       texture.update();
       texturesRenderable = texturesRenderable && texture.loaded;
     }
 
-    for (const [name, texture] of Object.entries(this.bindings)) {
+    for (const [, texture] of Object.entries(this.bindings)) {
       // texture.update();
       if (texture.loaded !== undefined) {
         texturesRenderable = texturesRenderable && texture.loaded;
@@ -398,24 +397,25 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
   }
 }
 
-function getAttributesByLocation(
-  attributes: Record<string, Buffer>,
-  layout: ShaderLayout
-): Record<number, Buffer> {
-  const byLocation: Record<number, Buffer> = {};
-  for (const [name, buffer] of Object.entries(attributes)) {
-    const attribute = getAttributeLayout(layout, name);
-    if (attribute) {
-      byLocation[attribute.location] = buffer;
-    }
-  }
-  return byLocation;
-}
+// function getAttributesByLocation(
+//   attributes: Record<string, Buffer>,
+//   layout: ShaderLayout
+// ): Record<number, Buffer> {
+//   const byLocation: Record<number, Buffer> = {};
+//   for (const [name, buffer] of Object.entries(attributes)) {
+//     const attribute = getAttributeLayout(layout, name);
+//     if (attribute) {
+//       byLocation[attribute.location] = buffer;
+//     }
+//   }
+//   return byLocation;
+// }
 
 function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
   return layout.attributes.find((binding) => binding.name === name) || null;
 }
 
+/* TODO
 function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
   const binding = layout.bindings.find((binding) => binding.name === name);
   if (!binding) {
@@ -423,3 +423,4 @@ function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
   }
   return binding;
 }
+*/

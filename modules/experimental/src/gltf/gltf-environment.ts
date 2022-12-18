@@ -36,7 +36,7 @@ export class GLTFEnvironment {
     this.specularMipLevels = props.specularMipLevels || 10;
   }
 
-  destroy() {
+  destroy(): void {
     if (this._DiffuseEnvSampler) {
       this._DiffuseEnvSampler.delete();
       this._DiffuseEnvSampler = null;

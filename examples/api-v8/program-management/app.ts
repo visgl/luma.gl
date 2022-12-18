@@ -117,13 +117,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onFinalize() {
+  override onFinalize() {
     for (let i = 0; i < 4; ++i) {
       this.cubes[i].model.destroy();
     }
   }
 
-  onRender({device, tick}: AnimationProps) {
+  override onRender({device, tick}: AnimationProps) {
     if (tick % 240 === 0) {
       if (tick % 480 === 0) {
         this.programManager.removeDefaultModule(dirlight);

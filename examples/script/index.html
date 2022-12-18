@@ -134,7 +134,7 @@
           return INFO_HTML;
         }
 
-        onInitialize({device, _animationLoop}) {
+        override onInitialize({device, _animationLoop}) {
           this.attachTimeline(new Timeline());
           this.timeline.play();
 
@@ -165,7 +165,7 @@
           return {timelineChannels, modelMatrix, viewMatix, projMatrix};
         }
 
-        onRender(animationProps) {
+        override onRender(animationProps) {
           const {device, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
           const {framebuffer, _mousePosition} = animationProps;
           const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
@@ -202,7 +202,7 @@
           this.cube.draw();
         }
 
-        onFinalize({gl}) {
+        override onFinalize({gl}) {
           this.cube.delete();
         }
       }

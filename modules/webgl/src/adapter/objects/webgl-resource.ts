@@ -13,9 +13,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
 /**
  * Base class for WebGL object wrappers
  */
- export default abstract class WebGLResource<Props> extends Resource<Props> {
-  id: string;
-  userData: any;
+ export default abstract class WebGLResource<Props extends ResourceProps> extends Resource<Props> {
   readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;
@@ -34,12 +32,10 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     assertWebGLContext(gl);
 
     // extends 
-    // @ts-expect-error
-    const {id, userData = {}} = props || {};
+    const {id} = props || {};
     this.gl = gl;
     this.gl2 = gl as WebGL2RenderingContext;
     this.id = id || uid(this.constructor.name);
-    this.userData = userData;
 
     // Set the handle
     // If handle was provided, use it, otherwise create a new handle
@@ -48,7 +44,6 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     // this.glCount = glGetContextLossCount(this.gl);
 
     // Default VertexArray needs to be created with null handle, so compare against undefined
-    // @ts-expect-error
     this._handle = props?.handle;
     if (this._handle === undefined) {
       this._handle = this._createHandle();
@@ -57,7 +52,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     this.byteLength = 0;
   }
 
-  toString(): string {
+  override toString(): string {
     return `${this.constructor.name}(${this.id})`;
   }
 
@@ -74,11 +69,11 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
     return this._handle;
   }
 
-  destroy(): void {
+  override destroy(): void {
     this.delete();
   }
 
-  delete({deleteChildren = false} = {}) {
+  override delete({deleteChildren = false} = {}) {
     // Delete this object, and get refs to any children
     // @ts-expect-error
     const children = this._handle && this._deleteHandle(this._handle);

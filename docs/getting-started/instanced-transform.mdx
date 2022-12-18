@@ -198,7 +198,7 @@ const model = new Model(device, {
 Our `onRender` needs an update to perform the transform feedback and pass the transformed rotation buffer to the `Model`:
 
 ```typescript
-  onRender({device, aspect, model, transform, projectionMatrix}) {
+  override onRender({device, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     transform.run();
@@ -296,7 +296,7 @@ const fs = `\
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({gl}) {
+  override onInitialize({gl}) {
     setParameters(gl, {
       depthTest: true,
       depthFunc: gl.LEQUAL
@@ -385,7 +385,7 @@ const loop = new AnimationLoop({
     };
   },
 
-  onRender({device, aspect, model, transform, projectionMatrix}) {
+  override onRender({device, aspect, model, transform, projectionMatrix}) {
     projectionMatrix.perspective({fov: Math.PI / 3, aspect});
 
     transform.run();

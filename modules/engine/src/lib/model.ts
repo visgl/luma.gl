@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding, PrimitiveTopology} from '@luma.gl/api';
-import {RenderPipeline, Shader, cast} from '@luma.gl/api';
+import {RenderPipeline} from '@luma.gl/api';
 import type { ShaderModule } from '@luma.gl/shadertools';
 import type Geometry from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';

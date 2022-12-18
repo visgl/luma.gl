@@ -54,7 +54,7 @@ export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   id: null!,
   type: 'best-available',
   canvas: null,
-  container: null, 
+  container: null,
   webgl2: true, // Attempt to create a WebGL2 context
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   manageState: true,
@@ -70,7 +70,7 @@ export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
   // premultipliedAlpha: undefined,
   // preserveDrawingBuffer: undefined,
   // failIfMajorPerformanceCaveat: undefined
-  
+
   gl: null
 };
 
@@ -124,78 +124,77 @@ export type DeviceLimits = {
 };
 
 export type WebGPUDeviceFeature =
-  'depth-clip-control' |
-  'depth24unorm-stencil8' |
-  'depth32float-stencil8' |
-  'timestamp-query' |
-  'indirect-first-instance' |
+  | 'depth-clip-control'
+  | 'depth24unorm-stencil8'
+  | 'depth32float-stencil8'
+  | 'timestamp-query'
+  | 'indirect-first-instance'
+  | 'texture-compression-bc'
+  | 'texture-compression-etc2'
+  | 'texture-compression-astc';
 
-  'texture-compression-bc' |
-  'texture-compression-etc2' |
-  'texture-compression-astc'
-
-  // obsolete...
-  // 'depth-clamping' |
-  // 'depth24unorm-stencil8' |
-  // 'depth32float-stencil8' |
-  // 'pipeline-statistics-query' |
-  // 'timestamp-query' |
-  // 'texture-compression-bc'
-  ;
+// obsolete...
+// 'depth-clamping' |
+// 'depth24unorm-stencil8' |
+// 'depth32float-stencil8' |
+// 'pipeline-statistics-query' |
+// 'timestamp-query' |
+// 'texture-compression-bc'
 
 export type WebGLDeviceFeature =
-  'webgpu' |
-  'webgl2' |
-  'webgl' |
+  | 'webgpu'
+  | 'webgl2'
+  | 'webgl'
 
   // api support (unify with WebGPU timestamp-query?)
-  'timer-query-webgl' |
-  'uniform-buffers-webgl' |
-  'uniforms-webgl' |
+  | 'timer-query-webgl'
+  | 'uniform-buffers-webgl'
+  | 'uniforms-webgl'
 
   // texture filtering
-  'texture-filter-linear-float32-webgl' |
-  'texture-filter-linear-float16-webgl' |
-  'texture-filter-anisotropic-webgl' |
+  | 'texture-filter-linear-float32-webgl'
+  | 'texture-filter-linear-float16-webgl'
+  | 'texture-filter-anisotropic-webgl'
 
   // texture rendering
-  'texture-renderable-float32-webgl' |
-  'texture-renderable-float16-webgl' |
-  'texture-renderable-rgba32float-webgl' | // TODO - remove
+  | 'texture-renderable-float32-webgl'
+  | 'texture-renderable-float16-webgl'
+  | 'texture-renderable-rgba32float-webgl' // TODO - remove
 
   // texture blending
-  'texture-blend-float-webgl1' |
+  | 'texture-blend-float-webgl1'
 
   // texture format support
-  'texture-formats-norm16-webgl' |
-  'texture-formats-srgb-webgl1' |
-  'texture-formats-depth-webgl1' |
-  'texture-formats-float32-webgl1' |
-  'texture-formats-float16-webgl1' |
+  | 'texture-formats-norm16-webgl'
+  | 'texture-formats-srgb-webgl1'
+  | 'texture-formats-depth-webgl1'
+  | 'texture-formats-float32-webgl1'
+  | 'texture-formats-float16-webgl1'
 
   // api support
-  'vertex-array-object-webgl1' |
-  'instanced-rendering-webgl1' |
-  'multiple-render-targets-webgl1' |
-  'index-uint32-webgl1' |
-  'blend-minmax-webgl1' |
+  | 'vertex-array-object-webgl1'
+  | 'instanced-rendering-webgl1'
+  | 'multiple-render-targets-webgl1'
+  | 'index-uint32-webgl1'
+  | 'blend-minmax-webgl1'
 
   // glsl extensions
-  'glsl-frag-data' |
-  'glsl-frag-depth' |
-  'glsl-derivatives' |
-  'glsl-texture-lod'
-  ;
+  | 'glsl-frag-data'
+  | 'glsl-frag-depth'
+  | 'glsl-derivatives'
+  | 'glsl-texture-lod';
 
 type WebGLCompressedTextureFeatures =
-  'texture-compression-bc5-webgl' |
-  'texture-compression-etc1-webgl' |
-  'texture-compression-pvrtc-webgl' |
-  'texture-compression-atc-webgl'
-  ;
+  | 'texture-compression-bc5-webgl'
+  | 'texture-compression-etc1-webgl'
+  | 'texture-compression-pvrtc-webgl'
+  | 'texture-compression-atc-webgl';
 
 /** Valid feature strings */
-export type DeviceFeature = WebGPUDeviceFeature | WebGLDeviceFeature | WebGLCompressedTextureFeatures;
+export type DeviceFeature =
+  | WebGPUDeviceFeature
+  | WebGLDeviceFeature
+  | WebGLCompressedTextureFeatures;
 
 /**
  * WebGPU Device/WebGL context abstraction
@@ -237,7 +236,7 @@ export default abstract class Device {
   abstract get isLost(): boolean;
 
   /** Promise that resolves when context is lost */
-  abstract readonly lost: Promise<{reason: 'destroyed', message: string}>;
+  abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   /** default canvas context */
   abstract canvasContext: CanvasContext | null;
@@ -301,14 +300,13 @@ export default abstract class Device {
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
   /** Create a compute pipeline (aka program) */
-  // abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
-
+  abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 
   /** Create a RenderPass */
   abstract beginRenderPass(props: RenderPassProps): RenderPass;
 
   /** Create a ComputePass */
-  // abstract beginComputePass(props?: ComputePassProps): ComputePass;
+  abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
   abstract getDefaultRenderPass(): RenderPass;
 

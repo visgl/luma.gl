@@ -19,7 +19,7 @@ export default class WEBGLBuffer extends Buffer {
 
   webglUsage: number;
 
-  accessor: {};
+  // accessor: {};
 
   constructor(device: WebGLDevice, props: BufferProps = {}) {
     super(device, props);
@@ -101,7 +101,7 @@ export default class WEBGLBuffer extends Buffer {
     return this;
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.removeStats();
       this.trackDeallocatedMemory();
@@ -111,7 +111,7 @@ export default class WEBGLBuffer extends Buffer {
     }
   }
 
-  write(data: ArrayBufferView, byteOffset: number = 0): void {
+  override write(data: ArrayBufferView, byteOffset: number = 0): void {
     const srcOffset = 0;
     const byteLength = data.byteLength;
 
@@ -135,7 +135,7 @@ export default class WEBGLBuffer extends Buffer {
   }
 
   /** Read data from the buffer */
-  async readAsync(
+  override async readAsync(
     byteOffset: number = 0,
     byteLength?: number
   ): Promise<ArrayBuffer> {

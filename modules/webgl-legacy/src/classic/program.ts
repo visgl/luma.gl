@@ -1,4 +1,4 @@
-import type {Device, RenderPipelineProps, RenderPipelineParameters, RenderPipeline} from '@luma.gl/api';
+import type {Device, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {parseUniformName, getUniformSetter} from './uniforms';
@@ -13,8 +13,6 @@ import VertexArray from './vertex-array';
 import {isWebGL2, assertWebGL2Context} from '@luma.gl/webgl';
 import {withParameters, withDeviceParameters} from '@luma.gl/webgl';
 import {WebGLDevice, WEBGLBuffer, WEBGLRenderPipeline, WEBGLShader, WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
-
-const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
@@ -61,21 +59,21 @@ function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): Rende
 
 /** @deprecated Use device.createRenderPipeline */
 export default class Program extends WEBGLRenderPipeline {
-  get [Symbol.toStringTag](): string { return 'Program'; }
+ override get [Symbol.toStringTag](): string { return 'Program'; }
 
   gl: WebGLRenderingContext;
   gl2: WebGL2RenderingContext;
 
   configuration: ProgramConfiguration;
   // Experimental flag to avoid deleting Program object while it is cached
-  hash: string; // Used by ProgramManager
-  uniforms: Record<string, any>;
-  varyings: string[];
-  _textureUniforms: Record<string, any>;
+  // hash: string; // Used by ProgramManager
+  // uniforms: Record<string, any>;
+  // varyings: string[];
+  // _textureUniforms: Record<string, any>;
   _isCached: boolean = false;
-  _textureIndexCounter: number = 0;
-  _uniformCount: number = 0;
-  _uniformSetters: Record<string, Function>;
+  // _textureIndexCounter: number = 0;
+  // _uniformCount: number = 0;
+  // _uniformSetters: Record<string, Function>;
   private _parameters: RenderPipelineParameters;
   private vertexArray: VertexArray;
 
@@ -90,7 +88,7 @@ export default class Program extends WEBGLRenderPipeline {
     this._setId(props.id);
   }
 
-  destroy(options = {}) {
+  override destroy(options = {}) {
     // This object is cached, do not delete
     if (!this._isCached) {
       super.destroy();
@@ -137,7 +135,7 @@ export default class Program extends WEBGLRenderPipeline {
   }
 
   /** @note completely overrides base class */
-  setAttributes(attributes: Record<string, WEBGLBuffer>): void {
+  override setAttributes(attributes: Record<string, WEBGLBuffer>): void {
     this.vertexArray.setAttributes(attributes);
   }
 
@@ -146,7 +144,7 @@ export default class Program extends WEBGLRenderPipeline {
    * This function unifies those ways into a single call using common parameters with sane defaults
    * @note completely overrides base class
    */
-  draw(options: ProgramDrawOptions): boolean {
+  override draw(options: ProgramDrawOptions): boolean {
     const {
       logPriority, // Probe log priority, enables Model to do more integrated logging
 
@@ -242,7 +240,7 @@ export default class Program extends WEBGLRenderPipeline {
     return true;
   }
 
-  setUniforms(uniforms = {}) {
+  override setUniforms(uniforms = {}) {
     if (log.priority >= 2) {
       checkUniformValues(uniforms, this.id, this._uniformSetters);
     }
@@ -304,7 +302,7 @@ export default class Program extends WEBGLRenderPipeline {
   // Checks if all texture-values uniforms are renderable (i.e. loaded)
   // Update a texture if needed (e.g. from video)
   // Note: This is currently done before every draw call
-  _areTexturesRenderable() {
+  override _areTexturesRenderable() {
     let texturesRenderable = true;
 
     for (const uniformName in this._textureUniforms) {

@@ -2,7 +2,6 @@ import {Device, getRandom} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Timeline} from '@luma.gl/engine';
 import {ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/webgl-legacy';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
-import {readPixelsToArray} from '@luma.gl/webgl-legacy';
 import {clear} from '@luma.gl/webgl-legacy';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -165,7 +164,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube = new InstancedCube(device);
   }
 
-  onRender(animationProps: AnimationProps) {
+  override onRender(animationProps: AnimationProps) {
     const {device, aspect, tick} = animationProps;
     // @ts-expect-error
     const {gl, framebuffer, _mousePosition} = animationProps;
@@ -201,11 +200,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.draw();
   }
 
-  onFinalize(animationProps: AnimationProps): void {
+  override onFinalize(animationProps: AnimationProps): void {
     this.cube.delete();
   }
 }
 
+/*
 function pickInstance(gl, pickX, pickY, model, framebuffer) {
   if (framebuffer) {
     framebuffer.clear({color: true, depth: true});
@@ -234,6 +234,7 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
     });
   }
 }
+*/
 
 // @ts-ignore
 if (typeof window !== 'undefined' && !window.website) {

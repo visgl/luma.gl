@@ -1,4 +1,4 @@
-import type {Binding, RenderPass, Shader} from '@luma.gl/api';
+import type {Binding, RenderPass} from '@luma.gl/api';
 import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -56,7 +56,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     return renderPipeline;
   }
 
-  destroy() {
+  override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
   }
 

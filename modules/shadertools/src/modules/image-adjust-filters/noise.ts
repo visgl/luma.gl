@@ -20,9 +20,6 @@ vec4 noise_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-const uniforms = {
-};
-
 /**
  * @filter         Noise
  * @description    Adds black and white noise to the image.

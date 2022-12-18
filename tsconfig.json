@@ -3,7 +3,21 @@
     "target": "es2020",
     "jsx": "react",
     "strict": false,
-    "noImplicitAny": false,
+    // "noImplicitAny": false, // covered by strict
+    // "exactOptionalPropertyTypes": true, - requires strictNullChecks
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    // "noImplicitThis": true, // covered by strict
+    // "noPropertyAccessFromIndexSignature": true,
+    // "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    // "strictBindCallApply": false // covered by strict
+    // "strictFunctionTypes": false // covered by strict
+    // "strictNullChecks" // covered by strict
+    // "strictPropertyInitialization" // covered by strict
+    // "useUnknownInCatchVariables"  // covered by strict
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",

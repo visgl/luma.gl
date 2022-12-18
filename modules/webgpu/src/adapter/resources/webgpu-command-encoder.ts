@@ -1,4 +1,4 @@
-import {CommandEncoder, CommandEncoderProps, RenderPipeline, Buffer, Texture, cast} from '@luma.gl/api';
+import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast} from '@luma.gl/api';
 import WebGPUDevice from '../webgpu-device';
 import WEBGPUBuffer from './webgpu-buffer';
 import WebGPUTexture from './webgpu-texture';
@@ -16,7 +16,7 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
     this.handle.label = this.props.id;
   }
 
-  destroy() {}
+  override destroy(): void {}
 
   finish(options?: {id?: string}): GPUCommandBuffer {
     return this.finish(options);
@@ -88,15 +88,15 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
     copySize: GPUExtent3D
   }): void {}
 
-  pushDebugGroup(groupLabel: string): void {
+  override pushDebugGroup(groupLabel: string): void {
     this.handle.pushDebugGroup(groupLabel);
   }
 
-  popDebugGroup(): void {
+  override popDebugGroup(): void {
     this.handle.popDebugGroup();
   }
 
-  insertDebugMarker(markerLabel: string): void {
+  override insertDebugMarker(markerLabel: string): void {
     this.handle.insertDebugMarker(markerLabel);
   }
 

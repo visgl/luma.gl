@@ -28,7 +28,7 @@ import WebGLDevice from '../webgl-device';
     this._compile(this.source);
   }
 
-  destroy(): void {
+  override destroy(): void {
     if (this.handle) {
       this.removeStats();
       this.device.gl.deleteShader(this.handle);

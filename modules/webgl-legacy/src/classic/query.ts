@@ -20,7 +20,7 @@ export type QueryProps = ResourceProps & {
  * Asynchronous queries for different kinds of information
  */
 export default class Query extends WebGLResource<QueryProps> {
-  get [Symbol.toStringTag](): string { return 'Query'; }
+ override get [Symbol.toStringTag](): string { return 'Query'; }
 
   // Returns true if Query is supported by the WebGL implementation
   // Can also check whether timestamp queries are available.
@@ -162,11 +162,11 @@ export default class Query extends WebGLResource<QueryProps> {
     return this._pollingPromise;
   }
 
-  _createHandle() {
+  override _createHandle() {
     return Query.isSupported(this.gl) ? this.gl2.createQuery() : null;
   }
 
-  _deleteHandle() {
+  override _deleteHandle() {
     this.gl2.deleteQuery(this.handle);
   }
 }

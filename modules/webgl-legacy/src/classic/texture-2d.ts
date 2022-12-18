@@ -1,5 +1,4 @@
-import {Device, loadImage, TextureData} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {Device, TextureData} from '@luma.gl/api';
 import Texture, {TextureProps} from './texture';
 
 export type Texture2DProps = TextureProps & {
@@ -15,7 +14,7 @@ export default class Texture2D extends Texture {
   //   return 'Texture2D';
   // }
 
-  static isSupported(device: Device | WebGLRenderingContext, opts?): boolean { // : TextureSupportOptions
+  static override isSupported(device: Device | WebGLRenderingContext, opts?): boolean { // : TextureSupportOptions
     return Texture.isSupported(device, opts);
   }
 

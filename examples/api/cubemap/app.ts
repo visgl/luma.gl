@@ -145,12 +145,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize(): void {
+  override onFinalize(): void {
     this.prism.destroy();
     this.cube.destroy();  
   }
 
-  onRender({device, aspect, tick}: AnimationProps): void {
+  override onRender({device, aspect, tick}: AnimationProps): void {
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({fov: radians(75), aspect});

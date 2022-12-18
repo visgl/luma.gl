@@ -82,7 +82,7 @@ These shader modules inject code into the shader hook that will modify the x-coo
 The `onInitialize` method of our `AnimationLoop` will be somewhat different from the previous example. To create a shader hook, we need access to a `ProgramManager` instance:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
@@ -93,7 +93,7 @@ The `onInitialize` method of our `AnimationLoop` will be somewhat different from
 The shader hook definition is the function signature with a prefix indicating whether it is intended for the vertex shader (`vs`) or fragment shader (`fs`). Shader hooks are always `void` funtions so they must return values to the caller via `out` or `inout` argurments. The rest of `onInitialize` is similar to what we've seen before with the exception of using the new shader modules and the `ProgramManager` to create our `Model`s:
 
 ```typescript
-  onInitialize({gl}) {
+  override onInitialize({gl}) {
     const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
@@ -177,7 +177,7 @@ const offsetRightModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const programManager = new ProgramManager(device);
     programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
@@ -214,7 +214,7 @@ const loop = new AnimationLoop({
     return {model1, model2};
   },
 
-  onRender({device, model}) {
+  override onRender({device, model}) {
     clear(gl, {color: [0, 0, 0, 1]});
     model1.draw();
     model2.draw();

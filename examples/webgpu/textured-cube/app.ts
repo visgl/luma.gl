@@ -1,5 +1,7 @@
-import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
-import {Model, CubeGeometry, AnimationLoopTemplate, makeAnimationLoop, AnimationProps} from '@luma.gl/engine';
+import {Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
+import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
+// import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
+// import {Model, CubeGeometry, AnimationLoopTemplate, makeAnimationLoop, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -156,12 +158,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
 
-  onRender({device}: AnimationProps) {
+  override onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();

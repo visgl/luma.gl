@@ -1,5 +1,5 @@
 // WEBGPU Buffer implementation
-import {Buffer, BufferProps, assert} from '@luma.gl/api';
+import {Buffer, BufferProps} from '@luma.gl/api';
 import type WebGPUDevice from '../webgpu-device';
 
 function getByteLength(props: BufferProps): number {
@@ -36,12 +36,12 @@ export default class WebGPUBuffer extends Buffer {
     }
   }
 
-  destroy(): void {
+  override destroy(): void {
     this.handle.destroy();
   }
 
   // WebGPU provides multiple ways to write a buffer...
-  write(data: ArrayBufferView, byteOffset = 0) {
+  override write(data: ArrayBufferView, byteOffset = 0) {
     this.device.handle.queue.writeBuffer(
       this.handle,
       byteOffset,
@@ -51,7 +51,7 @@ export default class WebGPUBuffer extends Buffer {
     );
   }
 
-  async readAsync(byteOffset: number = 0, byteLength: number = this.byteLength): Promise<ArrayBuffer> {
+  override async readAsync(byteOffset: number = 0, byteLength: number = this.byteLength): Promise<ArrayBuffer> {
     // We need MAP_READ flag, but only COPY_DST buffers can have MAP_READ flag, so we need to create a temp buffer
     const tempBuffer = new WebGPUBuffer(this.device, {usage: Buffer.MAP_READ | Buffer.COPY_DST, byteLength});
 

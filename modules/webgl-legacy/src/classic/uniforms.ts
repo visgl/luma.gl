@@ -1,10 +1,10 @@
 import {log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
-import {Matrix4} from '@math.gl/core';
-import Framebuffer from './framebuffer';
+// import {Matrix4} from '@math.gl/core';
+// import Framebuffer from './framebuffer';
 import Renderbuffer from './renderbuffer';
-import Texture from './texture';
+// import Texture from './texture';
 
 type NumberUniformInfo = {
   type: 'number'
@@ -34,19 +34,19 @@ type UniformInfo = NumberUniformInfo |
   ObjectUniformInfo
 
 // https://luma.gl/docs/developer-guide/shader-modules#getuniforms
-type UniformsOptions = {
-  [uniformName: string]: UniformInfo
-}
+// type UniformsOptions = {
+//   [uniformName: string]: UniformInfo
+// }
 
-type Uniform = UniformInfo |
-  Buffer | (() => Buffer) | Framebuffer |
-  Texture |
-  Matrix4 | // TODO: which other math.gl classes?
-  number | [number, number] | [number, number, number] | [number, number, number, number]
+// type Uniform = UniformInfo |
+//   Buffer | (() => Buffer) | Framebuffer |
+//   Texture |
+//   Matrix4 | // TODO: which other math.gl classes?
+//   number | [number, number] | [number, number, number] | [number, number, number, number]
 
-type Uniforms = {
-  [uniformName: string]: Uniform
-}
+// type Uniforms = {
+//   [uniformName: string]: Uniform
+// }
 
 const UNIFORM_SETTERS = {
   // WEBGL1

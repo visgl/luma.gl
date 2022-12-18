@@ -20,7 +20,7 @@ export default class WebGPUComputePass extends ComputePass {
   }
 
   /** @note no WebGPU destroy method, just gc */
-  destroy() {}
+  override destroy(): void {}
 
   endPass(): void {
     this.handle.endPass();

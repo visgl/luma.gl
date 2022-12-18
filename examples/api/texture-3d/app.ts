@@ -151,11 +151,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.cloud.destroy();
   }
 
-  onRender({device, tick, aspect}: AnimationProps) {
+  override onRender({device, tick, aspect}: AnimationProps) {
     this.mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
 
     // Draw the cubes

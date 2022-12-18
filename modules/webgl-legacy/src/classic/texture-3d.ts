@@ -9,7 +9,7 @@ import Texture, {TextureProps} from './texture';
  * @deprecated Use device.createTexture({dimension: '3d'})
  */
 export default class Texture3D extends Texture {
-  static isSupported(device: Device | WebGLRenderingContext): boolean {
+  static override isSupported(device: Device | WebGLRenderingContext): boolean {
     try {
       const webglDevice = WebGLDevice.attach(device);
       return webglDevice.isWebGL2;

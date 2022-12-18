@@ -32,17 +32,17 @@ import {
 import type {
   BufferProps,
   ShaderProps,
-  Sampler,
+  // Sampler,
   SamplerProps,
   TextureProps,
   ExternalTexture,
   ExternalTextureProps,
   FramebufferProps,
-  RenderPipeline,
+  // RenderPipeline,
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
-  RenderPass,
+  // RenderPass,
   RenderPassProps,
   ComputePass,
   ComputePassProps
@@ -58,8 +58,6 @@ import WEBGLRenderPass from './resources/webgl-render-pass';
 import WEBGLRenderPipeline from './resources/webgl-render-pipeline';
 
 const LOG_LEVEL = 1;
-
-let counter = 0;
 
 /** WebGPU style Device API for a WebGL context */
 export default class WebGLDevice extends Device {
@@ -238,7 +236,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * Destroys the context
    * @note Has no effect for browser contexts, there is no browser API for destroying contexts
    */
-  destroy() {
+  destroy(): void {
     const ext = this.gl.getExtension('STACKGL_destroy_context');
     if (ext) {
       ext.destroy();

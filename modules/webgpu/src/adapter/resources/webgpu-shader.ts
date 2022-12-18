@@ -36,7 +36,7 @@ export default class WebGPUShader extends Shader {
     }
   }
 
-  destroy() {
+  override destroy(): void {
     // this.handle.destroy();
   }
 

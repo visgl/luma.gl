@@ -21,7 +21,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 
 /** @deprecated Use RenderPipeline (public) and WEBGLVertexArrayObject (internal) */
 export default class VertexArrayObject extends WEBGLVertexArrayObject {
-  get [Symbol.toStringTag](): string {
+ override get [Symbol.toStringTag](): string {
     return 'VertexArrayObject';
   }
 
@@ -91,19 +91,19 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
 
   private buffer: Buffer | null = null;
   private bufferValue = null;
-  private isDefaultArray: boolean = false;
+  // private isDefaultArray: boolean;
 
   // Create a VertexArray
   constructor(gl: WebGLRenderingContext, props?: VertexArrayObjectProps) {
     // Use program's id if program but no id is supplied
     super(WebGLDevice.attach(gl), {...props, id: props?.id || props?.program?.id});
 
-    this.isDefaultArray = props?.isDefaultArray || false;
+    // this.isDefaultArray = props?.isDefaultArray || false;
 
     Object.seal(this);
   }
 
-  delete(): this {
+  override delete(): this {
     super.delete();
     if (this.buffer) {
       this.buffer.delete();
@@ -152,7 +152,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
   // DEPRECATED
 
   /** @deprecated this function has no effect */
-  initialize(props?: VertexArrayObjectProps): this {
+  override initialize(props?: VertexArrayObjectProps): this {
     return this.setProps(props);
   }
 
@@ -248,7 +248,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
   // RESOURCE IMPLEMENTATION
 
   // Generic getter for information about a vertex attribute at a given position
-  _getParameter(pname: number, options: {location: number}): any {
+  override _getParameter(pname: number, options: {location: number}): any {
     assert(Number.isFinite(options.location));
     return this.bind(() => {
       switch (pname) {

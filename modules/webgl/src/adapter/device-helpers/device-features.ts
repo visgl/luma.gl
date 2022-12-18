@@ -3,7 +3,6 @@
 // available in an WebGL1 or WebGL2 environment.
 
 import {DeviceFeature} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {isOldIE} from './is-old-ie';
 import {getTextureFeatures, _checkFloat32ColorAttachment} from '../converters/texture-formats';

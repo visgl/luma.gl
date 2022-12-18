@@ -9,7 +9,7 @@ export type TransformFeedbackProps = ResourceProps & {
 };
 
 export default class TransformFeedback extends WebGLResource<TransformFeedbackProps> {
-  get [Symbol.toStringTag](): string { return 'TransformFeedback'; }
+ override get [Symbol.toStringTag](): string { return 'TransformFeedback'; }
 
   buffers = {};
   unused = {};
@@ -32,7 +32,7 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
     Object.seal(this);
   }
 
-  initialize(props?: TransformFeedbackProps): this {
+  override initialize(props?: TransformFeedbackProps): this {
     this.buffers = {};
     this.unused = {};
     this.configuration = null;
@@ -176,17 +176,17 @@ export default class TransformFeedback extends WebGLResource<TransformFeedbackPr
 
   // RESOURCE METHODS
 
-  _createHandle() {
+  override _createHandle() {
     // @ts-expect-error
     return this.gl.createTransformFeedback();
   }
 
-  _deleteHandle() {
+  override _deleteHandle() {
     // @ts-expect-error
     this.gl.deleteTransformFeedback(this.handle);
   }
 
-  _bindHandle(handle) {
+  override _bindHandle(handle) {
     // @ts-expect-error
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
   }

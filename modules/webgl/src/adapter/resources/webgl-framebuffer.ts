@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type {FramebufferProps, DepthStencilTextureFormat, ColorTextureFormat} from '@luma.gl/api';
+import type {FramebufferProps, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import WebGLDevice from '../webgl-device';
@@ -62,7 +62,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
     }
   }
 
-  destroy() {
+  override destroy(): void {
     if (this.handle !== null) {
       for (const resource of this._ownResources) {
         resource.destroy();
@@ -202,6 +202,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
       this._attachTexture(attachmentPoint, attachment, 0, 0);
       return attachment;
     }
+    throw new Error('attach');
   }
 
   protected _attachRenderbuffer(attachment: GL, renderbuffer: Renderbuffer): void {

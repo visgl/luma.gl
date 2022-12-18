@@ -2,10 +2,6 @@ import {Matrix4} from '@math.gl/core';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-type ProjectOptions = {
-
-}
-
 const DEFAULT_MODULE_OPTIONS = {
   modelMatrix: IDENTITY_MATRIX,
   viewMatrix: IDENTITY_MATRIX,

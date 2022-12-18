@@ -36,7 +36,7 @@ class WebGPUQuery extends Resource<WebGPUQueryProps> implements Query {
     });
   }
 
-  destroy() {
+  override destroy(): void {
     this.handle.destroy();
   }
 }

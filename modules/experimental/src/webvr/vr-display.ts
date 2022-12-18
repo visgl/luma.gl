@@ -27,12 +27,12 @@ export class VRDisplay extends Display {
     }
   }
 
-  delete() {
+  override delete() {
     super.delete();
     this._removeVRButton();
   }
 
-  getViews(options) {
+  override getViews(options) {
     if (this._vrSupported) {
       this._addVRButton();
     }
@@ -79,7 +79,7 @@ export class VRDisplay extends Display {
     return super.getViews(options);
   }
 
-  submitFrame() {
+  override submitFrame() {
     if (this.vrPresenting && this.vrFrame) {
       this.vrDisplay.submitFrame();
       return true;
@@ -88,7 +88,7 @@ export class VRDisplay extends Display {
     return false;
   }
 
-  requestAnimationFrame(renderFrame) {
+  override requestAnimationFrame(renderFrame) {
     if (this.vrPresenting) {
       this.vrDisplay.requestAnimationFrame(() => {
         this.vrFrame = true;

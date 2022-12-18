@@ -35,7 +35,7 @@ export default class ProgramManager {
 
   private readonly _programCache: Record<string, Program> = {};
   private readonly _getUniforms: Record<string, Function> = {};
-  private readonly _registeredShaderModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
+  // private readonly _registeredShaderModules = {}; // TODO: Remove? This isn't used anywhere in luma.gl
   private readonly _hookFunctions: string[] = [];
   private _defaultModules: ShaderModule[] = [];
 

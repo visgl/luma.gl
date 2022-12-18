@@ -16,13 +16,13 @@ export default class PerformanceTestRunner extends TestRunner {
     });
   }
 
-  initTestCase(testCase: TestRunnerTestCase): void {
+  override initTestCase(testCase: TestRunnerTestCase): void {
     super.initTestCase(testCase);
     this._stats = new Stats({id: testCase.name});
     this._fps = this._stats.get('fps');
   }
 
-  shouldRender(animationProps: Record<string, any>): boolean {
+  override shouldRender(animationProps: Record<string, any>): boolean {
     this._fps?.timeEnd();
     this._fps?.timeStart();
 
@@ -34,7 +34,7 @@ export default class PerformanceTestRunner extends TestRunner {
     return true;
   }
 
-  assert(testCase: TestRunnerTestCase): void {
+  override assert(testCase: TestRunnerTestCase): void {
     // @ts-expect-error
     const targetFPS = testCase.targetFPS || this.testOptions.targetFPS;
     const count = this._fps?.count;

@@ -143,13 +143,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.cubeModel.destroy();
     this.uniformBuffer1.destroy();
     this.uniformBuffer2.destroy();
   }
 
-  onRender({device}: AnimationProps): void {
+  override onRender({device}: AnimationProps): void {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();

@@ -68,7 +68,7 @@ const fs = `\
 Our `onInitialize` method needs a few significant updates:
 
 ```typescript
-  onInitialize({device}) {
+  override onInitialize({device}) {
     setParameters(device, {
       depthTest: true,
       depthFunc: gl.LEQUAL
@@ -122,7 +122,7 @@ We're splitting the model matrix out on its own so we can use it in our shaders 
 Our `onRender` doesn't change much except to set up the model matrix separately from the MVP matrix and pass it as a uniform:
 
 ```typescript
-  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  override onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     modelMatrix
       .identity()
       .rotateX(tick * 0.01)
@@ -186,7 +186,7 @@ const fs = `\
 `;
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     setParameters(device, {
       depthTest: true,
       depthFunc: gl.LEQUAL
@@ -234,7 +234,7 @@ const loop = new AnimationLoop({
     };
   },
 
-  onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
+  override onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     modelMatrix
       .identity()
       .rotateX(tick * 0.01)

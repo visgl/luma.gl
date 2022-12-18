@@ -24,7 +24,7 @@ const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
  * @note resize() destroys existing textures (if size has changed).
  */
  export default abstract class Framebuffer extends Resource<FramebufferProps> {
-  get [Symbol.toStringTag](): string { return 'Framebuffer'; }
+ override get [Symbol.toStringTag](): string { return 'Framebuffer'; }
 
   /** Width of all attachments in this framebuffer */
   width: number;

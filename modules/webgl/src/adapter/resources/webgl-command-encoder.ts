@@ -19,7 +19,7 @@ export default class WEBGLCommandEncoder extends CommandEncoder {
     this.device = device;
   }
 
-  destroy() {}
+  override destroy(): void {}
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
@@ -41,10 +41,10 @@ export default class WEBGLCommandEncoder extends CommandEncoder {
     this.commandBuffer.commands.push({name: 'copy-texture-to-texture', options});
   }
 
-  pushDebugGroup(groupLabel: string): void {}
-  popDebugGroup() {}
+  override pushDebugGroup(groupLabel: string): void {}
+  override popDebugGroup() {}
 
-  insertDebugMarker(markerLabel: string): void {}
+  override insertDebugMarker(markerLabel: string): void {}
 
   // writeTimestamp(querySet: Query, queryIndex: number): void {}
 

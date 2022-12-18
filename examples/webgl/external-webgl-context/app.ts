@@ -12,14 +12,14 @@ export default class AppAnimationLoop extends AnimationLoop {
   resources;
 
   // Supply our own context
-  onCreateContext(props: GLContextOptions): WebGLRenderingContext {
+  override onCreateContext(props: GLContextOptions): WebGLRenderingContext {
     const canvas = props.canvas as HTMLCanvasElement;
     const gl = canvas.getContext('webgl');
     return instrumentGLContext(gl);
   }
 
   //
-  onInitialize({gl}: AnimationProps) {
+  override onInitialize({gl}: AnimationProps) {
     gl.clearColor(0, 0, 0, 1);
 
     const positionBuffer = new Buffer(gl, new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
@@ -68,7 +68,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     this.resources = resources;
   }
 
-  onRender({gl}: AnimationProps) {
+  override onRender({gl}: AnimationProps) {
     clear(gl, {color: [0, 0, 0, 1]});
     this.resources.model.draw();
   }

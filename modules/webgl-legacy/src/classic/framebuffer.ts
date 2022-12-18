@@ -1,4 +1,4 @@
-import type {FramebufferProps, ColorAttachment} from '@luma.gl/api';
+import type {FramebufferProps} from '@luma.gl/api';
 import {Device, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getWebGL2Context, assertWebGL2Context, WEBGLTexture} from '@luma.gl/webgl';
@@ -75,8 +75,6 @@ function getDefaultProps(props: ClassicFramebufferProps): FramebufferProps {
 
 /** @deprecated Use device.createFramebuffer() */
 export default class ClassicFramebuffer extends WEBGLFramebuffer {
-  width: number | null = null;
-  height: number | null = null;
   attachments: Attachments = {};
   readBuffer = GL.COLOR_ATTACHMENT0;
   drawBuffers = [GL.COLOR_ATTACHMENT0];
@@ -144,6 +142,9 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   constructor(device: Device | WebGLRenderingContext, props: ClassicFramebufferProps = {}) {
     super(WebGLDevice.attach(device), getDefaultProps(props));
+    this.width = null;
+    this.height = null;
+  
     this.initialize(props);
     Object.seal(this);
   }
@@ -153,7 +154,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
     // return this.attachments[GL.COLOR_ATTACHMENT0] || null;
   }
 
-  get texture() {
+  override get texture() {
     return this.colorAttachments[0] || null;
     // return this.attachments[GL.COLOR_ATTACHMENT0] || null;
   }

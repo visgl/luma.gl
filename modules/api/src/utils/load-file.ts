@@ -1,4 +1,4 @@
-import {assert} from '../utils/assert';
+// luma.gl, MIT license
 
 let pathPrefix = '';
 
@@ -12,8 +12,11 @@ export function setPathPrefix(prefix: string) {
 /**
  * Reads raw file data. Respects setPathPrefix.
  */
-export async function loadFile(url: string, options?: {dataType?: 'text' | 'arrayBuffer'} & RequestInit): Promise<any> {
-    url = url.startsWith('http') ? url : pathPrefix + url;
+export async function loadFile(
+  url: string,
+  options?: {dataType?: 'text' | 'arrayBuffer'} & RequestInit
+): Promise<any> {
+  url = url.startsWith('http') ? url : pathPrefix + url;
   const dataType = options?.dataType || 'text';
   const response = await fetch(url, options);
   return await response[dataType]();
@@ -24,7 +27,10 @@ export async function loadFile(url: string, options?: {dataType?: 'text' | 'arra
  * image.crossOrigin can be set via opts.crossOrigin, default to 'anonymous'
  * @returns a promise tracking the load
  */
-export async function loadImageBitmap(url: string, opts?: {crossOrigin?: string}): Promise<ImageBitmap> {
+export async function loadImageBitmap(
+  url: string,
+  opts?: {crossOrigin?: string}
+): Promise<ImageBitmap> {
   const image = new Image();
   image.crossOrigin = opts?.crossOrigin || 'anonymous';
   image.src = url.startsWith('http') ? url : pathPrefix + url;
@@ -38,7 +44,10 @@ export async function loadImageBitmap(url: string, opts?: {crossOrigin?: string}
  * @returns a promise tracking the load
  * @deprecated Use `loadImageBitmap()` unless you are supporting old versions of Safari.
  */
-export async function loadImage(url: string, opts?: {crossOrigin?: string}): Promise<HTMLImageElement> {
+export async function loadImage(
+  url: string,
+  opts?: {crossOrigin?: string}
+): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     try {
       const image = new Image();
@@ -58,14 +67,19 @@ export async function loadImage(url: string, opts?: {crossOrigin?: string}): Pro
  * @param scriptUrl defines the url of the script to laod
  * @param scriptId defines the id of the script element
  */
- export function loadScript(scriptUrl: string, scriptId?: string): Promise<Event> {
+export async function loadScript(scriptUrl: string, scriptId?: string): Promise<Event> {
   const head = document.getElementsByTagName('head')[0];
+  if (!head) {
+    throw new Error('loadScript');
+  }
+
   const script = document.createElement('script');
   script.setAttribute('type', 'text/javascript');
   script.setAttribute('src', scriptUrl);
   if (scriptId) {
     script.id = scriptId;
   }
+
   return new Promise((resolve, reject) => {
     script.onload = resolve;
     script.onerror = (error) => reject(new Error(`Unable to load script '${scriptUrl}': ${error}`));

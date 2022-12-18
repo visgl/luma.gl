@@ -1,4 +1,4 @@
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl-legacy';
 import {Matrix4} from '@math.gl/core';
 
@@ -60,7 +60,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  onRender({device, aspect, tick}: AnimationProps) {
+  override onRender({device, aspect, tick}: AnimationProps) {
     this.mvpMatrix
       .perspective({fov: Math.PI / 3, aspect})
       .multiplyRight(this.viewMatrix)
@@ -72,7 +72,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model.draw();
   }
 
-  onFinalize() {
+  override onFinalize() {
     this.model.destroy();
   }
 }

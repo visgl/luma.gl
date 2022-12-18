@@ -1,4 +1,4 @@
-import type {TextureFormat, DeviceFeature, Device} from '@luma.gl/api';
+import type {TextureFormat, DeviceFeature} from '@luma.gl/api';
 import {decodeTextureFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
@@ -29,7 +29,7 @@ const EXT_SRGB = 'EXT_sRGB'; // https://developer.mozilla.org/en-US/docs/Web/API
 const EXT_TEXTURE_NORM16 = 'EXT_texture_norm16';
 const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_RENDER_WEBGL2 = 'EXT_color_buffer_float';
-const EXT_HALF_FLOAT_WEBGL1 = 'WEBGL_color_buffer_half_float';
+// const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 // const DEPTH = 'WEBGL_depth_texture';
 
 const checkExtension = (gl: WebGLRenderingContext, extension: string): boolean =>
@@ -380,22 +380,22 @@ export function getTextureFormatSupport(
   if (!info) {
     return {supported: false};
   }
-  let decoded;
-  try {
-    decoded = decodeTextureFormat(format);
-  } catch {}
+  // let decoded;
+  // try {
+  //   decoded = decodeTextureFormat(format);
+  // } catch {}
 
   // Support Check that we have a GL constant
   let supported = isWebGL2(gl) ? info.gl === undefined : info.gl1 === undefined;
   supported = supported && checkTextureFeatures(gl, [info.f]);
 
   // Filtering
-  const filterable = info.filter
-    ? checkTextureFeatures(gl, [info.filter])
-    : decoded && !decoded.signed;
-  const renderable = info.filter
-    ? checkTextureFeatures(gl, [info.render])
-    : decoded && !decoded.signed;
+  // const filterable = info.filter
+  //   ? checkTextureFeatures(gl, [info.filter])
+  //   : decoded && !decoded.signed;
+  // const renderable = info.filter
+  //   ? checkTextureFeatures(gl, [info.render])
+  //   : decoded && !decoded.signed;
 
   return {
     supported,

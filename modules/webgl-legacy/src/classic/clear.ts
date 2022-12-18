@@ -1,5 +1,5 @@
 import {Device, Framebuffer, assert} from '@luma.gl/api';
-import {WebGLDevice, withParameters, assertWebGL2Context} from '@luma.gl/webgl';
+import {WebGLDevice, withParameters} from '@luma.gl/webgl';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;

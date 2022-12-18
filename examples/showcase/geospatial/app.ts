@@ -103,7 +103,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
   map: mapboxgl.Map;
 
-  onInitialize(animationProps: AnimationProps) {
+  override onInitialize(animationProps: AnimationProps) {
     let bearing = -10;
     let vb = 0.1;
     let pitch = 40;
@@ -149,7 +149,7 @@ export default class AppAnimationLoop extends AnimationLoop {
     });
   }
 
-  delete() {
+  override delete() {
     this.map.remove();
     this._removeContainer();
   }

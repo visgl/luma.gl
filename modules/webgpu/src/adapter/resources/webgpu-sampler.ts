@@ -26,7 +26,7 @@ export default class WebGPUSampler extends Sampler {
     this.handle.label = this.props.id;
   }
 
-  destroy(): void {
+  override destroy(): void {
     // this.handle.destroy();
   }
 }

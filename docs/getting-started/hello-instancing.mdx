@@ -143,7 +143,7 @@ const colorShaderModule = {
 };
 
 const loop = new AnimationLoop({
-  onInitialize({device}) {
+  override onInitialize({device}) {
     const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
     const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
     const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
@@ -178,7 +178,7 @@ const loop = new AnimationLoop({
     return {model};
   },
 
-  onRender({device, model}) {
+  override onRender({device, model}) {
     clear(device, {color: [0, 0, 0, 1]});
     model.draw();
   }
