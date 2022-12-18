@@ -26,6 +26,9 @@ const DEFAULT_TEST_CASE: TestRunnerTestCase = {
 
 /** Options for a TestRunner */
 export type TestRunnerProps = {
+  width?: number;
+  height?: number;
+  
   // test lifecycle callback
   onTestStart?: any;
   onTestPass?: any;
