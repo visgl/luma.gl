@@ -52,7 +52,7 @@ export default class TestRunner {
   device = webglDevice;
   props: Record<string, any>;
   isRunning: boolean = false;
-  readonly testOptions: Required<TestRunnerOptions> = {...DEFAULT_TEST_OPTIONS};
+  readonly testOptions: Required<TestRunnerProps> = {...DEFAULT_TEST_PROPS};
   readonly _animationProps?: AnimationProps;
   private _animationLoop: AnimationLoop | null;
   private _testCases: TestRunnerTestCase[] = [];
@@ -88,10 +88,11 @@ export default class TestRunner {
   async run(options: object = {}): Promise<void>  {
     this.testOptions = {...this.testOptions, ...options};
 
-    return new Promise<void>(resolve => {
-      this._animationLoop = new AnimationLoop(
-        // @ts-expect-error TODO
-        Object.assign({}, this.props, {
+    return await new Promise<void>((resolve, reject) => {
+      try {
+        this._animationLoop = new AnimationLoop({
+          // @ts-expect-error TODO
+          ...this.props,
           device: this.device,
           onRender: this._onRender.bind(this),
           onFinalize: () => {
@@ -99,15 +100,16 @@ export default class TestRunner {
             resolve();
           }
         });
-        this._animationLoop.start(this.props);
+          this._animationLoop.start(this.props);
 
-        this.isRunning = true;
-        this.isDiffing = false;
-        this._currentTestCase = null;
+          this.isRunning = true;
+          this.isDiffing = false;
+          this._currentTestCase = null;
+        } catch (error) {
+          this._fail({error: error.message});
+          reject(error);
+        }
       });
-    } catch (error) {
-      this._fail({error: error.message});
-    }
   }
 
   /* Lifecycle methods for subclassing */

@@ -9,10 +9,12 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
   imageDiffOptions?: {[key: string]: any}; 
 }
 
+export type SnapshotTestRunnerProps = TestRunnerProps;
+
 export default class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;
 
-  constructor(props: TestRunnerProps) {
+  constructor(props: SnapshotTestRunnerProps) {
     super(props);
     this.testOptions.imageDiffOptions = {};
   }
