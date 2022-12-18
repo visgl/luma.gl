@@ -51,7 +51,7 @@ const commonTestCases = [
 // Filter all tests cases based on current gpu and glsFunc
 function getTestCasesFor(glslFunc) {
   // Under node gl2 is not available
-  if (!gl) {
+  if (!webgl2Device) {
     return [];
   }
   const debugInfo = webgl2Device.info;
