@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-dof",
-  "version": "9.0.0-alpha.11",
+  "version": "9.0.0-alpha.12",
   "private": true,
   "description": "An es6 Depth of Field example for luma.gl.",
   "contributors": [
@@ -12,11 +12,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.11",
-    "@luma.gl/core": "9.0.0-alpha.11",
-    "@luma.gl/engine": "9.0.0-alpha.11",
-    "@luma.gl/webgl-legacy": "9.0.0-alpha.11",
-    "@luma.gl/webgl": "9.0.0-alpha.11",
+    "@luma.gl/constants": "9.0.0-alpha.12",
+    "@luma.gl/core": "9.0.0-alpha.12",
+    "@luma.gl/engine": "9.0.0-alpha.12",
+    "@luma.gl/webgl": "9.0.0-alpha.12",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.12",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {
