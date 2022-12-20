@@ -35,7 +35,7 @@ export function fp64ify(a: number, out: NumberArray = [], startIndex: number = 0
   for (let i = 0; i < 4; ++i) {
     for (let j = 0; j < 4; ++j) {
       const index = i * 4 + j;
-      fp64ify(matrix[j * 4 + i], matrixFP64, index * 2);
+      fp64ify(matrix[j * 4 + i]!, matrixFP64, index * 2);
     }
   }
   return matrixFP64;

@@ -21,7 +21,7 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 
 // Settings test, don't reuse a context
 const fixture = {
-  gl: createTestContext({debug: true})
+  gl: createTestContext({debug: true}) as WebGLRenderingContext
 };
 
 test('WebGLState#imports', (t) => {

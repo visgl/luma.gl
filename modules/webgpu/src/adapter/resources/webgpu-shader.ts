@@ -25,7 +25,7 @@ export default class WebGPUShader extends Shader {
     this._checkCompilationError(this.device.handle.popErrorScope());
   }
 
-  async _checkCompilationError(errorScope: Promise<GPUError>): Promise<void> {
+  async _checkCompilationError(errorScope: Promise<GPUError | null>): Promise<void> {
     const error = await errorScope as GPUValidationError;
     if (error) {
       const shaderLog = await this.compilationInfo();

@@ -170,15 +170,16 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     firstInstance?: number;
     baseVertex?: number;
   }): void {
-    const webgpuRenderPass =
+    const webgpuRenderPass: WebGPURenderPass =
       cast<WebGPURenderPass>(options.renderPass) || this.device.getDefaultRenderPass();
 
     // Set pipeline
     webgpuRenderPass.handle.setPipeline(this.handle);
 
     // Set bindings (uniform buffers, textures etc)
-    if (this._getBindGroup()) {
-      webgpuRenderPass.handle.setBindGroup(0, this._getBindGroup());
+    const bindGroup = this._getBindGroup();
+    if (bindGroup) {
+      webgpuRenderPass.handle.setBindGroup(0, bindGroup);
     }
 
     // Set attributes

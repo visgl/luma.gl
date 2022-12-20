@@ -17,7 +17,7 @@ export default class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
   readonly view: GPUTextureView;
-  sampler: WebGPUSampler = null;
+  sampler: WebGPUSampler;
 
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');

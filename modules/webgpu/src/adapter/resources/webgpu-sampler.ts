@@ -17,12 +17,12 @@ export default class WebGPUSampler extends Sampler {
     this.device = device;
 
     // Prepare sampler props
-    const samplerProps = this.props;
+    const samplerProps: Partial<WebGPUSamplerProps> = {...this.props};
     if (samplerProps.type !== 'comparison-sampler') {
       delete samplerProps.compare;
     }
 
-    this.handle = this.handle || this.device.handle.createSampler(this.props);
+    this.handle = this.handle || this.device.handle.createSampler(samplerProps);
     this.handle.label = this.props.id;
   }
 

@@ -2,8 +2,19 @@
   "compilerOptions": {
     "target": "es2020",
     "jsx": "react",
+    "allowJs": true,
+    "checkJs": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "rootDir": ".",
 
     // BEGIN TYPE CHECK SETTINGS
+    "skipLibCheck": true,
+
     "strict": false,
 
     // "noImplicitAny": true, // covered by strict
@@ -11,7 +22,7 @@
     "strictBindCallApply": true, // covered by strict
     "strictFunctionTypes": true, // covered by strict
     "useUnknownInCatchVariables": true,  // covered by strict
-    // "strictNullChecks": true, // covered by strict
+    "strictNullChecks": false, // covered by strict
     // "strictPropertyInitialization": true, // covered by strict, requires strict null checks
 
     // "exactOptionalPropertyTypes": true, - requires strictNullChecks
@@ -24,16 +35,6 @@
     "noUnusedParameters": false,
     // END TYPE CHECK SETTINGS
 
-    "allowJs": true,
-    "checkJs": true,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "rootDir": ".",
     "paths": {
       "@luma.gl/api/*": ["modules/api/src/*"],
       "@luma.gl/api/test/*": ["modules/api/test/*"],
