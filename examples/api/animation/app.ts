@@ -1,3 +1,4 @@
+import {glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl-legacy';
 import {dirlight} from '@luma.gl/shadertools';
@@ -14,7 +15,7 @@ Key frame animation based on multiple hierarchical timelines.
 Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
 `;
 
-const vs = `\
+const vs = glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -35,7 +36,7 @@ void main(void) {
 }
 `;
 
-const fs = `\
+const fs = glsl`\
 precision highp float;
 
 varying vec3 color;

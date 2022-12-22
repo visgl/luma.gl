@@ -1,4 +1,6 @@
-export default `\
+import {glsl} from '../../lib/glsl-utils/highlight';
+
+export default glsl`\
 uniform mat4 u_MVPMatrix;
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_NormalMatrix;

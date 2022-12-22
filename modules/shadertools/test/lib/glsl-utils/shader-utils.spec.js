@@ -1,11 +1,12 @@
+import test from 'tape-promise/tape';
 import {
   getQualifierDetails,
   getPassthroughFS,
   typeToChannelSuffix,
   typeToChannelCount,
-  convertToVec4
+  convertToVec4,
+  glsl
 } from '@luma.gl/shadertools';
-import test from 'tape-promise/tape';
 
 test('shader-utils#getQualifierDetails', (t) => {
   const QUALIFIER_TEST_CASES = [
@@ -57,7 +58,7 @@ test('shader-utils#getPassthroughFS', (t) => {
       version: 100,
       input: 'myInput',
       inputType: 'vec2',
-      expected: `\
+      expected: glsl`\
 varying vec2 myInput;
 void main() {
   gl_FragColor = vec4(myInput, 0.0, 1.0);
@@ -68,7 +69,7 @@ void main() {
       input: 'myInput',
       inputType: 'float',
       output: 'myOutput',
-      expected: `\
+      expected: glsl`\
 #version 300 es
 in float myInput;
 out vec4 myOutput;

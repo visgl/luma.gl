@@ -1,9 +1,10 @@
 // TODO: move to gpgpu module.
+import {glsl} from '@luma.gl/api';
 
 // Following shaders implement Histopyramid operations as described in 'High‐speed marching cubes using histopyramids' by Dyken C, Ziegler G, Theobalt C and Seidel H
 // Link to the paper: http://olmozavala.com/Custom/OpenGL/Tutorials/OpenGL4_Examples/MarchingCubes_Dyken/Dyken_et_al-2008-Computer_Graphics_Forum.pdf
 
-export const HISTOPYRAMID_BUILD_VS_UTILS = `\
+export const HISTOPYRAMID_BUILD_VS_UTILS = glsl`\
 // Get current pixel indices for a given size
 vec2 histoPyramid_getPixelIndices(vec2 size) {
   vec2 pixelOffset = transform_getPixelSizeHalf(size);
@@ -45,7 +46,7 @@ vec4 histoPyramid_getInput(sampler2D texSampler, vec2 size, vec2 scale, vec2 off
 `;
 
 // Vertex shader to build histopyramid
-export const HISTOPYRAMID_BUILD_VS = `\
+export const HISTOPYRAMID_BUILD_VS = glsl`\
 attribute vec4 inTexture;
 varying vec4 outTexture;
 
@@ -68,7 +69,7 @@ void main()
 `;
 
 // Vertex shader to build histopyramid
-export const HISTOPYRAMID_BASE_BUILD_VS = `\
+export const HISTOPYRAMID_BASE_BUILD_VS = glsl`\
 attribute vec4 inTexture;
 varying vec4 outTexture;
 uniform int channel;
@@ -124,7 +125,7 @@ void main()
 }
 `;
 
-export const HISTOPYRAMID_TRAVERSAL_UTILS = `\
+export const HISTOPYRAMID_TRAVERSAL_UTILS = glsl`\
 // Check 2X2 texture block to find relative index the given key index falls into
 // 2X2 block is represented by a single RGBA weight
 int histopyramid_traversal_findRangeIndex(float currentKey, vec4 weights, out float lowerBound) {
@@ -169,7 +170,7 @@ vec4 histopyramid_traversal_getWeight(sampler2D flatPyramid, vec2 size, int leve
 }
 `;
 
-export const HISTOPYRAMID_TRAVERSAL_VS = `\
+export const HISTOPYRAMID_TRAVERSAL_VS = glsl`\
 attribute float keyIndex;
 attribute vec4 flatPyramidTexture;
 varying vec4 locationAndIndex;

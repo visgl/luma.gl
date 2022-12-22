@@ -1,8 +1,8 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
-
+import {glsl} from '../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
-const fs = `\
+const fs = glsl`\
 uniform float radius;
 uniform float strength;
 uniform vec2 center;

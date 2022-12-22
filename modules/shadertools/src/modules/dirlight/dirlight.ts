@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {glsl} from '../../lib/glsl-utils/highlight';
 import type {NumberArray} from '../../types';
 import {project} from '../project/project';
 
@@ -19,7 +20,7 @@ function getUniforms(opts: DirlightOptions = DEFAULT_MODULE_OPTIONS): Record<str
   return uniforms;
 }
 
-var fs = `\
+var fs = glsl`\
 uniform vec3 dirlight_uLightDirection;
 
 /*

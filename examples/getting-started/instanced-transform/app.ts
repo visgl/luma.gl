@@ -1,3 +1,4 @@
+import {glsl} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model} from '@luma.gl/engine';
 import {clear, Transform} from '@luma.gl/webgl-legacy';
 import {phongLighting} from '@luma.gl/shadertools';
@@ -23,7 +24,7 @@ const transformVs = `
   }
 `;
 
-const vs = `\
+const vs = glsl`\
   attribute vec3 positions;
   attribute vec3 normals;
   attribute vec2 texCoords;
@@ -69,7 +70,7 @@ const vs = `\
   }
 `;
 
-const fs = `\
+const fs = glsl`\
   precision highp float;
 
   uniform sampler2D uTexture;

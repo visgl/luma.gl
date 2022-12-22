@@ -1,4 +1,5 @@
 /* eslint-disable no-var, max-statements */
+import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 // eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/core';
@@ -57,7 +58,7 @@ function makeInstancedCube(gl) {
       instanceOffsets: {value: offsets, size: 2, divisor: 1},
       instanceColors: {value: colors, size: 3, divisor: 1}
     },
-    vs: `\
+    vs: glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 instanceOffsets;
@@ -80,7 +81,7 @@ void main(void) {
   color = instanceColors;
 }
 `,
-    fs: `\
+    fs: glsl`\
 precision highp float;
 
 varying vec3 color;

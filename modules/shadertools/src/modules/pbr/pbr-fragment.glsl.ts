@@ -5,7 +5,9 @@
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 // TODO - better do the checks outside of shader
-export default `\
+import {glsl} from '../../lib/glsl-utils/highlight';
+
+export default glsl`\
 #if defined(USE_TEX_LOD) && !defined(FEATURE_GLSL_TEXTURE_LOD)
 # error PBR fragment shader: Texture LOD is not available
 #endif

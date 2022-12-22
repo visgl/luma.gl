@@ -1,4 +1,4 @@
-import {Framebuffer, getRandom} from '@luma.gl/api';
+import {Framebuffer, getRandom, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
 import {clear, setParameters, ClassicModel as Model} from '@luma.gl/webgl-legacy';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
@@ -11,7 +11,7 @@ const INFO_HTML = `
 </p>
 `;
 
-const SCREEN_QUAD_VS = `\
+const SCREEN_QUAD_VS = glsl`\
 attribute vec2 aPosition;
 
 void main(void) {
@@ -19,7 +19,7 @@ void main(void) {
 }
 `;
 
-const SCREEN_QUAD_FS = `\
+const SCREEN_QUAD_FS = glsl`\
 precision highp float;
 
 uniform sampler2D uTexture;
@@ -31,7 +31,7 @@ void main(void) {
 }
 `;
 
-const PERSISTENCE_FS = `\
+const PERSISTENCE_FS = glsl`\
 precision highp float;
 
 uniform sampler2D uScene;
@@ -46,7 +46,7 @@ void main(void) {
 }
 `;
 
-const SPHERE_VS = `\
+const SPHERE_VS = glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -61,7 +61,7 @@ void main(void) {
 }
 `;
 
-const SPHERE_FS = `\
+const SPHERE_FS = glsl`\
 precision highp float;
 
 uniform vec3 uColor;

@@ -1,4 +1,4 @@
-import {Buffer, ShaderLayout, RenderPipelineParameters} from '@luma.gl/api';
+import {Buffer, ShaderLayout, RenderPipelineParameters, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
@@ -9,7 +9,7 @@ export const description = 'Shows usage of multiple uniform buffers.';
 /** TODO - Provide both GLSL and WGSL shaders */
 const SHADERS = {
   vs: {
-    glsl: `\
+    glsl: glsl`\
 #version 300 es
 #define SHADER_NAME cube-vs
 
@@ -29,7 +29,7 @@ void main() {
   fragPosition = vec4(position, 1.);
 }
     `,
-    wgsl: `
+    wgsl: /* WGSL */`
 struct Uniforms {
   modelViewProjectionMatrix : [[stride(64)]] array<mat4x4<f32>, 16>;
 };
@@ -55,7 +55,7 @@ fn main([[builtin(instance_index)]] instanceIdx : u32,
     `
   },
   fs: {
-    glsl: `\
+    glsl: glsl`\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;
@@ -68,7 +68,7 @@ void main() {
   fragColor = fragPosition;
 }
     `,
-    wgsl: `
+    wgsl: /* WGSL */`
 [[stage(fragment)]]
 fn main([[location(0)]] fragUV: vec2<f32>,
         [[location(1)]] fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {

@@ -1,6 +1,7 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
-const fs = `\
+const fs = glsl`\
 uniform float amount;
 
 float rand(vec2 co) {

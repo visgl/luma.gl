@@ -1,6 +1,8 @@
 // luma.gl, MIT license
-const FS100 = `void main() {gl_FragColor = vec4(0);}`;
-const FS_GLES = `\
+import {glsl} from './highlight';
+
+const FS100 = glsl`void main() {gl_FragColor = vec4(0);}`;
+const FS_GLES = glsl`\
 out vec4 transform_output;
 void main() {
   transform_output = vec4(0);

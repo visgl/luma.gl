@@ -1,6 +1,7 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
-const fs = `\
+const fs = glsl`\
 uniform float strength;
 
 vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {

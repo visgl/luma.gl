@@ -1,4 +1,5 @@
 import test from 'tape-promise/tape';
+import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {UniformBufferLayout, Buffer, Program} from '@luma.gl/webgl-legacy';
 // TODO - tests shouldn't depend on higher level module?
@@ -11,7 +12,7 @@ const VEC2 = [2.0, 2.0];
 const VEC3 = [3.0, 3.0, 3.0];
 const VEC4 = [4.0, 4.0, 4.0, 4.0];
 
-const VS = `\
+const VS = glsl`\
 #version 300 es
 in float inValue;
 layout(std140) uniform;
@@ -37,7 +38,7 @@ outValue = m * inValue;
 }
 `;
 
-const FS = `\
+const FS = glsl`\
 #version 300 es
 precision highp float;
 out vec4 oColor;

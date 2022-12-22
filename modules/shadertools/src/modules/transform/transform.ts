@@ -1,4 +1,6 @@
-const vs = `\
+import {glsl} from '../../lib/glsl-utils/highlight';
+
+const vs = glsl`\
 attribute float transform_elementID;
 
 // returns half of pixel size, used to move the pixel position to center of the pixel.

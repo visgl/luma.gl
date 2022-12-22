@@ -2,16 +2,16 @@ import {webgl1Device} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 
 import {ProgramManager} from '@luma.gl/webgl-legacy';
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking, glsl} from '@luma.gl/shadertools';
 
-const vs = `\
+const vs = glsl`\
 attribute vec4 positions;
 
 void main(void) {
   gl_Position = positions;
 }
 `;
-const fs = `\
+const fs = glsl`\
 precision highp float;
 
 void main(void) {
@@ -19,7 +19,8 @@ void main(void) {
 }
 `;
 
-const VS_300 = `#version 300 es
+const VS_300 = glsl`\
+#version 300 es
 
   in vec4 positions;
   in vec2 uvs;
@@ -32,7 +33,8 @@ const VS_300 = `#version 300 es
   }
 `;
 
-const FS_300 = `#version 300 es
+const FS_300 = glsl`\
+#version 300 es
   precision highp float;
 
   in vec2 vUV;

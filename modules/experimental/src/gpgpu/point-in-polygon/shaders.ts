@@ -1,4 +1,6 @@
-export const POLY_TEX_VS = `\
+import {glsl} from '@luma.gl/api';
+
+export const POLY_TEX_VS = glsl`\
 uniform vec4 boundingBoxOriginSize; //[xMin, yMin, xSize, ySize]
 attribute vec2 a_position;
 attribute float a_polygonID;
@@ -14,7 +16,7 @@ void main()
 }
 `;
 
-export const FILTER_VS = `\
+export const FILTER_VS = glsl`\
 #version 300 es
 in vec2 a_position;
 out vec2 filterValueIndex; //[x: 0 (outside polygon)/1 (inside), y: position index]

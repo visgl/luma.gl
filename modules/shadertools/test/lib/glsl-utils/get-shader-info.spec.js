@@ -1,39 +1,46 @@
 import test from 'tape-promise/tape';
-import {getShaderInfo} from '@luma.gl/shadertools';
+import {getShaderInfo, glsl} from '@luma.gl/shadertools';
 
-const SHADER_1 = `\
+const SHADER_1 = glsl`\
 uniform float floaty;
 #define SHADER_NAME name-of-shader
 main() {}
 `;
 
-const SHADER_2 = `\
+const SHADER_2 = glsl`\
 uniform float floaty;
 #define SHADER name
 main() {}
 `;
 
 const SHADER1 = 'void main() {}';
+
 const SHADER2 = '#version 100 void main() {}';
-const SHADER3 = `\
+
+const SHADER3 = glsl`\
 void main() {
 
 }`;
-const SHADER4 = `\
+
+const SHADER4 = glsl`\
 #version 300 es
 void main() {
 
 }`;
+
 const SHADER5 = `#version 300 es
 void main() {
 
 }`;
-const SHADER6 = `\
+
+const SHADER6 = glsl`\
 #version 100
 void main() {
 
 }`;
-const SHADER7 = '#version 300 es void main() {}';
+
+const SHADER7 = glsl`#version 300 es void main() {}`;
+
 const versionTests = {
   [SHADER1]: 100,
   [SHADER2]: 100,

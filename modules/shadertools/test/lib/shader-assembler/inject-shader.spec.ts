@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/api';
 import {webgl1Device} from '@luma.gl/test-utils';
-import {assembleShaders} from '@luma.gl/shadertools';
+import {assembleShaders, glsl} from '@luma.gl/shadertools';
 import injectShader, {
   combineInjects,
   DECLARATION_INJECT_MARKER
@@ -33,7 +33,7 @@ void main(void) {
 
 const VS_GLSL_RESOLVED_DECL = 'uniform float uNewUniform';
 
-const VS_GLSL_RESOLVED_MAIN = `\
+const VS_GLSL_RESOLVED_MAIN = glsl`\
 void main(void) {
   vNew = uNewUniform;
   gl_Position = positions;
@@ -61,7 +61,7 @@ void main(void) {
 
 const FS_GLSL_RESOLVED_DECL = 'uniform bool uDiscard';
 
-const FS_GLSL_RESOLVED_MAIN = `\
+const FS_GLSL_RESOLVED_MAIN = glsl`\
 void main(void) {
   if (uDiscard} { discard } else {
   fragmentColor = vColor;

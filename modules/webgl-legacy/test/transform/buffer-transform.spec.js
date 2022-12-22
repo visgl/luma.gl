@@ -1,10 +1,11 @@
 import test from 'tape-promise/tape';
+import {glsl} from '@luma.gl/api';
 import BufferTransform from '@luma.gl/webgl-legacy/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl-legacy';
 import {ClassicModel as Model} from '@luma.gl/webgl-legacy';
 import {fixture} from 'test/setup';
 
-const VS = `\
+const VS = glsl`\
 attribute float source;
 varying float feedback;
 
@@ -14,7 +15,7 @@ void main()
 }
 `;
 
-const FS = `\
+const FS = glsl`\
 void main(void) {
   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

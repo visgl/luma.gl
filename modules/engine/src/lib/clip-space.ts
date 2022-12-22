@@ -5,7 +5,7 @@ import GL from '@luma.gl/constants';
 import Model, {ModelProps} from './model';
 import Geometry from '../geometry/geometry';
 
-const CLIPSPACE_VERTEX_SHADER = `\
+const CLIPSPACE_VERTEX_SHADER = glsl`\
 attribute vec2 aClipSpacePosition;
 attribute vec2 aTexCoord;
 attribute vec2 aCoordinate;

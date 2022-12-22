@@ -1,3 +1,4 @@
+import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {TransformFeedback, Buffer} from '@luma.gl/webgl-legacy';
 // TODO - tests shouldn't depend on higher level module?
@@ -6,7 +7,7 @@ import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
 
-const VS = `\
+const VS = glsl`\
 attribute float inValue;
 varying float outValue;
 void main()
@@ -15,7 +16,7 @@ void main()
 }
 `;
 
-const FS = `\
+const FS = glsl`\
 varying float outValue;
 void main()
 {

@@ -1,20 +1,21 @@
 import test from 'tape-promise/tape';
 import {webgl1Device} from '@luma.gl/test-utils';
 
+import {glsl} from '@luma.gl/api';
 import {PipelineFactory} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
 
 
 // TODO - this doesn't test that parameters etc are properly cached
 
-const vs = `\
+const vs = glsl`\
 attribute vec4 positions;
 
 void main(void) {
   gl_Position = positions;
 }
 `;
-const fs = `\
+const fs = glsl`\
 precision highp float;
 
 void main(void) {
@@ -22,7 +23,7 @@ void main(void) {
 }
 `;
 
-const VS_300 = `#version 300 es
+const VS_300 = glsl`#version 300 es
 
   in vec4 positions;
   in vec2 uvs;
@@ -35,7 +36,7 @@ const VS_300 = `#version 300 es
   }
 `;
 
-const FS_300 = `#version 300 es
+const FS_300 = glsl`#version 300 es
   precision highp float;
 
   in vec2 vUV;
