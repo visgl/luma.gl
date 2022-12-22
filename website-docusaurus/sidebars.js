@@ -36,6 +36,7 @@ const sidebars = {
       label: 'Developer Guide',
       items: [
         'developer-guide/installing',
+        'developer-guide/editing',
         'developer-guide/debugging',
         'developer-guide/testing',
         'developer-guide/profiling',
