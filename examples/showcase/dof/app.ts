@@ -5,9 +5,9 @@
 // @ts-nocheck
 
 import {glsl} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
+  GL,
   Framebuffer,
   clear,
   Program,

@@ -3,8 +3,7 @@
 import {Device, log, luma} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Timeline} from '@luma.gl/engine';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
-import GL from '@luma.gl/constants';
-import {clear} from '@luma.gl/webgl-legacy';
+import {GL, clear} from '@luma.gl/webgl-legacy';
 
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';

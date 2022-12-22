@@ -1,7 +1,6 @@
 import {Device, loadImage, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl-legacy';
-import GL from '@luma.gl/constants';
+import {GL, clear} from '@luma.gl/webgl-legacy';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `

@@ -1,7 +1,7 @@
 import type {Device, Texture} from '@luma.gl/api';
 import {log} from '@luma.gl/api';
 
-import GL from '@luma.gl/constants';
+import GL from '@luma.gl/webgl-legacy';
 import {GLTFEnvironment} from './gltf-environment';
 
 export type GLTFMaterialParserProps = {
