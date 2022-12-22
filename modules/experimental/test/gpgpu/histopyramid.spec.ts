@@ -2,10 +2,8 @@
 import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 import {equals} from '@math.gl/core';
-
-import {Transform, Buffer, Texture2D} from '@luma.gl/webgl-legacy';
-import GL from '@luma.gl/constants';
 import {_transform as transformModule, glsl} from '@luma.gl/shadertools';
+import {GL, Transform, Buffer, Texture2D} from '@luma.gl/webgl-legacy';
 import {
   buildHistopyramidBaseLevel,
   getHistoPyramid,

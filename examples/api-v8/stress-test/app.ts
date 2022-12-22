@@ -1,8 +1,7 @@
 import {Device, getRandom,glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
-import GL from '@luma.gl/constants';
-import {clear, withParameters, Model, ModelProps} from '@luma.gl/webgl-legacy';
+import {GL, clear, withParameters, Model, ModelProps} from '@luma.gl/webgl-legacy';
 import {radians} from '@math.gl/core';
 import {StatsWidget} from '@probe.gl/stats-widget';
 

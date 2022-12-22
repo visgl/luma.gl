@@ -3,6 +3,9 @@
 // This is the `@luma.gl/webgl-legacy` module which contains the now deprecated luma.gl v8 WebGL-only API.
 // Use `@luma.gl/api` to access the new API which supports both WebGL and WebGPU.
 
+// Constants
+export {default as GL} from '@luma.gl/constants';
+
 // Utils
 export {log} from '@luma.gl/api';
 

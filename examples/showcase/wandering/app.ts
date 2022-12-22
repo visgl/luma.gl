@@ -3,8 +3,7 @@
 import {getRandom, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
-import GL from '@luma.gl/constants';
-import {Buffer, ClassicModel as Model, Transform, Framebuffer} from '@luma.gl/webgl-legacy';
+import {GL, Buffer, ClassicModel as Model, Transform, Framebuffer} from '@luma.gl/webgl-legacy';
 
 
 // Ensure repeatable rendertests
