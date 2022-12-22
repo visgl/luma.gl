@@ -1,4 +1,4 @@
-import {AnimationLoop} from '@luma.gl/core';
+import {AnimationLoop} from '@luma.gl/webgl-legacy';
 import {DemoApp, GLTF_BASE_URL} from './gtlf-demo-app';
 
 const examples = {

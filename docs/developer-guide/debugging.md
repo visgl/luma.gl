@@ -82,7 +82,7 @@ and then reloading the browser tab.
 While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context/context-api) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
 
 ```typescript
-import {luma} from '@luma.gl/core';
+import {luma} from '@luma.gl/api';
 import '@luma.gl/debug';
 const device = luma.createDevice({type: 'webgl', debug: true});
 ```

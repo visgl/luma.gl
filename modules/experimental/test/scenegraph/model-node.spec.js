@@ -1,9 +1,9 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {makeSpy} from '@probe.gl/test-utils';
 import {fixture} from 'test/setup';
-import {Model} from '@luma.gl/core';
+import {makeSpy} from '@probe.gl/test-utils';
+import {Model} from '@luma.gl/webgl-legacy';
 import {ModelNode} from '@luma.gl/experimental';
 
 const DUMMY_VS = `

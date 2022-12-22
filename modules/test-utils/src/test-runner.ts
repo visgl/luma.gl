@@ -1,6 +1,6 @@
 // @ts-nocheck TODO remove
 /* eslint-disable no-console */
-import {AnimationLoop, AnimationProps} from '@luma.gl/core';
+import {AnimationLoop, AnimationProps} from '@luma.gl/webgl-legacy';
 import {webglDevice} from './create-test-device';
 
 /** Describes a test case */

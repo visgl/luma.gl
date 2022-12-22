@@ -1,6 +1,6 @@
-import {AnimationLoop} from '@luma.gl/core';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
+import {AnimationLoop} from '@luma.gl/webgl-legacy';
 
 test('gltools#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');

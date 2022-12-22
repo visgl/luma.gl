@@ -30,7 +30,7 @@ In your script that is run on the browser:
 
 ```typescript
 const {SnapshotTestRunner} = require('@luma.gl/test-utils');
-const {Cube} = require('@luma.gl/core');
+const {Cube} = require('@luma.gl/engine');
 
 const TEST_CASES = [
   {

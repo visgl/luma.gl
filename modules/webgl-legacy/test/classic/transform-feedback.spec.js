@@ -2,7 +2,7 @@ import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {TransformFeedback, Buffer} from '@luma.gl/webgl-legacy';
 // TODO - tests shouldn't depend on higher level module?
-import {Model} from '@luma.gl/core';
+import {Model} from '@luma.gl/webgl-legacy';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';
