@@ -1,7 +1,8 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
 // TODO pass texCoord to angle
-const fs = `\
+const fs = glsl`\
 uniform vec2 center;
 uniform float angle;
 uniform float size;

@@ -1,4 +1,4 @@
-import {Device, loadImage} from '@luma.gl/api';
+import {Device, loadImage, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl-legacy';
 import GL from '@luma.gl/constants';
@@ -13,7 +13,7 @@ surface
 
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = `\
+    const vs = glsl`\
 attribute vec3 positions;
 
 uniform mat4 uModel;
@@ -27,7 +27,7 @@ void main(void) {
   vPosition = positions;
 }
 `;
-    const fs = `\
+    const fs = glsl`\
 precision highp float;
 
 uniform samplerCube uTextureCube;
@@ -45,7 +45,7 @@ void main(void) {
 
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = `\
+    const vs = glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 texCoords;
@@ -65,7 +65,7 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-    const fs = `\
+    const fs = glsl`\
 precision highp float;
 
 uniform sampler2D uTexture;

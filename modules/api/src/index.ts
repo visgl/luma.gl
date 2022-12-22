@@ -118,6 +118,14 @@ export {getRandom, random} from './utils/random';
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
 export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';
 
+// SHADER HELPERS
+
+/**
+ * Marks GLSL shaders for syntax highlighting: glsl`...`
+ * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
+ */
+export const glsl = (x: TemplateStringsArray) => `${x}`;
+
 // INTERNAL
 
 export type {

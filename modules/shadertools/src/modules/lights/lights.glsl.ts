@@ -1,4 +1,6 @@
-export default `\
+import {glsl} from '../../lib/glsl-utils/highlight';
+
+export default glsl`\
 #if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
 
 struct AmbientLight {

@@ -1,10 +1,11 @@
+import {glsl} from '@luma.gl/api';
 import {updateForTextures} from '@luma.gl/webgl-legacy/transform/transform-shader-utils';
 import {Texture2D} from '@luma.gl/webgl-legacy';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
-test('TransformShaderUitls#updateForTextures', (t) => {
-  const VS = `\
+test('TransformShaderUtils#updateForTextures', (t) => {
+  const VS = glsl`\
 attribute vec4 inTexture;
 attribute float scale;
 varying vec4 output;
@@ -43,8 +44,8 @@ void main()
   t.end();
 });
 
-test('TransformShaderUitls#updateForTextures (with target texture)', (t) => {
-  const VS = `\
+test('TransformShaderUtils#updateForTextures (with target texture)', (t) => {
+  const VS = glsl`\
 attribute vec4 inTexture;
 attribute float scale;
 varying vec4 outTexture;

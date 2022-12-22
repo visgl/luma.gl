@@ -1,4 +1,5 @@
 import {Matrix4} from '@math.gl/core';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -38,7 +39,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS, prevUniforms = {}) {
   return uniforms;
 }
 
-const common = `\
+const common = glsl`\
 varying vec4 project_vPositionWorld;
 varying vec3 project_vNormalWorld;
 

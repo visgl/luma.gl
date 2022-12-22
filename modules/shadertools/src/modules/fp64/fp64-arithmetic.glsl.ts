@@ -1,6 +1,7 @@
 // luma.gl, MIT license
+import {glsl} from '../../lib/glsl-utils/highlight';
 
-export default `\
+export default glsl`\
 uniform float ONE;
 
 /*

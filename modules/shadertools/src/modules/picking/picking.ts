@@ -1,4 +1,5 @@
 import {NumberArray} from '../../types';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
@@ -41,7 +42,7 @@ function getUniforms(opts = DEFAULT_MODULE_OPTIONS): Record<string, any> {
   return uniforms;
 }
 
-const vs = `\
+const vs = glsl`\
 uniform bool picking_uActive;
 uniform bool picking_uAttribute;
 uniform vec3 picking_uSelectedColor;
@@ -93,7 +94,7 @@ void picking_setPickingAttribute(vec3 value) {
 }
 `;
 
-const fs = `\
+const fs = glsl`\
 uniform bool picking_uActive;
 uniform vec3 picking_uSelectedColor;
 uniform vec4 picking_uHighlightColor;

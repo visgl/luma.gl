@@ -1,4 +1,4 @@
-import {getRandom} from '@luma.gl/api';
+import {getRandom, glsl} from '@luma.gl/api';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {ClassicModel as Model, ProgramManager} from '@luma.gl/webgl-legacy';
@@ -11,7 +11,7 @@ const INFO_HTML = `
 Using a ProgramManager to cache and share programs between models.
 `;
 
-const vs = `\
+const vs = glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 
@@ -32,7 +32,7 @@ void main(void) {
 }
 `;
 
-const fs = `\
+const fs = glsl`\
 precision highp float;
 
 varying vec3 color;

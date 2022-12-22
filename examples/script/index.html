@@ -9,6 +9,7 @@
   </head>
   <body>
     <script>
+      const glsl = x => x;
       const {mat4} = glMatrix;
 
       const SIDE = 256;
@@ -56,7 +57,7 @@
 
           const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
-          const vs = `\
+          const vs = glsl`\
       attribute float instanceSizes;
       attribute vec3 positions;
       attribute vec3 normals;
@@ -86,7 +87,7 @@
         gl_Position = uProjection * uView * (uModel * vec4(positions * instanceSizes, 1.0) + offset);
       }
       `;
-          const fs = `\
+          const fs = glsl`\
       precision highp float;
 
       varying vec3 color;

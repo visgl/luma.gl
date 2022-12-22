@@ -1,3 +1,4 @@
+import {glsl} from '../../lib/glsl-utils/highlight';
 // import {ShaderPass} from '../../lib/shaderpass';
 
 
@@ -11,7 +12,7 @@ const uniforms = {
   contrast: {value: 0, min: -1, max: 1}
 };
 
-var fs = `\
+var fs = glsl`\
 uniform float brightness;
 uniform float contrast;
 

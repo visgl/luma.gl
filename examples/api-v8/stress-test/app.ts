@@ -1,4 +1,4 @@
-import {Device, getRandom} from '@luma.gl/api';
+import {Device, getRandom,glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
@@ -24,7 +24,7 @@ const FAR = 2000.0;
 
 const random = getRandom();
 
-const CUBE_VERTEX = `\
+const CUBE_VERTEX = glsl`\
 #version 300 es
 #define SHADER_NAME scene.vs
 
@@ -43,7 +43,7 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-const CUBE_FRAGMENT = `\
+const CUBE_FRAGMENT = glsl`\
 #version 300 es
 precision highp float;
 #define SHADER_NAME scene.fs

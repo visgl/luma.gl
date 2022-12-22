@@ -1,7 +1,8 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
 import {random} from '../utils/random';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
-const fs = `\
+const fs = glsl`\
 uniform float radius;
 uniform vec2 delta;
 

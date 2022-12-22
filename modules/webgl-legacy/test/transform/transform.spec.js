@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
-import {luma} from '@luma.gl/api';
+import {luma, glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {Transform} from '@luma.gl/webgl-legacy';
 import {Buffer, Texture2D, setParameters, getParameters} from '@luma.gl/webgl-legacy';
@@ -9,7 +9,7 @@ import {Buffer, Texture2D, setParameters, getParameters} from '@luma.gl/webgl-le
 // TODO - these tests have started failing on CI, we need to debug and fix
 const DISABLE_FLAKY_TRANSFORM_TESTS = true;
 
-const VS = `\
+const VS = glsl`\
 #version 300 es
 in float inValue;
 out float outValue;
@@ -20,7 +20,7 @@ void main()
 }
 `;
 
-const VS2 = `\
+const VS2 = glsl`\
 #version 300 es
 in float inValue1;
 in float inValue2;
@@ -34,7 +34,7 @@ void main()
 }
 `;
 
-const VS_NO_SOURCE_BUFFER = `\
+const VS_NO_SOURCE_BUFFER = glsl`\
 varying float outValue;
 uniform float uValue;
 
@@ -522,7 +522,7 @@ test('WebGL#Transform update', (t) => {
   t.end();
 });
 
-const VSTexInput = `\
+const VSTexInput = glsl`\
 #version 300 es
 in float inBuffer;
 in float inTexture;
@@ -592,7 +592,7 @@ const TEXTURE_BUFFER_TEST_CASES = [
     type: GL.FLOAT,
     width: 4,
     height: 4,
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in float inBuffer;
 in float inTexture;
@@ -614,7 +614,7 @@ void main()
     type: GL.UNSIGNED_BYTE,
     width: 2,
     height: 2,
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in float inBuffer;
 in vec4 inTexture;
@@ -707,7 +707,7 @@ const TEXTURE_TEST_CASES = [
     type: GL.FLOAT,
     width: 4,
     height: 4,
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in vec4 inTexture;
 out vec4 outTexture;
@@ -726,7 +726,7 @@ void main()
     type: GL.FLOAT,
     width: 4,
     height: 4,
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in float inTexture;
 out float outTexture;
@@ -745,7 +745,7 @@ void main()
     type: GL.UNSIGNED_BYTE,
     width: 2,
     height: 2,
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in vec4 inTexture;
 out vec4 outTexture;
@@ -963,7 +963,7 @@ const OFFLINE_RENDERING_TEST_CASES = [
     height: 4,
     expected: 123,
     position: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in vec2 position;
 out float outTexture;
@@ -984,7 +984,7 @@ void main()
     height: 2,
     expected: 255,
     position: new Float32Array([1, 1, -1, 1, 1, -1, -1, -1]),
-    vs: `\
+    vs: glsl`\
 #version 300 es
 in vec2 position;
 out vec4 outTexture;
@@ -1054,7 +1054,7 @@ test('WebGL#Transform run with shader injects', (t) => {
     return;
   }
 
-  const vs = `\
+  const vs = glsl`\
 attribute float inValue;
 varying float outValue;
 
@@ -1125,7 +1125,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
     const type = GL.FLOAT;
     const width = 4;
     const height = 4;
-    const vs = `\
+    const vs = glsl`\
 #version 300 es
 in vec4 inTexture;
 out vec4 outTexture;
@@ -1135,7 +1135,7 @@ void main()
 outTexture = inTexture;
 }
 `;
-    const fs = `\
+    const fs = glsl`\
 #version 300 es
 in vec4 outTexture;
 out vec4 transform_output;
@@ -1262,7 +1262,7 @@ test('WebGL#Transform (Buffer to Texture)', (t) => {
     return;
   }
 
-  const vs = `\
+  const vs = glsl`\
 #define EPSILON 0.00001
 attribute vec4 aCur;
 attribute vec4 aNext;
@@ -1275,7 +1275,7 @@ gl_Position = vec4(0, 0, 0, 1.);
 }
 `;
 
-  const fs = `\
+  const fs = glsl`\
 varying float equal;
 void main()
 {

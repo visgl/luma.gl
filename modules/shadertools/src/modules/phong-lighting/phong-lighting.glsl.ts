@@ -1,4 +1,6 @@
-export default `\
+import {glsl} from '../../lib/glsl-utils/highlight';
+
+export default glsl`\
 
 uniform float lighting_uAmbient;
 uniform float lighting_uDiffuse;

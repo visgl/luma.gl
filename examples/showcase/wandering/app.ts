@@ -1,13 +1,12 @@
 /* eslint-enable camelcase */
 // import {Buffer} from '@luma.gl/api';
+import {getRandom, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-import {Buffer} from '@luma.gl/webgl-legacy';
-import {ClassicModel as Model, Transform} from '@luma.gl/webgl-legacy';
-import {Framebuffer} from '@luma.gl/webgl-legacy';
 import {picking} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
+import {Buffer, ClassicModel as Model, Transform, Framebuffer} from '@luma.gl/webgl-legacy';
 
-import {getRandom} from '@luma.gl/api';
+
 // Ensure repeatable rendertests
 const random = getRandom();
 
@@ -25,7 +24,7 @@ const INFO_HTML = `
 // Text to be displayed on environments when this demos is not supported.
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-const EMIT_VS = `\
+const EMIT_VS = glsl`\
 #version 300 es
 #define OFFSET_LOCATION 0
 #define ROTATION_LOCATION 1
@@ -86,7 +85,7 @@ void main()
 }
 `;
 
-const DRAW_VS = `\
+const DRAW_VS = glsl`\
 #version 300 es
 #define OFFSET_LOCATION 0
 #define ROTATION_LOCATION 1
@@ -115,7 +114,7 @@ void main()
 }
 `;
 
-const DRAW_FS = `\
+const DRAW_FS = glsl`\
 #version 300 es
 #define ALPHA 0.9
 precision highp float;

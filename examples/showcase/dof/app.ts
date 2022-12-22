@@ -4,6 +4,7 @@
 */
 // @ts-nocheck
 
+import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
@@ -44,7 +45,7 @@ const NUM_CUBES = CUBES_PER_ROW * NUM_ROWS;
 const NEAR = 0.1;
 const FAR = 30.0;
 
-const vs = `\
+const vs = glsl`\
 #version 300 es
 #define SHADER_NAME scene.vs
 
@@ -74,7 +75,7 @@ void main(void) {
 }
 `;
 
-const fs = `\
+const fs = glsl`\
 #version 300 es
 precision highp float;
 #define SHADER_NAME scene.fs
@@ -161,7 +162,7 @@ class InstancedCube extends Model {
   }
 }
 
-const DOF_VERTEX = `\
+const DOF_VERTEX = glsl`\
 #version 300 es
 #define SHADER_NAME quad.vs
 
@@ -172,7 +173,7 @@ void main() {
 }
 `;
 
-const DOF_FRAGMENT = `\
+const DOF_FRAGMENT = glsl`\
 #version 300 es
 precision highp float;
 #define SHADER_NAME dof.fs

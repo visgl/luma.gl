@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+import {glsl} from '../glsl-utils/highlight';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines, PlatformInfo} from './platform-defines';
 import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
@@ -18,7 +20,7 @@ const SHADER_TYPE = {
  * Precision prologue to inject before functions are injected in shader
  * TODO - extract any existing prologue in the fragment source and move it up...
  */
-const FRAGMENT_SHADER_PROLOGUE = `\
+const FRAGMENT_SHADER_PROLOGUE = glsl`\
 precision highp float;
 
 `;

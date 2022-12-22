@@ -1,7 +1,8 @@
 // import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {glsl} from '../../lib/glsl-utils/highlight';
 
 // Do a 9x9 bilateral box filter
-const fs = `\
+const fs = glsl`\
 uniform float strength;
 
 vec4 denoise_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {

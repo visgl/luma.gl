@@ -1,4 +1,4 @@
-import {Device, getRandom} from '@luma.gl/api';
+import {Device, getRandom, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Timeline} from '@luma.gl/engine';
 import {ClassicModel as Model, ClassicModelProps as ModelProps, ProgramManager} from '@luma.gl/webgl-legacy';
 import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
@@ -34,7 +34,7 @@ const dirlight = {
   ...dirlightBase
 };
 
-const vs = `\
+const vs = glsl`\
 attribute float instanceSizes;
 attribute vec3 positions;
 attribute vec3 normals;
@@ -65,7 +65,7 @@ void main(void) {
 }
 `;
 
-const fs = `\
+const fs = glsl`\
 precision highp float;
 
 varying vec3 color;

@@ -1,6 +1,7 @@
+import {glsl} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl-legacy';
 import {phongLighting} from '@luma.gl/shadertools';
+import {clear} from '@luma.gl/webgl-legacy';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -9,7 +10,7 @@ Drawing a phong-shaded cube
 </p>
 `;
 
-const vs = `\
+const vs = glsl`\
   attribute vec3 positions;
   attribute vec3 normals;
   attribute vec2 texCoords;
@@ -29,7 +30,7 @@ const vs = `\
   }
 `;
 
-const fs = `\
+const fs = glsl`\
   precision highp float;
 
   uniform sampler2D uTexture;

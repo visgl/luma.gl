@@ -24,6 +24,14 @@ export {
   convertToVec4
 } from './lib/glsl-utils/shader-utils';
 
+// SHADER HELPERS
+
+/**
+ * Marks GLSL shaders for syntax highlighting: glsl`...`
+ * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
+ */
+export {glsl} from './lib/glsl-utils/highlight';
+
 // SHADER MODULES
 
 // utils

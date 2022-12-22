@@ -1,4 +1,4 @@
-import {Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
+import {Buffer, Texture, loadImageBitmap, ShaderLayout, glsl} from '@luma.gl/api';
 import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 // import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
 // import {Model, CubeGeometry, AnimationLoopTemplate, makeAnimationLoop, AnimationProps} from '@luma.gl/engine';
@@ -13,7 +13,7 @@ const TEXTURE_URL = 'https://raw.githubusercontent.com/uber/luma.gl/8.5-release/
 /** @todo - Provide both GLSL and WGSL shaders */
 const SHADERS = {
   vs: {
-    glsl: `\
+    glsl: glsl`\
 #version 300 es
 #define SHADER_NAME cube-vs
 
@@ -34,7 +34,7 @@ void main() {
   // fragPosition = 0.5 * (vec4(position, 1.) + vec4(1., 1., 1., 1.));
 }
     `,
-    wgsl: `
+    wgsl: /* WGSL */`
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>;
 };
@@ -57,7 +57,7 @@ fn main([[location(0)]] position : vec4<f32>,
 }        `
   },
   fs: {
-    glsl: `\
+    glsl: glsl`\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;
@@ -72,7 +72,7 @@ void main() {
   fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));;
 }
   `,
-    wgsl: `
+    wgsl: /* WGSL */`
 [[group(0), binding(1)]] var mySampler: sampler;
 [[group(0), binding(2)]] var myTexture: texture_2d<f32>;
 

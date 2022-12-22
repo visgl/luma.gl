@@ -1,3 +1,5 @@
+import {glsl} from '@luma.gl/shadertools';
+
 /**
  *
  */
@@ -7,7 +9,7 @@ export const TRANSPILATION_TEST_CASES = [
     isVertex: true,
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
-    GLSL_300: `\
+    GLSL_300: glsl`\
 #version 300 es
 
 in vec4 positions;
@@ -34,7 +36,7 @@ void main(void) {
 `,
 
     // transpiled 300 version should have correct `texure()` syntax
-    GLSL_300_TRANSPILED: `\
+    GLSL_300_TRANSPILED: glsl`\
 #version 300 es
 
 in vec4 positions;
@@ -60,7 +62,7 @@ void main(void) {
 }
 `,
 
-    GLSL_100: `\
+    GLSL_100: glsl`\
 #version 100
 
 attribute vec4 positions;
@@ -91,7 +93,7 @@ void main(void) {
     isVertex: false,
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
-    GLSL_300: `\
+    GLSL_300: glsl`\
 #version 300 es
 
 precision highp float;
@@ -115,7 +117,7 @@ void main(void) {
 `,
 
     // transpiled 300 version should have correct `texure()` syntax
-    GLSL_300_TRANSPILED: `\
+    GLSL_300_TRANSPILED: glsl`\
 #version 300 es
 
 precision highp float;
@@ -138,7 +140,7 @@ void main(void) {
 }
 `,
 
-    GLSL_100: `\
+    GLSL_100: glsl`\
 #version 100
 
 precision highp float;
@@ -165,7 +167,7 @@ void main(void) {
 export const COMPILATION_TEST_CASES = [
   {
     title: 'textureCube',
-    VS_300_VALID: `\
+    VS_300_VALID: glsl`\
 #version 300 es
 
 in vec4 positions;
@@ -183,7 +185,7 @@ void main(void) {
 }
 `,
 
-    FS_300_VALID: `\
+    FS_300_VALID: glsl`\
 #version 300 es
 
 precision highp float;

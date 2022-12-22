@@ -1,3 +1,7 @@
+// luma.gl, MIT license
+
+import {glsl} from '../glsl-utils/highlight';
+
 export type PlatformInfo = {
   gpu: string;
   features: Set<string>;
@@ -7,7 +11,7 @@ export type PlatformInfo = {
 export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
   switch (platformInfo?.gpu.toLowerCase()) {
     case 'apple':
-      return `\
+      return glsl`\
 #define APPLE_GPU
 // Apple optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -17,14 +21,14 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 `;
 
     case 'nvidia':
-      return `\
+      return glsl`\
 #define NVIDIA_GPU
 // Nvidia optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
 
     case 'intel':
-      return `\
+      return glsl`\
 #define INTEL_GPU
 // Intel optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -36,7 +40,7 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 
     case 'amd':
       // AMD Does not eliminate fp64 code
-      return `\
+      return glsl`\
 #define AMD_GPU
 `;
 
@@ -44,7 +48,7 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
       // We don't know what GPU it is, could be that the GPU driver or
       // browser is not implementing UNMASKED_RENDERER constant and not
       // reporting a correct name
-      return `\
+      return glsl`\
 #define DEFAULT_GPU
 // Prevent driver from optimizing away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -54,7 +58,7 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 
 /** Adds defines to let shaders portably v1/v3 check for features */
 export function getVersionDefines(platformInfo: PlatformInfo): string {
-  let versionDefines = `\
+  let versionDefines = glsl`\
 #if (__VERSION__ > 120)
 
 # define FEATURE_GLSL_DERIVATIVES
@@ -72,7 +76,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 `;
 
   if (platformInfo.features.has('glsl-frag-depth')) {
-    versionDefines += `\
+    versionDefines += glsl`\
 
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
@@ -84,7 +88,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 `;
   }
   if (platformInfo?.features.has('glsl-derivatives')) {
-    versionDefines += `\
+    versionDefines += glsl`\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #if defined(GL_OES_standard_derivatives) || defined(FEATURE_GLSL_DERIVATIVES)
@@ -95,7 +99,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 `;
   }
   if (platformInfo?.features.has('glsl-frag-data')) {
-    versionDefines += `\
+    versionDefines += glsl`\
 
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
@@ -106,7 +110,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 `;
   }
   if (platformInfo?.features.has('glsl-texture-lod')) {
-    versionDefines += `\
+    versionDefines += glsl`\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
 #extension GL_EXT_shader_texture_lod : enable

@@ -3,10 +3,9 @@ import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 import {equals} from '@math.gl/core';
 
-import {Buffer, Texture2D} from '@luma.gl/webgl-legacy';
-import {Transform} from '@luma.gl/webgl-legacy';
+import {Transform, Buffer, Texture2D} from '@luma.gl/webgl-legacy';
 import GL from '@luma.gl/constants';
-import {_transform as transformModule} from '@luma.gl/shadertools';
+import {_transform as transformModule, glsl} from '@luma.gl/shadertools';
 import {
   buildHistopyramidBaseLevel,
   getHistoPyramid,
@@ -27,7 +26,7 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
     return;
   }
 
-  const VS = `\
+  const VS = glsl`\
   uniform vec2 size;
   uniform vec2 scale;
   attribute float unusedAttribute;
@@ -104,7 +103,7 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
     return;
   }
 
-  const VS = `\
+  const VS = glsl`\
   attribute float unusedAttribute;
   varying vec2 pixelIndices;
   uniform vec2 size;
@@ -168,7 +167,7 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
   t.end();
 });
 
-const HISTOPYRAMID_GETINPUT_VS = `\
+const HISTOPYRAMID_GETINPUT_VS = glsl`\
 attribute float inTexture;
 varying float outTexture;
 uniform vec2 pixelOffset;
@@ -288,7 +287,7 @@ test('histopyramid#histoPyramid_getInput', (t) => {
   t.end();
 });
 
-const HISTOPYRAMID_BUILD_VS = `\
+const HISTOPYRAMID_BUILD_VS = glsl`\
 attribute float inTexture;
 varying float outTexture;
 
@@ -515,7 +514,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex', (t) => {
     return;
   }
 
-  const VS = `\
+  const VS = glsl`\
   attribute vec4 weights;
   attribute float currentKey;
   varying float relativeIndex;
@@ -565,7 +564,7 @@ test('histopyramid#histopyramid_traversal_findRangeIndex consecutive calls', (t)
     return;
   }
 
-  const VS = `\
+  const VS = glsl`\
   varying float lowerBound1;
   varying float lowerBound2;
 
@@ -612,7 +611,7 @@ test('histopyramid#histopyramid_traversal_mapIndexToCoord', (t) => {
     return;
   }
 
-  const VS = `\
+  const VS = glsl`\
   attribute float index;
   varying vec2 coord;
 
@@ -650,7 +649,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
       return;
     }
 
-    const VS = `\
+    const VS = glsl`\
   attribute float level;
   attribute vec2 offset;
   uniform sampler2D flatPyramid;
