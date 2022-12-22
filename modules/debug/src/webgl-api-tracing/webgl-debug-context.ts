@@ -1,6 +1,6 @@
 // Depends on Khronos Debug support module being imported via "luma.gl/debug"
 // NOTE deprecated, this file has been copied into luma.gl/webgl
-import {log} from '@luma.gl/core';
+import {log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
 // Expose Khronos Debug support module on global context

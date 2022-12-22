@@ -1,8 +1,9 @@
 // luma.gl, MIT license
 
 // eslint-disable-next-line
-import {Program, VertexShader, FragmentShader} from '@luma.gl/core';
+import {Program, VertexShader, FragmentShader} from '@luma.gl/webgl-legacy';
 import {createTestContext} from '@luma.gl/test-utils';
+
 const gl = createTestContext();
 
 const VS = `

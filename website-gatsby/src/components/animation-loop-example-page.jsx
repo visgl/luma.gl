@@ -1,8 +1,7 @@
 import React, {Component} from 'react'; // eslint-disable-line
 import PropTypes from 'prop-types'; 
 import {isBrowser} from '@probe.gl/env';
-import {setPathPrefix} from '@luma.gl/api';
-import {lumaStats} from '@luma.gl/core';
+import {luma, setPathPrefix} from '@luma.gl/api';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
 import {luma} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
@@ -149,7 +148,7 @@ export default class AnimationLoopExamplePage extends Component {
       }
     });
 
-    lumaStats.get('Memory Usage').reset();
+    luma.stats.get('Memory Usage').reset();
     const memWidget = new StatsWidget(lumaStats.get('Memory Usage'), {
       container: this.refs.memStats,
       css: {

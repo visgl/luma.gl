@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Program} from '@luma.gl/core';
+import {Program} from '@luma.gl/webgl-legacy';
 import {createTestContext} from '@luma.gl/test-utils';
 const gl = createTestContext();
 
