@@ -1,5 +1,32 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.13
+
+- chore: Remove WebGL specific exports from core (#1724)
+- feat: Export GL from @luma.gl/webgl-legacy. Update examples (#1723)
+- feat: GLSL/WGSL syntax highlighting (#1722)
+
+## v9.0.0-alpha.12
+
+- chore(shadertools): restore fp64 tests (#1721)
+- chore: Active more typescript checks (#1720)
+- chore(test-utils): More cleanup (#1715)
+- chore: Enable stricter typescript options (#1719)
+- chore(webgl-legacy): Reduce "implicit any" typings (#1718)
+- chore: stricter types (#1717)
+- chore: noImplicitAny (#1716)
+- chore: keep removing implicit any (#1673)
+- docs: Add docusaurus website (#1712)
+- chore(engine): Clean up RenderLoop API (#1687)
+- chore(engine): AnimationLoopTemplate (#1714)
+- feat(gltools): Rename @luma.gl/gltools to @luma.gl/webgl-legacy (#1711)
+- chore: v9 doc updates (#1713)
+- chore: .gitignore additions
+- chore: git ignore .docusaurus
+- build(deps): bump express from 4.17.1 to 4.18.2 (#1710)
+- build(deps): bump qs from 6.5.2 to 6.5.3 (#1709)
+- chore: More small fixes for deck.gl v9 (#1708)
+
 ## v9.0.0-alpha.11
 
 - chore: Refactor device pixel handling into CanvasContext (#1706)
