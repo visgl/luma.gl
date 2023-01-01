@@ -102,12 +102,12 @@ export default class WEBGLBuffer extends Buffer {
   }
 
   override destroy(): void {
-    if (!this.destroyed && this.handle) {
+    if (this.handle) {
       this.removeStats();
       this.trackDeallocatedMemory();
       this.gl.deleteBuffer(this.handle);
-      this.destroyed = true;
       // this.handle = null;
+      this.destroyed = true;
     }
   }
 
