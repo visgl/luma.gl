@@ -108,16 +108,6 @@ export default class ClassicBuffer extends WEBGLBuffer {
     Object.seal(this);
   }
 
-  override destroy(): void {
-    if (this.handle) {
-      this.removeStats();
-      this.trackDeallocatedMemory();
-      this.gl.deleteBuffer(this.handle);
-      // this.handle = null;
-      this.destroyed = true;
-    }
-  }
-
   override write(data: TypedArray, byteOffset?: number): void {
     this.subData({data, offset: byteOffset});
   }

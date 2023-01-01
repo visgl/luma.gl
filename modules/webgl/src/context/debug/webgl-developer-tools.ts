@@ -139,10 +139,10 @@ function onValidateGLFunc(props: DebugContextProps, functionName: string, functi
     log.log(1, functionString)();
   }
 
-  if (props.break) {
+  // If array of breakpoint strings supplied, check if any of them is contained in current GL function
+  if (props.break && props.break.length > 0) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
-    const isBreakpoint =
-      props.break && props.break.every((breakOn: string) => functionString.indexOf(breakOn) !== -1);
+    const isBreakpoint = props.break.every((breakOn: string) => functionString.indexOf(breakOn) !== -1);
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }
