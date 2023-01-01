@@ -98,7 +98,7 @@ Our `onRender` is similar to what we've seen before with the extra step of setti
 
 ```typescript
   override onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
-    mvpMatrix.perspective({fov: Math.PI / 3, aspect})
+    mvpMatrix.perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
@@ -180,7 +180,7 @@ const loop = new AnimationLoop({
 
   override onRender({device, aspect, tick, model, mvpMatrix, viewMatrix}) {
     mvpMatrix
-      .perspective({fov: Math.PI / 3, aspect})
+      .perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);

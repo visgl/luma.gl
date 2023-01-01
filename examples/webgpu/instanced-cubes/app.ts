@@ -153,7 +153,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const aspect = device.canvasContext.getAspect();
     const now = Date.now() / 1000;
 
-    projectionMatrix.perspective({fov: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
+    projectionMatrix.perspective({fovy: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
 
     const mvpMatrices = getMVPMatrixArray(projectionMatrix, now);
     this.uniformBuffer.write(mvpMatrices);

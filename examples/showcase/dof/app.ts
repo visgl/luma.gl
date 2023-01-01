@@ -436,7 +436,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     clear(gl, {color: [0, 0, 0, 1], depth: true, framebuffer: this.sceneFramebuffer});
 
-    this.projMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR});
+    this.projMat.perspective({fovy: radians(75), aspect, near: NEAR, far: FAR});
     this.viewMat.lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
 
     // Update model matrix data and then

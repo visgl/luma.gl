@@ -304,7 +304,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const uProjection = this.projectionMatrix
       ? new Matrix4(Array.from(this.projectionMatrix))
-      : new Matrix4().perspective({fov: radians(40), aspect, near: 0.1, far: 9000});
+      : new Matrix4().perspective({fovy: radians(40), aspect, near: 0.1, far: 9000});
 
     if (!this.scenes.length) return false;
 

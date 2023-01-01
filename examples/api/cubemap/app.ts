@@ -152,7 +152,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   override onRender({device, aspect, tick}: AnimationProps): void {
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
-    const projection = new Matrix4().perspective({fov: radians(75), aspect});
+    const projection = new Matrix4().perspective({fovy: radians(75), aspect});
 
     clear(device, {color: [0, 0, 0, 1], depth: true});
 

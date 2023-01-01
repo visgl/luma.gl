@@ -155,7 +155,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, tick, aspect}: AnimationProps) {
-    this.mvpMat.perspective({fov: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
+    this.mvpMat.perspective({fovy: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
 
     // Draw the cubes
     clear(device, {color: [0, 0, 0, 1], depth: true});

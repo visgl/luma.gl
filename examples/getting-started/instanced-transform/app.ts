@@ -186,7 +186,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, aspect}: AnimationProps) {
-    this.projectionMatrix.perspective({fov: Math.PI / 3, aspect});
+    this.projectionMatrix.perspective({fovy: Math.PI / 3, aspect});
 
     this.transform.run();
 

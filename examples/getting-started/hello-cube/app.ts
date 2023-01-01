@@ -63,7 +63,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override onRender({device, aspect, tick}: AnimationProps) {
     this.mvpMatrix
-      .perspective({fov: Math.PI / 3, aspect})
+      .perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(this.viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);

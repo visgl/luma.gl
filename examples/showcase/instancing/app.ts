@@ -184,7 +184,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.setUniforms({
       uTime: this.timeline.getTime(timeChannel),
       // Basic projection matrix
-      uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0}),
+      uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
       // Move the eye around the plane
       uView: new Matrix4().lookAt({
         center: [0, 0, 0],

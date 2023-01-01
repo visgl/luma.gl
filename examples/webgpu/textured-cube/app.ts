@@ -172,7 +172,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
-    projectionMatrix.perspective({fov: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
+    projectionMatrix.perspective({fovy: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     this.uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
 

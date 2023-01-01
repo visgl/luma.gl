@@ -161,7 +161,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             depthCompare: 'less-equal'
           },
           uniforms: {
-            uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
+            uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
             uView: new Matrix4().lookAt({
               center: [0, 0, 0],
               eye: [0, 0, -8]
