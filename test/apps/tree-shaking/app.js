@@ -33,7 +33,7 @@ const animationFrame = new AnimationLoop()
             ((Math.sin(tick * 0.0035) + 1) * SIDE) / 4 + 32
           ]
         }),
-        uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 2048.0})
+        uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0})
       })
       .draw();
   });

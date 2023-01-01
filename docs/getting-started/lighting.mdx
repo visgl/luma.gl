@@ -129,7 +129,7 @@ Our `onRender` doesn't change much except to set up the model matrix separately 
       .rotateY(tick * 0.013);
 
     mvpMatrix
-      .perspective({fov: Math.PI / 3, aspect})
+      .perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .multiplyRight(modelMatrix);
 
@@ -241,7 +241,7 @@ const loop = new AnimationLoop({
       .rotateY(tick * 0.013);
 
     mvpMatrix
-      .perspective({fov: Math.PI / 3, aspect})
+      .perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(viewMatrix)
       .multiplyRight(modelMatrix);
 

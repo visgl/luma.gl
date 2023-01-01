@@ -177,7 +177,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const camZ = Math.sin(this.rotationAngle);
     const camRadius = 800;
 
-    this.projectionMatrix.perspective({fov: radians(60), aspect, near: NEAR, far: FAR});
+    this.projectionMatrix.perspective({fovy: radians(60), aspect, near: NEAR, far: FAR});
     this.viewMatrix.lookAt({
       eye: [camX * camRadius, 400, camZ * camRadius],
       center: [0, 0, 0],

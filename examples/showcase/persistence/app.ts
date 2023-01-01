@@ -202,7 +202,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});
 
-    const projection = new Matrix4().perspective({fov: radians(75), aspect});
+    const projection = new Matrix4().perspective({fovy: radians(75), aspect});
     const view = new Matrix4().lookAt({eye: [0, 0, 4]});
 
     clear(device, {framebuffer: this.mainFramebuffer, color: [0, 0, 0, 1.0], depth: 1});

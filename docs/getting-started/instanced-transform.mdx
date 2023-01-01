@@ -199,7 +199,7 @@ Our `onRender` needs an update to perform the transform feedback and pass the tr
 
 ```typescript
   override onRender({device, aspect, model, transform, projectionMatrix}) {
-    projectionMatrix.perspective({fov: Math.PI / 3, aspect});
+    projectionMatrix.perspective({fovy: Math.PI / 3, aspect});
 
     transform.run();
 
@@ -386,7 +386,7 @@ const loop = new AnimationLoop({
   },
 
   override onRender({device, aspect, model, transform, projectionMatrix}) {
-    projectionMatrix.perspective({fov: Math.PI / 3, aspect});
+    projectionMatrix.perspective({fovy: Math.PI / 3, aspect});
 
     transform.run();
 
