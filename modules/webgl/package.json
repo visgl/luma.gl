@@ -37,7 +37,7 @@
     "@babel/runtime": "^7.0.0",
     "@luma.gl/api": "9.0.0-alpha.14",
     "@luma.gl/constants": "9.0.0-alpha.14",
-    "@probe.gl/env": "^3.5.0"
+    "@probe.gl/env": "4.0.0-alpha.1"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }
