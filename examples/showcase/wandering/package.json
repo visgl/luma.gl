@@ -12,7 +12,7 @@
     "@luma.gl/shadertools": "9.0.0-alpha.14",
     "@luma.gl/webgl": "9.0.0-alpha.14",
     "@luma.gl/webgl-legacy": "9.0.0-alpha.14",
-    "@probe.gl/log": "^3.5.0"
+    "@probe.gl/log": "4.0.0-alpha.1"
   },
   "devDependencies": {
     "typescript": "^4.3.2",

@@ -31,7 +31,7 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
-    "@probe.gl/env": "^3.5.0",
+    "@probe.gl/env": "4.0.0-alpha.1",
     "@types/gl": "^6.0.2",
     "gl": "^6.0.1"
   },
@@ -39,10 +39,10 @@
     "@luma.gl/api": "9.0.0-alpha.13",
     "@luma.gl/webgl": "9.0.0-alpha.13",
     "@luma.gl/webgpu": "9.0.0-alpha.13",
-    "@probe.gl/test-utils": "^3.5.0"
+    "@probe.gl/test-utils": "4.0.0-alpha.1"
   },
   "engines_comment": [
-    "gl needs recent minor version Node 16.x"
+    "gl needs recent minor version of Node 16.x"
   ],
   "engines": {
     "node": ">=16.18.0"
