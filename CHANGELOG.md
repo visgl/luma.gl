@@ -2,6 +2,15 @@
 
 ## v9.0.0-alpha.13
 
+- chore: Bump to probe.gl@4.0.0-alpha.1 (#1728)
+- chore: Bump math.gl@4.0.0-alpha.1 (#1727)
+
+## v9.0.0-alpha.13
+
+- fix(webgl): Fixes for deck.gl integration (#1725)
+
+## v9.0.0-alpha.13
+
 - chore: Remove WebGL specific exports from core (#1724)
 - feat: Export GL from @luma.gl/webgl-legacy. Update examples (#1723)
 - feat: GLSL/WGSL syntax highlighting (#1722)

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-shader-hooks",
-  "version": "9.0.0-alpha.14",
+  "version": "9.0.0-alpha.15",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.14",
-    "@luma.gl/webgl": "9.0.0-alpha.14",
-    "@luma.gl/webgl-legacy": "9.0.0-alpha.14"
+    "@luma.gl/engine": "9.0.0-alpha.15",
+    "@luma.gl/webgl": "9.0.0-alpha.15",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.15"
   },
   "devDependencies": {
     "typescript": "^4.3.2",
