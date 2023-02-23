@@ -5,7 +5,9 @@ dist-min/*
 dist-buble/*
 **/dist/*
 website*/public/*
+website-docusaurus
 
+tsconfig.tsbuildinfo
 _docs/
 .nyc_output/
 coverage/
