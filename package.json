@@ -45,9 +45,9 @@
     "@loaders.gl/core": "^3.2.12",
     "@loaders.gl/gltf": "^3.2.12",
     "@loaders.gl/polyfills": "^3.2.12",
-    "@probe.gl/bench": "4.0.0-alpha.1",
-    "@probe.gl/stats-widget": "4.0.0-alpha.1",
-    "@probe.gl/test-utils": "4.0.0-alpha.1",
+    "@probe.gl/bench": "^4.0.0",
+    "@probe.gl/stats-widget": "^4.0.0",
+    "@probe.gl/test-utils": "^4.0.0",
     "@turf/boolean-within": "^6.0.1",
     "@turf/helpers": "^6.1.4",
     "@types/tape-promise": "^4.0.1",
@@ -67,13 +67,14 @@
     "TODO - remove when ocular upgrades",
     "Note: tape 4.12 and higher no longer compares 0 and -0 equally...",
     "Note: newer prettier breaks on typescript import type",
-    "Note: probe.gl needs to be 3.5 or higher to avoid timeouts"
+    "Note: probe.gl needs to be 4.0, remove when ocular upgraded"
   ],
   "resolutions": {
     "tape": "4.11.0",
     "prettier": "2.3.1",
-    "@probe.gl/test-utils": "^4.0.0-alpha.1",
-    "@probe.gl/env": "4.0.0-alpha.1"
+    "@probe.gl/test-utils": "^4.0.0",
+    "@probe.gl/env": "4.0.0",
+    "puppeteer": "19.4.0"
   },
   "pre-commit": [
     "test-fast"

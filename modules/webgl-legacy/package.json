@@ -32,7 +32,7 @@
     "@luma.gl/constants": "9.0.0-alpha.15",
     "@luma.gl/engine": "9.0.0-alpha.15",
     "@luma.gl/webgl": "9.0.0-alpha.15",
-    "@probe.gl/log": "4.0.0-alpha.1"
+    "@probe.gl/log": "^4.0.0"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

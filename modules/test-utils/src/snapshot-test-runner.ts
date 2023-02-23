@@ -51,8 +51,7 @@ export default class SnapshotTestRunner extends TestRunner {
     };
 
     // Take screenshot and compare
-    // @ts-ignore
-    const result = await window.browserTestDriver_captureAndDiffScreen(diffOptions);
+    const result = await globalThis.browserTestDriver_captureAndDiffScreen(diffOptions);
 
     // invoke user callback
     if (result.success) {

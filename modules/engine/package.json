@@ -36,8 +36,8 @@
     "@luma.gl/shadertools": "9.0.0-alpha.15",
     "@luma.gl/webgl": "9.0.0-alpha.15",
     "@math.gl/core": "4.0.0-alpha.1",
-    "@probe.gl/log": "4.0.0-alpha.1",
-    "@probe.gl/stats": "4.0.0-alpha.1"
+    "@probe.gl/log": "^4.0.0",
+    "@probe.gl/stats": "^4.0.0"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }
