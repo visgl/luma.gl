@@ -31,6 +31,10 @@ export class ScenegraphNode {
     this._setScenegraphNodeProps(props);
   }
 
+  getBounds(): [number[], number[]] | null {
+    return null;
+  }
+
   destroy(): void {}
 
   /** @deprecated use .destroy() */

@@ -8,6 +8,7 @@ export type ModelNodeProps = ScenegraphNodeProps & ModelProps & {
 
 export class ModelNode extends ScenegraphNode {
   readonly model: Model;
+  bounds: [number[], number[]] | null = null;
 
   AfterRender = null;
   managedResources: any[];
@@ -36,6 +37,10 @@ export class ModelNode extends ScenegraphNode {
     super.setProps(props);
     this._setModelNodeProps(props);
     return this;
+  }
+
+  override getBounds(): [number[], number[]] | null {
+    return this.bounds;
   }
 
   override destroy(): void {

@@ -125,7 +125,7 @@ export class GLTFInstantiator {
       ? gltfPrimitive.indices.count
       : this.getVertexCount(gltfPrimitive.attributes);
 
-    return createGLTFModel(
+    const model = createGLTFModel(
       this.device,
       {
         id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
@@ -136,6 +136,9 @@ export class GLTFInstantiator {
         ...this.options
       }
     );
+    model.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
+
+    return model;
   }
 
   getVertexCount(attributes: any) {

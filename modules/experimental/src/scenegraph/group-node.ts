@@ -1,4 +1,4 @@
-import {Matrix4} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core';
 import {log} from '@luma.gl/api';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 
@@ -21,6 +21,40 @@ export class GroupNode extends ScenegraphNode {
     );
     super(props);
     this.children = children;
+  }
+
+  override getBounds(): [number[], number[]] | null {
+    const result: [number[], number[]] = [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]];
+
+    this.traverse((node, {worldMatrix}) => {
+      const bounds = node.getBounds();
+      if (!bounds) {
+        return;
+      }
+      const [min, max] = bounds;
+      const center = new Vector3(min).add(max).divide([2, 2, 2]);
+      worldMatrix.transformAsPoint(center, center);
+      const halfSize = new Vector3(max).subtract(min).divide([2, 2, 2]);
+      worldMatrix.transformAsVector(halfSize, halfSize);
+
+      for (let v = 0; v < 8; v++) {
+        // Test all 8 corners of the box
+        const position = new Vector3(
+          v & 0b001 ? -1 : 1,
+          v & 0b010 ? -1 : 1,
+          v & 0b100 ? -1 : 1
+        ).multiply(halfSize).add(center);
+
+        for (let i = 0; i < 3; i++) {
+          result[0][i] = Math.min(result![0][i], position[i]);
+          result[1][i] = Math.max(result![1][i], position[i]);
+        }
+      }
+    });
+    if (!Number.isFinite(result[0][0])) {
+      return null;
+    }
+    return result;
   }
 
   override destroy(): void {
@@ -55,7 +89,7 @@ export class GroupNode extends ScenegraphNode {
     return this;
   }
 
-  traverse(visitor, {worldMatrix = new Matrix4()} = {}) {
+  traverse(visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void, {worldMatrix = new Matrix4()} = {}) {
     const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
 
     for (const child of this.children) {

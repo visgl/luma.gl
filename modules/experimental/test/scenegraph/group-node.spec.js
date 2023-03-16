@@ -1,8 +1,12 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {GroupNode, ScenegraphNode} from '@luma.gl/experimental';
+import {GroupNode, ScenegraphNode, ModelNode} from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
+import {fixture} from 'test/setup';
+import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
+
+const {gl} = fixture;
 
 test('GroupNode#construction', (t) => {
   const grandChild = new ScenegraphNode();
@@ -98,6 +102,37 @@ test('GroupNode#traverse', (t) => {
     modelMatrices[grandChildSNode.id],
     new Matrix4().identity().scale(4),
     'should update grand child matrix'
+  );
+
+  t.end();
+});
+
+test('GroupNode#getBounds', (t) => {
+  const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
+
+  const childSNode = new ModelNode(gl, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+  const grandChildSNode = new ModelNode(gl, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+  const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
+  const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
+
+  t.deepEqual(groupNode.getBounds(), null, 'child bounds are not defined');
+
+  childSNode.bounds = [
+    [0, 0, 0],
+    [1, 1, 1]
+  ];
+  grandChildSNode.bounds = [
+    [-1, -1, -1],
+    [0, 0, 0]
+  ];
+
+  t.deepEqual(
+    groupNode.getBounds(),
+    [
+      [-4, -4, -1],
+      [2, 2, 3]
+    ],
+    'bounds calculated'
   );
 
   t.end();
