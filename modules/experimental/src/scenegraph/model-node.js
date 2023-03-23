@@ -17,6 +17,7 @@ export default class ModelNode extends ScenegraphNode {
       this.model = new Model(gl, props);
     }
 
+    this.bounds = null;
     this.managedResources = props.managedResources || [];
   }
 
@@ -24,6 +25,10 @@ export default class ModelNode extends ScenegraphNode {
     super.setProps(props);
     this._setModelNodeProps(props);
     return this;
+  }
+
+  getBounds() {
+    return this.bounds;
   }
 
   delete() {

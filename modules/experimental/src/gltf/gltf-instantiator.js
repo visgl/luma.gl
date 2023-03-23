@@ -118,7 +118,7 @@ export default class GLTFInstantiator {
   }
 
   createPrimitive(gltfPrimitive, i, gltfMesh) {
-    return createGLTFModel(
+    const model = createGLTFModel(
       this.gl,
       Object.assign(
         {
@@ -133,6 +133,10 @@ export default class GLTFInstantiator {
         this.options
       )
     );
+
+    model.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
+
+    return model;
   }
 
   createAttributes(attributes, indices) {
