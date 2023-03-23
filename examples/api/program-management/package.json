@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-program-management",
-  "version": "8.5.18",
+  "version": "8.5.19",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
@@ -8,10 +8,10 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/core": "8.5.18",
-    "@luma.gl/engine": "8.5.18",
-    "@luma.gl/gltools": "8.5.18",
-    "@luma.gl/shadertools": "8.5.18",
+    "@luma.gl/core": "8.5.19",
+    "@luma.gl/engine": "8.5.19",
+    "@luma.gl/gltools": "8.5.19",
+    "@luma.gl/shadertools": "8.5.19",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {

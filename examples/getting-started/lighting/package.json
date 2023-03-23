@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-lighting",
-  "version": "8.5.18",
+  "version": "8.5.19",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open",
@@ -8,10 +8,10 @@
     "build": "webpack --env.analyze"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.5.18",
-    "@luma.gl/gltools": "8.5.18",
-    "@luma.gl/shadertools": "8.5.18",
-    "@luma.gl/webgl": "8.5.18",
+    "@luma.gl/engine": "8.5.19",
+    "@luma.gl/gltools": "8.5.19",
+    "@luma.gl/shadertools": "8.5.19",
+    "@luma.gl/webgl": "8.5.19",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {

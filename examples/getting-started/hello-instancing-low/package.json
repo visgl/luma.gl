@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-instancing-low",
-  "version": "8.5.18",
+  "version": "8.5.19",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
@@ -8,8 +8,8 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.5.18",
-    "@luma.gl/gltools": "8.5.18",
+    "@luma.gl/engine": "8.5.19",
+    "@luma.gl/gltools": "8.5.19",
     "core-js": "^3.5.0"
   },
   "devDependencies": {
