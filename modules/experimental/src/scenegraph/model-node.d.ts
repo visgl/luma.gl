@@ -3,6 +3,7 @@ import ScenegraphNode from './scenegraph-node';
 
 export default class ModelNode extends ScenegraphNode {
   readonly model: Model;
+  bounds: [number[], number[]] | null;
 
   constructor(model: Model | WebGLRenderingContext, props?: {});
   setProps(props: any): this;

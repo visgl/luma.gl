@@ -29,6 +29,10 @@ export default class ScenegraphNode {
     return `{type: ScenegraphNode, id: ${this.id})}`;
   }
 
+  getBounds() {
+    return null;
+  }
+
   setPosition(position) {
     assert(position.length === 3, 'setPosition requires vector argument');
     this.position = position;

@@ -10,6 +10,7 @@ export default class ScenegraphNode {
   delete(): void;
   setProps(props: ScenegraphNodeProps): this;
   toString(): string;
+  getBounds(): [number[], number[]] | null;
   setPosition(position: any): this;
   setRotation(rotation: any): this;
   setScale(scale: any): this;
