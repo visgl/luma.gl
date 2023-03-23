@@ -46,6 +46,10 @@ var node = new Model(gl, props);
 
 Note that setting orientation props does not actually update the object's matrix. `update()` must be called.
 
+### getBounds() : [min: number[], max: number[]] | null
+
+Calculate the bounding box of the node.
+
 ### update() - DEPRECATED
 
 Update the model matrix. Useful to update changes to the `position`, `rotation` or `scale` properties.

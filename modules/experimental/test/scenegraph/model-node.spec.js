@@ -6,11 +6,11 @@ import {makeSpy} from '@probe.gl/test-utils';
 import {Model} from '@luma.gl/webgl-legacy';
 import {ModelNode} from '@luma.gl/experimental';
 
-const DUMMY_VS = `
+export const DUMMY_VS = `
   void main() { gl_Position = vec4(1.0); }
 `;
 
-const DUMMY_FS = `
+export const DUMMY_FS = `
   precision highp float;
   void main() { gl_FragColor = vec4(1.0); }
 `;
