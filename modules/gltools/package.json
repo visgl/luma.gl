@@ -15,7 +15,7 @@
     "webgl",
     "polyfill"
   ],
-  "types": "src/index.d.ts",
+  "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "files": [
