@@ -16,7 +16,7 @@ export default abstract class ComputePass extends Resource<ComputePassProps> {
 
   abstract override destroy(): void;
 
-  abstract endPass(): void;
+  abstract end(): void;
 
   abstract setPipeline(pipeline: ComputePipeline): void;
 

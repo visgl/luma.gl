@@ -22,8 +22,8 @@ export default class WebGPUComputePass extends ComputePass {
   /** @note no WebGPU destroy method, just gc */
   override destroy(): void {}
 
-  endPass(): void {
-    this.handle.endPass();
+  end(): void {
+    this.handle.end();
   }
 
   setPipeline(pipeline: ComputePipeline): void {
@@ -46,7 +46,7 @@ export default class WebGPUComputePass extends ComputePass {
    * @param z Z dimension of the grid of workgroups to dispatch.
    */
   dispatch(x: number, y?: number, z?: number): void {
-    this.handle.dispatch(x, y, z);
+    this.handle.dispatchWorkgroups(x, y, z);
   }
 
   /**
@@ -55,7 +55,7 @@ export default class WebGPUComputePass extends ComputePass {
    * @param indirectOffset
    */
   dispatchIndirect(indirectBuffer: Buffer, indirectOffset: number = 0): void {
-    this.handle.dispatchIndirect(cast<WebGPUBuffer>(indirectBuffer).handle, indirectOffset);
+    this.handle.dispatchWorkgroupsIndirect(cast<WebGPUBuffer>(indirectBuffer).handle, indirectOffset);
   }
 
   pushDebugGroup(groupLabel: string): void {

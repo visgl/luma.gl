@@ -151,7 +151,8 @@ export default class WebGPURenderPipeline extends RenderPipeline {
       fragment,
       primitive: {
         topology: this.props.topology
-      }
+      },
+      layout: 'auto'
     };
 
     // Set parameters on the descriptor

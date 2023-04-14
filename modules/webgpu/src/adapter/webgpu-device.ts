@@ -96,7 +96,7 @@ export default class WebGPUDevice extends Device {
 
     this._info = {
       type: 'webgpu',
-      vendor: this.adapter.name,
+      vendor: this.adapter.__brand,
       renderer: '',
       version: '',
       gpu: 'unknown', // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
@@ -228,7 +228,7 @@ export default class WebGPUDevice extends Device {
   }
 
   submit(): void {
-    this.renderPass?.endPass();
+    this.renderPass?.end();
     const commandBuffer = this.commandEncoder?.finish();
     if (commandBuffer) {
       this.handle.queue.submit([commandBuffer]);

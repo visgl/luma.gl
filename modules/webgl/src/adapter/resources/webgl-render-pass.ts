@@ -9,7 +9,7 @@ export default class WEBGLRenderPass extends RenderPass {
     this.device = device;
   }
 
-  endPass(): void {}
+  end(): void {}
 
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup(): void {}

@@ -36,7 +36,6 @@ declare global {
  */
 export async function loadWebGLDeveloperTools(): Promise<void> {
   if (!globalThis.WebGLDebugUtils) {
-    // @ts-expect-error Developer tools expects global to be set
     globalThis.global = globalThis.global || globalThis;
     // @ts-expect-error Developer tools expects global to be set
     globalThis.global.module = {};

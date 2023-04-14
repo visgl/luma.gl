@@ -12,7 +12,6 @@
   "references": [
     {"path": "../constants"},
     {"path": "../shadertools"},
-    {"path": "../webgl"},
-    {"path": "../webgl-legacy"}
+    {"path": "../webgl"}
   ]
 }

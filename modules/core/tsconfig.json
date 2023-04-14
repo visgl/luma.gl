@@ -12,6 +12,7 @@
     {"path": "../constants"},
     {"path": "../engine"},
     {"path": "../shadertools"},
-    {"path": "../webgl"}
+    {"path": "../webgl"},
+    {"path": "../webgl-legacy"}
   ]
 }

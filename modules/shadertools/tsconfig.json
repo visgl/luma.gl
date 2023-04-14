@@ -8,8 +8,9 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
-  },
-  "references": [
-    {"path": "../test-utils"}
-  ]
+  }
+  // ,
+  // "references": [
+  //   {"path": "../test-utils"}
+  // ]
 }

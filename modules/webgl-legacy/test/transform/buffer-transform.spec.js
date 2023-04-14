@@ -166,6 +166,7 @@ test('WebGL#BufferTransform setupResources', (t) => {
     }
   });
 
+  // @ts-ignore
   bt.setupResources({model});
 
   const {attributes, transformFeedback} = bt.getDrawOptions();
@@ -194,6 +195,7 @@ test('WebGL#BufferTransform swap', (t) => {
     }
   });
 
+  // @ts-ignore
   bt.setupResources({model});
 
   let {attributes, transformFeedback} = bt.getDrawOptions();

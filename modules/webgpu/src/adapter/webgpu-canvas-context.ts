@@ -25,6 +25,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.gpuCanvasContext = this.canvas.getContext('webgpu') as GPUCanvasContext;
+    // @ts-expect-error TODO this has been replaced
     this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
   }
 
@@ -75,9 +76,9 @@ export default class WebGPUCanvasContext extends CanvasContext {
       this.gpuCanvasContext.configure({
         device: this.device.handle,
         format: getWebGPUTextureFormat(this.format),
-        size: [this.width, this.height],
+        // size: [this.width, this.height],
         colorSpace: this.props.colorSpace,
-        compositingAlphaMode: this.props.compositingAlphaMode
+        alphaMode: this.props.alphaMode
       });
 
       log.log(1, `Resized to ${this.width}x${this.height}px`)();
