@@ -2,7 +2,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type Device from './device';
 import type Framebuffer from './resources/framebuffer';
-import {log} from '@luma.gl/api';
+import {log} from '../utils/log';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
