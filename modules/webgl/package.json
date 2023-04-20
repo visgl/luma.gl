@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
+    "@luma.gl/shadertools": "9.0.0-alpha.15",
     "@luma.gl/api": "9.0.0-alpha.15",
     "@luma.gl/constants": "9.0.0-alpha.15",
     "@probe.gl/env": "4.0.0-alpha.1"
