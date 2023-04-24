@@ -24,7 +24,7 @@
     "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_SKIP_DOWNLOAD=true yarn && ocular-bootstrap",
     "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
-    "build": "ocular-clean && yarn tsclean && yarn tsbuild && ocular-build --dist esm",
+    "build": "ocular-clean && yarn tsbuild && ocular-build --dist esm,es5 && lerna run pre-build",
     "build-scripts": "lerna run pre-build",
     "tsclean": "find . -name tsconfig.tsbuildinfo -exec rm {} \\;",
     "tsbuild": "tsc -b tsconfig.build.json && scripts/add-js-to-imports.sh",
