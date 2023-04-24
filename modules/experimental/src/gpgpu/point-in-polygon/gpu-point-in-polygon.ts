@@ -54,7 +54,6 @@ export class GPUPointInPolygon {
     const {polygonTexture, boundingBox} = this;
 
     this.filterTransform.run({
-      // @ts-expect-error
       moduleSettings: {boundingBox, texture: polygonTexture}
     });
   }

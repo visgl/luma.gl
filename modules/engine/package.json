@@ -17,8 +17,8 @@
     "3d"
   ],
   "types": "dist/index.d.ts",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
   "files": [
     "src",
     "dist",
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
+    "@luma.gl/api": "9.0.0-alpha.15",
     "@luma.gl/constants": "9.0.0-alpha.15",
     "@luma.gl/shadertools": "9.0.0-alpha.15",
     "@luma.gl/webgl": "9.0.0-alpha.15",
