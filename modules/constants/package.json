@@ -16,7 +16,7 @@
     "debug",
     "3d"
   ],
-  "types": "dist/index.d.ts",
+  "types": "src/index.ts",
   "main": "dist/es5/index.js",
   "module": "dist/esm/index.js",
   "files": [
