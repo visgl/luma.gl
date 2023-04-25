@@ -1,7 +1,7 @@
 // luma.gl, MIT license
-import {log, uid, Shader, ShaderProps} from '@luma.gl/api';
+import {log, uid, Shader, ShaderProps, CompilerMessage, formatCompilerLog} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {getShaderInfo, CompilerMessage, formatCompilerLog} from '@luma.gl/shadertools';
+import {getShaderInfo} from '../helpers/get-shader-info';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import WebGLDevice from '../webgl-device';
 

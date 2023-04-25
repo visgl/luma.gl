@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type Device from '../device';
-import {uid} from '../../utils/utils';
+import {uid} from '../../lib/utils/utils';
 
 export type ResourceProps = {
   id?: string;

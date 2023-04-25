@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type {TypedArray, NumberArray} from '../types';
+import type {TypedArray, NumberArray} from '../../types';
 
 let arrayBuffer: ArrayBuffer;
 

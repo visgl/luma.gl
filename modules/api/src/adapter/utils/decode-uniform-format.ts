@@ -1,4 +1,4 @@
-import {assert} from '../../utils/assert';
+import {assert} from '../../lib/utils/assert';
 import {UniformFormat, UniformDataType} from '../types/uniform-formats';
 
 const UNIFORM_FORMATS: Record<UniformFormat, {type: UniformDataType, components: number}> = {

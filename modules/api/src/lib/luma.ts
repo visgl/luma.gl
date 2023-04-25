@@ -1,9 +1,11 @@
+// luma.gl, MIT license
+
 import type {default as Device, DeviceProps} from '../adapter/device';
 import {DEFAULT_DEVICE_PROPS} from '../adapter/device';
-import StatsManager from '../utils/stats-manager';
-import {lumaStats} from '../utils/stats-manager';
+import StatsManager from './utils/stats-manager';
+import {lumaStats} from './utils/stats-manager';
 import type {Log} from '@probe.gl/log';
-import {log} from '../utils/log';
+import {log} from './utils/log';
 import {assert} from '..';
 
 const deviceList = new Map<string, typeof Device>();

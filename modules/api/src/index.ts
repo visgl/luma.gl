@@ -19,7 +19,7 @@ export type {TextureProps, TextureData} from './adapter/resources/texture';
 export {default as Texture} from './adapter/resources/texture';
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {default as ExternalTexture} from './adapter/resources/external-texture';
-export type {ShaderProps, CompilerMessage} from './adapter/resources/shader';
+export type {ShaderProps} from './adapter/resources/shader';
 export {default as Shader} from './adapter/resources/shader';
 export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
 export {default as Sampler} from './adapter/resources/sampler';
@@ -38,7 +38,9 @@ export {default as RenderPass} from './adapter/resources/render-pass';
 export type {ComputePassProps} from './adapter/resources/compute-pass';
 export {default as ComputePass} from './adapter/resources/compute-pass';
 
+
 // API TYPES
+export type {CompilerMessage} from './lib/compiler-log/compiler-message';
 export type {AccessorObject} from './adapter/types/accessor';
 export type {
   Parameters,
@@ -103,17 +105,19 @@ export type {
 
 // GENERAL UTILS
 
-export {default as StatsManager} from './utils/stats-manager';
-export {assert} from './utils/assert';
-export {cast} from './utils/cast';
-export {log} from './utils/log';
-export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
-export {formatValue} from './utils/format-value';
-export {stubRemovedMethods} from './utils/stub-methods';
-export {checkProps} from './utils/check-props';
-export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
-export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
-export {getRandom, random} from './utils/random';
+export {default as StatsManager} from './lib/utils/stats-manager';
+export {assert} from './lib/utils/assert';
+export {cast} from './lib/utils/cast';
+export {log} from './lib/utils/log';
+export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
+export {formatValue} from './lib/utils/format-value';
+export {stubRemovedMethods} from './lib/utils/stub-methods';
+export {checkProps} from './lib/utils/check-props';
+export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './lib/utils/load-file';
+export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
+export {getRandom, random} from './lib/utils/random';
+
+export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
 export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';
