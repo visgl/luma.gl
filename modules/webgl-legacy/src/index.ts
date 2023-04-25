@@ -131,4 +131,4 @@ export {default as ProgramManager} from './engine/program-manager';
 
 export {default as Transform} from './transform/transform';
 
-export {default as ClipSpace} from './engine/classic-clip-space';
+// export {default as ClipSpace} from './engine/classic-clip-space';

@@ -43,9 +43,9 @@ export default class WebGPUFramebuffer extends Framebuffer {
       this.renderPassDescriptor.depthStencilAttachment = {
         view: this.depthStencilAttachment.handle.createView(),
         // Add default clear values
-        depthLoadValue: 1.0,
+        depthClearValue: 1.0,
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
+        stencilClearValue: 0,
         stencilStoreOp: 'store',
       }
     }
@@ -53,6 +53,7 @@ export default class WebGPUFramebuffer extends Framebuffer {
     if (this.colorAttachments.length > 0) {
       this.renderPassDescriptor.colorAttachments = this.colorAttachments.map(colorAttachment => ({
         view: colorAttachment.handle.createView(),
+        loadOp: 'clear',
         loadValue: [0.0, 0.0, 0.0, 0.0],
         storeOp: 'store'
       }));

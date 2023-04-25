@@ -11,7 +11,7 @@
   },
   "references": [
     {"path": "../constants"},
-    {"path": "../webgl"},
-    {"path": "../test-utils"}
+    {"path": "../engine"},
+    {"path": "../webgl"}
   ]
 }

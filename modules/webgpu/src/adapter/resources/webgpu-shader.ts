@@ -66,7 +66,7 @@ export default class WebGPUShader extends Shader {
 
   /** Returns compilation info for this shader */
   async compilationInfo(): Promise<readonly CompilerMessage[]> {
-    const compilationInfo = await this.handle.compilationInfo();
+    const compilationInfo = await this.handle.getCompilationInfo();
     return compilationInfo.messages;
   }
 }

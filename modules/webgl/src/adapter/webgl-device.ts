@@ -336,7 +336,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * Chrome's offscreen canvas does not require gl.commit
    */
   submit(): void {
-    this.renderPass?.endPass();
+    this.renderPass?.end();
     this.renderPass = null;
     // this.canvasContext.commit();
   }

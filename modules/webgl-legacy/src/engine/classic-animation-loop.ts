@@ -495,7 +495,7 @@ export default class ClassicAnimationLoop {
       tock: 0,
 
       timeline: this.timeline,
-      // @ts-expect-error
+      // @ts-ignore
       animationLoop: this,
 
       // Timeline time for back compatibility

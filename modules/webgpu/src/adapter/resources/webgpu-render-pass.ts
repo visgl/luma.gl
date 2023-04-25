@@ -24,8 +24,8 @@ export default class WebGPURenderPass extends RenderPass {
 
   override destroy(): void {}
 
-  endPass(): void {
-    this.handle.endPass();
+  end(): void {
+    this.handle.end();
   }
 
   setPipeline(pipeline: RenderPipeline): void {

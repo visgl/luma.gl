@@ -24,7 +24,7 @@
     "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_SKIP_DOWNLOAD=true yarn && ocular-bootstrap",
     "start": "echo 'Please see luma.gl website for how to run examples' && open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
-    "build": "ocular-clean && yarn tsclean && yarn tsbuild && ocular-build --dist esm",
+    "build": "ocular-clean && yarn tsclean && yarn tsbuild && ocular-build --dist esm,es5 && lerna run pre-build",
     "build-scripts": "lerna run pre-build",
     "tsclean": "find . -name tsconfig.tsbuildinfo -exec rm {} \\;",
     "tsbuild": "tsc -b tsconfig.build.json && scripts/add-js-to-imports.sh",
@@ -73,13 +73,16 @@
     "tape": "4.11.0",
     "prettier": "2.3.1",
     "@probe.gl/test-utils": "^4.0.0-alpha.1",
-    "@probe.gl/env": "4.0.0-alpha.1",
-    "puppeteer": "19.4.0"
+    "@probe.gl/env": "4.0.0-alpha.1"
   },
   "pre-commit": [
     "test-fast"
   ],
   "dependencies": {
     "@types/offscreencanvas": "^2019.6.4"
+  },
+  "volta": {
+    "node": "16.19.1",
+    "yarn": "1.22.19"
   }
 }

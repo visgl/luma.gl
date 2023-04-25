@@ -2,7 +2,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type Device from './device';
 import type Framebuffer from './resources/framebuffer';
-import {log} from '@luma.gl/api';
+import {log} from '../utils/log';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
@@ -26,7 +26,7 @@ export type CanvasContextProps = {
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
   colorSpace?: 'srgb'; // GPUPredefinedColorSpace
   /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-  compositingAlphaMode?: 'opaque' | 'premultiplied';
+  alphaMode?: 'opaque' | 'premultiplied';
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
@@ -38,7 +38,7 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
   container: null,
   visible: true,
   colorSpace: 'srgb',
-  compositingAlphaMode: 'opaque'
+  alphaMode: 'opaque'
 };
 
 /**

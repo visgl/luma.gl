@@ -22,7 +22,8 @@ export default class WebGPUComputePipeline extends ComputePipeline {
         module,
         entryPoint: this.props.csEntryPoint,
         // constants: this.props.csConstants
-      }
+      },
+      layout: 'auto'
     });
   }
 

@@ -14,8 +14,8 @@
     "3d"
   ],
   "types": "src/index.ts",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
   "files": [
     "src",
     "dist",
@@ -30,7 +30,7 @@
     "@babel/runtime": "^7.0.0",
     "@luma.gl/api": "9.0.0-alpha.15",
     "@probe.gl/env": "^4.0.0-alpha.1",
-    "@webgpu/types": "^0.1.9"
+    "@webgpu/types": "^0.1.31"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

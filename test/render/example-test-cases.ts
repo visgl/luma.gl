@@ -45,8 +45,8 @@ const examples = {
 
   // showcases
   // instancing,
-  persistence,
-  wandering,
+  // persistence,
+  // wandering,
 
   // webgl - TODO - animation loop issue
   // helloInstancingWebGL

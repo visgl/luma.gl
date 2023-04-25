@@ -28,7 +28,7 @@ export default abstract class RenderPass extends Resource<RenderPassProps> {
     super(device, props, DEFAULT_RENDERPASS_PROPS);
   }
 
-  abstract endPass(): void;
+  abstract end(): void;
 
   abstract pushDebugGroup(groupLabel: string): void;
   abstract popDebugGroup(): void;

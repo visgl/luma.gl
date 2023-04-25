@@ -16,9 +16,9 @@
     "automation",
     "testing"
   ],
-  "types": "dist/index.d.ts",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
+  "types": "src/index.ts",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
   "files": [
     "src",
     "dist",

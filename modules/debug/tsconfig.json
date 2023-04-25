@@ -8,6 +8,7 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../constants"}
+    {"path": "../constants"},
+    {"path": "../api"}
   ]
 }
