@@ -12,11 +12,6 @@
   "references": [
     {"path": "../constants"},
     {"path": "../engine"},
-<<<<<<< HEAD
     {"path": "../webgl"}
-=======
-    {"path": "../webgl"},
-    {"path": "../test-utils"}
->>>>>>> ea58468bb (chore: export build .d.ts types)
   ]
 }

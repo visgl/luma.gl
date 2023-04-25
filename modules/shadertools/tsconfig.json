@@ -8,9 +8,9 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
-  }
-  // ,
-  // "references": [
-  //   {"path": "../test-utils"}
-  // ]
+  },
+  "references": [
+    // TODO: shadertools is almost independent of API, is it worth breaking the dependency?
+    {"path": "../api"}
+  ]
 }

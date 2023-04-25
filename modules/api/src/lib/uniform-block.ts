@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import type {NumberArray} from '../types';
-import {assert} from '../utils/assert';
-import {log} from '../utils/log';
+import {assert} from './utils/assert';
+import {log} from './utils/log';
 import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
 
 /** A uniform block holds a number of uniforms */

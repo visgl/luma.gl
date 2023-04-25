@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import type {NumberArray} from '../types';
+import type {NumberArray} from '../../types';
 
 /** TODO @deprecated - delete when confident that probe.gl logging implements all opts */
 function formatArrayValue(v: NumberArray, opts: {maxElts?: number, size?: number} = {}): string {

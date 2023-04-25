@@ -1,6 +1,6 @@
 import {isBrowser} from '@probe.gl/env';
-import {log} from './utils/log';
-import {lumaStats} from './utils/stats-manager';
+import {log} from './lib/utils/log';
+import {lumaStats} from './lib/utils/stats-manager';
 
 // Version detection using babel plugin
 // @ts-expect-error
