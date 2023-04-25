@@ -194,11 +194,11 @@ export type GLValueParameters = {
   [GL.STENCIL_WRITEMASK]?: number;
   [GL.STENCIL_BACK_WRITEMASK]?: number;
   [GL.STENCIL_FUNC]?: GLFunction;
-  [GL.STENCIL_REF]?: GLFunction;
-  [GL.STENCIL_VALUE_MASK]?: GLFunction;
+  [GL.STENCIL_REF]?: number;
+  [GL.STENCIL_VALUE_MASK]?: number;
   [GL.STENCIL_BACK_FUNC]?: GLFunction;
-  [GL.STENCIL_BACK_REF]?: GLFunction;
-  [GL.STENCIL_BACK_VALUE_MASK]?: GLFunction;
+  [GL.STENCIL_BACK_REF]?: number;
+  [GL.STENCIL_BACK_VALUE_MASK]?: number;
   [GL.STENCIL_FAIL]?: GLStencilOp;
   [GL.STENCIL_PASS_DEPTH_FAIL]?: GLStencilOp;
   [GL.STENCIL_PASS_DEPTH_PASS]?: GLStencilOp;
