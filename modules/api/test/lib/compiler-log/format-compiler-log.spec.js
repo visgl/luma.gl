@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {formatCompilerLog} from '@luma.gl/shadertools';
+import {formatCompilerLog} from '@luma.gl/api';
 
 /** @type {{type: 'warning' | 'error' | 'info'; linePos: number; lineNum: number; message: string}[]} */
 const ERROR_LOG = [
