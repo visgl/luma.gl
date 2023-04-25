@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "9.0.0-alpha.15",
+  "version": "9.0.0-alpha.16",
   "description": "WebGL2 Components for High Performance Rendering and Computation",
   "license": "MIT",
   "publishConfig": {
@@ -31,10 +31,10 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/api": "9.0.0-alpha.15",
-    "@luma.gl/constants": "9.0.0-alpha.15",
-    "@luma.gl/shadertools": "9.0.0-alpha.15",
-    "@luma.gl/webgl": "9.0.0-alpha.15",
+    "@luma.gl/api": "9.0.0-alpha.16",
+    "@luma.gl/constants": "9.0.0-alpha.16",
+    "@luma.gl/shadertools": "9.0.0-alpha.16",
+    "@luma.gl/webgl": "9.0.0-alpha.16",
     "@math.gl/core": "4.0.0-alpha.1",
     "@probe.gl/log": "^4.0.0",
     "@probe.gl/stats": "^4.0.0"

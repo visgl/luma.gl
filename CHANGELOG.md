@@ -1,11 +1,19 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.13
+## v9.0.0-alpha.16
+
+- chore: Bump probe@4.0.0 on master (#1730)
+- chore: export .d.ts types instead of .ts from package.json (#1737)
+- build(deps): bump @xmldom/xmldom from 0.7.5 to 0.7.10 (#1738)
+- chore: Clean up build (#1743)
+- Add getBounds() to ScenegraphNode (#1733)
+
+## v9.0.0-alpha.15
 
 - chore: Bump to probe.gl@4.0.0-alpha.1 (#1728)
 - chore: Bump math.gl@4.0.0-alpha.1 (#1727)
 
-## v9.0.0-alpha.13
+## v9.0.0-alpha.14
 
 - fix(webgl): Fixes for deck.gl integration (#1725)
 

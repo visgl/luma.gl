@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "9.0.0-alpha.15",
+  "version": "9.0.0-alpha.16",
   "description": "Experimental classes for luma.gl",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
     "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.15",
+    "@luma.gl/constants": "9.0.0-alpha.16",
     "@math.gl/core": "4.0.0-alpha.1",
     "earcut": "^2.0.6"
   },
