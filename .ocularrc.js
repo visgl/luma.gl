@@ -1,23 +1,36 @@
-const {resolve} = require('path');
+import {resolve} from 'path';
 
-module.exports = {
+export default {
   lint: {
     paths: ['modules', 'dev-modules', 'docs', 'test', 'examples'],
-    extensions: ['js']
+    extensions: ['js', 'ts']
+  },
+
+  typescript: {
+    project: 'tsconfig.build.json'
   },
 
   aliases: {
     // DEV MODULES
-    // TODO - why is each module not listed?
-    'dev-modules': resolve(__dirname, './dev-modules'),
+    'dev-modules': resolve('./dev-modules'),
 
     // TEST
-    test: resolve(__dirname, './test')
+    test: resolve('./test')
+  },
+
+  bundle: {
+    globalName: 'luma',
+    externals: [],
+    target: ['supports webgl', 'not dead'],
+    format: 'umd',
+    globals: {
+      '@luma.gl/*': 'globalThis.luma'
+    }
   },
 
   entry: {
-    test: 'test/index.js',
-    'test-browser': 'test/browser.js',
+    test: 'test/index.ts',
+    'test-browser': 'test/browser.ts',
     bench: 'test/bench/index.js',
     'bench-browser': 'test/bench/browser.js',
     size: 'test/size/import-nothing.js'

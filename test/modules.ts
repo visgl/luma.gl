@@ -5,26 +5,26 @@
 import '@luma.gl/debug';
 
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies
-import '../modules/shadertools/test';
+import '@luma.gl/shadertools/test';
 
 // WEBGL-DEPENDENT TESTS
 
 // Generic webgl helper modules
 
 // DEVICE INDEPENDENT TESTS
-import '../modules/api/test';
-import '../modules/constants/test';
+import '@luma.gl/api/test';
+import '@luma.gl/constants/test';
 
 // WEBGL ADAPTER TESTS
-import '../modules/webgl/test';
-import '../modules/debug/test';
+import '@luma.gl/webgl/test';
+import '@luma.gl/debug/test';
 
 // WEBGPU ADAPTER TESTS
-import '../modules/webgpu/test';
+import '@luma.gl/webgpu/test';
 
 // CROSS-DEVICE TESTS
-import '../modules/engine/test/';
-import '../modules/experimental/test/';
+import '@luma.gl/engine/test';
+import '@luma.gl/experimental/test';
 
 // DEPRECATED TESTS
-import '../modules/webgl-legacy/test';
+import '@luma.gl/webgl-legacy/test';

@@ -2,6 +2,7 @@
   "name": "@luma.gl/webgl",
   "version": "9.0.0-alpha.16",
   "description": "WebGL2 adapter for the luma.gl API",
+  "type": "module",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -17,11 +18,19 @@
     "3d"
   ],
   "types": "dist/index.d.ts",
-  "main": "dist/es5/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "src",
     "dist",
+    "dist.min.js",
     "README.md"
   ],
   "sideEffects": false,
@@ -30,14 +39,14 @@
     "gl/wrap": false
   },
   "scripts": {
-    "pre-build": "npm run build-bundle",
-    "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
+    "build-bundle": "ocular-bundle ./src/index.ts",
+    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
     "@luma.gl/api": "9.0.0-alpha.16",
     "@luma.gl/constants": "9.0.0-alpha.16",
-    "@probe.gl/env": "^4.0.0"
+    "@probe.gl/env": "^4.0.2"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

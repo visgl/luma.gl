@@ -2,6 +2,7 @@
   "name": "@luma.gl/constants",
   "version": "9.0.0-alpha.16",
   "description": "WebGL and WebGL2 constants",
+  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,17 +18,25 @@
     "3d"
   ],
   "types": "dist/index.d.ts",
-  "main": "dist/es5/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "src",
     "dist",
+    "dist.min.js",
     "README.md"
   ],
   "sideEffects": false,
   "scripts": {
-    "pre-build": "npm run build-bundle",
-    "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
+    "build-bundle": "ocular-bundle ./src/bundle.ts",
+    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"
 }

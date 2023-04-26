@@ -2,6 +2,7 @@
   "name": "@luma.gl/experimental",
   "version": "9.0.0-alpha.16",
   "description": "Experimental classes for luma.gl",
+  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,21 +18,29 @@
     "3d"
   ],
   "types": "dist/index.d.ts",
-  "main": "dist/es5/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "src",
     "dist",
+    "dist.min.js",
     "README.md"
   ],
   "sideEffects": false,
   "scripts": {
-    "pre-build": "npm run build-bundle",
-    "build-bundle": "webpack --display=minimal --config ../../scripts/bundle.config.js"
+    "build-bundle": "ocular-bundle ./src/index.ts",
+    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
     "@luma.gl/constants": "9.0.0-alpha.16",
-    "@math.gl/core": "4.0.0-alpha.1",
+    "@math.gl/core": "4.0.0-alpha.4",
     "earcut": "^2.0.6"
   },
   "peerDependencies": {

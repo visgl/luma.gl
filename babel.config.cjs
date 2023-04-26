@@ -1,9 +1,7 @@
-const {getBabelConfig, deepMerge} = require('ocular-dev-tools');
+const {getBabelConfig} = require('ocular-dev-tools/configuration');
 
-module.exports = (api) => {
-  const defaultConfig = getBabelConfig(api, {react: true});
-
-  const config = deepMerge(defaultConfig, {
+module.exports = getBabelConfig({
+  overrides: {
     plugins: [
       // inject __VERSION__ from package.json
       // 'version-inline',
@@ -29,8 +27,6 @@ module.exports = (api) => {
       // babel can't process .d.ts
       /\.d\.ts$/
     ]
-  });
-
-  // console.debug(config);
-  return config;
-};
+  },
+  debug: false
+});

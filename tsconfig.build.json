@@ -1,16 +1,18 @@
-// This is a base TS config for the individual packages, mainly for building .d.ts files
+// This is the entry point when building all modules for distribution
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
     // Uncomment to debug
-    "listEmittedFiles": true
+    // "listEmittedFiles": true
   },
   "references": [
     {"path": "modules/api"},
     {"path": "modules/constants"},
     {"path": "modules/core"},
+    {"path": "modules/debug"},
     {"path": "modules/engine"},
     {"path": "modules/experimental"},
+    {"path": "modules/gltools"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"},

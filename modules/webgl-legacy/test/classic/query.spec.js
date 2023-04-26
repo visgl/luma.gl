@@ -1,7 +1,7 @@
 /* eslint-disable max-len, max-statements */
 import test from 'tape-promise/tape';
 import {Query} from '@luma.gl/webgl-legacy';
-import util from 'util';
+// import util from 'util';
 import GL from '@luma.gl/constants';
 import {fixture} from 'test/setup';
 
@@ -15,7 +15,7 @@ function pollQuery(query, t) {
 function testQueryConstructDelete(gl, t) {
   const ext = gl.getExtension('EXT_disjoint_timer_query');
   t.comment(`EXT_disjoint_timer_query is ${Boolean(ext)} ${ext}`, ext);
-  util.inspect(ext, {showHidden: true});
+  // util.inspect(ext, {showHidden: true});
 
   const supported = Query.isSupported(gl);
   if (supported) {
