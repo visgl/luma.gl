@@ -10,5 +10,8 @@
     "emitDeclarationOnly": true,
     // Uncomment to debug
     // "listEmittedFiles": true
-  }
+  },
+  "include": [
+    "modules/*/src"
+  ]
 }

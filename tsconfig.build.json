@@ -18,19 +18,5 @@
     {"path": "modules/webgl"},
     {"path": "modules/webgl-legacy"},
     {"path": "modules/webgpu"}
-  ],
-  "include": [
-    "modules/*/src"
-  ],
-  "exclude": [
-    "modules/*/src/libs",
-    "examples",
-    "test",
-    "scripts",
-    "modules/*/wip",
-    "modules/*/bin",
-    "modules/*/wip",
-    "modules/*/test",
-    "modules/*/dist"
   ]
 }

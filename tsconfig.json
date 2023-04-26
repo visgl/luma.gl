@@ -70,16 +70,13 @@
   "include": [
     "examples/**/*",
     "modules/**/*",
+    "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
     "modules/**/wip",
-    "modules/**/dist/**/*.js",
-    "test/render/**/*",
-    "test",
+    "modules/**/dist",
     "test/apps",
-    "website",
-    "coverage",
     "node_modules"
   ]
 }
