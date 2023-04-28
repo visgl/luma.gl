@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-// Initialize any global state
-import './init';
+
+export {VERSION} from './init';
 
 // MAIN API ACCESS POINTS
 export {default as luma} from './lib/luma';

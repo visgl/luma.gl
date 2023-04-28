@@ -1,7 +1,4 @@
-
-// Initialize any global state
-import '@luma.gl/api';
-import './init'
+// luma.gl, MIT license
 
 // WEBGPU ADAPTER
 export {default as WebGPUDevice} from './adapter/webgpu-device';

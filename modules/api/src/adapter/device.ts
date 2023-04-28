@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {VERSION} from '../init';
 import StatsManager, {lumaStats} from '../lib/utils/stats-manager';
 import {log} from '../lib/utils/log';
 import {uid} from '../lib/utils/utils';
@@ -203,6 +204,8 @@ export default abstract class Device {
   get [Symbol.toStringTag](): string {
     return 'Device';
   }
+
+  static VERSION = VERSION;
 
   constructor(props: DeviceProps) {
     this.props = {...DEFAULT_DEVICE_PROPS, ...props};

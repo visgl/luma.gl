@@ -4,10 +4,6 @@
 // but make it easier to use.
 // Higher level abstractions can be built on these classes
 
-// Initialize any global state
-import '@luma.gl/api';
-import './init'
-
 // Types
 export type {WebGLLimits} from './adapter/device-helpers/device-limits';
 
