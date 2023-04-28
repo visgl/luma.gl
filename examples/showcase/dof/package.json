@@ -17,7 +17,7 @@
     "@luma.gl/engine": "9.0.0-alpha.16",
     "@luma.gl/webgl": "9.0.0-alpha.16",
     "@luma.gl/webgl-legacy": "9.0.0-alpha.16",
-    "@math.gl/core": "4.0.0-alpha.1"
+    "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {
     "typescript": "^4.3.2",
