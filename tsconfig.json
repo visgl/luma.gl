@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    // https://www.npmjs.com/package/@webgpu/types
+    "typeRoots": [ "./node_modules/@webgpu/types", "./node_modules/@types"],
+
     "target": "es2020",
     "module": "es2020",
     "jsx": "react",
