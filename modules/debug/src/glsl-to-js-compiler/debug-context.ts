@@ -1,6 +1,8 @@
 import GL from '@luma.gl/constants';
 import drawModel from './draw-model';
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 /* Draws WebGL style wireframe in a 2d canvas */
 export default class DebugContext {
   canvas: HTMLCanvasElement;

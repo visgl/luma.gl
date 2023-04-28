@@ -387,14 +387,14 @@ export default class ClassicAnimationLoop {
     if (!this._pageLoadPromise) {
       this._pageLoadPromise = isPage
         ? new Promise((resolve, reject) => {
-            if (isPage && document.readyState === 'complete') {
-              resolve(document);
-              return;
-            }
-            window.addEventListener('load', () => {
-              resolve(document);
-            });
-          })
+          if (isPage && document.readyState === 'complete') {
+            resolve(document);
+            return;
+          }
+          window.addEventListener('load', () => {
+            resolve(document);
+          });
+        })
         : Promise.resolve({});
     }
     return this._pageLoadPromise;
@@ -474,6 +474,8 @@ export default class ClassicAnimationLoop {
     this._resizeViewport();
     this._resizeFramebuffer();
   }
+
+  /* eslint-disable @typescript-eslint/unbound-method */
 
   // Initialize the  object that will be passed to app callbacks
   _initializeCallbackData() {

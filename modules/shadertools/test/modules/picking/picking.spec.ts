@@ -5,6 +5,8 @@ import {picking} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
+/* eslint-disable camelcase */
+
 // TODO: test WebGL1 when Transform class is ready
 /** @type {WebGL2RenderingContext} */
 const gl = fixture.gl2;

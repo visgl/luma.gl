@@ -3,8 +3,8 @@
 import {GPUPointInPolygon} from '@luma.gl/experimental';
 import {Buffer} from '@luma.gl/webgl';
 import {createTestContext} from '@luma.gl/test-utils';
-import {cpuPointInPolygon} from '../../modules/experimental/test/gpgpu/point-in-polygon/cpu-point-in-polygon';
-const gl = createTestContext();
+import {cpuPointInPolygon} from '../../modules/experimental/test/gpgpu/point-in-polygon-cpu';
+const gl = createTestContext() as WebGL2RenderingContext;
 
 const random = getRandom();
 

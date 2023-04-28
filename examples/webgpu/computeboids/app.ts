@@ -158,6 +158,6 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-};
+}
 
 init(document.getElementById('canvas') as HTMLCanvasElement, 'wgsl');

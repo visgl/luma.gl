@@ -53,7 +53,7 @@ export class WebGPUMipmapGenerator {
   }
 
   generateMipmappedTexture(imageBitmap: ImageBitmap) {
-    let textureSize = {
+    const textureSize = {
       width: imageBitmap.width,
       height: imageBitmap.height,
       depth: 1,

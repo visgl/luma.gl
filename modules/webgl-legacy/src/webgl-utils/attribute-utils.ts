@@ -1,5 +1,7 @@
 import {assert} from '@luma.gl/api';
 
+/* eslint-disable camelcase */
+
 const GL_BYTE = 0x1400;
 const GL_UNSIGNED_BYTE = 0x1401;
 const GL_SHORT = 0x1402;

@@ -3,6 +3,8 @@ import {decodeTextureFormat} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 
+/* eslint-disable camelcase */
+
 // TEXTURE FEATURES
 
 // Define local device feature strings to optimize minification
@@ -240,7 +242,7 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
   // "depth32float-stencil8" feature
-  "depth32float-stencil8": {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
+  'depth32float-stencil8': {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT},
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 

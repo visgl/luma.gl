@@ -95,7 +95,7 @@ export class Shader extends WEBGLShader {
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
  * @deprecated Use `device.createShader({stage: 'vertex', ...})`
  */
- export class VertexShader extends Shader {
+export class VertexShader extends Shader {
   constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'> | string) {
     super(gl, getShaderProps(props, GL.VERTEX_SHADER));
   }
@@ -110,7 +110,7 @@ export class Shader extends WEBGLShader {
  * Encapsulates the compiled or linked Shaders that execute portions of the WebGL Pipeline
  * @deprecated Use `device.createShader({stage: 'fragment', ...})`
  */
- export class FragmentShader extends Shader {
+export class FragmentShader extends Shader {
   constructor(gl: WebGLRenderingContext, props: Omit<ShaderProps, 'stage'> | string) {
     super(gl, getShaderProps(props, GL.FRAGMENT_SHADER));
   }

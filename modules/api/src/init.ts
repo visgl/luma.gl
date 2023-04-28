@@ -12,8 +12,9 @@ const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
 // luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
 declare global {
+  // eslint-disable-next-line no-var
   var luma: any
-};
+}
 
 if (globalThis.luma && globalThis.luma.VERSION !== VERSION) {
   throw new Error(`luma.gl - multiple VERSIONs detected: ${globalThis.luma.VERSION} vs ${VERSION}`);

@@ -23,7 +23,7 @@ export function fillArray(options: {target: NumberArray, source: NumberArray, st
   const total = count * length;
   let copied = 0;
   for (let i = start; copied < length; copied++) {
-    target[i++] = source[copied] as number;
+    target[i++] = source[copied] ;
   }
 
   while (copied < total) {

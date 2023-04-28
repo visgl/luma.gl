@@ -30,7 +30,7 @@ export {default as WEBGLRenderPipeline} from './adapter/resources/webgl-render-p
 // export {default as WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
 export {default as WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
 export {default as WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
-//export {default as WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
+// export {default as WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 
 // non-api resources
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';

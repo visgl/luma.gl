@@ -13,7 +13,7 @@ import type Program from './program';
  * 
  * @deprecated Use ShaderLayout
  */
- export default class ProgramConfiguration {
+export default class ProgramConfiguration {
   id: string;
   attributeInfos: AttributeBinding[] = [];
   attributeInfosByName: Record<string, AttributeBinding> = {};

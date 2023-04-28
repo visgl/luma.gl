@@ -25,6 +25,7 @@ function getContextData(gl: any) {
 }
 
 declare global {
+  // eslint-disable-next-line no-var
   var WebGLDebugUtils: any;
 }
 

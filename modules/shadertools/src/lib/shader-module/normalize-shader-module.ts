@@ -1,4 +1,4 @@
-import { ShaderModuleInstance } from "./shader-module-instance";
+import { ShaderModuleInstance } from './shader-module-instance';
 
 export function normalizeShaderModule(module: any): any {
   if (!module.normalized) {

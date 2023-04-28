@@ -4,6 +4,8 @@ import GL from '@luma.gl/constants';
 import {GLSamplerParameters} from '../../types/webgl';
 import {convertCompareFunction, convertToCompareFunction} from './device-parameters';
 
+/* eslint-disable consistent-return */
+
 /**
  * Convert WebGPU-style sampler props to WebGL
  * @param props
@@ -38,7 +40,7 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): GLSam
     params[GL.TEXTURE_COMPARE_MODE] = GL.COMPARE_REF_TO_TEXTURE;
   }
   if (props.compare) {
-      params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('compare', props.compare);
+    params[GL.TEXTURE_COMPARE_FUNC] = convertCompareFunction('compare', props.compare);
   }
   // Note depends on WebGL extension
   if (props.maxAnisotropy) {
@@ -84,7 +86,7 @@ function convertMinFilterMode(minFilter: 'nearest' | 'linear', mipmapFilter?: 'n
  * @param props
  * @returns
  */
- export function convertToSamplerParameters(params: GLSamplerParameters): SamplerParameters {
+export function convertToSamplerParameters(params: GLSamplerParameters): SamplerParameters {
   const props: SamplerParameters = {};
   if (params[GL.TEXTURE_WRAP_S]) {
     props.addressModeU = convertToAddressMode(params[GL.TEXTURE_WRAP_S]);

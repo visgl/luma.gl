@@ -76,6 +76,7 @@ export default class TextureTransform {
     let discard = opts.discard;
 
     if (this.hasSourceTextures || this.hasTargetTexture) {
+      // eslint-disable-next-line camelcase
       attributes.transform_elementID = this.elementIDBuffer;
 
       for (const sampler in this.samplerTextureMap) {
@@ -271,7 +272,7 @@ export default class TextureTransform {
         framebuffer.resize({width, height});
       } else {
         binding.framebuffer = new Framebuffer(this.gl, {
-          id: `transform-framebuffer`,
+          id: 'transform-framebuffer',
           width,
           height,
           attachments: {
@@ -357,7 +358,7 @@ export default class TextureTransform {
     const modules =
       this.hasSourceTextures || this.targetTextureVarying
         ? // @ts-expect-error
-          [transformModule].concat(props.modules || [])
+        [transformModule].concat(props.modules || [])
         : props.modules;
     return {vs, fs, modules, uniforms, inject: combinedInject};
   }

@@ -90,7 +90,7 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
  * A compiled and linked shader program
  */
 export default abstract class RenderPipeline extends Resource<RenderPipelineProps> {
- override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
+  override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   hash: string = '';
   abstract vs: Shader;

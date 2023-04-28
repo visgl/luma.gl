@@ -678,7 +678,7 @@ vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 /**
  * FXAA - Fast Approximate Anti-aliasing.
  */
- export const fxaa = {
+export const fxaa = {
   name: 'fxaa',
   uniforms: {},
   fs,

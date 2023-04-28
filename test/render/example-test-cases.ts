@@ -23,12 +23,12 @@ import animation from '../../examples/api/animation/app';
 
 // showcases
 // import instancing from '../../examples/showcase/instancing/app';
-import persistence from '../../examples/showcase/persistence/app';
-import wandering from '../../examples/showcase/wandering/app';
+// import persistence from '../../examples/showcase/persistence/app';
+// import wandering from '../../examples/showcase/wandering/app';
 
 // webgl
-import helloInstancingWebGL from '../../examples/webgl/hello-instancing-webgl/app';
-import shaderModulesWebGL from '../../examples/webgl/shader-modules-webgl/app';
+// import helloInstancingWebGL from '../../examples/webgl/hello-instancing-webgl/app';
+// import shaderModulesWebGL from '../../examples/webgl/shader-modules-webgl/app';
 
 const examples = {
   // getting started
@@ -68,6 +68,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       name,
 
       // Construct the renderloop, but don't start it. Manually call its OnInitialize
+      // @ts-ignore
       onInitialize: (props: AnimationProps) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
         animationLoopTemplate = new ExampleAnimationLoopTemplate(props);
@@ -89,7 +90,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // The target image
       goldenImage: `./test/render/golden-images/${name}.png`
     });
-  };
+  }
 
   return testCases;
 }

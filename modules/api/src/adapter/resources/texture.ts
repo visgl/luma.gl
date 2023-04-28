@@ -121,7 +121,7 @@ export default abstract class Texture extends Resource<TextureProps> {
   static STORAGE_BINDING = 0x08;
   static RENDER_ATTACHMENT = 0x10;
 
- override get [Symbol.toStringTag](): string { return 'Texture'; }
+  override get [Symbol.toStringTag](): string { return 'Texture'; }
 
   constructor(device: Device, props: TextureProps) {
     // @ts-expect-error

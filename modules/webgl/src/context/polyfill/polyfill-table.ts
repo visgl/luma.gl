@@ -5,6 +5,7 @@ import {isWebGL2} from '../context/webgl-checks';
 import {getParameterPolyfill} from './get-parameter-polyfill';
 import {getContextData} from './context-data';
 
+/* eslint-disable camelcase */
 const OES_vertex_array_object = 'OES_vertex_array_object';
 const ANGLE_instanced_arrays = 'ANGLE_instanced_arrays';
 const WEBGL_draw_buffers = 'WEBGL_draw_buffers';

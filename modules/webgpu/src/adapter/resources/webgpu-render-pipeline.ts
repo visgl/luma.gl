@@ -131,7 +131,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
         targets: [
           {
             // TODO exclamation mark hack!
-            format: getWebGPUTextureFormat(this.device?.canvasContext?.format!)
+            format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
           }
         ]
       };
@@ -146,7 +146,7 @@ export default class WebGPURenderPipeline extends RenderPipeline {
     }
 
     // Create a partially populated descriptor
-    let descriptor: GPURenderPipelineDescriptor = {
+    const descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
       primitive: {

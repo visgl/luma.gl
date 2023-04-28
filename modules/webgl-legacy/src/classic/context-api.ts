@@ -111,7 +111,7 @@ export function getContextDebugInfo(gl: WebGLRenderingContext): {
   version: string;
 } {
   const webglDevice = WebGLDevice.attach(gl);
-  //const info = webglDevice.info;
+  // const info = webglDevice.info;
   return {
     ...webglDevice.info,
     vendorMasked: webglDevice.info.vendor,

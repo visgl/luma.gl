@@ -79,7 +79,7 @@ export type CommandEncoderProps = ResourceProps & {
  * Encodes commands to queue that can be executed later
  */
 export default abstract class CommandEncoder extends Resource<CommandEncoderProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
 
@@ -115,4 +115,4 @@ export default abstract class CommandEncoder extends Resource<CommandEncoderProp
   //   destination: Buffer,
   //   destinationOffset?: number;
   // }): void;
-};
+}

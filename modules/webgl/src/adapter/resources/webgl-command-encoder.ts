@@ -55,4 +55,4 @@ export default class WEBGLCommandEncoder extends CommandEncoder {
   //   destination: Buffer,
   //   destinationOffset?: number;
   // }): void;
-};
+}

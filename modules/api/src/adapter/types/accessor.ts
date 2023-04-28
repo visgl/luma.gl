@@ -31,4 +31,4 @@ export interface AccessorObject {
 
   /** @deprecated */
   index?: number;
-};
+}

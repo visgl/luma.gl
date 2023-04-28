@@ -53,7 +53,7 @@ const uniforms = {
  * @param angle   The rotation of the pattern in radians.
  * @param size    The diameter of a dot in pixels.
  */
- export const colorHalftone = {
+export const colorHalftone = {
   name: 'colorHalftone',
   uniforms,
   fs,

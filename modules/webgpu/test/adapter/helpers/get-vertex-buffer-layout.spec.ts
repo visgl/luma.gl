@@ -26,35 +26,35 @@ const TEST_CASES: {shaderLayout: ShaderLayout, bufferMap, vertexBufferLayout: GP
 
     vertexBufferLayout: [
       {
-        "stepMode": "instance",
-        "arrayStride": 8,
-        "attributes": [
+        'stepMode': 'instance',
+        'arrayStride': 8,
+        'attributes': [
           {
-            "format": "float32x2",
-            "offset": 0,
-            "shaderLocation": 0
+            'format': 'float32x2',
+            'offset': 0,
+            'shaderLocation': 0
           }
         ]
       },
       {
-        "stepMode": "instance",
-        "arrayStride": 8,
-        "attributes": [
+        'stepMode': 'instance',
+        'arrayStride': 8,
+        'attributes': [
           {
-          "format": "float32x2",
-          "offset": 0,
-          "shaderLocation": 1
+            'format': 'float32x2',
+            'offset': 0,
+            'shaderLocation': 1
           }
         ]
       },
       {
-        "stepMode": "vertex",
-        "arrayStride": 8,
-        "attributes": [
+        'stepMode': 'vertex',
+        'arrayStride': 8,
+        'attributes': [
           {
-            "format": "float32x2",
-            "offset": 0,
-            "shaderLocation": 2
+            'format': 'float32x2',
+            'offset': 0,
+            'shaderLocation': 2
           }
         ]
       }
@@ -66,29 +66,29 @@ const TEST_CASES: {shaderLayout: ShaderLayout, bufferMap, vertexBufferLayout: GP
 
     vertexBufferLayout: [
       {
-        "stepMode": "instance",
-        "arrayStride": 16,
-        "attributes": [
+        'stepMode': 'instance',
+        'arrayStride': 16,
+        'attributes': [
           {
-            "format": "float32x2",
-            "offset": 0,
-            "shaderLocation": 0
+            'format': 'float32x2',
+            'offset': 0,
+            'shaderLocation': 0
           },
           {
-            "format": "float32x2",
-            "offset": 8,
-            "shaderLocation": 1
+            'format': 'float32x2',
+            'offset': 8,
+            'shaderLocation': 1
           }
         ]
       },
       {
-        "stepMode": "vertex",
-        "arrayStride": 8,
-        "attributes": [
+        'stepMode': 'vertex',
+        'arrayStride': 8,
+        'attributes': [
           {
-            "format": "float32x2",
-            "offset": 0,
-            "shaderLocation": 2
+            'format': 'float32x2',
+            'offset': 0,
+            'shaderLocation': 2
           }
         ]
       }

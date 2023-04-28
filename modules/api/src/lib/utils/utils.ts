@@ -26,7 +26,7 @@ export function isPowerOfTwo(n: number): boolean {
 export function isObjectEmpty(obj: object): boolean {
   let isEmpty = true;
   // @ts-ignore key is unused
-  // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const key in obj) {
     isEmpty = false;
     break;

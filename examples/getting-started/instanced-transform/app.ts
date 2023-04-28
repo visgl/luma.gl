@@ -10,7 +10,7 @@ Transform feedback on an instanced cube
 </p>
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
 
 const PI2 = Math.PI * 2;
 

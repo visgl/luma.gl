@@ -14,7 +14,7 @@ import WebGLDevice from '../webgl-device';
  * - Returns the return value of the supplied function
  * @deprecated use withDeviceParameters instead
  */
- export function withGLParameters<T = unknown>(device: Device, parameters: GLParameters, func: (device?: Device) => T): T {
+export function withGLParameters<T = unknown>(device: Device, parameters: GLParameters, func: (device?: Device) => T): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(device);
@@ -102,7 +102,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.depthMask(mapBoolean('depthWriteEnabled', parameters.depthWriteEnabled));
   }
 
- if (parameters.depthCompare) {
+  if (parameters.depthCompare) {
     parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST);
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }

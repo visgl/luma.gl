@@ -1,6 +1,8 @@
 import type {NumberArray} from '../../types';
 import lightingShader from './lights.glsl';
 
+/* eslint-disable camelcase */
+
 type Color = NumberArray;
 
 type LightSources = {

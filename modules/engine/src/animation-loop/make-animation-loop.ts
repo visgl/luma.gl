@@ -19,7 +19,7 @@ export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoo
     device,
 
     async onInitialize(animationProps: AnimationProps): Promise<unknown> {
-        // @ts-expect-error abstract to prevent instantiation
+      // @ts-expect-error abstract to prevent instantiation
       renderLoop = new AnimationLoopTemplateCtor(animationProps);
       // Any async loading can be handled here
       return await renderLoop?.onInitialize(animationProps);
@@ -33,6 +33,7 @@ export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoo
   // @ts-expect-error Hack: adds info for the website to find
   animationLoop.getInfo = () => {
     // @ts-ignore
+    // eslint-disable-next-line no-invalid-this
     return this.AnimationLoopTemplateCtor.info;
   }
 

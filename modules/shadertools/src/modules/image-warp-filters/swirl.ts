@@ -45,7 +45,7 @@ const uniforms = {
  * @param angle   The angle in radians that the pixels in the center of
  *                the circular region will be rotated by.
  */
- export const swirl = {
+export const swirl = {
   name: 'swirl',
   fs,
   uniforms,

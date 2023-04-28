@@ -177,7 +177,7 @@ export default class ClassicFramebuffer extends WEBGLFramebuffer {
 
   // initialize(props?: ClassicFramebufferProps): this;
   initialize(props: ClassicFramebufferProps) {
-    let {attachments = null} = props || {};
+    const {attachments = null} = props || {};
     const {
       width = 1,
       height = 1,

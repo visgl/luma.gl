@@ -368,7 +368,7 @@ test('histopyramid#Minification to 1X1)', (t) => {
   t.deepEqual(
     outTexData,
     [expectedData],
-    `Transform should access neighbor pixels correctly for 1X1 minification`
+    'Transform should access neighbor pixels correctly for 1X1 minification'
   );
 
   t.end();

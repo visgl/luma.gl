@@ -22,7 +22,7 @@ export default class luma {
   /** Global log */
   static log: Log = log;
 
-  static registerDevices(deviceClasses: any[] /*: typeof Device */): void {
+  static registerDevices(deviceClasses: any[] /* : typeof Device */): void {
     for (const deviceClass of deviceClasses) {
       assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
       deviceList.set(deviceClass.type, deviceClass);

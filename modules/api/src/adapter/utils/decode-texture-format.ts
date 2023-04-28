@@ -19,7 +19,7 @@ export function decodeTextureFormat(format: TextureFormat): {
   signed: boolean;
   normalized: boolean;
 } {
-  const matches = (format as string).match(REGEX);
+  const matches = REGEX.exec((format as string));
   if (matches) {
     const [, format, length, type, srgb, suffix] = matches;
     if (format) {

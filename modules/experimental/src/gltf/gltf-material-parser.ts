@@ -4,6 +4,8 @@ import {log} from '@luma.gl/api';
 import {GL} from '@luma.gl/webgl-legacy';
 import {GLTFEnvironment} from './gltf-environment';
 
+/* eslint-disable camelcase */
+
 export type GLTFMaterialParserProps = {
   attributes: any;
   material: any;
@@ -12,6 +14,7 @@ export type GLTFMaterialParserProps = {
   lights: any;
   useTangents?: boolean;
 };
+
 export class GLTFMaterialParser {
   readonly device: Device;
 

@@ -371,14 +371,14 @@ function getDrawMode(
 ): GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN {
   // prettier-ignore
   switch (topology) {
-  case 'point-list': return GL.POINTS;
-  case 'line-list': return GL.LINES;
-  case 'line-strip': return GL.LINE_STRIP;
-  case 'line-loop': return GL.LINE_LOOP;
-  case 'triangle-list': return GL.TRIANGLES;
-  case 'triangle-strip': return GL.TRIANGLE_STRIP;
-  case 'triangle-fan': return GL.TRIANGLE_FAN;
-  default: throw new Error(topology);
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINE_STRIP;
+    case 'line-loop': return GL.LINE_LOOP;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLE_STRIP;
+    case 'triangle-fan': return GL.TRIANGLE_FAN;
+    default: throw new Error(topology);
   }
 }
 
@@ -386,14 +386,14 @@ function getDrawMode(
 function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
   // prettier-ignore
   switch (topology) {
-  case 'point-list': return GL.POINTS;
-  case 'line-list': return GL.LINES;
-  case 'line-strip': return GL.LINES;
-  case 'line-loop': return GL.LINES;
-  case 'triangle-list': return GL.TRIANGLES;
-  case 'triangle-strip': return GL.TRIANGLES;
-  case 'triangle-fan': return GL.TRIANGLES;
-  default: throw new Error(topology);
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINES;
+    case 'line-loop': return GL.LINES;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLES;
+    case 'triangle-fan': return GL.TRIANGLES;
+    default: throw new Error(topology);
   }
 }
 

@@ -50,11 +50,11 @@ function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | numbe
 
   // Signature: `new Buffer(gl, 100)`
   else if (typeof props === 'number') {
-    return {byteLength: props as number};
+    return {byteLength: props };
   }
 
   props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
-  const bufferProps = {...props as ClassicBufferProps};
+  const bufferProps = {...props };
   if (bufferProps.offset) {
     bufferProps.byteOffset = bufferProps.offset;
   }
@@ -362,7 +362,7 @@ export default class ClassicBuffer extends WEBGLBuffer {
   getDebugData(): {
     data: any;
     changed: boolean;
-  } {
+    } {
     if (!this.debugData) {
       this.debugData = this.getData({length: Math.min(DEBUG_DATA_LENGTH, this.byteLength)});
       return {data: this.debugData, changed: true};

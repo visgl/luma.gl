@@ -341,7 +341,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     // this.canvasContext.commit();
   }
 
-    //
+  //
   // WebGL-only API (not part of `Device` API)
   //
 
@@ -379,7 +379,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * @note Triggers context loss, mainly for testing
    * @todo Promote to `Device` API?
    */
-   loseDevice(): void {
+  loseDevice(): void {
     const ext = this.gl.getExtension('WEBGL_lose_context');
     if (ext) {
       ext.loseContext();

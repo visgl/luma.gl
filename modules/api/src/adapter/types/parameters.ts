@@ -13,13 +13,13 @@ export type CompareFunction =
 // Primitive state
 
 export type PrimitiveTopology =
-  "point-list" |
-  "line-list" |
-  "line-strip" |
+  'point-list' |
+  'line-list' |
+  'line-strip' |
   /** @deprecated */
   'line-loop' |
-  "triangle-list" |
-  "triangle-strip" |
+  'triangle-list' |
+  'triangle-strip' |
   /** @deprecated */
   'triangle-fan';
 

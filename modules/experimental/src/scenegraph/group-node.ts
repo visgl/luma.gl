@@ -46,8 +46,8 @@ export class GroupNode extends ScenegraphNode {
         ).multiply(halfSize).add(center);
 
         for (let i = 0; i < 3; i++) {
-          result[0][i] = Math.min(result![0][i], position[i]);
-          result[1][i] = Math.max(result![1][i], position[i]);
+          result[0][i] = Math.min(result[0][i], position[i]);
+          result[1][i] = Math.max(result[1][i], position[i]);
         }
       }
     });

@@ -1,5 +1,5 @@
 import babel from '@babel/core';
-import plugin from 'dev-modules/babel-plugin-remove-glsl-comments/index.js';
+import plugin from 'dev-modules/babel-plugin-remove-glsl-comments';
 import test from 'tape-promise/tape';
 
 const ES6_ENV = {

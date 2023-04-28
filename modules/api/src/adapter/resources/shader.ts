@@ -41,7 +41,7 @@ const DEFAULT_SHADER_PROPS: Required<ShaderProps> = {
  * In WebGPU the handle can be copied between threads
  */
 export default abstract class Shader extends Resource<ShaderProps> {
- override get [Symbol.toStringTag](): string { return 'Shader'; }
+  override get [Symbol.toStringTag](): string { return 'Shader'; }
 
   readonly stage: 'vertex' | 'fragment' | 'compute';
   readonly source: string;

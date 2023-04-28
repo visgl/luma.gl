@@ -59,7 +59,7 @@ function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): Rende
 
 /** @deprecated Use device.createRenderPipeline */
 export default class Program extends WEBGLRenderPipeline {
- override get [Symbol.toStringTag](): string { return 'Program'; }
+  override get [Symbol.toStringTag](): string { return 'Program'; }
 
   gl: WebGLRenderingContext;
   gl2: WebGL2RenderingContext;
@@ -324,7 +324,7 @@ export default class Program extends WEBGLRenderPipeline {
     }
   }
 
-    // If program is not named, name it after shader names
+  // If program is not named, name it after shader names
   // TODO - this.id will already have been initialized
   _setId(id: string): void {
     if (!id) {

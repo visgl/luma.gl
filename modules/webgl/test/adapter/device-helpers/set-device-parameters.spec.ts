@@ -27,18 +27,18 @@ const getGLParameter = (parameter: keyof GLParameters): any => {
 test('setDeviceParameters#cullMode', (t) => {
   resetParameters(gl);
 
-  t.deepEqual(getGLParameter(GL.CULL_FACE), false, `got expected value`);
+  t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
   setDeviceParameters(webgl1Device, {cullMode: 'front'});
-  t.deepEqual(getGLParameter(GL.CULL_FACE), true, `got expected value`);
-  t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.FRONT, `got expected value`);
+  t.deepEqual(getGLParameter(GL.CULL_FACE), true, 'got expected value');
+  t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.FRONT, 'got expected value');
 
   setDeviceParameters(webgl1Device, {cullMode: 'back'});
-  t.deepEqual(getGLParameter(GL.CULL_FACE), true, `got expected value`);
-  t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.BACK, `got expected value`);
+  t.deepEqual(getGLParameter(GL.CULL_FACE), true, 'got expected value');
+  t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.BACK, 'got expected value');
 
   setDeviceParameters(webgl1Device, {cullMode: 'none'});
-  t.deepEqual(getGLParameter(GL.CULL_FACE), false, `got expected value`);
+  t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
   t.end();
 });
@@ -46,13 +46,13 @@ test('setDeviceParameters#cullMode', (t) => {
 test('setDeviceParameters#frontFace', (t) => {
   resetParameters(gl);
 
-  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, `got expected value`);
+  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
   setDeviceParameters(webgl1Device, {frontFace: 'cw'});
-  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CW, `got expected value`);
+  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CW, 'got expected value');
 
   setDeviceParameters(webgl1Device, {frontFace: 'ccw'});
-  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, `got expected value`);
+  t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
   t.end();
 });
@@ -60,13 +60,13 @@ test('setDeviceParameters#frontFace', (t) => {
 test('setDeviceParameters#depthWriteEnabled', (t) => {
   resetParameters(gl);
 
-  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, `got expected value`);
+  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
   setDeviceParameters(webgl1Device, {depthWriteEnabled: false});
-  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), false, `got expected value`);
+  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), false, 'got expected value');
 
   setDeviceParameters(webgl1Device, {depthWriteEnabled: true});
-  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, `got expected value`);
+  t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
   t.end();
 });

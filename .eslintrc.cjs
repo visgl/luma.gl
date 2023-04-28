@@ -37,7 +37,11 @@ module.exports = getESLintConfig({
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
+          'import/no-unresolved': 0,
+          'import/no-extraneous-dependencies': 0,
           'no-unused-expressions': 'warn',
+          '@typescript-eslint/no-empty-function': 0,
+          '@typescript-eslint/no-misused-promises': 0,
           // For parquet module
           '@typescript-eslint/no-non-null-assertion': 0,
           '@typescript-eslint/no-non-null-asserted-optional-chain': 0,
@@ -53,7 +57,7 @@ module.exports = getESLintConfig({
           ],
           // We still have some issues with import resolution
           'import/named': 0,
-          'import/no-extraneous-dependencies': ['warn'],
+          // 'import/no-extraneous-dependencies': ['warn'],
           // Warn instead of error
           // 'max-params': ['warn'],
           // 'no-undef': ['warn'],
@@ -61,7 +65,7 @@ module.exports = getESLintConfig({
           // '@typescript-eslint/no-floating-promises': ['warn'],
           // '@typescript-eslint/await-thenable': ['warn'],
           // '@typescript-eslint/no-misused-promises': ['warn'],
-          '@typescript-eslint/no-empty-function': ['warn', {allow: ['arrowFunctions']}],
+          // '@typescript-eslint/no-empty-function': ['warn', {allow: ['arrowFunctions']}],
           // We use function hoisting
           '@typescript-eslint/no-use-before-define': 0,
           // We always want explicit typing, e.g `field: string = ''`
@@ -84,6 +88,67 @@ module.exports = getESLintConfig({
           'import/no-unresolved': 0,
           'import/no-extraneous-dependencies': 0
         }
+      },
+      {
+        files: ['**/modules/webgpu/**/*.ts', '**/modules/webgpu/**/*.js'],
+        globals: {
+          // TODO - find eslint definitions for WebGPU
+          "GPU": true,
+          "GPUAdapter": true,
+          "GPUAdapterInfo": true,
+          "GPUBindGroup": true,
+          "GPUBindGroupLayout": true,
+          "GPUBuffer": true,
+          "GPUCanvasContext": true,
+          "GPUCommandBuffer": true,
+          "GPUCommandEncoder": true,
+          "GPUCompilationInfo": true,
+          "GPUCompilationMessage": true,
+          "GPUComputePassEncoder": true,
+          "GPUComputePipeline": true,
+          "GPUDevice": true,
+          "GPUDeviceLostInfo": true,
+          "GPUError": true,
+          "GPUExternalTexture": true,
+          "GPUFeatureName": true,
+          "GPUInternalError": true,
+          "GPUOutOfMemoryError": true,
+          "GPUPipelineError": true,
+          "GPUPipelineLayout": true,
+          "GPUQuerySet": true,
+          "GPUQueue": true,
+          "GPURenderBundle": true,
+          "GPURenderBundleEncoder": true,
+          "GPURenderPassEncoder": true,
+          "GPURenderPipeline": true,
+          "GPUSampler": true,
+          "GPUShaderModule": true,
+          "GPUSupportedLimits": true,
+          "GPUTexture": true,
+          "GPUTextureView": true,
+          "GPUUncapturedErrorEvent": true,
+          "GPUValidationError": true,
+          "GPUVertexBufferLayout": true,
+          "GPUVertexState": true,
+          "GPUVertexAttribute": true,
+          "GPUFragmentState": true,
+          "GPUIndexFormat": true,
+          "GPURenderPipelineDescriptor": true,
+          "GPUBufferUsage": true,
+          "GPUColorWrite": true,
+          "GPUMapMode": true,
+          "GPUShaderStage": true,
+          "GPUTextureUsage": true,
+          "GPUImageCopyTexture": true,
+          "GPUImageCopyBuffer": true,
+          "GPUExtent3D": true,
+          "GPURenderPassColorAttachment": true,
+          "GPURenderPassDepthStencilAttachment": true,        
+          "GPUDepthStencilState": true,
+          "GPUColorTargetState": true,
+          "GPUBindGroupEntry": true,
+          "GPUTextureFormat": true
+        }
       }
     ],
 
@@ -98,3 +163,12 @@ module.exports = getESLintConfig({
   },
   debug: false
 });
+
+  
+  
+  
+  
+  
+  
+  
+  

@@ -1,6 +1,8 @@
 import {compileVertexShader, compileFragmentShader} from './compile-shader';
 import {clamp, lerp} from '@math.gl/core';
 
+/* eslint-disable camelcase */
+
 const shaderCache = {};
 
 export const COLOR_MODE = {

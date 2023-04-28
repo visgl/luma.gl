@@ -114,8 +114,8 @@ function makePropValidator(propType: PropType): PropValidator {
     if (propType.type !== undefined) {
       return {...propType, ...DEFAULT_PROP_VALIDATORS[propType.type], type: propType.type};
     }
-      // If no type and value this object is likely the value
-      if (propType.value === undefined) {
+    // If no type and value this object is likely the value
+    if (propType.value === undefined) {
       return {type: 'object', value: propType};
     }
 

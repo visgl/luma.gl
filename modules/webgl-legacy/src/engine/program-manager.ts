@@ -52,7 +52,7 @@ export default class ProgramManager {
 
   addDefaultModule(module: ShaderModule): void {
     if (!this._defaultModules.find((m) => m.name === module.name)) {
-      this._defaultModules.push(module as ShaderModule);
+      this._defaultModules.push(module );
     }
 
     this.stateHash++;

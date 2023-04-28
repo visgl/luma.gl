@@ -39,7 +39,7 @@ const uniforms = {
  * @param angle   The rotation of the pattern in radians.
  * @param size    The diameter of a dot in pixels.
  */
- export const dotScreen = {
+export const dotScreen = {
   name: 'dotScreen',
   uniforms,
   fs,

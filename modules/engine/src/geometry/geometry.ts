@@ -117,8 +117,8 @@ export default class Geometry {
       }
     }
 
-      // @ts-expect-error
-      if (this.indices && this.indices.isIndexed !== undefined) {
+    // @ts-expect-error
+    if (this.indices && this.indices.isIndexed !== undefined) {
       this.indices = Object.assign({}, this.indices);
       // @ts-expect-error
       delete this.indices.isIndexed;

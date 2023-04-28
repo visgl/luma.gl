@@ -3,6 +3,8 @@ import {glsl} from '../../lib/glsl-utils/highlight';
 import type {NumberArray} from '../../types';
 import {project} from '../project/project';
 
+/* eslint-disable camelcase */
+
 export type DirlightOptions = {
   lightDirection?: NumberArray
 }
@@ -20,7 +22,7 @@ function getUniforms(opts: DirlightOptions = DEFAULT_MODULE_OPTIONS): Record<str
   return uniforms;
 }
 
-var fs = glsl`\
+const fs = glsl`\
 uniform vec3 dirlight_uLightDirection;
 
 /*
@@ -36,7 +38,7 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
- export const dirlight = {
+export const dirlight = {
   name: 'dirlight',
   // vs // TODO - reuse normal from geometry module
   fs,

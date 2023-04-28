@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 // Uniforms
 import GL from '@luma.gl/constants';
 

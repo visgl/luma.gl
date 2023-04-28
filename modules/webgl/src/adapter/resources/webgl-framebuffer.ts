@@ -131,7 +131,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
       //   [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
       //   [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
       // }
-    }) as WebGLTexture;
+    }) ;
     this._ownResources.push(texture);
     return texture;
   }
@@ -220,7 +220,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
    * @param layer = 0 - index into WebGLTextureArray and Texture3D or face for `TextureCubeMap`
    * @param level  = 0 - mipmapLevel (must be 0 in WebGL1)
    */
-   protected _attachTexture(attachment: GL, texture: WebGLTexture, layer: number, level: number): void {
+  protected _attachTexture(attachment: GL, texture: WebGLTexture, layer: number, level: number): void {
     const {gl, gl2} = this.device;
     gl.bindTexture(texture.target, texture.handle);
 

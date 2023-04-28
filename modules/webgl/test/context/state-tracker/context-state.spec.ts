@@ -359,6 +359,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
     if (context) {
       resetParameters(context);
 
+      // eslint-disable-next-line @typescript-eslint/no-for-in-array
       for (const index in parametersArray) {
         const parameters = parametersArray[index];
         const expected = expectedArray[index];
@@ -366,6 +367,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
         setParameters(context, parameters);
 
         const actualParameters = getParameters(context);
+        // eslint-disable-next-line @typescript-eslint/no-for-in-array
         for (const state in expected) {
           const value = actualParameters[state];
           t.equal(

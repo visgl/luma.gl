@@ -7,7 +7,7 @@
  * @param rate = 1
  * @param repeat = 1
  */
- export type ChannelOptions = {
+export type ChannelOptions = {
   delay?: number
   duration?: number
   rate?: number

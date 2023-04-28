@@ -176,7 +176,7 @@ test.skip('WebGL#Texture WebGL2 format creation', t => {
 */
 
 test.skip('WebGL#Texture setParameters', (t) => {
-  let texture = webgl1Device.createTexture({});
+  const texture = webgl1Device.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
   testSamplerParameters({t, texture, parameters: SAMPLER_PARAMETERS});
@@ -206,7 +206,7 @@ test.skip('WebGL2#Texture setParameters', (t) => {
     return;
   }
 
-  let texture = webgl2Device.createTexture({});
+  const texture = webgl2Device.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
   testSamplerParameters({t, texture, parameters: SAMPLER_PARAMETERS_WEBGL2});
@@ -711,7 +711,7 @@ test.skip('WebGL#TextureCube construct/delete', (t) => {
 });
 
 test.skip('WebGL#TextureCube buffer update', (t) => {
-  let texture = webgl1Device.createTexture({dimension: 'cube'});
+  const texture = webgl1Device.createTexture({dimension: 'cube'});
   t.ok(texture instanceof Texture, 'TextureCube construction successful');
 
   texture.destroy();
@@ -796,7 +796,7 @@ test.skip('WebGL#Texture3D construct/delete', (t) => {
 
 function getParameter(texture: Texture, pname: number): any {
   const webglTexture = cast<WEBGLTexture>(texture);
-  this.gl.bindTexture(webglTexture.target, webglTexture.handle);
+  gl.bindTexture(webglTexture.target, webglTexture.handle);
   const value = webglTexture.gl.getTexParameter(webglTexture.target, pname);
   webglTexture.gl.bindTexture(webglTexture.target, null);
   return value;

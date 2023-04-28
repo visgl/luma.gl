@@ -155,7 +155,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modules: [dirlight],
           geometry: new CubeGeometry(),
           parameters: {
-            //@ts-expect-error
+            // @ts-expect-error
             id: `hack-to-prevent-pipeline-sharing-${i}`,
             depthWriteEnabled: true,
             depthCompare: 'less-equal'

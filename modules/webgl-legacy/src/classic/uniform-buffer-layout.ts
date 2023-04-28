@@ -13,7 +13,7 @@ const GL_UNSIGNED_INT = 0x1405;
 /**
  * Std140 layout for uniforms
  */
- export default class UniformBufferLayout {
+export default class UniformBufferLayout {
   constructor(layout) {
     this.layout = {};
     this.size = 0;

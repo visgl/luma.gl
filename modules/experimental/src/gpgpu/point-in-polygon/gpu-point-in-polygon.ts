@@ -5,6 +5,9 @@ import {Transform} from '@luma.gl/webgl-legacy';
 import {default as textureFilterModule} from './texture-filter';
 import {POLY_TEX_VS, FILTER_VS} from './shaders';
 import {normalize, getSurfaceIndices, getVertexCount} from './polygon';
+
+/* eslint-disable camelcase */
+
 const TEXTURE_SIZE = 512;
 
 export type GPUPointInPolygonProps = {polygons?, textureSize?};
@@ -87,7 +90,7 @@ export class GPUPointInPolygon {
 
     // transform to generate polygon texture
     this.polyTextureTransform = new Transform(gl, {
-      id: `polygon-texture-creation-transform`,
+      id: 'polygon-texture-creation-transform',
       elementCount: 0,
       _targetTexture: this.polygonTexture,
       _targetTextureVarying: 'v_polygonColor',

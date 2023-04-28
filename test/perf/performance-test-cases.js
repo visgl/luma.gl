@@ -1,7 +1,9 @@
+// @ts-nocheck
+
 const examples = [
   {
     name: 'instancing',
-    animationLoop: require('../../examples/core/instancing/app').default,
+    animationLoop: require('../../examples/showcase/instancing/app').default,
     targetFPS: 40
   }
 ];
