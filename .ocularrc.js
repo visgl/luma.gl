@@ -2,7 +2,7 @@ import {resolve} from 'path';
 
 export default {
   lint: {
-    paths: ['modules', 'dev-modules', 'docs', 'test', 'examples'],
+    paths: ['modules', 'docs', 'test', 'examples'],
     extensions: ['js', 'ts']
   },
 

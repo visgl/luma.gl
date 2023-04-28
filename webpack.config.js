@@ -1,17 +1,17 @@
 /* eslint-disable import/no-extraneous-dependencies */
-const {getWebpackConfig} = require('ocular-dev-tools');
+const { getWebpackConfig } = require("ocular-dev-tools");
 
 module.exports = (env = {}) => {
   let config = getWebpackConfig(env);
 
-  config.devtool = 'source-map';
+  config.devtool = "source-map";
 
   config = addBabelSettings(config);
 
   switch (env.mode) {
-    case 'perf':
+    case "perf":
       config.entry = {
-        perf: './test/perf/index.js'
+        perf: "./test/perf/index.js",
       };
       break;
 
@@ -20,8 +20,8 @@ module.exports = (env = {}) => {
 
   // Log regex
   // eslint-disable-next-line
-  Object.defineProperty(RegExp.prototype, 'toJSON', {
-    value: RegExp.prototype.toString
+  Object.defineProperty(RegExp.prototype, "toJSON", {
+    value: RegExp.prototype.toString,
   });
 
   // Uncomment to debug config
@@ -34,22 +34,22 @@ function makeBabelRule() {
   return {
     // Compile source using babel
     test: /(\.js|\.ts|\.tsx)$/,
-    loader: 'babel-loader',
+    loader: "babel-loader",
     include: [/modules\/.*\/src/, /modules\/.*\/test/, /examples/, /test/],
     exclude: [/node_modules/],
     options: {
       presets: [
-        '@babel/preset-react',
-        '@babel/preset-typescript',
+        "@babel/preset-react",
+        "@babel/preset-typescript",
         [
-          '@babel/preset-env',
+          "@babel/preset-env",
           {
-            exclude: [/transform-async-to-generator/, /transform-regenerator/]
-          }
-        ]
+            exclude: [/transform-async-to-generator/, /transform-regenerator/],
+          },
+        ],
       ],
-      plugins: ['@babel/plugin-proposal-class-properties']
-    }
+      plugins: ["@babel/plugin-proposal-class-properties"],
+    },
   };
 }
 
@@ -59,19 +59,19 @@ function addBabelSettings(config) {
     module: {
       ...config.module,
       rules: [
-        ...config.module.rules.filter((r) => r.loader !== 'babel-loader'),
+        ...config.module.rules.filter((r) => r.loader !== "babel-loader"),
         makeBabelRule(),
         // See https://github.com/apollographql/apollo-link-state/issues/302
         {
           test: /\.mjs$/,
           include: /node_modules/,
-          type: 'javascript/auto'
-        }
-      ]
+          type: "javascript/auto",
+        },
+      ],
     },
     resolve: {
       ...config.resolve,
-      extensions: ['.ts', '.tsx', '.js', '.json']
-    }
+      extensions: [".ts", ".tsx", ".js", ".json"],
+    },
   };
 }

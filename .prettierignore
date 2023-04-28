@@ -4,3 +4,7 @@ workers/
 wip/
 encoding.js
 encoding-indexes.js
+examples
+modules
+test
+.ocularrc.js
