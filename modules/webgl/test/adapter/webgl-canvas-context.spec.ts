@@ -370,7 +370,9 @@ test('WebGLCanvasContext#cssToDevicePixels', (t) => {
 
 test('WebGLCanvasContext#cssToDeviceRatio', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
-    canvasContext && configureCanvasContext(canvasContext, tc);
+    if (canvasContext) {
+      configureCanvasContext(canvasContext, tc);
+    }
     t.equal(canvasContext?.cssToDeviceRatio(), tc.ratio, 'cssToDeviceRatio should return correct value');
   });
 

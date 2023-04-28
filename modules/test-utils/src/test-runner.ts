@@ -108,7 +108,7 @@ export default class TestRunner {
       this._currentTestCase = null;
     }).catch (error => {
       this._fail({error: error.message});
-      reject(error);
+      // reject(error);
     });
   }
 

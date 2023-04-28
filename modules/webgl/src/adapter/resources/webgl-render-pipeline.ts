@@ -49,8 +49,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle || this.device.gl.createProgram();
-    // @ts-expect-error
-    this.handle.__SPECTOR_Metadata = {id: this.props.id};
+    this.device.setSpectorMetadata(this.handle, {id: this.props.id});
 
     // Create shaders if needed
     this.vs = cast<WEBGLShader>(props.vs);
@@ -94,7 +93,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const attribute = getAttributeLayout(this.layout, name);
       if (!attribute) {
         log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
       const decoded = decodeVertexFormat(attribute.format);
       const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
@@ -122,7 +121,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const binding = this.layout.bindings.find((binding) => binding.name === name);
       if (!binding) {
         log.warn(`Unknown binding ${name} in render pipeline ${this.id}`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
       if (!value) {
         log.warn(`Unsetting binding ${name} in render pipeline ${this.id}`)();

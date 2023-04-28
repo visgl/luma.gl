@@ -2,7 +2,7 @@
 /* global window, setTimeout, clearTimeout */
 
 // / <reference types="@types/node" />
-export function requestAnimationFrame(callback: (time?: any) => void): number | NodeJS.Timeout {
+export function requestAnimationFrame(callback: (time?: any) => void): any {
   return typeof window !== 'undefined' && window.requestAnimationFrame
     ? window.requestAnimationFrame(callback)
     : setTimeout(callback, 1000 / 60);

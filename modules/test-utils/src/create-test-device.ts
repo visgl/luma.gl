@@ -24,6 +24,7 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
     // We dont use luma.createDevice since this tests current expect this context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);
     return null;
   }

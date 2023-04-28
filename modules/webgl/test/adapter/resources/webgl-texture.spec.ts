@@ -1,5 +1,7 @@
+// TODO - fix
 // @ts-nocheck
-/* eslint-disable max-len */
+/* eslint-disable */
+
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
 
@@ -796,7 +798,7 @@ test.skip('WebGL#Texture3D construct/delete', (t) => {
 
 function getParameter(texture: Texture, pname: number): any {
   const webglTexture = cast<WEBGLTexture>(texture);
-  gl.bindTexture(webglTexture.target, webglTexture.handle);
+  webglTexturegl.bindTexture(webglTexture.target, webglTexture.handle);
   const value = webglTexture.gl.getTexParameter(webglTexture.target, pname);
   webglTexture.gl.bindTexture(webglTexture.target, null);
   return value;

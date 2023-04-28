@@ -14,6 +14,8 @@ import {isWebGL2, assertWebGL2Context} from '@luma.gl/webgl';
 import {withParameters, withDeviceParameters} from '@luma.gl/webgl';
 import {WebGLDevice, WEBGLBuffer, WEBGLRenderPipeline, WEBGLShader, WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
 
+/* eslint-disable max-depth */
+
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
 export type ProgramProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {

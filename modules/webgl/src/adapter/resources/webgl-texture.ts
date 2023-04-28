@@ -176,9 +176,7 @@ export default class WEBGLTexture extends Texture {
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();
-    // @ts-expect-error Per SPECTOR docs
-    // eslint-disable-next-line camelcase
-    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
+    this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data}); // {name: this.props.id};
 
     this.target = getWebGLTextureTarget(this.props);
 

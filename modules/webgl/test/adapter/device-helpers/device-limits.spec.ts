@@ -98,7 +98,7 @@ test('WebGLDevice#limits (WebGPU style limits)', async (t) => {
 });
 
 test('WebGLDevice#webglLimits (WebGL style limits)', async (t) => {
-  for (const testDevice of await getWebGLTestDevices()) {
+  for (const testDevice of getWebGLTestDevices()) {
     for (const [limit, numeric] of Object.entries(WEBGL_LIMITS)) {
       const actual = testDevice.webglLimits[limit];
       if (numeric) {

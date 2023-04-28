@@ -1,4 +1,4 @@
-import {getPrettierConfig, deepMerge} from 'ocular-dev-tools';
+import {getPrettierConfig} from 'ocular-dev-tools';
 
 const config = getPrettierConfig({react: '16.8.2'});
 

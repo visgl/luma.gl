@@ -5,6 +5,8 @@ import {pushContextState, popContextState} from '../../context/state-tracker/tra
 import {setParameters} from '../../context/parameters/unified-parameter-api';
 import WebGLDevice from '../webgl-device';
 
+/* eslint-disable no-unused-expressions */ // For expression ? gl.enable() : gl.disable()
+
 /**
  * Execute a function with a set of temporary WebGL parameter overrides
  * - Saves current "global" WebGL context settings
@@ -103,6 +105,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.depthCompare) {
+
     parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST);
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }

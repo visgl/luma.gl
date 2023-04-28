@@ -58,7 +58,7 @@ export type ClassicAnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Promise<Device>;
   onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
-  onInitialize?: (animationProps: ClassicAnimationProps) => {} | void;
+  onInitialize?: (animationProps: ClassicAnimationProps) => {} | void | Promise<{} | void>;
   onRender?: (animationProps: ClassicAnimationProps) => void;
   onFinalize?: (animationProps: ClassicAnimationProps) => void;
   onError?: (reason: any) => void;
@@ -235,6 +235,7 @@ export default class ClassicAnimationLoop {
         this._initialize(props);
 
         // Note: onIntialize can return a promise (in case app needs to load resources)
+        // eslint-disable-next-line  @typescript-eslint/await-thenable
         appContext = await this.onInitialize(this.animationProps);
         this._addCallbackData(appContext || {});
       }

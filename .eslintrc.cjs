@@ -37,11 +37,14 @@ module.exports = getESLintConfig({
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
+          'consistent-return': 0, // We use typescript noImplicitReturn
+          'default-case': 0, // We rely on typescript
           'import/no-unresolved': 0,
           'import/no-extraneous-dependencies': 0,
           'no-unused-expressions': 'warn',
           '@typescript-eslint/no-empty-function': 0,
           '@typescript-eslint/no-misused-promises': 0,
+          '@typescript-eslint/no-floating-promises': 0,
           // For parquet module
           '@typescript-eslint/no-non-null-assertion': 0,
           '@typescript-eslint/no-non-null-asserted-optional-chain': 0,
@@ -90,7 +93,7 @@ module.exports = getESLintConfig({
         }
       },
       {
-        files: ['**/modules/webgpu/**/*.ts', '**/modules/webgpu/**/*.js'],
+        files: ['**/modules/webgpu/**/*.ts', '**/modules/webgpu/**/*.js', "examples/webgpu/**/*.ts"],
         globals: {
           // TODO - find eslint definitions for WebGPU
           "GPU": true,
@@ -147,7 +150,8 @@ module.exports = getESLintConfig({
           "GPUDepthStencilState": true,
           "GPUColorTargetState": true,
           "GPUBindGroupEntry": true,
-          "GPUTextureFormat": true
+          "GPUTextureFormat": true,
+          "GPUBufferUsage": true
         }
       }
     ],

@@ -29,8 +29,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
     this.handle = this.props.handle !== undefined ? this.props.handle : this.gl.createFramebuffer();
 
     if (this.handle) { // default framebuffer is null...
-      // @ts-expect-error Per SPECTOR docs
-      this.handle.__SPECTOR_Metadata = {id: this.props.id, props: this.props};
+      device.setSpectorMetadata(this.handle, {id: this.props.id, props: this.props});
     }
 
     this.colorAttachments = this._createColorAttachments();

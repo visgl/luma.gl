@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console, import/no-unresolved */
 import GL from '@luma.gl/constants';
 
 const COLOR_RESET = '\x1b[0m';
