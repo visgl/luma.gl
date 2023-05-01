@@ -1,17 +1,17 @@
 {
   "name": "luma.gl-examples-persistence",
-  "version": "8.5.19",
+  "version": "8.5.20",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open",
     "start-local": "webpack-dev-server --env.local --progress --hot --open --mode=development"
   },
   "dependencies": {
-    "@luma.gl/core": "8.5.19",
-    "@luma.gl/engine": "8.5.19",
-    "@luma.gl/experimental": "8.5.19",
-    "@luma.gl/gltools": "8.5.19",
-    "@luma.gl/webgl": "8.5.19",
+    "@luma.gl/core": "8.5.20",
+    "@luma.gl/engine": "8.5.20",
+    "@luma.gl/experimental": "8.5.20",
+    "@luma.gl/gltools": "8.5.20",
+    "@luma.gl/webgl": "8.5.20",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {

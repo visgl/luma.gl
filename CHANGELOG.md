@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.20
+
+- Fix cssToDeviceRatio when auto resize is disabled (#1746)
+
 ## v8.5.19
 
 - Add getBounds() to ScenegraphNode (#1735)

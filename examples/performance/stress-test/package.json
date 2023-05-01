@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-example-stress-test",
-  "version": "8.5.19",
+  "version": "8.5.20",
   "private": true,
   "description": "A stress test for luma.gl.",
   "contributors": [
@@ -11,11 +11,11 @@
     "start-local": "webpack-dev-server --env.local --progress --hot --open -d"
   },
   "dependencies": {
-    "@luma.gl/constants": "8.5.19",
-    "@luma.gl/engine": "8.5.19",
-    "@luma.gl/gltools": "8.5.19",
-    "@luma.gl/shadertools": "8.5.19",
-    "@luma.gl/webgl": "8.5.19",
+    "@luma.gl/constants": "8.5.20",
+    "@luma.gl/engine": "8.5.20",
+    "@luma.gl/gltools": "8.5.20",
+    "@luma.gl/shadertools": "8.5.20",
+    "@luma.gl/webgl": "8.5.20",
     "@math.gl/core": "^3.5.0",
     "@probe.gl/stats-widget": "^3.4.0"
   },
