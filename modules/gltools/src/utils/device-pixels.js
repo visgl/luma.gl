@@ -10,8 +10,10 @@ export function cssToDeviceRatio(gl) {
 
   if (gl.canvas && luma) {
     // For headless gl we might have used custom width and height
-    // hence use cached clientWidth
-    const {clientWidth} = luma.canvasSizeInfo;
+    // hence prioritize cached clientWidth
+    const cachedSize = luma.canvasSizeInfo;
+    const clientWidth =
+      'clientWidth' in cachedSize ? cachedSize.clientWidth : gl.canvas.clientWidth;
     return clientWidth ? gl.drawingBufferWidth / clientWidth : 1;
   }
   // use default device pixel ratio
