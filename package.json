@@ -56,7 +56,7 @@
     "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.7.3",
-    "gl": "^4.9.0",
+    "gl": "^6.0.2",
     "mjolnir.js": "^2.1.2",
     "mkdirp": "^0.5.1",
     "npm-normalize-package-bin": "^1.0.0",
@@ -72,5 +72,9 @@
   "pre-commit": [
     "test-fast"
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "volta": {
+    "node": "16.19.1",
+    "yarn": "1.22.19"
+  }
 }
