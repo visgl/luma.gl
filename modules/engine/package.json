@@ -36,8 +36,8 @@
     "@luma.gl/shadertools": "8.5.20",
     "@luma.gl/webgl": "8.5.20",
     "@math.gl/core": "^3.5.0",
-    "@probe.gl/env": "^3.5.0",
-    "@probe.gl/stats": "^3.5.0",
+    "@probe.gl/env": "^4.0.0",
+    "@probe.gl/stats": "^4.0.0",
     "@types/offscreencanvas": "^2019.7.0"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
