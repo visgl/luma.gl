@@ -28,24 +28,24 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
 }
 
 function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel' | 'apple' | 'amd' | 'software' | 'unknown' {
-  if (vendor.match(/NVIDIA/i) || renderer.match(/NVIDIA/i)) {
+  if ((/NVIDIA/i.exec(vendor)) || (/NVIDIA/i.exec(renderer))) {
     return 'nvidia';
   }
-  if (vendor.match(/INTEL/i) || renderer.match(/INTEL/i)) {
+  if ((/INTEL/i.exec(vendor)) || (/INTEL/i.exec(renderer))) {
     return 'intel';
   }
-  if (vendor.match(/Apple/i) || renderer.match(/Apple/i)) {
+  if ((/Apple/i.exec(vendor)) || (/Apple/i.exec(renderer))) {
     return 'apple';
   }
   if (
-    vendor.match(/AMD/i) ||
-    renderer.match(/AMD/i) ||
-    vendor.match(/ATI/i) ||
-    renderer.match(/ATI/i)
+    (/AMD/i.exec(vendor)) ||
+    (/AMD/i.exec(renderer)) ||
+    (/ATI/i.exec(vendor)) ||
+    (/ATI/i.exec(renderer))
   ) {
     return 'amd';
   }
-  if (vendor.match(/SwiftShader/i) || renderer.match(/SwiftShader/i)) {
+  if ((/SwiftShader/i.exec(vendor)) || (/SwiftShader/i.exec(renderer))) {
     return 'software';
   }
   

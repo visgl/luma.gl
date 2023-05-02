@@ -36,7 +36,7 @@ const uniforms = {
  * @param borderWidthPixels: border width of the effect circle, will not show border if value <= 0.0. Default value is `0`.
  * @param borderColor: border color of the effect circle. Default value is `[255, 255, 255, 255]`.
  */
- export const magnify = {
+export const magnify = {
   name: 'magnify',
   uniforms,
   fs,

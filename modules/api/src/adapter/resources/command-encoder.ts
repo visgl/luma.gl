@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import Resource, {ResourceProps} from './resource';
+import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 import Buffer from './buffer';
 import Texture from './texture';
 
@@ -75,11 +75,15 @@ export type CommandEncoderProps = ResourceProps & {
   measureExecutionTime?: boolean;
 };
 
+const DEFAULT_COMMAND_ENCODER_PROPS = {
+  ...DEFAULT_RESOURCE_PROPS
+};
+
 /**
  * Encodes commands to queue that can be executed later
  */
 export default abstract class CommandEncoder extends Resource<CommandEncoderProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
 
@@ -115,4 +119,4 @@ export default abstract class CommandEncoder extends Resource<CommandEncoderProp
   //   destination: Buffer,
   //   destinationOffset?: number;
   // }): void;
-};
+}

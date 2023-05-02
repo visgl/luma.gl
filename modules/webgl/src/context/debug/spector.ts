@@ -23,6 +23,7 @@ let spector: any = null;
 let initialized: boolean = false;
 
 declare global {
+  // eslint-disable-next-line no-var
   var SPECTOR: any;
 }
 
@@ -44,7 +45,7 @@ export function initializeSpectorJS(props?: SpectorProps) {
   }
 
   if (!spector && globalThis.SPECTOR) {
-    log.probe(LOG_LEVEL, "SPECTOR found and initialized")();
+    log.probe(LOG_LEVEL, 'SPECTOR found and initialized')();
     spector = new globalThis.SPECTOR.Spector();
     if (globalThis.luma) {
       globalThis.luma.spector = spector;
@@ -61,9 +62,9 @@ export function initializeSpectorJS(props?: SpectorProps) {
     // enables recording some extra information merged in the capture like texture memory sizes and formats
     spector.spyCanvases();
     // A callback when results are ready
-    spector?.onCaptureStarted.add((capture: unknown) => log.info(`Spector capture started:`, capture)());
+    spector?.onCaptureStarted.add((capture: unknown) => log.info('Spector capture started:', capture)());
     spector?.onCapture.add((capture: unknown) => {
-      log.info(`Spector capture complete:`, capture)();
+      log.info('Spector capture complete:', capture)();
       // Use undocumented Spector API to open the UI with our capture
       // See https://github.com/BabylonJS/Spector.js/blob/767ad1195a25b85a85c381f400eb50a979239eca/src/spector.ts#L124
       spector?.getResultUI()
@@ -82,7 +83,7 @@ export function initializeSpectorJS(props?: SpectorProps) {
     // spector?.captureCanvas(props?.canvas);
     spector?.startCapture(props?.canvas, 500); // 500 commands
     new Promise(resolve => setTimeout(resolve, 2000)).then(_ => {
-      log.info(`Spector capture stopped after 2 seconds`)();
+      log.info('Spector capture stopped after 2 seconds')();
       spector?.stopCapture();
       // spector?.displayUI();
     });

@@ -221,11 +221,11 @@ const FS_GLSL_300_GLTF = glsl`\
 const TEST_MODULE = {
   name: 'TEST_MODULE',
   inject: {
-    'vs:#decl': `uniform float vsFloat;`,
+    'vs:#decl': 'uniform float vsFloat;',
     // Hook function has access to injected variable
     'vs:HOOK_FUNCTION': 'value = vsFloat;',
 
-    'fs:#decl': `uniform vec4 fsVec4;`,
+    'fs:#decl': 'uniform vec4 fsVec4;',
     // Hook function has access to injected variable
     'fs:HOOK_FUNCTION': 'value = fsVec4;'
   }
@@ -494,11 +494,11 @@ test('assembleShaders#injection order', (t) => {
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
     inject: {
-      'vs:#decl': `uniform float vsFloat;`,
+      'vs:#decl': 'uniform float vsFloat;',
       // Hook function has access to injected variable
       'vs:HOOK_FUNCTION': 'value = vsFloat;',
 
-      'fs:#decl': `uniform vec4 fsVec4;`,
+      'fs:#decl': 'uniform vec4 fsVec4;',
       // Hook function has access to injected variable
       'fs:HOOK_FUNCTION': 'value = fsVec4;'
     },
@@ -536,10 +536,10 @@ test('assembleShaders#transpilation', (t) => {
   });
 
   t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!assembleResult.vs.match(/\bin vec4\b/), '"in" keyword removed');
+  t.ok(!(/\bin vec4\b/.exec(assembleResult.vs)), '"in" keyword removed');
 
   t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!assembleResult.fs.match(/\bout vec4\b/), '"out" keyword removed');
+  t.ok(!(/\bout vec4\b/.exec(assembleResult.fs)), '"out" keyword removed');
 
   t.ok(compileAndLinkShaders(t, webgl1Device, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
 
@@ -602,7 +602,7 @@ test('assembleShaders#transpilation', (t) => {
 
 function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   const gl = device.gl;
-  let vShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader;
+  const vShader = gl.createShader(gl.VERTEX_SHADER) ;
   gl.shaderSource(vShader, assembleResult.vs);
   gl.compileShader(vShader);
   let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
@@ -612,7 +612,7 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     return false;
   }
 
-  let fShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader;
+  const fShader = gl.createShader(gl.FRAGMENT_SHADER) ;
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
   compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
@@ -622,7 +622,7 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     return false;
   }
 
-  let program = gl.createProgram() as WebGLProgram;;
+  const program = gl.createProgram() ;
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);

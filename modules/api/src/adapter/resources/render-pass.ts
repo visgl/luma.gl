@@ -20,7 +20,7 @@ const DEFAULT_RENDERPASS_PROPS: Required<RenderPassProps> = {
 }
 
 export default abstract class RenderPass extends Resource<RenderPassProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'RenderPass';
   }
 

@@ -25,6 +25,7 @@
 // the global class.
 
 // @ts-nocheck external code
+/* eslint-disable */ 
 
 const glErrorShadow = {};
 
@@ -103,6 +104,7 @@ WebGLVertexArrayObjectOES.VertexAttrib.prototype.recache = function recache() {
 };
 
 const OESVertexArrayObject = function OESVertexArrayObject(gl) {
+  // eslint-disable-next-line @typescript-eslint/no-this-alias
   const self = this;
   this.gl = gl;
 

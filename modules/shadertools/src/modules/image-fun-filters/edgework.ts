@@ -69,7 +69,7 @@ const uniforms = {
  * copies of the image blurred with different radii.
  * @param radius The radius of the effect in pixels.
  */
- export const edgeWork = {
+export const edgeWork = {
   name: 'edgeWork',
   uniforms,
   fs,

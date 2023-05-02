@@ -137,7 +137,7 @@ function readAttributeBindings(
     // Add only user provided attributes, for built-in attributes like
     // `gl_InstanceID` locaiton will be < 0
     if (location >= 0) {
-      const {glType, components} = decodeAttributeType(compositeType);;
+      const {glType, components} = decodeAttributeType(compositeType);
       const accessor: AccessorObject = {type: glType, size: size * components};
       // Any attribute name containing the word "instance" will be assumed to be instanced
       if (/instance/i.test(name)) {
@@ -172,7 +172,7 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
       throw new Error('activeInfo');
     }
     const {name, type: compositeType, size} = activeInfo;
-    const {glType, components} = decodeUniformType(compositeType);;
+    const {glType, components} = decodeUniformType(compositeType);
     const accessor = new Accessor({type: glType, size: size * components});
     const varying = {location, name, accessor}; // Base values
     varyings.push(varying);
@@ -333,7 +333,7 @@ type SamplerInfo =   | {
 };
 
 function getSamplerInfo(type: GL): SamplerInfo {
-  let sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
+  const sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
   if (!sampler) {
     throw new Error('sampler');
   }
@@ -355,7 +355,7 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
 
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
-  const matches = name.match(UNIFORM_NAME_REGEXP);
+  const matches = UNIFORM_NAME_REGEXP.exec(name);
   if (!matches || matches.length < 2) {
     throw new Error(`Failed to parse GLSL uniform name ${name}`);
   }

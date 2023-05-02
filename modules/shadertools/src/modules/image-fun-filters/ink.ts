@@ -43,7 +43,7 @@ const uniforms = {
  *                 of black edges. Negative strength values will create white ink edges
  *                 instead of black ones.
  */
- export const ink = {
+export const ink = {
   name: 'ink',
   uniforms,
   fs,

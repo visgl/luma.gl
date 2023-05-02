@@ -5,6 +5,8 @@ import test from 'tape-promise/tape';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
 import {minifyShader} from './minify-shader';
 
+/* eslint-disable camelcase */
+
 const VERTEX = true;
 const FRAGMENT = false;
 

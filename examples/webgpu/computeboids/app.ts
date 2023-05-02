@@ -1,11 +1,14 @@
 // Inspired by https://github.com/austinEng/webgpu-samples
 // under MIT license, Copyright 2019 WebGPU Samples Contributors
 // @ts-nocheck
+/* eslint-disable no-console */
+
 import updateSprites from './update-sprites.wgsl?raw';
 import sprites from './sprites.wgsl?raw';
-import {Buffer, RenderPipelineParameters} from '@luma.gl/api';
+import {Buffer} from '@luma.gl/api';
+// import { RenderPipelineParameters} from '@luma.gl/api';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';
-import {Matrix4} from '@math.gl/core';
+// import {Matrix4} from '@math.gl/core';
 
 export const name = 'Compute Boids';
 export const description =
@@ -158,6 +161,6 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-};
+}
 
 init(document.getElementById('canvas') as HTMLCanvasElement, 'wgsl');

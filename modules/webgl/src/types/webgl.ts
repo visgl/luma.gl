@@ -1,6 +1,8 @@
 import type {NumberArray} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
+/* eslint-disable camelcase */
+
 type Framebuffer = any;
 
 export type GLDrawMode =

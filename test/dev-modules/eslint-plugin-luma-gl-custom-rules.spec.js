@@ -1,8 +1,9 @@
 import test from 'tape-promise/tape';
-import {rules} from 'dev-modules/eslint-plugin-luma-gl-custom-rules';
+import customRulesPlugin from 'dev-modules/eslint-plugin-luma-gl-custom-rules/index.js';
 import {RuleTester} from 'eslint';
 
 const ruleTester = new RuleTester();
+const {rules} = customRulesPlugin;
 
 // TODO - RESTORE
 test.skip('EslintCustomRules#check-log-call', (t) => {

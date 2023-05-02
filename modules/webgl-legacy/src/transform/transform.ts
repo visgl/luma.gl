@@ -196,10 +196,7 @@ export default class Transform {
 
   _updateModelProps(props: TransformProps): TransformProps {
     let updatedProps: TransformProps = {...props};
-    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) as (
-      | BufferTransform
-      | TextureTransform
-    )[];
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) ;
     for (const resourceTransform of resourceTransforms) {
       updatedProps = resourceTransform.updateModelProps(updatedProps);
     }
@@ -221,10 +218,7 @@ export default class Transform {
 
   _updateDrawOptions(options: TransformRunOptions): TransformDrawOptions {
     let updatedOpts = {...options};
-    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) as (
-      | BufferTransform
-      | TextureTransform
-    )[];
+    const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) ;
     for (const resourceTransform of resourceTransforms) {
       updatedOpts = Object.assign(updatedOpts, resourceTransform.getDrawOptions(updatedOpts));
     }

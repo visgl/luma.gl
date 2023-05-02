@@ -26,7 +26,7 @@ vec4 noise_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
  * @description    Adds black and white noise to the image.
  * @param amount   0 to 1 (0 for no effect, 1 for maximum noise)
  */
- export const noise = {
+export const noise = {
   name: 'noise',
   uniforms: {
     amount: {value: 0.5, min: 0, max: 1}

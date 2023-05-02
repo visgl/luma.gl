@@ -88,7 +88,7 @@ export function getTypedArrayFromGLType(
  * how-can-i-flip-the-result-of-webglrenderingcontext-readpixels
  * @param {*} param0
  */
- export function flipRows(options: {
+export function flipRows(options: {
   data: any;
   width: any;
   height: any;

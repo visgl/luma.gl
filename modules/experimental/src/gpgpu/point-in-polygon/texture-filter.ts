@@ -1,5 +1,7 @@
 // shader module to perform texture filtering
 
+/* eslint-disable camelcase */
+
 const vs = `
 uniform vec4 textureFilter_uBoundingBox; //[xMin, yMin, xSize, ySize]
 uniform sampler2D textureFilter_uTexture;

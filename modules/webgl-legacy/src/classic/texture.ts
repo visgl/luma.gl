@@ -46,7 +46,7 @@ export default class ClassicTexture extends WEBGLTexture {
    * @param name
    * @return param
    */
-   getParameter(pname: number): any {
+  getParameter(pname: number): any {
     pname = getKeyValue(this.gl, pname);
     assert(pname);
 

@@ -16,6 +16,7 @@ _enableDOMLogging({
 
 // Mac full screen
 new PerformanceTestRunner({
+  // @ts-expect-error
   useDevicePixels: false,
   width: 3600,
   height: 2800

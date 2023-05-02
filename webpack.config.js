@@ -59,7 +59,7 @@ function addBabelSettings(config) {
     module: {
       ...config.module,
       rules: [
-        ...config.module.rules.filter((r) => r.loader !== 'babel-loader'),
+        ...config.module.rules.filter(r => r.loader !== 'babel-loader'),
         makeBabelRule(),
         // See https://github.com/apollographql/apollo-link-state/issues/302
         {

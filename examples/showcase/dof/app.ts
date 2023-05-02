@@ -4,7 +4,7 @@
 */
 // @ts-nocheck
 
-import {glsl} from '@luma.gl/api';
+import {Device, glsl} from '@luma.gl/api';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
   GL,
@@ -36,7 +36,7 @@ post-processing effect.
 
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
 
 const QUAD_VERTS = [1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0]; // eslint-disable-line
 const NUM_ROWS = 5;
@@ -98,14 +98,14 @@ class InstancedCube extends Model {
   matrices: Float32Array;
   matrixBuffer: Buffer;
 
-  constructor(gl, props) {
+  constructor(device: Device, props) {
     const count = props.count;
     const xforms = new Array(count);
     const matrices = new Float32Array(count * 16);
-    const matrixBuffer = new Buffer(gl, matrices.byteLength);
+    const matrixBuffer = new Buffer(device.gl, matrices.byteLength);
 
     super(
-      gl,
+      device,
       Object.assign({geometry: new CubeGeometry()}, props, {
         vs,
         fs,
@@ -295,14 +295,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Need to ensure both color and depth targets can be sampled.
     this.sceneFramebuffer = new Framebuffer(device, {
-      width: gl.drawingBufferWidth,
-      height: gl.drawingBufferHeight,
+      width: device.gl.drawingBufferWidth,
+      height: device.gl.drawingBufferHeight,
       attachments: {
         [GL.COLOR_ATTACHMENT0]: device.createTexture({
           format: GL.RGBA,
           type: GL.UNSIGNED_BYTE,
-          width: gl.drawingBufferWidth,
-          height: gl.drawingBufferHeight,
+          width: device.gl.drawingBufferWidth,
+          height: device.gl.drawingBufferHeight,
           mipmaps: false,
           parameters: {
             [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
@@ -315,8 +315,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           format: GL.DEPTH_COMPONENT16,
           type: GL.UNSIGNED_SHORT,
           dataFormat: GL.DEPTH_COMPONENT,
-          width: gl.drawingBufferWidth,
-          height: gl.drawingBufferHeight,
+          width: device.gl.drawingBufferWidth,
+          height: device.gl.drawingBufferHeight,
           mipmaps: false,
           parameters: {
             [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
@@ -330,8 +330,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Postprocessing FBO doesn't need a depth attachment.
     this.dofFramebuffer = new Framebuffer(device, {
-      width: gl.drawingBufferWidth,
-      height: gl.drawingBufferHeight,
+      width: device.gl.drawingBufferWidth,
+      height: device.gl.drawingBufferHeight,
       depth: false
     });
 

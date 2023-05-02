@@ -88,7 +88,7 @@ export class AnimationLoop {
       throw new Error('No device provided');
     }
 
-    let {useDevicePixels = true} = this.props;
+    const {useDevicePixels = true} = this.props;
 
     // state
     this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
@@ -313,7 +313,7 @@ export class AnimationLoop {
     // if (this.display && this.display.cancelAnimationFrame) {
     //   this.display.cancelAnimationFrame(this._animationFrameId);
     // }
-  cancelAnimationFrame(this._animationFrameId);
+    cancelAnimationFrame(this._animationFrameId);
     this._animationFrameId = null;
   }
 
@@ -356,7 +356,7 @@ export class AnimationLoop {
     this.animationProps = {
       animationLoop: this,
       device: this.device,
-      canvas: this.device?.canvasContext?.canvas!,
+      canvas: this.device?.canvasContext?.canvas,
       timeline: this.timeline,
 
       // Initial values
@@ -532,8 +532,8 @@ export class AnimationLoop {
 
   _startEventHandling() {
     if (this.canvas) {
-      this.canvas.addEventListener('mousemove', this._onMousemove);
-      this.canvas.addEventListener('mouseleave', this._onMouseleave);
+      this.canvas.addEventListener('mousemove', this._onMousemove.bind(this));
+      this.canvas.addEventListener('mouseleave', this._onMouseleave.bind(this));
     }
   }
 

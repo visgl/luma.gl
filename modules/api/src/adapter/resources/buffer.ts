@@ -55,7 +55,7 @@ export default abstract class Buffer extends Resource<BufferProps> {
   static INDIRECT = 0x0100;
   static QUERY_RESOLVE = 0x0200;
 
- override get [Symbol.toStringTag](): string { return 'Buffer'; }
+  override get [Symbol.toStringTag](): string { return 'Buffer'; }
 
   constructor(device: Device, props: BufferProps) {
     const deducedProps = {...props};

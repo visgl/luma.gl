@@ -37,7 +37,9 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
   webgl2: true, // Attempt to create a WebGL2 context
   webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   powerPreference: 'high-performance', // After all, most apps are using WebGL for performance reasons
+  // eslint-disable-next-line no-console
   onContextLost: () => console.error('WebGL context lost'),
+  // eslint-disable-next-line no-console
   onContextRestored: () => console.info('WebGL context restored'),
 };
 
@@ -46,8 +48,8 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
  * Note calling this multiple time on the same canvas does return the same context
 * @param canvas A canvas element or offscreen canvas
  */
- export function createBrowserContext(canvas: HTMLCanvasElement | OffscreenCanvas, props: ContextProps): WebGLRenderingContext {
-   props = {...DEFAULT_CONTEXT_PROPS, ...props};
+export function createBrowserContext(canvas: HTMLCanvasElement | OffscreenCanvas, props: ContextProps): WebGLRenderingContext {
+  props = {...DEFAULT_CONTEXT_PROPS, ...props};
 
   // Try to extract any extra information about why context creation failed
   let errorMessage = null;

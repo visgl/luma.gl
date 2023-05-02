@@ -150,7 +150,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   for (const key in inject) {
     const injection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
-    const match = key.match(/^(v|f)s:(#)?([\w-]+)$/);
+    const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
       const hash = match[2];
       const name = match[3];
@@ -179,7 +179,7 @@ ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
 
     const injections = module.injections[type];
     for (const key in injections) {
-      const match = key.match(/^(v|f)s:#([\w-]+)$/);
+      const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {
         const name = match[2];
         const injectionType = name === 'decl' ? declInjections : mainInjections;

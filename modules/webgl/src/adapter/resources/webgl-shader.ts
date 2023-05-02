@@ -8,7 +8,7 @@ import WebGLDevice from '../webgl-device';
 /**
  * An immutable compiled shader program that execute portions of the GPU Pipeline
  */
- export default class WEBGLShader extends Shader {
+export default class WEBGLShader extends Shader {
   readonly device: WebGLDevice;
   readonly handle: WebGLShader;
 

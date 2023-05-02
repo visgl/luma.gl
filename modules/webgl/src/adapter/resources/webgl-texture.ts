@@ -176,8 +176,7 @@ export default class WEBGLTexture extends Texture {
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();
-    // @ts-expect-error Per SPECTOR docs
-    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
+    this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data}); // {name: this.props.id};
 
     this.target = getWebGLTextureTarget(this.props);
 
@@ -238,7 +237,7 @@ export default class WEBGLTexture extends Texture {
       return this;
     }
 
-    let {parameters = {}  as Record<GL, any>} = props;
+    const {parameters = {}  as Record<GL, any>} = props;
 
     const {
       pixels = null, recreate = false, pixelStore = {}, textureUnit = undefined} = props;
@@ -490,7 +489,7 @@ export default class WEBGLTexture extends Texture {
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
-          gl.texImage2D(target, level, format, width, height, 0 /*border*/, dataFormat, type, data);
+          gl.texImage2D(target, level, format, width, height, 0 /* border*/, dataFormat, type, data);
           break;
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
@@ -519,7 +518,7 @@ export default class WEBGLTexture extends Texture {
             format,
             width,
             height,
-            0 /*border*/,
+            0 /* border*/,
             dataFormat,
             type,
             offset
@@ -534,7 +533,7 @@ export default class WEBGLTexture extends Texture {
               format,
               width,
               height,
-              0 /*border*/,
+              0 /* border*/,
               dataFormat,
               type,
               data
@@ -819,7 +818,7 @@ export default class WEBGLTexture extends Texture {
       resolvedFaces[index].forEach((image, lodLevel) => {
         // TODO: adjust width & height for LOD!
         if (width && height) {
-          gl.texImage2D(face, lodLevel, format, width, height, 0 /*border*/, format, type, image);
+          gl.texImage2D(face, lodLevel, format, width, height, 0 /* border*/, format, type, image);
         } else {
           gl.texImage2D(face, lodLevel, format, format, type, image);
         }
@@ -858,7 +857,7 @@ export default class WEBGLTexture extends Texture {
         )
       );
     } else if (this.width || this.height) {
-      gl.texImage2D(face, 0, format, width, height, 0 /*border*/, format, type, imageData);
+      gl.texImage2D(face, 0, format, width, height, 0 /* border*/, format, type, imageData);
     } else {
       gl.texImage2D(face, 0, format, format, type, imageData);
     }
@@ -956,7 +955,7 @@ export default class WEBGLTexture extends Texture {
     this.gl.bindTexture(this.target, this.handle);
     for (const [pname, pvalue] of Object.entries(parameters)) {
       const param = Number(pname);
-      let value = pvalue;
+      const value = pvalue;
 
       // Apparently there are integer/float conversion issues requires two parameter setting functions in JavaScript.
       // For now, pick the float version for parameters specified as GLfloat.

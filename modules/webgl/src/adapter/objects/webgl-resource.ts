@@ -13,7 +13,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
 /**
  * Base class for WebGL object wrappers
  */
- export default abstract class WebGLResource<Props extends ResourceProps> extends Resource<Props> {
+export default abstract class WebGLResource<Props extends ResourceProps> extends Resource<Props> {
   readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext;

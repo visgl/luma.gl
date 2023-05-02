@@ -1,12 +1,11 @@
-/* eslint-disable no-console */
-// const GL = require('luma.gl/constants');
-const GL = require('@luma.gl/constants').default;
+/* eslint-disable no-console, import/no-unresolved */
+import GL from '@luma.gl/constants';
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 const COLOR_RED = '\x1b[31m';
 
-module.exports = function _(opts) {
+export default function _(opts) {
   return {
     visitor: {
       ImportDeclaration(path, state) {

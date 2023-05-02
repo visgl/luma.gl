@@ -35,8 +35,8 @@ export function getDebugTableForUniforms(options?: {
   // First add non-underscored uniforms (assumed not coming from shader modules)
   for (const uniformName of uniformNames) {
     if (
-      !uniformName.match(SHADER_MODULE_UNIFORM_REGEXP) &&
-      !uniformName.match(PROJECT_MODULE_UNIFORM_REGEXP)
+      !(RegExp(SHADER_MODULE_UNIFORM_REGEXP).exec(uniformName)) &&
+      !(RegExp(PROJECT_MODULE_UNIFORM_REGEXP).exec(uniformName))
     ) {
       if (addUniformToTable({table, header, uniforms, uniformName, undefinedOnly})) {
         count++;
@@ -46,7 +46,7 @@ export function getDebugTableForUniforms(options?: {
 
   // add underscored uniforms (assumed from shader modules)
   for (const uniformName of uniformNames) {
-    if (uniformName.match(PROJECT_MODULE_UNIFORM_REGEXP)) {
+    if (RegExp(PROJECT_MODULE_UNIFORM_REGEXP).exec(uniformName)) {
       if (addUniformToTable({table, header, uniforms, uniformName, undefinedOnly})) {
         count++;
       }

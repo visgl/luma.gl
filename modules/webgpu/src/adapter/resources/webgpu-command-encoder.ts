@@ -70,9 +70,9 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
       },
       {
         // TODO exclamation mark hack
-        width: options.extent![0],
-        height: options.extent![1],
-        depthOrArrayLayers: options.extent![2]
+        width: options.extent[0],
+        height: options.extent[1],
+        depthOrArrayLayers: options.extent[2]
       }
     );
   }

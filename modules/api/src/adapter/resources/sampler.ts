@@ -43,7 +43,7 @@ const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
 
 /** Immutable Sampler object */
 export default abstract class Sampler extends Resource<SamplerProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'Sampler';
   }
 

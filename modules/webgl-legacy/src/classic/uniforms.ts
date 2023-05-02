@@ -200,7 +200,7 @@ export function parseUniformName(name: string): {name: string; isArray: boolean,
 
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
-  const matches = name.match(UNIFORM_NAME_REGEXP);
+  const matches = UNIFORM_NAME_REGEXP.exec(name);
   if (!matches || matches.length < 2) {
     throw new Error(`Failed to parse GLSL uniform name ${name}`);
   }
@@ -220,7 +220,7 @@ export function parseUniformName(name: string): {name: string; isArray: boolean,
  * Basic checks of uniform values (with or without knowledge of program)
  * To facilitate early detection of e.g. undefined values in JavaScript
  */
- export function checkUniformValues(uniforms: object, source?: string, uniformMap?: object): boolean {
+export function checkUniformValues(uniforms: object, source?: string, uniformMap?: object): boolean {
   for (const uniformName in uniforms) {
     const value = uniforms[uniformName];
     const shouldCheck = !uniformMap || Boolean(uniformMap[uniformName]);
@@ -235,7 +235,7 @@ export function parseUniformName(name: string): {name: string; isArray: boolean,
   return true;
 }
 
- /**
+/**
   * Creates a copy of the uniform
   */
 export function copyUniform(uniforms: object, key: string, value: any): void {

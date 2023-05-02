@@ -49,8 +49,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle || this.device.gl.createProgram();
-    // @ts-expect-error
-    this.handle.__SPECTOR_Metadata = {id: this.props.id};
+    this.device.setSpectorMetadata(this.handle, {id: this.props.id});
 
     // Create shaders if needed
     this.vs = cast<WEBGLShader>(props.vs);
@@ -94,7 +93,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const attribute = getAttributeLayout(this.layout, name);
       if (!attribute) {
         log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
       const decoded = decodeVertexFormat(attribute.format);
       const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
@@ -122,7 +121,7 @@ export default class WEBGLRenderPipeline extends RenderPipeline {
       const binding = this.layout.bindings.find((binding) => binding.name === name);
       if (!binding) {
         log.warn(`Unknown binding ${name} in render pipeline ${this.id}`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
       if (!value) {
         log.warn(`Unsetting binding ${name} in render pipeline ${this.id}`)();
@@ -371,14 +370,14 @@ function getDrawMode(
 ): GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN {
   // prettier-ignore
   switch (topology) {
-  case 'point-list': return GL.POINTS;
-  case 'line-list': return GL.LINES;
-  case 'line-strip': return GL.LINE_STRIP;
-  case 'line-loop': return GL.LINE_LOOP;
-  case 'triangle-list': return GL.TRIANGLES;
-  case 'triangle-strip': return GL.TRIANGLE_STRIP;
-  case 'triangle-fan': return GL.TRIANGLE_FAN;
-  default: throw new Error(topology);
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINE_STRIP;
+    case 'line-loop': return GL.LINE_LOOP;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLE_STRIP;
+    case 'triangle-fan': return GL.TRIANGLE_FAN;
+    default: throw new Error(topology);
   }
 }
 
@@ -386,14 +385,14 @@ function getDrawMode(
 function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
   // prettier-ignore
   switch (topology) {
-  case 'point-list': return GL.POINTS;
-  case 'line-list': return GL.LINES;
-  case 'line-strip': return GL.LINES;
-  case 'line-loop': return GL.LINES;
-  case 'triangle-list': return GL.TRIANGLES;
-  case 'triangle-strip': return GL.TRIANGLES;
-  case 'triangle-fan': return GL.TRIANGLES;
-  default: throw new Error(topology);
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINES;
+    case 'line-loop': return GL.LINES;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLES;
+    case 'triangle-fan': return GL.TRIANGLES;
+    default: throw new Error(topology);
   }
 }
 

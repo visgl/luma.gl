@@ -255,6 +255,7 @@ function copyNestedRing(target: Float64Array, targetStartIndex: number, simplePo
  * @param [srcEndIndex] - end index of the path in the positions array
  * @returns - the index of the write head in the destination
  */
+// eslint-disable-next-line max-params
 function copyFlatRing(
   target: Float64Array,
   targetStartIndex: number,

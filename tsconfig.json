@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
+    // https://www.npmjs.com/package/@webgpu/types
+    "typeRoots": [ "./node_modules/@webgpu/types", "./node_modules/@types"],
+
     "target": "es2020",
+    "module": "es2020",
     "jsx": "react",
     "allowJs": true,
     "checkJs": true,
@@ -69,16 +73,13 @@
   "include": [
     "examples/**/*",
     "modules/**/*",
+    "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
     "modules/**/wip",
-    "modules/**/dist/**/*.js",
-    "test/render/**/*",
-    "test",
+    "modules/**/dist",
     "test/apps",
-    "website",
-    "coverage",
     "node_modules"
   ]
 }

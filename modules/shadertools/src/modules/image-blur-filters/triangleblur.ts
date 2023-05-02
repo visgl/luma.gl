@@ -48,7 +48,7 @@ const uniforms = {
  *               perpendicular triangle filters.
  * @param radius The radius of the pyramid convolved with the image.
  */
- export const triangleBlur = {
+export const triangleBlur = {
   name: 'triangleBlur',
   uniforms,
   fs,

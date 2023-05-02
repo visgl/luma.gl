@@ -35,7 +35,7 @@ const DEFAULT_RENDERBUFFER_PROPS: Required<RenderbufferProps> = {
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
 export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
- override get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
+  override get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
 
   get width(): number { return this.props.width; }
   get height(): number { return this.props.height; }

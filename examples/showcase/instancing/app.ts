@@ -166,8 +166,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override onRender(animationProps: AnimationProps) {
     const {device, aspect, tick} = animationProps;
-    // @ts-expect-error
-    const {gl, framebuffer, _mousePosition} = animationProps;
+    // const {framebuffer} = animationProps;
+    const {_mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
     if (_mousePosition) {

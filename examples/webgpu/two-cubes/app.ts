@@ -52,9 +52,9 @@ fn main([[location(0)]] position : vec4<f32>,
   return output;
 }
         `
-},
-fs: {
-  glsl: glsl`\
+  },
+  fs: {
+    glsl: glsl`\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;

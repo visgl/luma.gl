@@ -6,7 +6,7 @@
  * @note We always run transpiler even if same version e.g. 3.00 => 3.00
  * RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/portable-glsl-300-rfc.md
  */
- export default function transpileShader(source: string, targetGLSLVersion: number, isVertex: boolean): string {
+export default function transpileShader(source: string, targetGLSLVersion: number, isVertex: boolean): string {
   switch (targetGLSLVersion) {
     case 300:
       return isVertex
@@ -86,7 +86,7 @@ function convertShader(source: string, replacements: GLSLReplacement[]) {
 function convertFragmentShaderTo300(source: string): string {
   source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
 
-  const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
+  const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
   if (outputMatch) {
     const outputName = outputMatch[1];
     source = source.replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
@@ -104,7 +104,7 @@ function convertFragmentShaderTo300(source: string): string {
 function convertFragmentShaderTo100(source: string): string {
   source = convertShader(source, ES100_FRAGMENT_REPLACEMENTS);
 
-  const outputMatch = source.match(ES300_FRAGMENT_OUTPUT_REGEX);
+  const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
   if (outputMatch) {
     const outputName = outputMatch[1];
     source = source

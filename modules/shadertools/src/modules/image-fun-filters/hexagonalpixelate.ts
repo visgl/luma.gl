@@ -56,7 +56,7 @@ const uniforms = {
  * @param center The [x, y] coordinates of the pattern center.
  * @param scale  The width of an individual tile, in pixels.
  */
- export const hexagonalPixelate = {
+export const hexagonalPixelate = {
   name: 'hexagonalPixelate',
   uniforms,
   fs,

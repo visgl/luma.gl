@@ -173,6 +173,8 @@ export default abstract class CanvasContext {
         return canvas.parentElement
           ? [canvas.clientWidth * dpr, canvas.clientHeight * dpr]
           : [this.canvas.width, this.canvas.height];
+      default:
+        throw new Error(this.type);
     }
   }
 
@@ -265,7 +267,7 @@ export default abstract class CanvasContext {
         this.htmlCanvas.width = Math.floor(clientWidth * clampedPixelRatio);
         this.htmlCanvas.height = Math.floor(clientHeight * clampedPixelRatio);
 
-        log.warn(`Device pixel ratio clamped`)();
+        log.warn('Device pixel ratio clamped')();
       }
 
       this._canvasSizeInfo.clientWidth = clientWidth;

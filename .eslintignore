@@ -4,3 +4,8 @@ worker/
 *.min.js
 wip/
 picogl/
+**/dist/
+.cache
+.docusaurus
+
+test/apps/

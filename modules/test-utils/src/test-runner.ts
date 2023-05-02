@@ -74,7 +74,7 @@ export default class TestRunner {
   /**
    * Add testCase(s)
    */
-   add(testCases: TestRunnerTestCase[]): this {
+  add(testCases: TestRunnerTestCase[]): this {
     if (!Array.isArray(testCases)) {
       testCases = [testCases];
     }
@@ -84,7 +84,7 @@ export default class TestRunner {
     return this;
   }
 
-   /**
+  /**
     * Returns a promise that resolves when all the test cases are done
     */
   run(options: object = {}): Promise<void>  {
@@ -108,7 +108,7 @@ export default class TestRunner {
       this._currentTestCase = null;
     }).catch (error => {
       this._fail({error: error.message});
-      reject(error);
+      // reject(error);
     });
   }
 
@@ -179,8 +179,8 @@ export default class TestRunner {
 
     if (this._testCaseData && this.shouldRender(testCaseAnimationProps)) {
       // try {
-        // test case is initialized, render frame
-        testCase.onRender(testCaseAnimationProps);
+      // test case is initialized, render frame
+      testCase.onRender(testCaseAnimationProps);
       // } catch {
       //   isDone = true;
       // }

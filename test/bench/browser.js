@@ -1,3 +1,3 @@
 // luma.gl, MIT license
 
-require('./index');
+import './index';

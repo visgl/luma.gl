@@ -16,7 +16,7 @@ export function cssToDeviceRatio(device: Device | WebGLRenderingContext): number
  * Maps CSS pixel position to device pixel position
  * @deprecated Use device.canvasContext.cssToDevicePixels
  */
- export function cssToDevicePixels(
+export function cssToDevicePixels(
   device: Device | WebGLRenderingContext,
   cssPixel: number[],
   yInvert: boolean = true

@@ -5,6 +5,7 @@ import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps} from '@luma.gl
 import {picking} from '@luma.gl/shadertools';
 import {GL, Buffer, ClassicModel as Model, Transform, Framebuffer} from '@luma.gl/webgl-legacy';
 
+/* eslint-disable camelcase */
 
 // Ensure repeatable rendertests
 const random = getRandom();
@@ -21,7 +22,7 @@ const INFO_HTML = `
 `;
 
 // Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
 
 const EMIT_VS = glsl`\
 #version 300 es

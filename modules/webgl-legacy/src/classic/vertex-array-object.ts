@@ -21,7 +21,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 
 /** @deprecated Use RenderPipeline (public) and WEBGLVertexArrayObject (internal) */
 export default class VertexArrayObject extends WEBGLVertexArrayObject {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'VertexArrayObject';
   }
 

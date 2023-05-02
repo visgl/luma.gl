@@ -9,6 +9,8 @@ import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Matrix4, radians} from '@math.gl/core';
 
+/* eslint-disable camelcase */
+
 const CUBE_FACE_TO_DIRECTION = {
   [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: 'right',
   [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: 'left',

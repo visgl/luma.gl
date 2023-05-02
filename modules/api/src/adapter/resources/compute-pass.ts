@@ -6,7 +6,7 @@ import type Device from '../device';
 export type ComputePassProps = ResourceProps & {};
 
 export default abstract class ComputePass extends Resource<ComputePassProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'ComputePass';
   }
 

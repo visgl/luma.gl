@@ -24,7 +24,7 @@ const DEFAULT_COMPUTE_PIPELINE_PROPS: Required<ComputePipelineProps> = {
 /**
  */
 export default abstract class ComputePipeline extends Resource<ComputePipelineProps> {
- override get [Symbol.toStringTag](): string {
+  override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }
 
@@ -33,4 +33,4 @@ export default abstract class ComputePipeline extends Resource<ComputePipelinePr
   constructor(device: Device, props: ComputePipelineProps) {
     super(device, props, DEFAULT_COMPUTE_PIPELINE_PROPS);
   }
-};
+}

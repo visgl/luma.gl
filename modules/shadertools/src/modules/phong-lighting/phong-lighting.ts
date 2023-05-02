@@ -1,6 +1,8 @@
 import {lights} from '../lights/lights';
 import lightingShader from './phong-lighting.glsl';
 
+/* eslint-disable camelcase */
+
 export type PhongLightingProps = {
   ambient?: number;
   diffuse?: number;

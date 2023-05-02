@@ -4,6 +4,7 @@
 // - Node port Marcin Ignac, 2016-05-20
 
 // @ts-nocheck External, untyped code
+/* eslint-disable */
 
 /**
  * Which arguments are enums based on the number of arguments to the function.
@@ -19,7 +20,7 @@
  *
  * @type {!Object.<number, !Object.<number, string>}
  */
-var glValidEnumContexts = {
+const glValidEnumContexts = {
   // Generic setters and getters
 
   enable: {1: {0: true}},
@@ -240,10 +241,10 @@ var glValidEnumContexts = {
 };
 
 /** Map of numbers to names. */
-var glEnums: Record<number, string> = null;
+let glEnums: Record<number, string> = null;
 
 /** Map of names to numbers. */
-var enumStringToValue: Record<string, number> = null;
+let enumStringToValue: Record<string, number> = null;
 
 /**
  * Initializes this module. Safe to call more than once.
@@ -255,8 +256,8 @@ export function init(ctx: WebGLRenderingContext): void {
   if (glEnums == null) {
     glEnums = {};
     enumStringToValue = {};
-    for (var propertyName in ctx) {
-      if (typeof ctx[propertyName] == 'number') {
+    for (const propertyName in ctx) {
+      if (typeof ctx[propertyName] === 'number') {
         glEnums[ctx[propertyName]] = propertyName;
         enumStringToValue[propertyName] = ctx[propertyName];
       }
@@ -295,8 +296,8 @@ export function mightBeEnum(value: any): boolean {
  */
 export function glEnumToString(value: number): string {
   checkInit();
-  var name = glEnums[value];
-  return name !== undefined ? 'gl.' + name : '/*UNKNOWN WebGL ENUM*/ 0x' + value.toString(16) + '';
+  const name = glEnums[value];
+  return name !== undefined ? `gl.${  name}` : `/*UNKNOWN WebGL ENUM*/ 0x${  value.toString(16)  }`;
 }
 
 /**
@@ -328,13 +329,13 @@ export function glFunctionArgToString(
       if (funcInfo[argumentIndex]) {
         if (
           typeof funcInfo[argumentIndex] === 'object' &&
-          funcInfo[argumentIndex]['enumBitwiseOr'] !== undefined
+          funcInfo[argumentIndex].enumBitwiseOr !== undefined
         ) {
-          var enums = funcInfo[argumentIndex]['enumBitwiseOr'];
-          var orResult = 0;
-          var orEnums = [];
-          for (var i = 0; i < enums.length; ++i) {
-            var enumValue = enumStringToValue[enums[i]];
+          const enums = funcInfo[argumentIndex].enumBitwiseOr;
+          let orResult = 0;
+          const orEnums = [];
+          for (let i = 0; i < enums.length; ++i) {
+            const enumValue = enumStringToValue[enums[i]];
             if ((value & enumValue) !== 0) {
               orResult |= enumValue;
               orEnums.push(glEnumToString(enumValue));
@@ -342,12 +343,12 @@ export function glFunctionArgToString(
           }
           if (orResult === value) {
             return orEnums.join(' | ');
-          } else {
-            return glEnumToString(value);
-          }
-        } else {
+          } 
           return glEnumToString(value);
-        }
+          
+        } 
+        return glEnumToString(value);
+        
       }
     }
   }
@@ -355,9 +356,9 @@ export function glFunctionArgToString(
     return 'null';
   } else if (value === undefined) {
     return 'undefined';
-  } else {
-    return value.toString();
-  }
+  } 
+  return value.toString();
+  
 }
 
 /**
@@ -370,9 +371,9 @@ export function glFunctionArgToString(
  */
 export function glFunctionArgsToString(functionName: string, args): string {
   // apparently we can't do args.join(",");
-  var argStr = '';
-  var numArgs = args.length;
-  for (var ii = 0; ii < numArgs; ++ii) {
+  let argStr = '';
+  const numArgs = args.length;
+  for (let ii = 0; ii < numArgs; ++ii) {
     argStr += (ii == 0 ? '' : ', ') + glFunctionArgToString(functionName, numArgs, ii, args[ii]);
   }
   return argStr;
@@ -380,25 +381,25 @@ export function glFunctionArgsToString(functionName: string, args): string {
 
 // Internal export for context-loss
 export function makePropertyWrapper(wrapper, original, propertyName) {
-  //log("wrap prop: " + propertyName);
+  // log("wrap prop: " + propertyName);
   wrapper.__defineGetter__(propertyName, function () {
     return original[propertyName];
   });
   // TODO(gmane): this needs to handle properties that take more than
   // one value?
   wrapper.__defineSetter__(propertyName, function (value) {
-    //log("set: " + propertyName);
+    // log("set: " + propertyName);
     original[propertyName] = value;
   });
 }
 
 // Makes a function that calls a function on another object.
 function makeFunctionWrapper(original, functionName) {
-  //log("wrap fn: " + functionName);
-  var f = original[functionName];
+  // log("wrap fn: " + functionName);
+  const f = original[functionName];
   return function () {
-    //log("call: " + functionName);
-    var result = f.apply(original, arguments);
+    // log("call: " + functionName);
+    const result = f.apply(original, arguments);
     return result;
   };
 }
@@ -439,19 +440,19 @@ export function makeDebugContext(ctx, opt_onErrorFunc, opt_onFunc, opt_err_ctx) 
     opt_onErrorFunc ||
     function (err, functionName, args) {
       // apparently we can't do args.join(",");
-      var argStr = '';
-      var numArgs = args.length;
-      for (var ii = 0; ii < numArgs; ++ii) {
+      let argStr = '';
+      const numArgs = args.length;
+      for (let ii = 0; ii < numArgs; ++ii) {
         argStr +=
           (ii == 0 ? '' : ', ') + glFunctionArgToString(functionName, numArgs, ii, args[ii]);
       }
       // error
-      err('WebGL error ' + glEnumToString(err) + ' in ' + functionName + '(' + argStr + ')');
+      err(`WebGL error ${  glEnumToString(err)  } in ${  functionName  }(${  argStr  })`);
     };
 
   // Holds booleans for each GL error so after we get the error ourselves
   // we can still return it to the client app.
-  var glErrorShadow = {};
+  const glErrorShadow = {};
 
   // Makes a function that calls a WebGL function and then calls getError.
   function makeErrorWrapper(ctx, functionName) {
@@ -459,8 +460,8 @@ export function makeDebugContext(ctx, opt_onErrorFunc, opt_onFunc, opt_err_ctx) 
       if (opt_onFunc) {
         opt_onFunc(functionName, arguments);
       }
-      var result = ctx[functionName].apply(ctx, arguments);
-      var err = opt_err_ctx.getError();
+      const result = ctx[functionName].apply(ctx, arguments);
+      const err = opt_err_ctx.getError();
       if (err != 0) {
         glErrorShadow[err] = true;
         opt_onErrorFunc(err, functionName, arguments);
@@ -471,15 +472,15 @@ export function makeDebugContext(ctx, opt_onErrorFunc, opt_onFunc, opt_err_ctx) 
 
   // Make a an object that has a copy of every property of the WebGL context
   // but wraps all functions.
-  var wrapper = {};
-  for (var propertyName in ctx) {
-    if (typeof ctx[propertyName] == 'function') {
+  const wrapper = {};
+  for (const propertyName in ctx) {
+    if (typeof ctx[propertyName] === 'function') {
       if (propertyName != 'getExtension') {
         wrapper[propertyName] = makeErrorWrapper(ctx, propertyName);
       } else {
         var wrapped = makeErrorWrapper(ctx, propertyName);
         wrapper[propertyName] = function () {
-          var result = wrapped.apply(ctx, arguments);
+          const result = wrapped.apply(ctx, arguments);
           if (!result) {
             return null;
           }
@@ -493,7 +494,7 @@ export function makeDebugContext(ctx, opt_onErrorFunc, opt_onFunc, opt_err_ctx) 
 
   // @ts-expect-error Override the getError function with one that returns our saved results.
   wrapper.getError = function () {
-    for (var err in glErrorShadow) {
+    for (const err in glErrorShadow) {
       if (glErrorShadow.hasOwnProperty(err)) {
         if (glErrorShadow[err]) {
           glErrorShadow[err] = false;

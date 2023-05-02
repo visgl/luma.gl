@@ -26,5 +26,5 @@ test('RenderTest', (t) => {
         // saveAs: '[name].png'
       }
     })
-    .then(t.end);
+    .then(() => t.end());
 });

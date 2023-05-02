@@ -24,15 +24,16 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
     // We dont use luma.createDevice since this tests current expect this context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);
     return null;
   }
 }
 
 /** A WebGL 1 Device intended for testing */
-export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false}) as WebGLDevice;
+export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false}) ;
 /** A WebGL 2 Device intended for testing. Can be null */
-export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true}) as WebGLDevice;
+export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true}) ;
 /** A WebGL 2 or WebGL 1 Device intended for testing. Best available. */
 export const webglDevice: WebGLDevice = webgl2Device || webgl1Device;
 

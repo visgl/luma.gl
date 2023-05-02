@@ -77,26 +77,26 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
 
   stencilCompare: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront!.compare = value;
-    depthStencil.stencilBack!.compare = value;
+    depthStencil.stencilFront.compare = value;
+    depthStencil.stencilBack.compare = value;
   },
 
   stencilPassOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront!.passOp = value;
-    depthStencil.stencilBack!.passOp = value;
+    depthStencil.stencilFront.passOp = value;
+    depthStencil.stencilBack.passOp = value;
   },
 
   stencilFailOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront!.failOp = value;
-    depthStencil.stencilBack!.failOp = value;
+    depthStencil.stencilFront.failOp = value;
+    depthStencil.stencilBack.failOp = value;
   },
 
   stencilDepthFailOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront!.depthFailOp = value;
-    depthStencil.stencilBack!.depthFailOp = value;
+    depthStencil.stencilFront.depthFailOp = value;
+    depthStencil.stencilBack.depthFailOp = value;
   },
 
   // MULTISAMPLE
@@ -224,7 +224,7 @@ function setParameters(
 }
 
 function addColorState(descriptor: GPURenderPipelineDescriptor): GPUColorTargetState[] {
-  descriptor.fragment!.targets = descriptor.fragment?.targets || [];
+  descriptor.fragment.targets = descriptor.fragment?.targets || [];
   if (!Array.isArray(descriptor.fragment?.targets)) {
     throw new Error('colorstate');
   }

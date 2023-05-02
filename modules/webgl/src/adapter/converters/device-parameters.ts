@@ -5,6 +5,8 @@ import {pushContextState, popContextState} from '../../context/state-tracker/tra
 import {setParameters} from '../../context/parameters/unified-parameter-api';
 import WebGLDevice from '../webgl-device';
 
+/* eslint-disable no-unused-expressions */ // For expression ? gl.enable() : gl.disable()
+
 /**
  * Execute a function with a set of temporary WebGL parameter overrides
  * - Saves current "global" WebGL context settings
@@ -14,7 +16,7 @@ import WebGLDevice from '../webgl-device';
  * - Returns the return value of the supplied function
  * @deprecated use withDeviceParameters instead
  */
- export function withGLParameters<T = unknown>(device: Device, parameters: GLParameters, func: (device?: Device) => T): T {
+export function withGLParameters<T = unknown>(device: Device, parameters: GLParameters, func: (device?: Device) => T): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(device);
@@ -102,7 +104,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.depthMask(mapBoolean('depthWriteEnabled', parameters.depthWriteEnabled));
   }
 
- if (parameters.depthCompare) {
+  if (parameters.depthCompare) {
+
     parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST);
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }

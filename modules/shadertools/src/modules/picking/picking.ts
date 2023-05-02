@@ -1,6 +1,8 @@
 import {NumberArray} from '../../types';
 import {glsl} from '../../lib/glsl-utils/highlight';
 
+/* eslint-disable camelcase */
+
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 export type PickingOptions = {
@@ -153,7 +155,7 @@ vec4 picking_filterColor(vec4 color) {
  * and correspondingly, supports picking and highlighting groups of
  * primitives with the same picking color in non-instanced draw-calls
  */
- export const picking = {
+export const picking = {
   name: 'picking',
   vs,
   fs,

@@ -20,7 +20,7 @@ export function fp64ify(a: number, out: NumberArray = [], startIndex: number = 0
  * @param a the input float number
  * @returns the lower 32 bit of the number
  */
- export function fp64LowPart(a: number): number {
+export function fp64LowPart(a: number): number {
   return a - Math.fround(a);
 }
 
@@ -29,8 +29,8 @@ export function fp64ify(a: number, out: NumberArray = [], startIndex: number = 0
  * @param matrix  the input matrix
  * @returns the fp64 representation of the input matrix
  */
- export function fp64ifyMatrix4(matrix: NumberArray): Float32Array {
- // Transpose the projection matrix to column major for GLSL.
+export function fp64ifyMatrix4(matrix: NumberArray): Float32Array {
+  // Transpose the projection matrix to column major for GLSL.
   const matrixFP64 = new Float32Array(32);
   for (let i = 0; i < 4; ++i) {
     for (let j = 0; j < 4; ++j) {

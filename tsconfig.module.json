@@ -3,14 +3,15 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "build": true,
-    "target": "es2020",
-    "module": "es2015",
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,
     "noEmit": false,
-    // "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
     // Uncomment to debug
     // "listEmittedFiles": true
-  }
+  },
+  "include": [
+    "modules/*/src"
+  ]
 }

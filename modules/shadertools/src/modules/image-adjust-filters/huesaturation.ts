@@ -50,7 +50,7 @@ const uniforms = {
  *                   and 1 is 180 degree rotation in the positive direction)
  * @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
- export const hueSaturation = {
+export const hueSaturation = {
   name: 'hueSaturation',
   uniforms,
   fs,

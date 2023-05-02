@@ -341,7 +341,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     // this.canvasContext.commit();
   }
 
-    //
+  //
   // WebGL-only API (not part of `Device` API)
   //
 
@@ -379,7 +379,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
    * @note Triggers context loss, mainly for testing
    * @todo Promote to `Device` API?
    */
-   loseDevice(): void {
+  loseDevice(): void {
     const ext = this.gl.getExtension('WEBGL_lose_context');
     if (ext) {
       ext.loseContext();
@@ -399,6 +399,16 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
   /** Restores previously saved context state */
   popState(): void {
     popContextState(this.gl);
+  }
+
+  /** 
+   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension 
+   * luma.gl ids and props can be inspected
+   */
+  setSpectorMetadata(handle: unknown, props: Record<string, unknown>) {
+    // @ts-expect-error
+    // eslint-disable-next-line camelcase
+    handle.__SPECTOR_Metadata = props;
   }
 }
 

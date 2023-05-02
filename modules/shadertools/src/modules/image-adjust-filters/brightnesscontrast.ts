@@ -12,7 +12,7 @@ const uniforms = {
   contrast: {value: 0, min: -1, max: 1}
 };
 
-var fs = glsl`\
+const fs = glsl`\
 uniform float brightness;
 uniform float contrast;
 
@@ -38,7 +38,7 @@ vec4 brightnessContrast_filterColor(vec4 color, vec2 texSize, vec2 texCoords) {
  * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
  * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
- export const brightnessContrast = {
+export const brightnessContrast = {
   name: 'brightnessContrast',
   uniforms,
   fs,

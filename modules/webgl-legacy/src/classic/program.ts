@@ -14,6 +14,8 @@ import {isWebGL2, assertWebGL2Context} from '@luma.gl/webgl';
 import {withParameters, withDeviceParameters} from '@luma.gl/webgl';
 import {WebGLDevice, WEBGLBuffer, WEBGLRenderPipeline, WEBGLShader, WEBGLTexture, WEBGLFramebuffer} from '@luma.gl/webgl';
 
+/* eslint-disable max-depth */
+
 const GL_SEPARATE_ATTRIBS = 0x8c8d;
 
 export type ProgramProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
@@ -59,7 +61,7 @@ function getRenderPipelineProps(device: WebGLDevice, props: ProgramProps): Rende
 
 /** @deprecated Use device.createRenderPipeline */
 export default class Program extends WEBGLRenderPipeline {
- override get [Symbol.toStringTag](): string { return 'Program'; }
+  override get [Symbol.toStringTag](): string { return 'Program'; }
 
   gl: WebGLRenderingContext;
   gl2: WebGL2RenderingContext;
@@ -324,7 +326,7 @@ export default class Program extends WEBGLRenderPipeline {
     }
   }
 
-    // If program is not named, name it after shader names
+  // If program is not named, name it after shader names
   // TODO - this.id will already have been initialized
   _setId(id: string): void {
     if (!id) {

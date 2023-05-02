@@ -20,7 +20,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // 3 corner points [x,y,...]
     this.positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
-     // 3 colors [R,G,B, ...]
+    // 3 colors [R,G,B, ...]
     this.colorBuffer = device.createBuffer(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
 
     const vs = `

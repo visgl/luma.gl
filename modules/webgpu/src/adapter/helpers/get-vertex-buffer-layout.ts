@@ -20,7 +20,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
     // TODO verify that all stepModes for one buffer are the same
     let stepMode: 'vertex' | 'instance' = 'vertex';
     let byteStride = 0;
-    let byteOffset = mapping.byteOffset || 0;
+    const byteOffset = mapping.byteOffset || 0;
 
     // interleaved mapping {..., attributes: [{...}, ...]}
     if ('attributes' in mapping) {
@@ -40,7 +40,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
       // non-interleaved mapping (just set offset and stride)
     } else {
       const attributeLayout = findAttributeLayout(layout, mapping.name, usedAttributes);
-      byteStride = decodeVertexFormat(attributeLayout.format).byteLength,
+      byteStride = decodeVertexFormat(attributeLayout.format).byteLength;
 
       stepMode = attributeLayout.stepMode || 'vertex';
       vertexAttributes.push({

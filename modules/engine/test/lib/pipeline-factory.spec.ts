@@ -353,7 +353,7 @@ test('PipelineFactory#transpileToGLSL100', (t) => {
       fs: FS_300,
       topology: 'triangle-list'
     });
-  }, "Can't compile 300 shader with WebGL 1");
+  }, 'Can\'t compile 300 shader with WebGL 1');
 
   t.doesNotThrow(() => {
     pipelineFactory.createRenderPipeline({

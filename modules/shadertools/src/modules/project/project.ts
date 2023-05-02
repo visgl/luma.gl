@@ -115,7 +115,7 @@ ${common}\
 /**
  * Projects coordinates
  */
- export const project = {
+export const project = {
   name: 'project',
   getUniforms,
   vs,

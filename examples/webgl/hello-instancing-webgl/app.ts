@@ -6,7 +6,7 @@ const INFO_HTML = `
 Instanced triangles using luma.gl's low-level API
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER DOESN'T SUPPORT IT";
+const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL (NON-EXPERIMENTAL) BUT YOUR BROWSER DOESN\'T SUPPORT IT';
 
 export default class AppAnimationLoop extends ClassicAnimationLoop {
   static info = INFO_HTML;

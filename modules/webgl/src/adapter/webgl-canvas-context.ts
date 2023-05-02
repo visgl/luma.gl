@@ -49,7 +49,7 @@ export default class WebGLCanvasContext extends CanvasContext {
    *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
    * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
    */
-   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
+  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     // Resize browser context .
     if (this.canvas) {
       this.setDevicePixelRatio(devicePixelRatio, options);
@@ -58,7 +58,7 @@ export default class WebGLCanvasContext extends CanvasContext {
 
     // Resize headless gl context
     const ext = this.device.gl.getExtension('STACKGL_resize_drawingbuffer');
-    if (ext && options && `width` in options && `height` in options) {
+    if (ext && options && 'width' in options && 'height' in options) {
       ext.resize(options.width, options.height);
     }
   }

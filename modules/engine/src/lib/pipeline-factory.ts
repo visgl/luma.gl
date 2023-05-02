@@ -167,7 +167,7 @@ export class PipelineFactory {
   /** Calculate a hash based on all the inputs for a render pipeline */
   _hashRenderPipeline(props: GetRenderPipelineOptions): string {
     const {modules = [], varyings = [], defines = {}, inject = {}, parameters = {}} = props;
-     const vsHash = this._getHash(props.vs);
+    const vsHash = this._getHash(props.vs);
     const fsHash = props.fs ? this._getHash(props.fs) : 0;
 
     const moduleHashes = modules.map((m) => this._getHash(typeof m === 'string' ? m : m.name)).sort();

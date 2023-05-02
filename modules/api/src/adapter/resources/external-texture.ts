@@ -13,7 +13,7 @@ const DEFAULT_TEXTURE_PROPS: Required<ExternalTextureProps> = {
 };
 
 export default abstract class Texture extends Resource<ExternalTextureProps> {
- override get [Symbol.toStringTag](): string { return 'ExternalTexture'; }
+  override get [Symbol.toStringTag](): string { return 'ExternalTexture'; }
 
   constructor(device: Device, props: ExternalTextureProps) {
     super(device, props, DEFAULT_TEXTURE_PROPS);

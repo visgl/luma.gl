@@ -5,6 +5,7 @@ dist-min/*
 dist-buble/*
 **/dist/*
 website*/public/*
+dist.min.js
 
 _docs/
 .nyc_output/

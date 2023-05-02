@@ -892,4 +892,4 @@ export enum GL {
   TIME_ELAPSED_EXT = 0x88bf,
   TIMESTAMP_EXT = 0x8e28,
   GPU_DISJOINT_EXT = 0x8fbb // A Boolean indicating whether or not the GPU performed any disjoint operation.
-};
+}

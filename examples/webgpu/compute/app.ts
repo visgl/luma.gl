@@ -1,5 +1,6 @@
 // Inspired by https://web.dev/gpu-compute/
 // @ts-nocheck
+/* eslint-disable */
 
 import {Buffer, RenderPipelineParameters} from '@luma.gl/api';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';

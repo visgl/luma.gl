@@ -21,6 +21,7 @@ export default class WEBGLBuffer extends Buffer {
 
   // accessor: {};
 
+  
   constructor(device: WebGLDevice, props: BufferProps = {}) {
     super(device, props);
 
@@ -28,10 +29,9 @@ export default class WEBGLBuffer extends Buffer {
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
 
-    const handle = typeof props === 'object' ? (props as BufferProps).handle : undefined;
+    const handle = typeof props === 'object' ? (props ).handle : undefined;
     this.handle = handle || this.gl.createBuffer();
-    // @ts-expect-error Add metadata for spector
-    this.handle.__SPECTOR_Metadata = {...this.props, data: typeof this.props.data}; // {name: this.props.id};
+    device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data});
 
     // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     // otherwise buffer type will lock to generic (non-element) buffer
@@ -55,7 +55,7 @@ export default class WEBGLBuffer extends Buffer {
     // Object.seal(this);
   }
 
-   // PRIVATE METHODS
+  // PRIVATE METHODS
 
   // Allocate a new buffer and initialize to contents of typed array
   _initWithData(data, byteOffset: number = 0, byteLength: number = data.byteLength + byteOffset): this {
@@ -168,7 +168,7 @@ export default class WEBGLBuffer extends Buffer {
 
   _getReadTarget() {
     return this.target;
-    return this.device.isWebGL2 ? GL.COPY_READ_BUFFER : this.target;
+    // return this.device.isWebGL2 ? GL.COPY_READ_BUFFER : this.target;
   }
 }
 

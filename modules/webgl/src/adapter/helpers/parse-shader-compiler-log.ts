@@ -16,7 +16,7 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
 
   for (const line of lines) {
     if (line.length <= 1) {
-      continue;
+      continue; // eslint-disable-line no-continue
     }
 
     const segments: string[] = line.split(':');
