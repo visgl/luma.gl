@@ -2542,13 +2542,12 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-"@probe.gl/log@3.6.0", "@probe.gl/log@^3.5.0":
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/@probe.gl/log/-/log-3.6.0.tgz#c645bfd22b4769dc65161caa17f13bd2b231e413"
-  integrity sha512-hjpyenpEvOdowgZ1qMeCJxfRD4JkKdlXz0RC14m42Un62NtOT+GpWyKA4LssT0+xyLULCByRAtG2fzZorpIAcA==
+"@probe.gl/env@4.0.3":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/env/-/env-4.0.3.tgz#c437b139953ceda9c1a13bad2be9c14d3ff3ba03"
+  integrity sha512-Iz2/xPHMa5adDBw/m7nyQ0bKgLXZqMauPfV2ePU9ZOfkt6NnWMzQAjBeeXufujE6vndJUAALgpweO/YjYkKo+Q==
   dependencies:
     "@babel/runtime" "^7.0.0"
-    "@probe.gl/env" "3.6.0"
 
 "@probe.gl/log@4.0.2", "@probe.gl/log@^4.0.0", "@probe.gl/log@^4.0.2":
   version "4.0.2"
@@ -2557,6 +2556,22 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
     "@probe.gl/env" "4.0.2"
+
+"@probe.gl/log@4.0.3":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/log/-/log-4.0.3.tgz#69c57aac4394f21e7786285028403fa7504bc4f4"
+  integrity sha512-GAvGo87nYAcS/sLs00qts+thzlYPXLzkAG1xdtY3NxeI9oJAo+EU/sw+qcnfews4HO/u60QLMHrQJgSSbCGmjQ==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/env" "4.0.3"
+
+"@probe.gl/log@^3.5.0":
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/@probe.gl/log/-/log-3.6.0.tgz#c645bfd22b4769dc65161caa17f13bd2b231e413"
+  integrity sha512-hjpyenpEvOdowgZ1qMeCJxfRD4JkKdlXz0RC14m42Un62NtOT+GpWyKA4LssT0+xyLULCByRAtG2fzZorpIAcA==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/env" "3.6.0"
 
 "@probe.gl/stats-widget@^4.0.0", "@probe.gl/stats-widget@^4.0.2":
   version "4.0.2"
@@ -2579,16 +2594,6 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-"@probe.gl/test-utils@^3.5.4":
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-3.6.0.tgz#4c3dc04061896456935dc2ecf6ed79ef8de9c33a"
-  integrity sha512-BK6NkeNVN9CVC9Dbp7+Unvu8bAwWOLm3TV/WcyLd1ysI23xkrnPgUeN/PGNOqIqHkq32ijZwew7gX4Euc3Du3g==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-    "@probe.gl/log" "3.6.0"
-    pixelmatch "^4.0.2"
-    puppeteer "*"
-
 "@probe.gl/test-utils@^4.0.2":
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-4.0.2.tgz#fbcab19db3760bc2e993f5c566ba005c39f0950d"
@@ -2596,6 +2601,17 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
     "@probe.gl/log" "4.0.2"
+    "@types/pngjs" "^6.0.1"
+    pixelmatch "^4.0.2"
+    puppeteer "*"
+
+"@probe.gl/test-utils@^4.0.3":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-4.0.3.tgz#1bddd2543f89d5dcc928784bbf9a9d3b7a22c756"
+  integrity sha512-GV8OX8X2+l8bhUfGu7sgWz4MUopqFLiq8ij+2bese/tFAFXnHcuzQwY7QN8NdBQ/Yxue5EiiAMI5JXZLKvrviQ==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/log" "4.0.3"
     "@types/pngjs" "^6.0.1"
     pixelmatch "^4.0.2"
     puppeteer "*"
@@ -8375,10 +8391,10 @@ octokit-pagination-methods@^1.1.0:
   resolved "https://registry.yarnpkg.com/octokit-pagination-methods/-/octokit-pagination-methods-1.1.0.tgz#cf472edc9d551055f9ef73f6e42b4dbb4c80bea4"
   integrity sha512-fZ4qZdQ2nxJvtcasX7Ghl+WlWS/d9IgnBIwFZXVNNZUmzpno91SX5bc5vuxiuKoCtK78XxGGNuSCrDC7xYB3OQ==
 
-ocular-dev-tools@^2.0.0-alpha.11:
-  version "2.0.0-alpha.11"
-  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-2.0.0-alpha.11.tgz#6c52f2e253ed6c92d34762c07de25c478e3ea435"
-  integrity sha512-8I6j1L/pFLA2kryDvNu6ZWLc+5vDpHicLvma4EVJe1UC723iXRU/dYr2jv4T7SUrLaEWJwsyOL5SDKEdSGR/PQ==
+ocular-dev-tools@^2.0.0-alpha.12:
+  version "2.0.0-alpha.12"
+  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-2.0.0-alpha.12.tgz#8388579dc74b3dd3b10391402b68e577a8471628"
+  integrity sha512-XKIsPkJ2HyfYeRkEXRxI3nBlpgh8SuCUglyUMHXUuVWozmSOv6gvCBIJL/hoQ2ouhQTGF51t++6GjDjm0XY6ow==
   dependencies:
     "@babel/cli" "^7.14.5"
     "@babel/core" "^7.14.5"
@@ -8390,7 +8406,7 @@ ocular-dev-tools@^2.0.0-alpha.11:
     "@babel/runtime" "7.14.5"
     "@esbuild-plugins/node-globals-polyfill" "^0.2.0"
     "@esbuild-plugins/node-modules-polyfill" "^0.2.0"
-    "@probe.gl/test-utils" "^3.5.4"
+    "@probe.gl/test-utils" "^4.0.3"
     "@typescript-eslint/eslint-plugin" "^4.26.1"
     "@typescript-eslint/parser" "^4.26.1"
     babel-loader "8.2.2"
