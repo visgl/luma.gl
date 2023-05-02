@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-triangle",
-  "version": "9.0.0-alpha.16",
+  "version": "9.0.0-alpha.17",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.16",
-    "@luma.gl/webgl": "9.0.0-alpha.16",
-    "@luma.gl/webgl-legacy": "9.0.0-alpha.16"
+    "@luma.gl/engine": "9.0.0-alpha.17",
+    "@luma.gl/webgl": "9.0.0-alpha.17",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.17"
   },
   "devDependencies": {
     "typescript": "^4.3.2",

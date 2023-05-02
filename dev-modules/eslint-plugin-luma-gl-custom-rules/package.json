@@ -1,6 +1,5 @@
 {
   "name": "eslint-plugin-luma-gl-custom-rules",
-  "version": "1.0.0",
+  "version": "9.0.0-alpha.17",
   "main": "index.cjs"
 }
-

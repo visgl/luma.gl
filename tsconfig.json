@@ -7,7 +7,7 @@
     "module": "es2020",
     "jsx": "react",
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

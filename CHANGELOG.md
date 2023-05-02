@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.17
+
+- feat: Switch to ES modules (#1745)
+
 ## v9.0.0-alpha.16
 
 - chore: Bump probe@4.0.0 on master (#1730)

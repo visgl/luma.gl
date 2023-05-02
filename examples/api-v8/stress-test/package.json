@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-example-stress-test",
-  "version": "9.0.0-alpha.16",
+  "version": "9.0.0-alpha.17",
   "private": true,
   "description": "A stress test for luma.gl.",
   "contributors": [
@@ -12,10 +12,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.16",
-    "@luma.gl/engine": "9.0.0-alpha.16",
-    "@luma.gl/shadertools": "9.0.0-alpha.16",
-    "@luma.gl/webgl": "9.0.0-alpha.16",
+    "@luma.gl/constants": "9.0.0-alpha.17",
+    "@luma.gl/engine": "9.0.0-alpha.17",
+    "@luma.gl/shadertools": "9.0.0-alpha.17",
+    "@luma.gl/webgl": "9.0.0-alpha.17",
     "@math.gl/core": "4.0.0-alpha.4",
     "@probe.gl/stats-widget": "^4.0.0"
   },
