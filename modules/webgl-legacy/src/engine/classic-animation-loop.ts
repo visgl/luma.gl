@@ -75,7 +75,7 @@ export type ClassicAnimationLoopProps = {
   useDevicePixels?: number | boolean;
 
   /** @deprecated Use .device */
-  gl?: WebGLRenderingContext;
+  gl?: WebGLRenderingContext | null;
   /** @deprecated Will be removed */
   createFramebuffer?: boolean;
 };

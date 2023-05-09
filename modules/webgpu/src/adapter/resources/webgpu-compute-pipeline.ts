@@ -1,7 +1,7 @@
 // prettier-ignore
 import {ComputePipeline, ComputePipelineProps, cast} from '@luma.gl/api';
 
-import WebGPUDevice from '../webgpu-device';
+import {WebGPUDevice} from '../webgpu-device';
 import WebGPUShader from './webgpu-shader';
 
 // COMPUTE PIPELINE

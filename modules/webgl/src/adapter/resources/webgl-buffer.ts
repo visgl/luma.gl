@@ -124,7 +124,7 @@ export default class WEBGLBuffer extends Buffer {
       this.device.assertWebGL2();
 
       // @ts-expect-error
-      this.gl.bufferSubData(this.target, offset, data, srcOffset, byteLength);
+      this.gl.bufferSubData(this.target, byteOffset, data, srcOffset, byteLength);
     } else {
       this.gl.bufferSubData(target, byteOffset, data);
     }

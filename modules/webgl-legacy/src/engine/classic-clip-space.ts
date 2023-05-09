@@ -1,8 +1,8 @@
 // ClipSpace
 import {Device} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
+import {Geometry} from '@luma.gl/engine';
 import Model, {ClassicModelProps as ModelProps} from './classic-model';
-import type {Geometry} from '@luma.gl/engine';
 
 const CLIPSPACE_VERTEX_SHADER = `\
 attribute vec2 aClipSpacePosition;

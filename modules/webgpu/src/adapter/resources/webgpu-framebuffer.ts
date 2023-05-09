@@ -1,6 +1,6 @@
 import type {FramebufferProps, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture} from '@luma.gl/api';
-import WebGPUDevice from '../webgpu-device';
+import {WebGPUDevice} from '../webgpu-device';
 // import WebGPUCanvasContext from '../webgpu-canvas-context';
 import WEBGPUTexture from './webgpu-texture';
 import WebGPUTexture from './webgpu-texture';

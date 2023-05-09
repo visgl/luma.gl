@@ -1,9 +1,10 @@
 
 // ClipSpace
-/*
 import GL from '@luma.gl/constants';
-import Model, {ModelProps} from './model';
+import {Device, glsl} from '@luma.gl/api';
+import {Model, ModelProps} from './model';
 import Geometry from '../geometry/geometry';
+import {WebGLDevice} from '@luma.gl/webgl/index';
 
 const CLIPSPACE_VERTEX_SHADER = glsl`\
 attribute vec2 aClipSpacePosition;
@@ -22,18 +23,22 @@ void main(void) {
 }
 `;
 
-/* eslint-disable indent, no-multi-spaces *
+/* eslint-disable indent, no-multi-spaces */
 const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
 
-
-export default class ClipSpace extends Model {
-  constructor(gl: WebGLRenderingContext, opts?: ModelProps) {
+/**
+ * A flat geometry that covers the "visible area" that the GPU renders.
+ */
+export class ClipSpace extends Model {
+  constructor(device: Device | WebGLRenderingContext, opts?: ModelProps) {
     const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
 
     super(
-      gl,
-      Object.assign({}, opts, {
+      WebGLDevice.attach(device),
+      {
+        ...opts,
         vs: CLIPSPACE_VERTEX_SHADER,
+        vertexCount: 4,
         geometry: new Geometry({
           drawMode: GL.TRIANGLE_STRIP,
           vertexCount: 4,
@@ -43,9 +48,7 @@ export default class ClipSpace extends Model {
             aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
           }
         })
-      })
+      }
     );
-    this.setVertexCount(4);
   }
 }
-*/

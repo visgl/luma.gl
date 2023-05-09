@@ -1,5 +1,5 @@
 import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding, cast} from '@luma.gl/api';
-import WebGPUDevice from '../webgpu-device';
+import {WebGPUDevice} from '../webgpu-device';
 import WebGPUBuffer from './webgpu-buffer';
 // import WebGPUCommandEncoder from './webgpu-command-encoder';
 import WebGPUComputePipeline from './webgpu-compute-pipeline';

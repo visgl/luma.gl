@@ -1,5 +1,5 @@
 import {Sampler, SamplerProps} from '@luma.gl/api';
-import type WebGPUDevice from '../webgpu-device';
+import type {WebGPUDevice} from '../webgpu-device';
 
 export type WebGPUSamplerProps = SamplerProps & {
   handle?: GPUSampler;
