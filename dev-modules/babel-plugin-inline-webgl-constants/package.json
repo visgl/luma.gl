@@ -1,6 +1,7 @@
 {
   "name": "babel-plugin-inline-webgl-constants",
   "version": "9.0.0-alpha.18",
+  "private": true,
   "description": "Babel plugin for replacing long gl constants with the shorter corresponding numbers",
   "type": "module",
   "license": "MIT",
@@ -25,5 +26,6 @@
   },
   "dependencies": {
     "@luma.gl/constants": "9.0.0-alpha.18"
-  }
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

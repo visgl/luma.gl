@@ -1,5 +1,6 @@
 {
   "name": "babel-plugin-remove-glsl-comments",
+  "private": true,
   "version": "9.0.0-alpha.18",
   "description": "Babel plugin for removing glsl comments",
   "license": "MIT",
@@ -15,5 +16,6 @@
   "main": "index.js",
   "dependencies": {
     "minimatch": "^3.0.0"
-  }
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
