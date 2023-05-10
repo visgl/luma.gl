@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type Buffer from '../resources/buffer';
+import type {Buffer} from '../resources/buffer';
 // import type {VertexFormat} from './vertex-formats';
 
 // ACCESSORS

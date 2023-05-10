@@ -1,13 +1,13 @@
 // luma.gl, MIT license
 import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '@luma.gl/api';
 import type {WebGPUDevice} from '../webgpu-device';
-import WebGPUSampler from './webgpu-sampler';
+import {WebGPUSampler} from './webgpu-sampler';
 
 /**
  * Cheap, temporary texture view for videos
  * Only valid within same callback, destroyed automatically as a microtask.
  */
-export default class WebGPUExternalTexture extends ExternalTexture {
+export class WebGPUExternalTexture extends ExternalTexture {
   readonly device: WebGPUDevice;
   readonly handle: GPUExternalTexture;
   sampler: WebGPUSampler;

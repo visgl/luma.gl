@@ -3,7 +3,7 @@ import {Stats} from '@probe.gl/stats';
 /** 
  * Helper class managing a collection of probe.gl stats objects 
  */
-export default class StatsManager {
+export class StatsManager {
   stats = new Map();
 
   getStats(name: string): Stats {

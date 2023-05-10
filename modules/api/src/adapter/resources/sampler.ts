@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 
-import type Device from '../device';
+import type {Device} from '../device';
 import {CompareFunction} from '../types/parameters';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 export type SamplerFilterMode = 'nearest' | 'linear';
@@ -42,7 +42,7 @@ const DEFAULT_SAMPLER_PROPS: Required<SamplerProps> = {
 };
 
 /** Immutable Sampler object */
-export default abstract class Sampler extends Resource<SamplerProps> {
+export abstract class Sampler extends Resource<SamplerProps> {
   override get [Symbol.toStringTag](): string {
     return 'Sampler';
   }

@@ -24,7 +24,7 @@ export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
  * @returns 
  */
 // eslint-disable-next-line complexity
-export default function injectShader(
+export function injectShader(
   source: string, 
   type: 'vs' | 'fs', 
   inject: Record<string, Injection[]>, 

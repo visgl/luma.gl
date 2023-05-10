@@ -17,16 +17,16 @@ import {withDeviceParameters, withGLParameters} from '../converters/device-param
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
-import WebGLDevice from '../webgl-device';
-import WEBGLBuffer from './webgl-buffer';
-import WEBGLShader from './webgl-shader';
-import WEBGLTexture from './webgl-texture';
-import WEBGLVertexArrayObject from '../objects/webgl-vertex-array-object';
+import {WebGLDevice} from '../webgl-device';
+import {WEBGLBuffer} from './webgl-buffer';
+import {WEBGLShader} from './webgl-shader';
+import {WEBGLTexture} from './webgl-texture';
+import {WEBGLVertexArrayObject} from '../objects/webgl-vertex-array-object';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 /** Creates a new render pipeline */
-export default class WEBGLRenderPipeline extends RenderPipeline {
+export class WEBGLRenderPipeline extends RenderPipeline {
   device: WebGLDevice;
   handle: WebGLProgram;
   vs: WEBGLShader;

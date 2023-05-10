@@ -1,7 +1,7 @@
 import {lights} from '../lights/lights';
 
-import vs from './pbr-vertex.glsl';
-import fs from './pbr-fragment.glsl';
+import {vs} from './pbr-vertex.glsl';
+import {fs} from './pbr-fragment.glsl';
 
 /**
  * An implementation of PBR (Physically-Based Rendering).

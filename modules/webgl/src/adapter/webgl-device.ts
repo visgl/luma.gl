@@ -19,7 +19,7 @@ import {
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
-import WebGLCanvasContext from './webgl-canvas-context';
+import {WebGLCanvasContext} from './webgl-canvas-context';
 import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools, makeDebugContext} from '../context/debug/webgl-developer-tools';
 import {
@@ -48,19 +48,19 @@ import type {
   ComputePassProps
 } from '@luma.gl/api';
 
-import ClassicBuffer from '../classic/buffer';
-import WEBGLBuffer from './resources/webgl-buffer';
-import WEBGLShader from './resources/webgl-shader';
-import WEBGLSampler from './resources/webgl-sampler';
-import WEBGLTexture from './resources/webgl-texture';
-import WEBGLFramebuffer from './resources/webgl-framebuffer';
-import WEBGLRenderPass from './resources/webgl-render-pass';
-import WEBGLRenderPipeline from './resources/webgl-render-pipeline';
+import {ClassicBuffer} from '../classic/buffer';
+import {WEBGLBuffer} from './resources/webgl-buffer';
+import {WEBGLShader} from './resources/webgl-shader';
+import {WEBGLSampler} from './resources/webgl-sampler';
+import {WEBGLTexture} from './resources/webgl-texture';
+import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
+import {WEBGLRenderPass} from './resources/webgl-render-pass';
+import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 
 const LOG_LEVEL = 1;
 
 /** WebGPU style Device API for a WebGL context */
-export default class WebGLDevice extends Device {
+export class WebGLDevice extends Device {
   //
   // Public `Device` API
   //

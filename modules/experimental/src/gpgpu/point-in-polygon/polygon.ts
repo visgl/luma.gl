@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// TODO - use math.gl/polygon
 import earcut from 'earcut';
 
 // For Web Mercator projection

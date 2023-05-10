@@ -10,7 +10,7 @@ import {
   GL_PARAMETER_GETTERS
 } from './webgl-parameter-tables';
 
-import WebGLDevice from '../../adapter/webgl-device';
+import {WebGLDevice} from '../../adapter/webgl-device';
 
 export type {GLParameters};
 

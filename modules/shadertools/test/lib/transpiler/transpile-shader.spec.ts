@@ -1,5 +1,5 @@
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
-import transpileShader from '@luma.gl/shadertools/lib/transpiler/transpile-shader';
+import {transpileShader} from '@luma.gl/shadertools/lib/transpiler/transpile-shader';
 import test from 'tape-promise/tape';
 
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';

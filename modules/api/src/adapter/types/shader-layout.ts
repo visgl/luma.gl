@@ -2,9 +2,9 @@
 import {TextureFormat} from '../types/texture-formats';
 import {VertexFormat} from '../types/vertex-formats';
 import {AccessorObject} from '../types/accessor';
-import type Buffer from '../resources/buffer';
-import type Sampler from '../resources/sampler';
-import type Texture from '../resources/texture';
+import type {Buffer} from '../resources/buffer';
+import type {Sampler} from '../resources/sampler';
+import type {Texture} from '../resources/texture';
 import {UniformFormat} from './uniform-formats';
 
 /**

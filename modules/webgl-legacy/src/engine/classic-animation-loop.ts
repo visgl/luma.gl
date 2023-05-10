@@ -571,7 +571,7 @@ export default class ClassicAnimationLoop {
     // Create the WebGL context if necessary
     // this.gl = this.props.gl ? instrumentGLContext(this.props.gl, deviceProps) : this.onCreateContext(deviceProps);
 
-    this.device = await this.onCreateDevice(deviceProps);
+    this.device = this.props.device ? this.props.device : await this.onCreateDevice(deviceProps);
     // @ts-expect-error
     this.gl = this.device.gl;
 

@@ -1,9 +1,9 @@
 // luma.gl, MIT license
-import type Device from '../device';
+import type {Device} from '../device';
 import type {TypedArray, PartialBy} from '../../types';
 import type {TextureFormat} from '../types/texture-formats';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import Sampler, {SamplerProps} from './sampler';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Sampler, SamplerProps} from './sampler';
 
 // required GPUExtent3D size;
 // GPUIntegerCoordinate mipLevelCount = 1;
@@ -114,7 +114,7 @@ const DEFAULT_TEXTURE_PROPS: PartialBy<Required<TextureProps>, 'width' | 'height
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
-export default abstract class Texture extends Resource<TextureProps> {
+export abstract class Texture extends Resource<TextureProps> {
   static COPY_SRC = 0x01;
   static COPY_DST = 0x02;
   static TEXTURE_BINDING = 0x04;

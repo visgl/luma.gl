@@ -50,7 +50,7 @@ const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
 };
 
 /** Runs an array of test cases */
-export default class TestRunner {
+export class TestRunner {
   device = webglDevice;
   props: Record<string, any>;
   isRunning: boolean = false;

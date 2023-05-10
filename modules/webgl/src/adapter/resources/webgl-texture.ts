@@ -26,9 +26,9 @@ import {
   convertSamplerParametersToWebGL,
   updateSamplerParametersForNPOT
 } from '../converters/sampler-parameters';
-import WebGLDevice from '../webgl-device';
-import WEBGLBuffer from './webgl-buffer';
-import WEBGLSampler from './webgl-sampler';
+import {WebGLDevice} from '../webgl-device';
+import {WEBGLBuffer} from './webgl-buffer';
+import {WEBGLSampler} from './webgl-sampler';
 
 export type {TextureProps};
 
@@ -114,7 +114,7 @@ type SetImageData3DOptions = {
 
 
 // Polyfill
-export default class WEBGLTexture extends Texture {
+export class WEBGLTexture extends Texture {
   // TODO - remove?
   static FACES: number[] = [
     GL.TEXTURE_CUBE_MAP_POSITIVE_X,

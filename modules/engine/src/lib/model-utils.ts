@@ -1,5 +1,5 @@
 import {Device, Buffer, assert} from '@luma.gl/api';
-import type Geometry from '../geometry/geometry';
+import type {Geometry} from '../geometry/geometry';
 
 // Support for mapping new geometries with glTF attribute names to "classic" luma.gl shader names
 const GLTF_TO_LUMA_ATTRIBUTE_MAP = {

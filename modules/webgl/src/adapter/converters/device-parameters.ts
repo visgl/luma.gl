@@ -3,7 +3,7 @@ import GL from '@luma.gl/constants';
 import type { GLParameters } from '../../types/webgl';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setParameters} from '../../context/parameters/unified-parameter-api';
-import WebGLDevice from '../webgl-device';
+import {WebGLDevice} from '../webgl-device';
 
 /* eslint-disable no-unused-expressions */ // For expression ? gl.enable() : gl.disable()
 

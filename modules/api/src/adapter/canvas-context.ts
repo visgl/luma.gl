@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {isBrowser} from '@probe.gl/env';
-import type Device from './device';
-import type Framebuffer from './resources/framebuffer';
+import type {Device} from './device';
+import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../lib/utils/log';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
@@ -48,7 +48,7 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
  * @todo commit(): https://github.com/w3ctag/design-reviews/issues/288
  * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
-export default abstract class CanvasContext {
+export abstract class CanvasContext {
   abstract readonly device: Device;
   readonly id: string;
   readonly props: Required<CanvasContextProps>;

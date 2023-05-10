@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type Device from '../device';
+import type {Device} from '../device';
 import {uid} from '../../lib/utils/utils';
 
 export type ResourceProps = {
@@ -17,7 +17,7 @@ export const DEFAULT_RESOURCE_PROPS: Required<ResourceProps> = {
 /**
  * Base class for GPU (WebGPU/WebGL) Resources
  */
-export default abstract class Resource<Props extends ResourceProps> {
+export abstract class Resource<Props extends ResourceProps> {
   abstract get [Symbol.toStringTag](): string;
 
   /** props.id, for debugging. */

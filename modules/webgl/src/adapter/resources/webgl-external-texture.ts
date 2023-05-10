@@ -1,5 +1,5 @@
 /*
-export default class WEBGLExternalTexture extends WEBGLTexture {
+export class WEBGLExternalTexture extends WEBGLTexture {
   readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;

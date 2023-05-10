@@ -1,4 +1,4 @@
-// import type ShaderPass from '../../lib/shaderpass';
+// import type {ShaderPass} from '../../lib/shaderpass';
 import {random} from '../utils/random';
 
 const fs = `\

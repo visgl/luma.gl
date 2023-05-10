@@ -1,7 +1,7 @@
 import {log} from '@luma.gl/api';
 
 export {COLOR_MODE} from './glsl-to-js-compiler/draw-model';
-export {default as _DebugContext} from './glsl-to-js-compiler/debug-context';
+export {_DebugContext} from './glsl-to-js-compiler/debug-context';
 export {
   compileShaderModule,
   compileVertexShader,

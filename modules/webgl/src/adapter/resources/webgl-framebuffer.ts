@@ -3,24 +3,24 @@
 import type {FramebufferProps, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture, log, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../webgl-device';
-import WebGLTexture from './webgl-texture';
-import Renderbuffer from '../objects/webgl-renderbuffer';
+import {WebGLDevice} from '../webgl-device';
+import {WEBGLTexture} from './webgl-texture';
+import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';
 import {getWebGLTextureFormat, getWebGLDepthStencilAttachment} from '../converters/texture-formats';
 
 export type TextureAttachment = [Texture, number?, number?];
-export type Attachment = WebGLTexture | Renderbuffer | TextureAttachment;
+export type Attachment = WEBGLTexture | WEBGLRenderbuffer | TextureAttachment;
 
 /** luma.gl Framebuffer, WebGL implementation  */
-export default class WEBGLFramebuffer extends Framebuffer {
+export class WEBGLFramebuffer extends Framebuffer {
   device: WebGLDevice;
   gl: WebGLRenderingContext;
   handle: WebGLFramebuffer;
 
   get texture() { return this.colorAttachments[0]; }
-  readonly colorAttachments: WebGLTexture[] = [];
-  readonly depthStencilAttachment: WebGLTexture | null = null;
-  protected _ownResources: (WebGLTexture | Renderbuffer)[] = [];
+  readonly colorAttachments: WEBGLTexture[] = [];
+  readonly depthStencilAttachment: WEBGLTexture | null = null;
+  protected _ownResources: (WEBGLTexture | WEBGLRenderbuffer)[] = [];
 
   constructor(device: WebGLDevice, props: FramebufferProps) {
     super(device, props);
@@ -86,12 +86,12 @@ export default class WEBGLFramebuffer extends Framebuffer {
     }
   }
 
-  _createColorAttachments(): WebGLTexture[] {
+  _createColorAttachments(): WEBGLTexture[] {
     return this.props.colorAttachments.map(colorAttachment => {
       if (!colorAttachment) {
         return undefined;
       }
-      if (colorAttachment instanceof WebGLTexture) {
+      if (colorAttachment instanceof WEBGLTexture) {
         return colorAttachment;
       }
       // if (typeof colorAttachment === 'default') {
@@ -103,7 +103,7 @@ export default class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** Create a color attachment */
-  protected _createColorAttachment(format: ColorTextureFormat, width: number, height: number): WebGLTexture {
+  protected _createColorAttachment(format: ColorTextureFormat, width: number, height: number): WEBGLTexture {
     const texture = this.device._createTexture({
       id: `${this.id}-color`,
       data: null, // reserves texture memory, but texels are undefined
@@ -136,20 +136,20 @@ export default class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** Create a depth stencil attachment GL.DEPTH24_STENCIL8 */
-  protected _createDepthStencilAttachment(): Renderbuffer | WebGLTexture {
+  protected _createDepthStencilAttachment(): WEBGLRenderbuffer | WEBGLTexture {
     if (!this.props.depthStencilAttachment) {
       return undefined;
     }
-    if (this.props.depthStencilAttachment instanceof Renderbuffer) {
+    if (this.props.depthStencilAttachment instanceof WEBGLRenderbuffer) {
       return this.props.depthStencilAttachment;
     }
     if (this.props.depthStencilAttachment instanceof Texture) {
-      return this.props.depthStencilAttachment as unknown as WebGLTexture;
+      return this.props.depthStencilAttachment as unknown as WEBGLTexture;
     }
     const format = this.props.depthStencilAttachment;
     const webglFormat = getWebGLTextureFormat(this.gl, format);
 
-    const texture = new Renderbuffer(this.device, {
+    const texture = new WEBGLRenderbuffer(this.device, {
       id: `${this.id}-depth-stencil`, // TODO misleading if not depth and stencil?
       format: webglFormat,
       // dataFormat: GL.DEPTH_STENCIL,
@@ -189,22 +189,22 @@ export default class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** Attach one attachment */
-  protected _attachOne(attachmentPoint: GL, attachment: Attachment): WebGLTexture | Renderbuffer {
-    if (attachment instanceof Renderbuffer) {
-      this._attachRenderbuffer(attachmentPoint, attachment);
+  protected _attachOne(attachmentPoint: GL, attachment: Attachment): WEBGLTexture | WEBGLRenderbuffer {
+    if (attachment instanceof WEBGLRenderbuffer) {
+      this._attachWEBGLRenderbuffer(attachmentPoint, attachment);
       return attachment;
     } else if (Array.isArray(attachment)) {
       const [texture, layer = 0, level = 0] = attachment;
-      this._attachTexture(attachmentPoint, texture as unknown as WebGLTexture, layer, level);
-      return texture as unknown as WebGLTexture;
-    } else if (attachment instanceof WebGLTexture) {
+      this._attachTexture(attachmentPoint, texture as unknown as WEBGLTexture, layer, level);
+      return texture as unknown as WEBGLTexture;
+    } else if (attachment instanceof WEBGLTexture) {
       this._attachTexture(attachmentPoint, attachment, 0, 0);
       return attachment;
     }
     throw new Error('attach');
   }
 
-  protected _attachRenderbuffer(attachment: GL, renderbuffer: Renderbuffer): void {
+  protected _attachWEBGLRenderbuffer(attachment: GL, renderbuffer: WEBGLRenderbuffer): void {
     this.gl.framebufferRenderbuffer(
       GL.FRAMEBUFFER,
       attachment,
@@ -216,10 +216,10 @@ export default class WEBGLFramebuffer extends Framebuffer {
   /**
    * @param attachment
    * @param texture
-   * @param layer = 0 - index into WebGLTextureArray and Texture3D or face for `TextureCubeMap`
+   * @param layer = 0 - index into WEBGLTextureArray and Texture3D or face for `TextureCubeMap`
    * @param level  = 0 - mipmapLevel (must be 0 in WebGL1)
    */
-  protected _attachTexture(attachment: GL, texture: WebGLTexture, layer: number, level: number): void {
+  protected _attachTexture(attachment: GL, texture: WEBGLTexture, layer: number, level: number): void {
     const {gl, gl2} = this.device;
     gl.bindTexture(texture.target, texture.handle);
 

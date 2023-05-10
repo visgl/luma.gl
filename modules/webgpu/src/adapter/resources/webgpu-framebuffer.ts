@@ -1,9 +1,8 @@
 import type {FramebufferProps, ColorTextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
-// import WebGPUCanvasContext from '../webgpu-canvas-context';
-import WEBGPUTexture from './webgpu-texture';
-import WebGPUTexture from './webgpu-texture';
+// import {WebGPUCanvasContext} from '../webgpu-canvas-context';
+import {WebGPUTexture} from './webgpu-texture';
 
 // const DEFAULT_DEPTH_STENCIL_FORMAT: DepthStencilTextureFormat = 'depth24plus';
 
@@ -13,7 +12,7 @@ import WebGPUTexture from './webgpu-texture';
  * Create new textures with correct size for all attachments. 
  * @note resize() destroys existing textures (if size has changed). 
  */
-export default class WebGPUFramebuffer extends Framebuffer {
+export class WebGPUFramebuffer extends Framebuffer {
   readonly device: WebGPUDevice;
 
   colorAttachments: WebGPUTexture[] = [];
@@ -61,8 +60,8 @@ export default class WebGPUFramebuffer extends Framebuffer {
   }
 
   /** Create depth stencil texture */
-  private createDepthStencilTexture(props: FramebufferProps): WEBGPUTexture {
-    if (props.depthStencilAttachment instanceof WEBGPUTexture) {
+  private createDepthStencilTexture(props: FramebufferProps): WebGPUTexture {
+    if (props.depthStencilAttachment instanceof WebGPUTexture) {
       return props.depthStencilAttachment;
     }
 
@@ -79,8 +78,8 @@ export default class WebGPUFramebuffer extends Framebuffer {
     throw new Error('type');
   }
 
-  private createColorTexture(props: FramebufferProps, texture: Texture | ColorTextureFormat): WEBGPUTexture {
-    if (texture instanceof WEBGPUTexture) {
+  private createColorTexture(props: FramebufferProps, texture: Texture | ColorTextureFormat): WebGPUTexture {
+    if (texture instanceof WebGPUTexture) {
       return texture;
     }
 

@@ -1,9 +1,9 @@
 // luma.gl, MIT license
 import type {ShaderLayout, BindingLayout, Binding} from '@luma.gl/api';
 import {Buffer, Sampler, Texture, log, cast} from '@luma.gl/api';
-import type WebGPUBuffer from '../resources/webgpu-buffer';
-import type WebGPUSampler from '../resources/webgpu-sampler';
-import type WebGPUTexture from '../resources/webgpu-texture';
+import type {WebGPUBuffer} from '../resources/webgpu-buffer';
+import type {WebGPUSampler} from '../resources/webgpu-sampler';
+import type {WebGPUTexture} from '../resources/webgpu-texture';
 
 /**
  * Create a WebGPU "bind group layout" from an array of luma.gl bindings

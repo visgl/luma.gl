@@ -4,7 +4,7 @@ import {Sampler, SamplerProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import type {GLSamplerParameters} from '../../types/webgl';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
-import type WebGLDevice from '../webgl-device';
+import type {WebGLDevice} from '../webgl-device';
 
 /**
  * Sampler object -
@@ -13,7 +13,7 @@ import type WebGLDevice from '../webgl-device';
  * so that they can be set directly on the texture
  * https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/sampler_object.html
  */
-export default class WEBGLSampler extends Sampler {
+export class WEBGLSampler extends Sampler {
   readonly device: WebGLDevice;
   readonly handle: WebGLSampler;
   readonly parameters: GLSamplerParameters;

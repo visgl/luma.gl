@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 
-import type {default as Device, DeviceProps} from '../adapter/device';
+import type {Device, DeviceProps} from '../adapter/device';
 import {DEFAULT_DEVICE_PROPS} from '../adapter/device';
-import StatsManager from './utils/stats-manager';
+import {StatsManager} from './utils/stats-manager';
 import {lumaStats} from './utils/stats-manager';
 import type {Log} from '@probe.gl/log';
 import {log} from './utils/log';
@@ -15,7 +15,7 @@ const deviceList = new Map<string, typeof Device>();
  * Register WebGPU and/or WebGL devices (controls application bundle size)
  * Run-time selection of the first available Device
  */
-export default class luma {
+export class luma {
   /** Global stats for all devices */
   static stats: StatsManager = lumaStats;
 

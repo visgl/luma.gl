@@ -3,12 +3,12 @@ import {log, uid, Shader, ShaderProps, CompilerMessage, formatCompilerLog} from 
 import GL from '@luma.gl/constants';
 import {getShaderInfo} from '../helpers/get-shader-info';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
-import WebGLDevice from '../webgl-device';
+import {WebGLDevice} from '../webgl-device';
 
 /**
  * An immutable compiled shader program that execute portions of the GPU Pipeline
  */
-export default class WEBGLShader extends Shader {
+export class WEBGLShader extends Shader {
   readonly device: WebGLDevice;
   readonly handle: WebGLShader;
 

@@ -5,11 +5,11 @@ import {assert, checkProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
-import Accessor from './accessor';
+import {Accessor} from './accessor';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 
-import WebGLDevice from '../adapter/webgl-device';
-import WEBGLBuffer from '../adapter/resources/webgl-buffer';
+import {WebGLDevice} from '../adapter/webgl-device';
+import {WEBGLBuffer} from '../adapter/resources/webgl-buffer';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -81,7 +81,7 @@ export type ClassicBufferProps = BufferProps & {
 }
 
 /** WebGL Buffer interface */
-export default class ClassicBuffer extends WEBGLBuffer {
+export class ClassicBuffer extends WEBGLBuffer {
   usage: number;
   accessor: Accessor;
 

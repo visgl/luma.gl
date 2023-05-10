@@ -3,40 +3,40 @@
 export {VERSION} from './init';
 
 // MAIN API ACCESS POINTS
-export {default as luma} from './lib/luma';
+export {luma} from './lib/luma';
 
 export type {DeviceProps, DeviceLimits, DeviceInfo, DeviceFeature} from './adapter/device';
-export {default as Device} from './adapter/device';
+export {Device} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
-export {default as CanvasContext} from './adapter/canvas-context';
+export {CanvasContext} from './adapter/canvas-context';
 
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resources/resource';
-export {default as Resource} from './adapter/resources/resource';
+export {Resource} from './adapter/resources/resource';
 export type {BufferProps} from './adapter/resources/buffer';
-export {default as Buffer} from './adapter/resources/buffer';
+export {Buffer} from './adapter/resources/buffer';
 export type {TextureProps, TextureData} from './adapter/resources/texture';
-export {default as Texture} from './adapter/resources/texture';
+export {Texture} from './adapter/resources/texture';
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
-export {default as ExternalTexture} from './adapter/resources/external-texture';
+export {ExternalTexture} from './adapter/resources/external-texture';
 export type {ShaderProps} from './adapter/resources/shader';
-export {default as Shader} from './adapter/resources/shader';
+export {Shader} from './adapter/resources/shader';
 export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
-export {default as Sampler} from './adapter/resources/sampler';
+export {Sampler} from './adapter/resources/sampler';
 export type {FramebufferProps} from './adapter/resources/framebuffer';
-export {default as Framebuffer} from './adapter/resources/framebuffer';
+export {Framebuffer} from './adapter/resources/framebuffer';
 
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
-export {default as RenderPipeline} from './adapter/resources/render-pipeline';
+export {RenderPipeline} from './adapter/resources/render-pipeline';
 
 export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
-export {default as ComputePipeline} from './adapter/resources/compute-pipeline';
+export {ComputePipeline} from './adapter/resources/compute-pipeline';
 export type {CommandEncoderProps} from './adapter/resources/command-encoder';
-export {default as CommandEncoder} from './adapter/resources/command-encoder';
+export {CommandEncoder} from './adapter/resources/command-encoder';
 export type {RenderPassProps} from './adapter/resources/render-pass';
-export {default as RenderPass} from './adapter/resources/render-pass';
+export {RenderPass} from './adapter/resources/render-pass';
 export type {ComputePassProps} from './adapter/resources/compute-pass';
-export {default as ComputePass} from './adapter/resources/compute-pass';
+export {ComputePass} from './adapter/resources/compute-pass';
 
 
 // API TYPES
@@ -84,8 +84,8 @@ export type {
   VaryingBinding
 } from './adapter/types/shader-layout';
 
-export {default as UniformBufferLayout} from './lib/uniform-buffer-layout';
-export {default as UniformBlock} from './lib/uniform-block';
+export {UniformBufferLayout} from './lib/uniform-buffer-layout';
+export {UniformBlock} from './lib/uniform-block';
 
 // API UTILS
 export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
@@ -105,7 +105,7 @@ export type {
 
 // GENERAL UTILS
 
-export {default as StatsManager} from './lib/utils/stats-manager';
+export {StatsManager} from './lib/utils/stats-manager';
 export {assert} from './lib/utils/assert';
 export {cast} from './lib/utils/cast';
 export {log} from './lib/utils/log';

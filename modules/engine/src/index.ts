@@ -22,7 +22,7 @@ export {PipelineFactory} from './lib/pipeline-factory';
 export {ClipSpace} from './lib/clip-space';
 
 // Geometries
-export {default as Geometry} from './geometry/geometry';
+export {Geometry} from './geometry/geometry';
 
 // Primitives
 export type {ConeGeometryProps} from './geometries/cone-geometry';

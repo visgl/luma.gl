@@ -31,8 +31,8 @@ export type BindingLayout = BufferBindingLayout | TextureBindingLayout | Storage
 
 // BINDINGS
 
-import type Buffer from '../resources/buffer';
-import type Texture from '../resources/texture'; // TextureView...
+import type {Buffer} from '../resources/buffer';
+import type {Texture} from '../resources/texture'; // TextureView...
 
 export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
 

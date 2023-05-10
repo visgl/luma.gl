@@ -20,18 +20,18 @@ import type {
   ComputePassProps
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, uid} from '@luma.gl/api';
-import WebGPUBuffer from './resources/webgpu-buffer';
-import WebGPUTexture from './resources/webgpu-texture';
-import WebGPUExternalTexture from './resources/webgpu-external-texture';
-import WebGPUSampler from './resources/webgpu-sampler';
-import WebGPUShader from './resources/webgpu-shader';
-import WebGPURenderPipeline from './resources/webgpu-render-pipeline';
-import WebGPUFramebuffer from './resources/webgpu-framebuffer';
-import WebGPUComputePipeline from './resources/webgpu-compute-pipeline';
-import WebGPURenderPass from './resources/webgpu-render-pass';
-import WebGPUComputePass from './resources/webgpu-compute-pass';
+import {WebGPUBuffer} from './resources/webgpu-buffer';
+import {WebGPUTexture} from './resources/webgpu-texture';
+import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
+import {WebGPUSampler} from './resources/webgpu-sampler';
+import {WebGPUShader} from './resources/webgpu-shader';
+import {WebGPURenderPipeline} from './resources/webgpu-render-pipeline';
+import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
+import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
+import {WebGPURenderPass} from './resources/webgpu-render-pass';
+import {WebGPUComputePass} from './resources/webgpu-compute-pass';
 
-import WebGPUCanvasContext from './webgpu-canvas-context';
+import {WebGPUCanvasContext} from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
 
 /** WebGPU Device implementation */

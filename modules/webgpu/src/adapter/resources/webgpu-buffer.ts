@@ -6,7 +6,7 @@ function getByteLength(props: BufferProps): number {
   return props.byteLength || props.data?.byteLength || 0;
 }
 
-export default class WebGPUBuffer extends Buffer {
+export class WebGPUBuffer extends Buffer {
   readonly device: WebGPUDevice;
   readonly handle: GPUBuffer;
   readonly byteLength: number;

@@ -1,5 +1,5 @@
 import {lights} from '../lights/lights';
-import lightingShader from './phong-lighting.glsl';
+import {lightingShader} from './phong-lighting.glsl';
 
 /* eslint-disable camelcase */
 

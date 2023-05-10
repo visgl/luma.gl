@@ -15,7 +15,7 @@ const MIN_DEPTH_COLOR = [1, 1, 0, 1];
 const MAX_DEPTH_COLOR = [0, 0, 1, 1];
 const DISCARDED_FRAG_COLOR = [1, 0, 0, 1];
 
-export default ({model, draw, colorMode = COLOR_MODE.NONE}) => {
+export function drawModel({model, draw, colorMode = COLOR_MODE.NONE}) {
   const shaders = getShaders(model);
 
   // draw params
@@ -42,7 +42,7 @@ export default ({model, draw, colorMode = COLOR_MODE.NONE}) => {
 
     draw({indices, drawMode, positions, colors});
   }
-};
+}
 
 // Transpile shaders of a model to JavaScript
 function getShaders(model) {

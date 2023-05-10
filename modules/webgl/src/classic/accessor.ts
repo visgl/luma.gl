@@ -19,7 +19,7 @@ const PROP_CHECKS = {
   }
 };
 
-export default class Accessor implements AccessorObject {
+export class Accessor implements AccessorObject {
   offset?: number;
   stride?: number;
   type?: number;

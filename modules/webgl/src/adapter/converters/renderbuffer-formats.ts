@@ -34,7 +34,7 @@ type RenderbufferFormat = {
   ext?: string;
 };
 
-const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
+export const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
   [GL.DEPTH_COMPONENT16]: {bpp: 2}, // 16 depth bits.
   [GL.DEPTH_COMPONENT24]: {gl2: true, bpp: 3},
   [GL.DEPTH_COMPONENT32F]: {gl2: true, bpp: 4},
@@ -88,5 +88,3 @@ const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
   // [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2, gl1: EXT_FLOAT_WEBGL1},
   [GL.R11F_G11F_B10F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4}
 };
-
-export default RENDERBUFFER_FORMATS;

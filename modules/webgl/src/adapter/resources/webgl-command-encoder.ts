@@ -6,10 +6,10 @@ import type {
   CopyTextureToTextureOptions
 } from '@luma.gl/api';
 
-import CommandBuffer from './webgl-command-buffer';
-import WebGLDevice from '../webgl-device';
+import {CommandBuffer} from './webgl-command-buffer';
+import {WebGLDevice} from '../webgl-device';
 
-export default class WEBGLCommandEncoder extends CommandEncoder {
+export class WEBGLCommandEncoder extends CommandEncoder {
   readonly device: WebGLDevice;
 
   readonly commandBuffer = new CommandBuffer();

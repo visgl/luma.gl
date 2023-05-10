@@ -2,12 +2,12 @@ import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext, log} from '@luma.gl/api';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
-import WEBGPUFramebuffer from './resources/webgpu-framebuffer';
+import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 
 /** 
  * Holds a WebGPU Canvas Context which handles resizing etc 
  */
-export default class WebGPUCanvasContext extends CanvasContext {
+export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly gpuCanvasContext: GPUCanvasContext;
   readonly format: TextureFormat;
@@ -34,7 +34,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
-  getCurrentFramebuffer(): WEBGPUFramebuffer {
+  getCurrentFramebuffer(): WebGPUFramebuffer {
     // Ensure the canvas context size is updated
     this.update();
 
@@ -50,7 +50,7 @@ export default class WebGPUCanvasContext extends CanvasContext {
     // Resize the depth stencil attachment
     this._createDepthStencilAttachment();
 
-    return new WEBGPUFramebuffer(this.device, {
+    return new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
       depthStencilAttachment: this.depthStencilAttachment
     });

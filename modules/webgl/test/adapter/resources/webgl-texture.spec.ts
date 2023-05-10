@@ -12,7 +12,7 @@ import {Buffer, getKey, isWebGL2, readPixelsToArray} from '@luma.gl/webgl-legacy
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './webgl-sampler.spec';
 
-import WEBGLTexture from '@luma.gl/webgl/adapter/resources/webgl-texture';
+import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
 test('WebGL#Texture construct/delete', async (t) => {

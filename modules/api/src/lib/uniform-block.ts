@@ -5,7 +5,7 @@ import {log} from './utils/log';
 import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/types/shader-layout';
 
 /** A uniform block holds a number of uniforms */
-export default class UniformBlock<TUniforms extends object = Record<string, unknown>> {
+export class UniformBlock<TUniforms extends object = Record<string, unknown>> {
   // readonly layout: UniformBufferLayout;
   readonly layout: Record<string, UniformInfo> = {};
   uniforms: Record<string, unknown> = {};
