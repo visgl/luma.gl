@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltools",
-  "version": "9.0.0-alpha.19",
+  "version": "9.0.0-alpha.20",
   "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
   "type": "module",
   "license": "MIT",
@@ -38,9 +38,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "9.0.0-alpha.19",
-    "@luma.gl/engine": "9.0.0-alpha.19",
-    "@luma.gl/webgl": "9.0.0-alpha.19",
+    "@luma.gl/constants": "9.0.0-alpha.20",
+    "@luma.gl/engine": "9.0.0-alpha.20",
+    "@luma.gl/webgl": "9.0.0-alpha.20",
     "@probe.gl/log": "^4.0.2"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
