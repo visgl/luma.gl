@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "9.0.0-alpha.17",
+  "version": "9.0.0-alpha.18",
   "description": "WebGL2 adapter for the luma.gl API",
   "type": "module",
   "license": "MIT",
@@ -44,8 +44,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/api": "9.0.0-alpha.17",
-    "@luma.gl/constants": "9.0.0-alpha.17",
+    "@luma.gl/api": "9.0.0-alpha.18",
+    "@luma.gl/constants": "9.0.0-alpha.18",
     "@probe.gl/env": "^4.0.2"
   },
   "gitHead": "81e93840f31f0e32f86dfea6b576acf2c2d9caec"

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "9.0.0-alpha.17",
+  "version": "9.0.0-alpha.18",
   "description": "Experimental classes for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.17",
+    "@luma.gl/constants": "9.0.0-alpha.18",
     "@math.gl/core": "4.0.0-alpha.4",
     "earcut": "^2.0.6"
   },
