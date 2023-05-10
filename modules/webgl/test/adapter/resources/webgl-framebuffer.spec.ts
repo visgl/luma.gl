@@ -86,10 +86,6 @@ test('WebGLDevice.createFramebuffer()', async (t) => {
 
 test('WebGLFramebuffer create and resize attachments', async (t) => {
   for (const testDevice of await getWebGLTestDevices()) {
-    if (testDevice.type === 'w') {
-      t.end();
-      return;
-    }
     for (const tc of TEST_CASES) {
       let props;
 
