@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-persistence",
-  "version": "9.0.0-alpha.18",
+  "version": "9.0.0-alpha.19",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.0-alpha.18",
-    "@luma.gl/engine": "9.0.0-alpha.18",
-    "@luma.gl/experimental": "9.0.0-alpha.18",
-    "@luma.gl/webgl": "9.0.0-alpha.18",
-    "@luma.gl/webgl-legacy": "9.0.0-alpha.18",
+    "@luma.gl/core": "9.0.0-alpha.19",
+    "@luma.gl/engine": "9.0.0-alpha.19",
+    "@luma.gl/experimental": "9.0.0-alpha.19",
+    "@luma.gl/webgl": "9.0.0-alpha.19",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.19",
     "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl-legacy",
-  "version": "9.0.0-alpha.18",
+  "version": "9.0.0-alpha.19",
   "description": "The legacy luma.gl v8 API",
   "type": "module",
   "license": "MIT",
@@ -38,9 +38,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "9.0.0-alpha.18",
-    "@luma.gl/engine": "9.0.0-alpha.18",
-    "@luma.gl/webgl": "9.0.0-alpha.18",
+    "@luma.gl/constants": "9.0.0-alpha.19",
+    "@luma.gl/engine": "9.0.0-alpha.19",
+    "@luma.gl/webgl": "9.0.0-alpha.19",
     "@probe.gl/log": "^4.0.2"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
