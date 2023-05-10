@@ -3384,6 +3384,13 @@ babel-plugin-polyfill-regenerator@^0.4.1:
   dependencies:
     "@babel/helper-define-polyfill-provider" "^0.3.3"
 
+babel-plugin-remove-glsl-comments@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-remove-glsl-comments/-/babel-plugin-remove-glsl-comments-1.0.0.tgz#62c0910707798a60504b70d09f9e2733ae10fc93"
+  integrity sha512-Z11LLl2UgZHiNTHkwHAyB8/eTaJpq9ih28aR7VtXk1ky3dwQJFGHUqOQFy8MH6ZQ6Ky9PmoWreWeoRxT1Zs68w==
+  dependencies:
+    minimatch "^3.0.0"
+
 babel-plugin-version-inline@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-version-inline/-/babel-plugin-version-inline-1.0.0.tgz#b99b6f925db4a4c6789eb08836e66d128dd5993f"
@@ -5226,7 +5233,7 @@ eslint-plugin-jsx-a11y@^6.1.2:
     semver "^6.3.0"
 
 "eslint-plugin-luma-gl-custom-rules@file:./dev-modules/eslint-plugin-luma-gl-custom-rules":
-  version "1.0.0"
+  version "9.0.0-alpha.17"
 
 eslint-plugin-markdown@^2.2.0:
   version "2.2.1"

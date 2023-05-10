@@ -1,5 +1,5 @@
 import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast} from '@luma.gl/api';
-import WebGPUDevice from '../webgpu-device';
+import {WebGPUDevice} from '../webgpu-device';
 import WEBGPUBuffer from './webgpu-buffer';
 import WebGPUTexture from './webgpu-texture';
 

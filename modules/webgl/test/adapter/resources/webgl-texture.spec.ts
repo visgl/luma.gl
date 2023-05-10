@@ -30,7 +30,8 @@ test('WebGL#Texture construct/delete', async (t) => {
 test('WebGLDevice#isTextureFormatSupported()', async (t) => {
   const FORMATS: Record<string, TextureFormat[]> = {
     'webgl': ['rgba8unorm'],
-    'webgl2': ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float']
+    'webgl2': ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    'webgpu': []
   }
 
   for (const device of await getTestDevices()) {

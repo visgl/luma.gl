@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
 import {Framebuffer} from '@luma.gl/api';
-import {webgl1Device, getTestDevices} from '@luma.gl/test-utils';
+import {webgl1Device, getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const TEST_CASES = [
   {
@@ -66,7 +66,7 @@ const TEST_CASES = [
 ];
 
 test('WebGLDevice.createFramebuffer()', async (t) => {
-  for (const testDevice of await getTestDevices()) {
+  for (const testDevice of await getWebGLTestDevices()) {
     t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
 
     const framebuffer = testDevice.createFramebuffer({
@@ -85,7 +85,7 @@ test('WebGLDevice.createFramebuffer()', async (t) => {
 });
 
 test('WebGLFramebuffer create and resize attachments', async (t) => {
-  for (const testDevice of await getTestDevices()) {
+  for (const testDevice of await getWebGLTestDevices()) {
     for (const tc of TEST_CASES) {
       let props;
 

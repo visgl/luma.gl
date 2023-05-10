@@ -19,7 +19,7 @@ export {Model} from './lib/model';
 export {PipelineFactory} from './lib/pipeline-factory';
 
 // Utils
-// export {default as ClipSpace} from './lib/clip-space';
+export {ClipSpace} from './lib/clip-space';
 
 // Geometries
 export {default as Geometry} from './geometry/geometry';

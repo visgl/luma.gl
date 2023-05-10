@@ -39,7 +39,7 @@ export default class ProgramManager {
   private readonly _hookFunctions: string[] = [];
   private _defaultModules: ShaderModule[] = [];
 
-  static getDefaultProgramManager(device: Device): ProgramManager {
+  static getDefaultProgramManager(device: Device | WebGLRenderingContext): ProgramManager {
     // @ts-expect-error
     device.defaultProgramManager = device.defaultProgramManager || new ProgramManager(device);
     // @ts-expect-error

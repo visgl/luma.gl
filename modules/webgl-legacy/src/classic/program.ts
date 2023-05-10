@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+
 import type {Device, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/api';
 import {log, assert, uid, cast, Shader} from '@luma.gl/api';
 import GL from '@luma.gl/constants';

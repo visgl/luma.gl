@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 // WEBGPU ADAPTER
-export {default as WebGPUDevice} from './adapter/webgpu-device';
+export {WebGPUDevice} from './adapter/webgpu-device';
 
 // WEBGPU CLASSES (typically not accessed directly)
 export {default as WebGPUBuffer} from './adapter/resources/webgpu-buffer';

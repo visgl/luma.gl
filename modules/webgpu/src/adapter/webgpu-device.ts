@@ -35,7 +35,7 @@ import WebGPUCanvasContext from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
 
 /** WebGPU Device implementation */
-export default class WebGPUDevice extends Device {
+export class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   readonly adapter: GPUAdapter;
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
