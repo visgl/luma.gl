@@ -354,7 +354,7 @@ test('Model#getBuffersFromGeometry', (t) => {
 });
 
 test('Model#transpileToGLSL100', (t) => {
-  let model;
+  let model: Model;
 
   t.throws(() => {
     model = new Model(webgl1Device, {
@@ -371,7 +371,6 @@ test('Model#transpileToGLSL100', (t) => {
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
-  // @ts-expect-error object possibly undefined
   t.ok(model.program, 'Created a program');
   t.end();
 });

@@ -1,9 +1,8 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {formatCompilerLog} from '@luma.gl/api';
+import {formatCompilerLog, CompilerMessage} from '@luma.gl/api';
 
-/** @type {{type: 'warning' | 'error' | 'info'; linePos: number; lineNum: number; message: string}[]} */
-const ERROR_LOG = [
+const ERROR_LOG: CompilerMessage[] = [
   {
     type: 'warning',
     linePos: 0,
