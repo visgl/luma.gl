@@ -1,11 +1,11 @@
 // luma.gl, MIT license
 
 import {Stats, Stat} from '@probe.gl/stats';
-import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
+import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';
 
 export type PerformanceTestRunnerProps = TestRunnerProps;
 
-export default class PerformanceTestRunner extends TestRunner {
+export class PerformanceTestRunner extends TestRunner {
   private _stats: Stats | null = null;
   private _fps: Stat | null = null;
 

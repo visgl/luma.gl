@@ -1,9 +1,9 @@
 import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
-import WEBGPUBuffer from './webgpu-buffer';
-import WebGPUTexture from './webgpu-texture';
+import {WebGPUBuffer} from './webgpu-buffer';
+import {WebGPUTexture} from './webgpu-texture';
 
-export default class WebGPUCommandEncoder extends CommandEncoder {
+export class WebGPUCommandEncoder extends CommandEncoder {
   readonly device: WebGPUDevice;
   readonly handle: GPUCommandEncoder;
 
@@ -34,9 +34,9 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
     size?: number
   }): void {
     this.handle.copyBufferToBuffer(
-      cast<WEBGPUBuffer>(options.source).handle,
+      cast<WebGPUBuffer>(options.source).handle,
       options.sourceOffset ?? 0,
-      cast<WEBGPUBuffer>(options.destination).handle,
+      cast<WebGPUBuffer>(options.destination).handle,
       options.destinationOffset ?? 0,
       options.size ?? 0
     );
@@ -57,7 +57,7 @@ export default class WebGPUCommandEncoder extends CommandEncoder {
   }): void {
     this.handle.copyBufferToTexture(
       {
-        buffer: cast<WEBGPUBuffer>(options.source).handle,
+        buffer: cast<WebGPUBuffer>(options.source).handle,
         offset: options.offset ?? 0,
         bytesPerRow: options.bytesPerRow,
         rowsPerImage: options.rowsPerImage,

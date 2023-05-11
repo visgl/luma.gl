@@ -36,7 +36,7 @@ function getUniforms(opts: {boundingBox?: number[], texture?} = {}) {
   return uniforms;
 }
 
-export default {
+export const textureFilterModule = {
   name: 'texture-filter',
   vs,
   getUniforms

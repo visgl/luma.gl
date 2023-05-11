@@ -9,14 +9,14 @@ import {getVertexBufferLayout, getBufferSlots} from '../helpers/get-vertex-buffe
 // import type {BufferAccessors} from './webgpu-pipeline';
 
 import type {WebGPUDevice} from '../webgpu-device';
-import type WebGPUBuffer from './webgpu-buffer';
-import type WebGPUShader from './webgpu-shader';
-import type WebGPURenderPass from './webgpu-render-pass';
+import type {WebGPUBuffer} from './webgpu-buffer';
+import type {WebGPUShader} from './webgpu-shader';
+import type {WebGPURenderPass} from './webgpu-render-pass';
 
 // RENDER PIPELINE
 
 /** Creates a new render pipeline when parameters change */
-export default class WebGPURenderPipeline extends RenderPipeline {
+export class WebGPURenderPipeline extends RenderPipeline {
   device: WebGPUDevice;
   handle: GPURenderPipeline;
 

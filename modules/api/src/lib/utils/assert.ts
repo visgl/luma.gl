@@ -5,5 +5,3 @@ export function assert(condition: unknown, message?: string): void | never {
     throw new Error(message || 'luma.gl: assertion failed.');
   }
 }
-
-export default assert;

@@ -1,6 +1,6 @@
 import {glsl} from '../../lib/glsl-utils/highlight';
 
-export default glsl`\
+export const lightingShader = glsl`\
 
 uniform float lighting_uAmbient;
 uniform float lighting_uDiffuse;

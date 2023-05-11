@@ -10,34 +10,34 @@ export type {WebGLLimits} from './adapter/device-helpers/device-limits';
 export {registerHeadlessGL} from './context/context/create-headless-context';
 
 // WebGL adapter classes
-export {default as WebGLDevice} from './adapter/webgl-device';
-export {default as WebGLCanvasContext} from './adapter/webgl-canvas-context';
+export {WebGLDevice} from './adapter/webgl-device';
+export {WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
 // WebGL Resource classes
-export {default as WEBGLResource, default as WebGLResource} from './adapter/objects/webgl-resource';
-export {default as WEBGLBuffer} from './adapter/resources/webgl-buffer';
-export {default as WEBGLTexture} from './adapter/resources/webgl-texture';
-// export {default as WEBGLExternalTexture} from './adapter/resources/webgl-external-texture';
-export {default as WEBGLShader} from './adapter/resources/webgl-shader';
-export {default as WEBGLSampler} from './adapter/resources/webgl-sampler';
-export {default as WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
+export {WebGLResource, WebGLResource as WEBGLResource} from './adapter/objects/webgl-resource';
+export {WEBGLBuffer} from './adapter/resources/webgl-buffer';
+export {WEBGLTexture} from './adapter/resources/webgl-texture';
+// export {WEBGLExternalTexture} from './adapter/resources/webgl-external-texture';
+export {WEBGLShader} from './adapter/resources/webgl-shader';
+export {WEBGLSampler} from './adapter/resources/webgl-sampler';
+export {WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
 
-export {default as WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
-// export {default as WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
-export {default as WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
-export {default as WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
-// export {default as WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
+export {WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
+// export {WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';
+export {WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
+export {WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
+// export {WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 
 // non-api resources
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
-export {default as WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
-export {default as WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
+export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
+export {WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
 
 // WebGL adapter classes (Legacy, will be moved to gltools)
-export {default as Accessor} from './classic/accessor';
+export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
 export type {ClassicBufferProps, ClassicBufferProps as BufferProps} from './classic/buffer';
-export {default as ClassicBuffer, default as Buffer} from './classic/buffer';
+export {ClassicBuffer, ClassicBuffer as Buffer} from './classic/buffer';
 
 export {
   isWebGL,

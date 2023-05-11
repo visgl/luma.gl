@@ -1,11 +1,11 @@
 import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/api';
 import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
-import WebGPUBuffer from './webgpu-buffer';
-// import WebGPUCommandEncoder from './webgpu-command-encoder';
-import WebGPURenderPipeline from './webgpu-render-pipeline';
+import {WebGPUBuffer} from './webgpu-buffer';
+// import {WebGPUCommandEncoder} from './webgpu-command-encoder';
+import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 
-export default class WebGPURenderPass extends RenderPass {
+export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
 

@@ -1,8 +1,8 @@
 //
 import {BindingLayout} from '../types/shader-layout';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import type Device from '../device';
-import type Shader from './shader';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import type {Device} from '../device';
+import type {Shader} from './shader';
 
 export type ComputePipelineProps = ResourceProps & {
   handle?: unknown;
@@ -23,7 +23,7 @@ const DEFAULT_COMPUTE_PIPELINE_PROPS: Required<ComputePipelineProps> = {
 
 /**
  */
-export default abstract class ComputePipeline extends Resource<ComputePipelineProps> {
+export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }

@@ -11,7 +11,7 @@ declare global {
  * By adding the result of init() to Device.VERSION we guarantee it will be called
  * @returns version
  */
-function init(): string {
+function initializeLuma(): string {
   // Version detection using babel plugin
   // @ts-expect-error
   const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
@@ -44,7 +44,4 @@ function init(): string {
   return VERSION;
 }
 
-export const VERSION = init();
-
-export {lumaStats};
-export default globalThis.luma;
+export const VERSION = initializeLuma();

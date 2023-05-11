@@ -1,8 +1,8 @@
 /* eslint-disable no-inline-comments */
 import {assert, ResourceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../webgl-device';
-import WebGLResource from './webgl-resource';
+import {WebGLDevice} from '../webgl-device';
+import {WebGLResource} from './webgl-resource';
 import {
   isRenderbufferFormatSupported, getRenderbufferFormatBytesPerPixel
 } from '../converters/renderbuffer-formats';
@@ -34,7 +34,7 @@ const DEFAULT_RENDERBUFFER_PROPS: Required<RenderbufferProps> = {
  * use Textures instead.
  * Renderbuffer objects also natively accommodate Multisampling (MSAA).
  */
-export default class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
+export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
   override get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
 
   get width(): number { return this.props.width; }

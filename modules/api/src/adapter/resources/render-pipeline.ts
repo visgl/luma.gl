@@ -1,12 +1,12 @@
 // luma.gl, MIT license
-import type Device from '../device';
+import type {Device} from '../device';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import type {default as Buffer} from './buffer';
-import type {default as Shader} from './shader';
-import type {default as RenderPass} from './render-pass';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import type {Buffer} from './buffer';
+import type {Shader} from './shader';
+import type {RenderPass} from './render-pass';
 
 export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
@@ -89,7 +89,7 @@ export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
 /**
  * A compiled and linked shader program
  */
-export default abstract class RenderPipeline extends Resource<RenderPipelineProps> {
+export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   hash: string = '';

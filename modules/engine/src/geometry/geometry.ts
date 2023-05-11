@@ -42,7 +42,7 @@ type GeometryAttributes = {
   indices?: {size?: number, value: Uint32Array | Uint16Array};
 };
 
-export default class Geometry {
+export class Geometry {
   /** @deprecated */
   static DRAW_MODE = {
     POINTS: GL.POINTS,  // draw single points.

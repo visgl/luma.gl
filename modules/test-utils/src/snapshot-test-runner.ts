@@ -1,4 +1,4 @@
-import TestRunner, {TestRunnerProps, TestRunnerTestCase} from './test-runner';
+import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils';
 
 /** A snapshot test case */
@@ -11,7 +11,7 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
 
 export type SnapshotTestRunnerProps = TestRunnerProps;
 
-export default class SnapshotTestRunner extends TestRunner {
+export class SnapshotTestRunner extends TestRunner {
   private isDiffing: boolean = false;
 
   constructor(props: SnapshotTestRunnerProps) {

@@ -2,7 +2,7 @@
 import {Texture, TextureProps, Sampler, SamplerProps} from '@luma.gl/api';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
-import WebGPUSampler from './webgpu-sampler';
+import {WebGPUSampler} from './webgpu-sampler';
 
 const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
   '1d': '1d',
@@ -13,7 +13,7 @@ const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
   '3d': '3d'
 };
 
-export default class WebGPUTexture extends Texture {
+export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
   readonly view: GPUTextureView;

@@ -1,6 +1,6 @@
 import {glsl} from '../../lib/glsl-utils/highlight';
 
-export default glsl`\
+export const lightingShader = glsl`\
 #if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
 
 struct AmbientLight {

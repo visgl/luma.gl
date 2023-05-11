@@ -1,10 +1,10 @@
 import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding, cast} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
-import WebGPUBuffer from './webgpu-buffer';
-// import WebGPUCommandEncoder from './webgpu-command-encoder';
-import WebGPUComputePipeline from './webgpu-compute-pipeline';
+import {WebGPUBuffer} from './webgpu-buffer';
+// import {WebGPUCommandEncoder} from './webgpu-command-encoder';
+import {WebGPUComputePipeline} from './webgpu-compute-pipeline';
 
-export default class WebGPUComputePass extends ComputePass {
+export class WebGPUComputePass extends ComputePass {
   readonly device: WebGPUDevice;
   readonly handle: GPUComputePassEncoder;
   _bindGroupLayout: GPUBindGroupLayout | null = null;

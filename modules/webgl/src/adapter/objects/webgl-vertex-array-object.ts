@@ -2,10 +2,10 @@ import {assert, ResourceProps} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 
-import WebGLDevice from '../webgl-device';
-import WebGLResource from './webgl-resource';
+import {WebGLDevice} from '../webgl-device';
+import {WebGLResource} from './webgl-resource';
 
-import Buffer from '../resources/webgl-buffer';
+import {WEBGLBuffer} from '../resources/webgl-buffer';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
@@ -16,7 +16,7 @@ export type VertexArrayObjectProps = ResourceProps & {
 };
 
 /** VertexArrayObject wrapper */
-export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
+export class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps> {
   override get [Symbol.toStringTag](): string {
     return 'BaseVertexArrayObject';
   }
@@ -43,7 +43,7 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
 
   // Set (bind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
-  setElementBuffer(elementBuffer: Buffer | null = null, opts = {}) {
+  setElementBuffer(elementBuffer: WEBGLBuffer | null = null, opts = {}) {
     assert(!elementBuffer || elementBuffer.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
     // The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject...
@@ -55,7 +55,7 @@ export default class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObj
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
-  setBuffer(location: number, buffer: Buffer, accessor: any): this {
+  setBuffer(location: number, buffer: WEBGLBuffer, accessor: any): this {
     // Check target
     if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
       return this.setElementBuffer(buffer, accessor);

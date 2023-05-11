@@ -1,7 +1,7 @@
 // luma.gl, MIT license
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
-import Buffer from './buffer';
-import Texture from './texture';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Buffer} from './buffer';
+import {Texture} from './texture';
 
 export type WriteBufferOptions = {
   buffer: Buffer,
@@ -82,7 +82,7 @@ const DEFAULT_COMMAND_ENCODER_PROPS = {
 /**
  * Encodes commands to queue that can be executed later
  */
-export default abstract class CommandEncoder extends Resource<CommandEncoderProps> {
+export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }

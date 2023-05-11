@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {TypedArray} from '../..';
-import type Device from '../device';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import type {Device} from '../device';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type BufferProps = ResourceProps & {
   handle?: WebGLBuffer;
@@ -42,7 +42,7 @@ const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
 };
 
 /** Abstract GPU buffer */
-export default abstract class Buffer extends Resource<BufferProps> {
+export abstract class Buffer extends Resource<BufferProps> {
   // Usage Flags
   static MAP_READ = 0x01;
   static MAP_WRITE = 0x02;

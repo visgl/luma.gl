@@ -2,9 +2,9 @@
 // ClipSpace
 import GL from '@luma.gl/constants';
 import {Device, glsl} from '@luma.gl/api';
+import {WebGLDevice} from '@luma.gl/webgl';
 import {Model, ModelProps} from './model';
-import Geometry from '../geometry/geometry';
-import {WebGLDevice} from '@luma.gl/webgl/index';
+import {Geometry} from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = glsl`\
 attribute vec2 aClipSpacePosition;

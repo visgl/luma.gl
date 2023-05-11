@@ -1,5 +1,5 @@
 import {uid} from '@luma.gl/api';
-import Geometry from '../geometry/geometry';
+import {Geometry} from '../geometry/geometry';
 import {GeometryTable} from '../geometry/geometry-table';
 
 const INDEX_OFFSETS = {

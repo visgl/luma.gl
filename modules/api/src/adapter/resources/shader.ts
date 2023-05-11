@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type Device from '../device';
-import Resource, {ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import type {Device} from '../device';
+import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type CompilerMessageType = 'error' | 'warning' | 'info';
 
@@ -40,7 +40,7 @@ const DEFAULT_SHADER_PROPS: Required<ShaderProps> = {
  * Immutable Shader object
  * In WebGPU the handle can be copied between threads
  */
-export default abstract class Shader extends Resource<ShaderProps> {
+export abstract class Shader extends Resource<ShaderProps> {
   override get [Symbol.toStringTag](): string { return 'Shader'; }
 
   readonly stage: 'vertex' | 'fragment' | 'compute';

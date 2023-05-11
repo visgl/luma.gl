@@ -11,7 +11,7 @@ export type WebGPUShaderProps = ShaderProps & {
 /**
  * Immutable shader
  */
-export default class WebGPUShader extends Shader {
+export class WebGPUShader extends Shader {
   readonly device: WebGPUDevice;
   readonly handle: GPUShaderModule;
 

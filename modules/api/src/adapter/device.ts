@@ -1,21 +1,21 @@
 // luma.gl, MIT license
 import {VERSION} from '../init';
-import StatsManager, {lumaStats} from '../lib/utils/stats-manager';
+import {StatsManager, lumaStats} from '../lib/utils/stats-manager';
 import {log} from '../lib/utils/log';
 import {uid} from '../lib/utils/utils';
 import {TextureFormat} from './types/texture-formats';
-import type {default as CanvasContext, CanvasContextProps} from './canvas-context';
+import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
-import Buffer from './resources/buffer';
-import type {default as RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
-import type {default as ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
-import type {default as Sampler, SamplerProps} from './resources/sampler';
-import type {default as Shader, ShaderProps} from './resources/shader';
-import type {default as Texture, TextureProps, TextureData} from './resources/texture';
-import type {default as ExternalTexture, ExternalTextureProps} from './resources/external-texture';
-import type {default as Framebuffer, FramebufferProps} from './resources/framebuffer';
-import type {default as RenderPass, RenderPassProps} from './resources/render-pass';
-import type {default as ComputePass, ComputePassProps} from './resources/compute-pass';
+import {Buffer} from './resources/buffer';
+import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
+import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
+import type {Sampler, SamplerProps} from './resources/sampler';
+import type {Shader, ShaderProps} from './resources/shader';
+import type {Texture, TextureProps, TextureData} from './resources/texture';
+import type {ExternalTexture, ExternalTextureProps} from './resources/external-texture';
+import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
+import type {RenderPass, RenderPassProps} from './resources/render-pass';
+import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 
 /** Device properties */
 export type DeviceProps = {
@@ -200,7 +200,7 @@ export type DeviceFeature =
 /**
  * WebGPU Device/WebGL context abstraction
  */
-export default abstract class Device {
+export abstract class Device {
   get [Symbol.toStringTag](): string {
     return 'Device';
   }

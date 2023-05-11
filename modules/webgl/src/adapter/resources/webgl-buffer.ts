@@ -1,12 +1,12 @@
 import type {BufferProps} from '@luma.gl/api';
 import {Buffer, assert} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../webgl-device';
+import {WebGLDevice} from '../webgl-device';
 
 const DEBUG_DATA_LENGTH = 10;
 
 /** WebGL Buffer interface */
-export default class WEBGLBuffer extends Buffer {
+export class WEBGLBuffer extends Buffer {
   readonly device: WebGLDevice;
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;

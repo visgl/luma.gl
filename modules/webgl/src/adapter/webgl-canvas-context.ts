@@ -1,14 +1,14 @@
 // luma.gl, MIT license
 import type {CanvasContextProps} from '@luma.gl/api';
 import {CanvasContext} from '@luma.gl/api';
-import WebGLDevice from './webgl-device';
-import WEBGLFramebuffer from './resources/webgl-framebuffer';
+import {WebGLDevice} from './webgl-device';
+import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 
 /** 
  * Holds a WebGL Canvas Context which will handle drawing buffer resizing etc 
  * @todo This class is WIP, intended to replace the old gltools-based context size tracking
  */
-export default class WebGLCanvasContext extends CanvasContext {
+export class WebGLCanvasContext extends CanvasContext {
   readonly device: WebGLDevice;
   presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer | null = null;

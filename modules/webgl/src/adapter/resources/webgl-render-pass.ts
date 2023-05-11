@@ -1,7 +1,7 @@
 import {RenderPass, RenderPassProps} from '@luma.gl/api';
-import WebGLDevice from '../webgl-device';
+import {WebGLDevice} from '../webgl-device';
 
-export default class WEBGLRenderPass extends RenderPass {
+export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
 
   constructor(device: WebGLDevice, props: RenderPassProps) {

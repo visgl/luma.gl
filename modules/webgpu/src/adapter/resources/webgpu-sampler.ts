@@ -8,7 +8,7 @@ export type WebGPUSamplerProps = SamplerProps & {
 /**
  *
  */
-export default class WebGPUSampler extends Sampler {
+export class WebGPUSampler extends Sampler {
   readonly device: WebGPUDevice;
   readonly handle: GPUSampler;
 

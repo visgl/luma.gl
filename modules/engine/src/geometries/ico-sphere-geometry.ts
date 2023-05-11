@@ -1,6 +1,6 @@
 import {uid} from '@luma.gl/api';
 import {Vector3} from '@math.gl/core';
-import Geometry from '../geometry/geometry';
+import {Geometry} from '../geometry/geometry';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 

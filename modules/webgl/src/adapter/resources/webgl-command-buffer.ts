@@ -5,8 +5,8 @@ import type {
   CopyTextureToTextureOptions
 } from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import WebGLDevice from '../webgl-device';
-import WEBGLBuffer from './webgl-buffer';
+import {WebGLDevice} from '../webgl-device';
+import {WEBGLBuffer} from './webgl-buffer';
 
 function cast<T>(value: unknown): T {
   return value as T;
@@ -38,7 +38,7 @@ type Command =
   | CopyTextureToBufferCommand
   | CopyTextureToTextureCommand;
 
-export default class CommandBuffer {
+export class CommandBuffer {
   commands: Command[] = [];
 }
 

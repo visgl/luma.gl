@@ -2,12 +2,12 @@
 import {ComputePipeline, ComputePipelineProps, cast} from '@luma.gl/api';
 
 import {WebGPUDevice} from '../webgpu-device';
-import WebGPUShader from './webgpu-shader';
+import {WebGPUShader} from './webgpu-shader';
 
 // COMPUTE PIPELINE
 
 /** Creates a new compute pipeline when parameters change */
-export default class WebGPUComputePipeline extends ComputePipeline {
+export class WebGPUComputePipeline extends ComputePipeline {
   device: WebGPUDevice;
   handle: GPUComputePipeline;
 

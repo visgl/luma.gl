@@ -213,7 +213,7 @@ const TEST_CASES = [
 ];
 
 /* eslint-disable max-nested-callbacks */
-// TODO - puppeteer failure
+// TODO - fails in new puppeteer environment
 test.skip('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

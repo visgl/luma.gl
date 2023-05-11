@@ -2,8 +2,8 @@
 import {glsl} from '../glsl-utils/highlight';
 import {resolveModules} from './resolve-modules';
 import {getPlatformShaderDefines, getVersionDefines, PlatformInfo} from './platform-defines';
-import injectShader, {DECLARATION_INJECT_MARKER} from './inject-shader';
-import transpileShader from '../transpiler/transpile-shader';
+import {injectShader, DECLARATION_INJECT_MARKER} from './inject-shader';
+import {transpileShader} from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 import type { Injection } from '../shader-module/shader-module-instance';
