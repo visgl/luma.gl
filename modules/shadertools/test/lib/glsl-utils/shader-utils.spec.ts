@@ -1,3 +1,4 @@
+import test from 'tape-promise/tape';
 import {
   getQualifierDetails,
   getPassthroughFS,
@@ -6,7 +7,6 @@ import {
   convertToVec4,
   glsl
 } from '@luma.gl/shadertools';
-import test from 'tape-promise/tape';
 
 test('shader-utils#getQualifierDetails', (t) => {
   const QUALIFIER_TEST_CASES = [

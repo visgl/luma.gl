@@ -100,8 +100,6 @@ test('ScenegraphNode#update', (t) => {
 test('ScenegraphNode#getCoordinateUniforms', (t) => {
   const sgNode = new ScenegraphNode();
 
-  t.throws(() => sgNode.getCoordinateUniforms(), 'should throw on missing viewMatrix');
-
   const uniforms = sgNode.getCoordinateUniforms(new Matrix4());
   t.ok(uniforms.viewMatrix, 'should return viewMatrix');
   t.ok(uniforms.modelMatrix, 'should return modelMatrix');

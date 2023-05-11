@@ -39,6 +39,7 @@ test('WebGL#Texture2D async constructor', (t) => {
   const loadPromise = new Promise((resolve) => {
     loadCompleted = resolve; // eslint-disable-line
   });
+  // @ts-ignore
   texture = new Texture2D(gl, loadPromise);
   t.ok(texture instanceof Texture2D, 'Asynchronous Texture2D construction successful');
   t.equal(texture.loaded, false, 'Async Texture2D initially marked as not loaded');
@@ -48,7 +49,6 @@ test('WebGL#Texture2D async constructor', (t) => {
     t.end();
   });
 
-  // @ts-expect-error
   loadCompleted(null);
 });
 
