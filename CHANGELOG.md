@@ -1,5 +1,15 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.21
+
+- chore: Remove default exports (#1750)
+
+## v9.0.0-alpha.20
+## v9.0.0-alpha.19
+## v9.0.0-alpha.18
+
+- fix(webgl-legacy): unbreak deck.gl build (#1748)
+
 ## v9.0.0-alpha.17
 
 - feat: Switch to ES modules (#1745)
