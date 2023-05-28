@@ -1,36 +1,62 @@
 # Upgrading to V9
 
-This upgrade guide describes upgrading to the new luma.gl v9 API, which introduces major API changes. 
-
-Note: While the API changes are on the surface quite extensive, they are in a sense superficial, meaning that typically a port of a luma.gl application to v9 will not require the structure of an application to change. Looking at the code an application should still be "instantly recognizable" as luma.gl application, whether written towards the v8 or v9 API.
-
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
+
+This upgrade guide describes upgrading to the luma.gl v9 API, which introduces major API changes. 
+
+### Effort Estimation
+
+Having to upgrade to a new breaking API is rarely fun. It is impossible to assess exactly how much work will be required for a specific application. We provide a few notes that may help give a better sense of what to expect:
+
+- The strong focus on TypeScript types in v9 should create a safety net when porting. The typescript compiler should find most breakages in your application before you even run the code.
+- While the v9 API changes will seem extensive at first, the "structure" and abstraction level of the API has not changed. 
+  - A port of a luma.gl application to v9 should not require the application to be refactored or redesigned. 
+  - An application should still be "instantly recognizable" as luma.gl application, whether written towards the v8 or v9 API.
 
 ### Module-level changes
 
-v9.0 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
 
-- `@luma.gl/gltools` module is the new home of the luma.gl v8 API
-    - As before, still contains the WebGL context functions (`createGLContext` etc). However these have been reimplemented as wrappers on the new `WebGLDevice` class.
+| **Module**           | v8 Description                                  | v9 Replacement                                                                                                                   |
+| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `@luma.gl/core`      | The core module was re-exporting other modules. | Replace direct use of WebGL classes with `@luma.gl/api` device API. import directly from `@luma.gl/shadertools`.                 |
+| `@luma.gl/gltools`   | Contained WebGL context functionality.          | Removed. WebGL context is now handled by the  `@luma.gl/webgl` `WebGLDevice` and  `@luma.gl/api` `CanvasContext` classes.        |
+| `@luma.gl/webgl`     | Exported WebGL classes meant for direct usage.  | Now exports the WebGL backend for the `@luma.gl/api` module. `@luma.gl/webgl-legacy` now offers the legacy luma.gl v8 WebGL API. |
+| `@luma.gl/constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                            |
+
+
+Detailed notes
+
+- `@luma.gl/gltools` (removed)
+    - The WebGL context functions (`createGLContext` etc), have been moved to the new `WebGLDevice` and `CanvasContext` classes.
     - It also contains the classic luma.gl WebGL 2 classes (`Program`, `Texture2D`) etc that used to be improved from `@luma.gl/webgl`. However these classes are now just exposed for backwards compatibility and should gradually be relaced.
-    - To simplify gradual introduction of the new v9 API, all APIs in `@luma.gl/gltools` have been updated to optionally accept a `Device` parameter instead of a `WebGLRenderingContext`
+    - To simplify gradual introduction of the new v9 API, all APIs in `@luma.gl/Webgl-legacy` have been updated to optionally accept a `Device` parameter instead of a `WebGLRenderingContext`
 - `@luma.gl/core` module is "in transition":
     - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
-    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/gltools`.
-    - gltools module re-exports are deprecated and should be imported directly from `@luma.gl/webgl`.
+    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/webgl-legacy`.
 - `@luma.gl/constants` module remains but is no longer needed by applications:
     - WebGL-style numeric constants (`GL.` constants) are no longer used in the public v9 API.
-    - Instead, the luma.gl v9 API uses string constants (strictly typed, of course).
+    - Instead, the luma.gl v9 API contains strictly types WebGPU style string constants
+
+### API Deprecations
+
+v9.0 deprecates a range of APIs as part of preparations for WebGPU support in v9.0.
 
 ### Feature-level changes
 
+
 A long list of changes, some required to make the API portable between WebGPU and WebGL, and many to accommodate the limitations of the more locked-down WebGPU API.
 
-- APIs no longer accept `WebGLRenderingContext` directly. APIs now require a `Device`.
-- WebGL classes such as Buffer, Texture2D etc can no longer be imported and instantiated with `new Buffer(gl, props)`. Instead they must be created via a device `device.createBuffer(props)`.
-- `Program` is now called `RenderPipeline`.
-- Parameters can no longer be set on the WebGL context. They must be set on a `RenderPipeline`.
-- `RenderPipeline` parameters cannot be changed after creation (though the `Model` class will create new `RenderPipeline` instances if parameters change).
+| v8                      | v9                           | Comment                                                                                                                                              |
+| ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WebGLRenderingContext` | `Device`                     | The device lets luma                                                                                                                                 |
+| `new Buffer(gl, props)` | `device.createBuffer(props)` | WebGL classes such as `Buffer`, `Texture2D` etc can no longer be imported and instantiated with . Instead they must be created via a device methods. |
+| `Program`               | `RenderPipeline`             | WebGPU alignment                                                                                                                                     |
+
+
+## GPU Parameters
+
+| setParameters | |  Parameters can no longer be set on the WebGL context. They must be set on a `RenderPipeline`. |
+| setParameters ||  - `RenderPipeline` parameters cannot be changed after creation (though the `Model` class will create new `RenderPipeline` instances if parameters change).
 - Some parameters are set on `RenderPass`.
 - Constant attributes are no longer supported.
 - `clear` can no longer be called directly. Instead attachments are cleared when a `RenderPass` is created and clear colors must be specified in `beginRenderPass`.
@@ -42,20 +68,20 @@ A long list of changes, some required to make the API portable between WebGPU an
 
 /constants
 
-### Context API
+### WebGLContext API
 
-The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRenderingContext` object. In v9 it became necessary to wrap the WebGL context in a `Device` object.
+The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRenderingContext` object. v9 enables applications to work portably with both WebGPU and WebGL, and accordingly it wraps the WebGL context in a `Device` instance.
 
-| Function                           | Replacement                    | Comment                                                          |
-| ---------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| `createGLContext()`                | `luma.createDevice()`          |                                                                  |
-| `createGLContext({onContextLost})` | `device.lost`                  | `Promise` that lets the application `await` context loss.        |
-| `instrumentGLContext()`            | `WebGLDevice.attach(gl)`       | Contexts are now automatically instrumented.                     |
-| `polyfillGLContext()`              | N/A                            | Partial polyfilling doesn't mix well with TypeScript.            |
-| `hasFeature(feature)`              | `device.features.has(feature)` | Note: Feature names must be updated to new WebGPU style strings. |
-| `getFeatures()`                    | `Array.from(device.features)`  |                                                                  |
-| `getGLContextInfo(gl)`             | `device.info`                  | Returned object is keyed with strings instead of GL constants.   |
-| `getContextLimits(gl)`             | `device.limits`                | Now returns "WebGPU style" limits.                               |
+| Function                           | Replacement                    | Comment                                                        |
+| ---------------------------------- | ------------------------------ | -------------------------------------------------------------- |
+| `createGLContext()`                | `luma.createDevice()`          | Will create a WebGL context if `WebGLDevice` is registered.    |
+| `createGLContext({onContextLost})` | `device.lost`                  | `Promise` that lets the application `await` context loss.      |
+| `instrumentGLContext()`            | `WebGLDevice.attach(gl)`       | Contexts are now automatically instrumented.                   |
+| `polyfillGLContext()`              | N/A                            | Partial polyfilling doesn't mix well with TypeScript.          |
+| `hasFeature(feature)`              | `device.features.has(feature)` | Note: Feature names now defined by WebGPU style strings.       |
+| `getFeatures()`                    | `Array.from(device.features)`  |                                                                |
+| `getGLContextInfo(gl)`             | `device.info`                  | Returned object is keyed with strings instead of GL constants. |
+| `getContextLimits(gl)`             | `device.limits`                | Returns "WebGPU style" limits instead of WebGL style enums     |
 
 ## Context Assertion Functions
 
@@ -98,7 +124,7 @@ Feature names have been changed to fit with a combined WebGL / WebGPU model and 
 | ------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------- |
 | **General WebGL Features**                  |                                         |                                                                               |
 | `FEATURES.WEBGL2`                           | `webgl2`                                | True for WebGL 2 Context                                                      |
-| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                     | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings    |
+| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                     | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
 | `FEATURES.INSTANCED_RENDERING`              | `instanced-rendering-webgl1`            | Instanced rendering (via instanced vertex attributes)                         |
 | `FEATURES.VERTEX_ARRAY_OBJECT`              | `vertex-array-object-webgl1`            | `VertexArrayObjects` can be created                                           |
 | `FEATURES.ELEMENT_INDEX_UINT32`             | `element-index-uint32-webgl1`           | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |
@@ -123,8 +149,7 @@ Feature names have been changed to fit with a combined WebGL / WebGPU model and 
 
 ## Porting Strategies
 
-This describes the porting strategy used to port [deck.gl](https://deck.gl), which is
-a big luma.gl-dependent code base.
+This is based on the porting strategy used to port [deck.gl](https://deck.gl), which is the biggest luma.gl-dependent code base.
 
 ### Step 1: Update Imports
 
@@ -147,14 +172,4 @@ be a messy part of WebGL applications.
 Recommended changes:
 
 - Gradually reduce the number of imports `@luma.gl/constants` and start adopting string constants.
-
-
-### luma.gl v10 expectations
-
-When planning an upgrade strategy,s it can be good to know what further API changes might come down the pipe.
-
-- In v10.0 the `@luma.gl/gltools` module is expected to be removed, forcing applications to adopt the new `Device` API.
-- in v10, the core module will be completely updated and instead export the new v9+ API (what is currently in `@luma.gl/api` and `@luma.gl/engine`).
-
-These are indications of intent, not firm decisions. However, the cost of maintaining the v8 API is not trivial, and having the supposedly minimal "core" module of a multi-module framework being focused on exporting optional backwards compatibility classes does not make much sense.
 

@@ -2,9 +2,13 @@
 
 > The luma.gl v9 API is currently in [public review](/docs/public-review).
 
-A `CanvasContext` holds a connection between the GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
+A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
 
-Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either creates a new canvas element, or attaches the context to an existing canvas element (see [remarks](#remarks) below for WebGL limitations).
+Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either: 
+- creates a new canvas element, or 
+- attaches the context to an existing canvas element 
+- 
+- (see [remarks](#remarks) below for WebGL limitations).
 
 a `CanvasContext` handles the following responsibilities:
 
@@ -104,4 +108,4 @@ canvasContext.resize(options)
 
 - Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute). 
 - However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of WebGL.)
-- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference/gltools/context/device-pixels).
+- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference-v8/webgl-legacy/context/device-pixels).

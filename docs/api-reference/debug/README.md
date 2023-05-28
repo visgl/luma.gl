@@ -6,7 +6,7 @@ luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGL
 
 The `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
 
-To use debug support, first import the debug tools, then call `createGLContext` or `instrumentGLContext` from [@luma.gl/gltools](/docs/api-reference/gltools/context/context-api) to create a debug context:
+To use debug support, first import the debug tools, then call `createGLContext` or `instrumentGLContext` from [@luma.gl/gltools](/docs/api-reference-v8/webgl-legacy/context/context-api) to create a debug context:
 
 ```typescript
 import {createGLContext} from '@luma.gl/gltools';
@@ -24,7 +24,7 @@ luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGL
 
 > Warning: WebGL debug contexts impose a significant performance penalty (due to waiting for the GPU after each WebGL call to check error codes) and should not be used in production builds.
 
-To use debug support, first import the debug tools, then call [`createDevice`](/docs/api-reference/gltools/context/context-api) with `debug: true` to create a debug context:
+To use debug support, first import the debug tools, then call [`createDevice`](/docs/api-reference-v8/webgl-legacy/context/context-api) with `debug: true` to create a debug context:
 
 ```typescript
 import {luma} from '@luma.gl/core';

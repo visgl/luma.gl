@@ -98,8 +98,8 @@ test('WebGL#Program uniform array', (t) => {
   const program = new Program(gl, {vs, fs});
 
   t.ok(program._uniformSetters.uMVMatrix, 'uniform array is ok');
-  t.ok(program._uniformSetters[`uMVMatrix[0]`], 'uniform array is ok');
-  t.ok(program._uniformSetters[`uMVMatrix[1]`], 'uniform array is ok');
+  t.ok(program._uniformSetters['uMVMatrix[0]'], 'uniform array is ok');
+  t.ok(program._uniformSetters['uMVMatrix[1]'], 'uniform array is ok');
 
   program.delete();
   t.end();

@@ -65,7 +65,7 @@ new AnimationLoop({
 - `props.autoResizeDrawingBuffer`=`true` - If true, checks the canvas size every frame and updates the drawing buffer size if needed.
 - `props.useDevicePixels` - Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc. Refer to `Experimental API` section below for more use cases of this prop.
 - `props.gl`=`null` (WebGLContext) - If supplied, will render into this external context instead of creating a new one.
-- `props.glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context/context-api).
+- `props.glOptions`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference-v8/webgl-legacy/context/context-api).
 - `props.debug`=`false` (bool) - Enable debug mode will provide more validations and error messages, but less performant.
 - `props.createFramebuffer`=`false` (bool) - If true, will make a `framebuffer` (FrameBuffer) parameter available to `onInitialize` and `onRender` callbacks.
 
@@ -75,7 +75,7 @@ Restarts the animation
 
 `animationLoop.start(options)`
 
-- `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference/gltools/context/context-api).
+- `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference-v8/webgl-legacy/context/context-api).
 
 ### stop() : AnimationLoop
 
@@ -164,13 +164,13 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 
 ## Experimental API (`useDevicePixels`)
 
-`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference/gltools/context/device-pixels).
+`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference-v8/webgl-legacy/context/device-pixels).
 
 ## Remarks
 
 - You can instantiate multiple `AnimationLoop` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 - Works both in browser and under Node.js.
 - All `AnimationLoop` methods can be chained.
-- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference/gltools/context/context-api).
+- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference-v8/webgl-legacy/context/context-api).
 - The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 - This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.

@@ -289,7 +289,7 @@ Use a `Geometry` instance to define attribute buffers
 
 ### setAttributes(attributes: object); this
 
-Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/gltools/classes/vertex-array))
+Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference-v8/webgl-legacy/classes/vertex-array))
 
 ## Remarks
 

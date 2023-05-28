@@ -2,7 +2,7 @@
 
 ## Open Governance
 
-luma.gl is part of the vis.gl suite which is under open governance through the Linux Foundation.
+luma.gl is part of the vis.gl suite which is under open governance through the OpenJS Foundation.
 Among other things, this means that vis.gl projects make efforts to share information about
 ongoing and planned development, and ensures that there is a path for users and contributors
 to influence the project.
