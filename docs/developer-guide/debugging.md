@@ -79,7 +79,7 @@ Note that the developer tools module is loaded dynamically when a device is crea
 
 and then reloading the browser tab.
 
-While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/gltools/context/context-api) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
+While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference-v8/webgl-legacy/context/context-api) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
 
 ```typescript
 import {luma} from '@luma.gl/api';

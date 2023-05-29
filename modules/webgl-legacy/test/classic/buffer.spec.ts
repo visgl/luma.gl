@@ -205,7 +205,7 @@ test('Buffer#getData', (t) => {
     srcByteOffset: Float32Array.BYTES_PER_ELEMENT
   });
   expectedData = new Float32Array([2, 3]);
-  t.deepEqual(expectedData, receivedData, "Buffer.getData: with 'dstData' parameter successful");
+  t.deepEqual(expectedData, receivedData, 'Buffer.getData: with \'dstData\' parameter successful');
 
   receivedData = buffer.getData({
     srcByteOffset: Float32Array.BYTES_PER_ELEMENT,

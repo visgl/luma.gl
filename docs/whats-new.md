@@ -4,25 +4,35 @@
 
 ## Version 9.0 (In Development)
 
-Target Date: Q1, 2022
+Target Date: Q3, 2023
 
-The v9.0 release brings WebGPU support and a modernized luma.gl API. Adoption of the new API will require applications to be updated. However, all legacy v8 APIs are still available, so it should be possible to gradually migrate luma.gl v8 applications to luma.gl v9.
+This is a "decadal" (once in a decade) release that brings a "re-imagination" of the luma.gl API around WebGPU:
 
-Highlights:
-- luma.gl is now closely aligned with WebGPU API. 
-- luma.gl is now fully rewritten in TypeScript and applications will benefit from more rigorous types. 
-- The luma.gl documentation now focuses on the new v9 API, however legacy v8 API documentation is still included.
+- New API closely aligned with WebGPU conventions. 
+- New API designed ground-up for TypeScript.
+- Pluggable, non-exclusive WebGPU and WebGL backends.
+
+Build and packaging
+- luma.gl is now packaged as ES modules in alignment with the direction of the JavaScript ecosystem.
+
+General improvements:
+- The website has been rebuilt using Docusaurus and now offers more embedded live examples in the documentation.
+- luma.gl is fully rewritten in TypeScript and applications will benefit from more rigorous types.
+
+Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 applications to be updated. Please refer to the [Upgrade Guide](/docs/upgrade-guide) for more information.
+
 
 #### `@luma.gl/api` (new module)
 
-- The heart of the new cross-platform luma.gl API is the portable `Device` API that is exposed through the new `@luma.gl/api` module. 
+- The new cross-platform luma.gl API exported as a set of interfaces and abstract classes.
+- The core `Device` API that is exposed through the new `@luma.gl/api` module.
 - Applications written against `@luma.gl/api` can run on both WebGPU, WebGL2 and WebGL devices.
 
 #### `@luma.gl/engine` (breaking changes)
 
-- The `@luma.gl/engine` module still exports th classic luma.gl classes such as `Model` and `AnimationLoop`. 
+- The `@luma.gl/engine` module still exports the classic luma.gl classes such as `Model` and `AnimationLoop`. 
 - However all engine classes are now implemented on top of `@luma.gl/api`, allowing them to work portably on both WebGPU and WebGL.
-- For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/gltools`
+- For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/webgl-legacy`
 
 #### `@luma.gl/webgpu` (new module)
 
@@ -33,11 +43,24 @@ Highlights:
 
 - Provides a WebGL / WebGL 2 implementation of the luma.gl API (`@luma.gl/api`). 
 - Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`. 
-- The legacy v8 WebGL classes have been moved to `@luma.gl/gltools`
+- The legacy v8 WebGL classes have been moved to `@luma.gl/webgl-legacy`
 
 #### `@luma.gl/shadertools`
 
 - New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
+
+#### `@luma.gl/core`
+
+- The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/webgl-legacy`).
+- The core module still exports `@luma.gl/engine` classes.
+
+#### `@luma.gl/webgl-legacy` (deprecated)
+
+- The new `@luma.gl/webgl-legacy` exports all legacy WebGL APIs.
+- The legacy v8 WebGL classes from luma.gl v8 can now be imported directly from this module (previoulsy imported from `@luma.gl/gltools` and `@luma.gl/webgl`).
+- The legacy v8 WebGL-dependent `@luma.gl/engine` classes can still be imported from this module.
+
+Note that the WebGL context related APIs exported by this module in v8 are not the same. They are now simple wrappers for a `WebGLDevice` class instance that is created under the hood.
 
 #### `@luma.gl/debug`
 
@@ -45,17 +68,14 @@ Highlights:
 - Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
 - Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured". Also information about luma.gl objects associated with WebGL handles will be displayed in the Spector UI.
 
-#### `@luma.gl/core` ("deprecated")
+#### `@luma.gl/constants` (deprecated)
 
-- The core module still re-exports the classic luma.gl v8 API (from `@luma.gl/gltools`), to avoid breaking existing applications.
-- Applications that want to start using the v9 API should import directly from `@luma.gl/engine` and `@luma.gl/api`.
+- The `@luma.gl/constants` module is still available, but is no longer needed by luma.gl v9 applications.
+- For convenience, the {`GL`} export is also available in the `@luma.gl/webgl-legacy` module.
 
-#### `@luma.gl/gltools` (deprecated)
+#### `@luma.gl/gltools` (removed)
 
-- The `@luma.gl/gltools` module is now deprecated. It now exports all legacy WebGL APIs and is no longer dedicate to just WebGL context-related utilities.
-- The legacy v8 WebGL classes from luma.gl v8 can now be imported directly from this module.
-- The legacy v8 WebGL-dependent `@luma.gl/engine` classes can still be imported from this module.
-- The WebGL context related APIs exported by this module in v8 are now simple wrappers for the `WebGLDevice` class.
+- The `@luma.gl/gltools` module is removed. Its exports are available in the `@luma.gl/webgl-legacy` module.
 
 ## Version 8.5
 
@@ -173,7 +193,7 @@ Date: September 19, 2019
 
 ### Program Management
 
-luma.gl introduces the [ProgramManager](/docs/api-reference/gltools/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
+luma.gl introduces the [ProgramManager](/docs/api-reference-v8/webgl-legacy/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
 
 - Redundant shader compilation and linking is avoided.
 - Redundant program switching (among the [most expensive](https://computergraphics.stackexchange.com/a/46) GPU state changes) while rendering is avoided.
@@ -512,7 +532,7 @@ The new experimental [`Transform`](/docs/api-reference/engine/transform) class p
 
 ## Framebuffer Class
 
-**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference/gltools/classes/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference-v8/webgl-legacy/classes/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 ## Bundle Size Reduction
 
@@ -544,7 +564,7 @@ Two improvements Performing Transform Feedback operations has gotten easier, mai
 
 `Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
-For more details check [`TransformFeedback`](/docs/api-reference/gltools/classes/transform-feedback) and [`Model`](/docs/api-reference/engine/model) documentation.
+For more details check [`TransformFeedback`](/docs/api-reference-v8/webgl-legacy/classes/transform-feedback) and [`Model`](/docs/api-reference/engine/model) documentation.
 
 ## Version 5.0
 
@@ -602,7 +622,7 @@ A major release that brings full WebGL 2 support to luma.gl, as well as adding s
 
 luma.gl now exposes the complete WebGL 2 APIs:
 
-- New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference/gltools/classes/query), [`Texture3D`](/docs/api-reference/gltools/classes/texture-3d), and [`TransformFeedback`](/docs/api-reference/gltools/classes/transform-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference/gltools/classes/uniform-buffer-layout) helper class to make uniform buffers easy to use.
+- New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference-v8/webgl-legacy/classes/query), [`Texture3D`](/docs/api-reference-v8/webgl-legacy/classes/texture-3d), and [`TransformFeedback`](/docs/api-reference-v8/webgl-legacy/classes/transform-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference-v8/webgl-legacy/classes/uniform-buffer-layout) helper class to make uniform buffers easy to use.
 - Other existing WebGL classes with new functionalites under WebGL 2 have been updated.
 - Add new WebGL 2 texture formats and types support, including floating point textures, and multiple render targets.
 

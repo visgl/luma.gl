@@ -361,7 +361,7 @@ test('Model#transpileToGLSL100', (t) => {
       vs: VS_300,
       fs: FS_300
     });
-  }, "Can't compile 300 shader with WebGL 1");
+  }, 'Can\'t compile 300 shader with WebGL 1');
 
   t.doesNotThrow(() => {
     model = new Model(webgl1Device, {

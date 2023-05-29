@@ -1,0 +1,224 @@
+[
+  "README",
+  "whats-new", 
+  "public-review",
+  {
+    "type": "category",
+    "label": "Upgrade Guide",
+    "items": [
+      "upgrade-guide/README",
+      "upgrade-guide/upgrade-to-v9",
+      "upgrade-guide/upgrade-to-v9-parameters",
+      "upgrade-guide/parameters2",
+      "upgrade-guide/api-philosophy"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Developer Guide",
+    "items": [
+      "developer-guide/installing",
+      "developer-guide/debugging",
+      "developer-guide/testing",
+      "developer-guide/profiling",
+      "developer-guide/bundling",
+      "developer-guide/contributing"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "API Guide",
+    "items": [
+      {
+        "type": "category",
+        "label": "Background",
+        "items": [
+          "api-guide/background/api-design",
+          "api-guide/background/webgpu-vs-webgl"
+        ]
+      },
+      "api-guide/README",
+      "api-guide/device",
+      "api-guide/resources",
+      "api-guide/memory",      
+      "api-guide/buffers",
+      "api-guide/textures",
+      "api-guide/rendering",
+      "api-guide/parameters",
+      "api-guide/bindings",
+      "api-guide/transforms",
+      "api-guide/shader-modules"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Tutorials",
+    "items": [
+      "tutorials/README",
+      "tutorials/hello-triangle",
+      "tutorials/hello-instancing",
+      "tutorials/hello-cube",
+      "tutorials/lighting",
+      "tutorials/shader-hooks",
+      "tutorials/shader-modules",
+      "tutorials/transform",
+      "tutorials/transform-feedback",
+      "tutorials/instanced-transform",
+      "tutorials/external-context",
+      "tutorials/whats-next"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "API Reference",
+    "items": [
+      {
+        "type": "category",
+        "label": "V8 API Reference",
+        "items": [
+          {
+            "type": "category",
+            "label": "@luma.gl/webgl-legacy",
+            "items": [
+              "api-reference-v8/webgl-legacy/README",
+              "api-reference-v8/webgl-legacy/class-list",
+              "api-reference-v8/webgl-legacy/accessors",
+              "api-reference-v8/webgl-legacy/context/context-api",
+              "api-reference-v8/webgl-legacy/context/context-properties",
+              "api-reference-v8/webgl-legacy/context/parameter-setting",
+              "api-reference-v8/webgl-legacy/context/feature-checking",
+              "api-reference-v8/webgl-legacy/context/device-pixels",
+              "api-reference-v8/webgl-legacy/parameters-legacy",
+              "api-reference-v8/webgl-legacy/classes/accessor",
+              "api-reference-v8/webgl-legacy/classes/buffer",
+              "api-reference-v8/webgl-legacy/classes/framebuffer",
+              "api-reference-v8/webgl-legacy/classes/moving-data",
+              "api-reference-v8/webgl-legacy/classes/program",
+              "api-reference-v8/webgl-legacy/classes/query",
+              "api-reference-v8/webgl-legacy/classes/renderbuffer",
+              "api-reference-v8/webgl-legacy/classes/resource",
+              "api-reference-v8/webgl-legacy/classes/shader",
+              "api-reference-v8/webgl-legacy/classes/texture",
+              "api-reference-v8/webgl-legacy/classes/texture-2d",
+              "api-reference-v8/webgl-legacy/classes/texture-3d",
+              "api-reference-v8/webgl-legacy/classes/texture-cube",
+              "api-reference-v8/webgl-legacy/classes/transform-feedback",
+              "api-reference-v8/webgl-legacy/classes/uniform-buffer-layout",
+              "api-reference-v8/webgl-legacy/classes/vertex-array",
+              "api-reference-v8/webgl-legacy/classes/vertex-array-object"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "@luma.gl/constants",
+            "items": [
+              "api-reference-v8/constants/README"
+            ]
+          }
+        ]
+      },
+      "api-reference/README",
+        {
+        "type": "category",
+        "label": "@luma.gl/api",
+        "items": [
+          "api-reference/api/README",
+          "api-reference/api/device",
+          "api-reference/api/device-features",
+          "api-reference/api/device-limits",
+          "api-reference/api/canvas-context",
+          "api-reference/api/parameters",
+          "api-reference/api/bindings",
+          "api-reference/api/types/shader-layout",
+          "api-reference/api/texture-formats",
+          "api-reference/api/resources/buffer",
+          "api-reference/api/resources/compute-pipeline",
+          "api-reference/api/resources/framebuffer",
+          "api-reference/api/resources/pipeline",
+          "api-reference/api/resources/render-pipeline",
+          "api-reference/api/resources/sampler",
+          "api-reference/api/resources/shader",
+          "api-reference/api/resources/texture"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/core",
+        "items": [
+          "api-reference/core/README"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/engine",
+        "items": [
+          "api-reference/engine/animation-loop",
+          "api-reference/engine/animation/key-frames",
+          "api-reference/engine/animation/timeline",
+          "api-reference/engine/geometry/geometries",
+          "api-reference/engine/geometry/geometry",
+          "api-reference/engine/model",
+          "api-reference/engine/model2",
+          "api-reference/engine/pipeline-factory",
+          "api-reference/engine/transform",
+          "api-reference/engine/transform/buffer-transform",
+          "api-reference/engine/transform/texture-transform"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/experimental",
+        "items": [
+          "api-reference/experimental/README",
+          "api-reference/experimental/gpgpu/gpu-point-in-polygon",
+          "api-reference/experimental/gpgpu/histopyramid",
+          "api-reference/experimental/scenegraph/group-node",
+          "api-reference/experimental/scenegraph/model-node",
+          "api-reference/experimental/scenegraph/scenegraph-node"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/shadertools",
+        "items": [
+          "api-reference/shadertools/README",
+          "api-reference/shadertools/assemble-shaders",
+          "api-reference/shadertools/core-shader-modules",
+          "api-reference/shadertools/shader-info",
+          "api-reference/shadertools/shader-logs"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/test-utils",
+        "items": [
+          "api-reference/test-utils/README",
+          "api-reference/test-utils/api-reference/snapshot-test-runner",
+          "api-reference/test-utils/snapshot-test-runner"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/webgl",
+        "items": [
+          "api-reference/webgl/README",
+          "api-reference/webgl/adapter/webgl-device"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/webgpu",
+        "items": [
+          "api-reference/webgpu/README"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/debug",
+        "items": [
+          "api-reference/debug/README"
+        ]
+      }
+    ]
+  }
+]

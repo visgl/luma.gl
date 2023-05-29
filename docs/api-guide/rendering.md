@@ -74,10 +74,10 @@ A default Framebuffer should not be manually resized.
 
 ### Reading, copying or blitting data from a Framebuffer attachment.
 
-- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference/gltools/classes/moving-data)
-- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference/gltools/classes/moving-data)
-- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference/gltools/classes/moving-data)
-- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference/gltools/classes/moving-data)
+- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
+- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
+- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
+- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
 
 ### Framebuffer Attachment Values (TBD)
 

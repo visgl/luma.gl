@@ -1,3 +1,5 @@
+/* eslint-disable camelcase */
+
 import test from 'tape-promise/tape';
 import GL from '@luma.gl/constants';
 import {VertexArray, VertexArrayObject, Buffer, Program} from '@luma.gl/webgl-legacy';

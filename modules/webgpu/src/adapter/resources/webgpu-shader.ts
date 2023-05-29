@@ -43,7 +43,7 @@ export class WebGPUShader extends Shader {
   }
 
   protected createHandle(): GPUShaderModule {
-    const {source} = this.props;
+    const {source, stage} = this.props;
 
     let language = this.props.language;
     // Compile from src
@@ -59,7 +59,7 @@ export class WebGPUShader extends Shader {
         return this.device.handle.createShaderModule({
           code: source,
           // @ts-expect-error
-          transform: (glsl) => this.device.glslang.compileGLSL(glsl, type)
+          transform: (glsl) => this.device.glslang.compileGLSL(glsl, stage)
         });
       default:
         throw new Error(language);

@@ -1,3 +1,5 @@
+/* eslint-disable camelcase */
+
 import test from 'tape-promise/tape';
 import {glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';

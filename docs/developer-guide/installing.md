@@ -12,7 +12,7 @@ that implements the API. luma.gl provides adapters (implementations of the abstr
 through the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
 
 The `@luma.gl/api` module is not usable on its own. A device adapter module must
-be imported (it self registers on import).
+be imported.
 
 ```bash
 yarn add @luma.gl/api
@@ -53,23 +53,4 @@ yarn add @luma.gl/engine
 yarn add @luma.gl/shadertools
 ```
 
-## Module Catalog
-
-**luma.gl** also exposes a `core` module that simply re-exports key parts of the other modules. This can be helpful to just get started without worrying too much about fine-grained control of dependencies. The `core` module re-exports the following functions and classes from other modules:
-
-| Module                  | Description                                                                                | Exports                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| `@luma.gl/core`         | The core module exports the api and engine modules.                                        |                                                         |
-| `@luma.gl/webgpu`       | A `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources. | `WebGPUDevice`                                          |
-| `@luma.gl/engine`       |                                                                                            | `AnimationLoop`, `Model`, `Transform`, `Geometry`, ...  |
-| `@luma.gl/webgl`        | A `Device` adapter implemented using the WebGL API. Enables creation of WebGL resources.   | `WebGLDevice`                                           |
-| `@luma.gl/shadertools`  |                                                                                            | `assembleShaders`, `fp32`, `fp64`, `project`, ...       |
-| `@luma.gl/experimental` | Scenegraph, GPGPU, GLTF, ...                                                               |                                                         |
-| `@luma.gl/api`          |                                                                                            | `luma`, `Device`, `CanvasContext`, `Buffer`, `Texture`, |
-
-luma.gl also includes some legacy modules that should be avoided in new applications.
-
-| Legacy Module        | Description                                      | Exports                                                                |
-| -------------------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
-| `@luma.gl/constants` | WebGL constants. No longer needed in luma.gl v9. | `GL`                                                                   |
-| `@luma.gl/gltools`   | Legacy WebGL API from luma.gl v8                 | `createGLContext`, `instrumentGLContext`, `isWebGL2`, `setParameters`, |
+Refer to the [Module Catalog](/docs/api-reference) for more information about which luma.gl modules to install.
