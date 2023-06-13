@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {luma, glsl} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
@@ -60,16 +60,15 @@ function validateResourceCounts(t, startCounts, endCounts) {
 }
 
 test('WebGL#Transform construction', (t) => {
-  const gl = fixture.gl2;
-  if (!gl) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     vs: VS,
     sourceBuffers: {
-      inValue: new Buffer(gl, {id: 'inValue', data: new Float32Array([0, 2.7, -45])})
+      inValue: new Buffer(webgl2Device, {id: 'inValue', data: new Float32Array([0, 2.7, -45])})
     },
     feedbackBuffers: {
       outValue: 'inValue'
@@ -83,23 +82,21 @@ test('WebGL#Transform construction', (t) => {
 });
 
 test('WebGL#Transform constructor/delete', (t) => {
-  const {gl, gl2} = fixture;
-
   // @ts-expect-error
   t.throws(() => new Transform(), 'Transform throws on missing gl context');
 
-  t.throws(() => new Transform(gl), 'Transform throws on gl1 context');
+  t.throws(() => new Transform(webgl1Device), 'Transform throws on gl1 context');
 
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -123,18 +120,16 @@ test('WebGL#Transform constructor/delete', (t) => {
 });
 
 test('WebGL#Transform run', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -157,19 +152,17 @@ test('WebGL#Transform run', (t) => {
 });
 
 test('WebGL#Transform run (feedbackBuffer offset)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
-  const outBuffer = new Buffer(gl2, 10 * 4); // 10 floats
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
+  const outBuffer = new Buffer(webgl2Device, 10 * 4); // 10 floats
   const offset = 3;
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -192,18 +185,16 @@ test('WebGL#Transform run (feedbackBuffer offset)', (t) => {
 });
 
 test('WebGL#Transform run (no source buffer)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const INPUT = 101;
-  const outBuffer = new Buffer(gl2, 4);
+  const outBuffer = new Buffer(webgl2Device, 4);
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     feedbackBuffers: {
       outValue: outBuffer
     },
@@ -303,18 +294,16 @@ test('WebGL#Transform run (constant Attribute)', t => {
 */
 
 test('WebGL#Transform swap', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -340,18 +329,16 @@ test('WebGL#Transform swap', (t) => {
 });
 
 test('WebGL#Transform swap + update', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   let sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  let sourceBuffer = new Buffer(gl2, {data: sourceData});
+  let sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue: sourceBuffer
     },
@@ -368,7 +355,7 @@ test('WebGL#Transform swap + update', (t) => {
 
   // Increase the buffer size
   sourceData = new Float32Array([1, 2, 3, 4, 5, 6, 7]);
-  sourceBuffer = new Buffer(gl2, {data: sourceData});
+  sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
   transform.update({
     sourceBuffers: {
@@ -394,21 +381,19 @@ test('WebGL#Transform swap + update', (t) => {
 });
 
 test('WebGL#Transform swap without varyings', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData1 = new Float32Array([10, 20, 30]);
-  const sourceBuffer1 = new Buffer(gl2, {data: sourceData1});
+  const sourceBuffer1 = new Buffer(webgl2Device, {data: sourceData1});
   const sourceData2 = new Float32Array([10, 20, 30]);
-  const sourceBuffer2 = new Buffer(gl2, {data: sourceData2});
+  const sourceBuffer2 = new Buffer(webgl2Device, {data: sourceData2});
 
   // varyings array is dedueced from feedbackMap.
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inValue1: sourceBuffer1,
       inValue2: sourceBuffer2
@@ -440,20 +425,18 @@ test('WebGL#Transform swap without varyings', (t) => {
 
 /* eslint-disable max-statements */
 test('WebGL#Transform update', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   let sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  let sourceBuffer = new Buffer(gl2, {data: sourceData});
+  let sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
   let expectedData;
   let outData;
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     vs: VS,
     varyings: ['outValue']
   });
@@ -478,7 +461,7 @@ test('WebGL#Transform update', (t) => {
 
   sourceData = new Float32Array([1, 2, 3, 0, -5]);
   sourceBuffer.delete();
-  sourceBuffer = new Buffer(gl2, {data: sourceData});
+  sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
   transform.update({
     sourceBuffers: {
@@ -494,14 +477,14 @@ test('WebGL#Transform update', (t) => {
 
   sourceData = new Float32Array([3, 4, 5, 2, -3, 0]);
   sourceBuffer.delete();
-  sourceBuffer = new Buffer(gl2, {data: sourceData});
+  sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
 
   transform.update({
     sourceBuffers: {
       inValue: sourceBuffer
     },
     feedbackBuffers: {
-      outValue: new Buffer(gl2, {data: new Float32Array(6)})
+      outValue: new Buffer(webgl2Device, {data: new Float32Array(6)})
     },
     elementCount: 6
   });
@@ -535,17 +518,15 @@ void main()
 `;
 
 test('WebGL#Transform run (source texture + feedback buffer)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   const sourceData = new Float32Array([20, -31, 0, 23.45]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
-  const sourceTexture = new Texture2D(gl2, {
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
+  const sourceTexture = new Texture2D(webgl2Device, {
     data: sourceData,
     format: GL.R32F,
     dataFormat: GL.RED,
@@ -557,7 +538,7 @@ test('WebGL#Transform run (source texture + feedback buffer)', (t) => {
       [GL.UNPACK_FLIP_Y_WEBGL]: false
     }
   });
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       inBuffer: sourceBuffer
     },
@@ -632,9 +613,7 @@ void main()
 
 if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
   test('WebGL#Transform run (source&destination texture + feedback buffer)', (t) => {
-    const {gl2} = fixture;
-
-    if (!gl2) {
+    if (!webgl2Device) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
@@ -642,8 +621,8 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
 
     TEXTURE_BUFFER_TEST_CASES.forEach((testCase) => {
       const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-      const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
-      const sourceTexture = new Texture2D(gl2, {
+      const sourceBuffer = new Buffer(webgl2Device, {data: new Float32Array(sourceData)});
+      const sourceTexture = new Texture2D(webgl2Device, {
         data: sourceData,
         format,
         dataFormat,
@@ -655,7 +634,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
           [GL.UNPACK_FLIP_Y_WEBGL]: false
         }
       });
-      const transform = new Transform(gl2, {
+      const transform = new Transform(webgl2Device, {
         sourceBuffers: {
           inBuffer: sourceBuffer
         },
@@ -760,9 +739,7 @@ void main()
 
 if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
   test('WebGL#Transform run (source&destination texture)', (t) => {
-    const {gl2} = fixture;
-
-    if (!gl2) {
+    if (!webgl2Device) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
@@ -770,7 +747,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
 
     TEXTURE_TEST_CASES.forEach((testCase) => {
       const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-      const sourceTexture = new Texture2D(gl2, {
+      const sourceTexture = new Texture2D(webgl2Device, {
         data: sourceData,
         format,
         dataFormat,
@@ -782,7 +759,7 @@ if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
           [GL.UNPACK_FLIP_Y_WEBGL]: false
         }
       });
-      const transform = new Transform(gl2, {
+      const transform = new Transform(webgl2Device, {
         _sourceTextures: {
           inTexture: sourceTexture
         },
@@ -879,9 +856,7 @@ test('WebGL#Transform update (source&destination texture)', t => {
 */
 
   test('WebGL#Transform run (source&destination texture update)', (t) => {
-    const {gl2} = fixture;
-
-    if (!gl2) {
+    if (!webgl2Device) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
@@ -892,7 +867,7 @@ test('WebGL#Transform update (source&destination texture)', t => {
 
       const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
       // const sourceBuffer = new Buffer(gl2, {data: new Float32Array(sourceData)});
-      const sourceTexture = new Texture2D(gl2, {
+      const sourceTexture = new Texture2D(webgl2Device, {
         data: sourceData,
         format,
         dataFormat,
@@ -904,7 +879,7 @@ test('WebGL#Transform update (source&destination texture)', t => {
           [GL.UNPACK_FLIP_Y_WEBGL]: false
         }
       });
-      const transform = new Transform(gl2, {
+      const transform = new Transform(webgl2Device, {
         _sourceTextures: {
           inTexture: sourceTexture
         },
@@ -918,7 +893,7 @@ test('WebGL#Transform update (source&destination texture)', t => {
       transform.run();
 
       const updateData = sourceData.map((x) => x + 3);
-      const updateTexture = new Texture2D(gl2, {
+      const updateTexture = new Texture2D(webgl2Device, {
         data: updateData,
         format,
         dataFormat,
@@ -999,9 +974,7 @@ void main()
 ];
 
 test('WebGL#Transform run (offline rendering)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -1009,7 +982,7 @@ test('WebGL#Transform run (offline rendering)', (t) => {
 
   OFFLINE_RENDERING_TEST_CASES.forEach((testCase) => {
     const {position, format, dataFormat, type, width, height, name, vs, expected} = testCase;
-    const _targetTexture = new Texture2D(gl2, {
+    const _targetTexture = new Texture2D(webgl2Device, {
       format,
       dataFormat,
       type,
@@ -1020,9 +993,9 @@ test('WebGL#Transform run (offline rendering)', (t) => {
         [GL.UNPACK_FLIP_Y_WEBGL]: false
       }
     });
-    const transform = new Transform(gl2, {
+    const transform = new Transform(webgl2Device, {
       sourceBuffers: {
-        position: new Buffer(gl2, position)
+        position: new Buffer(webgl2Device, position)
       },
       _targetTexture,
       _targetTextureVarying: 'outTexture',
@@ -1046,9 +1019,7 @@ test('WebGL#Transform run (offline rendering)', (t) => {
 });
 
 test('WebGL#Transform run with shader injects', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -1069,7 +1040,7 @@ void main()
 `;
 
   const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-  const sourceBuffer = new Buffer(gl2, {data: sourceData});
+  const sourceBuffer = new Buffer(webgl2Device, {data: sourceData});
   const inject = {
     'vs:#decl': `
 attribute float injectedAttribute;
@@ -1079,7 +1050,7 @@ varying float injectedVarying;
     'vs:#main-end': '  }\n'
   };
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       injectedAttribute: sourceBuffer
     },
@@ -1104,9 +1075,7 @@ varying float injectedVarying;
 
 if (!DISABLE_FLAKY_TRANSFORM_TESTS) {
   test('WebGL#Transform run (source&destination with custom FS)', (t) => {
-    const {gl2} = fixture;
-
-    if (!gl2) {
+    if (!webgl2Device) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
@@ -1146,7 +1115,7 @@ void main()
 `;
 
     // const {sourceData, format, dataFormat, type, width, height, name, vs} = testCase;
-    const sourceTexture = new Texture2D(gl2, {
+    const sourceTexture = new Texture2D(webgl2Device, {
       data: sourceData,
       format,
       dataFormat,
@@ -1158,7 +1127,7 @@ void main()
         [GL.UNPACK_FLIP_Y_WEBGL]: false
       }
     });
-    const transform = new Transform(gl2, {
+    const transform = new Transform(webgl2Device, {
       _sourceTextures: {
         inTexture: sourceTexture
       },
@@ -1198,16 +1167,14 @@ void main()
   });
 
   test('WebGL#Transform run (custom parameters)', (t) => {
-    const {gl2} = fixture;
-
-    if (!gl2) {
+    if (!webgl2Device) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
     }
 
     const {sourceData, format, dataFormat, type, width, height, name, vs} = TEXTURE_TEST_CASES[0];
-    const sourceTexture = new Texture2D(gl2, {
+    const sourceTexture = new Texture2D(webgl2Device, {
       data: sourceData,
       format,
       dataFormat,
@@ -1221,9 +1188,9 @@ void main()
     });
 
     // enable blending
-    setParameters(gl2, {blend: true, blendEquation: GL.MIN});
+    setParameters(webgl2Device, {blend: true, blendEquation: GL.MIN});
 
-    const transform = new Transform(gl2, {
+    const transform = new Transform(webgl2Device, {
       _sourceTextures: {
         inTexture: sourceTexture
       },
@@ -1245,18 +1212,16 @@ void main()
       `${name} Transform should write correct data into Texture`
     );
 
-    t.ok(getParameters(gl2, [GL.BLEND])[GL.BLEND] === true, 'Parameters are properly set');
+    t.ok(getParameters(webgl2Device, [GL.BLEND])[GL.BLEND] === true, 'Parameters are properly set');
 
-    setParameters(gl2, {blend: false});
+    setParameters(webgl2Device, {blend: false});
 
     t.end();
   });
 }
 
 test('WebGL#Transform (Buffer to Texture)', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
@@ -1288,16 +1253,16 @@ gl_FragColor = vec4(1.);
 
   const data1 = new Float32Array([10, 20, 31, 0, -57, 28, 100, 53]);
   const data2 = new Float32Array([10, 20, 31, 0, 7, 10, -10, 43]);
-  const aCur = new Buffer(gl2, {data: data1});
-  const aNext = new Buffer(gl2, {data: data2}); // buffers contain different data
-  const texture = new Texture2D(gl2, {
+  const aCur = new Buffer(webgl2Device, {data: data1});
+  const aNext = new Buffer(webgl2Device, {data: data2}); // buffers contain different data
+  const texture = new Texture2D(webgl2Device, {
     format: GL.RGBA,
     dataFormat: GL.RGBA,
     type: GL.UNSIGNED_BYTE,
     mipmaps: false
   });
 
-  const transform = new Transform(gl2, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       aCur,
       aNext

@@ -4,8 +4,8 @@ import {log} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 
 // Expose Khronos Debug support module on global context
-import WebGLDebug from 'webgl-debug';
-globalThis.WebGLDebugUtils = WebGLDebug;
+import {WebGLDebugUtils} from './webgl-debug';
+globalThis.WebGLDebugUtils = WebGLDebugUtils;
 
 // Helper to get shared context data
 function getContextDebugData(gl) {
@@ -54,7 +54,7 @@ function getDebugContext(gl, opts) {
 
   // Create a new debug context
   class WebGLDebugContext {}
-  const debugContext = WebGLDebug.makeDebugContext(
+  const debugContext = WebGLDebugUtils.makeDebugContext(
     gl,
     onGLError.bind(null, opts),
     onValidateGLFunc.bind(null, opts)
@@ -76,14 +76,14 @@ function getDebugContext(gl, opts) {
 // DEBUG TRACING
 
 function getFunctionString(functionName, functionArgs) {
-  let args = WebGLDebug.glFunctionArgsToString(functionName, functionArgs);
+  let args = WebGLDebugUtils.glFunctionArgsToString(functionName, functionArgs);
   args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
   return `gl.${functionName}(${args})`;
 }
 
 function onGLError(opts, err, functionName, args) {
-  const errorMessage = WebGLDebug.glEnumToString(err);
-  const functionArgs = WebGLDebug.glFunctionArgsToString(functionName, args);
+  const errorMessage = WebGLDebugUtils.glEnumToString(err);
+  const functionArgs = WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
   if (opts.throwOnError) {
     throw new Error(message);
