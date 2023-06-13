@@ -315,7 +315,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('gltools#getDevicePixelRatio', (t) => {
+test('webgl-legacy#getDevicePixelRatio', (t) => {
   const windowPixelRatio = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
   const TEST_CAES = [
     {
@@ -356,7 +356,7 @@ test('gltools#getDevicePixelRatio', (t) => {
   t.end();
 });
 
-test('gltools#cssToDevicePixels', (t) => {
+test('webgl-legacy#cssToDevicePixels', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
@@ -377,7 +377,7 @@ test('gltools#cssToDevicePixels', (t) => {
   t.end();
 });
 
-test('gltools#cssToDeviceRatio', (t) => {
+test('webgl-legacy#cssToDeviceRatio', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
     // @ts-expect-error Mock GL context
     t.equal(cssToDeviceRatio(tc.gl), tc.ratio, 'cssToDeviceRatio should return correct value');

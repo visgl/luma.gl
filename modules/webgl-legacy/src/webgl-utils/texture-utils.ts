@@ -1,28 +1,16 @@
-// TODO: Two subdirectories must not depend on each other (classes vs utils)!
-import {assert, Framebuffer, FramebufferProps} from '@luma.gl/api';
-import Texture from '../classic/texture';
-import Texture2D from '../classic/texture-2d';
-import TextureCube from '../classic/texture-cube';
-import Texture3D from '../classic/texture-3d';
-
-type TextureType = Texture2D | TextureCube | Texture3D;
+import {Texture, Framebuffer, FramebufferProps} from '@luma.gl/api';
 
 /** 
  * Clone a new texture object from a reference texture object. 
  * @deprecated
  */
-export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides?: any): T {
-  assert(
-    refTexture instanceof Texture2D ||
-      refTexture instanceof TextureCube ||
-      refTexture instanceof Texture3D
-  );
+export function cloneTextureFrom(refTexture: Texture, overrides?: any): Texture {
 
-  const TextureType = refTexture.constructor;
+  // @ts-expect-error WebGL texture fields
+  const {width, height, format, type, dataFormat, mipmaps} = refTexture;
 
-  const {gl, width, height, format, type, dataFormat, mipmaps} = refTexture;
-
-  const textureOptions = {
+  // TODO: move this to `Texture` class as instance method and use this.constructor
+  return refTexture.device.createTexture({
     width,
     height,
     format,
@@ -30,11 +18,7 @@ export function cloneTextureFrom<T extends TextureType>(refTexture: T, overrides
     dataFormat,
     mipmaps,
     ...overrides
-  };
-
-  // TODO: move this to `Texture` class as instance method and use this.constructor
-  // @ts-expect-error
-  return new TextureType(gl, textureOptions);
+  });
 }
 
 /**

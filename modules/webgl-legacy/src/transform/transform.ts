@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/api';
+import {Device, Texture, Framebuffer, assert, isObjectEmpty} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
@@ -8,7 +8,6 @@ import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 
 import {clear} from '../classic/clear';
 import type Buffer from '../classic/buffer';
-import {default as Texture2D} from '../classic/texture-2d';
 import {default as TransformFeedback} from '../classic/transform-feedback';
 import Model from '../engine/classic-model';
 import BufferTransform from './buffer-transform';
@@ -33,8 +32,8 @@ export type TransformProps = {
   inject?: Record<string, string>;
   drawMode?: number;
   framebuffer?: Framebuffer;
-  _sourceTextures?: Record<string, Texture2D>;
-  _targetTexture?: string | Texture2D;
+  _sourceTextures?: Record<string, Texture>;
+  _targetTexture?: string | Texture;
   _targetTextureVarying?: string;
   _swapTexture?: string | null;
   _fs?: string;
@@ -62,11 +61,11 @@ export type TransformDrawOptions = {
 
 export type TransformBinding = {
   sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture2D>;
+  sourceTextures: Record<string, Texture>;
   feedbackBuffers?: Record<string, Buffer | {buffer: Buffer}>;
   transformFeedback?: TransformFeedback;
   framebuffer?: Framebuffer;
-  targetTexture?: Texture2D;
+  targetTexture?: Texture;
 };
 
 /**

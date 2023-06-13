@@ -346,7 +346,7 @@ export class WEBGLTexture extends Texture {
     return this;
   }
 
-  setSampler(sampler: Sampler | SamplerProps = {}): this {
+  setSampler(sampler: Sampler | SamplerProps = {}): void {
     let samplerProps: SamplerParameters;
     if (sampler instanceof WEBGLSampler) {
       this.sampler = sampler;
@@ -359,7 +359,6 @@ export class WEBGLTexture extends Texture {
     // TODO - technically, this is only needed in WebGL1. In WebGL2 we could always use the sampler.
     const parameters = convertSamplerParametersToWebGL(samplerProps);
     this._setSamplerParameters(parameters);
-    return this;
   }
 
   /**

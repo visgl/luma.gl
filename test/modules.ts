@@ -24,7 +24,7 @@ import '@luma.gl/webgpu/test';
 
 // CROSS-DEVICE TESTS
 import '@luma.gl/engine/test';
-import '@luma.gl/experimental/test';
 
 // DEPRECATED TESTS
 import '@luma.gl/webgl-legacy/test';
+import '@luma.gl/experimental/test';

@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import GL from '@luma.gl/constants';
-import {Device, Framebuffer} from '@luma.gl/api';
+import {Device, Texture, Framebuffer} from '@luma.gl/api';
 
 import {
   _transform as transformModule,
@@ -12,28 +12,18 @@ import {
 } from '@luma.gl/shadertools';
 
 import Buffer from '../classic/buffer';
-import Texture2D from '../classic/texture-2d';
 import {readPixelsToArray} from '../classic/copy-and-blit';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
 import type {TransformProps, TransformDrawOptions} from './transform';
 import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 
-
-// TODO: move these constants to transform-shader-utils
-// Texture parameters needed so sample can precisely pick pixel for given element id.
-const SRC_TEX_PARAMETER_OVERRIDES = {
-  [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-  [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-  [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
-  [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
-};
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
 type TextureBinding = {
   sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture2D>;
-  targetTexture: Texture2D;
+  sourceTextures: Record<string, Texture>;
+  targetTexture: Texture;
   framebuffer?: Framebuffer;
 };
 
@@ -51,7 +41,7 @@ export default class TextureTransform {
 
   hasTargetTexture: boolean = false;
   hasSourceTextures: boolean = false;
-  ownTexture: Texture2D | null = null;
+  ownTexture: Texture | null = null;
   elementIDBuffer: Buffer | null = null;
   _targetRefTexName: string;
   elementCount: number;
@@ -171,11 +161,11 @@ export default class TextureTransform {
 
   // auto create target texture if requested
   _createTargetTexture(props: {
-    sourceTextures: Record<string, Texture2D>;
-    textureOrReference: string | Texture2D;
-  }): Texture2D {
+    sourceTextures: Record<string, Texture>;
+    textureOrReference: string | Texture;
+  }): Texture {
     const {sourceTextures, textureOrReference} = props;
-    if (textureOrReference instanceof Texture2D) {
+    if (textureOrReference instanceof Texture) {
       return textureOrReference;
     }
     // 'targetTexture' is a reference souce texture.
@@ -227,8 +217,8 @@ export default class TextureTransform {
 
   _updateBindings(opts: {
     sourceBuffers: Record<string, Buffer>;
-    sourceTextures: Record<string, Texture2D>;
-    targetTexture: Texture2D;
+    sourceTextures: Record<string, Texture>;
+    targetTexture: Texture;
   }) {
     this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
@@ -245,8 +235,8 @@ export default class TextureTransform {
     binding: TextureBinding,
     opts: {
       sourceBuffers?: Record<string, Buffer>;
-      sourceTextures: Record<string, Texture2D>;
-      targetTexture: Texture2D;
+      sourceTextures: Record<string, Texture>;
+      targetTexture: Texture;
     }
   ): TextureBinding {
     const {sourceBuffers, sourceTextures, targetTexture} = opts;
@@ -282,13 +272,19 @@ export default class TextureTransform {
     const index = this.currentIndex;
     const {sourceTextures} = this.bindings[index];
     for (const name in sourceTextures) {
-      sourceTextures[name].setParameters(SRC_TEX_PARAMETER_OVERRIDES);
+      // Texture parameters needed so sample can precisely pick pixel for given element id.
+      sourceTextures[name].setSampler({
+        minFilter: 'nearest',
+        magFilter: 'nearest',
+        addressModeU: 'clamp-to-edge',
+        addressModeW: 'clamp-to-edge'
+      });
     }
   }
 
   _swapTextures(
-    opts: {sourceTextures: Record<string, Texture2D>; targetTexture: Texture2D}
-  ): {sourceTextures: Record<string, Texture2D>; targetTexture: Texture2D} | null {
+    opts: {sourceTextures: Record<string, Texture>; targetTexture: Texture}
+  ): {sourceTextures: Record<string, Texture>; targetTexture: Texture} | null {
     if (!this._swapTexture) {
       return null;
     }
@@ -301,17 +297,18 @@ export default class TextureTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  _createNewTexture(refTexture: Texture2D) {
+  _createNewTexture(refTexture: Texture) {
     const texture = cloneTextureFrom(refTexture, {
-      parameters: {
-        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
-        [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
-        [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
-      },
       pixelStore: {
         [GL.UNPACK_FLIP_Y_WEBGL]: false
       }
+    });
+
+    texture.setSampler({
+      minFilter: 'nearest',
+      magFilter: 'nearest',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
     });
 
     // thre can only be one target texture

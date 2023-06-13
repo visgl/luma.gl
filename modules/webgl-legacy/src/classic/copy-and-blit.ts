@@ -7,7 +7,6 @@ import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/t
 import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
 import Buffer from './buffer';
-// import Texture from '../adapter/resources/webgl-texture';
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.

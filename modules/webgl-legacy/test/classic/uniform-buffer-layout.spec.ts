@@ -49,7 +49,7 @@ void main(void) {
 }
 `;
 
-test.skip('gltools#UniformBufferLayout', (t) => {
+test.skip('webgl-legacy#UniformBufferLayout', (t) => {
   const std140 = new UniformBufferLayout({
     uEnabled: 'bool',
     uProjectionMatrix: 'mat4x4<f32>'
@@ -66,7 +66,7 @@ test.skip('gltools#UniformBufferLayout', (t) => {
   t.end();
 });
 
-test('gltools#UniformBufferLayout getData', (t) => {
+test('webgl-legacy#UniformBufferLayout getData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
@@ -113,7 +113,7 @@ test('gltools#UniformBufferLayout getData', (t) => {
   t.end();
 });
 
-test('gltools#UniformBufferLayout setData', (t) => {
+test('webgl-legacy#UniformBufferLayout setData', (t) => {
   const {gl2} = fixture;
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');

@@ -2,8 +2,9 @@ import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
 import {Buffer} from '@luma.gl/webgl-legacy';
-import {equals} from '@math.gl/core';
 import {GPUPointInPolygon} from '@luma.gl/experimental';
+
+import {equals} from '@math.gl/core';
 import {cpuPointInPolygon} from './point-in-polygon-cpu';
 
 const {gl2} = fixture;

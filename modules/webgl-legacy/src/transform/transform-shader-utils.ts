@@ -2,7 +2,6 @@
 
 import {assert, Texture} from '@luma.gl/api';
 import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
-import Texture2D from '../classic/texture-2d';
 
 const SAMPLER_UNIFORM_PREFIX = 'transform_uSampler_';
 const SIZE_UNIFORM_PREFIX = 'transform_uSize_';
@@ -84,7 +83,7 @@ export function updateForTextures(options: {
 export function getSizeUniforms(options: {
   sourceTextureMap: Record<string, any>;
   targetTextureVarying: string;
-  targetTexture: Texture2D;
+  targetTexture: Texture;
 }):  Record<string, any> {
   const uniforms: Record<string, any> = {};
   let width;

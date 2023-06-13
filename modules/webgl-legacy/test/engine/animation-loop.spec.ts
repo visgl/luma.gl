@@ -2,7 +2,7 @@ import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 import {AnimationLoop} from '@luma.gl/webgl-legacy';
 
-test('gltools#AnimationLoop constructor', (t) => {
+test('webgl-legacy#AnimationLoop constructor', (t) => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const {gl} = fixture;
   const animationLoop = new AnimationLoop({gl});
@@ -10,7 +10,7 @@ test('gltools#AnimationLoop constructor', (t) => {
   t.end();
 });
 
-test('gltools#AnimationLoop start,stop', (t) => {
+test('webgl-legacy#AnimationLoop start,stop', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
   let renderCalled = 0;
@@ -40,7 +40,7 @@ test('gltools#AnimationLoop start,stop', (t) => {
   }).start();
 });
 
-test('gltools#AnimationLoop redraw', (t) => {
+test('webgl-legacy#AnimationLoop redraw', (t) => {
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -60,7 +60,7 @@ test('gltools#AnimationLoop redraw', (t) => {
   }).start();
 });
 
-test('gltools#AnimationLoop should not call initialize more than once', async (t) => {
+test('webgl-legacy#AnimationLoop should not call initialize more than once', async (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -78,7 +78,7 @@ test('gltools#AnimationLoop should not call initialize more than once', async (t
   t.end();
 });
 
-test('gltools#AnimationLoop two start()s should only run one loop', async (t) => {
+test('webgl-legacy#AnimationLoop two start()s should only run one loop', async (t) => {
   const {gl} = fixture;
   let renderCalled = 0;
 
@@ -98,7 +98,7 @@ test('gltools#AnimationLoop two start()s should only run one loop', async (t) =>
   t.end();
 });
 
-test('gltools#AnimationLoop start followed immediately by stop() should stop', (t) => {
+test('webgl-legacy#AnimationLoop start followed immediately by stop() should stop', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 
@@ -116,7 +116,7 @@ test('gltools#AnimationLoop start followed immediately by stop() should stop', (
   }, 100);
 });
 
-test('gltools#AnimationLoop a start/stop/start should not call initialize again', (t) => {
+test('webgl-legacy#AnimationLoop a start/stop/start should not call initialize again', (t) => {
   const {gl} = fixture;
   let initializeCalled = 0;
 

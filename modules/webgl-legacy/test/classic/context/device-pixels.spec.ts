@@ -7,7 +7,7 @@ import {
 } from '@luma.gl/webgl-legacy';
 
 // Let's not repeat the tedious CanvasContext mocking tests. Just check that these are actually exported
-test('gltools#exports', (t) => {
+test('webgl-legacy#exports', (t) => {
   t.ok(cssToDevicePixels);
   t.ok(cssToDeviceRatio);
   t.ok(getDevicePixelRatio);

@@ -128,6 +128,11 @@ export abstract class Texture extends Resource<TextureProps> {
     super(device, props, DEFAULT_TEXTURE_PROPS);
   }
 
+  abstract setSampler(sampler: Sampler | SamplerProps): void;
+
   /** Default sampler for this device */
   abstract sampler: Sampler;
+
+  abstract width: number;
+  abstract height: number;
 }
