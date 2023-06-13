@@ -94,6 +94,7 @@ export function buildHistopyramidBaseLevel(
     }
   });
   const framebuffer = transform.getFramebuffer();
+  // @ts-ignore TODO fix
   copyToTexture(framebuffer, flatPyramidTexture, {
     targetX: 0,
     width: size,
