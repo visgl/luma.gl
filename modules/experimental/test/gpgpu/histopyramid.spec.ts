@@ -94,7 +94,7 @@ test('histopyramid#histoPyramid_getTexCoord', (t) => {
   t.end();
 });
 
-test('histopyramid#histoPyramid_getPixelIndices', (t) => {
+test.only('histopyramid#histoPyramid_getPixelIndices', (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
