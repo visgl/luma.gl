@@ -159,6 +159,8 @@ test('histopyramid#histoPyramid_getPixelIndices', (t) => {
     });
 
     const outData = transform.getBuffer('pixelIndices').getData().slice(0, expected.length);
+    t.comment(JSON.stringify(expected));
+    t.comment(JSON.stringify(outData));
     t.ok(equals(expected, outData), 'pixelIndices should match');
   });
 
