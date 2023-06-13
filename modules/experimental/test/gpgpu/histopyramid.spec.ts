@@ -152,6 +152,7 @@ test.only('histopyramid#histoPyramid_getPixelIndices', (t) => {
     const expected = getExpected(size);
     const elementCount = size[0] * size[1];
     transform.update({elementCount});
+    t.comment(`${JSON.stringify(size)} ${elementCount}`);
     transform.run({
       uniforms: {
         size
