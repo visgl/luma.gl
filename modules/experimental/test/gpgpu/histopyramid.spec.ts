@@ -152,17 +152,17 @@ test.only('histopyramid#histoPyramid_getPixelIndices', (t) => {
     const expected = getExpected(size);
     const elementCount = size[0] * size[1];
     transform.update({elementCount});
-    // t.comment(`${JSON.stringify(size)} ${elementCount} ${expected.length}`);
+    t.comment(`${JSON.stringify(size)} ${elementCount} ${expected.length}`);
     transform.run({
       uniforms: {
         size
       }
     });
 
-    // TODO - without Array.from this fails in CI.
+    // TODO - without Array.from this fails in CI. Could it be GL.FLOAT default in transform?
     const outData = Array.from(transform.getBuffer('pixelIndices').getData()).slice(0, expected.length);
-    // t.comment(JSON.stringify(expected));
-    // t.comment(JSON.stringify(outData));
+    t.comment(JSON.stringify(expected));
+    t.comment(JSON.stringify(outData));
     t.ok(equals(expected, outData), 'pixelIndices should match');
   });
 

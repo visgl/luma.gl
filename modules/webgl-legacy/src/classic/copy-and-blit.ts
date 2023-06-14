@@ -1,4 +1,4 @@
-import {log, assert, Framebuffer} from '@luma.gl/api';
+import {log, assert, Texture, Framebuffer} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
 import {assertWebGL2Context, WEBGLFramebuffer} from '@luma.gl/webgl';
 import {withParameters} from '@luma.gl/webgl';
@@ -8,7 +8,6 @@ import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
 import Buffer from './buffer';
 // import Texture from '../adapter/resources/webgl-texture';
-import Texture from './texture';
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.
@@ -59,6 +58,7 @@ export function readPixelsToArray(
   // assert(attachments[sourceAttachment]);
 
   // Deduce the type from color attachment if not provided.
+  // TODO - is gl type still available on texture? is float right default?
   sourceType = sourceType || (framebuffer.colorAttachments[attachment] as any).type || GL.FLOAT;
 
   // Deduce type and allocated pixelArray if needed
