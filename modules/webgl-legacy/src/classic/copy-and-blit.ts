@@ -59,7 +59,7 @@ export function readPixelsToArray(
 
   // Deduce the type from color attachment if not provided.
   // TODO - is gl type still available on texture? is float right default?
-  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as any).type || GL.FLOAT;
+  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as any).type;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
