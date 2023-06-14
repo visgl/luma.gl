@@ -14,8 +14,8 @@ export class ShaderModuleInstance {
   name: string;
   vs?: string;
   fs?: string;
-  getModuleUniforms;
-  dependencies: ShaderModule[];
+  getModuleUniforms: Function;
+  dependencies: ShaderModuleInstance[];
   deprecations: ShaderModuleDeprecation[];
   defines: Record<string, string | number>;
   injections: {
@@ -23,6 +23,27 @@ export class ShaderModuleInstance {
     fs: Record<string, Injection>;
   };
   uniforms: Record<string, PropValidator> = {};
+  uniformFormats: Record<string, PropValidator> = {};
+
+  static instantiateModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
+    return modules.map((module: ShaderModule | ShaderModuleInstance) => {
+      if (module instanceof ShaderModuleInstance) {
+        return module;
+      }
+  
+      assert(
+        typeof module !== 'string',
+        `Shader module use by name is deprecated. Import shader module '${module}' and use it directly.`
+      );
+      assert(module.name, 'shader module has no name');
+  
+      const moduleObject = new ShaderModuleInstance(module);
+      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(module.dependencies || []);
+  
+      return moduleObject;
+    });
+  }
+  
 
   constructor(props: ShaderModule) {
     const {
@@ -42,7 +63,7 @@ export class ShaderModuleInstance {
     this.vs = vs;
     this.fs = fs;
     this.getModuleUniforms = getUniforms;
-    this.dependencies = dependencies;
+    this.dependencies = ShaderModuleInstance.instantiateModules(dependencies);
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
     this.defines = defines;
     this.injections = normalizeInjections(inject);

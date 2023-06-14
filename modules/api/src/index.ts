@@ -41,7 +41,6 @@ export type {CommandBufferProps} from './adapter/resources/command-buffer';
 export {CommandBuffer} from './adapter/resources/command-buffer';
 
 // API TYPES
-export type {CompilerMessage} from './lib/compiler-log/compiler-message';
 export type {AccessorObject} from './adapter/types/accessor';
 export type {
   Parameters,
@@ -92,16 +91,24 @@ export {UniformBlock} from './lib/uniform-block';
 export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/utils/decode-texture-format';
 
+// COMPILER LOG
+export type {CompilerMessage} from './lib/compiler-log/compiler-message';
+export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
+
 // GENERAL TYPES
+
+export type {ConstructorOf, PartialBy} from './types';
+
+// NUMERIC TYPES
+
+// TODO: could be imported from @math.gl/types
 export type {
   TypedArray,
   TypedArrayConstructor,
   NumberArray,
   NumericArray,
   BigIntOrNumberArray,
-  BigIntOrNumericArray,
-  ConstructorOf,
-  PartialBy
+  BigIntOrNumericArray
 } from './types';
 
 // GENERAL UTILS
@@ -117,8 +124,6 @@ export {checkProps} from './lib/utils/check-props';
 export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './lib/utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
 export {getRandom, random} from './lib/utils/random';
-
-export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
 export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';

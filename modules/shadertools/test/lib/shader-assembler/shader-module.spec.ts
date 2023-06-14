@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import {ShaderModuleInstance} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
-import {normalizeShaderModule} from '@luma.gl/shadertools/lib/shader-module/normalize-shader-module';
+import {normalizeShaderModule} from '@luma.gl/shadertools';
 
 test('ShaderModuleInstance', (t) => {
   let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module'});

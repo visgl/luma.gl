@@ -28,6 +28,11 @@ export {
  */
 export {glsl} from './lib/glsl-utils/highlight';
 
+// TODO - experimental
+export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shader';
+export {generateShaderForModule} from './lib/shader-generator/generate-shader';
+export {capitalize} from './lib/shader-generator/utils/capitalize';
+
 // SHADER MODULES
 
 // utils
@@ -51,8 +56,7 @@ export {triangleBlur} from './modules/image-blur-filters/triangleblur';
 export {zoomBlur} from './modules/image-blur-filters/zoomblur';
 
 // glfx image adjustment shader modules
-import type {BrightnessContrastProps} from './modules/image-adjust-filters/brightnesscontrast';
-export type {BrightnessContrastProps};
+export type {BrightnessContrastProps} from './modules/image-adjust-filters/brightnesscontrast';
 export {brightnessContrast} from './modules/image-adjust-filters/brightnesscontrast';
 export {denoise} from './modules/image-adjust-filters/denoise';
 export {hueSaturation} from './modules/image-adjust-filters/huesaturation';
@@ -80,6 +84,7 @@ export {fxaa} from './modules/fxaa/fxaa';
 export {warp as _warp} from './modules/image-warp-filters/warp';
 export {transform as _transform} from './modules/transform/transform';
 
-export type ShaderPassProps = {
-  brightnessContrast?: BrightnessContrastProps;
-}
+// TEST EXPORTS
+export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
+export {resolveModules as _resolveModules} from './lib/shader-assembler/resolve-modules';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembler/resolve-modules';

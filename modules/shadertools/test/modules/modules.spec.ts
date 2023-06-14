@@ -5,9 +5,10 @@ import * as imports from '@luma.gl/shadertools';
 
 const shaderModules = {};
 
+// HACK - sniff out modules from * imports
 for (const [name, value] of Object.entries(imports)) {
   // @ts-expect-error
-  if (value.fs || value.vs) {
+  if (value?.fs || value?.vs) {
     shaderModules[name] = value;
   }
 }

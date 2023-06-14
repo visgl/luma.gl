@@ -51,7 +51,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
   constructor(device: WebGLDevice, props: RenderbufferProps) {
     // TODO - remove temporary sanity check
     if (typeof props.format === 'number') {
-      throw new Error('Rendebuffer');
+      throw new Error('Renderbuffer');
     }
     super(device, props, WEBGLRenderbuffer.defaultProps);
     this.glFormat = convertTextureFormatToGL(this.props.format, device.isWebGL2);
