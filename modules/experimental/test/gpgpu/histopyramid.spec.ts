@@ -152,16 +152,17 @@ test.only('histopyramid#histoPyramid_getPixelIndices', (t) => {
     const expected = getExpected(size);
     const elementCount = size[0] * size[1];
     transform.update({elementCount});
-    t.comment(`${JSON.stringify(size)} ${elementCount}`);
+    // t.comment(`${JSON.stringify(size)} ${elementCount} ${expected.length}`);
     transform.run({
       uniforms: {
         size
       }
     });
 
-    const outData = transform.getBuffer('pixelIndices').getData().slice(0, expected.length);
-    t.comment(JSON.stringify(expected));
-    t.comment(JSON.stringify(outData));
+    // TODO - without Array.from this fails in CI.
+    const outData = Array.from(transform.getBuffer('pixelIndices').getData()).slice(0, expected.length);
+    // t.comment(JSON.stringify(expected));
+    // t.comment(JSON.stringify(outData));
     t.ok(equals(expected, outData), 'pixelIndices should match');
   });
 
