@@ -214,7 +214,7 @@ const TEST_CASES = [
 
 /* eslint-disable max-nested-callbacks */
 // TODO - fails in new puppeteer environment
-test('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
+test.only('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
   if (!gl2) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -255,10 +255,12 @@ test('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
       // @ts-expect-error
       let cpuResults = tc.cpuResults;
       if (!cpuResults) {
-        cpuResults = cpuPointInPolygon({polygons, points});
+        cpuResults = Array.from(cpuPointInPolygon({polygons, points}));
       }
 
-      t.ok(equals(gpuResults, cpuResults), `${name}: CPU GPU results should match`);
+      t.deepEquals(gpuResults, cpuResults, `${name}: CPU GPU results should match`);
+      t.comment(JSON.stringify(gpuResults));
+      t.comment(JSON.stringify(cpuResults));
     });
   });
   t.end();
