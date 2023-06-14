@@ -258,7 +258,7 @@ test.only('gpgpu#GPUPointInPolygon CPU vs GPU', (t) => {
         cpuResults = Array.from(cpuPointInPolygon({polygons, points}));
       }
 
-      t.deepEquals(gpuResults, cpuResults, `${name}: CPU GPU results should match`);
+      t.ok(equals(gpuResults, cpuResults), `${name}: CPU GPU results should match`);
       t.comment(JSON.stringify(gpuResults));
       t.comment(JSON.stringify(cpuResults));
     });
