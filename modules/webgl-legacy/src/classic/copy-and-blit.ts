@@ -1,6 +1,6 @@
-import {log, assert} from '@luma.gl/api';
+import {log, assert, Texture, Framebuffer} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {assertWebGL2Context} from '@luma.gl/webgl';
+import {assertWebGL2Context, WEBGLFramebuffer} from '@luma.gl/webgl';
 import {withParameters} from '@luma.gl/webgl';
 import {flipRows, scalePixels} from '../webgl-utils/typed-array-utils';
 import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../webgl-utils/typed-array-utils';
@@ -8,8 +8,6 @@ import {glFormatToComponents, glTypeToBytes} from '../webgl-utils/format-utils';
 import {toFramebuffer} from '../webgl-utils/texture-utils';
 import Buffer from './buffer';
 // import Texture from '../adapter/resources/webgl-texture';
-import Texture from './texture';
-import Framebuffer from './framebuffer';
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.
@@ -47,7 +45,7 @@ export function readPixelsToArray(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const {gl, handle} = framebuffer;
+  const {gl, handle} = framebuffer as WEBGLFramebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
@@ -60,7 +58,8 @@ export function readPixelsToArray(
   // assert(attachments[sourceAttachment]);
 
   // Deduce the type from color attachment if not provided.
-  sourceType = sourceType || framebuffer.colorAttachments[attachment].type;
+  // TODO - is gl type still available on texture? is float right default?
+  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as any).type || GL.FLOAT;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
@@ -114,7 +113,8 @@ export function readPixelsToBuffer(
   sourceHeight = sourceHeight || framebuffer.height;
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const gl2 = assertWebGL2Context(framebuffer.gl);
+  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const gl2 = webglFramebuffer.device.assertWebGL2();
 
   // deduce type if not available.
   sourceType = sourceType || (target ? target.type : GL.UNSIGNED_BYTE);
@@ -244,7 +244,8 @@ export function copyToTexture(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const {gl, handle} = framebuffer;
+  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const {gl, handle} = webglFramebuffer;
   const isSubCopy =
     typeof targetX !== 'undefined' ||
     typeof targetY !== 'undefined' ||
@@ -378,10 +379,12 @@ export function blit(
 
   assert(srcFramebuffer);
   assert(dstFramebuffer);
-  const {gl, handle, width, height, readBuffer} = dstFramebuffer;
-  const gl2 = assertWebGL2Context(gl);
+  const webglSrcFramebuffer = srcFramebuffer as WEBGLFramebuffer;
+  const webglDstFramebuffer = dstFramebuffer as WEBGLFramebuffer;
+  const {gl, handle, width, height} = webglDstFramebuffer;
+  const gl2 = webglDstFramebuffer.device.assertWebGL2();
 
-  if (!srcFramebuffer.handle && sourceAttachment === GL.COLOR_ATTACHMENT0) {
+  if (!webglSrcFramebuffer.handle && sourceAttachment === GL.COLOR_ATTACHMENT0) {
     sourceAttachment = GL.FRONT;
   }
 
@@ -411,7 +414,7 @@ export function blit(
   targetY1 = targetY1 === undefined ? height : targetY1;
 
   const prevDrawHandle = gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, handle);
-  const prevReadHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, srcFramebuffer.handle);
+  const prevReadHandle = gl.bindFramebuffer(GL.READ_FRAMEBUFFER, webglSrcFramebuffer.handle);
   gl2.readBuffer(sourceAttachment);
   gl2.blitFramebuffer(
     sourceX0,
@@ -425,7 +428,7 @@ export function blit(
     mask,
     filter
   );
-  gl2.readBuffer(readBuffer);
+  // gl2.readBuffer(readBuffer);
   // @ts-expect-error
   gl2.bindFramebuffer(GL.READ_FRAMEBUFFER, prevReadHandle || null);
   // @ts-expect-error

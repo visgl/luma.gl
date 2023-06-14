@@ -42,8 +42,7 @@
     "@luma.gl/constants": "9.0.0-alpha.21",
     "@math.gl/core": "4.0.0-alpha.4",
     "@probe.gl/env": "^4.0.2",
-    "glsl-transpiler": "^1.8.5",
-    "webgl-debug": "^2.0.1"
+    "glsl-transpiler": "^1.8.5"
   },
   "peerDependencies": {
     "@luma.gl/core": "9.0.0-alpha.13"

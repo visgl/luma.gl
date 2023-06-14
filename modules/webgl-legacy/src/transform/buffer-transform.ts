@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {assert, Resource} from '@luma.gl/api';
+import {Device, Resource, assert} from '@luma.gl/api';
 import {isWebGL2} from '@luma.gl/webgl';
 
 import type {TransformProps, TransformDrawOptions, TransformRunOptions} from './transform';
@@ -27,6 +27,7 @@ type BufferBinding = {
 };
 
 export default class BufferTransform {
+  device: Device;
   gl: WebGL2RenderingContext;
   currentIndex = 0;
   feedbackMap: Record<string, string> = {};
@@ -34,8 +35,9 @@ export default class BufferTransform {
   bindings: BufferBinding[] = [];
   resources: Record<string, Resource<any>> = {}; // resources to be deleted
 
-  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
-    this.gl = gl;
+  constructor(device: Device, props: TransformProps = {}) {
+    this.device = device;
+    this.gl = (device as any).gl2 as WebGL2RenderingContext;
     this._initialize(props);
     Object.seal(this);
   }

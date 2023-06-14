@@ -1,13 +1,13 @@
 // luma.gl, MIT license
 
-import {Device, assert, isObjectEmpty} from '@luma.gl/api';
+import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import GL from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 // import {AccessorObject} from '@luma.gl/webgl';
 
+import {clear} from '../classic/clear';
 import type Buffer from '../classic/buffer';
-import type Framebuffer from '../classic/framebuffer';
 import {default as Texture2D} from '../classic/texture-2d';
 import {default as TransformFeedback} from '../classic/transform-feedback';
 import Model from '../engine/classic-model';
@@ -98,8 +98,7 @@ export default class Transform {
     this.device = WebGLDevice.attach(device);
     // TODO assert webgl2?
     this.gl = this.device.gl2;
-    const {gl} = this;
-    this._buildResourceTransforms(gl, props);
+    this._buildResourceTransforms(props);
 
     props = this._updateModelProps(props);
     // @ts-expect-error TODO this is valid type error for params
@@ -143,7 +142,7 @@ export default class Transform {
     const updatedOpts = this._updateDrawOptions(options);
 
     if (clearRenderTarget && updatedOpts.framebuffer) {
-      updatedOpts.framebuffer.clear({color: true});
+      clear(this.device, {framebuffer: updatedOpts.framebuffer, color: true});
     }
 
     this.model.transform(updatedOpts);
@@ -203,12 +202,12 @@ export default class Transform {
     return updatedProps;
   }
 
-  _buildResourceTransforms(gl: WebGL2RenderingContext, props: TransformProps) {
+  _buildResourceTransforms(props: TransformProps) {
     if (canCreateBufferTransform(props)) {
-      this.bufferTransform = new BufferTransform(gl, props);
+      this.bufferTransform = new BufferTransform(this.device, props);
     }
     if (canCreateTextureTransform(props)) {
-      this.textureTransform = new TextureTransform(gl, props);
+      this.textureTransform = new TextureTransform(this.device, props);
     }
     assert(
       this.bufferTransform || this.textureTransform,

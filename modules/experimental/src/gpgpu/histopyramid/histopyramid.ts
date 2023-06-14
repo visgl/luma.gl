@@ -79,7 +79,7 @@ export function buildHistopyramidBaseLevel(
   });
   // _readData is debug only option
   let textureData;
-  // when base textuer size is 1X1, there are no more level to be generated
+  // when base texture size is 1X1, there are no more level to be generated
   // so read the texture data to be provided as base level data.
   if (_readData || size === 1) {
     textureData = transform.getData({packed: true});
@@ -94,6 +94,7 @@ export function buildHistopyramidBaseLevel(
     }
   });
   const framebuffer = transform.getFramebuffer();
+  // @ts-ignore TODO fix
   copyToTexture(framebuffer, flatPyramidTexture, {
     targetX: 0,
     width: size,

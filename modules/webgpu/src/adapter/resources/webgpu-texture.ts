@@ -19,6 +19,9 @@ export class WebGPUTexture extends Texture {
   readonly view: GPUTextureView;
   sampler: WebGPUSampler;
 
+  height: number;
+  width: number;
+
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');
   //   img.src = src;
@@ -35,6 +38,8 @@ export class WebGPUTexture extends Texture {
 
     this.device = device;
     this.handle = this.props.handle || this.createHandle();
+    this.width = this.props.width;
+    this.height = this.props.height;
 
     if (this.props.data) {
       this.setData({data: this.props.data}  );

@@ -1,9 +1,10 @@
 import test from 'tape-promise/tape';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
+
 import {glsl} from '@luma.gl/api';
 import BufferTransform from '@luma.gl/webgl-legacy/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl-legacy';
 import {ClassicModel as Model} from '@luma.gl/webgl-legacy';
-import {fixture} from 'test/setup';
 
 const VS = glsl`\
 attribute float source;
@@ -22,12 +23,9 @@ void main(void) {
 `;
 
 test('WebGL#BufferTransform construct', (t) => {
-  const gl = fixture.gl;
-
-  // @ts-expect-error
-  const bt = new BufferTransform(gl, {
+  const bt = new BufferTransform(webgl1Device, {
     sourceBuffers: {
-      input: new Buffer(gl, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
+      input: new Buffer(webgl1Device, {id: 'source-1', data: new Float32Array([0, 2.7, -45])})
     }
   });
   t.ok(bt instanceof BufferTransform, 'should construct with only sourceBuffers');
@@ -36,13 +34,11 @@ test('WebGL#BufferTransform construct', (t) => {
 });
 
 test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
-  const gl = fixture.gl;
-  let source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  let feedback = new Buffer(gl, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
+  let source = new Buffer(webgl1Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  let feedback = new Buffer(webgl1Device, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
   t.throws(
     () =>
-      // @ts-expect-error
-      new BufferTransform(gl, {
+      new BufferTransform(webgl1Device, {
         sourceBuffers: {
           source
         },
@@ -53,15 +49,14 @@ test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
     'should throw under WebGL1'
   );
 
-  const gl2 = fixture.gl2;
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
-  source = new Buffer(gl2, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  feedback = new Buffer(gl2, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
-  const bt = new BufferTransform(gl2, {
+  source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  feedback = new Buffer(webgl2Device, {id: 'feedback', data: new Float32Array([0, 2.7, -45])});
+  const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },
@@ -80,14 +75,13 @@ test('WebGL#BufferTransform construct with feedbackBuffer', (t) => {
 });
 
 test('WebGL#BufferTransform feedbackBuffer with referece', (t) => {
-  const gl = fixture.gl2;
-  if (!gl) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
-  const source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  const bt = new BufferTransform(gl, {
+  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },
@@ -103,18 +97,17 @@ test('WebGL#BufferTransform feedbackBuffer with referece', (t) => {
 });
 
 test('WebGL#BufferTransform updateModelProps', (t) => {
-  const gl = fixture.gl2;
-  if (!gl) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  // const model = new Model(gl, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-  const source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  // const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
+  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
 
   const cutomVaryings = ['a', 'b'];
-  let bt = new BufferTransform(gl, {
+  let bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },
@@ -127,7 +120,7 @@ test('WebGL#BufferTransform updateModelProps', (t) => {
   t.deepEqual(varyings, cutomVaryings, 'should use custom varyings when provided');
 
   bt.delete();
-  bt = new BufferTransform(gl, {
+  bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },
@@ -148,16 +141,15 @@ test('WebGL#BufferTransform updateModelProps', (t) => {
 });
 
 test('WebGL#BufferTransform setupResources', (t) => {
-  const gl = fixture.gl2;
-  if (!gl) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  const model = new Model(gl, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-  const source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  const bt = new BufferTransform(gl, {
+  const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
+  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },
@@ -177,16 +169,15 @@ test('WebGL#BufferTransform setupResources', (t) => {
 });
 
 test('WebGL#BufferTransform swap', (t) => {
-  const gl = fixture.gl2;
-  if (!gl) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  const model = new Model(gl, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
-  const source = new Buffer(gl, {id: 'source', data: new Float32Array([0, 2.7, -45])});
-  const bt = new BufferTransform(gl, {
+  const model = new Model(webgl2Device, {vs: VS, fs: FS, vertexCount: 1, varyings: ['feedback']});
+  const source = new Buffer(webgl2Device, {id: 'source', data: new Float32Array([0, 2.7, -45])});
+  const bt = new BufferTransform(webgl2Device, {
     sourceBuffers: {
       source
     },

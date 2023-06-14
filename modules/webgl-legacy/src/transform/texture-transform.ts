@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 
 import GL from '@luma.gl/constants';
+import {Device, Framebuffer} from '@luma.gl/api';
 
 import {
   _transform as transformModule,
@@ -12,7 +13,6 @@ import {
 
 import Buffer from '../classic/buffer';
 import Texture2D from '../classic/texture-2d';
-import Framebuffer from '../classic/framebuffer';
 import {readPixelsToArray} from '../classic/copy-and-blit';
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
@@ -38,6 +38,7 @@ type TextureBinding = {
 };
 
 export default class TextureTransform {
+  device: Device;
   gl: WebGL2RenderingContext;
   id = 0;
   currentIndex = 0;
@@ -55,8 +56,9 @@ export default class TextureTransform {
   _targetRefTexName: string;
   elementCount: number;
 
-  constructor(gl: WebGL2RenderingContext, props: TransformProps = {}) {
-    this.gl = gl;
+  constructor(device: Device, props: TransformProps = {}) {
+    this.device = device;
+    this.gl = (device as any).gl2 as WebGL2RenderingContext;
     this._initialize(props);
     Object.seal(this);
   }
@@ -261,25 +263,16 @@ export default class TextureTransform {
       binding.targetTexture = targetTexture;
 
       const {width, height} = targetTexture;
-      const {framebuffer} = binding;
-      if (framebuffer) {
-        // First update texture without re-sizing attachments
-        framebuffer.update({
-          attachments: {[GL.COLOR_ATTACHMENT0]: targetTexture},
-          resizeAttachments: false
-        });
-        // Resize to new taget texture size
-        framebuffer.resize({width, height});
-      } else {
-        binding.framebuffer = new Framebuffer(this.gl, {
-          id: 'transform-framebuffer',
-          width,
-          height,
-          attachments: {
-            [GL.COLOR_ATTACHMENT0]: targetTexture
-          }
-        });
+      if (binding.framebuffer) {
+        binding.framebuffer.destroy();
       }
+      binding.framebuffer = this.device.createFramebuffer({
+        id: 'transform-framebuffer',
+        width,
+        height,
+        colorAttachments: [targetTexture]
+      });
+      binding.framebuffer.resize({width, height});
     }
     return binding;
   }

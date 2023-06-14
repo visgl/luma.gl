@@ -1,6 +1,11 @@
 <!doctype html>
 <script type="module">
-  import './app.ts';
+  import AnimationLoopTemplate from './app.ts';
+  import {luma} from '@luma.gl/api';
+  import {WebGLDevice} from '@luma.gl/webgl';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  luma.registerDevices([WebGLDevice]);
+  makeAnimationLoop(AnimationLoopTemplate, {device: luma.createDevice()}).start();
 </script>
 <body>
 </body>
