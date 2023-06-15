@@ -39,8 +39,10 @@ const buffer = device.createBuffer(...)
 
 ## Accessing the CanvasContext
 
-A `Device` may be used to render in one or more canvases (HTML canvas elements).
-The connection between a Device and a canvas
+A `Device` may (optinally) be used to render in one or more canvases (HTML canvas elements).
+The connection between a Device and a canvas is managed by the `CanvasContext` class.
 
-> In WebGL there is always exactly one canvas associated with the device and it is not
-> possible to create a canvas-less context or render into multiple contexts.
+:::info
+In WebGL there is always exactly one canvas associated with the device and it is not
+possible to create a canvas-less context or render into multiple contexts.
+:::

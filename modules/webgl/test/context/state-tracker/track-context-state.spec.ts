@@ -1,6 +1,5 @@
 import test from 'tape-promise/tape';
-import {createTestContext} from '@luma.gl/test-utils';
-import {stringifyTypedArray} from './context-state.spec';
+import {createTestDevice} from '@luma.gl/test-utils';
 
 import {
   trackContextState,
@@ -8,21 +7,21 @@ import {
   popContextState,
   getParameters,
   setParameters,
-  resetParameters
+  resetParameters,
+  WEBGLTexture
 } from '@luma.gl/webgl';
-import {Texture2D} from '@luma.gl/webgl-legacy';
 
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
 } from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 
+import {stringifyTypedArray} from './context-state.spec';
+
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
-const fixture = {
-  gl: createTestContext({debug: true}) 
-};
+const device = createTestDevice({debug: true})!;
 
 test('WebGLState#imports', (t) => {
   t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
@@ -32,7 +31,7 @@ test('WebGLState#imports', (t) => {
 });
 
 test('WebGLState#trackContextState', (t) => {
-  const {gl} = fixture;
+  const {gl} = device;
   t.doesNotThrow(
     () => trackContextState(gl, {copyState: false}),
     'trackContextState call succeeded'
@@ -41,7 +40,7 @@ test('WebGLState#trackContextState', (t) => {
 });
 
 test('WebGLState#push & pop', (t) => {
-  const {gl} = fixture;
+  const {gl} = device;
 
   resetParameters(gl);
   let parameters = getParameters(gl);
@@ -112,7 +111,7 @@ test('WebGLState#push & pop', (t) => {
 });
 
 test('WebGLState#gl API', (t) => {
-  const {gl} = fixture;
+  const {gl} = device;
 
   resetParameters(gl);
   let parameters = getParameters(gl);
@@ -168,7 +167,7 @@ test('WebGLState#gl API', (t) => {
 });
 
 test('WebGLState#intercept gl calls', (t) => {
-  const {gl} = fixture;
+  const {gl} = device;
 
   resetParameters(gl);
 
@@ -211,13 +210,13 @@ test('WebGLState#intercept gl calls', (t) => {
 });
 
 test('WebGLState#not cached parameters', (t) => {
-  const {gl} = fixture;
+  const {gl} = device;
 
   resetParameters(gl);
 
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
-  const tex = new Texture2D(gl);
+  const tex = device.createTexture({}) as WEBGLTexture;
   tex.bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 
@@ -230,6 +229,6 @@ test('WebGLState#not cached parameters', (t) => {
   tex.unbind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
 
-  tex.delete();
+  tex.destroy();
   t.end();
 });

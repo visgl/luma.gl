@@ -7,10 +7,27 @@
     "label": "Upgrade Guide",
     "items": [
       "upgrade-guide/README",
-      "upgrade-guide/upgrade-to-v9",
-      "upgrade-guide/upgrade-to-v9-parameters",
-      "upgrade-guide/parameters2",
-      "upgrade-guide/api-philosophy"
+      "upgrade-guide/api-philosophy",
+      "upgrade-guide/upgrade-v9",
+      "upgrade-guide/upgrade-v9-parameters"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Tutorials",
+    "items": [
+      "tutorials/README",
+      "tutorials/hello-triangle",
+      "tutorials/hello-instancing",
+      "tutorials/hello-cube",
+      "tutorials/lighting",
+      "tutorials/shader-modules",
+      "tutorials/shader-hooks",
+      "tutorials/transform",
+      "tutorials/transform-feedback",
+      "tutorials/instanced-transform",
+      "tutorials/external-context",
+      "tutorials/whats-next"
     ]
   },
   {
@@ -48,24 +65,6 @@
       "api-guide/bindings",
       "api-guide/transforms",
       "api-guide/shader-modules"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Tutorials",
-    "items": [
-      "tutorials/README",
-      "tutorials/hello-triangle",
-      "tutorials/hello-instancing",
-      "tutorials/hello-cube",
-      "tutorials/lighting",
-      "tutorials/shader-hooks",
-      "tutorials/shader-modules",
-      "tutorials/transform",
-      "tutorials/transform-feedback",
-      "tutorials/instanced-transform",
-      "tutorials/external-context",
-      "tutorials/whats-next"
     ]
   },
   {

@@ -1,6 +1,8 @@
 # RenderPipeline
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
@@ -186,7 +188,9 @@ The following WebGL APIs are called in this function:
 
 # RenderPipeline
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 

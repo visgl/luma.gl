@@ -13,8 +13,10 @@ export {AnimationLoop} from './animation-loop/animation-loop';
 export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
 export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
-export type {ModelProps} from './lib/model';
-export {Model} from './lib/model';
+export type {ModelProps} from './model/model';
+export {Model} from './model/model';
+
+export {Transform} from './transform/transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 

@@ -48,5 +48,8 @@
     "@luma.gl/constants": "9.0.0-alpha.21",
     "@probe.gl/env": "^4.0.2"
   },
+  "devDependencies": {
+    "@luma.gl/test-utils": "9.0.0-alpha.21"
+  },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

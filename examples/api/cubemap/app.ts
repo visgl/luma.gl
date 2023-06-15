@@ -1,6 +1,6 @@
 import {Device, loadImage, glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
-import {GL, clear} from '@luma.gl/webgl-legacy';
+import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
+import {GL} from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -154,13 +154,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({fovy: radians(75), aspect});
 
-    clear(device, {color: [0, 0, 0, 1], depth: true});
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1]
+      // clearDepth: true
+    });
 
     this.cube.setUniforms({
       uView: view,
       uProjection: projection
     });
-    this.cube.draw();
+    this.cube.draw(renderPass);
 
     this.prism.setUniforms({
       uEyePosition: eyePosition,
@@ -168,11 +171,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       uProjection: projection,
       uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
     });
-    this.prism.draw();
-  }
-}
+    this.prism.draw(renderPass);
 
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
+    renderPass.end();
+  }
 }

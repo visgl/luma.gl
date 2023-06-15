@@ -1,6 +1,8 @@
 # WebGL Information
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 luma.gl provides several helper functions for testing properties of a WebGL context:
 

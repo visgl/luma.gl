@@ -1,5 +1,4 @@
-import GL from '@luma.gl/constants';
-import {GLDrawMode, GLPrimitive} from '../../types/webgl';
+import {GL, GLDrawMode, GLPrimitive} from '@luma.gl/constants';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
 export function getPrimitiveDrawMode(drawMode: GLDrawMode): GLPrimitive {

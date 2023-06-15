@@ -6,20 +6,25 @@ import type {
   CopyTextureToTextureOptions
 } from '@luma.gl/api';
 
-import {CommandBuffer} from './webgl-command-buffer';
+import {WEBGLCommandBuffer} from './webgl-command-buffer';
 import {WebGLDevice} from '../webgl-device';
 
 export class WEBGLCommandEncoder extends CommandEncoder {
   readonly device: WebGLDevice;
 
-  readonly commandBuffer = new CommandBuffer();
+  readonly commandBuffer: WEBGLCommandBuffer;
 
   constructor(device: WebGLDevice, props: CommandEncoderProps) {
     super(props);
     this.device = device;
+    this.commandBuffer = new WEBGLCommandBuffer(device);
   }
 
   override destroy(): void {}
+
+  override finish(): void {
+    this.commandBuffer.submitCommands();
+  }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;

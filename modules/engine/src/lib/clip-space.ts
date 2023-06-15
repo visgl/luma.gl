@@ -3,7 +3,7 @@
 import GL from '@luma.gl/constants';
 import {Device, glsl} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
-import {Model, ModelProps} from './model';
+import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = glsl`\

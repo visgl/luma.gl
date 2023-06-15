@@ -22,6 +22,7 @@ import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLShader} from './webgl-shader';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLVertexArrayObject} from '../objects/webgl-vertex-array-object';
+import {WEBGLRenderPass} from './webgl-render-pass';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -159,7 +160,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * This function unifies those ways into a single call using common parameters with sane defaults
    */
   draw(options: {
-    renderPass?: RenderPass;
+    renderPass: RenderPass;
     vertexCount?: number;
     indexCount?: number;
     instanceCount?: number;
@@ -169,7 +170,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     baseVertex?: number;
   }): boolean {
     const {
-      renderPass = this.device.getDefaultRenderPass(),
+      renderPass,
       vertexCount,
       // indexCount,
       instanceCount,
@@ -206,9 +207,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       this._applyBindings();
       this._applyUniforms();
 
+      const webglRenderPass = renderPass as WEBGLRenderPass;
+
       // TODO - double context push/pop
       withDeviceParameters(this.device, this.props.parameters, () => {
-        withGLParameters(this.device, {framebuffer: renderPass.props.framebuffer}, () => {
+        withGLParameters(this.device, webglRenderPass.glParameters, () => {
           // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
           if (isIndexed && isInstanced) {
             // ANGLE_instanced_arrays extension

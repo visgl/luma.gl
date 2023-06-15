@@ -1,7 +1,7 @@
 // Tables describing WebGL parameters
-import GL from '@luma.gl/constants';
+import {GL, GLParameters} from '@luma.gl/constants';
 import {isWebGL2} from '../context/webgl-checks';
-import type {GLParameters} from '../../types/webgl';
+
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
 /* eslint-disable no-shadow */

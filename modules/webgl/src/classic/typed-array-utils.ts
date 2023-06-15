@@ -1,28 +1,17 @@
 // luma.gl, MIT license
 
-import {TypedArray} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
-import {GLType} from '../types/webgl'
+import {TypedArray, TypedArrayConstructor} from '@luma.gl/api';
+import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
-
-type TypedArrayConstructor =
-  | Float32ArrayConstructor
-  | Uint16ArrayConstructor
-  | Uint32ArrayConstructor
-  | Uint8ArrayConstructor
-  | Uint8ClampedArrayConstructor
-  | Int8ArrayConstructor
-  | Int16ArrayConstructor
-  | Int32ArrayConstructor;
 
 /**
  * Converts TYPED ARRAYS to corresponding GL constant
  * Used to auto deduce gl parameter types
- * @param {*} arrayOrType
+ * @param arrayOrType
  * @returns
  */
-export function getGLTypeFromTypedArray(arrayOrType: TypedArray): GLType {
+export function getGLTypeFromTypedArray(arrayOrType: TypedArray): GLDataType {
   // If typed array, look up constructor
   const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
   switch (type) {
@@ -50,13 +39,13 @@ export function getGLTypeFromTypedArray(arrayOrType: TypedArray): GLType {
 /**
  * Converts GL constant to corresponding TYPED ARRAY
  * Used to auto deduce gl parameter types
- * @param {*} glType
- * @param {*} param1
+ * @param glType
+ * @param param1
  * @returns
  */
 // eslint-disable-next-line complexity
 export function getTypedArrayFromGLType(
-  glType: any,
+  glType: GLDataType | GLPixelType,
   options?: {
     clamped?: boolean;
   }
@@ -90,14 +79,14 @@ export function getTypedArrayFromGLType(
  * Flip rows (can be used on arrays returned from `Framebuffer.readPixels`)
  * https: *stackoverflow.com/questions/41969562/
  * how-can-i-flip-the-result-of-webglrenderingcontext-readpixels
- * @param {*} param0
+ * @param param0
  */
 export function flipRows(options: {
-  data: any;
-  width: any;
-  height: any;
+  data: TypedArray;
+  width: number;
+  height: number;
   bytesPerPixel?: number;
-  temp?: any;
+  temp?: Uint8Array;
 }): void {
   const {data, width, height, bytesPerPixel = 4, temp} = options;
   const bytesPerRow = width * bytesPerPixel;
@@ -118,9 +107,9 @@ export function flipRows(options: {
 
 
 export function scalePixels(options: {
-  data: any;
-  width: any;
-  height: any;
+  data: TypedArray;
+  width: number;
+  height: number;
 }): {
   data: Uint8Array;
   width: number;

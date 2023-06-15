@@ -11,6 +11,7 @@
   },
   "references": [
     {"path": "../api"},
-    {"path": "../constants"}
+    {"path": "../constants"},
+    {"path": "../engine"}
   ]
 }

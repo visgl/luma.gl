@@ -1,4 +1,9 @@
-import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast} from '@luma.gl/api';
+import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast, 
+  CopyTextureToTextureOptions, 
+  CopyTextureToBufferOptions
+  // CopyBufferToTextureOptions,
+  // CopyBufferToBufferOptions,
+} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';
@@ -26,13 +31,15 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
 
-  copyBufferToBuffer(options: {
-    source: Buffer,
-    sourceOffset?: number,
-    destination: Buffer,
-    destinationOffset?: number,
-    size?: number
-  }): void {
+  copyBufferToBuffer(options: // CopyBufferToBufferOptions
+    {
+      source: Buffer,
+      sourceOffset?: number,
+      destination: Buffer,
+      destinationOffset?: number,
+      size?: number
+    }
+  ): void {
     this.handle.copyBufferToBuffer(
       cast<WebGPUBuffer>(options.source).handle,
       options.sourceOffset ?? 0,
@@ -42,7 +49,8 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     );
   }
 
-  copyBufferToTexture(options: {
+  copyBufferToTexture(options: // CopyBufferToTextureOptions
+    {
     source: Buffer,
     offset?: number,
     bytesPerRow: number,
@@ -54,7 +62,8 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
     origin?: number[] | [number, number, number],
     extent?: number[] | [number, number, number]
-  }): void {
+  }
+  ): void {
     this.handle.copyBufferToTexture(
       {
         buffer: cast<WebGPUBuffer>(options.source).handle,
@@ -77,17 +86,27 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     );
   }
 
-  copyTextureToBuffer(options: {
-    source: GPUImageCopyTexture,
-    destination: GPUImageCopyBuffer,
-    copySize: GPUExtent3D
-  }): void {}
+  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
+    // this.handle.copyTextureToBuffer(
+    //   // source
+    //   {},
+    //   // destination
+    //   {},
+    //   // copySize
+    //   {}
+    // );
+  }
 
-  copyTextureToTexture(options: {
-    source: GPUImageCopyTexture ,
-    destination: GPUImageCopyTexture,
-    copySize: GPUExtent3D
-  }): void {}
+  copyTextureToTexture(options: CopyTextureToTextureOptions): void {
+    // this.handle.copyTextureToTexture(
+    //   // source
+    //   {},
+    //   // destination
+    //   {},
+    //   // copySize
+    //   {}
+    // );
+  }
 
   override pushDebugGroup(groupLabel: string): void {
     this.handle.pushDebugGroup(groupLabel);

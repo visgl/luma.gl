@@ -1,6 +1,8 @@
 # Buffer
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A `Buffer` is a WebGL object that stores an chunk of memory allocated by the GPU. This memory can be accessed directly by the GPU and is used to store things like vertex data, pixel data retrieved from images or the framebuffer, etc. The `Buffer` class provides mechanism for allocating such memory, together with facilities for copying data to and from the GPU (usually via JavaScript typed arrays).
 

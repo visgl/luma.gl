@@ -1,6 +1,13 @@
-import {Device, Parameters, CompareFunction, StencilOperation, log, isObjectEmpty} from '@luma.gl/api';
+import {
+  Device,
+  Parameters,
+  CompareFunction,
+  StencilOperation,
+  log,
+  isObjectEmpty
+} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import type { GLParameters } from '../../types/webgl';
+import type {GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
@@ -16,7 +23,11 @@ import {WebGLDevice} from '../webgl-device';
  * - Returns the return value of the supplied function
  * @deprecated use withDeviceParameters instead
  */
-export function withGLParameters<T = unknown>(device: Device, parameters: GLParameters, func: (device?: Device) => T): T {
+export function withGLParameters<T = unknown>(
+  device: Device,
+  parameters: GLParameters,
+  func: (device?: Device) => T
+): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(device);
@@ -42,7 +53,11 @@ export function withGLParameters<T = unknown>(device: Device, parameters: GLPara
  * - Restores parameters
  * - Returns the return value of the supplied function
  */
-export function withDeviceParameters<T = unknown>(device: Device, parameters: Parameters, func: (device?: Device) => T): T {
+export function withDeviceParameters<T = unknown>(
+  device: Device,
+  parameters: Parameters,
+  func: (device?: Device) => T
+): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
     return func(device);
@@ -59,7 +74,6 @@ export function withDeviceParameters<T = unknown>(device: Device, parameters: Pa
     popContextState(device.gl);
   }
 }
-
 
 /** Set WebGPU Style Parameters */
 export function setDeviceParameters(device: Device, parameters: Parameters) {
@@ -84,10 +98,12 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.frontFace) {
-    gl.frontFace(map('frontFace', parameters.frontFace, {
-      ccw: GL.CCW,
-      cw: GL.CW
-    }));
+    gl.frontFace(
+      map('frontFace', parameters.frontFace, {
+        ccw: GL.CCW,
+        cw: GL.CW
+      })
+    );
   }
 
   if (parameters.depthBias !== undefined) {
@@ -105,7 +121,6 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.depthCompare) {
-
     parameters.depthCompare !== 'always' ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST);
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }
@@ -125,15 +140,24 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     const mask = parameters.stencilReadMask || 0xffffffff;
     const glValue = convertCompareFunction('depthCompare', parameters.stencilCompare);
     // TODO - ensure back doesn't overwrite
-    parameters.stencilCompare !== 'always' ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST);
+    parameters.stencilCompare !== 'always'
+      ? gl.enable(GL.STENCIL_TEST)
+      : gl.disable(GL.STENCIL_TEST);
     gl.stencilFuncSeparate(GL.FRONT, glValue, 0, mask);
     gl.stencilFuncSeparate(GL.BACK, glValue, 0, mask);
   }
 
-  if (parameters.stencilPassOperation && parameters.stencilFailOperation && parameters.stencilDepthFailOperation) {
+  if (
+    parameters.stencilPassOperation &&
+    parameters.stencilFailOperation &&
+    parameters.stencilDepthFailOperation
+  ) {
     const dppass = convertStencilOperation('stencilPassOperation', parameters.stencilPassOperation);
     const sfail = convertStencilOperation('stencilFailOperation', parameters.stencilFailOperation);
-    const dpfail = convertStencilOperation('stencilDepthFailOperation', parameters.stencilDepthFailOperation);
+    const dpfail = convertStencilOperation(
+      'stencilDepthFailOperation',
+      parameters.stencilDepthFailOperation
+    );
     gl.stencilOpSeparate(GL.FRONT, sfail, dpfail, dppass);
     gl.stencilOpSeparate(GL.BACK, sfail, dpfail, dppass);
   }
@@ -190,14 +214,14 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
 export function convertCompareFunction(parameter: string, value: CompareFunction): GL {
   return map(parameter, value, {
-    'never': GL.NEVER,
-    'less': GL.LESS,
-    'equal': GL.EQUAL,
+    never: GL.NEVER,
+    less: GL.LESS,
+    equal: GL.EQUAL,
     'less-equal': GL.LEQUAL,
-    'greater': GL.GREATER,
+    greater: GL.GREATER,
     'not-equal': GL.NOTEQUAL,
     'greater-equal': GL.GEQUAL,
-    'always': GL.ALWAYS
+    always: GL.ALWAYS
   });
 }
 
@@ -216,10 +240,10 @@ export function convertToCompareFunction(parameter: string, value: GL): CompareF
 
 function convertStencilOperation(parameter: string, value: StencilOperation): GL {
   return map(parameter, value, {
-    'keep': GL.KEEP,
-    'zero': GL.ZERO,
-    'replace': GL.REPLACE,
-    'invert': GL.INVERT,
+    keep: GL.KEEP,
+    zero: GL.ZERO,
+    replace: GL.REPLACE,
+    invert: GL.INVERT,
     'increment-clamp': GL.INCR,
     'decrement-clamp': GL.DECR,
     'increment-wrap': GL.INCR_WRAP,

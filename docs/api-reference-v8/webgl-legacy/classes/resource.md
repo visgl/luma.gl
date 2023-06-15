@@ -1,6 +1,8 @@
 # Resource
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 ## Overview
 
@@ -18,7 +20,7 @@ Deleting a resource
 
 ```typescript
 const resource = new Buffer(gl);
-resource.delete();
+resource.destroy();
 ```
 
 Getting parameters

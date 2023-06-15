@@ -107,13 +107,14 @@ export class WEBGLBuffer extends Buffer {
       this.trackDeallocatedMemory();
       this.gl.deleteBuffer(this.handle);
       this.destroyed = true;
-      // this.handle = null;
+      // @ts-expect-error
+      this.handle = null;
     }
   }
 
   override write(data: ArrayBufferView, byteOffset: number = 0): void {
     const srcOffset = 0;
-    const byteLength = data.byteLength;
+    const byteLength = undefined; // data.byteLength;
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
@@ -122,9 +123,7 @@ export class WEBGLBuffer extends Buffer {
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
       this.device.assertWebGL2();
-
-      // @ts-expect-error
-      this.gl.bufferSubData(this.target, byteOffset, data, srcOffset, byteLength);
+      this.gl2.bufferSubData(target, byteOffset, data, srcOffset, byteLength);
     } else {
       this.gl.bufferSubData(target, byteOffset, data);
     }

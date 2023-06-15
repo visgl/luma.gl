@@ -1,6 +1,8 @@
 # CanvasContext
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
 
@@ -82,7 +84,9 @@ Whether the framebuffer backing this canvas context is sized using device pixels
 
 ### constructor
 
-> A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice`, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
+:::info
+A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice`, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
+:::
 
 ### `getDevicePixelResolution(): [number, number]`
 

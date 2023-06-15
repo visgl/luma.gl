@@ -12,7 +12,8 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
 export type SnapshotTestRunnerProps = TestRunnerProps;
 
 export class SnapshotTestRunner extends TestRunner {
-  private isDiffing: boolean = false;
+  // should be defined here but hack access in TestRunner
+  // private isDiffing: boolean = false;
 
   constructor(props: SnapshotTestRunnerProps) {
     super(props);

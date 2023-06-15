@@ -21,28 +21,3 @@ export function getKeyValue(gl: WebGLRenderingContext, name: string | GL): GL {
   assert(value !== undefined, `Accessing undefined constant GL.${name}`);
   return value;
 }
-
-export function getKey(gl: WebGLRenderingContext, value: any): string {
-  // @ts-ignore expect-error depends on settings 
-  gl = gl.gl || gl;
-  value = Number(value);
-  for (const key in gl) {
-    // @ts-ignore expect-error depends on settings
-    if (gl[key] === value) {
-      return `GL.${key}`;
-    }
-  }
-  return String(value);
-}
-
-export function getKeyType(gl: WebGLRenderingContext, value: any): string {
-  assert(value !== undefined, 'undefined key');
-  value = Number(value);
-  for (const key in gl) {
-    // @ts-ignore expect-error depends on settings
-    if (gl[key] === value) {
-      return `GL.${key}`;
-    }
-  }
-  return String(value);
-}

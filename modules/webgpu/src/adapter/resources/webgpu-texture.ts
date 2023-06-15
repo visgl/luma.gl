@@ -19,8 +19,8 @@ export class WebGPUTexture extends Texture {
   readonly view: GPUTextureView;
   sampler: WebGPUSampler;
 
-  height: number;
-  width: number;
+  override height: number;
+  override width: number;
 
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');
@@ -38,12 +38,13 @@ export class WebGPUTexture extends Texture {
 
     this.device = device;
     this.handle = this.props.handle || this.createHandle();
-    this.width = this.props.width;
-    this.height = this.props.height;
 
     if (this.props.data) {
       this.setData({data: this.props.data}  );
     }
+
+    this.width = this.handle.width;
+    this.height = this.handle.height;
 
     // Create a default sampler. This mimics the WebGL1 API where sampler props are stored on the texture
     // this.setSampler(props.sampler);
@@ -121,7 +122,7 @@ export class WebGPUTexture extends Texture {
     aspect?: 'all' | 'stencil-only' | 'depth-only';
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
-  }): this {
+  }): {width: number, height: number} {
     const {
       source,
       width = options.source.width,
@@ -162,7 +163,7 @@ export class WebGPUTexture extends Texture {
         depth
       ]
     );
-    return this;
+    return {width, height};
   }
 
   /*

@@ -45,7 +45,9 @@ import type {
   // RenderPass,
   RenderPassProps,
   ComputePass,
-  ComputePassProps
+  ComputePassProps,
+  // CommandEncoder,
+  CommandEncoderProps
 } from '@luma.gl/api';
 
 import {ClassicBuffer} from '../classic/buffer';
@@ -56,6 +58,7 @@ import {WEBGLTexture} from './resources/webgl-texture';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 import {WEBGLRenderPass} from './resources/webgl-render-pass';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
+import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 
 const LOG_LEVEL = 1;
 
@@ -279,8 +282,9 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     throw new Error('WebGL only supports a single canvas');
   }
 
-  _createBuffer(props: BufferProps): WEBGLBuffer {
-    return new ClassicBuffer(this, props);
+  createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
+    const newProps = this._getBufferProps(props);
+    return new ClassicBuffer(this, newProps);
   }
 
   _createTexture(props: TextureProps): WEBGLTexture {
@@ -330,6 +334,10 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     return this.renderPass;
   }
 
+  override createCommandEncoder(props: CommandEncoderProps): WEBGLCommandEncoder {
+    return new WEBGLCommandEncoder(this, props);
+  }
+
   /**
    * Offscreen Canvas Support: Commit the frame
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
@@ -375,20 +383,22 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
   }
 
   /**
-   * Loses the context
-   * @note Triggers context loss, mainly for testing
-   * @todo Promote to `Device` API?
+   * Triggers device (or WebGL context) loss.
+   * @note primarily intended for testing how application reacts to device loss
    */
-  loseDevice(): void {
+  override loseDevice(): boolean {
+    let deviceLossTriggered = false;
     const ext = this.gl.getExtension('WEBGL_lose_context');
     if (ext) {
+      deviceLossTriggered = true;
       ext.loseContext();
+      // ext.loseContext should trigger context loss callback but the platform may not do this, so do it explicitly
     }
-    // loseContext should trigger context loss callback but 
     this._resolveContextLost?.({
       reason: 'destroyed',
       message: 'Application triggered context loss'
     });
+    return deviceLossTriggered;
   }
 
   /** Save current WebGL context state onto an internal stack */
@@ -409,6 +419,25 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     // @ts-expect-error
     // eslint-disable-next-line camelcase
     handle.__SPECTOR_Metadata = props;
+  }
+
+  /** 
+   * Returns the GL.<KEY> constant that corresponds to a numeric value of a GL constant
+   * Be aware that there are some duplicates especially for constants that are 0,
+   * so this isn't guaranteed to return the right key in all cases.
+   */
+  getGLKey(value: unknown, gl?: WebGLRenderingContext): string {
+    // @ts-ignore expect-error depends on settings 
+    gl = gl || this.gl2 || this.gl;
+    const number = Number(value);
+    for (const key in gl) {
+      // @ts-ignore expect-error depends on settings
+      if (gl[key] === number) {
+        return `GL.${key}`;
+      }
+    }
+    // No constant found. Stringify the value and return it.
+    return String(value);
   }
 }
 

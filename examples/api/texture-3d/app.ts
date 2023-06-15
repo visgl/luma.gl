@@ -1,10 +1,7 @@
-/*
-  Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
-*/
+// Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
 import {getRandom, glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {GL, setParameters, clear} from '@luma.gl/webgl-legacy';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -66,11 +63,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       interpolation: lerp,
       permutation: shuffle(range(0, 255), random)
     });
-    setParameters(device, {
-      // TODO these should be set on the model, but doesn't work...
-      blend: true,
-      blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
-    });
 
     // CREATE POINT CLOUD
     const DIMENSIONS = 128;
@@ -128,6 +120,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
+    // setParameters(device, {
+    //   // TODO these should be set on the model, but doesn't work...
+    //   blend: true,
+    //   blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
+    // });
+
     this.cloud = new Model(device, {
       vs,
       fs,
@@ -150,26 +148,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.cloud.destroy();
   }
 
-  override onRender({device, tick, aspect}: AnimationProps) {
+  onRender({device, tick, aspect}: AnimationProps) {
     this.mvpMat.perspective({fovy: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
 
     // Draw the cubes
-    clear(device, {color: [0, 0, 0, 1], depth: true});
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1], 
+      // clearDepth: true
+    });
     this.cloud.setProps({
       uniforms: {
         uTime: tick / 100,
         uMVP: this.mvpMat
       }
     });
-    this.cloud.draw();
+    this.cloud.draw(renderPass);
+    renderPass.end();
   }
-}
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

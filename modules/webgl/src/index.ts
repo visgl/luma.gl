@@ -33,7 +33,7 @@ export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 export {WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
 
-// WebGL adapter classes (Legacy, will be moved to gltools)
+// WebGL adapter classes (Legacy, will be moved to webgl-legacy)
 export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
 export type {ClassicBufferProps, ClassicBufferProps as BufferProps} from './classic/buffer';
@@ -51,7 +51,7 @@ export {
 
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
-export type {GLParameters} from './types/webgl';
+export type {GLParameters} from '@luma.gl/constants';
 export {
   getParameters,
   setParameters,
@@ -74,4 +74,6 @@ export {polyfillContext} from './context/polyfill/polyfill-context';
 
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout, getProgramBindings} from './adapter/helpers/get-shader-layout';
-export {_checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
+export {convertGLToTextureFormat, _checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
+
+export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';

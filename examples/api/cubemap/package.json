@@ -8,6 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@luma.gl/api": "9.0.0-alpha.21",
     "@luma.gl/constants": "9.0.0-alpha.21",
     "@luma.gl/engine": "9.0.0-alpha.21",
     "@luma.gl/webgl": "9.0.0-alpha.21",

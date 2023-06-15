@@ -3,7 +3,7 @@ import {VERSION} from '../init';
 import {StatsManager, lumaStats} from '../lib/utils/stats-manager';
 import {log} from '../lib/utils/log';
 import {uid} from '../lib/utils/utils';
-import {TextureFormat} from './types/texture-formats';
+import type {TextureFormat} from './types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -16,6 +16,7 @@ import type {ExternalTexture, ExternalTextureProps} from './resources/external-t
 import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
+import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
 
 /** Device properties */
 export type DeviceProps = {
@@ -217,6 +218,8 @@ export abstract class Device {
   readonly props: Required<DeviceProps>;
   userData: {[key: string]: any} = {};
 
+  // Capabilities
+
   /** Information about the device (vendor, versions etc) */
   abstract info: DeviceInfo;
 
@@ -235,13 +238,26 @@ export abstract class Device {
   /** Check if device supports rendering to a specific texture format */
   abstract isTextureFormatRenderable(format: TextureFormat): boolean;
 
-  /** True context is already lost */
+  // Device loss
+
+  /** `true` if device is already lost */
   abstract get isLost(): boolean;
 
-  /** Promise that resolves when context is lost */
+  /** Promise that resolves when device is lost */
   abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
-  /** default canvas context */
+  /** 
+   * Trigger device loss. 
+   * @returns `true` if context loss could actually be triggered. 
+   * @note primarily intended for testing how application reacts to device loss 
+   */
+  loseDevice(): boolean {
+    return false;
+  }
+
+  // Canvas context
+
+  /** Default / primary canvas context. Can be null as WebGPU devices can be created without a CanvasContext */
   abstract canvasContext: CanvasContext | null;
 
   /** Creates a new CanvasContext (WebGPU only) */
@@ -253,29 +269,10 @@ export abstract class Device {
   // Resource creation
 
   /** Create a buffer */
-  createBuffer(props: BufferProps): Buffer;
-  createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer;
-
-  createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer {
-    if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
-      return this._createBuffer({data: props});
-    }
-
-    // TODO - fragile, as this is done before we merge with default options
-    // inside the Buffer constructor
-
-    // Deduce indexType
-    if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
-      if (props.data instanceof Uint32Array) {
-        props.indexType = 'uint32';
-      } else if (props.data instanceof Uint16Array) {
-        props.indexType = 'uint16';
-      }
-    }
-    return this._createBuffer(props);
-  }
+  abstract createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer;
 
   /** Create a texture */
+  abstract _createTexture(props: TextureProps): Texture;
   createTexture(props: TextureProps): Texture;
   createTexture(data: Promise<TextureData>): Texture;
   createTexture(url: string): Texture;
@@ -305,16 +302,39 @@ export abstract class Device {
   /** Create a compute pipeline (aka program) */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 
+  createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
+    throw new Error('not implemented');
+  }
+
   /** Create a RenderPass */
-  abstract beginRenderPass(props: RenderPassProps): RenderPass;
+  abstract beginRenderPass(props?: RenderPassProps): RenderPass;
 
   /** Create a ComputePass */
   abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
+  /** Get a renderpass that is set up to render to the primary CanvasContext */
   abstract getDefaultRenderPass(): RenderPass;
 
-  // Implementation
+  // Resource creation helpers
 
-  protected abstract _createBuffer(props: BufferProps): Buffer;
-  protected abstract _createTexture(props: TextureProps): Texture;
+  protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
+
+    if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
+      return {data: props};
+    }
+
+    // TODO - fragile, as this is done before we merge with default options
+    // inside the Buffer constructor
+
+    const newProps = {...props};
+    // Deduce indexType
+    if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
+      if (props.data instanceof Uint32Array) {
+        props.indexType = 'uint32';
+      } else if (props.data instanceof Uint16Array) {
+        props.indexType = 'uint16';
+      }
+    }
+    return newProps;    
+  }
 }

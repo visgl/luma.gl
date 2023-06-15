@@ -14,11 +14,10 @@ import {
   isObjectEmpty
 } from '@luma.gl/api';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
-import type {GLSamplerParameters} from '../../types/webgl';
+import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withParameters} from '../../context/state-tracker/with-parameters';
 import {
-  getWebGLTextureFormat,
+  convertTextureFormatToGL,
   getWebGLTextureParameters,
   getTextureFormatBytesPerPixel
 } from '../converters/texture-formats';
@@ -30,7 +29,33 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLSampler} from './webgl-sampler';
 
-export type {TextureProps};
+export type WEBGLTextureProps = TextureProps & {
+  /** @deprecated use props.sampler */
+  parameters?: Record<number, number>;
+  /** @deprecated use props.data */
+  pixels?: any;
+  /** @deprecated use props.format */
+  dataFormat?: number | null;
+  /** @deprecated rarely supported */
+  border?: number;
+  /** @deprecated WebGL only. */
+  pixelStore?: object;
+  /** @deprecated WebGL only. */
+  textureUnit?: number;
+  /** @deprecated WebGL only. Use dimension. */
+  target?: number;
+};
+
+export const DEFAULT_WEBGL_TEXTURE_PROPS = {
+  // deprecated
+  parameters: {},
+  pixelStore: {},
+  pixels: null,
+  border: 0,
+  dataFormat: undefined!,
+  textureUnit: undefined!,
+  target: undefined!,
+};
 
 export type TextureSourceData = 
   TypedArray |
@@ -48,7 +73,7 @@ type SetImageDataOptions = {
   width?: number;
   height?: number;
   depth?: number;
-  format?: any;
+  glFormat?: GL;
   type?: any;
   offset?: number;
   data: any; // TextureSourceData;
@@ -87,7 +112,7 @@ type SetSubImageDataOptions = {
   width?: number;
   height?: number;
   depth?: number;
-  format?: any;
+  glFormat?: any;
   type?: any;
   offset?: number;
   data: any;
@@ -114,7 +139,7 @@ type SetImageData3DOptions = {
 
 
 // Polyfill
-export class WEBGLTexture extends Texture {
+export class WEBGLTexture extends Texture<WEBGLTextureProps> {
   // TODO - remove?
   static FACES: number[] = [
     GL.TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -131,13 +156,12 @@ export class WEBGLTexture extends Texture {
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLTexture;
 
-  data;
+  /** Sampler object (currently unused) */
+  sampler: WEBGLSampler = undefined;
 
-  width: number = undefined;
-  height: number = undefined;
-  depth: number = undefined;
+  // data;
 
-  format: GL = undefined;
+  glFormat: GL = undefined;
   type: GL = undefined;
   dataFormat: GL = undefined;
   mipmaps: boolean = undefined;
@@ -154,9 +178,6 @@ export class WEBGLTexture extends Texture {
   target: GL;
   textureUnit: number = undefined;
 
-  /** Sampler object (currently unused) */
-  sampler: WEBGLSampler = undefined;
-
   /**
    * Program.draw() checks the loaded flag of all textures to avoid
    * Textures that are still loading from promises
@@ -169,8 +190,8 @@ export class WEBGLTexture extends Texture {
     lastTime: number;
   };
 
-  constructor(device: Device, props: TextureProps) {
-    super(device, {format: GL.RGBA, ...props});
+  constructor(device: Device, props: WEBGLTextureProps) {
+    super(device, {...DEFAULT_WEBGL_TEXTURE_PROPS, format: 'rgba8unorm', ...props});
 
     this.device = cast<WebGLDevice>(device);
     this.gl = this.device.gl;
@@ -178,6 +199,7 @@ export class WEBGLTexture extends Texture {
     this.handle = this.props.handle || this.gl.createTexture();
     this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data}); // {name: this.props.id};
 
+    this.glFormat = GL.RGBA;
     this.target = getWebGLTextureTarget(this.props);
 
     // Program.draw() checks the loaded flag of all textures
@@ -208,7 +230,7 @@ export class WEBGLTexture extends Texture {
   }
 
   // eslint-disable-next-line max-statements
-  initialize(props: TextureProps = {}): this {
+  initialize(props: WEBGLTextureProps = {}): this {
     // Cube textures
     if (this.props.dimension === 'cube') {
       return this.initializeCube(props);
@@ -240,7 +262,7 @@ export class WEBGLTexture extends Texture {
     const {parameters = {}  as Record<GL, any>} = props;
 
     const {
-      pixels = null, recreate = false, pixelStore = {}, textureUnit = undefined} = props;
+      pixels = null, pixelStore = {}, textureUnit = undefined} = props;
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -253,6 +275,8 @@ export class WEBGLTexture extends Texture {
     let {width, height, dataFormat, type, compressed = false, mipmaps = true} = props;
     const {depth = 0} = props;
 
+    const glFormat = convertTextureFormatToGL(props.format, this.device.isWebGL2);
+
     // Deduce width and height
     ({width, height, compressed, dataFormat, type} = this._deduceParameters({
       format: props.format,
@@ -264,13 +288,11 @@ export class WEBGLTexture extends Texture {
       height
     }));
 
-    const format = getWebGLTextureFormat(this.gl, props.format);
-
     // Store opts for accessors
     this.width = width;
     this.height = height;
-    this.depth = depth;
-    this.format = format;
+    // this.depth = depth;
+    this.glFormat = glFormat;
     this.type = type;
     this.dataFormat = dataFormat;
     this.textureUnit = textureUnit;
@@ -292,7 +314,7 @@ export class WEBGLTexture extends Texture {
       width,
       height,
       depth,
-      format,
+      format: glFormat,
       type,
       dataFormat,
       // @ts-expect-error 
@@ -308,10 +330,6 @@ export class WEBGLTexture extends Texture {
       this.generateMipmap();
     }
 
-    // TODO - Store data to enable auto recreate on context loss
-    if (recreate) {
-      this.data = data;
-    }
     if (isVideo) {
       this._video = {
         video: data as HTMLVideoElement,
@@ -324,7 +342,7 @@ export class WEBGLTexture extends Texture {
     return this;
   }
 
-  initializeCube(props?: TextureProps): this {
+  initializeCube(props?: WEBGLTextureProps): this {
     const {mipmaps = true, parameters = {}  as Record<GL, any>} = props;
 
     // Store props for accessors
@@ -449,7 +467,7 @@ export class WEBGLTexture extends Texture {
       target = this.target,
       pixels = null,
       level = 0,
-      format = this.format,
+      glFormat = this.glFormat,
       offset = 0,
       parameters = {}  as Record<GL, any>
     } = options;
@@ -489,7 +507,7 @@ export class WEBGLTexture extends Texture {
     withParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
-          gl.texImage2D(target, level, format, width, height, 0 /* border*/, dataFormat, type, data);
+          gl.texImage2D(target, level, glFormat, width, height, 0 /* border*/, dataFormat, type, data);
           break;
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
@@ -497,7 +515,7 @@ export class WEBGLTexture extends Texture {
           gl.texImage2D(
             target,
             level,
-            format,
+            glFormat,
             width,
             height,
             0, // border (must be 0)
@@ -515,7 +533,7 @@ export class WEBGLTexture extends Texture {
           gl2.texImage2D(
             target,
             level,
-            format,
+            glFormat,
             width,
             height,
             0 /* border*/,
@@ -530,7 +548,7 @@ export class WEBGLTexture extends Texture {
             gl.texImage2D(
               target,
               level,
-              format,
+              glFormat,
               width,
               height,
               0 /* border*/,
@@ -539,7 +557,7 @@ export class WEBGLTexture extends Texture {
               data
             );
           } else {
-            gl.texImage2D(target, level, format, dataFormat, type, data);
+            gl.texImage2D(target, level, glFormat, dataFormat, type, data);
           }
           break;
         case 'compressed':
@@ -564,7 +582,7 @@ export class WEBGLTexture extends Texture {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      const bytesPerPixel = getTextureFormatBytesPerPixel(this.gl, this.props.format);
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
       this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
     }
 
@@ -587,7 +605,7 @@ export class WEBGLTexture extends Texture {
     width = this.width,
     height = this.height,
     level = 0,
-    format = this.format,
+    glFormat = this.glFormat,
     type = this.type,
     dataFormat = this.dataFormat,
     compressed = false,
@@ -629,7 +647,7 @@ export class WEBGLTexture extends Texture {
     withParameters(this.gl, parameters, () => {
       // TODO - x,y parameters
       if (compressed) {
-        this.gl.compressedTexSubImage2D(target, level, x, y, width, height, format, data);
+        this.gl.compressedTexSubImage2D(target, level, x, y, width, height, glFormat, data);
       } else if (data === null) {
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
@@ -723,12 +741,12 @@ export class WEBGLTexture extends Texture {
 
   // HELPER METHODS
 
-  _deduceParameters(opts: TextureProps) {
+  _deduceParameters(opts: WEBGLTextureProps) {
     const {format, data} = opts;
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
-    const parameters = getWebGLTextureParameters(this.gl, format);
+    const parameters = getWebGLTextureParameters(format, this.device.isWebGL2);
     dataFormat = dataFormat || parameters.dataFormat;
     type = type || parameters.type;
     compressed = compressed || parameters.compressed;
@@ -884,7 +902,7 @@ export class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.target, this.handle);
 
-    const webglTextureFormat = getWebGLTextureParameters(this.gl, format);
+    const webglTextureFormat = getWebGLTextureParameters(format, this.device.isWebGL2);
 
     withParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
@@ -924,7 +942,7 @@ export class WEBGLTexture extends Texture {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      const bytesPerPixel = getTextureFormatBytesPerPixel(this.gl, this.props.format);
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
       this.trackAllocatedMemory(this.width * this.height * this.depth * bytesPerPixel, 'Texture');
     }
 

@@ -1,6 +1,8 @@
 # ShaderLayout
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 Shader code contains declarations of attributes, uniform blocks, samplers etc in the GLSL or WGSL code,
 that collectively define the layout of data that needs to be bound before the shader can execute on the

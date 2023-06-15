@@ -142,16 +142,20 @@ export abstract class CanvasContext {
     if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
       return 1;
     }
+
+    useDevicePixels = useDevicePixels === undefined ? this.props.useDevicePixels : useDevicePixels;
+
+    if (!useDevicePixels || useDevicePixels as number <= 0) {
+      return 1;
+    }
+
     // The param was mainly provide to support the test cases, could be removed
-    if (typeof useDevicePixels === 'number') {
-      return useDevicePixels > 0 ? useDevicePixels : 1;
+    if (useDevicePixels === true) {
+      const dpr = typeof window !== 'undefined' && window.devicePixelRatio;
+      return dpr || 1;
     }
-    if (typeof this.props.useDevicePixels === 'number') {
-      return this.props.useDevicePixels > 0 ? this.props.useDevicePixels : 1;
-    }
-    return useDevicePixels || this.props.useDevicePixels
-      ? (typeof window !== 'undefined' && window.devicePixelRatio) || 1
-      : 1;
+
+    return useDevicePixels;
   }
 
   /**

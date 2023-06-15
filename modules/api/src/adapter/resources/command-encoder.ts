@@ -12,48 +12,95 @@ export type WriteBufferOptions = {
 };
 
 export type WriteTextureOptions = {
-  destination: Texture,
-  mipLevel?: number //  = 0;
-  origin?: [number, number, number] | number[],
+  destination: Texture;
+  mipLevel?: number; //  = 0;
+  origin?: [number, number, number] | number[];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
-  data: BufferSource,
-  // dataLayout,
-  offset: number,
-  bytesPerRow: number,
-  rowsPerImage: number,
-  size: [number, number, number] | number[],
+  data: BufferSource;
+  // dataLayout;
+  offset: number;
+  bytesPerRow: number;
+  rowsPerImage: number;
+  size: [number, number, number] | number[];
 }
 
 export type CopyBufferToBufferOptions = {
-  source: Buffer,
-  sourceOffset?: number,
-  destination: Buffer,
-  destinationOffset?: number,
-  size: number
+  source: Buffer;
+  sourceOffset?: number;
+  destination: Buffer;
+  destinationOffset?: number;
+  size: number;
 };
 
 export type CopyBufferToTextureOptions = {
-  destination: Texture,
+  source: Buffer;
+  byteOffset?: number;
+  destination: Texture;
   mipLevel?: number //  = 0;
-  origin?: [number, number, number] | number[],
+  origin?: [number, number, number] | number[];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
-  source: Buffer,
-  offset: number,
-  bytesPerRow: number,
-  rowsPerImage: number,
-  size: [number, number, number] | number[],
+  bytesPerRow: number;
+  rowsPerImage: number;
+  size: [number, number, number] | number[];
 };
 
 export type CopyTextureToBufferOptions = {
-  // source: GPUImageCopyTexture,
-  // destination: GPUImageCopyBuffer,
-  // copySize: GPUExtent3D
+  /** Texture to copy to/from. */
+  source: Texture;
+  /**  Mip-map level of the texture to copy to/from. (Default 0) */
+  mipLevel?: number;
+  /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from.
+   * Together with `copySize`, defines the full copy sub-region.
+   */
+  /** Defines which aspects of the texture to copy to/from. */
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+
+  /** Width to copy */
+  width?: number;
+  height?: number;
+  depthOrArrayLayers?: number;
+  origin?: number[];
+
+  /** Destination buffer */
+  destination: Buffer;
+  /** Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0) */
+  byteOffset?: number;
+  /**
+   * The stride, in bytes, between the beginning of each block row and the subsequent block row.
+   * Required if there are multiple block rows (i.e. the copy height or depth is more than one block).
+   */
+  bytesPerRow?: number;
+  /**
+   * Number of block rows per single image of the texture.
+   * rowsPerImage &times; bytesPerRow is the stride, in bytes, between the beginning of each image of data and the subsequent image.
+   * Required if there are multiple images (i.e. the copy depth is more than one).
+   */
+  rowsPerImage?: number;
 };
 
 export type CopyTextureToTextureOptions = {
-  // source: GPUImageCopyTexture ,
-  // destination: GPUImageCopyTexture,
-  // copySize: GPUExtent3D
+  /** Texture to copy to/from. */
+  source: Texture;
+  /**  Mip-map level of the texture to copy to/from. (Default 0) */
+  mipLevel?: number;
+  /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
+  /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+
+  /** Texture to copy to/from. */
+  destination: Texture;
+  /**  Mip-map level of the texture to copy to/from. (Default 0) */
+  destinationMipLevel?: number;
+  /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
+  destinationOrigin?: number[];
+  /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
+  destinationAspect?: 'all' | 'stencil-only' | 'depth-only';
+
+  origin?: number[];
+  /** Width to copy */
+  width?: number;
+  height?: number;
+  depthOrArrayLayers?: number;
 };
 
 // interface Queue {
@@ -91,6 +138,8 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     // @ts-expect-error
     super(props, DEFAULT_COMMAND_ENCODER_PROPS);
   }
+  
+  abstract finish(): void; // TODO - return the CommandBuffer?
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;

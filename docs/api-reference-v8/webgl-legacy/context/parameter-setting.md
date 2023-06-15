@@ -1,6 +1,8 @@
 # WebGL Parameters
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 luma.gl simplifies the usage of WebGL parameters by providing a unified API for setting and getting values. Any GL parameter can be queried or set using `getParameters` and `setParameters` (no need to keep track of what underlying WebGL calls are required), and luma.gl also provide _setting names_ that allow the normal WebGL setter functions (like `gl.blendEquation` or `gl.clearColor`) to be specified as keys in a `setParameters` call.
 

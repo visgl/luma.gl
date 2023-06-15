@@ -149,13 +149,14 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     const arrayBuffer = await particleBuffers[0].readAsync();
     console.log(new Float32Array(arrayBuffer));
 
+
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     model.setAttributes({
       particles: particleBuffers[(t + 1) % 2],
       vertexPositions: spriteVertexBuffer
     });
-    model.draw();
-
-    device.submit();
+    model.draw(renderPass);
+    renderPass.end();
 
     ++t;
     requestAnimationFrame(frame);

@@ -187,7 +187,7 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 | Parameter                           | Type      | Description                                                                                                                                                        |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.delete()`), but the delete is pending because pipeline is still part of current rendering state |
+| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.destroy()`), but the delete is pending because pipeline is still part of current rendering state |
 | `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                               |
 | `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
 | `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |

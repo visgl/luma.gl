@@ -6,11 +6,23 @@ import {ShaderHooksExample} from '@site';
 <DeviceTabs />
 <ShaderHooksExample />
 
-In the [previous tutorial](/docs/tutorials/shader-hooks), we used shader modules to insert re-usable functions into the shaders that use them. In this tutorial, we'll focus on another feature of shader modules: the ability to modify the behavior of shaders that use them via **shader hooks**. A shader hook is simply a function inserted into a vertex or fragment shader. By default, these functions will be no-ops, but they define entry points into which shader modules can inject code. For high-level API usage, shader hooks are exposed via [PipelineFactory](/docs/api-reference/engine/pipeline-factory) (we'll look at low-level shader hooks later):
+In the [previous tutorial](/docs/tutorials/shader-moduls), we used shader modules 
+to insert re-usable functions into the shaders that use them. 
+
+In this tutorial, we'll focus on another feature of shader modules: 
+the ability to modify the behavior of the shaders that use the shader modules via **shader hooks**. 
+
+A shader hook is simply a function inserted into a vertex or fragment shader. 
+By default, these functions will be no-ops, but they define entry points 
+into which shader modules can inject code. 
+
+For high-level API usage, shader hooks are defined on a
+[PipelineFactory](/docs/api-reference/engine/pipeline-factory) 
+(we'll look at low-level shader hooks later):
 
 ```typescript
-const pm = new ProgramManager(device);
-pm.addShaderHook('vs:MY_SHADER_HOOK(inout vec4 position)');
+const pipelineFactory = new PipelineFactory(device);
+pipelineFactory.addShaderHook('vs:MY_SHADER_HOOK(inout vec4 position)');
 
 const vs = `
   attribute vec4 pos;
@@ -25,8 +37,8 @@ const vs = `
 Shader modules can then inject code into the hook via their `inject` property:
 
 ```typescript
-const myModule = {
-  name: 'myModule',
+const myShaderModule = {
+  name: 'my-shader-module',
   inject: 'position.x -= 0.1;'
 };
 ```
@@ -36,10 +48,7 @@ We'll use these features to create a modified version of the previous tutorial, 
 We'll start by setting up our imports and defining our base vertex and fragment shaders:
 
 ```typescript
-import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
-
-import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
+import {AnimationLoop, Model, PipelineFactory} from '@luma.gl/engine';
 
 const vs = `
   attribute vec2 position;
@@ -79,23 +88,23 @@ const offsetRightModule = {
 
 These shader modules inject code into the shader hook that will modify the x-coordinate of the position passed in. The `inject` property maps shader hook names to the code to be injected into them. The `vs` prefix indicates that this is a vertex shader hook.
 
-The `onInitialize` method of our `AnimationLoop` will be somewhat different from the previous example. To create a shader hook, we need access to a `ProgramManager` instance:
+The `onInitialize` method of our `AnimationLoop` will be somewhat different from the previous example. To create a shader hook, we need access to a `PipelineFactory` instance:
 
 ```typescript
   override onInitialize({device}) {
-    const programManager = new ProgramManager(device);
-    programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    const pipelineFactory = new PipelineFactory(device);
+    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     // ...
   }
 ```
 
-The shader hook definition is the function signature with a prefix indicating whether it is intended for the vertex shader (`vs`) or fragment shader (`fs`). Shader hooks are always `void` funtions so they must return values to the caller via `out` or `inout` argurments. The rest of `onInitialize` is similar to what we've seen before with the exception of using the new shader modules and the `ProgramManager` to create our `Model`s:
+The shader hook definition is the function signature with a prefix indicating whether it is intended for the vertex shader (`vs`) or fragment shader (`fs`). Shader hooks are always `void` funtions so they must return values to the caller via `out` or `inout` argurments. The rest of `onInitialize` is similar to what we've seen before with the exception of using the new shader modules and the `PipelineFactory` to create our `Model`s:
 
 ```typescript
   override onInitialize({gl}) {
-    const programManager = new ProgramManager(device);
-    programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    const pipelineFactory = new PipelineFactory(device);
+    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     const positionBuffer = device.createBuffer(new Float32Array([
       -0.3, -0.5,
@@ -106,7 +115,7 @@ The shader hook definition is the function signature with a prefix indicating wh
     const model1 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetLeftModule],
       attributes: {
         position: positionBuffer
@@ -120,7 +129,7 @@ The shader hook definition is the function signature with a prefix indicating wh
     const model2 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetRightModule],
       attributes: {
         position: positionBuffer
@@ -142,7 +151,7 @@ Shader hooks allowed us to define our vertex and fragment shaders once and modif
 The entire application should look like the following:
 
 ```typescript
-import {AnimationLoop, Model, ProgramManager} from '@luma.gl/engine';
+import {AnimationLoop, Model, PipelineFactory} from '@luma.gl/engine';
 import {clear} from '@luma.gl/webgl';
 
 const vs = `
@@ -178,15 +187,15 @@ const offsetRightModule = {
 
 const loop = new AnimationLoop({
   override onInitialize({device}) {
-    const programManager = new ProgramManager(device);
-    programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    const pipelineFactory = new PipelineFactory(device);
+    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     const positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     const model1 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetLeftModule],
       attributes: {
         position: positionBuffer
@@ -200,7 +209,7 @@ const loop = new AnimationLoop({
     const model2 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetRightModule],
       attributes: {
         position: positionBuffer

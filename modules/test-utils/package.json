@@ -39,14 +39,18 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
+    "@luma.gl/api": "9.0.0-alpha.21",
+    "@luma.gl/engine": "9.0.0-alpha.21",
+    "@luma.gl/webgl": "9.0.0-alpha.21",
+    "@luma.gl/webgpu": "9.0.0-alpha.21",
     "@probe.gl/env": "^4.0.2",
     "@types/gl": "^6.0.2",
     "gl": "^6.0.1"
   },
   "peerDependencies": {
-    "@luma.gl/api": "9.0.0-alpha.13",
-    "@luma.gl/webgl": "9.0.0-alpha.13",
-    "@luma.gl/webgpu": "9.0.0-alpha.13",
+    "@luma.gl/api": "9.0.0-alpha.21",
+    "@luma.gl/webgl": "9.0.0-alpha.21",
+    "@luma.gl/webgpu": "9.0.0-alpha.21",
     "@probe.gl/test-utils": "^4.0.2"
   },
   "engines_comment": [

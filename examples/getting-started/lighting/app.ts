@@ -1,7 +1,6 @@
 import {glsl} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {phongLighting} from '@luma.gl/shadertools';
-import {clear} from '@luma.gl/webgl-legacy';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -102,6 +101,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, aspect, tick}) {
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1], 
+      clearDepth: true
+    });
     this.modelMatrix
       .identity()
       .rotateX(tick * 0.01)
@@ -114,7 +117,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.model.setUniforms({uMVP: this.mvpMatrix, uModel: this.modelMatrix});
 
-    clear(device, {color: [0, 0, 0, 1], depth: true});
-    this.model.draw();
+    this.model.draw(renderPass);
+
+    renderPass.end();
   }
 }

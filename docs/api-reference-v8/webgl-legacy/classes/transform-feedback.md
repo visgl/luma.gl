@@ -1,6 +1,8 @@
 # TransformFeedback
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 > `TransformFeedback` is only available in WebGL 2
 

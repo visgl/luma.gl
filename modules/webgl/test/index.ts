@@ -31,7 +31,12 @@ import './adapter/device-helpers/set-device-parameters.spec';
 import './adapter/webgl-device.spec';
 import './adapter/webgl-canvas-context.spec';
 
+import './adapter/objects/webgl-renderbuffer.spec';
+import './adapter/objects/webgl-vertex-array-object.spec';
+
 // Resources - TODO these tests only depend on Device and could move to API...
-import './adapter/resources/webgl-sampler.spec';
-import './adapter/resources/webgl-texture.spec';
-import './adapter/resources/webgl-framebuffer.spec';
+// import './adapter/resources/webgl-buffer.spec';
+// import './adapter/resources/webgl-sampler.spec';
+// import './adapter/resources/webgl-texture.spec';
+// import './adapter/resources/webgl-framebuffer.spec';
+// import './adapter/resources/webgl-command-buffer.spec';

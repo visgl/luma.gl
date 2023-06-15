@@ -1,6 +1,8 @@
 # Device Pixels
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 Many modern devices support retina or UHD displays can render 2 or 4 times the number of pixels indicated by the CSS dimensions. By rendering to a drawing surface that matches the device and then down sampling it to the smaller (CSS) area, sharper images can be produced but at the cost of rendering more pixels.
 

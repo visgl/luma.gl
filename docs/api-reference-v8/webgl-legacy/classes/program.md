@@ -1,6 +1,8 @@
 # Program
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A `Program` contains a matched pair of vertex and fragment [shaders](/docs/api-reference-v8/webgl-legacy/classes/shader) that can be exectued on the GPU by calling `Program.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
@@ -189,7 +191,7 @@ Use with `Program.getParameter(parameter)`
 
 | Parameter                           | Type      | Description                                                                                                                                                        |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GL.DELETE_STATUS`                  | GLboolean | If true, program has been flagged for deletion (by calling `Program.delete()`), but the delete is pending because program is still part of current rendering state |
+| `GL.DELETE_STATUS`                  | GLboolean | If true, program has been flagged for deletion (by calling `Program.destroy()`), but the delete is pending because program is still part of current rendering state |
 | `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. Program linking is performed by luma on program initialization                                               |
 | `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
 | `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |

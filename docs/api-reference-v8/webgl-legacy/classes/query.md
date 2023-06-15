@@ -1,6 +1,8 @@
 # Query
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A `Query` object provides single unified API for using WebGL asynchronus queries, which include query objects ('Occlusion' and 'Transform Feedback') and timer queries.
 

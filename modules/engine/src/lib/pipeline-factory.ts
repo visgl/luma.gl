@@ -1,5 +1,5 @@
 import type {RenderPipelineParameters, PrimitiveTopology, ShaderLayout} from '@luma.gl/api';
-import {Device, RenderPipeline} from '@luma.gl/api/';
+import {Device, RenderPipeline} from '@luma.gl/api';
 import type { ShaderModule } from '@luma.gl/shadertools';
 import {assembleShaders} from '@luma.gl/shadertools';
 

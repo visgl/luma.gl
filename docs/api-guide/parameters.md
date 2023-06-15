@@ -32,7 +32,7 @@ const framebuffer = device.createFramebuffer({
   colorAttachments: {clearColor: [1, 0, 0]},
 })
 
-const device.createRenderPass({
+const device.beginRenderPass({
   framebuffer,
   parameters: {
 

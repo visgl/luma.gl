@@ -145,8 +145,8 @@ export type WebGL2ColorTextureFormat =
   'rgba4unorm-webgl' |
   'rgb565unorm-webgl' |
   'rgb5a1unorm-webgl' |
-  'rbg8unorm-webgl' |
-  'rbg8snorm-webgl' |
+  'rgb8unorm-webgl' |
+  'rgb8snorm-webgl' |
   'rg16unorm-webgl' |
   'rg16snorm-webgl' |
   'rgb10a2unorm-webgl' |

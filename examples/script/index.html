@@ -166,7 +166,7 @@
           return {timelineChannels, modelMatrix, viewMatix, projMatrix};
         }
 
-        override onRender(animationProps) {
+        onRender(animationProps) {
           const {device, aspect, tick, timelineChannels, modelMatrix, viewMatix, projMatrix} = animationProps;
           const {framebuffer, _mousePosition} = animationProps;
           const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = timelineChannels;
@@ -203,8 +203,8 @@
           this.cube.draw();
         }
 
-        override onFinalize({gl}) {
-          this.cube.delete();
+        onFinalize({gl}) {
+          this.cube.destroy();
         }
       }
 

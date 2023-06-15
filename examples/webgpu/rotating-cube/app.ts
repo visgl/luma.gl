@@ -1,5 +1,5 @@
 import {Buffer, glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -134,17 +134,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
     this.uniformBuffer.destroy();
   }
 
-  override onRender({device}: AnimationProps) {
+  onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
     const viewMatrix = new Matrix4();
     const modelViewProjectionMatrix = new Matrix4();
 
-    const aspect = device.canvasContext.getAspect();
+    const aspect = device.canvasContext?.getAspect();
     const now = Date.now() / 1000;
 
     viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
@@ -152,14 +152,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     this.uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
   
-    // device.beginRenderPass();
-    this.model.draw();
-    device.submit();
+    const renderPass = device.beginRenderPass();
+    this.model.draw(renderPass);
+    renderPass.end();
   }
-}
-
-// Create device and run
-if (!globalThis.website) {
-  // , {canvas: 'canvas'}
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

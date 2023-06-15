@@ -7,8 +7,6 @@ import type {TypedArray} from '@luma.gl/api'
 import type {GLParameters} from '@luma.gl/webgl';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/webgl';
 
-import {getKey} from '@luma.gl/webgl-legacy';
-import {Framebuffer} from '@luma.gl/webgl-legacy';
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
@@ -53,7 +51,7 @@ test('WebGLState#getParameters (WebGL2)', (t) => {
       const value = parameters[setting];
       t.ok(
         value !== undefined,
-        `${getKey(webgl2Device.gl, setting)}: got a value ${stringifyTypedArray(value)}`
+        `${webgl2Device.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
       );
     }
   }
@@ -73,7 +71,7 @@ test.skip('WebGLState#setParameters (Mixing enum and function style keys)', (t) 
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(webgl1Device.gl, key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${webgl1Device.getGLKey(key)}`
     );
   }
   t.end();
@@ -118,7 +116,7 @@ test('WebGLState#setParameters (Argument expansion for ***SeperateFunc setters))
     t.deepEqual(
       value,
       expectedValues[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${getKey(webgl1Device.gl, key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${webgl1Device.getGLKey(key)}`
     );
   }
   t.end();
@@ -373,8 +371,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
           t.equal(
             value,
             expected[state],
-            `${contextName} : expected value, ${getKey(webgl1Device.gl, value)} received for ${getKey(
-              webgl1Device.gl,
+            `${contextName} : expected value, ${webgl1Device.getGLKey(value)} received for ${webgl1Device.getGLKey(
               state
             )}`
           );
@@ -388,7 +385,7 @@ test('WebGLState#BlendEquationMinMax', (t) => {
 });
 
 test('WebGLState#bindFramebuffer (WebGL1)', (t) => {
-  const framebuffer = new Framebuffer(webgl1Device);
+  const framebuffer = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
   let fbHandle;
 
   resetParameters(webgl1Device);
@@ -408,9 +405,9 @@ test('WebGLState#bindFramebuffer (WebGL1)', (t) => {
 
 test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
   if (webgl2Device) {
-    const framebuffer = new Framebuffer(webgl2Device);
-    const framebufferTwo = new Framebuffer(webgl2Device);
-    const framebufferThree = new Framebuffer(webgl2Device);
+    const framebuffer = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+    const framebufferTwo = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+    const framebufferThree = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
     let fbHandle;
 
     resetParameters(webgl2Device);
@@ -471,8 +468,10 @@ test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
 });
 
 test('WebGLState#withParameters framebuffer', (t) => {
-  const framebufferOne = new Framebuffer(webgl1Device);
-  const framebufferTwo = new Framebuffer(webgl1Device);
+  const framebufferOne = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+
+  const framebufferTwo = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+
 
   resetParameters(webgl1Device);
 
