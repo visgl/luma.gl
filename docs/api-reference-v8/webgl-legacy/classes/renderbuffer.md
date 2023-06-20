@@ -1,6 +1,8 @@
 # Renderbuffer
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 `Renderbuffer`s are WebGL Objects that contain textures. They are optimized for use as render targets, while vanilla `Texture`s may not be, and are the logical choice when you do not need to sample (i.e. in a post-pass shader) from the produced image. If you do need to sample (such as when reading depth back in a second shader pass), use [`Texture`](/docs/api-reference-v8/webgl-legacy/classes/texture) instead. In addition, in WebGL 2, `Renderbuffer` can do [Multisampling (MSAA)](https://www.khronos.org/opengl/wiki/Multisampling) just like standard framebuffer.
 

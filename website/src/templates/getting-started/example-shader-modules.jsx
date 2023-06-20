@@ -7,7 +7,7 @@ export class ShaderModulesExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample name="shader-modules" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
+      <LumaExample id="shader-modules" name="shader-modules" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }
 }

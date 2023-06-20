@@ -1,15 +1,12 @@
 // luma.gl, MIT license
 
-import {Buffer, Transform} from '@luma.gl/webgl-legacy';
-import {picking} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
+import {webgl2Device} from '@luma.gl/test-utils';
+
+import {Transform} from '@luma.gl/engine';
+import {picking} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
-
-// TODO: test WebGL1 when Transform class is ready
-/** @type {WebGL2RenderingContext} */
-const gl = fixture.gl2;
 
 const TEST_DATA = {
   vertexColorData: new Float32Array([
@@ -94,7 +91,7 @@ test('picking#getUniforms', (t) => {
 });
 
 test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -112,10 +109,10 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
   const vertexColorData = TEST_DATA.vertexColorData;
 
   const elementCount = vertexColorData.length / 3;
-  const vertexColor = new Buffer(gl, vertexColorData);
-  const isPicked = new Buffer(gl, {byteLength: elementCount * 4});
+  const vertexColor = webgl2Device.createBuffer(vertexColorData);
+  const isPicked = webgl2Device.createBuffer({byteLength: elementCount * 4});
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       vertexColor
     },
@@ -147,7 +144,7 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
 
 /* eslint-disable max-nested-callbacks */
 test('picking#picking_setPickingColor', (t) => {
-  if (!Transform.isSupported(gl)) {
+  if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -166,10 +163,10 @@ test('picking#picking_setPickingColor', (t) => {
   const vertexColorData = TEST_DATA.vertexColorData;
 
   const elementCount = vertexColorData.length / 3;
-  const vertexColor = new Buffer(gl, vertexColorData);
-  const rgbColorASelected = new Buffer(gl, {byteLength: elementCount * 4});
+  const vertexColor = webgl2Device.createBuffer(vertexColorData);
+  const rgbColorASelected = webgl2Device.createBuffer({byteLength: elementCount * 4});
 
-  const transform = new Transform(gl, {
+  const transform = new Transform(webgl2Device, {
     sourceBuffers: {
       vertexColor
     },

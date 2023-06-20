@@ -1,7 +1,8 @@
-import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/api';
+import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/api';
 import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/api';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
+import {WebGPUTexture} from './webgpu-texture';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 
@@ -15,9 +16,8 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
-    // @ts-expect-error
-    const renderPassDescriptor = framebuffer.renderPassDescriptor;
+    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer() ;
+    const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
     this.handle.label = this.props.id;
   }
@@ -128,4 +128,34 @@ export class WebGPURenderPass extends RenderPass {
   // endPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
 
   // executeBundles(bundles: Iterable<GPURenderBundle>): void;
+
+  // INTERNAL
+
+  /** 
+   * Partial render pass descriptor. Used by WebGPURenderPass.
+   * @returns attachments fields of a renderpass descriptor. 
+   */
+  protected getRenderPassDescriptor(framebuffer: Framebuffer): GPURenderPassDescriptor {
+    const renderPassDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: []
+    };
+
+    renderPassDescriptor.colorAttachments = framebuffer.colorAttachments.map(colorAttachment => ({
+      // clear values
+      loadOp: 'clear',
+      colorClearValue: this.props.clearColor || [0, 0, 0, 0],
+      storeOp: this.props.discard? 'discard': 'store',
+      // ...colorAttachment,
+      view: (colorAttachment as WebGPUTexture).handle.createView()
+    }));
+
+    if (framebuffer.depthStencilAttachment) {
+      renderPassDescriptor.depthStencilAttachment = {
+        ...this.props,
+        view: (framebuffer.depthStencilAttachment as WebGPUTexture).handle.createView()
+      };
+    }
+
+    return renderPassDescriptor;
+  }
 }

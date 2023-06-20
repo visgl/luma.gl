@@ -1,6 +1,8 @@
 # Texture3D
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 > `Texture3D` is only available in WebGL 2
 

@@ -1,10 +1,11 @@
-import {Device} from '@luma.gl/api';
+import {Device, RenderPass} from '@luma.gl/api';
 import {Timeline} from '../animation/timeline'
 import type {AnimationLoop} from './animation-loop';
 
 /** Properties passed to every render frame  */
 export type AnimationProps = {
   device: Device;
+  renderPass: RenderPass;
   animationLoop: AnimationLoop;
 
   /** @todo Should be canvasContext */

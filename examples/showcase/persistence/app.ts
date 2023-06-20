@@ -1,6 +1,11 @@
 import {Framebuffer, getRandom, glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, Geometry, SphereGeometry, AnimationProps} from '@luma.gl/engine';
-import {clear, setParameters, ClassicModel as Model} from '@luma.gl/webgl-legacy';
+import {
+  AnimationLoopTemplate,
+  Geometry,
+  SphereGeometry,
+  AnimationProps,
+  Model
+} from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -90,25 +95,71 @@ const nPos = [];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
+  /** Electron model */
+  electron: Model;
+  /** Nucleon model */
+  nucleon: Model;
+
   mainFramebuffer: Framebuffer;
   pingpongFramebuffers: Framebuffer[];
-  quad;
-  persistenceQuad;
-  sphere;
-  
+  quad: Model;
+  persistenceQuad: Model;
+
   constructor({device, width, height}: AnimationProps) {
     super();
 
-    setParameters(device, {
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
+    this.electron = new Model(device, {
+      id: 'electron',
+      vs: SPHERE_VS,
+      fs: SPHERE_FS,
+      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        cullMode: 'back'
+      },
+      uniforms: {
+        uColor: [0.0, 0.5, 1],
+        uLighting: 0
+      }
     });
 
-    this.mainFramebuffer = device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'});
+    this.nucleon = new Model(device, {
+      id: 'nucleon',
+      vs: SPHERE_VS,
+      fs: SPHERE_FS,
+      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
+        cullMode: 'back'
+      },
+      uniforms: {
+        uColor: [1, 0.25, 0.25],
+        uLighting: 1
+      }
+    });
+
+    this.mainFramebuffer = device.createFramebuffer({
+      width,
+      height,
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth24plus'
+    });
 
     this.pingpongFramebuffers = [
-      device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'}),
-      device.createFramebuffer({width, height, colorAttachments: ['rgba8unorm'], depthStencilAttachment: 'depth24plus'})
+      device.createFramebuffer({
+        width,
+        height,
+        colorAttachments: ['rgba8unorm'],
+        depthStencilAttachment: 'depth24plus'
+      }),
+      device.createFramebuffer({
+        width,
+        height,
+        colorAttachments: ['rgba8unorm'],
+        depthStencilAttachment: 'depth24plus'
+      })
     ];
 
     const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
@@ -131,7 +182,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
-        cullMode: 'back',
+        cullMode: 'back'
       }
     });
 
@@ -143,19 +194,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
-        cullMode: 'back',
-      }
-    });
-
-    this.sphere = new Model(device, {
-      id: 'electron',
-      vs: SPHERE_VS,
-      fs: SPHERE_FS,
-      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back',
+        cullMode: 'back'
       }
     });
 
@@ -189,12 +228,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onFinalize(animationProps: AnimationProps): void {
+    this.electron.destroy();
+    this.nucleon.destroy();
+
     this.mainFramebuffer.destroy();
     this.pingpongFramebuffers[0].destroy();
     this.pingpongFramebuffers[1].destroy();
     this.quad.destroy();
     this.persistenceQuad.destroy();
-    this.sphere.destroy();
   }
 
   override onRender({device, tick, width, height, aspect}: AnimationProps) {
@@ -205,23 +246,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const projection = new Matrix4().perspective({fovy: radians(75), aspect});
     const view = new Matrix4().lookAt({eye: [0, 0, 4]});
 
-    clear(device, {framebuffer: this.mainFramebuffer, color: [0, 0, 0, 1.0], depth: 1});
+    const mainRenderPass = device.beginRenderPass({
+      framebuffer: this.mainFramebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
 
     // Render electrons to framebuffer
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       ePos[i] = eRot[i].transformVector(ePos[i]);
       const modelMatrix = new Matrix4().translate(ePos[i]).scale([0.06125, 0.06125, 0.06125]);
 
-      this.sphere.draw({
-        framebuffer: this.mainFramebuffer,
-        uniforms: {
-          uModelView: view.clone().multiplyRight(modelMatrix),
-          uView: view,
-          uProjection: projection,
-          uColor: [0.0, 0.5, 1],
-          uLighting: 0
-        }
+      this.electron.setUniforms({
+        uModelView: view.clone().multiplyRight(modelMatrix),
+        uView: view,
+        uProjection: projection,
       });
+      this.electron.draw(mainRenderPass);
     }
 
     // Render core to framebuffer
@@ -234,44 +275,44 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const translation = [modelMatrix[12], modelMatrix[13], modelMatrix[14]];
       modelMatrix.identity().translate(translation).scale([0.25, 0.25, 0.25]);
 
-      this.sphere.draw({
-        framebuffer: this.mainFramebuffer,
-        uniforms: {
-          uModelView: view.clone().multiplyRight(modelMatrix),
-          uProjection: projection,
-          uColor: [1, 0.25, 0.25],
-          uLighting: 1
-        }
+      this.nucleon.setUniforms({
+        uModelView: view.clone().multiplyRight(modelMatrix),
+        uView: view,
+        uProjection: projection,
       });
+      this.nucleon.draw(mainRenderPass);
     }
+
+    mainRenderPass.end();
 
     const ppi = tick % 2;
     const currentFramebuffer = this.pingpongFramebuffers[ppi];
     const nextFramebuffer = this.pingpongFramebuffers[1 - ppi];
 
     // Accumulate in persistence buffer
-    clear(device, {framebuffer: currentFramebuffer, color: true, depth: true});
-    this.persistenceQuad.draw({
+    const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
-      uniforms: {
-        uScene: this.mainFramebuffer.colorAttachments[0],
-        uPersistence: nextFramebuffer.colorAttachments[0],
-        uRes: [width, height]
-      }
+      clearColor: [0, 0, 0, 1]
     });
+    this.persistenceQuad.setBindings({
+      uScene: this.mainFramebuffer.colorAttachments[0],
+      uPersistence: nextFramebuffer.colorAttachments[0],
+    });
+    this.persistenceQuad.setUniforms({
+      uRes: [width, height]
+    });
+    this.persistenceQuad.draw(persistenceRenderPass);
+    persistenceRenderPass.end();
 
-    // Render to screen
-    clear(device, {color: true, depth: true});
-    this.quad.draw({
-      uniforms: {
-        uTexture: currentFramebuffer.colorAttachments[0],
-        uRes: [width, height]
-      }
+    // Copy the current framebuffer to screen
+    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.quad.setBindings({
+      uTexture: currentFramebuffer.colorAttachments[0],
     });
+    this.quad.setUniforms({
+      uRes: [width, height]
+    });
+    this.quad.draw(screenRenderPass);
+    screenRenderPass.end();
   }
-}
-
-// @ts-ignore
-if (typeof window !== 'undefined' && !window.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

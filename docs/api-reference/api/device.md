@@ -1,6 +1,8 @@
 # Device
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 The `Device` class manages the application's connection with the GPU,
 providing methods to:
@@ -17,14 +19,14 @@ based on what the run-time environment (ie. browser or Node.js) supports.
 
 ## Usage
 
-Create a WebGL2 or WebGL context, auto creating a canvas
+Creates a WebGL2 or WebGL context, auto creating a canvas
 
 ```typescript
 import {Device} from '@luma.gl/api';
 const device = new Device(); // Prefers WebGL 2 but falls back to WebGL 1
 ```
 
-Create a WebGL 2 context (throws if WebGL2 not supported)
+Creates a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
 import {Device} from '@luma.gl/api';
@@ -89,10 +91,13 @@ console.error(message);
 
 ## Static Methods
 
-###` Device.create(props: DeviceProps): Promise<Device>`
+### create
+
+```typescript
+Device.create(props: DeviceProps): Promise<Device>
+```
 
 Creating device is done with the static `Device.create()` method.
-
 Creates and returns a WebGL context, both in browsers and in Node.js.
 
 ```typescript
@@ -103,23 +108,43 @@ const device = await Device.create(props);
 
 ## Fields
 
-### `readonly id: string`
+### id
+
+```typescript
+readonly id: string
+```
 
 A string identifier, for debug purposes.
 
-### `readonly statsManager: StatsManager`
+### statsManager
+
+```typescript
+statsManager: StatsManager
+```
 
 Provides access to bags of stats containing information about resource usage and performance of the device.
 
-### `readonly props: Required<DeviceProps>`
+### props
+
+```typescript
+props: Required<DeviceProps>
+```
 
 A readonly copy of the props that were used to create this device.
 
-### `userData: Record<string, any>`
+### userData
+
+```typescript
+userData: Record<string, any>
+```
 
 Reserved for the application.
 
-### info: DeviceInfo
+### info
+
+```typescript
+info: DeviceInfo
+```
 
 Information about the device (vendor, versions etc).
 
@@ -137,105 +162,208 @@ Remarks:
 - WebGPU Devices currently do not provide much information due to limitations in the WebGPU API.
 - WebGL Devices can usually provide the full set of information (through the `WEBGL_debug_renderer_info` extension).
 
-## Functions
+### features
 
-### constructor
+```typescript
+features: Set<DeviceFeature>
+```
 
-`Device` is an abstract class and the constructor can not be called directly.
-Use the static `Device.create()` method to create classes.
+Applications can determine whether the device implements an optional features by checking `device.features.has(...)`.
 
-### `features: Set<DeviceFeature>`
+### limits
 
-Determine whether the device implements an optional features by checking `device.features.has(...)`.
-
-### `limits: DeviceLimits`
+```typescript
+limits: DeviceLimits
+```
 
 An object with various device limits. WebGPU style.
 
-### `isTextureFormatSupported(format: TextureFormat): boolean`
+### isTextureFormatSupported
+
+```typescript
+isTextureFormatSupported(format: TextureFormat): boolean
+```
 
 Check if device supports a specific texture format (creation and `nearest` sampling).
 
-### `isTextureFormatFilterable(format: TextureFormat): boolean`
+### isTextureFormatFilterable
+
+```typescript
+isTextureFormatFilterable(format: TextureFormat): boolean
+```
 
 Check if linear filtering (sampler interpolation) is supported for a specific texture format.
 
-### `isTextureFormatRenderable(format: TextureFormat): boolean`
+### isTextureFormatRenderable
+
+```typescript
+isTextureFormatRenderable(format: TextureFormat): boolean
+```
 
 Check if device supports rendering to a specific texture format.
 
-### `isLost: boolean`
+### isLost
+
+```typescript
+isLost: boolean
+```
 
 True if the device is already lost (GPU is disconnected).
 
-### `lost: Promise<{reason: 'destroyed', message: string}>`
+### lost
+
+```typescript
+lost: Promise<{reason: 'destroyed', message: string}>
+```
+
 
 Promise that resolves with an error message if the device is lost (GPU is disconnected).
 
+:::info
 GPU disconnections normally happen when the computer goes to sleep but it can also happen
 when too many applications use the GPU, too many `Device` instances are created etc.
+:::
 
-### `canvasContext: CanvasContext`
+:::info
+Recovering from a lost GPU device is typically challenging as all GPU resources need to be
+recreated. For applications that auto-save state, it may be better to simply reload the page
+or ask the user to reload the page.
+:::
+
+### canvasContext
+
+```typescript
+canvasContext?: CanvasContext
+```
 
 Returns the default [`CanvasContext`](./canvas-context).
 
 Note that a WebGPU `Device` may not have a canvas context.
 
-### `createCanvasContext(props?: CanvasContextProps): CanvasContext`
+## Methods
 
-> WebGPU only. (WebGL devices can only render to the single canvas they were created for.)
+### constructor
+
+:::info
+`Device` is an abstract class and the constructor should not be called directly.
+Use the static `Device.create()` method to create classes.
+:::
+
+### destroy()
+
+Releases resources associated with this `Device`.
+
+:::info
+Whether destroying a device actually releases resources depends on the underlying `Device` implementation in use.
+- WebGL does not have a context destroy function.
+- However, if headless gl is running the destroy extension will be called.
+:::
+
+:::info
+Interaction between `Device.destroy()`, `Device.lost` and `Device.isLost` is implementation-dependent.
+Whether destroying a device trigger a device loss, the order of isLost promise resolution versus API errors caused by destroyed device etc, should not be relied upon.
+:::
+
+### createCanvasContext()
+
+```typescript
+createCanvasContext(props?: CanvasContextProps): CanvasContext
+```
+:::info
+WebGPU only. (WebGL devices can only render into the canvas they were created with).
+:::
 
 Creates a new [`CanvasContext`](./canvas-context).
 
-### `submit(): void`
+### submit
+
+```typescript
+submit(): void
+```
 
 Call after rendering a frame is complete.
 
-### `createBuffer(props: BufferProps): Buffer`
+### createBuffer
 
-### `createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer`
+```typescript
+createBuffer(props: BufferProps): Buffer
+createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer
+```
 
-Create a buffer,
+Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU.
 
 Deduces `indexType` if usage.
 
-### `createTexture(props: TextureProps): Texture`
+### createTexture
 
-### `createTexture(data: Promise<TextureData>): Texture`
+```typescript
+createTexture(props: TextureProps): Texture
+createTexture(data: Promise<TextureData>): Texture
+```
 
-### `createTexture(url: string): Texture`
+Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU.
 
-Create a [`Texture`](./resources/sampler).
+### createSampler
 
-### `createSampler(props: SamplerProps): Sampler`
+```typescript
+createSampler(props: SamplerProps): Sampler
+```
 
-Create a [`Sampler`](./resources/sampler).
+Creates a [`Sampler`](./resources/sampler).
 
-### `createFramebuffer(props: FramebufferProps): Framebuffer`
+### createFramebuffer
 
-Create a [`Framebuffer`](./resources/framebuffer).
+```typescript
+createFramebuffer(props: FramebufferProps): Framebuffer
+```
 
-### `createShader(props: ShaderProps): Shader`
+Creates a [`Framebuffer`](./resources/framebuffer).
 
-Create a [`Shader`](./resources/shader).
+### createShader
 
-### `createRenderPipeline(props: RenderPipelineProps): RenderPipeline`
+```typescript
+createShader(props: ShaderProps): Shader
+```
 
-Create a [`RenderPipeline`](./resources/render-pipeline) (aka program)
+Creates a [`Shader`](./resources/shader).
 
-### `createComputePipeline(props: ComputePipelineProps): ComputePipeline`
+### createRenderPipeline
 
-Create a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
+```typescript
+createRenderPipeline(props: RenderPipelineProps): RenderPipeline
+```
 
-### `beginRenderPass(props: RenderPassProps): RenderPass`
+Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
 
-Create a [`RenderPass`](./resources/render-pass).
+### createComputePipeline
 
-### `beginComputePass(props?: ComputePassProps): ComputePass`
+```typescript
+createComputePipeline(props: ComputePipelineProps): ComputePipeline
+```
 
-Create a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
+Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
 
-### `getDefaultRenderPass(): RenderPass`
+### beginRenderPass
+
+```typescript
+beginRenderPass(props: RenderPassProps): RenderPass
+```
+
+Creates a [`RenderPass`](./resources/render-pass).
+
+### beginComputePass
+
+```typescript
+beginComputePass(props?: ComputePassProps): ComputePass
+```
+
+Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
+
+### getDefaultRenderPass
+
+```typescript
+getDefaultRenderPass(): RenderPass
+```
 
 A default `RenderPass` is provided for applications that don't need to create
 multiple or specially configured render passes.
@@ -244,25 +372,44 @@ Note that a new default `RenderPass` is returned every animation frame.
 
 ## Remarks
 
-- Note that the actual `Device` returned by `Device.create()` will be either
+- Note that the actual `Device` returned by `Device.create()` can be either
   a `WebGLDevice` wrapping a WebGL context or a `WebGPUDevice` wrapping a WebGPU device
   based on what the run-time environment (ie. browser or Node.js) supports.
 - The `Device` API is intentionally similar, but not identical, to the [WebGPU `GPUDevice`](https://www.w3.org/TR/webgpu/#gpu-device) class API.
 
-## WebGL specifics
+## WebGL specific fields
 
-### isWebGL: boolean
+### isWebGL
 
-True if the is a WebGL context. Both WebGL 1 and WebGL 2 contexts will be
+```typescript
+isWebGL: boolean
+```
 
-`device.isWebGL`
+`true` if the context is a WebGL 1 or 2 Context.
 
-Returns true if the context is a WebGL 1 or 2 Context.
+### isWebGL2
 
-### isWebGL2: boolean
+```typescript
+isWebGL2: boolean
+```
 
 Test if an object is a WebGL context.
 
-`device.isWebGL2`
+Returns `true` if the context is a WebGL 2 Context.
 
-Returns true if the context is a WebGL 2 Context.
+### loseDevice
+
+```typescript
+loseDevice(): boolean
+```
+
+Triggers context loss and context loss callback.
+After this call, the `Device.lost` promise will be resolved with an error message and `Device.isLost` will be set to true.
+
+- Returns `true` if an actual device loss event was triggered, `false` otherwise.
+
+:::note
+`loseDevice()` currently only triggers actual context loss on WebGL devices, and only when the current platform's WebGL API provides the required `WEBGL_lose_context` WebGL debug extension. If device loss trigger is supported by the platform this function will return `false`, 
+The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code. 
+:::
+

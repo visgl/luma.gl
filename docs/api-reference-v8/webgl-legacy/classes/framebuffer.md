@@ -1,6 +1,8 @@
 # Framebuffer
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A `Framebuffer` is a WebGL container object that the application can use for "off screen" rendering. A framebuffer does not itself contain any image data but can optionally contain attachments (one or more color buffers, a depth buffer and a stencil buffer) that store data. Attachments must be in the form of `Texture`s and `Renderbuffer`s.
 

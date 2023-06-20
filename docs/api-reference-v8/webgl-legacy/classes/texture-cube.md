@@ -1,6 +1,8 @@
 # TextureCube
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A texture cube holds six textures that represent faces of the cube. A main feature of `TextureCube`s are that they can be passed to shaders and sampled with a direction vector (looking out from the center of the cube) rather than a normal set of texture coordinates, see Usage below.
 

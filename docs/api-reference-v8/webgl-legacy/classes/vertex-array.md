@@ -1,6 +1,8 @@
 # VertexArray
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 The `VertexArray` class (like its lower level counterpart, the `VertexArrayObject`) manages an "array" of values ("buffers") that will be made available as input data to shaders during a draw call. For each WebGL `Buffer`, the `VertexArray` also stores some additional information about how that data in the buffer should be accessed, such as offsets, strides, etc, and whether the attribute is instanced.
 
@@ -38,7 +40,7 @@ const vao = new VertexArray(gl);
 Deleting a VertexArray
 
 ```typescript
-vertexArrayObject.delete();
+vertexArrayObject.destroy();
 ```
 
 Adding attributes to a VertexArray: without program metadata, buffers must be specified using location indices

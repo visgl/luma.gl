@@ -9,7 +9,9 @@ import {
 
 # DeviceFeature
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 The luma.gl `Device` provides a range of fields and functions to help an application
 determine the capabilities of the underlying platform and API.
@@ -127,11 +129,20 @@ On your current browser, this would yield:
 
 The following table illustrates how WebGL extensions map to luma.gl features.
 
-> Caveat: It is mainly included for reference purposes.
-> WebGL extensions can be demanding to work with directly. They are very granular,
-> they often require functions to be invoked on the extension instead of the context,
-> and WebGL1 extensions are not listed as supported on WebGL2 contexts even though the
-> corresponding features are supported by WebGL2.
+:::info
+Caveat: this table is mainly included for reference purposes, in cases where 
+it is helpful to understand exactly which extensions are being used by luma.gl
+under the hood. 
+:::
+
+:::caution
+WebGL extensions can be demanding to work with directly. The extensions are very granular, 
+enabling subfeatures of bigger features.
+Support both WebGL 1 and WebGL2 can require a lot of additional code, 
+as WebGL 1 extensions typically require functions to be invoked on the extension object instead of the context.
+Furthermore, WebGL1 extensions are not supported on WebGL2 contexts even though the
+corresponding features are often supported out-of-the-box by WebGL2.
+:::
 
 | `luma.gl feature`                           | WebGL Extension                                                | Description                                                                                                                                                    |
 | ------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |

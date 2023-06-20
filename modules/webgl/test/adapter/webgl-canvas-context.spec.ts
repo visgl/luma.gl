@@ -294,58 +294,6 @@ const MAP_TEST_CASES = [
   }
 ];
 
-/** Modify the canvas context to mock test conditions */
-function configureCanvasContext(canvasContext: CanvasContext, tc) {
-  // @ts-expect-error read only
-  canvasContext._canvasSizeInfo = tc._canvasSizeInfo;
-  canvasContext.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
-}
-
-
-test('WebGLCanvasContext#getDevicePixelRatio', (t) => {
-  const windowPixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-  const TEST_CASES = [
-    {
-      name: 'useDevicePixels: true: should use window.devicePixelRatio or 1',
-      useDevicePixels: true,
-      expected: windowPixelRatio
-    },
-    {
-      name: 'useDevicePixels: false: should use 1',
-      useDevicePixels: false,
-      expected: 1
-    },
-    {
-      name: 'Non Finite useDevicePixels null: should use 1',
-      useDevicePixels: null,
-      expected: 1
-    },
-    {
-      name: 'Non valid useDevicePixels 0: should use 1',
-      useDevicePixels: 0,
-      expected: 1
-    },
-    {
-      name: 'Non valid useDevicePixels negative: should use 1',
-      useDevicePixels: -3.2,
-      expected: 1
-    },
-    {
-      name: 'Valid useDevicePixels, should use it',
-      useDevicePixels: 1.5,
-      expected: 1.5
-    }
-  ];
-
-  TEST_CASES.forEach((tc) => {
-    if (canvasContext) {
-      configureCanvasContext(canvasContext, tc);
-    }
-    t.equal(canvasContext?.getDevicePixelRatio(tc.useDevicePixels), tc.expected, tc.name);
-  });
-  t.end();
-});
-
 test('WebGLCanvasContext#cssToDevicePixels', (t) => {
   MAP_TEST_CASES.forEach((tc) => {
     if (canvasContext) {
@@ -394,3 +342,10 @@ test('WebGLCanvasContext#cssToDeviceRatio', (t) => {
   // );
   t.end();
 });
+
+/** Modify the canvas context to mock test conditions */
+function configureCanvasContext(canvasContext: CanvasContext, tc) {
+  // @ts-expect-error read only
+  canvasContext._canvasSizeInfo = tc._canvasSizeInfo;
+  canvasContext.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
+}

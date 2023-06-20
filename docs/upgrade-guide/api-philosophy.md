@@ -1,6 +1,8 @@
 # About luma.gl V9?
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 The luma.gl v9 API is a major new iteration of the luma.gl API, optimized around providing WebGPU and TypeScript support. It is a big breaking change.
 

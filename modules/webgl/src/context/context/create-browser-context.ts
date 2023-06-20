@@ -68,10 +68,10 @@ export function createBrowserContext(canvas: HTMLCanvasElement | OffscreenCanvas
 
   // Prefer webgl2 over webgl1 if both are acceptable
   if (props.webgl2) {
-    gl = gl || canvas.getContext('webgl2', props) as WebGL2RenderingContext | null;
+    gl = gl || canvas.getContext('webgl2', props) ;
   }
   if (props.webgl1) {
-    gl = gl || canvas.getContext('webgl', props) as WebGLRenderingContext | null;
+    gl = gl || canvas.getContext('webgl', props) ;
   }
 
   // TODO are we removing this listener before giving it a chance to fire?

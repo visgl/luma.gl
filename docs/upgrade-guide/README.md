@@ -8,13 +8,10 @@ This upgrade guide focuses on breaking changes in the APIs.
 
 ## Upgrading to v9.0
 
-- **API changes** - luma.gl v9 introduces major API changes. Since the changes are significant, a separate [v9 upgrade guide](./upgrade-to-v9) is provided.
-- **ES modules** - luma.gl is now packaged and published as ES modules. This is the modern way of packaging JavaScript applications that fully embraces the static `import`/`export` syntax, however be aware that it can introduce incompatibilities with code that uses legacy imports that can be tricky to work around. If you are in a big legacy projects, getting your code base ready for ES modules may require a bigger effort than actually updating the luma.gl API.
-- **Dependencies** - luma.gl v9 introduces major version bumps of some key dependencies. 
-   - Luma.gl now uses math.gl v4, loaders.gl v4 and probe.gl v4. 
-   - These dependencies are not expected to generate API breakages for most luma.gl applications. 
-   - The main motivation for these major version bumps is to ensure that all luma.gl dependencies have also adopted ES modules.
-   - However, be aware that dependent libraries are now even more strongly typed which could result in type errors in your applications that were previously silently ignored.
+luma.gl v9 represents a major API changes and a substantial amount of documentation is provided:
+- [v9 upgrade guide](./upgrade-to-v9).
+- [v9 GPU parameter upgrade guide](./upgrade-v9-parameters.md)
+- [v9 API philosophy](./api-philosophy).
 
 ## Upgrading to v8.5
 

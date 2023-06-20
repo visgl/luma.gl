@@ -1,6 +1,8 @@
 # VertexArrayObject
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 The WebGL `VertexArrayObject` object holds a map of "buffers" that will be made available as input data to shaders during a draw call, similar to how a `TransformFeedback` object holds a set of `Buffer` instances that will receive output data from shaders.For `Buffer` objects, the `VertexArrayObject` also stores some additional information about how that data in the buffer should be accessed, such as offsets, strides, etc.
 
@@ -43,7 +45,7 @@ vertexArray.setBuffer(location, buffer);
 Deleting a VertexArray
 
 ```typescript
-vertexArrayObject.delete();
+vertexArrayObject.destroy();
 ```
 
 Setting a constant vertex attribute

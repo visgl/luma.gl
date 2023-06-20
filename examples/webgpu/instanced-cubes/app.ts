@@ -1,5 +1,5 @@
 import {Buffer, ShaderLayout, RenderPipelineParameters, glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
@@ -150,7 +150,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
-    const aspect = device.canvasContext.getAspect();
+    const aspect = device.canvasContext?.getAspect();
     const now = Date.now() / 1000;
 
     projectionMatrix.perspective({fovy: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
@@ -158,9 +158,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const mvpMatrices = getMVPMatrixArray(projectionMatrix, now);
     this.uniformBuffer.write(mvpMatrices);
 
-    // device.beginRenderPass();
-    this.cubeModel.draw();
-    device.submit();
+    const renderPass = device.beginRenderPass();
+    this.cubeModel.draw(renderPass);
+    renderPass.end();
   }
 }
 
@@ -198,8 +198,3 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
   return mvpMatricesData;
 }
 
-// Create device and run
-if (!globalThis.website) {
-  // , {canvas: 'canvas'}
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
-}

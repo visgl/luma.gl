@@ -91,11 +91,11 @@ test('Model#multiple delete', (t) => {
     fs
   });
 
-  model1.delete();
+  model1.destroy();
   t.ok(model2.program.handle, 'program still in use');
-  model1.delete();
+  model1.destroy();
   t.ok(model2.program.handle, 'program still in use');
-  model2.delete();
+  model2.destroy();
   t.notOk(model2.program.handle, 'program is released');
 
   t.end();
@@ -313,9 +313,9 @@ test('Model#getBuffersFromGeometry', (t) => {
   t.is(buffers.uvs[1].size, 2, 'uvs mapped');
   t.ok(buffers.indices[0] instanceof Buffer, 'indices mapped');
 
-  buffers.positions[0].delete();
-  buffers.uvs[0].delete();
-  buffers.indices[0].delete();
+  buffers.positions[0].destroy();
+  buffers.uvs[0].destroy();
+  buffers.indices[0].destroy();
 
   // Inferring attribute size
   buffers = getBuffersFromGeometry(webgl1Device.gl, {
@@ -329,9 +329,9 @@ test('Model#getBuffersFromGeometry', (t) => {
   t.is(buffers.normals[1].size, 3, 'normals size');
   t.is(buffers.texCoords[1].size, 2, 'texCoords size');
 
-  buffers.indices[0].delete();
-  buffers.normals[0].delete();
-  buffers.texCoords[0].delete();
+  buffers.indices[0].destroy();
+  buffers.normals[0].destroy();
+  buffers.texCoords[0].destroy();
 
   t.throws(
     () =>

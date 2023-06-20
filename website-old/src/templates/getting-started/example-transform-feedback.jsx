@@ -7,7 +7,7 @@ export class TransformFeedbackExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample name="transform-feedback" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
+      <LumaExample id="transform-feedback" name="transform-feedback" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }
 }

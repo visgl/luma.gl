@@ -1,6 +1,8 @@
 # WebGL Contexts
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 Functions to initialize, instrument and manipulate WebGL contexts.
 

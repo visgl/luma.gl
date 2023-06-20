@@ -1,51 +1,79 @@
 /* eslint-disable key-spacing, max-len, no-inline-comments, camelcase */
 
 /** 
- * Standard WebGL and WebGL2 constants
- * These constants are also defined on the WebGLRenderingContext interface.
+ * Standard WebGL, WebGL2 and extension constants (OpenGL constants)
+ * @note (Most) of these constants are also defined on the WebGLRenderingContext interface.
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
  */
 export enum GL {
   // Clearing buffers
   // Constants passed to clear() to clear buffer masks.
 
+  /** Passed to clear to clear the current depth buffer. */
   DEPTH_BUFFER_BIT = 0x00000100,
+  /** Passed to clear to clear the current stencil buffer. */
   STENCIL_BUFFER_BIT = 0x00000400,
+  /** Passed to clear to clear the current color buffer. */
   COLOR_BUFFER_BIT = 0x00004000,
 
   // Rendering primitives
   // Constants passed to drawElements() or drawArrays() to specify what kind of primitive to render.
 
+  /** Passed to drawElements or drawArrays to draw single points. */
   POINTS = 0x0000,
+  /** Passed to drawElements or drawArrays to draw lines. Each vertex connects to the one after it. */
   LINES = 0x0001,
+  /** Passed to drawElements or drawArrays to draw lines. Each set of two vertices is treated as a separate line segment. */
   LINE_LOOP = 0x0002,
+  /** Passed to drawElements or drawArrays to draw a connected group of line segments from the first vertex to the last. */
   LINE_STRIP = 0x0003,
+  /** Passed to drawElements or drawArrays to draw triangles. Each set of three vertices creates a separate triangle. */
   TRIANGLES = 0x0004,
+  /** Passed to drawElements or drawArrays to draw a connected group of triangles. */
   TRIANGLE_STRIP = 0x0005,
+  /** Passed to drawElements or drawArrays to draw a connected group of triangles. Each vertex connects to the previous and the first vertex in the fan. */
   TRIANGLE_FAN = 0x0006,
 
   // Blending modes
   // Constants passed to blendFunc() or blendFuncSeparate() to specify the blending mode (for both, RBG and alpha, or separately).
-
+  /** Passed to blendFunc or blendFuncSeparate to turn off a component. */
   ZERO = 0,
+  /** Passed to blendFunc or blendFuncSeparate to turn on a component. */
   ONE = 1,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by the source elements color. */
   SRC_COLOR = 0x0300,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by one minus the source elements color. */
   ONE_MINUS_SRC_COLOR = 0x0301,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by the source's alpha. */
   SRC_ALPHA = 0x0302,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by one minus the source's alpha. */
   ONE_MINUS_SRC_ALPHA = 0x0303,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by the destination's alpha. */
   DST_ALPHA = 0x0304,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by one minus the destination's alpha. */
   ONE_MINUS_DST_ALPHA = 0x0305,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by the destination's color. */
   DST_COLOR = 0x0306,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by one minus the destination's color. */
   ONE_MINUS_DST_COLOR = 0x0307,
+  /** Passed to blendFunc or blendFuncSeparate to multiply a component by the minimum of source's alpha or one minus the destination's alpha. */
   SRC_ALPHA_SATURATE = 0x0308,
+  /** Passed to blendFunc or blendFuncSeparate to specify a constant color blend function. */
   CONSTANT_COLOR = 0x8001,
+  /** Passed to blendFunc or blendFuncSeparate to specify one minus a constant color blend function. */
   ONE_MINUS_CONSTANT_COLOR = 0x8002,
+  /** Passed to blendFunc or blendFuncSeparate to specify a constant alpha blend function. */
   CONSTANT_ALPHA = 0x8003,
+  /** Passed to blendFunc or blendFuncSeparate to specify one minus a constant alpha blend function. */
   ONE_MINUS_CONSTANT_ALPHA = 0x8004,
 
   // Blending equations
   // Constants passed to blendEquation() or blendEquationSeparate() to control
   // how the blending is calculated (for both, RBG and alpha, or separately).
 
+/** Passed to blendEquation or blendEquationSeparate to set an addition blend function. */
+/** Passed to blendEquation or blendEquationSeparate to specify a subtraction blend function (source - destination). */
+/** Passed to blendEquation or blendEquationSeparate to specify a reverse subtraction blend function (destination - source). */
   FUNC_ADD = 0x8006,
   FUNC_SUBTRACT = 0x800a,
   FUNC_REVERSE_SUBTRACT = 0x800b,
@@ -53,30 +81,57 @@ export enum GL {
   // Getting GL parameter information
   // Constants passed to getParameter() to specify what information to return.
 
+  /** Passed to getParameter to get the current RGB blend function. */
   BLEND_EQUATION = 0x8009,
+  /** Passed to getParameter to get the current RGB blend function. Same as BLEND_EQUATION */
   BLEND_EQUATION_RGB = 0x8009,
+  /** Passed to getParameter to get the current alpha blend function. Same as BLEND_EQUATION */
   BLEND_EQUATION_ALPHA = 0x883d,
+  /** Passed to getParameter to get the current destination RGB blend function. */
   BLEND_DST_RGB = 0x80c8,
+  /** Passed to getParameter to get the current destination RGB blend function. */
   BLEND_SRC_RGB = 0x80c9,
+  /** Passed to getParameter to get the current destination alpha blend function. */
   BLEND_DST_ALPHA = 0x80ca,
+  /** Passed to getParameter to get the current source alpha blend function. */
   BLEND_SRC_ALPHA = 0x80cb,
+
+  /** Passed to getParameter to return a the current blend color. */
   BLEND_COLOR = 0x8005,
+  /** Passed to getParameter to get the array buffer binding. */
   ARRAY_BUFFER_BINDING = 0x8894,
+  /** Passed to getParameter to get the current element array buffer. */
   ELEMENT_ARRAY_BUFFER_BINDING = 0x8895,
+  /** Passed to getParameter to get the current lineWidth (set by the lineWidth method). */
   LINE_WIDTH = 0x0b21,
+  /** Passed to getParameter to get the current size of a point drawn with gl.POINTS */
   ALIASED_POINT_SIZE_RANGE = 0x846d,
+  /** Passed to getParameter to get the range of available widths for a line. Returns a length-2 array with the lo value at 0, and hight at 1. */
   ALIASED_LINE_WIDTH_RANGE = 0x846e,
+  /** Passed to getParameter to get the current value of cullFace. Should return FRONT, BACK, or FRONT_AND_BACK */
   CULL_FACE_MODE = 0x0b45,
+  /** Passed to getParameter to determine the current value of frontFace. Should return CW or CCW. */
   FRONT_FACE = 0x0b46,
+  /** Passed to getParameter to return a length-2 array of floats giving the current depth range. */
   DEPTH_RANGE = 0x0b70,
+  /** Passed to getParameter to determine if the depth write mask is enabled. */
+
   DEPTH_WRITEMASK = 0x0b72,
+  /** Passed to getParameter to determine the current depth clear value. */
   DEPTH_CLEAR_VALUE = 0x0b73,
+  /** Passed to getParameter to get the current depth function. Returns NEVER, ALWAYS, LESS, EQUAL, LEQUAL, GREATER, GEQUAL, or NOTEQUAL. */
   DEPTH_FUNC = 0x0b74,
+  /** Passed to getParameter to get the value the stencil will be cleared to. */
   STENCIL_CLEAR_VALUE = 0x0b91,
+  /** Passed to getParameter to get the current stencil function. Returns NEVER, ALWAYS, LESS, EQUAL, LEQUAL, GREATER, GEQUAL, or NOTEQUAL. */
   STENCIL_FUNC = 0x0b92,
+  /** Passed to getParameter to get the current stencil fail function. Should return KEEP, REPLACE, INCR, DECR, INVERT, INCR_WRAP, or DECR_WRAP. */
   STENCIL_FAIL = 0x0b94,
+  /** Passed to getParameter to get the current stencil fail function should the depth buffer test fail. Should return KEEP, REPLACE, INCR, DECR, INVERT, INCR_WRAP, or DECR_WRAP. */
   STENCIL_PASS_DEPTH_FAIL = 0x0b95,
+  /** Passed to getParameter to get the current stencil fail function should the depth buffer test pass. Should return KEEP, REPLACE, INCR, DECR, INVERT, INCR_WRAP, or DECR_WRAP. */
   STENCIL_PASS_DEPTH_PASS = 0x0b96,
+  /** Passed to getParameter to get the reference value used for stencil tests. */
   STENCIL_REF = 0x0b97,
   STENCIL_VALUE_MASK = 0x0b93,
   STENCIL_WRITEMASK = 0x0b98,
@@ -87,7 +142,10 @@ export enum GL {
   STENCIL_BACK_REF = 0x8ca3,
   STENCIL_BACK_VALUE_MASK = 0x8ca4,
   STENCIL_BACK_WRITEMASK = 0x8ca5,
+
+  /** An Int32Array with four elements for the current viewport dimensions. */  
   VIEWPORT = 0x0ba2,
+  /** An Int32Array with four elements for the current scissor box dimensions. */
   SCISSOR_BOX = 0x0c10,
   COLOR_CLEAR_VALUE = 0x0c22,
   COLOR_WRITEMASK = 0x0c23,
@@ -121,17 +179,25 @@ export enum GL {
   // Constants passed to bufferData(), bufferSubData(), bindBuffer(), or
   // getBufferParameter().
 
+  /** Passed to bufferData as a hint about whether the contents of the buffer are likely to be used often and not change often. */
   STATIC_DRAW = 0x88e4,
+  /** Passed to bufferData as a hint about whether the contents of the buffer are likely to not be used often. */
   STREAM_DRAW = 0x88e0,
+  /** Passed to bufferData as a hint about whether the contents of the buffer are likely to be used often and change often. */
   DYNAMIC_DRAW = 0x88e8,
+  /** Passed to bindBuffer or bufferData to specify the type of buffer being used. */
   ARRAY_BUFFER = 0x8892,
+  /** Passed to bindBuffer or bufferData to specify the type of buffer being used. */
   ELEMENT_ARRAY_BUFFER = 0x8893,
+  /** Passed to getBufferParameter to get a buffer's size. */
   BUFFER_SIZE = 0x8764,
+  /** Passed to getBufferParameter to get the hint for the buffer passed in when it was created. */
   BUFFER_USAGE = 0x8765,
 
   // Vertex attributes
   // Constants passed to getVertexAttrib().
 
+  /** Passed to getVertexAttrib to read back the current vertex attribute. */
   CURRENT_VERTEX_ATTRIB = 0x8626,
   VERTEX_ATTRIB_ARRAY_ENABLED = 0x8622,
   VERTEX_ATTRIB_ARRAY_SIZE = 0x8623,
@@ -144,45 +210,69 @@ export enum GL {
   // Culling
   // Constants passed to cullFace().
 
+  /** Passed to enable/disable to turn on/off culling. Can also be used with getParameter to find the current culling method. */
   CULL_FACE = 0x0b44,
+  /** Passed to cullFace to specify that only front faces should be culled. */
   FRONT = 0x0404,
+  /** Passed to cullFace to specify that only back faces should be culled. */
   BACK = 0x0405,
+  /** Passed to cullFace to specify that front and back faces should be culled. */
   FRONT_AND_BACK = 0x0408,
 
   // Enabling and disabling
   // Constants passed to enable() or disable().
 
+  /** Passed to enable/disable to turn on/off blending. Can also be used with getParameter to find the current blending method. */
   BLEND = 0x0be2,
+  /** Passed to enable/disable to turn on/off the depth test. Can also be used with getParameter to query the depth test. */
   DEPTH_TEST = 0x0b71,
+  /** Passed to enable/disable to turn on/off dithering. Can also be used with getParameter to find the current dithering method. */
   DITHER = 0x0bd0,
+  /** Passed to enable/disable to turn on/off the polygon offset. Useful for rendering hidden-line images, decals, and or solids with highlighted edges. Can also be used with getParameter to query the scissor test. */
   POLYGON_OFFSET_FILL = 0x8037,
+  /** Passed to enable/disable to turn on/off the alpha to coverage. Used in multi-sampling alpha channels. */
   SAMPLE_ALPHA_TO_COVERAGE = 0x809e,
+  /** Passed to enable/disable to turn on/off the sample coverage. Used in multi-sampling. */
   SAMPLE_COVERAGE = 0x80a0,
+  /** Passed to enable/disable to turn on/off the scissor test. Can also be used with getParameter to query the scissor test. */
   SCISSOR_TEST = 0x0c11,
+  /** Passed to enable/disable to turn on/off the stencil test. Can also be used with getParameter to query the stencil test. */
   STENCIL_TEST = 0x0b90,
 
   // Errors
   // Constants returned from getError().
 
+  /** Returned from getError(). */
   NO_ERROR = 0,
+  /** Returned from getError(). */
   INVALID_ENUM = 0x0500,
+  /** Returned from getError(). */
   INVALID_VALUE = 0x0501,
+  /** Returned from getError(). */
   INVALID_OPERATION = 0x0502,
+  /** Returned from getError(). */
   OUT_OF_MEMORY = 0x0505,
+  /** Returned from getError(). */
   CONTEXT_LOST_WEBGL = 0x9242,
 
   // Front face directions
   // Constants passed to frontFace().
 
+  /** Passed to frontFace to specify the front face of a polygon is drawn in the clockwise direction */
   CW = 0x0900,
+  /** Passed to frontFace to specify the front face of a polygon is drawn in the counter clockwise direction */
   CCW = 0x0901,
 
   // Hints
   // Constants passed to hint()
 
+  /** There is no preference for this behavior. */	
   DONT_CARE = 0x1100,
+  /** The most efficient behavior should be used. */	
   FASTEST = 0x1101,
+  /** The most correct or the highest quality option should be used. */	
   NICEST = 0x1102,
+  /** Hint for the quality of filtering when generating mipmap images with WebGLRenderingContext.generateMipmap(). */	
   GENERATE_MIPMAP_HINT = 0x8192,
 
   // Data types
@@ -215,20 +305,31 @@ export enum GL {
   // Shaders
   // Constants passed to createShader() or getShaderParameter()
 
+  /** Passed to createShader to define a fragment shader. */
   FRAGMENT_SHADER = 0x8b30,
+  /** Passed to createShader to define a vertex shader */
   VERTEX_SHADER = 0x8b31,
+  /** Passed to getShaderParameter to get the status of the compilation. Returns false if the shader was not compiled. You can then query getShaderInfoLog to find the exact error */
   COMPILE_STATUS = 0x8b81,
+  /** Passed to getShaderParameter to determine if a shader was deleted via deleteShader. Returns true if it was, false otherwise. */
   DELETE_STATUS = 0x8b80,
+  /** Passed to getProgramParameter after calling linkProgram to determine if a program was linked correctly. Returns false if there were errors. Use getProgramInfoLog to find the exact error. */
   LINK_STATUS = 0x8b82,
+  /** Passed to getProgramParameter after calling validateProgram to determine if it is valid. Returns false if errors were found. */
   VALIDATE_STATUS = 0x8b83,
+  /** Passed to getProgramParameter after calling attachShader to determine if the shader was attached correctly. Returns false if errors occurred. */
   ATTACHED_SHADERS = 0x8b85,
+  /** Passed to getProgramParameter to get the number of attributes active in a program. */
   ACTIVE_ATTRIBUTES = 0x8b89,
+  /** Passed to getProgramParameter to get the number of uniforms active in a program. */
   ACTIVE_UNIFORMS = 0x8b86,
+  /** The maximum number of entries possible in the vertex attribute list. */
   MAX_VERTEX_ATTRIBS = 0x8869,
   MAX_VERTEX_UNIFORM_VECTORS = 0x8dfb,
   MAX_VARYING_VECTORS = 0x8dfc,
   MAX_COMBINED_TEXTURE_IMAGE_UNITS = 0x8b4d,
   MAX_VERTEX_TEXTURE_IMAGE_UNITS = 0x8b4c,
+  /** Implementation dependent number of maximum texture units. At least 8. */  
   MAX_TEXTURE_IMAGE_UNITS = 0x8872,
   MAX_FRAGMENT_UNIFORM_VECTORS = 0x8dfd,
   SHADER_TYPE = 0x8b4f,
@@ -238,14 +339,22 @@ export enum GL {
   // Depth or stencil tests
   // Constants passed to depthFunc() or stencilFunc().
 
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will never pass, i.e., nothing will be drawn. */
   NEVER = 0x0200,
-  ALWAYS = 0x0207,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is less than the stored value. */
   LESS = 0x0201,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is equals to the stored value. */
   EQUAL = 0x0202,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is less than or equal to the stored value. */
   LEQUAL = 0x0203,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is greater than the stored value. */
   GREATER = 0x0204,
-  GEQUAL = 0x0206,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is not equal to the stored value. */
   NOTEQUAL = 0x0205,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will pass if the new depth value is greater than or equal to the stored value. */
+  GEQUAL = 0x0206,
+  /** Passed to depthFunction or stencilFunction to specify depth or stencil tests will always pass, i.e., pixels will be drawn in the order they are drawn. */
+  ALWAYS = 0x0207,
 
   // Stencil actions
   // Constants passed to stencilOp().
@@ -268,9 +377,13 @@ export enum GL {
   LINEAR_MIPMAP_NEAREST = 0x2701,
   NEAREST_MIPMAP_LINEAR = 0x2702,
   LINEAR_MIPMAP_LINEAR = 0x2703,
+  /** The texture magnification function is used when the pixel being textured maps to an area less than or equal to one texture element. It sets the texture magnification function to either GL_NEAREST or GL_LINEAR (see below). GL_NEAREST is generally faster than GL_LINEAR, but it can produce textured images with sharper edges because the transition between texture elements is not as smooth. Default: GL_LINEAR.  */
   TEXTURE_MAG_FILTER = 0x2800,
+  /** The texture minifying function is used whenever the pixel being textured maps to an area greater than one texture element. There are six defined minifying functions. Two of them use the nearest one or nearest four texture elements to compute the texture value. The other four use mipmaps. Default: GL_NEAREST_MIPMAP_LINEAR */
   TEXTURE_MIN_FILTER = 0x2801,
+  /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. G */
   TEXTURE_WRAP_S = 0x2802,
+  /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. G */
   TEXTURE_WRAP_T = 0x2803,
   TEXTURE_2D = 0x0de1,
   TEXTURE = 0x1702,
@@ -414,6 +527,7 @@ export enum GL {
   RGBA8 = 0x8058,
   RGB10_A2 = 0x8059,
   TEXTURE_3D = 0x806f,
+  /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. G */
   TEXTURE_WRAP_R = 0x8072,
   TEXTURE_MIN_LOD = 0x813a,
   TEXTURE_MAX_LOD = 0x813b,
@@ -699,23 +813,32 @@ export enum GL {
 
   // ANGLE_instanced_arrays
 
+  /** Describes the frequency divisor used for instanced rendering. */
   VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE = 0x88fe,
 
   // WEBGL_debug_renderer_info
 
+  /** Passed to getParameter to get the vendor string of the graphics driver. */
   UNMASKED_VENDOR_WEBGL = 0x9245,
+  /** Passed to getParameter to get the renderer string of the graphics driver. */
   UNMASKED_RENDERER_WEBGL = 0x9246,
 
   // EXT_texture_filter_anisotropic
 
+  /** Returns the maximum available anisotropy. */
   MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84ff,
+  /** Passed to texParameter to set the desired maximum anisotropy for a texture. */
   TEXTURE_MAX_ANISOTROPY_EXT = 0x84fe,
 
   // EXT_sRGB
 
+  /** Unsized sRGB format that leaves the precision up to the driver. */
   SRGB_EXT = 0x8c40,
+  /** Unsized sRGB format with unsized alpha component. */
   SRGB_ALPHA_EXT = 0x8c42,
+  /** Sized (8-bit) sRGB and alpha formats. */
   SRGB8_ALPHA8_EXT = 0x8c43,
+  /** Returns the framebuffer color encoding. */
   FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT = 0x8210,
 
   // EXT_texture_norm16 - https://khronos.org/registry/webgl/extensions/EXT_texture_norm16/
@@ -731,9 +854,13 @@ export enum GL {
 
   // WEBGL_compressed_texture_s3tc (BC1, BC2, BC3)
 
+  /** A DXT1-compressed image in an RGB image format. */
   COMPRESSED_RGB_S3TC_DXT1_EXT = 0x83f0,
+  /** A DXT1-compressed image in an RGB image format with a simple on/off alpha value. */
   COMPRESSED_RGBA_S3TC_DXT1_EXT = 0x83f1,
+  /** A DXT3-compressed image in an RGBA image format. Compared to a 32-bit RGBA texture, it offers 4:1 compression. */
   COMPRESSED_RGBA_S3TC_DXT3_EXT = 0x83f2,
+  /** A DXT5-compressed image in an RGBA image format. It also provides a 4:1 compression, but differs to the DXT3 compression in how the alpha compression is done. */
   COMPRESSED_RGBA_S3TC_DXT5_EXT = 0x83f3,
 
   // WEBGL_compressed_texture_s3tc_srgb (BC1, BC2, BC3 -  SRGB)
@@ -759,26 +886,41 @@ export enum GL {
 
   // WEBGL_compressed_texture_es3
 
+  /** One-channel (red) unsigned format compression. */
   COMPRESSED_R11_EAC = 0x9270,
+  /** One-channel (red) signed format compression. */
   COMPRESSED_SIGNED_R11_EAC = 0x9271,
+  /** Two-channel (red and green) unsigned format compression. */
   COMPRESSED_RG11_EAC = 0x9272,
+  /** Two-channel (red and green) signed format compression. */
   COMPRESSED_SIGNED_RG11_EAC = 0x9273,
+  /** Compresses RGB8 data with no alpha channel. */
   COMPRESSED_RGB8_ETC2 = 0x9274,
+  /** Compresses RGBA8 data. The RGB part is encoded the same as RGB_ETC2, but the alpha part is encoded separately. */
   COMPRESSED_RGBA8_ETC2_EAC = 0x9275,
+  /** Compresses sRGB8 data with no alpha channel. */
   COMPRESSED_SRGB8_ETC2 = 0x9276,
+  /** Compresses sRGBA8 data. The sRGB part is encoded the same as SRGB_ETC2, but the alpha part is encoded separately. */
   COMPRESSED_SRGB8_ALPHA8_ETC2_EAC = 0x9277,
+  /** Similar to RGB8_ETC, but with ability to punch through the alpha channel, which means to make it completely opaque or transparent. */
   COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 = 0x9278,
+  /** Similar to SRGB8_ETC, but with ability to punch through the alpha channel, which means to make it completely opaque or transparent. */
   COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 = 0x9279,
 
   // WEBGL_compressed_texture_pvrtc
 
+  /** RGB compression in 4-bit mode. One block for each 4×4 pixels. */
   COMPRESSED_RGB_PVRTC_4BPPV1_IMG = 0x8c00,
+  /** RGBA compression in 4-bit mode. One block for each 4×4 pixels. */
   COMPRESSED_RGBA_PVRTC_4BPPV1_IMG = 0x8c02,
+  /** RGB compression in 2-bit mode. One block for each 8×4 pixels. */
   COMPRESSED_RGB_PVRTC_2BPPV1_IMG = 0x8c01,
+  /** RGBA compression in 2-bit mode. One block for each 8×4 pixels. */
   COMPRESSED_RGBA_PVRTC_2BPPV1_IMG = 0x8c03,
 
   // WEBGL_compressed_texture_etc1
 
+  /** Compresses 24-bit RGB data with no alpha channel. */
   COMPRESSED_RGB_ETC1_WEBGL = 0x8d64,
 
   // WEBGL_compressed_texture_atc
@@ -820,26 +962,33 @@ export enum GL {
 
   // WEBGL_depth_texture
 
+  /** Unsigned integer type for 24-bit depth texture data. */
   UNSIGNED_INT_24_8_WEBGL = 0x84fa,
 
   // OES_texture_half_float
 
+  /** Half floating-point type (16-bit). */
   HALF_FLOAT_OES = 0x8d61,
 
   // WEBGL_color_buffer_float
 
+  /** RGBA 32-bit floating-point color-renderable format. */
   RGBA32F_EXT = 0x8814,
+  /** RGB 32-bit floating-point color-renderable format. */
   RGB32F_EXT = 0x8815,
   FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE_EXT = 0x8211,
   UNSIGNED_NORMALIZED_EXT = 0x8c17,
 
   // EXT_blend_minmax
 
+  /** Produces the minimum color components of the source and destination colors. */
   MIN_EXT = 0x8007,
+  /** Produces the maximum color components of the source and destination colors. */
   MAX_EXT = 0x8008,
 
   // OES_standard_derivatives
 
+  /** Indicates the accuracy of the derivative calculation for the GLSL built-in functions: dFdx, dFdy, and fwidth */
   FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8b8b,
 
   // WEBGL_draw_buffers
@@ -876,20 +1025,30 @@ export enum GL {
   DRAW_BUFFER13_WEBGL = 0x8832,
   DRAW_BUFFER14_WEBGL = 0x8833,
   DRAW_BUFFER15_WEBGL = 0x8834,
+  /** Maximum number of framebuffer color attachment points */
   MAX_COLOR_ATTACHMENTS_WEBGL = 0x8cdf,
+  /** Maximum number of draw buffers */
   MAX_DRAW_BUFFERS_WEBGL = 0x8824,
 
   // OES_vertex_array_object
 
+  /** The bound vertex array object (VAO). */
   VERTEX_ARRAY_BINDING_OES = 0x85b5,
 
   // EXT_disjoint_timer_query
 
+  /** The number of bits used to hold the query result for the given target. */
   QUERY_COUNTER_BITS_EXT = 0x8864,
+  /** The currently active query. */
   CURRENT_QUERY_EXT = 0x8865,
+  /** The query result. */
   QUERY_RESULT_EXT = 0x8866,
+  /** A Boolean indicating whether or not a query result is available. */
   QUERY_RESULT_AVAILABLE_EXT = 0x8867,
+  /** Elapsed time (in nanoseconds). */
   TIME_ELAPSED_EXT = 0x88bf,
+  /** The current time. */
   TIMESTAMP_EXT = 0x8e28,
+  /** A Boolean indicating whether or not the GPU performed any disjoint operation. */
   GPU_DISJOINT_EXT = 0x8fbb // A Boolean indicating whether or not the GPU performed any disjoint operation.
 }

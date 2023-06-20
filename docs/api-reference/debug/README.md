@@ -18,7 +18,9 @@ If the debug tools haven't been imported, both funcitons will print a warning an
 
 # Overview
 
-> WebGL only
+:::info
+WebGL only.
+:::
 
 luma.gl is pre-integrated with the Khronos group's WebGL debug tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and can use these to "instrument" `WebGLRenderingContext`s.
 

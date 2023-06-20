@@ -1,6 +1,5 @@
 import {Buffer} from '@luma.gl/api';
-import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-import {clear, ClassicModel as Model, ProgramManager} from '@luma.gl/webgl-legacy';
+import {AnimationLoopTemplate, AnimationProps, Model, PipelineFactory} from '@luma.gl/engine';
 
 const INFO_HTML = `
 Modifying shader behavior with shader hooks
@@ -48,15 +47,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const programManager = new ProgramManager(device);
-    programManager.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    const pipelineFactory = new PipelineFactory(device);
+    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     this.model1 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetLeftModule],
       attributes: {
         position: this.positionBuffer
@@ -70,7 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model2 = new Model(device, {
       vs,
       fs,
-      programManager,
+      pipelineFactory,
       modules: [offsetRightModule],
       attributes: {
         position: this.positionBuffer
@@ -89,8 +88,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device}: AnimationProps) {
-    clear(device, {color: [0, 0, 0, 1]});
-    this.model1.draw();
-    this.model2.draw();
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model1.draw(renderPass);
+    this.model2.draw(renderPass);
+    renderPass.end();
   }
 }

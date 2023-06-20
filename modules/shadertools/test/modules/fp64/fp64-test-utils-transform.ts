@@ -4,7 +4,7 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 
 import {Device} from '@luma.gl/api';
-import {Buffer, Transform} from '@luma.gl/webgl-legacy';
+import {Transform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
@@ -60,8 +60,8 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
   const vs = binary ? getBinaryShader(glslFunc) : getUnaryShader(glslFunc);
   const transform = new Transform(device, {
     sourceBuffers: {
-      a: new Buffer(device, {data: a_fp64}),
-      b: new Buffer(device, {data: b_fp64})
+      a: device.createBuffer({data: a_fp64}),
+      b: device.createBuffer({data: b_fp64})
     },
     vs,
     modules: [fp64],
@@ -89,7 +89,7 @@ export function runTests(device: Device, {glslFunc, binary = false, op, limit = 
     testCases
   });
   transform.run({uniforms: {ONE: 1}});
-  const gpu_result = transform.getBuffer('result').getData();
+  const gpu_result = transform.getBuffer('result')?.getData() ;
   for (let idx = 0; idx < testCases.length; idx++) {
     const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
     const result64 = gpu_result[2 * idx] + gpu_result[2 * idx + 1];

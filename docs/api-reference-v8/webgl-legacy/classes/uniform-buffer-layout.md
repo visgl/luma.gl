@@ -1,6 +1,8 @@
 # UniformBufferLayout
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 > `UniformBufferLayout` is only available in WebGL 2.
 

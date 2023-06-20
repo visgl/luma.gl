@@ -1,6 +1,5 @@
 import type {Buffer} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API
@@ -66,15 +65,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
     this.positionBuffer.destroy();
     this.colorBuffer.destroy();
     this.offsetBuffer.destroy();
   }
 
-  override onRender({device}: AnimationProps) {
-    clear(device, {color: [0, 0, 0, 1]});
-    this.model.draw();
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model.draw(renderPass);
+    renderPass.end();
   }
 }

@@ -1,6 +1,8 @@
 # Moving Data
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 `luma.gl` offers a set of functions that copy or blit data from and to Texture and Framebuffer objects. Image data can also be copied into Buffer, TypedArray, Images or Urls.
 

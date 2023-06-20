@@ -1,8 +1,12 @@
 # ExternalTexture
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
-> WebGPU only
+:::info
+WebGPU only.
+:::
 
 While it is possible to use a normal `Texture` for a video element, the `ExternalTexture`
 class provides a way to create a cheap-to-construct, disposable view of the video.

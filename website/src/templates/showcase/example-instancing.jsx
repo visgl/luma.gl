@@ -7,7 +7,7 @@ export class InstancingShowcaseExample extends React.Component {
     const { pageContext, panel = true } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample  name="transform-feedback" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} panel={panel} />
+      <LumaExample  name="instancing" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} panel={panel} />
     );
   }
 }

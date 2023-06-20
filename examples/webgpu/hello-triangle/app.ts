@@ -1,5 +1,5 @@
 import {glsl} from '@luma.gl/api';
-import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
@@ -61,16 +61,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
   }
 
-  override onRender({device}: AnimationProps) {
-    this.model.draw();
-    device.submit();
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({});
+    this.model.draw(renderPass);
+    renderPass.end();
   }
-}
-
-if (!globalThis.website) {
-  makeAnimationLoop(AppAnimationLoopTemplate).start();
 }

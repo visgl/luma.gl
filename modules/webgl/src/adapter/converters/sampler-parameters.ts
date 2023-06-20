@@ -1,7 +1,6 @@
 // SAMPLER FILTERS
 import {SamplerParameters} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
-import {GLSamplerParameters} from '../../types/webgl';
+import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {convertCompareFunction, convertToCompareFunction} from './device-parameters';
 
 /* eslint-disable consistent-return */

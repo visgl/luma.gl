@@ -7,7 +7,7 @@ import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
 
 import {Device, Texture, TextureFormat, cast} from '@luma.gl/api';
 import GL from '@luma.gl/constants';
-import {Buffer, getKey, isWebGL2, readPixelsToArray} from '@luma.gl/webgl-legacy';
+import {Buffer, readPixelsToArray} from '@luma.gl/webgl-legacy';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './webgl-sampler.spec';
@@ -115,7 +115,7 @@ function testFormatDeduction(t, device: Device) {
     };
     if (device.isTextureFormatSupported({format})) {
       const texture = device.createTexture(options);
-      const msg = `Texture({format: ${getKey(gl, format)}}) created`;
+      const msg = `Texture({format: ${device.getGLKey(format)}}) created`;
       t.equals(texture.format, Number(format), msg);
       t.equals(texture.type, expectedType, msg);
       t.equals(texture.dataFormat, expectedDataFormat, msg);
@@ -624,7 +624,7 @@ export function testSamplerParameters({t, texture, parameters}) {
       t.equals(
         newValue,
         value,
-        `${name}.setParameters({[${getKey(gl, parameter)}]: ${getKey(gl, value)}}) read back OK`
+        `${name}.setParameters({[${texture.device.getGLKey(parameter)}]: ${texture.device.getGLKey(value)}}) read back OK`
       );
     }
   }
@@ -805,11 +805,11 @@ function getParameter(texture: Texture, pname: number): any {
   return value;
 }
 
-function isFormatSupported(format, glContext) {
-  format = Number(format);
-  const opts = Object.assign({format}, TEXTURE_FORMATS[format]);
-  if (!device.isTextureFormatSupported({format}) || (!isWebGL2(glContext) && opts.compressed)) {
-    return false;
-  }
-  return true;
-}
+// function isFormatSupported(format, glContext) {
+//   format = Number(format);
+//   const opts = Object.assign({format}, TEXTURE_FORMATS[format]);
+//   if (!device.isTextureFormatSupported({format}) || (!isWebGL2(glContext) && opts.compressed)) {
+//     return false;
+//   }
+//   return true;
+// }

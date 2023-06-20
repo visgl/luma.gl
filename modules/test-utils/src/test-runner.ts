@@ -1,27 +1,30 @@
-// @ts-nocheck TODO remove
-/* eslint-disable no-console */
-import {AnimationLoop, AnimationProps} from '@luma.gl/webgl-legacy';
+// @ts-nocheck
+/* eslint-disable */
+
+import {AnimationProps} from '@luma.gl/engine';
 import {webglDevice} from './create-test-device';
+
+// TODO - Replace with new AnimationLoop from `@luma.gl/engine`
+import {ClassicAnimationLoop as AnimationLoop} from './engine/classic-animation-loop';
 
 /** Describes a test case */
 export type TestRunnerTestCase = {
   /** Name of the test case (for logging) */
   name: string;
   /** Initialize the test case. Can return a promise */
-  onInitialize: (props: AnimationProps) => Promise<unknown>;
+  onInitialize: (props: AnimationProps) => Promise<void | {}>;
   /** Perform rendering */
   onRender: (props: AnimationProps & {done}) => void;
   /** Clean up after the test case */
   onFinalize: (props: AnimationProps) => void;
+  animationLoop?: AnimationLoop;
 };
-
-function noop() {}
 
 const DEFAULT_TEST_CASE: TestRunnerTestCase = {
   name: 'Unnamed test',
-  onInitialize: noop,
+  onInitialize: async () => {},
   onRender: ({done}) => done(),
-  onFinalize: noop
+  onFinalize: () => {}
 };
 
 /** Options for a TestRunner */
@@ -30,8 +33,8 @@ export type TestRunnerProps = {
   height?: number;
   // test lifecycle callback
   onTestStart?: (testCase: TestRunnerTestCase) => void;
-  onTestPass?: (testCase: TestRunnerTestCase) => void;
-  onTestFail?: (testCase: TestRunnerTestCase) => void;
+  onTestPass?: (testCase: TestRunnerTestCase, result?: unknown) => void;
+  onTestFail?: (testCase: TestRunnerTestCase, error?: unknown) => void;
   /** milliseconds to wait for each test case before aborting */
   timeout?: number;
   maxFramesToRender?: number;
@@ -40,13 +43,18 @@ export type TestRunnerProps = {
 };
 
 const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
+  width: undefined,
+  height: undefined,
+
   // test lifecycle callback
   onTestStart: (testCase: TestRunnerTestCase) => console.log(`# ${testCase.name}`),
-  onTestPass: (testCase: TestRunnerTestCase) => console.log(`ok ${testCase.name} passed`),
-  onTestFail: (testCase: TestRunnerTestCase) => console.log(`not ok ${testCase.name} failed`),
+  onTestPass: (testCase: TestRunnerTestCase, result?: unknown) => console.log(`ok ${testCase.name} passed`),
+  onTestFail: (testCase: TestRunnerTestCase, error?: unknown) => console.log(`not ok ${testCase.name} failed`),
 
   // milliseconds to wait for each test case before aborting
-  timeout: 2000
+  timeout: 2000,
+  maxFramesToRender: undefined,
+  imageDiffOptions: undefined
 };
 
 /** Runs an array of test cases */
@@ -54,11 +62,17 @@ export class TestRunner {
   device = webglDevice;
   props: Record<string, any>;
   isRunning: boolean = false;
-  readonly testOptions: Required<TestRunnerProps> = {...DEFAULT_TEST_PROPS};
-  readonly _animationProps?: AnimationProps = {};
+  testOptions: Required<TestRunnerProps> = {...DEFAULT_TEST_PROPS};
+  readonly _animationProps?: AnimationProps;
   private _animationLoop: AnimationLoop | null;
   private _testCases: TestRunnerTestCase[] = [];
   private _testCaseData: any = null;
+  private _currentTestCase: TestRunnerTestCase | null;
+  private _currentTestCaseStartTime: number;
+  private _currentTestCaseStartTick: number;
+
+  // should be defined in snapshot-test-runner
+  isDiffing: boolean = false;
 
   // @ts-expect-error
   isHeadless: boolean = Boolean(window.browserTestDriver_isHeadless);
@@ -92,7 +106,6 @@ export class TestRunner {
 
     return new Promise<void>((resolve, reject) => {
       this._animationLoop = new AnimationLoop({
-        // @ts-expect-error TODO
         ...this.props,
         device: this.device,
         onRender: this._onRender.bind(this),
@@ -204,7 +217,7 @@ export class TestRunner {
       for (const key in this._testCaseData) {
         const value = this._testCaseData[key];
         if (value && value.delete) {
-          value.delete();
+          value.destroy();
         }
       }
       this._currentTestCase.onFinalize(Object.assign({}, animationProps, this._testCaseData));

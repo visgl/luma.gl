@@ -1,8 +1,12 @@
 # How Rendering Works
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
-> This page is a work-in-progress
+:::caution
+This page is a work-in-progress
+:::
 
 A major feature of any GPU API is the ability to issue GPU draw calls. luma.gl has been designed to offer developers full control over draw calls as outlined below.
 
@@ -10,17 +14,78 @@ A major feature of any GPU API is the ability to issue GPU draw calls. luma.gl h
 
 The luma.gl documentation includes a series of tutorials that show how to render 
 
-## Model
+## Overview
 
-## RenderPipeline
+## Drawing to the screen
 
-## RenderPass
+## Rendering into a canvas
 
-... 
+To render to the screen requires rendering into a canvas, a special `Framebuffer` should be obtained from a 
+`CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
+A device context `Framebuffer` and has a (single) special color attachment that is connected to the
+current swap chain buffer, and also a depth buffer, and is automatically resized to match the size of the canvas
+associated.
 
-The luma.gl `Framebuffer` constructor enables the creation of a framebuffer with all the proper attachments in a single step and also the `resize` method makes it easy to efficiently resize a all the attachments of a `Framebuffer` with a single method.
+To draw to the screen in luma.gl, simply create a `RenderPass` by calling 
+`device.beginRenderPass()` and start rendering. When done rendering, call 
+`renderPass.end()`  
+
+```typescript
+  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
+  const renderPass = device.beginRenderPass();
+  model.draw();
+  renderPass.end();
+  device.submit();
+```
+
+For more detail. `device.canvasContext.getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the device's swap chain textures). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`: 
+
+```typescript
+  const renderPass = device.beginRenderPass({framebuffer: device.canvasContext.getDefaultFramebuffer()});
+  ...
+```
+
+## Clearing the screen
+
+`Framebuffer` attachments are cleared by default when a RenderPass starts. Control is provided via the `RenderPassProps.clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is a fully transparent black `[0, 0, 0, 0]`. 
+
+```typescript
+  const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  model.draw();
+  renderPass.end();
+  device.submit();
+```
+
+Depth and stencil buffers are also cleared to default values:
+
+```typescript
+  const renderPass = device.beginRenderPass({
+    clearColor: [0, 0, 0, 1],
+    depthClearValue: 1,
+    stencilClearValue: 0
+  });
+  renderPass.end();
+  device.submit();
+```
+
+Clearing can  be disabled by setting any of the clear properties to the string constant `'load'`. Instead of clearing before rendering, this loads the previous contents of the framebuffer. Clearing should generally be expected to be more performant.
+
+## Offscreen rendering
+
+While is possible to render into an `OffscreenCanvas`, offscreen rendering usually refers to 
+rendering into one or more application created `Texture`s. 
+
+To help organize and resize these textures, luma.gl provides a `Framebuffer` class. 
+A `Framebuffer` is a simple container object that holds textures that will be used as render targets for a `RenderPass`, containing
+- one or more color attachments
+- optionally, a depth, stencil or depth-stencil attachment 
+
+`Framebuffer` also provides a `resize` method makes it easy to efficiently resize all the attachments of a `Framebuffer` with a single method call.
+
+`device.createFramebuffer` constructor enables the creation of a framebuffer with all attachments in a single step. 
 
 When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
+
 For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
 
 | Texture parameter | Value           |
@@ -30,10 +95,6 @@ For color, new `Texture2D` object is created with no mipmaps and following filte
 | `addressModeU`    | `clamp-to-edge` |
 | `addressModeV`    | `clamp-to-edge` |
 
-
-A `Framebuffer` is a container object that holds textures that will be used as render targets for `RenderPipeline`s.
-- one or more color textures
-- optionally a depth / stencil buffer
 
 An application can render into an (HTML or offscreen) canvas by obtaining a
 `Framebuffer` object from a `CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
@@ -54,14 +115,6 @@ A `Framebuffer` holds:
 - an optional depth, stencil or combined depth-stencil `Texture`).
 
 All attachments must be in the form of `Texture`s.
-
-## Rendering into a canvas
-
-To render into a canvas, a special `Framebuffer` should be obtained from a 
-`CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
-A device context `Framebuffer` and has a (single) special color attachment that is connected to the
-current swap chain buffer, and also a depth buffer, and is automatically resized to match the size of the canvas
-associated.
 
 ## Resizing Framebuffers
 
@@ -156,11 +209,11 @@ Binding a framebuffer for multiple render calls
 const framebuffer1 = device.createFramebuffer({...});
 const framebuffer2 = device.createFramebuffer({...});
 
-const renderPass1 = device.createRenderPass({framebuffer: framebuffer1});
+const renderPass1 = device.beginRenderPass({framebuffer: framebuffer1});
 program.draw(renderPass1);
 renderPass1.endPass();
 
-const renderPass2 = device.createRenderPass({framebuffer: framebuffer1});
+const renderPass2 = device.beginRenderPass({framebuffer: framebuffer1});
 program.draw(renderPass2);
 renderPass2.endPass();
 ```
@@ -212,7 +265,9 @@ framebuffer.clear({
 
 # RenderPipeline
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
@@ -426,7 +481,7 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 | Parameter                           | Type      | Description                                                                                                                                                        |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.delete()`), but the delete is pending because pipeline is still part of current rendering state |
+| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.destroy()`), but the delete is pending because pipeline is still part of current rendering state |
 | `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                               |
 | `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
 | `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |
@@ -439,7 +494,9 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 # RenderPipeline
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/api/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
@@ -644,7 +701,7 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 | Parameter                           | Type      | Description                                                                                                                                                        |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.delete()`), but the delete is pending because pipeline is still part of current rendering state |
+| `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.destroy()`), but the delete is pending because pipeline is still part of current rendering state |
 | `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                               |
 | `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
 | `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |

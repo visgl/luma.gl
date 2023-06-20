@@ -7,7 +7,7 @@ export class HelloCubeExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample name="hello-cube" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
+      <LumaExample id="hello-cube" name="hello-cube" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }
 }

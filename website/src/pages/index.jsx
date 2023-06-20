@@ -32,7 +32,6 @@ export default function Home() {
     <Layout
       title={`${siteConfig.title}`}
       description="WebGPU and WebGL 2 APIs<head />">
-      <HomepageHeader />
       <main>
         <InstancingShowcaseExample />
         <HomepageFeatures />

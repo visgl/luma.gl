@@ -67,7 +67,7 @@ export class WebGPUMipmapGenerator {
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED | GPUTextureUsage.OUTPUT_ATTACHMENT,
       mipLevelCount
     });
-    this.device.queue.copyImageBitmapToTexture({ imageBitmap }, { texture }, textureSize);
+    this.device.queue.copyImageBitmapToTexture({ imageBitmap }, { texture: srcTexture }, textureSize);
 
     const commandEncoder = this.device.createCommandEncoder({});
     for (let i = 1; i < mipLevelCount; ++i) {

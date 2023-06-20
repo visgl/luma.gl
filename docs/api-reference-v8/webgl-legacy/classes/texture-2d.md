@@ -1,6 +1,8 @@
 # Texture2D
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 2D textures hold basic "single image" textures (although technically they can contain multiple mipmap levels). They hold image memory of a certain format and size, determined at initialization time. They can be read from using shaders and written to by attaching them to frame buffers.
 

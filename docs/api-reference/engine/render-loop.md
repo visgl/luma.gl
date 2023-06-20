@@ -1,6 +1,8 @@
 # AnimationLoopTemplate
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 `AnimationLoopTemplate` is a helper class that manages the applications render loop.
 provides a number of conveniences related to initialization of a `Device` 
@@ -28,11 +30,11 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.clipSpaceQuad.destroy();
   }
 
-  override onRender({tick}) {
+  onRender({tick}) {
     // Tick is auto updated by AnimationLoopTemplate
     this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
     this.clipSpaceQuad.draw();

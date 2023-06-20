@@ -1,6 +1,8 @@
 # Shader
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 The `Shader` class are the base class for `VertexShader` class and `FragmentShader` class
 

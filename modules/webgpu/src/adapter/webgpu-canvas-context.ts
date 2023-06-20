@@ -24,7 +24,8 @@ export class WebGPUCanvasContext extends CanvasContext {
     this.height = -1;
   
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.gpuCanvasContext = this.canvas.getContext('webgpu') as GPUCanvasContext;
+    // @ts-ignore TODO - we don't handle OffscreenRenderingContext.
+    this.gpuCanvasContext = this.canvas.getContext('webgpu') ;
     // @ts-expect-error TODO this has been replaced
     this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
   }

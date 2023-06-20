@@ -1,8 +1,5 @@
 import {Buffer} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-// import {Buffer, luma} from '@luma.gl/api';
-// import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Have to start somewhere...
@@ -61,7 +58,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device}: AnimationProps): void {
-    clear(device, {color: [0, 0, 0, 1]});
-    this.model.draw();
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model.draw(renderPass);
+    renderPass.end();
   }
 }

@@ -31,13 +31,14 @@ export {RenderPipeline} from './adapter/resources/render-pipeline';
 
 export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
 export {ComputePipeline} from './adapter/resources/compute-pipeline';
-export type {CommandEncoderProps} from './adapter/resources/command-encoder';
-export {CommandEncoder} from './adapter/resources/command-encoder';
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';
 export type {ComputePassProps} from './adapter/resources/compute-pass';
 export {ComputePass} from './adapter/resources/compute-pass';
-
+export type {CommandEncoderProps} from './adapter/resources/command-encoder';
+export {CommandEncoder} from './adapter/resources/command-encoder';
+export type {CommandBufferProps} from './adapter/resources/command-buffer';
+export {CommandBuffer} from './adapter/resources/command-buffer';
 
 // API TYPES
 export type {CompilerMessage} from './lib/compiler-log/compiler-message';

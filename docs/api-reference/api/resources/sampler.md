@@ -1,6 +1,8 @@
 # Sampler
 
-> The luma.gl v9 API is currently in [public review](/docs/public-review).
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
 A `Sampler` is an immutable object that holds a set of sampling parameters for texture access.
 Sampling parameters are applied during shader execution and control how values ("texels")

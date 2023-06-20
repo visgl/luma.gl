@@ -276,7 +276,7 @@ export class AnimationLoop {
 
   _setDisplay(display: any) {
     if (this.display) {
-      this.display.delete();
+      this.display.destroy();
       this.display.animationLoop = null;
     }
 
@@ -355,8 +355,10 @@ export class AnimationLoop {
     }
     this.animationProps = {
       animationLoop: this,
+
       device: this.device,
       canvas: this.device?.canvasContext?.canvas,
+      renderPass: this.device.getDefaultRenderPass(),
       timeline: this.timeline,
 
       // Initial values
@@ -392,6 +394,8 @@ export class AnimationLoop {
     if (!this.animationProps) {
       return;
     }
+
+    this.animationProps.renderPass = this.device.getDefaultRenderPass();
 
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {

@@ -1,6 +1,8 @@
 # Accessor
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 The `Accessor` class is a helper class that describes how a buffers memory is structured and should be accessed. Accessors are used.
 

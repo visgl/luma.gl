@@ -3,20 +3,8 @@ import test from 'tape-promise/tape';
 import {createTestDevice, webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 import {WebGLDevice, isWebGL, isWebGL2} from '@luma.gl/webgl';
 
-const webgl1DebugDevice = createTestDevice({webgl1: true, webgl2: false, debug: true});
-const webgl2DebugDevice = createTestDevice({webgl1: false, webgl2: true, debug: true});
-
-test('WebGLDevice#headless context creation', (t) => {
-  t.ok(isWebGL(webgl1Device.gl), 'Context creation ok');
-  t.end();
-});
-
-test('WebGLDevice#getContextDebugInfo', (t) => {
-  const info = webgl1Device.info;
-  t.ok(typeof info.vendor === 'string', 'info.vendor ok');
-  t.ok(typeof info.renderer === 'string', 'info.renderer ok');
-  t.end();
-});
+const webgl1DebugDevice = createTestDevice({webgl1: true, webgl2: false, debug: true})!;
+const webgl2DebugDevice = createTestDevice({webgl1: false, webgl2: true, debug: true})!;
 
 test('WebGLDevice#isWebGL1', (t) => {
   t.ok(isWebGL(webgl1Device.gl), 'isWebGL should return true on WebGL1 device');
@@ -49,6 +37,23 @@ test('WebGLDevice#isWebGL2', (t) => {
   t.ok(isWebGL2(webgl2DebugDevice.gl2), 'isWebGL2 should return true on WebGL2 debug device');
 
   t.end();
+});
+
+test('WebGLDevice#lost (Promise)', async (t) => {
+  const device = await WebGLDevice.create({webgl2: false});
+
+  // Wrap in a promise to make sure tape waits for us
+  await new Promise<void>(async (resolve) => {
+    setTimeout(async () => {
+      const cause = await device.lost;
+      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
+      t.end();
+      resolve();
+    }, 0);
+    device.loseDevice();
+  });
+
+  device.destroy();
 });
 
 test.skip('WebGLDevice#resize', (t) => {
@@ -136,21 +141,4 @@ test.skip('WebGLDevice#resize', (t) => {
   */
 
   t.end();
-});
-
-test('WebGLDevice#lost (Promise)', async (t) => {
-  const device = await WebGLDevice.create({webgl2: false});
-
-  // Wrap in a promise to make sure tape waits for us
-  await new Promise<void>(async (resolve) => {
-    setTimeout(async () => {
-      const cause = await device.lost;
-      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
-      t.end();
-      resolve();
-    }, 0);
-    device.loseDevice();
-  });
-
-  device.destroy();
 });

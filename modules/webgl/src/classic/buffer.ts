@@ -108,9 +108,9 @@ export class ClassicBuffer extends WEBGLBuffer {
     Object.seal(this);
   }
 
-  override write(data: TypedArray, byteOffset?: number): void {
-    this.subData({data, offset: byteOffset});
-  }
+  // override write(data: TypedArray, byteOffset: number = 0): void {
+  //   this.subData({data, offset: byteOffset});
+  // }
 
   // returns number of elements in the buffer (assuming that the full buffer is used)
   getElementCount(accessor: AccessorObject = this.accessor): number {

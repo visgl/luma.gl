@@ -7,16 +7,17 @@
   },
   "references": [
     {"path": "modules/api"},
+    {"path": "modules/api-tests"},
     {"path": "modules/constants"},
     {"path": "modules/core"},
     {"path": "modules/debug"},
     {"path": "modules/engine"},
-    {"path": "modules/experimental"},
-    {"path": "modules/gltools"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"},
-    {"path": "modules/webgl-legacy"},
     {"path": "modules/webgpu"}
+    // {"path": "modules/gltools"},
+    // {"path": "modules/webgl-legacy"},
+    // {"path": "modules/experimental"}
   ]
 }

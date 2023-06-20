@@ -5,8 +5,6 @@ import {stringifyTypedArray} from './context-state.spec';
 import {setParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 
 import GL from '@luma.gl/constants';
-import {Framebuffer} from '@luma.gl/webgl-legacy';
-import {getKey} from '@luma.gl/webgl-legacy';
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
@@ -82,7 +80,7 @@ test('WebGLState#get all parameters', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(webgl1Device.gl, key)}`
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${webgl1Device.getGLKey(key)}`
     );
   }
 
@@ -92,7 +90,7 @@ test('WebGLState#get all parameters', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after getParameters for ${getKey(webgl1Device.gl, key)}`
+      `got expected value ${stringifyTypedArray(value)} after getParameters for ${webgl1Device.getGLKey(key)}`
     );
   }
 
@@ -109,7 +107,7 @@ test('WebGL#reset', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(webgl1Device.gl, key)}`
+      `got expected value ${stringifyTypedArray(value)} after setParameters for ${webgl1Device.getGLKey(key)}`
     );
   }
 
@@ -123,8 +121,7 @@ test('WebGL#reset', (t) => {
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)} after resetParameters for ${getKey(
-        webgl1Device.gl,
+      `got expected value ${stringifyTypedArray(value)} after resetParameters for ${webgl1Device.getGLKey(
         key
       )}`
     );
@@ -139,7 +136,7 @@ test('WebGLState#setParameters framebuffer', (t) => {
 
   let fbHandle = getParameters(webgl1Device, [GL.FRAMEBUFFER_BINDING])[GL.FRAMEBUFFER_BINDING];
   // t.equal(fbHandle, null, 'Initial frambuffer binding should be null');
-  const framebuffer = new Framebuffer(webgl1Device);
+  const framebuffer = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
   setParameters(webgl1Device, {
     [GL.FRAMEBUFFER_BINDING]: framebuffer.handle
@@ -165,7 +162,7 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', (t) => {
 
     let fbHandle = getParameters(webgl2Device, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
     // t.equal(fbHandle, null, 'Initial read-frambuffer binding should be null');
-    const framebuffer = new Framebuffer(webgl2Device);
+    const framebuffer = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
     setParameters(webgl2Device, {
       [GL.READ_FRAMEBUFFER_BINDING]: framebuffer.handle

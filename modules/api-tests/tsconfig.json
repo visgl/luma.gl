@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.module.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    {"path": "../api"},
+    {"path": "../test-utils"},
+    {"path": "../webgl"},
+    {"path": "../webgpu"}
+  ]
+}

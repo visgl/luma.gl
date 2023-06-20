@@ -7,7 +7,7 @@ export class HelloInstancingExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample name="hello-instancing" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
+      <LumaExample id="hello-instancing" name="hello-instancing" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }
 }

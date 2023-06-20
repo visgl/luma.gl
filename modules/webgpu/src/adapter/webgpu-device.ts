@@ -10,6 +10,7 @@ import type {
   BufferProps,
   SamplerProps,
   ShaderProps,
+  Texture,
   TextureProps,
   TextureFormat,
   ExternalTextureProps,
@@ -17,7 +18,8 @@ import type {
   RenderPipelineProps,
   ComputePipelineProps,
   RenderPassProps,
-  ComputePassProps
+  ComputePassProps,
+  // CommandEncoderProps
 } from '@luma.gl/api';
 import {Device, CanvasContext, log, uid} from '@luma.gl/api';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -30,6 +32,7 @@ import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPURenderPass} from './resources/webgpu-render-pass';
 import {WebGPUComputePass} from './resources/webgpu-compute-pass';
+// import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
@@ -162,8 +165,9 @@ export class WebGPUDevice extends Device {
     return this._isLost;
   }
 
-  _createBuffer(props: BufferProps): WebGPUBuffer {
-    return new WebGPUBuffer(this, props);
+  createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
+    const newProps = this._getBufferProps(props);
+    return new WebGPUBuffer(this, newProps);
   }
 
   _createTexture(props: TextureProps): WebGPUTexture {
@@ -209,6 +213,10 @@ export class WebGPUDevice extends Device {
     this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
     return new WebGPUComputePass(this, props);
   }
+
+  // createCommandEncoder(props: CommandEncoderProps): WebGPUCommandEncoder {
+  //   return new WebGPUCommandEncoder(this, props);
+  // }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);
@@ -291,5 +299,65 @@ export class WebGPUDevice extends Device {
     features.add('glsl-texture-lod');
 
     return features;
+  }
+
+  copyExternalImageToTexture(options: {
+    texture: Texture;
+    mipLevel?: number;
+    aspect?: 'all' | 'stencil-only' | 'depth-only';
+    colorSpace?: 'display-p3' | 'srgb';
+    premultipliedAlpha?: boolean;
+
+    source:  ImageBitmap | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas;
+    sourceX?: number;
+    sourceY?: number;
+
+    width?: number;
+    height?: number;
+    depth?: number;
+  }): void {
+    const {
+      source,
+      sourceX = 0,
+      sourceY = 0,
+
+      texture,
+      mipLevel = 0,
+      aspect = 'all',
+      colorSpace = 'display-p3',
+      premultipliedAlpha = false,
+      // destinationX,
+      // destinationY,
+      // desitnationZ,
+
+      width = texture.width,
+      height = texture.height,
+      depth = 1
+    } = options;
+
+    const webGpuTexture = texture as WebGPUTexture;
+
+    this.handle?.queue.copyExternalImageToTexture(
+      // source: GPUImageCopyExternalImage
+      {
+        source,
+        origin: [sourceX, sourceY]
+      },
+      // destination: GPUImageCopyTextureTagged
+      {
+        texture: webGpuTexture.handle,
+        origin: [0, 0, 0], // [x, y, z],
+        mipLevel,
+        aspect,
+        colorSpace,
+        premultipliedAlpha
+      },
+      // copySize: GPUExtent3D
+      [
+        width,
+        height,
+        depth
+      ]
+    )
   }
 }

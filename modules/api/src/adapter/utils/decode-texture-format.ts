@@ -4,10 +4,7 @@ import {decodeVertexType} from './decode-data-type';
 
 const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
 
-/**
- * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
- */
-export function decodeTextureFormat(format: TextureFormat): {
+export type DecodedTextureFormat = {
   format: string;
   components: number;
   dataType: VertexType;
@@ -18,7 +15,12 @@ export function decodeTextureFormat(format: TextureFormat): {
   integer: boolean;
   signed: boolean;
   normalized: boolean;
-} {
+}
+
+/**
+ * Decodes a vertex format, returning type, components, byte length and flags (integer, signed, normalized)
+ */
+export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat {
   const matches = REGEX.exec((format as string));
   if (matches) {
     const [, format, length, type, srgb, suffix] = matches;
@@ -36,13 +38,13 @@ export function decodeTextureFormat(format: TextureFormat): {
       };
     }
   }
-  throw new Error(`Unknown format ${format}`);
+
+  return decodeNonStandardFormat(format);
 }
 
 // https://www.w3.org/TR/webgpu/#texture-format-caps
 
-/*
-const EXCEPTIONS: Record<TextureFormat, any> = {
+const EXCEPTIONS: Partial<Record<TextureFormat, any>> = {
   // Packed 16 bit formats
   'rgba4unorm-webgl': {format: 'rgba', bpp: 2}, 
   'rgb565unorm-webgl': {format: 'rgb', bpp: 2},
@@ -61,9 +63,24 @@ const EXCEPTIONS: Record<TextureFormat, any> = {
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
   // "depth32float-stencil8" feature
-  "depth32float-stencil8": {components: 2, bpp: 4, a: 'depth-stencil'}
+  'depth32float-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'}
 };
 
+function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
+  const data = EXCEPTIONS[format];
+  if (!data) {
+    throw new Error(`Unknown format ${format}`);
+  }
+  return {
+    format: data.format || '',
+    components: data.components || 1,
+    byteLength: data.bpp || 1,
+    srgb: false,
+    unsized: false    
+  } as DecodedTextureFormat;
+}
+
+/*
 'r8unorm':	{s: "float"}, // 	✓	✓	✓	},
 'r8snorm':	{s: "float"}, // 		✓		},
 'r8uint':	{s: "uint"}, // 	✓	✓		},

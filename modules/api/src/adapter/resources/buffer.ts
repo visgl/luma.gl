@@ -4,12 +4,17 @@ import type {Device} from '../device';
 import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 
 export type BufferProps = ResourceProps & {
+  /** Supply a handle to connect to an existing device-specific buffer */
   handle?: WebGLBuffer;
+  /** Specifies how this buffer can be used */
   usage?: number;
+  /** Length in bytes of memory to be allocated. If not specified, `byteLength` of  `props.data` will be used. */
   byteLength?: number;
+  /** Data to initialize the buffer with. */
   data?: ArrayBuffer | ArrayBufferView | null;
+  /** Byte offset into the newly created Buffer to store data at */
   byteOffset?: number;
-  /** If props.usage & Buffer.INDEX */
+  /** If props.usage includes Buffer.INDEX */
   indexType?: 'uint16' | 'uint32';
 
   // TBD
@@ -56,6 +61,9 @@ export abstract class Buffer extends Resource<BufferProps> {
   static QUERY_RESOLVE = 0x0200;
 
   override get [Symbol.toStringTag](): string { return 'Buffer'; }
+
+  /** Length of buffer in bytes */
+  abstract byteLength: number;
 
   constructor(device: Device, props: BufferProps) {
     const deducedProps = {...props};

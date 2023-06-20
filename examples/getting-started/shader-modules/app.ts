@@ -1,6 +1,5 @@
 import {Buffer} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl-legacy';
 
 const INFO_HTML = `
 Re-using shader code with shader modules
@@ -92,12 +91,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   override onFinalize() {
     this.model1.destroy();
     this.model2.destroy();
-    this.positionBuffer.delete();
+    this.positionBuffer.destroy();
   }
 
   override onRender({device}) {
-    clear(device, {color: [0, 0, 0, 1]});
-    this.model1.draw();
-    this.model2.draw();
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model1.draw(renderPass);
+    this.model2.draw(renderPass);
+    renderPass.end();
   }
 }

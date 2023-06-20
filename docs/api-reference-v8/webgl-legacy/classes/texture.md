@@ -1,6 +1,8 @@
 # Texture
 
-> This page describes deprecated components in the legacy luma.gl v8 API.
+:::info
+This page describes deprecated components in the legacy luma.gl v8 API.
+:::
 
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 
