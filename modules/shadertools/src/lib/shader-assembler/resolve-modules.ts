@@ -1,29 +1,10 @@
-import {assert} from '../utils/assert';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
 // Instantiate shader modules and any dependencies resolve dependencies
 export function resolveModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
-  return getShaderDependencies(instantiateModules(modules));
-}
-
-function instantiateModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
-  return modules.map((module: ShaderModule | ShaderModuleInstance) => {
-    if (module instanceof ShaderModuleInstance) {
-      return module;
-    }
-
-    assert(
-      typeof module !== 'string',
-      `Shader module use by name is deprecated. Import shader module '${module}' and use it directly.`
-    );
-    assert(module.name, 'shader module has no name');
-
-    const moduleObject = new ShaderModuleInstance(module);
-    moduleObject.dependencies = instantiateModules(module.dependencies || []);
-
-    return moduleObject;
-  });
+  const instances = ShaderModuleInstance.instantiateModules(modules);
+  return getShaderDependencies(instances);
 }
 
 /**
@@ -38,7 +19,7 @@ function instantiateModules(modules: (ShaderModule | ShaderModuleInstance)[]): S
  * @param modules - Array of modules (inline modules or module names)
  * @return - Array of modules
  */
-function getShaderDependencies(modules: ShaderModule[]): ShaderModuleInstance[] {
+function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleInstance[] {
   const moduleMap: Record<string, ShaderModuleInstance> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
@@ -59,10 +40,10 @@ function getShaderDependencies(modules: ShaderModule[]): ShaderModuleInstance[] 
  * @return - Map of module name to its level
  */
 // Adds another level of dependencies to the result map
-function getDependencyGraph(options: {
-  modules: ShaderModule[],
+export function getDependencyGraph(options: {
+  modules: ShaderModuleInstance[],
   level: number,
-  moduleMap: Record<string, ShaderModule>;
+  moduleMap: Record<string, ShaderModuleInstance>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;

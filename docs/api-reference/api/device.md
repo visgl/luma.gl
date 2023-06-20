@@ -377,6 +377,22 @@ Note that a new default `RenderPass` is returned every animation frame.
   based on what the run-time environment (ie. browser or Node.js) supports.
 - The `Device` API is intentionally similar, but not identical, to the [WebGPU `GPUDevice`](https://www.w3.org/TR/webgpu/#gpu-device) class API.
 
+### loseDevice
+
+```typescript
+loseDevice(): boolean
+```
+
+Triggers device loss (see below). After this call, the `Device.lost` promise will be resolved with an error message and `Device.isLost` will be set to true.
+
+- Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. Note that even if device loss emulation is not supported by the platform this function will still update the `Device` instance to indicate that the device was lost, however the device can still be used.
+
+
+:::note
+The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code. 
+`loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension. 
+:::
+
 ## WebGL specific fields
 
 ### isWebGL
@@ -396,20 +412,4 @@ isWebGL2: boolean
 Test if an object is a WebGL context.
 
 Returns `true` if the context is a WebGL 2 Context.
-
-### loseDevice
-
-```typescript
-loseDevice(): boolean
-```
-
-Triggers context loss and context loss callback.
-After this call, the `Device.lost` promise will be resolved with an error message and `Device.isLost` will be set to true.
-
-- Returns `true` if an actual device loss event was triggered, `false` otherwise.
-
-:::note
-`loseDevice()` currently only triggers actual context loss on WebGL devices, and only when the current platform's WebGL API provides the required `WEBGL_lose_context` WebGL debug extension. If device loss trigger is supported by the platform this function will return `false`, 
-The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code. 
-:::
 

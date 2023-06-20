@@ -1,24 +1,26 @@
 // luma.gl, MIT license
+import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
+
+export type UniformInfo = {
+  format: UniformFormat; 
+} & PropType;
 
 /** 
  * A shader module definition object
  * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
  */
-export type ShaderModule = {
+export type ShaderModule<Uniforms extends Record<string, unknown> = {}> = {
   name: string;
   fs?: string;
   vs?: string;
-  uniforms?: Record<string, PropType>;
+  uniforms?: Record<string, UniformInfo>;
+  uniformFormats?: Record<string, UniformInfo>;
   getUniforms?: any;
   defines?: Record<string, string | number>;
   inject?: Record<string, string | {injection: string; order: number;}>;
   dependencies?: ShaderModule[];
   deprecations?: ShaderModuleDeprecation[];
-  /** @deprecated Use vs */
-  vertexShader?: string;
-  /** @deprecated Use fs */
-  fragmentShader?: string;
 };
 
 /** Use to generate deprecations when shader module is used */

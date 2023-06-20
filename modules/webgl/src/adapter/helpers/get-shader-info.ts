@@ -1,5 +1,8 @@
 // luma.gl, MIT license
 
+// Note: This was the only dependency that made @luma.gl/webgl depend on @luma.gl/shadertools
+// This file was coped from shadertools to avoid the dependency
+
 /** Information extracted from shader source code */
 export type ShaderInfo = {
   name: string;

@@ -455,7 +455,6 @@ export function isTextureFormatSupported(
   }
   // Check extensions
   const extension = info.x || (isWebGL2(gl) ? info.gl2ext || info.gl1ext : info.gl1ext);
-  console.error(`extension ${extension}`);
   if (extension) {
     return Boolean(gl.getExtension(extension));
   }
