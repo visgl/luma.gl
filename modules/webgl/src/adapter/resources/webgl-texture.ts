@@ -457,7 +457,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
    */
   // eslint-disable-next-line max-statements, complexity
   setImageData(options: SetImageDataOptions) {
-    if (this.props.dimension === '3d') {
+    if (this.props.dimension === '3d' || this.props.dimension === '2d-array') {
       return this.setImageData3D(options);
     }
 
