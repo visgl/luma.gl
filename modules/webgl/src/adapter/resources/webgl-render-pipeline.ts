@@ -359,7 +359,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   _applyUniforms() {
     for (const uniformLayout of this.layout.uniforms || []) {
       const {name, location, type, textureUnit} = uniformLayout;
-      const value = this.uniforms[name] || textureUnit;
+      const value = this.uniforms[name] ?? textureUnit;
       if (value !== undefined) {
         setUniform(this.device.gl, location, type, value);
       }
