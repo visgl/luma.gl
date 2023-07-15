@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/debug",
-  "version": "9.0.0-alpha.21",
+  "version": "9.0.0-alpha.23",
   "description": "Debug utilities for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.0.0-alpha.21",
+    "@luma.gl/constants": "9.0.0-alpha.23",
     "@math.gl/core": "4.0.0-alpha.4",
     "@probe.gl/env": "^4.0.2",
     "glsl-transpiler": "^1.8.5"

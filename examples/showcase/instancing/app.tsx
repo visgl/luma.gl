@@ -180,6 +180,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     // Draw the cubes
+    // @ts-ignore
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1, clearStencil: 0});
     this.cube.setUniforms({
       uTime: this.timeline.getTime(timeChannel),
