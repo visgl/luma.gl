@@ -76,4 +76,9 @@ export {polyfillContext} from './context/polyfill/polyfill-context';
 export {getShaderLayout, getProgramBindings} from './adapter/helpers/get-shader-layout';
 export {convertGLToTextureFormat, _checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
 
+// TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
+
+// DEPRECATED EXPORTS
+export {clear} from './classic/clear';
+export {readPixelsToBuffer, readPixelsToArray} from './classic/copy-and-blit';
