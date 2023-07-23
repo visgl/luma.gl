@@ -2819,10 +2819,10 @@
     "@typescript-eslint/types" "4.33.0"
     eslint-visitor-keys "^2.0.0"
 
-"@webgpu/types@^0.1.31":
-  version "0.1.31"
-  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.31.tgz#b0c1074083735ad206d1798c9609a237096acfef"
-  integrity sha512-ozP2mEPjnJvtE7Q8Fz0/FnW00gcM0ySV+hi/Q+ddLX/hQk4xoaRT1NtQQVSS3mbEUWkVC5pizEkwS40qe0GK+g==
+"@webgpu/types@^0.1.34":
+  version "0.1.34"
+  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.34.tgz#4537c9cae874a63ef79d7afdc2c36a792581d4ad"
+  integrity sha512-9mXtH+CC8q+Ku7Z+1XazNIte81FvfdXwR2lLRO7Ykzjd/hh1J1krJa0gtnkF1kvP11psUmKEPKo7iMTeEcUpNA==
 
 "@xmldom/xmldom@^0.7.5":
   version "0.7.10"
@@ -4903,7 +4903,7 @@ eslint-plugin-jsx-a11y@^6.1.2:
     semver "^6.3.0"
 
 "eslint-plugin-luma-gl-custom-rules@file:./dev-modules/eslint-plugin-luma-gl-custom-rules":
-  version "9.0.0-alpha.21"
+  version "9.0.0-alpha.23"
 
 eslint-plugin-markdown@^2.2.0:
   version "2.2.1"
@@ -10266,10 +10266,10 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==
 
-typescript@~4.6.0:
-  version "4.6.4"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.6.4.tgz#caa78bbc3a59e6a5c510d35703f6a09877ce45e9"
-  integrity sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg==
+typescript@^5.1.6, typescript@~4.6.0:
+  version "5.1.6"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.1.6.tgz#02f8ac202b6dad2c0dd5e0913745b47a37998274"
+  integrity sha512-zaWCozRZ6DLEWAWFrVDz1H6FVXzUSfTy5FUMWsQlU8Ym5JP9eO4xkTIROFCQvhQf61z6O/G6ugw3SgAnvvm+HA==
 
 uglify-js@^3.1.4:
   version "3.17.4"

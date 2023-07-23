@@ -67,6 +67,7 @@
     "escaper": "v2 has an invalid main field in package.json, breaks esbuild during browser test"
   },
   "resolutions": {
+    "typescript": "^5.1.6",
     "escaper": "3.0.6"
   },
   "pre-commit": [
