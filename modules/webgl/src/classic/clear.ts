@@ -1,5 +1,6 @@
 import {Device, Framebuffer, assert} from '@luma.gl/api';
-import {WebGLDevice, withParameters} from '@luma.gl/webgl';
+import {WebGLDevice} from '../adapter/webgl-device';
+import {withParameters} from '../context/state-tracker/with-parameters';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
@@ -16,7 +17,7 @@ const ERR_ARGUMENTS = 'clear: bad arguments';
 
 /** 
  * Optionally clears depth, color and stencil buffers 
- * @deprecated Set clear color when creating a RenderPass
+ * @deprecated Set clear color when creating a RenderPass.
  */
 export function clear(
   gl: Device | WebGLRenderingContext,
