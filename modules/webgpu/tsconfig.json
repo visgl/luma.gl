@@ -3,7 +3,7 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "typeRoots": ["./node_modules/@webgpu/types"],
+    "typeRoots": ["../../node_modules/@webgpu/types"],
     "noImplicitAny": false,
     "strictNullChecks": false,
     "composite": true,
