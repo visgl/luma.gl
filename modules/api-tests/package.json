@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/api-tests",
-  "version": "9.0.0-alpha.23",
+  "version": "9.0.0-alpha.24",
   "description": "luma.gl API",
   "license": "MIT",
   "type": "module",
@@ -37,10 +37,10 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "devDependencies": {
-    "@luma.gl/api": "9.0.0-alpha.23",
-    "@luma.gl/test-utils": "9.0.0-alpha.23",
-    "@luma.gl/webgl": "9.0.0-alpha.23",
-    "@luma.gl/webgpu": "9.0.0-alpha.23"
+    "@luma.gl/api": "9.0.0-alpha.24",
+    "@luma.gl/test-utils": "9.0.0-alpha.24",
+    "@luma.gl/webgl": "9.0.0-alpha.24",
+    "@luma.gl/webgpu": "9.0.0-alpha.24"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
