@@ -1,6 +1,6 @@
 import {RenderPass} from '@luma.gl/api';
-import {Model} from '@luma.gl/engine';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
+import {Model} from '../model/model';
 
 export type ModelNodeProps = ScenegraphNodeProps & {
   model: Model;
@@ -14,9 +14,9 @@ export class ModelNode extends ScenegraphNode {
   managedResources: any[];
 
   // TODO - is this used? override callbacks to make sure we call them with this
-  onBeforeRender = null;
-  onAfterRender = null;
-  AfterRender = null;
+  // onBeforeRender = null;
+  // onAfterRender = null;
+  // AfterRender = null;
 
   constructor(props: ModelNodeProps) {
     super(props);

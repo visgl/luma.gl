@@ -8,3 +8,8 @@ import './geometry/geometry-utils.spec';
 
 import './animation/timeline.spec';
 import './animation/key-frames.spec';
+
+// Scenegraph
+import './scenegraph/group-node.spec';
+import './scenegraph/scenegraph-node.spec';
+import './scenegraph/model-node.spec';
