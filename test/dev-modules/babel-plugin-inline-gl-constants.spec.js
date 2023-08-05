@@ -39,7 +39,7 @@ const TEST_CASES = [
   {
     title: 'remove import',
     input: `
-      import GL from '@luma.gl/constants';
+      import {GL} from '@luma.gl/constants';
       const x = GL.FLOAT;
     `,
     output: 'const x = 5126;'

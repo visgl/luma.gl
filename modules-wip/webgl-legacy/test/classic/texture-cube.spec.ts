@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import {TextureCube} from '@luma.gl/webgl-legacy';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 import {fixture} from 'test/setup';
 

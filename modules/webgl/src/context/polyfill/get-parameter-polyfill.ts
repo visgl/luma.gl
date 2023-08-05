@@ -1,5 +1,5 @@
 /* eslint-disable no-inline-comments, max-len, camelcase */
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../context/webgl-checks';
 
 const OES_element_index = 'OES_element_index';

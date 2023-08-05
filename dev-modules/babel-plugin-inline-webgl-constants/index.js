@@ -1,5 +1,5 @@
 /* eslint-disable no-console, import/no-unresolved */
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';

@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import type {PrimitiveTopology, TypedArray} from '@luma.gl/api';
 import {uid, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 /**
  * Rendering primitives - "topology" specifies how to extract primitives from vertices.

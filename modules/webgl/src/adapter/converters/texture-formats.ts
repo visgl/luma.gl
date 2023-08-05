@@ -1,6 +1,6 @@
 import type {TextureFormat, DeviceFeature} from '@luma.gl/api';
 import {decodeTextureFormat} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 
 /* eslint-disable camelcase */

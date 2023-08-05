@@ -1,5 +1,5 @@
 import {getParameterPolyfill} from '@luma.gl/webgl/context/polyfill/get-parameter-polyfill';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';

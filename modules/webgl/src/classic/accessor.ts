@@ -1,5 +1,5 @@
 import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
 
 const DEFAULT_ACCESSOR_VALUES = {

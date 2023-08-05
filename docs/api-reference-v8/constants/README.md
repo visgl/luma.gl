@@ -10,7 +10,7 @@ a (big) enum `GL` that contains all WebGL constants (i.e. the OpenGL API constan
 ## Usage
 
 ```typescript
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 const type = GL.POINTS;
 ```
 

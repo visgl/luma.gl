@@ -1,5 +1,5 @@
 import {assert, ResourceProps, TextureFormat} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WebGLResource} from './webgl-resource';
 import {isRenderbufferFormatSupported} from '../converters/texture-formats';

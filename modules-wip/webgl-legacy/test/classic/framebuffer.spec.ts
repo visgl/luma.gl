@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {Framebuffer, Renderbuffer, Texture2D} from '@luma.gl/webgl-legacy';
 import {fixture} from 'test/setup';
 

@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {Program} from '@luma.gl/webgl-legacy';
 import ProgramConfiguration from '@luma.gl/webgl-legacy/classic/program-configuration';
 import {fixture} from 'test/setup';

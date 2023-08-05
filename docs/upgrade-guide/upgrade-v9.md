@@ -40,17 +40,22 @@ The ground-up focus on TypeScript and strong typing in luma.gl v9 should create 
 
 Detailed notes
 
-- `@luma.gl/gltools` (removed)
+**`@luma.gl/core`** module is "in transition":
+    - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
+    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/webgl-legacy`.
+
+**`@luma.gl/experimental`**
+    - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
+
+**`@luma.gl/constants`** module remains but is no longer needed by applications:
+    - WebGL-style numeric constants (`GL.` constants) are no longer used in the public v9 API.
+    - Instead, the luma.gl v9 API contains strictly types WebGPU style string constants
+    - Breaking change: Constants are now exported via a named export rather than a default export (for better ES modules compatibility): `import GL from @luma.gl/constants` => `import {GL} from @luma.gl/constants`.
+
+**`@luma.gl/gltools`** (removed)
     - The WebGL context functions (`createGLContext` etc), have been moved to the new `WebGLDevice` and `CanvasContext` classes.
     - It also contains the classic luma.gl WebGL 2 classes (`Program`, `Texture2D`) etc that used to be improved from `@luma.gl/webgl`. However these classes are now just exposed for backwards compatibility and should gradually be relaced.
     - To simplify gradual introduction of the new v9 API, all APIs in `@luma.gl/Webgl-legacy` have been updated to optionally accept a `Device` parameter instead of a `WebGLRenderingContext`
-- `@luma.gl/core` module is "in transition":
-    - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
-    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/webgl-legacy`.
-- `@luma.gl/constants` module remains but is no longer needed by applications:
-    - WebGL-style numeric constants (`GL.` constants) are no longer used in the public v9 API.
-    - Instead, the luma.gl v9 API contains strictly types WebGPU style string constants
-
 
 ### Feature-level changes
 

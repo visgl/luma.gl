@@ -1,5 +1,5 @@
 // WebGL constants
-export {GL, GL as default} from './constants-enum';
+export {GL} from './constants-enum';
 
 // WebGL types
 export type {

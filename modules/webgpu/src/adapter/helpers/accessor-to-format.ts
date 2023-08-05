@@ -1,6 +1,6 @@
 /*
 import {assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 type Accessor = Record<string, any>;
 

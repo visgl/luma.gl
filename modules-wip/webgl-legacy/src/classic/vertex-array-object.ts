@@ -1,6 +1,6 @@
 import type {NumberArray} from '@luma.gl/api';
 import {assert, getScratchArray, fillArray, ResourceProps} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {assertWebGL2Context, isWebGL2} from '@luma.gl/webgl';

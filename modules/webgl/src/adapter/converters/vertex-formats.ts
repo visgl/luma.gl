@@ -1,4 +1,4 @@
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {VertexFormat} from '@luma.gl/api';
 
 export function getVertexFormat(type: GL, components: number): VertexFormat {

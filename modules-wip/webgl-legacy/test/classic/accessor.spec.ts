@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {Accessor} from '@luma.gl/webgl-legacy';
 import {DEFAULT_ACCESSOR_VALUES} from '@luma.gl/webgl/classic/accessor';
 

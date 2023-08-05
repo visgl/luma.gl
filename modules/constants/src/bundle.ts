@@ -1,3 +1,3 @@
-import GLConstants from './index';
+import {GL as GLConstants} from './index';
 
 export {GLConstants};

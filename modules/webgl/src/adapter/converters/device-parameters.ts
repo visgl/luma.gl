@@ -6,7 +6,7 @@ import {
   log,
   isObjectEmpty
 } from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import type {GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setParameters} from '../../context/parameters/unified-parameter-api';

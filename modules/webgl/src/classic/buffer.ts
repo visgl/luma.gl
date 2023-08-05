@@ -2,7 +2,7 @@
 
 import type {Device, BufferProps, TypedArray} from '@luma.gl/api';
 import {assert, checkProps} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';
 import {Accessor} from './accessor';

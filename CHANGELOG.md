@@ -1095,7 +1095,7 @@
 - Ocular based website: initial directory (#564)
 - Adopt new underscore convention for experimental exports (#563)
 - Make polyfills for webgl1 optional (Dist Size Reduction) (#554)
-- Update code to import GL from luma.gl/constants (#556)
+- Update code to import {GL} from luma.gl/constants (#556)
 - Code cleanup (#559)
 - Doc Improvements (#558)
 

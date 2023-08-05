@@ -9,7 +9,7 @@ import type {
   AttributeLayout
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 import {getWebGLDataType} from '../converters/texture-formats';
 import {getShaderLayout} from '../helpers/get-shader-layout';

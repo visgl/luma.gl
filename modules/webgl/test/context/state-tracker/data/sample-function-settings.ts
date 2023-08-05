@@ -1,4 +1,4 @@
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import type {GLParameters} from '@luma.gl/webgl';
 
 // NOTE: These settings are same as ENUM_STYLE_SETTINGS_SET1

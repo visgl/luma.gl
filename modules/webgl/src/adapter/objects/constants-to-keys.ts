@@ -1,5 +1,5 @@
 import {assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function getKeyValue(gl: WebGLRenderingContext, name: string | GL): GL {

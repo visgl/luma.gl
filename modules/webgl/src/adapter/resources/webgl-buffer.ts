@@ -1,6 +1,6 @@
 import type {BufferProps} from '@luma.gl/api';
 import {Buffer, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 
 const DEBUG_DATA_LENGTH = 10;
