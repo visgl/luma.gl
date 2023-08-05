@@ -1,5 +1,5 @@
 import {assert, ResourceProps} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 
 import {WebGLDevice} from '../webgl-device';

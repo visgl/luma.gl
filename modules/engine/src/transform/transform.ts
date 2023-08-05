@@ -2,7 +2,7 @@
 
 import {Device, Buffer, Texture, Framebuffer} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 import {Model} from '../model/model';
 

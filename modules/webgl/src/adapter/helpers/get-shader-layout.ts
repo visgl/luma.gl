@@ -11,7 +11,7 @@ import {
   // AttributeLayout,
   AccessorObject
 } from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decodeUniformType, decodeAttributeType} from './uniforms';

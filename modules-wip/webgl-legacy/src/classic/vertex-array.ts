@@ -1,6 +1,6 @@
 import {log, assert, AttributeBinding, TypedArray} from '@luma.gl/api';
 import {ClassicBuffer, WEBGLBuffer, AccessorObject} from '@luma.gl/webgl';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import Accessor from './accessor';
 import Program from './program';
 import ProgramConfiguration from './program-configuration';

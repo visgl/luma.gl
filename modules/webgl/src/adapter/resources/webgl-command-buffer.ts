@@ -12,7 +12,7 @@ import {
   // Buffer,
   Framebuffer
 } from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 // import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../../classic/typed-array-utils';
 import {WebGLDevice} from '../webgl-device';

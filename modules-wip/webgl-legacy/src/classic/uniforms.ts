@@ -1,5 +1,5 @@
 import {log, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WEBGLTexture, WEBGLFramebuffer, WEBGLRenderbuffer} from '@luma.gl/webgl';
 
 type NumberUniformInfo = {

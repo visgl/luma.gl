@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 import {ClassicBuffer as Buffer} from './buffer';
 import {WEBGLTexture}  from  '../adapter/resources/webgl-texture';

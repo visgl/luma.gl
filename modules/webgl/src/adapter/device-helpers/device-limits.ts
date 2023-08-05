@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type {DeviceLimits} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getWebGL2Context} from '../../context/context/webgl-checks';
 
 /** Populate a WebGPU style device limits */

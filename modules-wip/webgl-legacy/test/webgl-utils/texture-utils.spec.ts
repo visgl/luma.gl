@@ -2,7 +2,7 @@ import test from 'tape-promise/tape';
 import {cloneTextureFrom} from '@luma.gl/webgl-legacy/webgl-utils/texture-utils';
 import {Texture2D} from '@luma.gl/webgl-legacy';
 import {fixture} from 'test/setup';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 test('texture-utils#cloneTextureFrom', (t) => {
   const {gl} = fixture;

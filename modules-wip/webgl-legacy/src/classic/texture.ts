@@ -1,5 +1,5 @@
 import {Device, TextureFormat, TextureProps, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/webgl';
 import {getKey, getKeyValue} from '../webgl-utils/constants-to-keys';
 import {WebGLDevice, WEBGLTexture} from '@luma.gl/webgl';

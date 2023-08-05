@@ -1,5 +1,5 @@
 import {Device, ResourceProps, log, isObjectEmpty} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
 import {isWebGL2} from '@luma.gl/webgl';
 import Buffer from './buffer';

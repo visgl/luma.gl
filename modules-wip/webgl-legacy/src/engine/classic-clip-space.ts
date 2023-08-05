@@ -1,6 +1,6 @@
 // ClipSpace
 import {Device} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {Geometry} from '@luma.gl/engine';
 import Model, {ClassicModelProps as ModelProps} from './classic-model';
 

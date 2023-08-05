@@ -3,7 +3,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WEBGLVertexArrayObject} from '@luma.gl/webgl';
 
 test('WebGL#WEBGLVertexArrayObject#enable', t => {

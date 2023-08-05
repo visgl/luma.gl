@@ -15,7 +15,7 @@ luma.gl provides several helper functions for testing properties of a WebGL cont
 ````
 Check a certain limit (whether through an extension under WebGL 1 or through WebGL 2)
 ```typescript
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getContextLimits} from '@luma.gl/gltools';
 const limits = getContextLimits(gl);
 if (limits[GL.MAX_COLOR_ATTACHMENTS] > 0) { // it will be 0 for WebGL 1

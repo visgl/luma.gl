@@ -2,7 +2,7 @@
 
 import type {FramebufferProps, TextureFormat} from '@luma.gl/api';
 import {Framebuffer, Texture, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';

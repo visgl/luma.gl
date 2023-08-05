@@ -69,7 +69,7 @@ the luma.gl Device APIs. You can access "raw" WebGL extensions and limits direct
 A luma.gl `WebGLDevice` extracts an object that contains all "raw" WebGL limits.
 
 ```typescript
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 const webglDevice = device instanceof WebGLDevice ? device as WebGLDevice: null;

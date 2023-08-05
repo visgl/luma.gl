@@ -4,7 +4,7 @@
 
 /* eslint-disable quotes */
 import type {Device, DeviceProps} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {DEPRECATED_FEATURES, DEPRECATED_TO_CLASSIC_FEATURES} from './features';
 

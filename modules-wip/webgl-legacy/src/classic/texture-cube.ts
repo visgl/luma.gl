@@ -1,5 +1,5 @@
 import {Device} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import Texture, {TextureProps} from './texture';
 
 /**

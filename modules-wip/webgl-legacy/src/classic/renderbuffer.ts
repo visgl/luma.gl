@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments */
 import type {Device} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice, WEBGLRenderbuffer, RenderbufferProps, convertGLToTextureFormat} from '@luma.gl/webgl';
 
 export type ClassicRenderbufferProps = Omit<RenderbufferProps, 'format'> & {

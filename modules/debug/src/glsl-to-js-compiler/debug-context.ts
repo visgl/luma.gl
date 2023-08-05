@@ -1,4 +1,4 @@
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {drawModel} from './draw-model';
 
 /* eslint-disable @typescript-eslint/unbound-method */

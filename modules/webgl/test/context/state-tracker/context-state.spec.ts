@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 import type {TypedArray} from '@luma.gl/api'
 import type {GLParameters} from '@luma.gl/webgl';

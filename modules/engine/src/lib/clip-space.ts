@@ -1,6 +1,6 @@
 
 // ClipSpace
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {Device, glsl} from '@luma.gl/api';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Model, ModelProps} from '../model/model';

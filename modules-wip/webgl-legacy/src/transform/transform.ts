@@ -2,7 +2,7 @@
 
 import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/api';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 // import {AccessorObject} from '@luma.gl/webgl';
 

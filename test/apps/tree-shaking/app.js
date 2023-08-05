@@ -1,6 +1,6 @@
 /* eslint-disable no-var, max-statements */
 import {glsl} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 // eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/engine';
 import {createTestContext} from '@luma.gl/test-utils';

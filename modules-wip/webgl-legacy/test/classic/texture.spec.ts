@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {fixture} from 'test/setup';
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '@luma.gl/webgl-legacy';
 import {Buffer, Texture2D, getKey, readPixelsToArray} from '@luma.gl/webgl-legacy';
 

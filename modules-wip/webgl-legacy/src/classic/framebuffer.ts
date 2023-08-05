@@ -1,6 +1,6 @@
 import type {FramebufferProps} from '@luma.gl/api';
 import {Device, log, assert} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {getWebGL2Context, assertWebGL2Context} from '@luma.gl/webgl';
 import {WebGLDevice, WEBGLFramebuffer, WEBGLTexture, WEBGLRenderbuffer} from '@luma.gl/webgl';
 import {getKey} from '../webgl-utils/constants-to-keys';

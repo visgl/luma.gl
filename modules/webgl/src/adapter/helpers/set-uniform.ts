@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 // Uniforms
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */

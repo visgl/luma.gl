@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import { WebGLLimits } from '@luma.gl/webgl';
 import {getKey, getContextInfo} from '@luma.gl/webgl-legacy';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 
 import {fixture} from 'test/setup';

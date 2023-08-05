@@ -2,7 +2,7 @@
 
 import {Buffer} from '@luma.gl/api';
 import {WEBGLBuffer} from '@luma.gl/webgl';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 
 import {getWebGLTestDevices} from '@luma.gl/test-utils';

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {GLParameters} from '@luma.gl/webgl';
 
 // NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1

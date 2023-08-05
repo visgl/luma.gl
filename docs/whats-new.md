@@ -55,10 +55,10 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 - Exports `WebGLDevice`, a WebGL / WebGL 2 backend implementation of the luma.gl API (`@luma.gl/api`). 
 - Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`.
 
-#### `@luma.gl/constants` (deprecated)
+#### `@luma.gl/constants` (breaking changes, deprecated)
 
-- The `@luma.gl/constants` module is still available, but is no longer needed by luma.gl v9 applications.
-- For convenience, the {`GL`} export is also available in the `@luma.gl/webgl-legacy` module.
+- The `@luma.gl/constants` module is still available, but is now considered an internal luma.gl module as GL constants are no longer exposed in the luma.gl v9 API.
+- Constants are now exported via a named export `GL` rather than a default export (for better ES modules compatibility).
 
 #### `@luma.gl/debug`
 

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 

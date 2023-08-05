@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import {log, assert, Texture, Framebuffer} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
 import {WEBGLTexture, WEBGLFramebuffer, assertWebGL2Context} from '@luma.gl/webgl';
 import {withParameters} from '@luma.gl/webgl';
 import {flipRows, scalePixels} from '../webgl-utils/typed-array-utils';
