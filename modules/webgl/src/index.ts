@@ -36,8 +36,8 @@ export {WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-objec
 // WebGL adapter classes (Legacy, will be moved to webgl-legacy)
 export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
-export type {ClassicBufferProps, ClassicBufferProps as BufferProps} from './classic/buffer';
-export {ClassicBuffer, ClassicBuffer as Buffer} from './classic/buffer';
+export type {BufferWithAccessorProps} from './classic/buffer-with-accessor';
+export {BufferWithAccessor} from './classic/buffer-with-accessor';
 
 export {
   isWebGL,

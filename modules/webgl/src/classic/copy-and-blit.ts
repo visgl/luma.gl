@@ -2,7 +2,7 @@
 import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
 
-import {ClassicBuffer as Buffer} from './buffer';
+import {BufferWithAccessor as Buffer} from './buffer-with-accessor';
 import {WEBGLTexture}  from  '../adapter/resources/webgl-texture';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
 import {withParameters} from '../context/state-tracker/with-parameters';

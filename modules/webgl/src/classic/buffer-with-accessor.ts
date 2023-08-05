@@ -42,7 +42,7 @@ const PROP_CHECKS_SET_PROPS = {
   removedProps: DEPRECATED_PROPS
 };
 
-function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | number): BufferProps {
+function getWEBGLBufferProps(props: BufferWithAccessorProps | ArrayBufferView | number): BufferProps {
   // Signature `new Buffer(gl, new Float32Array(...)`
   if (ArrayBuffer.isView(props)) {
     return {data: props};
@@ -62,7 +62,7 @@ function getWEBGLBufferProps(props: ClassicBufferProps | ArrayBufferView | numbe
 }
 
 /** WebGL Buffer interface */
-export type ClassicBufferProps = BufferProps & {
+export type BufferWithAccessorProps = BufferProps & {
   handle?: WebGLBuffer;
 
   target?: number;
@@ -81,11 +81,11 @@ export type ClassicBufferProps = BufferProps & {
 }
 
 /** WebGL Buffer interface */
-export class ClassicBuffer extends WEBGLBuffer {
+export class BufferWithAccessor extends WEBGLBuffer {
   usage: number;
   accessor: Accessor;
 
-  constructor(device: Device | WebGLRenderingContext, props?: ClassicBufferProps);
+  constructor(device: Device | WebGLRenderingContext, props?: BufferWithAccessorProps);
   constructor(device: Device | WebGLRenderingContext, data: ArrayBufferView | number[]);
   constructor(device: Device | WebGLRenderingContext, byteLength: number);
 
@@ -96,7 +96,7 @@ export class ClassicBuffer extends WEBGLBuffer {
     // this.initialize(props);
 
     // Deprecated: Merge main props and accessor
-    this.setAccessor(Object.assign({}, props, (props as ClassicBufferProps).accessor));
+    this.setAccessor(Object.assign({}, props, (props as BufferWithAccessorProps).accessor));
 
     // infer GL type from supplied typed array
     if (this.props.data) {
@@ -126,7 +126,7 @@ export class ClassicBuffer extends WEBGLBuffer {
   // Signature: `new Buffer(gl, {data: new Float32Array(...)})`
   // Signature: `new Buffer(gl, new Float32Array(...))`
   // Signature: `new Buffer(gl, 100)`
-  initialize(props: ClassicBufferProps = {}): this {
+  initialize(props: BufferWithAccessorProps = {}): this {
     // Signature `new Buffer(gl, new Float32Array(...)`
     if (ArrayBuffer.isView(props)) {
       props = {data: props};
@@ -157,7 +157,7 @@ export class ClassicBuffer extends WEBGLBuffer {
     return this;
   }
 
-  setProps(props: ClassicBufferProps): this {
+  setProps(props: BufferWithAccessorProps): this {
     props = checkProps('Buffer', props, PROP_CHECKS_SET_PROPS);
 
     if ('accessor' in props) {
@@ -197,7 +197,7 @@ export class ClassicBuffer extends WEBGLBuffer {
   }
 
   // Update with new data. Reinitializes the buffer
-  setData(props: ClassicBufferProps) {
+  setData(props: BufferWithAccessorProps) {
     return this.initialize(props);
   }
 
