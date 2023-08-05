@@ -1,5 +1,28 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.25
+
+- Export legacy BufferWithAccessor (#1773)
+- build(deps): bump word-wrap from 1.2.3 to 1.2.4 (#1767)
+- feat(constants): Drop default export to improve ES module compatibility (#1772)
+- chore(engine): Move Scenegraph classes into engine (#1771)
+
+## v9.0.0-alpha.24
+
+- chore: Selected legacy webgl exports for deck.gl (#1769)
+- chore: Upgrade typescript and WebGPU typings (#1768)
+- fix: 🐛 Fix issue with setting 0 or false values (#1766)
+
+## v9.0.0-alpha.23
+
+- build(deps): bump semver from 5.7.1 to 5.7.2 (#1763)
+- fix #1760 - Modify to call "setImageData3D" method even if "2d-array" in addition to "3d" (#1765)
+- feat(shadertools): shader generator for uniform buffer compatible declarations (#1759)
+- chore: Temporarily remove legacy and experimental modules, simplify webgl module. (#1758)
+- chore: Use new Framebuffer api in Transform class (#1755)
+- build(deps-dev): bump vite from 3.2.6 to 3.2.7 (#1754)
+- docs: Reorganize v9 docs (#1753)
+
 ## v9.0.0-alpha.21
 
 - chore: Remove default exports (#1750)

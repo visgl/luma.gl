@@ -1,7 +1,7 @@
 {
   "name": "eslint-plugin-luma-gl-custom-rules",
   "private": "true",
-  "version": "9.0.0-alpha.24",
+  "version": "9.0.0-alpha.25",
   "main": "index.cjs",
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
