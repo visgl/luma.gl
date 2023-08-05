@@ -1,7 +1,6 @@
-import {Device, PrimitiveTopology, log} from '@luma.gl/core';
+import {Device, PrimitiveTopology, log} from '@luma.gl/api';
 import {pbr} from '@luma.gl/shadertools';
-import {Model} from '@luma.gl/engine';
-import {ModelNode, ModelNodeProps} from '../scenegraph/model-node';
+import {Model, ModelNode, ModelNodeProps} from '@luma.gl/engine';
 import {parseGLTFMaterial, ParseGLTFMaterialOptions} from './gltf-material-parser';
 
 const vs = `

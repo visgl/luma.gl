@@ -4,13 +4,14 @@ import {webgl1Device} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {Texture2D, TextureCube} from '@luma.gl/webgl-legacy';
-import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
+import {Texture} from '@luma.gl/api';
+import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/gltf';
 
 test.only('gltf#loading', async (t) => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
+  debugger
   const result = createGLTFObjects(webgl1Device, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
@@ -26,13 +27,13 @@ test('gltf#environment', (t) => {
     specularMipLevels: 9
   });
 
-  t.ok(environment.getBrdfTexture() instanceof Texture2D, 'BRDF lookup texture created');
+  t.ok(environment.getBrdfTexture() instanceof Texture, 'BRDF lookup texture created');
   t.ok(
-    environment.getDiffuseEnvSampler() instanceof TextureCube,
+    environment.getDiffuseEnvSampler() instanceof Texture,
     'Diffuse environment map created'
   );
   t.ok(
-    environment.getSpecularEnvSampler() instanceof TextureCube,
+    environment.getSpecularEnvSampler() instanceof Texture,
     'Specular environment map created'
   );
 

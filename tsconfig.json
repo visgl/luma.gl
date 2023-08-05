@@ -49,6 +49,8 @@
       "@luma.gl/engine/test/*": ["modules/engine/test/*"],
       // "@luma.gl/experimental/*": ["modules/experimental/src/*"],
       // "@luma.gl/experimental/test/*": ["modules/experimental/test/*"],
+      "@luma.gl/gltf/*": ["modules/gltf/src/*"],
+      "@luma.gl/gltf/test/*": ["modules/gltools/test/*"],
       "@luma.gl/shadertools/*": ["modules/shadertools/src/*"],
       "@luma.gl/shadertools/test/*": ["modules/shadertools/test/*"],
       "@luma.gl/test-utils/*": ["modules/test-utils/src/*"],

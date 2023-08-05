@@ -1,0 +1,55 @@
+{
+  "name": "@luma.gl/gltf",
+  "version": "9.0.0-alpha.21",
+  "description": "glTF support for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "glsl",
+    "debug",
+    "3d"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build-bundle": "ocular-bundle ./src/index.ts",
+    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+  },
+  "dependencies": {
+    "@luma.gl/api": "9.0.0-alpha.21",
+    "@luma.gl/engine": "9.0.0-alpha.21",
+    "@luma.gl/webgl": "9.0.0-alpha.21",
+    "@math.gl/core": "4.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "@luma.gl/test-utils": "9.0.0-alpha.21"
+  },
+  "peerDependencies": {
+    "@loaders.gl/gltf": "^3.2.12",
+    "@loaders.gl/images": "^3.2.12"
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+}

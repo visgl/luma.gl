@@ -1,10 +1,7 @@
-import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {Accessor} from '@luma.gl/webglx';
-import {Model} from '@luma.gl/engine';
+import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/api';
+import {Model, GroupNode, ModelNode} from '@luma.gl/engine';
+import {WebGLDevice, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
-import {GroupNode} from '../scenegraph/group-node';
-import {ModelNode} from '../scenegraph/model-node';
 
 import type {ParseGLTFMaterialOptions} from './gltf-material-parser';
 import {GLTFAnimator} from './gltf-animator';
@@ -140,7 +137,7 @@ export class GLTFInstantiator {
       this.device,
       {
         id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-        topology: convertGLPrimitiveTopologyToTopology(gltfPrimitive.mode || 4),
+        topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
         vertexCount,
         attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
         ...this.options
@@ -236,17 +233,17 @@ enum GL {
   TRIANGLE_FAN = 0x6
 }
 
-export function convertGLPrimitiveTopologyToTopology(
+export function convertGLDrawModeToTopology(
   drawMode: GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN,
 ): PrimitiveTopology  {
   switch (drawMode) {
     case GL.POINTS: return 'point-list';
     case GL.LINES: return 'line-list';
     case GL.LINE_STRIP: return 'line-strip';
-    case GL.LINE_LOOP: return 'line-loop-webgl';
+    case GL.LINE_LOOP: return 'line-loop';
     case GL.TRIANGLES: return 'triangle-list';
     case GL.TRIANGLE_STRIP: return 'triangle-strip';
-    case GL.TRIANGLE_FAN: return 'triangle-fan-webgl';
+    case GL.TRIANGLE_FAN: return 'triangle-fan';
     default: throw new Error(drawMode);
   }
 }

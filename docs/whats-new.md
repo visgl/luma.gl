@@ -25,7 +25,7 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 
 #### `@luma.gl/core`
 
-- The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/webgl-legacy`).
+- The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/api`).
 - The core module still exports `@luma.gl/engine` classes.
 
 #### `@luma.gl/core` (new module)
@@ -37,8 +37,7 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 #### `@luma.gl/engine` (breaking changes)
 
 - The `@luma.gl/engine` module still exports the classic luma.gl classes such as `Model` and `AnimationLoop`. 
-- However all engine classes are now implemented on top of `@luma.gl/core`, allowing them to work portably on both WebGPU and WebGL.
-- For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/webgl-legacy`
+- However all engine classes are now implemented on top of `@luma.gl/api`, allowing them to work portably on both WebGPU and WebGL.
 - Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`) are now exported from `@luma.gl/engine`.
 
 #### `@luma.gl/shadertools`
@@ -68,7 +67,7 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 
 #### `@luma.gl/gltools` (removed)
 
-- The `@luma.gl/gltools` module is removed. Its exports are available in the `@luma.gl/webgl-legacy` module.
+- The `@luma.gl/gltools` module has been removed, corresponding functionality is now handled by `Device` methods.
 
 ## Version 8.5
 
