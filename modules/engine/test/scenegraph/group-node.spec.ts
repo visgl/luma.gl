@@ -2,7 +2,7 @@
 
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
-import {GroupNode, ScenegraphNode, ModelNode} from '@luma.gl/experimental';
+import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
 
@@ -109,8 +109,10 @@ test('GroupNode#getBounds', (t) => {
   for (const device of getWebGLTestDevices()) {
     const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 
-    const childSNode = new ModelNode(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
-    const grandChildSNode = new ModelNode(device, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+    const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+    const model2 = new Model(device, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+    const childSNode = new ModelNode({model: model1});
+    const grandChildSNode = new ModelNode({model: model2});
     const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
     const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
 

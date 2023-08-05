@@ -23,6 +23,10 @@ General improvements:
 
 Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 applications to be updated. Please refer to the [Upgrade Guide](/docs/upgrade-guide) for more information.
 
+#### `@luma.gl/core`
+
+- The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/webgl-legacy`).
+- The core module still exports `@luma.gl/engine` classes.
 
 #### `@luma.gl/api` (new module)
 
@@ -35,6 +39,11 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 - The `@luma.gl/engine` module still exports the classic luma.gl classes such as `Model` and `AnimationLoop`. 
 - However all engine classes are now implemented on top of `@luma.gl/api`, allowing them to work portably on both WebGPU and WebGL.
 - For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/webgl-legacy`
+- Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`) are now exported from `@luma.gl/engine`.
+
+#### `@luma.gl/shadertools`
+
+- New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
 
 #### `@luma.gl/webgpu` (new module)
 
@@ -43,37 +52,19 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 
 #### `@luma.gl/webgl` (breaking changes)
 
-- Provides a WebGL / WebGL 2 implementation of the luma.gl API (`@luma.gl/api`). 
-- Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`. 
-- The legacy v8 WebGL classes have been moved to `@luma.gl/webgl-legacy`
+- Exports `WebGLDevice`, a WebGL / WebGL 2 backend implementation of the luma.gl API (`@luma.gl/api`). 
+- Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`.
 
-#### `@luma.gl/shadertools`
+#### `@luma.gl/constants` (deprecated)
 
-- New `CompilerMessage` type and `formatCompilerLog` function for handling of shader logs in a platform and shader language independent way.
-
-#### `@luma.gl/core`
-
-- The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/webgl-legacy`).
-- The core module still exports `@luma.gl/engine` classes.
-
-#### `@luma.gl/webgl-legacy` (deprecated)
-
-- The new `@luma.gl/webgl-legacy` exports all legacy WebGL APIs.
-- The legacy v8 WebGL classes from luma.gl v8 can now be imported directly from this module (previoulsy imported from `@luma.gl/gltools` and `@luma.gl/webgl`).
-- The legacy v8 WebGL-dependent `@luma.gl/engine` classes can still be imported from this module.
-
-Note that the WebGL context related APIs exported by this module in v8 are not the same. They are now simple wrappers for a `WebGLDevice` class instance that is created under the hood.
+- The `@luma.gl/constants` module is still available, but is no longer needed by luma.gl v9 applications.
+- For convenience, the {`GL`} export is also available in the `@luma.gl/webgl-legacy` module.
 
 #### `@luma.gl/debug`
 
 - `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
 - Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
 - Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured". Also information about luma.gl objects associated with WebGL handles will be displayed in the Spector UI.
-
-#### `@luma.gl/constants` (deprecated)
-
-- The `@luma.gl/constants` module is still available, but is no longer needed by luma.gl v9 applications.
-- For convenience, the {`GL`} export is also available in the `@luma.gl/webgl-legacy` module.
 
 #### `@luma.gl/gltools` (removed)
 

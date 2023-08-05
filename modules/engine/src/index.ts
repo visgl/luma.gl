@@ -23,6 +23,11 @@ export {PipelineFactory} from './lib/pipeline-factory';
 // Utils
 export {ClipSpace} from './lib/clip-space';
 
+// Scenegraph Core nodes
+export {ScenegraphNode} from './scenegraph/scenegraph-node';
+export {GroupNode} from './scenegraph/group-node';
+export {ModelNode} from './scenegraph/model-node';
+
 // Geometries
 export {Geometry} from './geometry/geometry';
 

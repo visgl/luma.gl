@@ -1,13 +1,15 @@
-import {assert, uid} from '@luma.gl/api';
+import {assert, uid, NumericArray} from '@luma.gl/api';
 import {Vector3, Matrix4} from '@math.gl/core';
 
+/** Properties for creating a new Scenegraph */
 export type ScenegraphNodeProps = {
   id?: string;
-  matrix?;
-  display?;
-  position?;
-  rotation?;
-  scale?;
+  /** whether to display the object at all */
+  display?: boolean;
+  matrix?: NumericArray;
+  position?: NumericArray;
+  rotation?: NumericArray;
+  scale?: NumericArray;
   update?: boolean
 };
 
@@ -15,13 +17,13 @@ export class ScenegraphNode {
   readonly id: string;
   matrix: Matrix4 = new Matrix4();
 
-  display = true; // whether to display the object at all
+  display = true; 
   position = new Vector3();
   rotation = new Vector3();
   scale = new Vector3(1, 1, 1);
-  userData = {};
+  userData: Record<string, unknown> = {};
 
-  props = {};
+  props: ScenegraphNodeProps = {};
 
   constructor(props: ScenegraphNodeProps = {}) {
     const {id} = props;

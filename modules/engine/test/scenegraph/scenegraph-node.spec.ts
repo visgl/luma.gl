@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {ScenegraphNode} from '@luma.gl/experimental';
+import {ScenegraphNode} from '@luma.gl/engine';
 import {Matrix4, Vector3} from '@math.gl/core';
 
 const PROPS = {

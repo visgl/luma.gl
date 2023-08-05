@@ -9,11 +9,6 @@ export type {ParseGLTFMaterialOptions, ParsedGTLFMaterial} from './gltf/gltf-mat
 export {parseGLTFMaterial} from './gltf/gltf-material-parser';
 export {GLTFAnimator} from './gltf/gltf-animator';
 
-// Core nodes
-export {ScenegraphNode} from './scenegraph/scenegraph-node';
-export {GroupNode} from './scenegraph/group-node';
-export {ModelNode} from './scenegraph/model-node';
-
 // GPGPU utilities for luma.gl
 export {
   buildHistopyramidBaseLevel,
