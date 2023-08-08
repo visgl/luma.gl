@@ -1,9 +1,10 @@
 # About Devices
 
-The [`Device`](../api-reference/api/device) class provides access to the GPU. 
-An luma.gl application first obtains a `Device` provides the 
-application with facilities for creating GPU resources 
-(such as `Buffer` and `Texture` objects), query GPU capabilities etc.
+The [`Device`](../api-reference/api/device) class provides luma.gl applications with access to the GPU. 
+An luma.gl application first creates a `Device` instance which in turn provides the 
+application with facilities for creating GPU resources (such as `Buffer` and `Texture` objects), 
+querying GPU capabilities, compiling and linking shaders into pipelines, setting parameters, 
+and of course performing draw and compute calls.
 
 While a `Device` can be used on its own to perform computations on the GPU,
 at least one `CanvasContext` is required for rendering to the screen.
