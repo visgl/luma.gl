@@ -41,6 +41,7 @@ export class Model {
   readonly fs: string | null = null;
   readonly topology: PrimitiveTopology;
   readonly vertexCount;
+  userData: {[key: string]: any} = {};
 
   readonly pipelineFactory: PipelineFactory;
   pipeline: RenderPipeline;
@@ -55,6 +56,8 @@ export class Model {
     this.id = this.props.id;
     this.device = device;
 
+    Object.assign(this.userData, this.props.userData);
+    
     // Create the pipeline
     if (!props.vs) {
       throw new Error('no vertex shader');

@@ -10,10 +10,7 @@ import {Framebuffer} from './framebuffer';
 import {NumericArray} from '../..';
 
 /**
- * - Framebuffer specifies which textures to render into
- * - parameters control viewport, scissor rect, blend constant and stencil ref 
- * - clearColor, depthClearValue, stencilClearValue control clearing at beginning of render pass.
- * - discard disables rasterizer.
+ * Properties for a RenderPass instance is a required parameter to all draw calls.
  */
 export type RenderPassProps = ResourceProps & {
   /** Framebuffer specifies which textures to render into. Default gets framebuffer from canvas context. */
@@ -34,6 +31,14 @@ export type RenderPassProps = ResourceProps & {
   discard?: boolean; 
 };
 
+/**
+ * A RenderPass instance is a required parameter to all draw calls.
+ * 
+ * It holds a combination of 
+ * - render targets (specified via a framebuffer)
+ * - clear colors, read/write, discard information for the framebuffer attachments
+ * - a couple of mutable parameters ()
+ */
 export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** Default properties for RenderPass */
@@ -57,10 +62,14 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     super(device, props, RenderPass.defaultProps);
   }
 
-  /** A small set of parameters can be changed between every draw call (viewport, scissorRect, blendColor, stencilReference) */
-  abstract setParameters(parameters: RenderPassParameters): void;
-
+  /** Call when rendering is done in this pass. */
   abstract end(): void;
+
+  /** 
+   * A small set of parameters can be changed between every draw call 
+   * (viewport, scissorRect, blendColor, stencilReference) 
+   */
+  abstract setParameters(parameters: RenderPassParameters): void;
 
   abstract pushDebugGroup(groupLabel: string): void;
   abstract popDebugGroup(): void;
