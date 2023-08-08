@@ -12,8 +12,9 @@ Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvas
 ## Installing adapters
 
 The `@luma.gl/api` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
-One or more device "adapter" modules (`@luma.gl/webgl` and `@luma.gl/webgpu`) must be also be imported, 
-and the actual resources returned to the application will be created by the adapter.
+
+One or more devices must be also be imported from a corresponding GPU API backend module
+(`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
 
 Create a WebGPU device:
 
@@ -24,14 +25,15 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import '@luma.gl/webgpu'; // Note: self registers on import
+import {WebGPUDevice} from '@luma.gl/webgpu';
 
+luma.registerDevices([WebGPUDevice]);
 const device = await luma.createDevice({type: 'webgpu', canvas: ...});
 ```
 
 It is possible to register more than one device adapter to create an application
 that can work in both WebGL and WebGPU environments. To create a `Device` using 
-the best available adapter (WebGPU, WebGL 2 and WebGL in that order).
+the best available adapter (luma.gl favors WebGPU, WebGL 2 and WebGL 1 devices, in that order).
 
 ```sh
 yarn add @luma.gl/api
@@ -41,8 +43,10 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import '@luma.gl/webgpu';
-import '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGPUDevice} from '@luma.gl/webgpu';
+
+luma.registerDevices([WebGLDevice, WebGPUDevice]);
 
 const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 ```
@@ -53,8 +57,9 @@ Create a WebGL2 or WebGL context, auto creating a canvas
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
 
+luma.registerDevices([WebGLDevice]);
 const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
 ```
 
@@ -62,8 +67,9 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
 import {luma} from '@luma.gl/api';
-import '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
 
+luma.registerDevices([WebGLDevice]);
 const webgpuDevice = luma.createDevice({type: 'webgl2', canvas: ...});
 ```
 
