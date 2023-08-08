@@ -141,6 +141,13 @@ export class Model {
   }
 
   setAttributes(attributes: Record<string, Buffer>): this {
+    // Temporary HACK since deck.gl v9 sets indices as part of attributes
+    if (attributes.indices) {
+      this.setIndexBuffer(attributes.indices);
+      attributes = {...attributes};
+      delete attributes.indices;
+      console.warn('luma.gl: indices should not be part of attributes')
+    }
     this.pipeline.setAttributes(attributes);
     Object.assign(this.props.attributes, attributes);
     return this;
