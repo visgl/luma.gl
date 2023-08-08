@@ -52,6 +52,7 @@ export class WebGLCanvasContext extends CanvasContext {
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     // Resize browser context .
     if (this.canvas) {
+      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
       this.setDevicePixelRatio(devicePixelRatio, options);
       return;
     }
@@ -64,7 +65,7 @@ export class WebGLCanvasContext extends CanvasContext {
   }
 
   commit() {
-    // gl.commit was ultimately removed from standard??
+    // gl.commit was ultimately removed from the WebGL standard??
     // if (this.offScreen && this.gl.commit) {
     //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
     //   this.gl.commit();
