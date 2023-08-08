@@ -1,7 +1,7 @@
 # About Devices
 
 The [`Device`](../api-reference/api/device) class provides luma.gl applications with access to the GPU. 
-An luma.gl application first creates a `Device` instance which in turn provides the 
+A luma.gl application first creates a `Device` instance which in turn provides the 
 application with facilities for creating GPU resources (such as `Buffer` and `Texture` objects), 
 querying GPU capabilities, compiling and linking shaders into pipelines, setting parameters, 
 and of course performing draw and compute calls.
@@ -10,11 +10,11 @@ While a `Device` can be used on its own to perform computations on the GPU,
 at least one `CanvasContext` is required for rendering to the screen.
 Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvasElement` (or `OffscreenCanvas`).
 
-## Installing adapters
+## Registering Device Types
 
 The `@luma.gl/api` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
 
-One or more devices must be also be imported from a corresponding GPU API backend module
+One or more device types must be also be imported from a corresponding GPU API backend module
 (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
 
 Create a WebGPU device:
