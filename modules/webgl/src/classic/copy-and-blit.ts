@@ -80,6 +80,7 @@ export function readPixelsToArray(
 /**
  * Copies data from a Framebuffer or a Texture object into a Buffer object.
  * NOTE: doesn't wait for copy to be complete, it programs GPU to perform a DMA transffer.
+ * @deprecated Use CommandEncoder
  * @param source
  * @param options
  */
@@ -139,6 +140,125 @@ export function readPixelsToBuffer(
   }
 
   return target;
+}
+
+/**
+ * Copy a rectangle from a Framebuffer or Texture object into a texture (at an offset)
+ * @deprecated Use CommandEncoder
+ */
+// eslint-disable-next-line complexity, max-statements
+export function copyToTexture(
+  source: Framebuffer | Texture,
+  target: Texture | GL,
+  options?: {
+    sourceX?: number;
+    sourceY?: number;
+
+    targetX?: number;
+    targetY?: number;
+    targetZ?: number;
+    targetMipmaplevel?: number;
+    targetInternalFormat?: number;
+
+    width?: number; // defaults to target width
+    height?: number; // defaults to target height
+  }
+): Texture {
+  const {
+    sourceX = 0,
+    sourceY = 0,
+    // attachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
+    targetMipmaplevel = 0,
+    targetInternalFormat = GL.RGBA
+  } = options || {};
+  let {
+    targetX,
+    targetY,
+    targetZ,
+    width, // defaults to target width
+    height // defaults to target height
+  } = options || {};
+
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
+  assert(framebuffer);
+  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const {device, handle} = webglFramebuffer;
+  const isSubCopy =
+    typeof targetX !== 'undefined' ||
+    typeof targetY !== 'undefined' ||
+    typeof targetZ !== 'undefined';
+  targetX = targetX || 0;
+  targetY = targetY || 0;
+  targetZ = targetZ || 0;
+  const prevHandle = device.gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
+  // TODO - support gl.readBuffer (WebGL2 only)
+  // const prevBuffer = gl.readBuffer(attachment);
+  assert(target);
+  let texture = null;
+  let textureTarget: GL;
+  if (target instanceof Texture) {
+    texture = target;
+    width = Number.isFinite(width) ? width : texture.width;
+    height = Number.isFinite(height) ? height : texture.height;
+    texture.bind(0);
+    textureTarget = texture.target;
+  } else {
+    textureTarget = target;
+  }
+
+  if (!isSubCopy) {
+    device.gl.copyTexImage2D(
+      textureTarget,
+      targetMipmaplevel,
+      targetInternalFormat,
+      sourceX,
+      sourceY,
+      width,
+      height,
+      0 /* border must be 0 */
+    );
+  } else {
+    switch (textureTarget) {
+      case GL.TEXTURE_2D:
+      case GL.TEXTURE_CUBE_MAP:
+        device.gl.copyTexSubImage2D(
+          textureTarget,
+          targetMipmaplevel,
+          targetX,
+          targetY,
+          sourceX,
+          sourceY,
+          width,
+          height
+        );
+        break;
+      case GL.TEXTURE_2D_ARRAY:
+      case GL.TEXTURE_3D:
+        device.assertWebGL2();
+        device.gl2.copyTexSubImage3D(
+          textureTarget,
+          targetMipmaplevel,
+          targetX,
+          targetY,
+          targetZ,
+          sourceX,
+          sourceY,
+          width,
+          height
+        );
+        break;
+      default:
+    }
+  }
+  if (texture) {
+    texture.unbind();
+  }
+  // @ts-expect-error
+  gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+  if (deleteFramebuffer) {
+    framebuffer.destroy();
+  }
+  return texture;
 }
 
 function getFramebuffer(source: Texture | Framebuffer): {

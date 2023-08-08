@@ -330,9 +330,9 @@ export abstract class Device {
     // Deduce indexType
     if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
       if (props.data instanceof Uint32Array) {
-        props.indexType = 'uint32';
+        newProps.indexType = 'uint32';
       } else if (props.data instanceof Uint16Array) {
-        props.indexType = 'uint16';
+        newProps.indexType = 'uint16';
       }
     }
     return newProps;    

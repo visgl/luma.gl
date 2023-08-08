@@ -81,4 +81,4 @@ export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-
 
 // DEPRECATED EXPORTS
 export {clear} from './classic/clear';
-export {readPixelsToBuffer, readPixelsToArray} from './classic/copy-and-blit';
+export {readPixelsToBuffer, readPixelsToArray, copyToTexture} from './classic/copy-and-blit';
