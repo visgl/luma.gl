@@ -1,11 +1,19 @@
 // luma.gl, MIT license
 
-import type {Device, Buffer, RenderPipelineProps, RenderPass, Binding, PrimitiveTopology} from '@luma.gl/api';
+import {
+  Device,
+  Buffer,
+  RenderPipelineProps,
+  RenderPass,
+  Binding,
+  PrimitiveTopology
+} from '@luma.gl/api';
 import {RenderPipeline} from '@luma.gl/api';
-import type { ShaderModule } from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
 import {PipelineFactory} from '../lib/pipeline-factory';
+import {TypedArray} from '@math.gl/core';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
@@ -57,7 +65,7 @@ export class Model {
     this.device = device;
 
     Object.assign(this.userData, this.props.userData);
-    
+
     // Create the pipeline
     if (!props.vs) {
       throw new Error('no vertex shader');
@@ -75,7 +83,8 @@ export class Model {
       this.topology = this.props.geometry.topology || 'triangle-list';
     }
 
-    this.pipelineFactory = this.props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
+    this.pipelineFactory =
+      this.props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     const {pipeline, getUniforms} = this.pipelineFactory.createRenderPipeline({
       ...this.props,
       vs: this.vs,
@@ -92,7 +101,7 @@ export class Model {
     if (this.props.geometry) {
       this._setGeometry(this.props.geometry);
     }
-    this.setUniforms(this._getModuleUniforms()) // Get all default module uniforms
+    this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
     this.setProps(this.props);
   }
 
@@ -141,38 +150,65 @@ export class Model {
   }
 
   // Temporary hack to support deck.gl's dependency on luma.gl v8 Model attribute API.
-  _filterDeckAttributes(attributes: Record<string, Buffer>, filterBuffers?: boolean): Record<string, Buffer> {
-    const normalizedAttributes: Record<string, Buffer> = {};
+  _splitAttributes(
+    attributes: Record<string, Buffer | TypedArray>,
+    filterBuffers?: boolean
+  ): {
+    bufferAttributes: Record<string, Buffer>;
+    constantAttributes: Record<string, TypedArray>;
+    indices?: Buffer;
+  } {
+    const bufferAttributes: Record<string, Buffer> = {};
+    const constantAttributes: Record<string, TypedArray> = {};
+    const indices: Buffer | undefined = attributes.indices as Buffer;
+
+    delete attributes.indices;
+
     for (const name in attributes) {
-      const attribute = attributes[name];
+      let attribute = attributes[name];
+
+      if (attribute instanceof Buffer) {
+        bufferAttributes[name] = attribute;
+        continue;
+      }
 
       // The `getValue` call provides support for deck.gl `Attribute` class
       // TODO - remove once deck refactoring completes
       // @ts-expect-error
-      normalizedAttributes[name] = attribute.getValue ? attribute.getValue() : attribute;
+      if (attribute.getValue) {
+        // @ts-expect-error
+        attribute = attribute.getValue();
+      }
+
+      if (ArrayBuffer.isView(attribute) && !attribute) {
+        constantAttributes[name] = attribute as unknown as TypedArray;
+        continue;
+      }
 
       // @ts-expect-error
-      if (filterBuffers && normalizedAttributes[name]._buffer) {
+      if (filterBuffers && attribute[name]._buffer) {
         // @ts-expect-error
-        normalizedAttributes[name] = normalizedAttributes[name]._buffer;
+        buffer[name] = normalizedAttributes[name]._buffer;
       }
     }
 
-    return normalizedAttributes;
+    return {bufferAttributes, constantAttributes, indices};
   }
 
-  setAttributes(attributes: Record<string, Buffer>, filterBuffers?: boolean): void {
-    const normalizedAttributes= this._filterDeckAttributes(attributes, filterBuffers);
+  setAttributes(attributes: Record<string, Buffer | TypedArray>, filterBuffers?: boolean): void {
+    const {bufferAttributes, constantAttributes, indices} = this._splitAttributes(attributes, filterBuffers);
 
     // Temporary HACK since deck.gl v9 sets indices as part of attributes
-    if (normalizedAttributes.indices) {
-      this.setIndexBuffer(normalizedAttributes.indices);
-      delete normalizedAttributes.indices;
-      console.warn('luma.gl: indices should not be part of attributes')
+    if (indices) {
+      this.setIndexBuffer(indices as Buffer);
+      console.warn('luma.gl: indices should not be part of attributes');
     }
 
-    this.pipeline.setAttributes(normalizedAttributes);
-    Object.assign(this.props.attributes, normalizedAttributes);
+    this.pipeline.setAttributes(bufferAttributes);
+    // TODO - WebGL only. We may have to allocate buffers on WebGPU
+    this.pipeline.setConstantAttributes(constantAttributes);
+
+    Object.assign(this.props.attributes, bufferAttributes, constantAttributes);
   }
 
   /** Set the bindings */

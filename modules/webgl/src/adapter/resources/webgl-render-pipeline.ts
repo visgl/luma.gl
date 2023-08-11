@@ -6,7 +6,8 @@ import type {
   ShaderLayout,
   PrimitiveTopology,
   // BindingLayout,
-  AttributeLayout
+  AttributeLayout,
+  TypedArray
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
@@ -110,6 +111,33 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         divisor
       });
     }
+  }
+
+  // Constant attributes were removed during v9 porting
+  setConstantAttributes(attributes: Record<string, TypedArray>): void {
+    /*
+    for (const [name, buffer] of Object.entries(attributes)) {
+      const webglBuffer = cast<WEBGLBuffer>(buffer);
+      const attribute = getAttributeLayout(this.layout, name);
+      if (!attribute) {
+        log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
+        continue; // eslint-disable-line no-continue
+      }
+      const decoded = decodeVertexFormat(attribute.format);
+      const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
+      const divisor = attribute.stepMode === 'instance' ? 1 : 0;
+      const type = getWebGLDataType(typeString);
+      this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
+        size,
+        type,
+        stride,
+        offset: 0,
+        normalized,
+        integer,
+        divisor
+      });
+    }
+    */
   }
 
   /** @todo needed for portable model */
