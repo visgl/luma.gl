@@ -174,9 +174,9 @@ export class Model {
 
       // The `getValue` call provides support for deck.gl `Attribute` class
       // TODO - remove once deck refactoring completes
-      // @ts-expect-error
+      // @ts-ignore
       if (attribute.getValue) {
-        // @ts-expect-error
+        // @ts-ignore
         attribute = attribute.getValue();
       }
 
@@ -185,10 +185,10 @@ export class Model {
         continue;
       }
 
-      // @ts-expect-error
+      // @ts-ignore
       if (filterBuffers && attribute[name]._buffer) {
-        // @ts-expect-error
-        buffer[name] = normalizedAttributes[name]._buffer;
+        // @ts-ignore
+        buffer[name] = attribute[name]._buffer;
       }
     }
 
@@ -200,7 +200,7 @@ export class Model {
 
     // Temporary HACK since deck.gl v9 sets indices as part of attributes
     if (indices) {
-      this.setIndexBuffer(indices as Buffer);
+      this.setIndexBuffer(indices);
       console.warn('luma.gl: indices should not be part of attributes');
     }
 

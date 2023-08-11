@@ -87,6 +87,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Constant attributes are not available in WebGPU */
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
+    console.error('not implemented');
   }
 
   /** Set the bindings */
