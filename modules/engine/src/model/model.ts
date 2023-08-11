@@ -140,17 +140,39 @@ export class Model {
     return this;
   }
 
-  setAttributes(attributes: Record<string, Buffer>): this {
+  // Temporary hack to support deck.gl's dependency on luma.gl v8 Model attribute API.
+  _filterDeckAttributes(attributes: Record<string, Buffer>, filterBuffers?: boolean): Record<string, Buffer> {
+    const normalizedAttributes: Record<string, Buffer> = {};
+    for (const name in attributes) {
+      const attribute = attributes[name];
+
+      // The `getValue` call provides support for deck.gl `Attribute` class
+      // TODO - remove once deck refactoring completes
+      // @ts-expect-error
+      normalizedAttributes[name] = attribute.getValue ? attribute.getValue() : attribute;
+
+      // @ts-expect-error
+      if (filterBuffers && normalizedAttributes[name]._buffer) {
+        // @ts-expect-error
+        normalizedAttributes[name] = normalizedAttributes[name]._buffer;
+      }
+    }
+
+    return normalizedAttributes;
+  }
+
+  setAttributes(attributes: Record<string, Buffer>, filterBuffers?: boolean): void {
+    const normalizedAttributes= this._filterDeckAttributes(attributes, filterBuffers);
+
     // Temporary HACK since deck.gl v9 sets indices as part of attributes
-    if (attributes.indices) {
-      this.setIndexBuffer(attributes.indices);
-      attributes = {...attributes};
-      delete attributes.indices;
+    if (normalizedAttributes.indices) {
+      this.setIndexBuffer(normalizedAttributes.indices);
+      delete normalizedAttributes.indices;
       console.warn('luma.gl: indices should not be part of attributes')
     }
-    this.pipeline.setAttributes(attributes);
-    Object.assign(this.props.attributes, attributes);
-    return this;
+
+    this.pipeline.setAttributes(normalizedAttributes);
+    Object.assign(this.props.attributes, normalizedAttributes);
   }
 
   /** Set the bindings */
