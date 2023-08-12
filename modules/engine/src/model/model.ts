@@ -178,6 +178,7 @@ export class Model {
       if (attribute.getValue) {
         // @ts-ignore
         attribute = attribute.getValue();
+        console.warn(`attribute ${name}: getValue() will be removed`);
       }
 
       if (ArrayBuffer.isView(attribute) && !attribute) {
