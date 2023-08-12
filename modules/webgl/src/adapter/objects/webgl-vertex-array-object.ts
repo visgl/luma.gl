@@ -84,7 +84,7 @@ export class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps
   // Set (bind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
   setElementBuffer(elementBuffer: WEBGLBuffer | null = null, opts = {}) {
-    assert(!elementBuffer || elementBuffer.target === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
+    assert(!elementBuffer || elementBuffer.glTarget === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
 
     // The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject...
     this.bind(() => {
@@ -95,7 +95,7 @@ export class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
   setBuffer(location: number, buffer: WEBGLBuffer, accessor: any): void {
     // Check target
-    if (buffer.target === GL.ELEMENT_ARRAY_BUFFER) {
+    if (buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER) {
       this.setElementBuffer(buffer, accessor);
       return;
     }

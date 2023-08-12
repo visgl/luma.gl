@@ -445,8 +445,7 @@ export default class VertexArray {
       // index type is saved for drawElement calls
       drawParams.elementCount = this.elements.getElementCount(this.elements.accessor);
       drawParams.isIndexed = true;
-      // @ts-expect-error TODO looks like a valid type mismatch
-      drawParams.indexType = this.elementsAccessor.type || this.elements.accessor.type;
+      drawParams.indexType = this.elements.glIndexType;
       drawParams.indexOffset = this.elementsAccessor.offset || 0;
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-cube",
-  "version": "9.0.0-alpha.21",
+  "version": "9.0.0-alpha.27",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.21",
-    "@luma.gl/shadertools": "9.0.0-alpha.21",
-    "@luma.gl/webgl": "9.0.0-alpha.21",
+    "@luma.gl/engine": "9.0.0-alpha.27",
+    "@luma.gl/shadertools": "9.0.0-alpha.27",
+    "@luma.gl/webgl": "9.0.0-alpha.27",
     "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {

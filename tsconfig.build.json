@@ -16,8 +16,6 @@
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"},
     {"path": "modules/webgpu"}
-    // {"path": "modules/gltools"},
-    // {"path": "modules/webgl-legacy"},
     // {"path": "modules/experimental"}
   ]
 }

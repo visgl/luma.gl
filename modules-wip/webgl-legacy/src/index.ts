@@ -132,3 +132,15 @@ export {default as ProgramManager} from './engine/program-manager';
 export {default as Transform} from './transform/transform';
 
 export {default as ClipSpace} from './engine/classic-clip-space';
+
+// GLSL debugger
+
+export {COLOR_MODE} from './glsl-to-js-compiler/draw-model';
+export {_DebugContext} from './glsl-to-js-compiler/debug-context';
+export {
+  compileShaderModule,
+  compileVertexShader,
+  compileFragmentShader
+} from './glsl-to-js-compiler/compile-shader';
+
+import './glsl-to-js-compiler/compile-shader.spec';

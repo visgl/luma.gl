@@ -1,17 +1,6 @@
 [
   "README",
   "whats-new", 
-  "public-review",
-  {
-    "type": "category",
-    "label": "Upgrade Guide",
-    "items": [
-      "upgrade-guide/README",
-      "upgrade-guide/api-philosophy",
-      "upgrade-guide/upgrade-v9",
-      "upgrade-guide/upgrade-v9-parameters"
-    ]
-  },
   {
     "type": "category",
     "label": "Tutorials",
@@ -32,18 +21,6 @@
   },
   {
     "type": "category",
-    "label": "Developer Guide",
-    "items": [
-      "developer-guide/installing",
-      "developer-guide/debugging",
-      "developer-guide/testing",
-      "developer-guide/profiling",
-      "developer-guide/bundling",
-      "developer-guide/contributing"
-    ]
-  },
-  {
-    "type": "category",
     "label": "API Guide",
     "items": [
       {
@@ -54,6 +31,7 @@
           "api-guide/background/webgpu-vs-webgl"
         ]
       },
+      "public-review",
       "api-guide/README",
       "api-guide/device",
       "api-guide/resources",
@@ -218,6 +196,28 @@
           "api-reference/debug/README"
         ]
       }
+    ]
+  },  
+  {
+    "type": "category",
+    "label": "Developer Guide",
+    "items": [
+      "developer-guide/installing",
+      "developer-guide/debugging",
+      "developer-guide/testing",
+      "developer-guide/profiling",
+      "developer-guide/bundling",
+      "developer-guide/contributing"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Upgrade Guide",
+    "items": [
+      "upgrade-guide/README",
+      "upgrade-guide/api-philosophy",
+      "upgrade-guide/upgrade-v9",
+      "upgrade-guide/upgrade-v9-parameters"
     ]
   }
 ]

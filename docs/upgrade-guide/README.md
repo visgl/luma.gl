@@ -1,14 +1,20 @@
 # Upgrade Guide
 
-This upgrade guide focuses on breaking changes in the APIs.
+This upgrade guide calls out any breaking changes in the luma.gl API. It covers all releases, and includes information on how to update affected applications.
 
-> Upgrade instructions assume that you are upgrading from the immediately previous release.
-> If you are upgrading across multiple releases you will want to consider the release notes for all
-> intermediary releases.
+:::info
+luma.gl largely follows [**semantic versioning**](https://semver.org) conventions: breaking changes are done in major versions only, minor version bumps  bring new functionality but no breaking changes, and patch releases contain only low-risk fixes. However luma.gl is a big framework and there are cases where maintainers decide that it is reasonable to make a small breaking change in a minor releases for some infrequently used part of the API. 
+:::
+
+:::caution
+Upgrade instructions assume that you are upgrading from the immediately previous release.
+If you are upgrading across multiple releases you will want to consider the release notes for all
+intermediary releases.
+:::
 
 ## Upgrading to v9.0
 
-luma.gl v9 represents a major API changes and a substantial amount of documentation is provided:
+luma.gl v9 represents a major, "once in a generation" API change and separate documentation is provided:
 - [v9 upgrade guide](./upgrade-to-v9).
 - [v9 GPU parameter upgrade guide](./upgrade-v9-parameters.md)
 - [v9 API philosophy](./api-philosophy).

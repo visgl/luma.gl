@@ -55,9 +55,9 @@ function getWEBGLBufferProps(props: BufferWithAccessorProps | ArrayBufferView | 
 
   props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
   const bufferProps = {...props };
-  if (bufferProps.offset) {
-    bufferProps.byteOffset = bufferProps.offset;
-  }
+  // if (bufferProps.offset) {
+  //   bufferProps.byteOffset = bufferProps.offset;
+  // }
   return bufferProps;
 }
 
@@ -65,19 +65,18 @@ function getWEBGLBufferProps(props: BufferWithAccessorProps | ArrayBufferView | 
 export type BufferWithAccessorProps = BufferProps & {
   handle?: WebGLBuffer;
 
-  target?: number;
-  webglUsage?: number;
-
   accessor?: AccessorObject;
 
-  /** @deprecated */
-  index?: number;
-  /** @deprecated */
-  offset?: number;
-  /** @deprecated */
-  size?: number;
-  /** @deprecated */
-  type?: number
+  // target?: number;
+  // glUsage?: number;
+  // /** @deprecated */
+  // index?: number;
+  // /** @deprecated */
+  // offset?: number;
+  // /** @deprecated */
+  // size?: number;
+  // /** @deprecated */
+  // type?: number
 }
 
 /** WebGL Buffer interface */
@@ -141,7 +140,8 @@ export class BufferWithAccessor extends WEBGLBuffer {
     props = checkProps('Buffer', props, PROP_CHECKS_INITIALIZE);
 
     // Initialize member fields
-    this.webglUsage = props.webglUsage || GL.STATIC_DRAW;
+    // @ts-expect-error readonly field
+    this.glUsage = props.glUsage || GL.STATIC_DRAW;
     this.debugData = null;
 
     // Deprecated: Merge main props and accessor
@@ -149,7 +149,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
 
     // Set data: (re)initializes the buffer
     if (props.data) {
-      this._setData(props.data, props.offset, props.byteLength);
+      this._setData(props.data, props.byteOffset, props.byteLength);
     } else {
       this._setByteLength(props.byteLength || 0);
     }
@@ -220,17 +220,17 @@ export class BufferWithAccessor extends WEBGLBuffer {
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
     // @ts-expect-error
-    const target = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.target;
-    this.gl.bindBuffer(target, this.handle);
+    const glTarget = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
       assertWebGL2Context(this.gl);
       // @ts-expect-error
-      this.gl.bufferSubData(this.target, offset, data, srcOffset, byteLength);
+      this.gl.bufferSubData(this.glTarget, offset, data, srcOffset, byteLength);
     } else {
-      this.gl.bufferSubData(target, offset, data);
+      this.gl.bufferSubData(glTarget, offset, data);
     }
-    this.gl.bindBuffer(target, null);
+    this.gl.bindBuffer(glTarget, null);
 
     // TODO - update local `data` if offsets are right
     this.debugData = null;
@@ -321,9 +321,9 @@ export class BufferWithAccessor extends WEBGLBuffer {
    *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
    *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
    */
-  bind(options?: {target?: number; index?: any; offset?: number; size: any}): this {
+  bind(options?: {glTarget?: number; index?: any; offset?: number; size?: any}): this {
     const {
-      target = this.target, // target for the bind operation
+      glTarget = this.glTarget, // target for the bind operation
       index = this.accessor && this.accessor.index, // index = index of target (indexed bind point)
       offset = 0,
       size
@@ -331,27 +331,27 @@ export class BufferWithAccessor extends WEBGLBuffer {
     // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
     // be used as direct binding points, they will not affect transform feedback or
     // uniform buffer state. Instead indexed bindings need to be made.
-    if (target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER) {
+    if (glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER) {
       if (size !== undefined) {
-        this.gl2?.bindBufferRange(target, index, this.handle, offset, size);
+        this.gl2?.bindBufferRange(glTarget, index, this.handle, offset, size);
       } else {
         assert(offset === 0); // Make sure offset wasn't supplied
-        this.gl2?.bindBufferBase(target, index, this.handle);
+        this.gl2?.bindBufferBase(glTarget, index, this.handle);
       }
     } else {
-      this.gl.bindBuffer(target, this.handle);
+      this.gl.bindBuffer(glTarget, this.handle);
     }
 
     return this;
   }
 
-  unbind(options?: {target?: any; index?: any}): this {
-    const {target = this.target, index = this.accessor && this.accessor.index} = options || {};
-    const isIndexedBuffer = target === GL.UNIFORM_BUFFER || target === GL.TRANSFORM_FEEDBACK_BUFFER;
+  unbind(options?: {glTarget?: any; index?: any}): this {
+    const {glTarget = this.glTarget, index = this.accessor && this.accessor.index} = options || {};
+    const isIndexedBuffer = glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER;
     if (isIndexedBuffer) {
-      this.gl2?.bindBufferBase(target, index, null);
+      this.gl2?.bindBufferBase(glTarget, index, null);
     } else {
-      this.gl.bindBuffer(target, null);
+      this.gl.bindBuffer(glTarget, null);
     }
     return this;
   }
@@ -384,7 +384,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
 
     const target = this._getTarget();
     this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, byteLength, this.webglUsage);
+    this.gl.bufferData(target, byteLength, this.glUsage);
     this.gl.bufferSubData(target, offset, data);
     this.gl.bindBuffer(target, null);
 
@@ -401,7 +401,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
   }
 
   // Allocate a GPU buffer of specified size.
-  _setByteLength(byteLength: number, webglUsage = this.webglUsage): this {
+  _setByteLength(byteLength: number): this {
     assert(byteLength >= 0);
 
     this.trackDeallocatedMemory();
@@ -414,12 +414,11 @@ export class BufferWithAccessor extends WEBGLBuffer {
       data = new Float32Array(0);
     }
 
-    const target = this._getTarget();
-    this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, data, webglUsage);
-    this.gl.bindBuffer(target, null);
+    const glTarget = this._getTarget();
+    this.gl.bindBuffer(glTarget, this.handle);
+    this.gl.bufferData(glTarget, data, this.glUsage);
+    this.gl.bindBuffer(glTarget, null);
 
-    this.webglUsage = webglUsage;
     this.debugData = null;
     this.bytesUsed = byteLength;
     this.byteLength = byteLength;
@@ -433,7 +432,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
   // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
   _getTarget() {
     // @ts-expect-error
-    return this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.target;
+    return this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
   }
 
   _getAvailableElementCount(srcByteOffset: number) {
@@ -453,9 +452,9 @@ export class BufferWithAccessor extends WEBGLBuffer {
   // RESOURCE METHODS
 
   getParameter(pname: GL): any {
-    this.gl.bindBuffer(this.target, this.handle);
-    const value = this.gl.getBufferParameter(this.target, pname);
-    this.gl.bindBuffer(this.target, null);
+    this.gl.bindBuffer(this.glTarget, this.handle);
+    const value = this.gl.getBufferParameter(this.glTarget, pname);
+    this.gl.bindBuffer(this.glTarget, null);
     return value;
   }
 

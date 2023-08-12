@@ -11,17 +11,21 @@ export class WEBGLBuffer extends Buffer {
   readonly gl: WebGLRenderingContext;
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLBuffer;
-  readonly target: number;
 
+  /** Target in OpenGL defines the type of buffer */
+  readonly glTarget: GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER;
+  /** Usage is a hint on how frequently the buffer will be updates */
+  readonly glUsage: GL.STATIC_DRAW | GL.DYNAMIC_DRAW;
+  /** Index type is needed when issuing draw calls, so we pre-compute it */
+  readonly glIndexType: GL.UNSIGNED_SHORT | GL.UNSIGNED_INT = GL.UNSIGNED_SHORT;
+
+  /** Number of bytes allocated on the GPU for this buffer */
   byteLength: number;
+  /** Number of bytes used */
   bytesUsed: number;
+  /** A partial CPU-side copy of the data in this buffer, for debugging purposes */
   debugData: ArrayBuffer | null = null;
 
-  webglUsage: number;
-
-  // accessor: {};
-
-  
   constructor(device: WebGLDevice, props: BufferProps = {}) {
     super(device, props);
 
@@ -33,13 +37,13 @@ export class WEBGLBuffer extends Buffer {
     this.handle = handle || this.gl.createBuffer();
     device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data});
 
-    // In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
-    // otherwise buffer type will lock to generic (non-element) buffer
-    // In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
-    // @ts-expect-error Hack - Checking for subclass prop
-    this.target = this.props.target || getWebGLTarget(this.props.usage);
-    // @ts-expect-error Hack - Checking for subclass prop
-    this.webglUsage = this.props.webglUsage || getWebGLUsage(this.props.usage);
+    // - In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
+    //   otherwise buffer type will lock to generic (non-element) buffer
+    // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
+    this.glTarget = getWebGLTarget(this.props.usage);
+    this.glUsage = getWebGLUsage(this.props.usage);
+    this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT :  GL.UNSIGNED_SHORT;
+
     this.debugData = null;
 
     // Set data: (re)initializes the buffer
@@ -48,25 +52,19 @@ export class WEBGLBuffer extends Buffer {
     } else {
       this._initWithByteLength(props.byteLength || 0);
     }
-
-    // Deprecated: Merge main props and accessor
-    // this.accessor = {...props.accessor};
-
-    // Object.seal(this);
   }
 
   // PRIVATE METHODS
 
-  // Allocate a new buffer and initialize to contents of typed array
+  /** Allocate a new buffer and initialize to contents of typed array */
   _initWithData(data, byteOffset: number = 0, byteLength: number = data.byteLength + byteOffset): this {
     assert(ArrayBuffer.isView(data));
 
-    const target = this._getWriteTarget();
-
-    this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, byteLength, this.webglUsage);
-    this.gl.bufferSubData(target, byteOffset, data);
-    this.gl.bindBuffer(target, null);
+    const glTarget = this._getWriteTarget();
+    this.gl.bindBuffer(glTarget, this.handle);
+    this.gl.bufferData(glTarget, byteLength, this.glUsage);
+    this.gl.bufferSubData(glTarget, byteOffset, data);
+    this.gl.bindBuffer(glTarget, null);
 
     this.debugData = data.slice(0, DEBUG_DATA_LENGTH);
     this.bytesUsed = byteLength;
@@ -88,11 +86,11 @@ export class WEBGLBuffer extends Buffer {
       data = new Float32Array(0);
     }
 
-    const target = this._getWriteTarget();
+    const glTarget = this._getWriteTarget();
 
-    this.gl.bindBuffer(target, this.handle);
-    this.gl.bufferData(target, data, this.webglUsage);
-    this.gl.bindBuffer(target, null);
+    this.gl.bindBuffer(glTarget, this.handle);
+    this.gl.bufferData(glTarget, data, this.glUsage);
+    this.gl.bindBuffer(glTarget, null);
 
     this.debugData = null;
     this.bytesUsed = byteLength;
@@ -118,16 +116,16 @@ export class WEBGLBuffer extends Buffer {
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
-    const target = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.target;
-    this.gl.bindBuffer(target, this.handle);
+    const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
       this.device.assertWebGL2();
-      this.gl2.bufferSubData(target, byteOffset, data, srcOffset, byteLength);
+      this.gl2.bufferSubData(glTarget, byteOffset, data, srcOffset, byteLength);
     } else {
-      this.gl.bufferSubData(target, byteOffset, data);
+      this.gl.bufferSubData(glTarget, byteOffset, data);
     }
-    this.gl.bindBuffer(target, null);
+    this.gl.bindBuffer(glTarget, null);
 
     // TODO - update local `data` if offsets are right
     // this.debugData = data.slice(byteOffset, 40);
@@ -161,13 +159,13 @@ export class WEBGLBuffer extends Buffer {
   }
 
   _getWriteTarget() {
-    return this.target;
-    // return this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.target;
+    return this.glTarget;
+    // return this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
   }
 
   _getReadTarget() {
-    return this.target;
-    // return this.device.isWebGL2 ? GL.COPY_READ_BUFFER : this.target;
+    return this.glTarget;
+    // return this.device.isWebGL2 ? GL.COPY_READ_BUFFER : this.glTarget;
   }
 }
 
@@ -182,7 +180,7 @@ export class WEBGLBuffer extends Buffer {
 // static INDIRECT = 0x0100;
 // static QUERY_RESOLVE = 0x0200;
 
-function getWebGLTarget(usage: number): GL {
+function getWebGLTarget(usage: number): GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER {
   if (usage & Buffer.INDEX) {
     return GL.ELEMENT_ARRAY_BUFFER;
   }
@@ -204,7 +202,7 @@ function getWebGLTarget(usage: number): GL {
   return GL.ARRAY_BUFFER;
 }
 
-function getWebGLUsage(usage: number): GL {
+function getWebGLUsage(usage: number): GL.STATIC_DRAW | GL.DYNAMIC_DRAW {
   if (usage & Buffer.INDEX) {
     return GL.STATIC_DRAW;
   }

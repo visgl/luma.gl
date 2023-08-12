@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/experimental",
-  "version": "9.0.0-alpha.21",
+  "version": "9.0.0-alpha.27",
   "description": "Experimental classes for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -39,15 +39,15 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
-    "@luma.gl/api": "9.0.0-alpha.21",
-    "@luma.gl/engine": "9.0.0-alpha.21",
-    "@luma.gl/webgl": "9.0.0-alpha.21",
-    "@luma.gl/webgl-legacy": "9.0.0-alpha.21",
+    "@luma.gl/api": "9.0.0-alpha.27",
+    "@luma.gl/engine": "9.0.0-alpha.27",
+    "@luma.gl/webgl": "9.0.0-alpha.27",
+    "@luma.gl/webgl-legacy": "9.0.0-alpha.27",
     "@math.gl/core": "4.0.0-alpha.4",
     "earcut": "^2.0.6"
   },
   "devDependencies": {
-    "@luma.gl/test-utils": "9.0.0-alpha.21"
+    "@luma.gl/test-utils": "9.0.0-alpha.27"
   },
   "peerDependencies": {
     "@loaders.gl/gltf": "^3.2.12",

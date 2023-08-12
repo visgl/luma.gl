@@ -121,8 +121,7 @@ export function readPixelsToBuffer(
     target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
   }
 
-  // @ts-expect-error
-  target.bind({target: GL.PIXEL_PACK_BUFFER});
+  target.bind({glTarget: GL.PIXEL_PACK_BUFFER});
   withParameters(gl2, {framebuffer}, () => {
     gl2.readPixels(
       sourceX,
@@ -134,7 +133,7 @@ export function readPixelsToBuffer(
       targetByteOffset
     );
   });
-  target.unbind({target: GL.PIXEL_PACK_BUFFER});
+  target.unbind({glTarget: GL.PIXEL_PACK_BUFFER});
   if (deleteFramebuffer) {
     framebuffer.destroy();
   }

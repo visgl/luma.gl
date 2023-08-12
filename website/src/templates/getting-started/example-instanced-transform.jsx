@@ -7,7 +7,7 @@ export class InstancedTransformExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <div>Transform examples temporarily disabled</div>
+      <h2><i>Note: Transform examples temporarily disabled</i></h2>
       // <LumaExample id="instanced-transform" name="instanced-transform" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }

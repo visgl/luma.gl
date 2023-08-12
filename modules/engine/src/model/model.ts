@@ -6,7 +6,8 @@ import {
   RenderPipelineProps,
   RenderPass,
   Binding,
-  PrimitiveTopology
+  PrimitiveTopology,
+  log
 } from '@luma.gl/api';
 import {RenderPipeline} from '@luma.gl/api';
 import type {ShaderModule} from '@luma.gl/shadertools';
@@ -14,6 +15,9 @@ import type {Geometry} from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {TypedArray} from '@math.gl/core';
+
+/** @todo import type */
+type UniformValue = unknown;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
@@ -48,23 +52,34 @@ export class Model {
   readonly vs: string;
   readonly fs: string | null = null;
   readonly topology: PrimitiveTopology;
-  readonly vertexCount;
+  readonly pipelineFactory: PipelineFactory;
+  /** The underlying GPU "program". @note May be recreated if parameters change */
+  pipeline: RenderPipeline;
   userData: {[key: string]: any} = {};
 
-  readonly pipelineFactory: PipelineFactory;
-  pipeline: RenderPipeline;
+  // readonly props: Required<ModelProps>;
 
-  props: Required<ModelProps>;
+  /** Vertex count */
+  vertexCount: number;
+  /** instance count */
+  instanceCount: number = 0;
+  /** Buffer-valued attributes */
+  bufferAttributes: Record<string, Buffer> = {};
+  /** Constant-valued attributes */
+  constantAttributes: Record<string, TypedArray> = {};
+  /** Bindings (textures, samplers, uniform buffers) */
+  bindings: Record<string, Binding> = {};
+  /** Uniforms */
+  uniforms: Record<string, UniformValue> = {};
 
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
 
   constructor(device: Device, props: ModelProps) {
-    this.props = {...DEFAULT_MODEL_PROPS, ...props};
-    props = this.props;
-    this.id = this.props.id;
+    props = {...DEFAULT_MODEL_PROPS, ...props};
+    this.id = props.id;
     this.device = device;
 
-    Object.assign(this.userData, this.props.userData);
+    Object.assign(this.userData, props.userData);
 
     // Create the pipeline
     if (!props.vs) {
@@ -75,18 +90,19 @@ export class Model {
       this.fs = getShaderSource(this.device, props.fs);
     }
 
-    this.vertexCount = this.props.vertexCount;
-    this.topology = this.props.topology;
+    this.vertexCount = props.vertexCount;
+    this.instanceCount = props.instanceCount;
+    this.topology = props.topology;
 
-    if (this.props.geometry) {
-      this.vertexCount = this.props.geometry.vertexCount;
-      this.topology = this.props.geometry.topology || 'triangle-list';
+    if (props.geometry) {
+      this.vertexCount = props.geometry.vertexCount;
+      this.topology = props.geometry.topology || 'triangle-list';
     }
 
     this.pipelineFactory =
-      this.props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
+      props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     const {pipeline, getUniforms} = this.pipelineFactory.createRenderPipeline({
-      ...this.props,
+      ...props,
       vs: this.vs,
       fs: this.fs,
       topology: this.topology,
@@ -98,27 +114,26 @@ export class Model {
     this.pipeline = pipeline;
     this._getModuleUniforms = getUniforms;
 
-    if (this.props.geometry) {
-      this._setGeometry(this.props.geometry);
+    if (props.geometry) {
+      this._setGeometry(props.geometry);
     }
     this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
-    this.setProps(this.props);
+    this.setProps(props);
   }
 
   destroy(): void {
     this.pipelineFactory.release(this.pipeline);
   }
 
-  draw(renderPass: RenderPass): this {
+  draw(renderPass: RenderPass): void {
     this.pipeline.draw({
       renderPass,
       vertexCount: this.vertexCount,
-      instanceCount: this.props.instanceCount
+      instanceCount: this.instanceCount
     });
-    return this;
   }
 
-  setProps(props: ModelProps): this {
+  setProps(props: ModelProps): void {
     if (props.indices) {
       this.setIndexBuffer(props.indices);
     }
@@ -134,95 +149,42 @@ export class Model {
     if (props.moduleSettings) {
       this.updateModuleSettings(props.moduleSettings);
     }
-    return this;
   }
 
-  updateModuleSettings(props: Record<string, any>): this {
+  updateModuleSettings(props: Record<string, any>): void {
     const uniforms = this._getModuleUniforms(props);
     this.setUniforms(uniforms);
-    return this;
   }
 
-  setIndexBuffer(indices: Buffer): this {
+  setIndexBuffer(indices: Buffer): void {
     this.pipeline.setIndexBuffer(indices);
     // this._indices = indices;
-    return this;
   }
 
-  // Temporary hack to support deck.gl's dependency on luma.gl v8 Model attribute API.
-  _splitAttributes(
-    attributes: Record<string, Buffer | TypedArray>,
-    filterBuffers?: boolean
-  ): {
-    bufferAttributes: Record<string, Buffer>;
-    constantAttributes: Record<string, TypedArray>;
-    indices?: Buffer;
-  } {
-    const bufferAttributes: Record<string, Buffer> = {};
-    const constantAttributes: Record<string, TypedArray> = {};
-    const indices: Buffer | undefined = attributes.indices as Buffer;
-
-    delete attributes.indices;
-
-    for (const name in attributes) {
-      let attribute = attributes[name];
-
-      if (attribute instanceof Buffer) {
-        bufferAttributes[name] = attribute;
-        continue;
-      }
-
-      // The `getValue` call provides support for deck.gl `Attribute` class
-      // TODO - remove once deck refactoring completes
-      // @ts-ignore
-      if (attribute.getValue) {
-        // @ts-ignore
-        attribute = attribute.getValue();
-        console.warn(`attribute ${name}: getValue() will be removed`);
-      }
-
-      if (ArrayBuffer.isView(attribute) && !attribute) {
-        constantAttributes[name] = attribute as unknown as TypedArray;
-        continue;
-      }
-
-      // @ts-ignore
-      if (filterBuffers && attribute[name]._buffer) {
-        // @ts-ignore
-        buffer[name] = attribute[name]._buffer;
-      }
-    }
-
-    return {bufferAttributes, constantAttributes, indices};
-  }
-
-  setAttributes(attributes: Record<string, Buffer | TypedArray>, filterBuffers?: boolean): void {
-    const {bufferAttributes, constantAttributes, indices} = this._splitAttributes(attributes, filterBuffers);
-
-    // Temporary HACK since deck.gl v9 sets indices as part of attributes
-    if (indices) {
-      this.setIndexBuffer(indices);
-      console.warn('luma.gl: indices should not be part of attributes');
+  setAttributes(bufferAttributes: Record<string, Buffer>): void {
+    if (bufferAttributes.indices) {
+      log.warn(`Model:${this.id} setAttributes() - indices should be set using setIndexBuffer()`);
     }
 
     this.pipeline.setAttributes(bufferAttributes);
-    // TODO - WebGL only. We may have to allocate buffers on WebGPU
-    this.pipeline.setConstantAttributes(constantAttributes);
+    Object.assign(this.bufferAttributes, bufferAttributes);
+  }
 
-    Object.assign(this.props.attributes, bufferAttributes, constantAttributes);
+  setConstantAttributes(constantAttributes: Record<string, TypedArray>): void {
+    // TODO - this doesn't work under WebGPU, we'll need to create buffers or inject uniforms
+    this.pipeline.setConstantAttributes(constantAttributes);
+    Object.assign(this.constantAttributes, constantAttributes);
   }
 
   /** Set the bindings */
-  setBindings(bindings: Record<string, Binding>): this {
+  setBindings(bindings: Record<string, Binding>): void {
     this.pipeline.setBindings(bindings);
-    Object.assign(this.props.bindings, bindings);
-    return this;
+    Object.assign(this.bindings, bindings);
   }
 
-  setUniforms(uniforms: Record<string, any>): this {
+  setUniforms(uniforms: Record<string, any>): void {
     this.pipeline.setUniforms(uniforms);
-    Object.assign(this.props.uniforms, uniforms);
-    return this;
+    Object.assign(this.uniforms, uniforms);
   }
 
   _setGeometry(geometry: Geometry): void {
