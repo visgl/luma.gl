@@ -1,4 +1,6 @@
-import type {Binding, RenderPass} from '@luma.gl/api';
+// luma.gl MIT license
+
+import type {Binding, RenderPass, TypedArray} from '@luma.gl/api';
 import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/api';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -81,6 +83,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     //     this.handle
     //   }
     // }
+  }
+
+  /** Constant attributes are not available in WebGPU */
+  setConstantAttributes(attributes: Record<string, TypedArray>): void {
+    console.error('not implemented');
   }
 
   /** Set the bindings */

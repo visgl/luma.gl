@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
+import type {TypedArray} from '../../types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
@@ -104,6 +105,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   abstract setIndexBuffer(indices: Buffer): void;
   /** Set attributes (stored on pipeline and set before each call) */
   abstract setAttributes(attributes: Record<string, Buffer>): void;
+  /** Set constant attributes (WebGL only) */
+  abstract setConstantAttributes(attributes: Record<string, TypedArray>): void;
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
   /** Uniforms (only supported on WebGL devices. Reset before each call to enable pipeline sharing) */

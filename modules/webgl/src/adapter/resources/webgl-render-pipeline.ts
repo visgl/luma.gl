@@ -6,7 +6,8 @@ import type {
   ShaderLayout,
   PrimitiveTopology,
   // BindingLayout,
-  AttributeLayout
+  AttributeLayout,
+  TypedArray
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
@@ -112,7 +113,27 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  /** @todo needed for portable model */
+  /**
+   * Constant attributes are only supported in WebGL, not in WebGPU
+   * Any attribute that is disabled in the current vertex array object
+   * is read from the context's global constant value for that attribute location.
+   * @param attributes 
+   */
+  setConstantAttributes(attributes: Record<string, TypedArray>): void {
+    for (const [name, value] of Object.entries(attributes)) {
+      const attribute = getAttributeLayout(this.layout, name);
+      if (!attribute) {
+        log.warn(`Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`)();
+        continue; // eslint-disable-line no-continue
+      }
+      this.vertexArrayObject.setConstant(attribute.location, value);
+    }
+  }
+
+  /** 
+   * Bindings include: textures, samplers and uniform buffers
+   * @todo needed for portable model 
+   */
   setBindings(bindings: Record<string, Binding>): void {
     // if (log.priority >= 2) {
     //   checkUniformValues(uniforms, this.id, this._uniformSetters);
