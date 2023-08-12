@@ -10,7 +10,6 @@ To use debug support, first import the debug tools, then call `createGLContext` 
 
 ```typescript
 import {createGLContext} from '@luma.gl/gltools';
-import '@luma.gl/debug';
 const gl = createGLContext(gl, {debug: true});
 ```
 

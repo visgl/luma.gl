@@ -39,7 +39,6 @@ const config = {
       {alias: {
           '@luma.gl/api': `${__dirname}/../modules/api/src`,
           '@luma.gl/core': `${__dirname}/../modules/core/src`,
-          '@luma.gl/debug': `${__dirname}/../modules/debug/src`,
           '@luma.gl/engine': `${__dirname}/../modules/engine/src`,
           '@luma.gl/experimental': `${__dirname}/../modules/experimental/src`,
           '@luma.gl/shadertools': `${__dirname}/../modules/shadertools/src`,
@@ -47,10 +46,7 @@ const config = {
           '@luma.gl/webgl': `${__dirname}/../modules/webgl/src`,
           '@luma.gl/webgpu': `${__dirname}/../modules/webgpu/src`,
           // deprecated modules
-          '@luma.gl/constants': `${__dirname}/../modules/constants/src`,
-          '@luma.gl/webgl-legacy': `${__dirname}/../modules/webgl-legacy/src`,
-          // removed (empty) modules
-          '@luma.gl/gltools': `${__dirname}/../modules/gltools/src`,
+          '@luma.gl/constants': `${__dirname}/../modules/constants/src`
       }}
     ],
     [

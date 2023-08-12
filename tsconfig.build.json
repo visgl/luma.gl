@@ -10,7 +10,6 @@
     {"path": "modules/api-tests"},
     {"path": "modules/constants"},
     {"path": "modules/core"},
-    {"path": "modules/debug"},
     {"path": "modules/engine"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},

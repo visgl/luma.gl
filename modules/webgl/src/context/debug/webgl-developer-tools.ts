@@ -18,8 +18,13 @@ type DebugContextProps = {
 //   webgl2: false,
 // }
 
+type ContextData = {
+  realContext?: WebGLRenderingContext;
+  debugContext?: WebGLRenderingContext;
+}
+
 // Helper to get shared context data
-function getContextData(gl: any) {
+function getContextData(gl: any): ContextData {
   gl.luma = gl.luma || {};
   return gl.luma;
 }

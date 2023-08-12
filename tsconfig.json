@@ -48,8 +48,6 @@
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],
       "@luma.gl/core/*": ["modules/core/src/*"],
       "@luma.gl/core/test/*": ["modules/core/test/*"],
-      "@luma.gl/debug/*": ["modules/debug/src/*"],
-      "@luma.gl/debug/test/*": ["modules/debug/test/*"],
       "@luma.gl/engine/*": ["modules/engine/src/*"],
       "@luma.gl/engine/test/*": ["modules/engine/test/*"],
       // "@luma.gl/experimental/*": ["modules/experimental/src/*"],

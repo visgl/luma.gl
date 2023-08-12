@@ -188,13 +188,6 @@
         "items": [
           "api-reference/webgpu/README"
         ]
-      },
-      {
-        "type": "category",
-        "label": "@luma.gl/debug",
-        "items": [
-          "api-reference/debug/README"
-        ]
       }
     ]
   },  
