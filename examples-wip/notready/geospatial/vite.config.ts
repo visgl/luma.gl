@@ -4,7 +4,6 @@ const alias = {
   '@luma.gl/api': `${__dirname}/../../../modules/api/src`,
   '@luma.gl/constants': `${__dirname}/../../../modules/constants/src`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
-  '@luma.gl/debug': `${__dirname}/../../../modules/debug/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
   '@luma.gl/webgl-legacy': `${__dirname}/../../../modules/webgl-legacy/src`,

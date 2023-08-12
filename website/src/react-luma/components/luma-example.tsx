@@ -1,6 +1,6 @@
 import React, {FC, useEffect, useRef, useState, useCallback, forwardRef} from 'react'; // eslint-disable-line
 import {isBrowser} from '@probe.gl/env';
-import {Device, luma, setPathPrefix} from '@luma.gl/api';
+import {Device, log, luma, setPathPrefix} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
 
 import StatsWidget from '@probe.gl/stats-widget';
@@ -70,7 +70,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const callbackRef = useCallback((canvas: HTMLCanvasElement) => {
     if (canvas) {
       if (!animationLoop) {
-        console.error(`creating luma device ${canvas.id}`); // , ref.current);
+        log.info(0, `creating luma device ${canvas.id}`); // , ref.current);
         canvas.style.width = '100vw';
         canvas.style.height = '50vh';
         const device = luma.createDevice({type: deviceType, canvas, container: containerName});

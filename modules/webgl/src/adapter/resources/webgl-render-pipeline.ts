@@ -39,9 +39,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   // Experimental flag to avoid deleting Program object while it is cached
   varyings: string[] | null = null;
   vertexArrayObject: WEBGLVertexArrayObject;
-  _indexBuffer?: Buffer;
+  _indexBuffer?: WEBGLBuffer;
   uniforms: Record<string, any> = {};
   bindings: Record<string, any> = {};
+  constantAttributes: Record<string, TypedArray> = {};
+
   _textureUniforms: Record<string, any> = {};
   _textureIndexCounter: number = 0;
   _uniformCount: number = 0;
@@ -85,7 +87,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   setIndexBuffer(indexBuffer: Buffer): void {
     const webglBuffer = cast<WEBGLBuffer>(indexBuffer);
     this.vertexArrayObject.setElementBuffer(webglBuffer);
-    this._indexBuffer = indexBuffer;
+    this._indexBuffer = webglBuffer;
   }
 
   /** @todo needed for portable model */
@@ -128,6 +130,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       }
       this.vertexArrayObject.setConstant(attribute.location, value);
     }
+    Object.assign(this.constantAttributes, attributes);
   }
 
   /** 
@@ -203,7 +206,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     const drawMode = getDrawMode(this.props.topology);
     const isIndexed: boolean = Boolean(this._indexBuffer);
-    const indexType = this._indexBuffer?.props.indexType === 'uint16' ? GL.UNSIGNED_SHORT : GL.UNSIGNED_INT;
+    const indexType = this._indexBuffer?.glIndexType;
     const isInstanced: boolean = Number(options.instanceCount) > 0;
 
     // Avoid WebGL draw call when not rendering any data or values are incomplete
@@ -227,6 +230,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // We have to apply bindings before every draw call since other draw calls will overwrite
       this._applyBindings();
       this._applyUniforms();
+      this._applyConstantAttributes();
 
       const webglRenderPass = renderPass as WEBGLRenderPass;
 
@@ -386,9 +390,25 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       }
     }
   }
+
+  /**
+   * Constant attributes are only supported in WebGL, not in WebGPU
+   * Any attribute that is disabled in the current vertex array object
+   * is read from the context's global constant value for that attribute location.
+   */
+  _applyConstantAttributes(): void {
+    for (const [name, value] of Object.entries(this.constantAttributes)) {
+      const attribute = getAttributeLayout(this.layout, name);
+      if (!attribute) {
+        log.warn(`Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`)();
+        continue; // eslint-disable-line no-continue
+      }
+      this.vertexArrayObject.setConstant(attribute.location, value);
+    }
+  }  
 }
 
-/** Get the primitive type for transform feedback */
+/** Get the primitive type for draw */
 function getDrawMode(
   topology: PrimitiveTopology
 ): GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN {
@@ -420,6 +440,11 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
   }
 }
 
+function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
+  return layout.attributes.find((binding) => binding.name === name) || null;
+}
+
+
 // function getAttributesByLocation(
 //   attributes: Record<string, Buffer>,
 //   layout: ShaderLayout
@@ -433,10 +458,6 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
 //   }
 //   return byLocation;
 // }
-
-function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
-  return layout.attributes.find((binding) => binding.name === name) || null;
-}
 
 /* TODO
 function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {

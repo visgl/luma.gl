@@ -19,21 +19,6 @@ export type BufferProps = ResourceProps & {
 
   // TBD
   mappedAtCreation?: boolean;
-
-  /** @deprecated *
-  accessor?: any; // AccessorObject;
-
-  /** @deprecated Use BufferProps.usage = VERTEX | INDEX | UNIFORM *
-  target?: number;
-  /** @deprecated Bind separately *
-  index?: number;
-  /** @deprecated *
-  offset?: number;
-  /** @deprecated *
-  size?: number;
-  /** @deprecated *
-  type?: number;
-  */
 }
 
 const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {

@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 import {log, loadScript} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
+import {isBrowser} from '@probe.gl/env'
 
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 
@@ -18,8 +19,13 @@ type DebugContextProps = {
 //   webgl2: false,
 // }
 
+type ContextData = {
+  realContext?: WebGLRenderingContext;
+  debugContext?: WebGLRenderingContext;
+}
+
 // Helper to get shared context data
-function getContextData(gl: any) {
+function getContextData(gl: any): ContextData {
   gl.luma = gl.luma || {};
   return gl.luma;
 }
@@ -36,7 +42,7 @@ declare global {
  * @see https://github.com/vorg/webgl-debug
  */
 export async function loadWebGLDeveloperTools(): Promise<void> {
-  if (!globalThis.WebGLDebugUtils) {
+  if (isBrowser() && !globalThis.WebGLDebugUtils) {
     globalThis.global = globalThis.global || globalThis;
     // @ts-expect-error Developer tools expects global to be set
     globalThis.global.module = {};

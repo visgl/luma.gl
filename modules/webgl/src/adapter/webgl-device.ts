@@ -130,11 +130,13 @@ export class WebGLDevice extends Device {
     }
 
     // Load webgl and spector debug scripts from CDN if requested
-    if (props.debug) {
+    if (log.get('debug') || props.debug) {
       await loadWebGLDeveloperTools();
     }
+    
     // @ts-expect-error spector not on props
-    if (props.spector) {
+    const {spector} = props;
+    if (log.get('spector') || spector) {
       await loadSpectorJS();
     }
 

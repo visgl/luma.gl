@@ -59,9 +59,9 @@ test('Buffer#constructor offset and size', t => {
 test('Buffer#bind/unbind', t => {
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
-    device.gl.bindBuffer(buffer.target, buffer.handle);
+    device.gl.bindBuffer(buffer.glTarget, buffer.handle);
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind successful`);
-    device.gl.bindBuffer(buffer.target, null);
+    device.gl.bindBuffer(buffer.glTarget, null);
     buffer.destroy();
   }
   t.end();
@@ -77,9 +77,9 @@ test('Buffer#bind/unbind with index', t => {
     }
 
     const buffer = device.createBuffer({usage: Buffer.UNIFORM, index: 0});
-    device.gl.bindBuffer(buffer.target, buffer.handle);
+    device.gl.bindBuffer(buffer.glTarget, buffer.handle);
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
-    device.gl.bindBuffer(buffer.target, null);
+    device.gl.bindBuffer(buffer.glTarget, null);
     buffer.destroy();
   }
 

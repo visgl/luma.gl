@@ -15,10 +15,6 @@ module.exports = {
     'modules/constants',
     // core is just re-exporting things at the moment
     'modules/core',
-    // debug is an optional dependency
-    'modules/debug',
-    // deprecated module
-    'modules/webgl-legacy',
     // we don't have a test setup for WebGPU yet
     'modules/webgpu',
     // these are test utilities

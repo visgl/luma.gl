@@ -1,4 +1,4 @@
-# Introduction
+# Overview
 
 <p/>
 <p>
@@ -48,21 +48,21 @@
 
 luma.gl is a modern GPU toolkit for the Web, created to facilitate processing and visualization of big data on GPUs, that offers:
 
-- A "closer-to-the-metal" API for working with GPUs in JavaScript.
-- WebGPU, WebGL2 and WebGL backends.
-- A GLSL shader system supporting modules, dependencies, injection, transpilation etc.
-- A minimal set of higher-level classes such as `Model`, `Transform` and `AnimationLoop` and basic scenegraph support.
+- A "close-to-the-metal" API for working with GPUs in TypeScript and JavaScript.
+- Offers WebGPU, WebGL2 and WebGL backends.
+- A minimal set of engine-level classes such as `Model`, `Transform` and `AnimationLoop` and basic scenegraph support.
 - glTF support.
-- Shader modules for compute, visual effects and post processing.
+- A shader management system supporting shader modules, dependencies, injection, transpilation etc.
+- Pre-optimized shader modules for compute, visual effects and post processing.
 
-Instead of including limited support for math and data loading, luma.gl integrates seamlessly with dedicated companion framworks such as:
+Unlike some other GPU frameworks, luma.gl does not include support for prerequisites such math and data loading. Instead luma.gl integrates seamlessly with dedicated companion framworks such as:
 
-- [loaders.gl](https://loaders.gl) - a long list of 3D and geospatial data format standards are supported out of the box.
+- [loaders.gl](https://loaders.gl) - wide range of 3D and geospatial data format standards.
 - [math.gl](https://uber-web.github.io/math.gl/docs) - a variety of high precision geospatial and 3D math logic.
 
-luma.gl is a small framework that can be used to build other GPU frameworks. The canonical example is
+luma.gl is intended to be a foundation on top of which to build higher-level GPU frameworks. The primary example is
 
-- [deck.gl](https://deck.gl) - an extensive geospatial GPU framework that even supports functional programming paradigms, built on top of luma.gl.
+- [deck.gl](https://deck.gl) - geospatial GPU visualization and compute via a high-performance functional programming API.
 
 ## Philosophy
 

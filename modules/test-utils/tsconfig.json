@@ -10,7 +10,6 @@
   },
   "references": [
     {"path": "../api"},
-    {"path": "../debug"},
     {"path": "../webgl"},
     {"path": "../webgpu"}
   ]

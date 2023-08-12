@@ -128,7 +128,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'nucleon',
       vs: SPHERE_VS,
       fs: SPHERE_FS,
-      geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
+      geometry: new SphereGeometry({nlat: 20, nlong: 30}),
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',

@@ -7,7 +7,7 @@ export class TransformExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <div />
+      <h2><i>Note: Transform examples temporarily disabled</i></h2>
     );
     // LumaExample name="transform" AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
   }

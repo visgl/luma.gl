@@ -116,9 +116,9 @@ const bindBuffer = (gl: WebGLRenderingContext, value: unknown, key: GL) => {
     [GL.PIXEL_PACK_BUFFER_BINDING]: GL.PIXEL_PACK_BUFFER,
     [GL.PIXEL_UNPACK_BUFFER_BINDING]: GL.PIXEL_UNPACK_BUFFER
   };
-  const target = bindingMap[key];
+  const glTarget = bindingMap[key];
 
-  gl.bindBuffer(target, value);
+  gl.bindBuffer(glTarget, value);
 };
 
 // Utility

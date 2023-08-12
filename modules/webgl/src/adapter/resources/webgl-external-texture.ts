@@ -53,7 +53,7 @@ export class WEBGLExternalTexture extends WEBGLTexture {
   constructor(device: Device | WebGLRenderingContext, props: TextureProps) {
     super(WebGLDevice.attach(device), {id: uid('texture'), ...props});
 
-    this.target = getWebGLTextureTarget(props);
+    this.glTarget = getWebGLTextureTarget(props);
 
     this.device = WebGLDevice.attach(device);
     this.gl = this.device.gl;
