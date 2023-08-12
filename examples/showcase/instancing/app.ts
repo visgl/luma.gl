@@ -1,4 +1,3 @@
-import '@luma.gl/debug';
 import {Device, Framebuffer, getRandom, glsl} from '@luma.gl/api';
 import {
   AnimationProps,

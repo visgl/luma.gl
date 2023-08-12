@@ -64,14 +64,17 @@ Buffers will also have their first values checked to ensure that they are not Na
 
 ## Resource Leak Detection
 
-See the chapter on Profiling for some tools that can help spot resource leaks.
+See the chapter on Profiling for tools that can help spot resource leaks.
 
-## Khronos WebGL developer tools integration (WebGL only)
+## WebGL API tracing integration (WebGL only)
 
-luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) and luma.gl use these tools to "instrument" the `WebGLRenderingContext` which enabled:
+luma.gl is pre-integrated with the Khronos group's WebGL developer tools (the [WebGLDeveloperTools](https://github.com/KhronosGroup/WebGLDeveloperTools)) which provide the following features:
 
-- **Inline WebGL Error Detections** - Check the WebGL error status after each WebGL call and throws an exception if an error was detected, breaking the debugger at the correct place, and also extract helpful information about the error. 
-- **WebGL Parameters Checking** - Ensure that WebGL parameters are set to valid values.
+- **WebGL API tracing** - Logs each call to the WebGL context with parameters.
+- **Synchronous WebGL Error Detections** - Checks the WebGL error status after each WebGL call and throws an exception if an error was detected, breaking the debugger at the correct place, and also extract helpful information about the error. 
+- **WebGL Parameters Checking** - Checks that WebGL parameters are set to valid values.
+
+The most flexible way to enable WebGL API tracing is by typing the following command into the browser developer tools console:
 
 Note that the developer tools module is loaded dynamically when a device is created with the debug flag set, so the developer tools can be activated in production code by opening the browser console and typing:
 
@@ -93,12 +96,23 @@ const device = luma.createDevice({type: 'webgl', debug: true});
 
 luma.gl integrates with [Spector.js](https://spector.babylonjs.com/), a powerful debug tool created by the BabylonJS team.
 
-To avoid performance impact, luma.gl doesn't load or start spector.js by default. 
+The most flexible way to enable Spector.js is by typing the following command into the browser developer tools console:
 
-- Add the `spector: true` option when creating a device.
+```
+luma.log.set('spector', true);
+```
+
+And then restarting the application (e.g. via Command-R on MacOS),
+
+
+You can also enable spector when creating a device  by adding the `spector: true` option.
 
 To display Spector.js stats when loaded.
 
 ```
 luma.spector.displayUI()
 ```
+
+:::info
+Spector.js is dynamically loaded into your application, so there is no bundle size penalty.
+:::
