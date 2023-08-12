@@ -113,34 +113,27 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  // Constant attributes were removed during v9 porting
+  /**
+   * Constant attributes are only supported in WebGL, not in WebGPU
+   * Any attribute that is disabled in the current vertex array object
+   * is read from the context's global constant value for that attribute location.
+   * @param attributes 
+   */
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
-    /*
-    for (const [name, buffer] of Object.entries(attributes)) {
-      const webglBuffer = cast<WEBGLBuffer>(buffer);
+    for (const [name, value] of Object.entries(attributes)) {
       const attribute = getAttributeLayout(this.layout, name);
       if (!attribute) {
-        log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
+        log.warn(`Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`)();
         continue; // eslint-disable-line no-continue
       }
-      const decoded = decodeVertexFormat(attribute.format);
-      const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
-      const divisor = attribute.stepMode === 'instance' ? 1 : 0;
-      const type = getWebGLDataType(typeString);
-      this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
-        size,
-        type,
-        stride,
-        offset: 0,
-        normalized,
-        integer,
-        divisor
-      });
+      this.vertexArrayObject.setConstant(attribute.location, value);
     }
-    */
   }
 
-  /** @todo needed for portable model */
+  /** 
+   * Bindings include: textures, samplers and uniform buffers
+   * @todo needed for portable model 
+   */
   setBindings(bindings: Record<string, Binding>): void {
     // if (log.priority >= 2) {
     //   checkUniformValues(uniforms, this.id, this._uniformSetters);
