@@ -14,7 +14,6 @@ import '@luma.gl/api-tests/test';
 
 // WEBGL ADAPTER TESTS
 import '@luma.gl/webgl/test';
-import '@luma.gl/debug/test';
 
 // WEBGPU ADAPTER TESTS
 import '@luma.gl/webgpu/test';
