@@ -1,16 +1,16 @@
 // luma.gl, MIT license
 
-import {
+import type {
   ShaderLayout,
-  // BindingLayout,
+  AttributeLayout,
   UniformBinding,
   UniformBlockBinding,
-  ProgramBindings,
   AttributeBinding,
   VaryingBinding,
-  // AttributeLayout,
-  AccessorObject
+  AccessorObject,
+  BufferMapping
 } from '@luma.gl/api';
+import {log} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
@@ -24,14 +24,13 @@ import {isSamplerUniform} from './uniforms';
  * (although linking does not need to have been successful).
  */
 export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
-  const programBindings = getProgramBindings(gl, program);
-
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: []
   };
 
-  for (const attribute of programBindings.attributes) {
+  const attributes: AttributeBinding[] = readAttributeBindings(gl, program);
+  for (const attribute of attributes) {
     // TODO - multicolumn attributes like a matrix4 can be up to 16 elts...
     const size = Math.min(attribute.accessor.size, 4);
     const format =
@@ -46,8 +45,9 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
   }
 
   // Uniform blocks
-  for (const uniformBlock of programBindings.uniformBlocks) {
-    const uniforms = uniformBlock.uniforms.map((uniform) => ({
+  const uniformBlocks: UniformBlockBinding[] = readUniformBlocks(gl, program);
+  for (const uniformBlock of uniformBlocks) {
+    const uniforms = uniformBlock.uniforms.map(uniform => ({
       name: uniform.name,
       format: uniform.format,
       byteOffset: uniform.byteOffset,
@@ -64,8 +64,9 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
     });
   }
 
+  const uniforms: UniformBinding[] = readUniformBindings(gl, program);
   let textureUnit = 0;
-  for (const uniform of programBindings.uniforms) {
+  for (const uniform of uniforms) {
     if (isSamplerUniform(uniform.type)) {
       const {viewDimension, sampleType} = getSamplerInfo(uniform.type);
       shaderLayout.bindings.push({
@@ -82,37 +83,86 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
     }
   }
 
-  const uniforms = programBindings.uniforms?.filter((uniform) => uniform.location !== null) || [];
   if (uniforms.length) {
     shaderLayout.uniforms = uniforms;
   }
-  if (programBindings.varyings?.length) {
-    shaderLayout.varyings = programBindings.varyings;
+
+  // Varyings
+  const varyings: VaryingBinding[] = readVaryings(gl, program);
+  // Note - samplers are always in unform bindings, even if uniform blocks are used
+  if (varyings?.length) {
+    shaderLayout.varyings = varyings;
   }
 
   return shaderLayout;
 }
 
 /**
- * Extract metadata describing binding information for a program's shaders
- * Note: `linkProgram()` needs to have been called
- * (although linking does not need to have been successful).
+ * Merges an provided shader layout into a base shader layout
+ * In WebGL, this allows the auto generated shader layout to be overridden by the application
+ * Typically to change the format of the vertex attributes (from float32x4 to uint8x4 etc).
+ * @todo Drop this? This could also be done more clearly with bufferMapping
  */
-export function getProgramBindings(
-  gl: WebGLRenderingContext,
-  program: WebGLProgram
-): ProgramBindings {
-  const config: ProgramBindings = {
-    attributes: readAttributeBindings(gl, program),
-    uniforms: readUniformBindings(gl, program),
-    uniformBlocks: readUniformBlocks(gl, program),
-    varyings: readVaryings(gl, program)
+export function mergeShaderLayout(
+  baseLayout: ShaderLayout,
+  overrideLayout: ShaderLayout
+): ShaderLayout {
+  // Deep clone the base layout
+  const mergedLayout: ShaderLayout = {
+    ...baseLayout,
+    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
   };
+  // Merge the attributes
+  for (const attribute of overrideLayout?.attributes || []) {
 
-  Object.seal(config);
-  return config;
-  // generateWebGPUStyleBindings(bindings);
+    const baseAttribute = mergedLayout.attributes.find(attr => attr.name === attribute.name);
+    if (!baseAttribute) {
+      log.warn(`shader layout attribute ${attribute.name} not present in shader`);
+    } else {
+      baseAttribute.format = attribute.format || baseAttribute.format;
+      baseAttribute.stepMode = attribute.stepMode || baseAttribute.stepMode;
+    }
+  }
+  return mergedLayout;
 }
+
+export function mergeBufferMap(baseLayout: ShaderLayout, bufferMap: BufferMapping[]): ShaderLayout {
+  // Deep clone the base layout
+  const mergedLayout: ShaderLayout = {
+    ...baseLayout,
+    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
+  };
+  for (const bufferMapping of bufferMap) {
+    // @ts-expect-error
+    if (bufferMapping.attributes) {
+      // @ts-expect-error
+      for (const attributeOverride of bufferMapping.attributes) {
+        const attribute = getAttributeFromLayout(mergedLayout, attributeOverride.name);
+        if (attribute && attributeOverride.format) {
+          attribute.format = attributeOverride.format;
+        }
+      }
+    } else {
+      const attribute = getAttributeFromLayout(mergedLayout, bufferMapping.name);
+      // @ts-expect-error
+      if (attribute && bufferMapping.format) {
+        // @ts-expect-error
+        attribute.format = bufferMapping.format;
+      }
+    }
+  }
+  return mergedLayout;
+}
+
+export function getAttributeFromLayout(shaderLayout: ShaderLayout, name: string): AttributeLayout | null {
+  const attribute = shaderLayout.attributes.find(attr => attr.name === name);
+  if (!attribute) {
+    log.warn(`shader layout attribute "${name}" not present in shader`);
+  }
+  return attribute || null;
+}
+
+// HELPERS
 
 /**
  * Extract info about all transform feedback varyings
@@ -261,7 +311,8 @@ function readUniformBlocks(
       uniforms: [] as any[]
     };
 
-    const uniformIndices = getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES) as number[] || [];
+    const uniformIndices =
+      (getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES) as number[]) || [];
 
     const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
     const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
@@ -283,14 +334,14 @@ function readUniformBlocks(
       if (!activeInfo) {
         throw new Error('activeInfo');
       }
-  
+
       blockInfo.uniforms.push({
         name: activeInfo.name,
         format: decodeUniformType(uniformType[i]).format,
         type: uniformType[i],
         arrayLength: uniformArrayLength[i],
         byteOffset: uniformOffset[i],
-        byteStride: uniformStride[i],
+        byteStride: uniformStride[i]
         // matrixStride: uniformStride[i],
         // rowMajor: uniformRowMajor[i]
       });
@@ -327,7 +378,7 @@ const SAMPLER_UNIFORMS_GL_TO_GPU: Record<
   [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint']
 };
 
-type SamplerInfo =   | {
+type SamplerInfo = {
   viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
 };

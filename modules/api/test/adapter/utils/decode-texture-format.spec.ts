@@ -5,8 +5,8 @@ import {decodeTextureFormat, TextureFormat} from '@luma.gl/api';
 // prettier-ignore
 const TEST_CASES: {format: TextureFormat, result: any}[] = [
   // 8-bit formats
-  {format: 'r8unorm', result: { format: 'r', components: 0, dataType: 'uint8', byteLength: 1, integer: true, signed: false, normalized: true, srgb: false, webgl: false, unsized: false }},
-  {format: 'r8snorm', result: { format: 'r', components: 0, dataType: 'sint8', byteLength: 1, integer: true, signed: true, normalized: true, srgb: false, webgl: false, unsized: false }},
+  {format: 'r8unorm', result: { format: 'r', components: 0, dataType: 'uint8', byteLength: 1, integer: false, signed: false, normalized: true, srgb: false, webgl: false, unsized: false }},
+  {format: 'r8snorm', result: { format: 'r', components: 0, dataType: 'sint8', byteLength: 1, integer: false, signed: true, normalized: true, srgb: false, webgl: false, unsized: false }},
   {format: 'r8uint', result: { format: 'r', components: 0, dataType: 'uint8', byteLength: 1, integer: true, signed: false, normalized: false, srgb: false, webgl: false, unsized: false }},
   {format: 'r8sint', result: { format: 'r', components: 0, dataType: 'sint8', byteLength: 1, integer: true, signed: true, normalized: false, srgb: false, webgl: false, unsized: false }},
 

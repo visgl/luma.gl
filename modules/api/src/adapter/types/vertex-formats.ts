@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 
+/** Basic data types signed and unsigned integers, and floats, of varying sizes */
 export type DataType =
   'uint8' |
   'sint8' |
@@ -12,7 +13,7 @@ export type DataType =
   // 'float64'
   ;
 
-/** Vertex and Pixel data types. */
+/** Vertex and Pixel data types. Include normalized integers */
 export type NormalizedDataType =
   'uint8' |
   'sint8' |

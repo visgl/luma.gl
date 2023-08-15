@@ -1,17 +1,24 @@
 import {DataType, NormalizedDataType} from '../types/vertex-formats';
 
-/** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
-export function decodeVertexType(type: NormalizedDataType): {
+export type DecodedVertexType = {
+  /** WebGPU data type */
   dataType: DataType,
+  /** Length in bytes of the data for one vertex */
   byteLength: number;
+  /** Whether this is for integer or float vert */
   integer: boolean;
+  /** Whether this data type is signed */
   signed: boolean;
+  /** Whether this is a normalized integer (that must be used as float) */
   normalized: boolean;
-} {
+};
+
+/** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
+export function decodeVertexType(type: NormalizedDataType): DecodedVertexType {
   const dataType = TYPE_MAP[type];
   const bytes = getDataTypeBytes(dataType);
-  const integer: boolean = !type.startsWith('float');
   const normalized: boolean = type.includes('norm');
+  const integer: boolean = !normalized && !type.startsWith('float');
   const signed: boolean = type.startsWith('s');
   return {
     dataType: TYPE_MAP[type],

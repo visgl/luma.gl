@@ -1,15 +1,8 @@
 import {Device, Framebuffer, getRandom, glsl} from '@luma.gl/api';
-import {
-  AnimationProps,
-  AnimationLoopTemplate,
-  CubeGeometry,
-  Timeline,
-  Model,
-  ModelProps,
-  PipelineFactory
-} from '@luma.gl/engine';
-// import {GL, readPixelsToArray} from '@luma.gl/webgl-legacy';
-import {picking as pickingBase, dirlight as dirlightBase} from '@luma.gl/shadertools';
+import type {AnimationProps, ModelProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
+import {readPixelsToArray} from '@luma.gl/webgl';
+import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -22,27 +15,7 @@ single GPU draw call using instanced vertex attributes.
 
 const random = getRandom();
 
-// Add injections to shader modules
-const picking = {
-  inject: {
-    'vs:MY_SHADER_HOOK_pickColor': 'picking_setPickingColor(color.rgb);',
-    'fs:MY_SHADER_HOOK_fragmentColor': {
-      injection: 'color = picking_filterColor(color);',
-      order: Number.POSITIVE_INFINITY
-    }
-  },
-  ...pickingBase
-};
-
-const dirlight = {
-  inject: {
-    'fs:MY_SHADER_HOOK_fragmentColor': 'color = dirlight_filterColor(color);'
-  },
-  ...dirlightBase
-};
-
 const vs = glsl`\
-// // attribute float instanceSizes;
 attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 instanceOffsets;
@@ -62,8 +35,8 @@ void main(void) {
   // Set up data for modules
   color = instanceColors;
   project_setNormal(normal);
-  vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  MY_SHADER_HOOK_pickColor(pickColor);
+  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  picking_setPickingColor(vec3(0., instancePickingColors));
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -79,7 +52,9 @@ varying vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);
-  MY_SHADER_HOOK_fragmentColor(gl_FragColor);
+  gl_FragColor = dirlight_filterColor(gl_FragColor);
+  // TODO - 
+  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 `;
 
@@ -99,7 +74,7 @@ class InstancedCube extends Model {
 
     const offsets32 = new Float32Array(offsets);
 
-    const pickingColors = new Float32Array(SIDE * SIDE * 2);
+    const pickingColors = new Uint8Array(SIDE * SIDE * 2);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
         pickingColors[(i * SIDE + j) * 2 + 0] = i;
@@ -107,16 +82,19 @@ class InstancedCube extends Model {
       }
     }
 
-    const colors = new Float32Array(SIDE * SIDE * 3).map((n, i) => random() * 0.75 + 0.25);
+    const colors = new Uint8Array(SIDE * SIDE * 4).map((n, i) => (random() * 0.75 + 0.25) * 255);
+    for (let i = 0; i < colors.length; i += 4) {
+      colors[i + 3] = 255;
+    }
 
     const offsetsBuffer = device.createBuffer(offsets32);
     const colorsBuffer = device.createBuffer(colors);
     const pickingColorsBuffer = device.createBuffer(pickingColors);
 
-    const programManager = PipelineFactory.getDefaultPipelineFactory(device);
-    // TODO - Should we really be setting global hooks?
-    programManager.addShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
-    programManager.addShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
+    // TODO - Should we really be setting global hooks in a simple example?
+    // const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
+    // pipelineFactory.addShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
+    // pipelineFactory.addShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
 
     // Model
     super(device, {
@@ -126,12 +104,26 @@ class InstancedCube extends Model {
       modules: [dirlight, picking],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry(),
+      layout: {
+        attributes: [
+          {name: 'positions', location: 0, format: 'float32x3', stepMode: 'vertex'},
+          {name: 'normals', location: 1, format: 'float32x3', stepMode: 'vertex'},
+          {name: 'instanceOffsets', location: 2, format: 'float32x2', stepMode: 'instance'},
+          {name: 'instanceColors', location: 3, format: 'float32x3', stepMode: 'instance'},
+          {name: 'instancePickingColors', location: 4, format: 'float32x2', stepMode: 'instance'}
+        ],
+        bindings: []
+      },
       attributes: {
         // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
         instanceOffsets: offsetsBuffer,
         instanceColors: colorsBuffer,
-        instancePickingColors: pickingColorsBuffer,
+        instancePickingColors: pickingColorsBuffer
       },
+      bufferMap: [
+        {name: 'instanceColors', format: 'unorm8x4'},
+        {name: 'instancePickingColors', format: 'unorm8x2'},
+      ],
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal'
@@ -164,10 +156,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
 
     this.cube = new InstancedCube(device);
+    this.cube.updateModuleSettings({
+      pickingSelectedColor: null
+    });
 
-    this.pickingFramebuffer = device.createFramebuffer(
-      device.canvasContext.getCurrentFramebuffer().props
-    );
+
+    this.pickingFramebuffer = device.createFramebuffer({
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth24plus'
+    });
   }
 
   onRender(animationProps: AnimationProps) {
@@ -180,7 +177,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     // Draw the cubes
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1, clearStencil: 0});
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1,
+      clearStencil: 0
+    });
     this.cube.setUniforms({
       uTime: this.timeline.getTime(timeChannel),
       // Basic projection matrix
@@ -197,6 +198,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // Rotate all the individual cubes
       uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
     });
+    // this.cube.updateModuleSettings({pickingActive: 0});
     this.cube.draw(renderPass);
     renderPass.end();
   }
@@ -212,31 +214,32 @@ export function pickInstance(
   model: Model,
   framebuffer: Framebuffer
 ) {
-  /*
   // use the center pixel location in device pixel range
   const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
   const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
   const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
-  framebuffer.resize(device.canvasContext.getPixelSize());
-  clear(device, {color: true, depth: true, framebuffer});
-
   // Render picking colors
-  model.setUniforms({picking_uActive: 1});
-  model.draw({framebuffer});
-  model.setUniforms({picking_uActive: 0});
+  framebuffer.resize(device.canvasContext.getPixelSize());
+  const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+  model.updateModuleSettings({pickingActive: 1});
+  model.draw(pickingPass);
+  model.updateModuleSettings({pickingActive: 0});
 
-  const commandEncoder = new CommandEncoder();
+  pickingPass.end();
+
+  // Read back 
   const color = readPixelsToArray(framebuffer, {
     sourceX: pickX,
     sourceY: pickY,
     sourceWidth: 1,
     sourceHeight: 1,
-    sourceFormat: GL.RGBA,
-    sourceType: GL.UNSIGNED_BYTE
+    // sourceFormat: GL.RGBA,
+    // sourceType: GL.UNSIGNED_BYTE
   });
 
   if (color[0] + color[1] + color[2] > 0) {
+    console.log('setting picking color', color);
     model.updateModuleSettings({
       pickingSelectedColor: color
     });
@@ -245,5 +248,4 @@ export function pickInstance(
       pickingSelectedColor: null
     });
   }
-  */
 }
