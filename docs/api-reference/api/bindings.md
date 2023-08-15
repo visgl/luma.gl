@@ -64,23 +64,25 @@ const shaderLayout: ShaderLayout = {
 };
 ```
 
-### Buffer Mapping
+### Buffer Maps
 
-Buffer mappings are an optional mechanism enabling more sophisticated GPU buffer layouts,
-offering control of GPU buffer offsets, strides, interleaving etc.
+Buffer mapping is an optional mechanism that enables more sophisticated GPU attribute buffer layouts.
 
-Note that buffer layouts are static and need to be defined when a pipeline is created, and all
-buffers subsequently supplied to that pipeline need to conform to the buffer mapping.
+Buffer mappings offer control of GPU buffer vertex formats, as well as offsets, strides, interleaving etc.
+
+:::info
+Pipeline attribute layouts are immutable and need to be defined when a pipeline is created. All buffers subsequently supplied to that pipeline need to conform to any buffer mapping properties specified during pipeline creation (e.g. the vertex format may be locked to `unorm8x4`).
+:::
 
 The bufferMap field in the example below specifies that
 
 ```typescript
-const shaderLayout: ShaderLayout = {
-  attributes: [
-    {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-    {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-    {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
-  ],
+const bufferMap: BufferMap = {
+  {name: 'instanceColors', format: 'unorm8x4'},
+  {name: 'instanceVelocities', format: 'interleaved', attributes: [
+    {name: 'instancePositions'}
+    {name: 'instanceVelocities'}
+  ]},
   ...
 };
 
@@ -88,10 +90,7 @@ device.createRenderPipeline({
   shaderLayout,
   // We want to use "non-standard" buffers: two attributes interleaved in same buffer
   bufferMap: [
-    {name: 'particles', attributes: [
-      {name: 'instancePositions'},
-      {name: 'instanceVelocities'}
-    ]
+    {name: 'instanceColors', format: 'unorm8x4'},
   ],
   attributes: {},
   bindings: {}

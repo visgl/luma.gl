@@ -8,7 +8,8 @@ import type {
   AttributeBinding,
   VaryingBinding,
   AccessorObject,
-  BufferMapping
+  BufferMapping,
+  VertexFormat
 } from '@luma.gl/api';
 import {log} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
@@ -114,7 +115,6 @@ export function mergeShaderLayout(
   };
   // Merge the attributes
   for (const attribute of overrideLayout?.attributes || []) {
-
     const baseAttribute = mergedLayout.attributes.find(attr => attr.name === attribute.name);
     if (!baseAttribute) {
       log.warn(`shader layout attribute ${attribute.name} not present in shader`);
@@ -133,28 +133,37 @@ export function mergeBufferMap(baseLayout: ShaderLayout, bufferMap: BufferMappin
     attributes: baseLayout.attributes.map(attribute => ({...attribute}))
   };
   for (const bufferMapping of bufferMap) {
-    // @ts-expect-error
-    if (bufferMapping.attributes) {
-      // @ts-expect-error
-      for (const attributeOverride of bufferMapping.attributes) {
-        const attribute = getAttributeFromLayout(mergedLayout, attributeOverride.name);
-        if (attribute && attributeOverride.format) {
-          attribute.format = attributeOverride.format;
+    // Handle interleave
+    switch (bufferMapping.type) {
+      case 'interleave':
+        // Handle interleaved buffer mapping
+        for (const attributeOverride of bufferMapping.attributes) {
+          overrideShaderLayoutAttribute(mergedLayout, attributeOverride);
         }
-      }
-    } else {
-      const attribute = getAttributeFromLayout(mergedLayout, bufferMapping.name);
-      // @ts-expect-error
-      if (attribute && bufferMapping.format) {
-        // @ts-expect-error
-        attribute.format = bufferMapping.format;
-      }
+        break;
+
+      default:
+        // Handle simple attribute overrides
+        overrideShaderLayoutAttribute(mergedLayout, bufferMapping);
     }
   }
   return mergedLayout;
 }
 
-export function getAttributeFromLayout(shaderLayout: ShaderLayout, name: string): AttributeLayout | null {
+function overrideShaderLayoutAttribute(
+  layout: ShaderLayout,
+  attributeOverride: {name: string; format?: VertexFormat}
+): void {
+  const attribute = getAttributeFromLayout(layout, attributeOverride.name);
+  if (attribute && attributeOverride.format) {
+    attribute.format = attributeOverride.format;
+  }
+}
+
+export function getAttributeFromLayout(
+  shaderLayout: ShaderLayout,
+  name: string
+): AttributeLayout | null {
   const attribute = shaderLayout.attributes.find(attr => attr.name === name);
   if (!attribute) {
     log.warn(`shader layout attribute "${name}" not present in shader`);

@@ -108,6 +108,7 @@
           "api-reference/api/parameters",
           "api-reference/api/bindings",
           "api-reference/api/types/shader-layout",
+          "api-reference/api/types/buffer-mapping",
           "api-reference/api/texture-formats",
           "api-reference/api/resources/buffer",
           "api-reference/api/resources/compute-pipeline",

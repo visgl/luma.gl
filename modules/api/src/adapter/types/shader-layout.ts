@@ -72,6 +72,8 @@ export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
 
 /** Specify stride and offset for a buffer that only handles one attribute*/
 export type SingleBufferMapping = {
+  /** Mark this as interleaved */
+  type?: 'override';
   /** Name of attribute to adjust */
   name: string;
   /** vertex format override, when using formats other than float32, uint32, sint32 */
@@ -84,20 +86,24 @@ export type SingleBufferMapping = {
 
 /** Map an interleaved buffer */
 export type InterleavedBufferMapping = {
-  /** Name of buffer () */
+  /** Mark this as interleaved */
+  type: 'interleave';
+  /** Name of buffer (to which the multiple attributes are to be bound) */
   name: string;
-  /** bytes between successive elements @note `stride` is auto calculated if omitted */
+  /** bytes between successive elements. Assumes tight packing if omitted */
   byteStride?: number;
   /** offset into buffer Defaults to `0` */
   byteOffset?: number;
   /** Attributes that read from this buffer */
   attributes: InterleavedAttribute[];
+  /** @deprecated Dummy for typing */
+  format?: VertexFormat;
 };
 
 /** @note Not public: not exported outside of api module */
 export type InterleavedAttribute = {
-  /** Name of buffer to map */
-  name?: string;
+  /** Name of attribute that maps to an interleaved "view" of this buffer */
+  name: string;
   /** vertex format override, when using formats other than float32 (& uint32, sint32) */
   format?: VertexFormat;
   /** 

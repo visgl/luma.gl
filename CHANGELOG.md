@@ -1,5 +1,23 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.28
+
+- feat(webgl): Implement ShaderLayout.bufferMap in webgl (#1780)
+- feat(engine): model cleanup (#1779)
+
+## v9.0.0-alpha.27
+
+- fix(engine) Workaround for deck.gl attribute access (#1778)
+- Update device.md
+- Update device.md with minor clarifications
+- Update device.md to cover device registration
+
+## v9.0.0-alpha.26
+
+- fix: Indices attribute workaround (#1776)
+- fix(webgl): Fix WebGLCanvasContext.resize() (#1775)
+- feat(webgl): Add legacy copyToTExture to unblock deck picking pass (#1774)
+
 ## v9.0.0-alpha.25
 
 - Export legacy BufferWithAccessor (#1773)
