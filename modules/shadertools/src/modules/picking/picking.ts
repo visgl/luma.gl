@@ -13,33 +13,34 @@ export type PickingOptions = {
 }
 
 const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
+  pickingActive: false, // Set to true when rendering to off-screen "picking" buffer
+  pickingAttribute: false, // Set to true when picking an attribute value instead of object index
   pickingSelectedColor: null, //  Set to a picking color to visually highlight that item
   pickingHighlightColor: DEFAULT_HIGHLIGHT_COLOR, // Color of visual highlight of "selected" item
-  pickingActive: false, // Set to true when rendering to off-screen "picking" buffer
-  pickingAttribute: false // Set to true when picking an attribute value instead of object index
 };
 
-function getUniforms(opts = DEFAULT_MODULE_OPTIONS): Record<string, any> {
+function getUniforms(options = DEFAULT_MODULE_OPTIONS): Record<string, any> {
   const uniforms: Record<string, any> = {};
-  if (opts.pickingSelectedColor !== undefined) {
-    if (!opts.pickingSelectedColor) {
-      uniforms.picking_uSelectedColorValid = 0;
-    } else {
-      const selectedColor = opts.pickingSelectedColor.slice(0, 3);
+  if (options.pickingActive !== undefined) {
+    uniforms.picking_uActive = Number(options.pickingActive);
+    uniforms.picking_uAttribute = Number(options.pickingAttribute);
+  }
+
+  if (options.pickingSelectedColor !== undefined) {
+    if (options.pickingSelectedColor) {
+      const selectedColor = options.pickingSelectedColor.slice(0, 3);
       uniforms.picking_uSelectedColorValid = 1;
       uniforms.picking_uSelectedColor = selectedColor;
+    } else {
+      uniforms.picking_uSelectedColorValid = 0;
     }
   }
-  if (opts.pickingHighlightColor) {
-    const color = Array.from(opts.pickingHighlightColor, (x) => x / 255);
+  if (options.pickingHighlightColor) {
+    const color = Array.from(options.pickingHighlightColor, (x) => x / 255);
     if (!Number.isFinite(color[3])) {
       color[3] = 1;
     }
     uniforms.picking_uHighlightColor = color;
-  }
-  if (opts.pickingActive !== undefined) {
-    uniforms.picking_uActive = Boolean(opts.pickingActive);
-    uniforms.picking_uAttribute = Boolean(opts.pickingAttribute);
   }
   return uniforms;
 }
@@ -69,10 +70,10 @@ void picking_setPickingColor(vec3 pickingColor) {
     // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
     picking_vRGBcolor_Avalid.a = float(picking_isColorValid(pickingColor));
 
-    if (!picking_uAttribute) {
+    // if (!picking_uAttribute) {
       // Stores the picking color so that the fragment shader can render it during picking
-      picking_vRGBcolor_Avalid.rgb = pickingColor * COLOR_SCALE;
-    }
+      picking_vRGBcolor_Avalid.rgb = pickingColor; //  * COLOR_SCALE;
+    // }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
     picking_vRGBcolor_Avalid.a = float(isVertexPicked(pickingColor));

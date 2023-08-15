@@ -70,7 +70,7 @@ test('picking#getUniforms', (t) => {
       picking_uSelectedColorValid: 0,
       picking_uHighlightColor: [1, 0, 0, 1],
       picking_uActive: true,
-      picking_uAttribute: false
+      picking_uAttribute: 0 // false
     }
   );
 

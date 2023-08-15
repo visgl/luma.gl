@@ -74,6 +74,13 @@ In WebGL many parameters are set on the WebGL context using individual function 
 
 -  and a range of WebGL features are no longer available (uniforms and transform feedback just to mention a few). There are of course good reasons for this (and In many cases these incompatibilities reflect choices made by the underlying next-gen APIs) but WebGPU does create quite an upgrade shock for existing WebGL based frameworks. 
 
+## Attributes
+
+In WebGPU
+- Unlike WebGL, WebGPU attribute sizes must be even multiples of 2, which means that an attribute with 1 or 3 bytes per vertex are not possible.
+- Attribute formats (type, components, normalization, etc) are specified when creating a pipeline (program). This cannot be re specified when rebinding an attribute, like it can in WebGL.
+
+
 ## No TransformFeedback
 
 -  and a range of WebGL features are no longer available (uniforms and transform feedback just to mention a few). There are of course good reasons for this (and In many cases these incompatibilities reflect choices made by the underlying next-gen APIs) but WebGPU does create quite an upgrade shock for existing WebGL based frameworks. 

@@ -71,11 +71,9 @@ export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/type
 
 export type {
   ShaderLayout,
-  ProgramBindings,
   AttributeLayout,
   BindingLayout,
   Binding,
-  //
   BufferMapping,
   // Deprecated, todo
   AttributeBinding,

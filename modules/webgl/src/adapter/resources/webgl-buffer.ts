@@ -202,6 +202,7 @@ function getWebGLTarget(usage: number): GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFE
   return GL.ARRAY_BUFFER;
 }
 
+/** @todo usage is not passed correctly */
 function getWebGLUsage(usage: number): GL.STATIC_DRAW | GL.DYNAMIC_DRAW {
   if (usage & Buffer.INDEX) {
     return GL.STATIC_DRAW;
@@ -212,5 +213,5 @@ function getWebGLUsage(usage: number): GL.STATIC_DRAW | GL.DYNAMIC_DRAW {
   if (usage & Buffer.UNIFORM) {
     return GL.DYNAMIC_DRAW;
   }
-  return GL.DYNAMIC_DRAW;
+  return GL.STATIC_DRAW;
 }

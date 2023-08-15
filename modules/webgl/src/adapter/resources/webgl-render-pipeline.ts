@@ -7,13 +7,14 @@ import type {
   PrimitiveTopology,
   // BindingLayout,
   AttributeLayout,
-  TypedArray
+  TypedArray,
+  BufferMapping
 } from '@luma.gl/api';
 import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
 
 import {getWebGLDataType} from '../converters/texture-formats';
-import {getShaderLayout} from '../helpers/get-shader-layout';
+import {getShaderLayout, mergeShaderLayout, mergeBufferMap} from '../helpers/get-shader-layout';
 import {withDeviceParameters, withGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
@@ -29,20 +30,34 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 
 /** Creates a new render pipeline */
 export class WEBGLRenderPipeline extends RenderPipeline {
+  /** The WebGL device that created this render pipeline */
   device: WebGLDevice;
+  /** Handle to underlying WebGL program */
   handle: WebGLProgram;
+  /** vertex shader */
   vs: WEBGLShader;
+  /** fragment shader */
   fs: WEBGLShader;
+  /** The merged layout */
   layout: ShaderLayout;
+  /** The layout extracted from shader by WebGL introspection APIs */
+  introspectedLayout: ShaderLayout;
+  /** Buffer map describing buffer interleaving etc */
+  bufferMap: BufferMapping[];
 
-  // configuration: ProgramConfiguration;
-  // Experimental flag to avoid deleting Program object while it is cached
-  varyings: string[] | null = null;
-  vertexArrayObject: WEBGLVertexArrayObject;
-  _indexBuffer?: WEBGLBuffer;
+  /** Uniforms set on this model */
   uniforms: Record<string, any> = {};
+  /** Bindings set on this model */
   bindings: Record<string, any> = {};
+  /** Any constant attributes */
   constantAttributes: Record<string, TypedArray> = {};
+  /** Index buffer is stored separately */
+  _indexBuffer?: WEBGLBuffer;
+  /** WebGL varyings */
+  varyings: string[] | null = null;
+
+  /** Stores attribute bindings */
+  vertexArrayObject: WEBGLVertexArrayObject;
 
   _textureUniforms: Record<string, any> = {};
   _textureIndexCounter: number = 0;
@@ -72,7 +87,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     this._compileAndLink();
 
-    this.layout = props.layout || getShaderLayout(this.device.gl, this.handle);
+    this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
+    // Merge provided layout with introspected layout
+    this.layout = mergeShaderLayout(this.introspectedLayout, props.layout); 
+    // Merge layout with any buffer map overrides
+    this.bufferMap = props.bufferMap || [];
+    this.layout = mergeBufferMap(this.layout, this.bufferMap); 
     this.vertexArrayObject = new WEBGLVertexArrayObject(this.device);
   }
 
@@ -443,28 +463,3 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
 function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
   return layout.attributes.find((binding) => binding.name === name) || null;
 }
-
-
-// function getAttributesByLocation(
-//   attributes: Record<string, Buffer>,
-//   layout: ShaderLayout
-// ): Record<number, Buffer> {
-//   const byLocation: Record<number, Buffer> = {};
-//   for (const [name, buffer] of Object.entries(attributes)) {
-//     const attribute = getAttributeLayout(layout, name);
-//     if (attribute) {
-//       byLocation[attribute.location] = buffer;
-//     }
-//   }
-//   return byLocation;
-// }
-
-/* TODO
-function getBindingLayout(layout: ShaderLayout, name: string): BindingLayout {
-  const binding = layout.bindings.find((binding) => binding.name === name);
-  if (!binding) {
-    throw new Error(`Unknown binding ${name}`);
-  }
-  return binding;
-}
-*/
