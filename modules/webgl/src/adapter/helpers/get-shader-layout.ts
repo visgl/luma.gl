@@ -100,8 +100,8 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
 /**
  * Merges an provided shader layout into a base shader layout
  * In WebGL, this allows the auto generated shader layout to be overridden by the application
- * Typically to change the format of the vertex attributes (from float32x3 to uint8x3 etc).
- * @todo this could also be done with bufferMapping
+ * Typically to change the format of the vertex attributes (from float32x4 to uint8x4 etc).
+ * @todo Drop this? This could also be done more clearly with bufferMapping
  */
 export function mergeShaderLayout(
   baseLayout: ShaderLayout,
@@ -113,7 +113,7 @@ export function mergeShaderLayout(
     attributes: baseLayout.attributes.map(attribute => ({...attribute}))
   };
   // Merge the attributes
-  for (const attribute of overrideLayout.attributes) {
+  for (const attribute of overrideLayout?.attributes || []) {
 
     const baseAttribute = mergedLayout.attributes.find(attr => attr.name === attribute.name);
     if (!baseAttribute) {

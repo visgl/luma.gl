@@ -12,6 +12,14 @@ export type PickingOptions = {
   pickingAttribute: boolean // Set to true when picking an attribute value instead of object index
 }
 
+export type PickingUniforms = {
+  picking_uActive?: boolean;
+  picking_uAttribute?: boolean;
+  picking_uSelectedColorValid?: number;
+  picking_uSelectedColor?: NumberArray;
+  picking_uHighlightColor?: NumberArray;
+}
+
 const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
   pickingActive: false, // Set to true when rendering to off-screen "picking" buffer
   pickingAttribute: false, // Set to true when picking an attribute value instead of object index
@@ -19,11 +27,11 @@ const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
   pickingHighlightColor: DEFAULT_HIGHLIGHT_COLOR, // Color of visual highlight of "selected" item
 };
 
-function getUniforms(options = DEFAULT_MODULE_OPTIONS): Record<string, any> {
-  const uniforms: Record<string, any> = {};
+function getUniforms(options = DEFAULT_MODULE_OPTIONS): PickingUniforms {
+  const uniforms: PickingUniforms = {};
   if (options.pickingActive !== undefined) {
-    uniforms.picking_uActive = Number(options.pickingActive);
-    uniforms.picking_uAttribute = Number(options.pickingAttribute);
+    uniforms.picking_uActive = Boolean(options.pickingActive);
+    uniforms.picking_uAttribute = Boolean(options.pickingAttribute);
   }
 
   if (options.pickingSelectedColor !== undefined) {

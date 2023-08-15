@@ -41,7 +41,7 @@
       "api-guide/rendering",
       "api-guide/parameters",
       "api-guide/bindings",
-      "api-guide/api/attributes",
+      "api-guide/attributes",
       "api-guide/transforms",
       "api-guide/shader-modules"
     ]

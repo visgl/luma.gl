@@ -117,8 +117,11 @@ export class Model {
     if (props.geometry) {
       this._setGeometry(props.geometry);
     }
-    this.setProps(props);
+
     this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
+
+    // Props can update any of the above, so call setProps last.
+    this.setProps(props);
   }
 
   destroy(): void {
