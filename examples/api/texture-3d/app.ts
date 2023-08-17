@@ -160,11 +160,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1], 
       // clearDepth: true
     });
-    this.cloud.setProps({
-      uniforms: {
-        uTime: tick / 100,
-        uMVP: this.mvpMat
-      }
+    this.cloud.setUniforms({
+      uTime: tick / 100,
+      uMVP: this.mvpMat
     });
     this.cloud.draw(renderPass);
     renderPass.end();

@@ -64,8 +64,14 @@ export class WEBGLRenderPass extends RenderPass {
 
     // Map the four renderpass parameters to WebGL parameters
     if (parameters.viewport) {
-      glParameters.viewport = parameters.viewport;
-      glParameters.depthRange = [parameters.viewport[4], parameters.viewport[5]];
+      // WebGPU viewports are 6 coordinates (X, Y, Z)
+      if (parameters.viewport.length >= 6) {
+        glParameters.viewport = parameters.viewport.slice(0, 4);
+        glParameters.depthRange = [parameters.viewport[4], parameters.viewport[5]];
+      } else {
+        // WebGL viewports are 4 coordinates (X, Y)
+        glParameters.viewport = parameters.viewport;
+      }
     }
     glParameters.scissorTest = Boolean(parameters.scissorRect);
     if (parameters.scissorRect) {
