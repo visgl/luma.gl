@@ -1,6 +1,5 @@
 import {uid} from '@luma.gl/core';
 import {Geometry} from '../geometry/geometry';
-import {GeometryTable} from '../geometry/geometry-table';
 
 const INDEX_OFFSETS = {
   x: [2, 0, 1],
@@ -24,15 +23,6 @@ export type TruncatedConeGeometryProps = {
  * copyright 2011 Google Inc. new BSD License
  * (http://www.opensource.org/licenses/bsd-license.php).
  */
-export function makeTruncatedConeGeometry(props?: TruncatedConeGeometryProps): GeometryTable {
-  const {indices, attributes} = tesselateTruncatedCone(props);
-  return {
-    length: indices.length,
-    indices,
-    attributes
-  };
-}
-
 export class TruncatedConeGeometry extends Geometry {
   constructor(props: TruncatedConeGeometryProps & {id?: string; attributes?: any} = {}) {
     const {id = uid('truncated-code-geometry')} = props;

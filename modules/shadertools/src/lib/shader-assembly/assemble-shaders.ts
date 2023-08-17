@@ -7,6 +7,7 @@ import {transpileShader} from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 import type { Injection } from '../shader-module/shader-module-instance';
+import {ShaderModule} from '../shader-module/shader-module';
 
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
@@ -31,18 +32,34 @@ type Defines = Record<string, string | number | boolean>;
 export type HookFunction = { hook: string; header: string; footer: string; signature?: string};
 
 export type AssembleShaderOptions = {
+  /** Inject shader id #defines */
   id?: string;
+  /** Vertex shader */
   vs: string;
+  /** Fragment shader */
   fs: string;
-  type?: any;
-  modules?: any[];
+  /** Shader type @deprecated do we still need this */
+  // type?: any;
+  /** Modules to be injected */
+  modules?: (ShaderModule | ShaderModuleInstance)[];
+  /** Defines to be injected */
   defines?: Defines;
+  /** Hook functions */
   hookFunctions?: (HookFunction | string | { hook: string; header: string; footer: string; })[];
+  /** Code injections */
   inject?: object;
+  /** Whether to transpile code */
   transpileToGLSL100?: boolean;
+  /** Whether to inject prologue */
   prologue?: boolean;
+  /** logger object */
   log?: any;
 };
+
+/** 
+ * getUniforms function returned from the shader module system 
+ */
+export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>;
 
 /**
  * Inject a list of shader modules into shader sources
@@ -53,7 +70,7 @@ export function assembleShaders(
 ): {
   vs: string;
   fs: string;
-  getUniforms: any;
+  getUniforms: GetUniformsFunc;
 } {
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);

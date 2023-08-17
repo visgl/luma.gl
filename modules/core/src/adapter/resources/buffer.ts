@@ -47,6 +47,10 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   override get [Symbol.toStringTag](): string { return 'Buffer'; }
 
+  /** The usage with which this buffer was created */
+  readonly usage: number;
+  /** For index buffers, whether indices are 16 or 32 bit */
+  readonly indexType?: 'uint16' | 'uint32';
   /** Length of buffer in bytes */
   abstract byteLength: number;
 
@@ -63,6 +67,9 @@ export abstract class Buffer extends Resource<BufferProps> {
     }
 
     super(device, deducedProps, Buffer.defaultProps);
+
+    this.usage = props.usage || 0;
+    this.indexType = deducedProps.indexType;
   }
 
   write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }

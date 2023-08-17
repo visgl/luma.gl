@@ -61,7 +61,7 @@ const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
-  constructor(device: Device, props: ModelProps = {}) {
+  constructor(device: Device, props?: ModelProps) {
     const offsets = [];
     for (let i = 0; i < SIDE; i++) {
       const x = ((-SIDE + 1) * 3) / 2 + i * 3;

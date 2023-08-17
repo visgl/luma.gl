@@ -2,12 +2,6 @@
 import type {PrimitiveTopology, TypedArray} from '@luma.gl/core';
 import {uid, assert} from '@luma.gl/core';
 
-export type GeometryAttribute = {
-  size?: number;
-  value: TypedArray;
-  [key: string]: any;
-};
-
 export type GeometryProps = {
   id?: string;
   /** Determines how vertices are read from the 'vertex' attributes */
@@ -25,12 +19,18 @@ export type GeometryProps = {
   indices?: GeometryAttribute | TypedArray;
 };
 
-type GeometryAttributes = {
+export type GeometryAttributes = {
   POSITION: GeometryAttribute;
   NORMAL: GeometryAttribute;
   TEXCOORD_0: GeometryAttribute;
   COLOR_0?: GeometryAttribute;
   indices?: {size?: number; value: Uint32Array | Uint16Array};
+};
+
+export type GeometryAttribute = {
+  size?: number;
+  value: TypedArray;
+  [key: string]: any;
 };
 
 export class Geometry {

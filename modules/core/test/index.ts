@@ -2,6 +2,7 @@
 import './lib/utils/array-utils-flat.spec';
 import './lib/utils/utils.spec';
 import './lib/utils/format-value.spec';
+import './lib/utils/deep-equal.spec';
 
 // type utils
 import './adapter/type-utils/decode-attribute-type.spec';

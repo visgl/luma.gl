@@ -4,11 +4,15 @@
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
 
-export type {HookFunction} from './lib/shader-assembler/assemble-shaders';
-export {assembleShaders} from './lib/shader-assembler/assemble-shaders';
+export {ShaderAssembler} from './lib/shader-assembler';
+
+export type {PlatformInfo} from './lib/shader-assembly/platform-defines';
+
+export type {HookFunction} from './lib/shader-assembly/assemble-shaders';
+export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
 
 // HELPERS
-export {combineInjects} from './lib/shader-assembler/inject-shader';
+export {combineInjects} from './lib/shader-assembly/inject-shader';
 export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
 
 // Shader source introspection
@@ -87,5 +91,5 @@ export {transform as _transform} from './modules/transform/transform';
 
 // TEST EXPORTS
 export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
-export {resolveModules as _resolveModules} from './lib/shader-assembler/resolve-modules';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembler/resolve-modules';
+export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
