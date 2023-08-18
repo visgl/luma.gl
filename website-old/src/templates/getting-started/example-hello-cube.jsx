@@ -1,6 +1,6 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
-import AnimationLoopTemplate from '../../../../examples/getting-started/hello-cube/app';
+import {LumaExample} from '../../../react-luma';
+import AnimationLoopTemplate from '../../../../../examples/getting-started/hello-cube/app';
 
 export class HelloCubeExample extends React.Component {
   render() {

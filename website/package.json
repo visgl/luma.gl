@@ -22,10 +22,11 @@
     "@luma.gl/webgl": "9.0.0-alpha.27",
     "@luma.gl/webgpu": "9.0.0-alpha.27",
     "clsx": "^1.1.1",
-    "zustand": "^4.1.5",
-    "styled-components": "^5.3.3",
+    "d3-request": "^1.0.6",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "styled-components": "^5.3.3",
+    "zustand": "^4.1.5"
   },
   "devDependencies": {
     "@cmfcmf/docusaurus-search-local": "^1.0.0",

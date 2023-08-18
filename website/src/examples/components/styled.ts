@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import {isMobile} from '../common';
+import {isMobile} from './is-mobile';
 
 export const ExampleHeader = styled.div`
   font: bold 20px/28px var(--ifm-font-family-base);

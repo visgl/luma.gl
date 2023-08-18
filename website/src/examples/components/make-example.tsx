@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import InfoPanel from '../info-panel';
 import {loadData, joinPath} from '../../utils/data-utils';
 import {normalizeParam} from '../../utils/format-utils';
-import {MAPBOX_STYLES} from '../../constants/defaults';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 const DemoContainer = styled.div`
@@ -106,7 +105,6 @@ export default function makeExample(DemoComponent, {isInteractive = true, style}
       <DemoContainer style={style}>
         <DemoComponent
           data={data}
-          mapStyle={mapStyle || MAPBOX_STYLES.BLANK}
           params={params}
           useParam={useParam}
           onStateChange={updateMeta}

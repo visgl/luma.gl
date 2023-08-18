@@ -1,5 +1,5 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
+import {LumaExample} from '../../../react-luma';
 import AnimationLoop from '../../../examples/showcase/gltf/app';
 
 export default class Example extends React.Component {

@@ -1,6 +1,6 @@
 import React from 'react';
-// import {LumaExample} from '../../react-luma';
-// import AnimationLoopTemplate from '../../../../examples/getting-started/instanced-transform/app';
+// import {LumaExample} from '../../../react-luma';
+// import AnimationLoopTemplate from '../../../../../examples/getting-started/instanced-transform/app';
 
 export class InstancedTransformExample extends React.Component {
   render() {

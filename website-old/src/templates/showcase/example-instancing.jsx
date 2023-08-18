@@ -1,5 +1,5 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
+import {LumaExample} from '../../../react-luma';
 import AnimationLoopTemplate from '../../../../examples/showcase/instancing/app';
 
 export class InstancingShowcaseExample extends React.Component {

@@ -1,6 +1,6 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
-import AnimationLoopTemplate from '../../../../examples/getting-started/shader-hooks/app';
+import {LumaExample} from '../../../react-luma';
+import AnimationLoopTemplate from '../../../../../examples/getting-started/shader-hooks/app';
 
 export class ShaderHooksExample extends React.Component {
   render() {

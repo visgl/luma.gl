@@ -1,5 +1,5 @@
 import React from 'react';
-import {LumaExample} from '../../react-luma';
+import {LumaExample} from '../../../react-luma';
 import AnimationLoop from '../../../examples/performance/stress-test/app';
 
 export default class Example extends React.Component {

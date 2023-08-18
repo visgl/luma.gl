@@ -62,9 +62,9 @@ const config = {
         id: 'examples',
         path: './src/examples',
         routeBasePath: 'examples',
-        sidebarPath: resolve('./src/examples-sidebar.js'),
+        sidebarPath: resolve('./src/examples/sidebar.js'),
         breadcrumbs: false,
-        docItemComponent: resolve('./src/components/example/doc-item-component.tsx')
+        docItemComponent: resolve('./src/examples/components/doc-item-component.tsx')
       }
     ],
     [
@@ -104,6 +104,11 @@ const config = {
           src: 'img/favicon.png',
         },
         items: [
+          {
+            to: '/examples',
+            position: 'left',
+            label: 'Examples',
+          },
           {
             to: '/docs',
             position: 'left',
