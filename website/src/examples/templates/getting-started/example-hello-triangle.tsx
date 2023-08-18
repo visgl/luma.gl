@@ -7,9 +7,7 @@ export class HelloTriangleExample extends React.Component {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <div id='hello-triangle'>
-        <LumaExample id="hello-triangle" name='hello-triangle' AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
-      </div>
+      <LumaExample id="hello-triangle" name='hello-triangle' AnimationLoopTemplate={AnimationLoopTemplate} exampleConfig={exampleConfig} />
     );
   }
 }

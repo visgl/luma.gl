@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import InfoPanel from '../info-panel';
+import InfoPanel from '../../ocular-docusaurus/react-ocular/components/info-panel';
 import {loadData, joinPath} from '../../utils/data-utils';
 import {normalizeParam} from '../../utils/format-utils';
 import useBaseUrl from '@docusaurus/useBaseUrl';
@@ -32,6 +32,7 @@ font-size: 14px;
 }
 `;
 
+// @ts-expect-error style default value?
 export default function makeExample(DemoComponent, {isInteractive = true, style} = {}) {
   const {parameters = {}, mapStyle} = DemoComponent;
   const defaultParams = Object.keys(parameters)

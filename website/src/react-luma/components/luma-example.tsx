@@ -3,9 +3,9 @@ import {isBrowser} from '@probe.gl/env';
 import {Device, log, luma, setPathPrefix} from '@luma.gl/api';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
 
-import StatsWidget from '@probe.gl/stats-widget';
+// import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
-import {InfoPanel} from '../../react-ocular';
+// import {InfoPanel} from '../../ocular-docusaurus/react-ocular';
 import {useStore} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.5-release';
@@ -16,6 +16,7 @@ const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.5-release';
 // }
 
 if (typeof window !== 'undefined') {
+  // @ts-ignore
   window.website = true;
 }
 

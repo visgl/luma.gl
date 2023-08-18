@@ -1,4 +1,7 @@
-module.exports = function(context, opts = {alias: {}}) {
+// @ts-check
+
+  /** @returns {import('@docusaurus/types').Plugin} */
+  function OcularDocusaurusPlugin(context, opts = {alias: {}}) {
   return {
     name: 'ocular-docusaurus-plugin',
     configureWebpack(_config, isServer, utils) {
@@ -19,3 +22,5 @@ module.exports = function(context, opts = {alias: {}}) {
     },
   };
 }
+
+module.exports = OcularDocusaurusPlugin;

@@ -18,13 +18,18 @@ const config = {
   projectName: 'luma.gl', // Usually your repo name.
 
   presets: [
+    // Examples
     [
       'classic',
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
           path: '../docs',
-          sidebarPath: require.resolve('./src/sidebars.js'),
+          sidebarPath: require.resolve('./content/sidebars.js'),
+          // lastVersion: '9.0',
+          // versions: {
+          //   '9.0': {banner: 'none'}
+          // },
           editUrl: 'https://github.com/visgl/luma.gl/tree/main/docs',
         },
         theme: {
@@ -36,7 +41,18 @@ const config = {
 
   plugins: [
     [
-      './src/plugins/ocular-docusaurus-plugin',
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'examples',
+        path: './content/examples',
+        routeBasePath: 'examples',
+        sidebarPath: resolve('./content/sidebar-examples.js'),
+        breadcrumbs: false,
+        docItemComponent: resolve('./src/examples/components/doc-item-component.tsx')
+      }
+    ],
+    [
+      './src/ocular-docusaurus/ocular-docusaurus-plugin',
       {alias: {
           '@luma.gl/api': `${__dirname}/../modules/api/src`,
           '@luma.gl/core': `${__dirname}/../modules/core/src`,
@@ -54,17 +70,6 @@ const config = {
       require.resolve('@cmfcmf/docusaurus-search-local'),
       {
         // Options here
-      }
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'examples',
-        path: './src/examples',
-        routeBasePath: 'examples',
-        sidebarPath: resolve('./src/examples/sidebar.js'),
-        breadcrumbs: false,
-        docItemComponent: resolve('./src/examples/components/doc-item-component.tsx')
       }
     ],
     [
@@ -162,7 +167,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Urban Computing Foundation`,
+        copyright: `Copyright © ${new Date().getFullYear()} OpenJS Foundation`,
       },
       prism: {
         theme: lightCodeTheme,

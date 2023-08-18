@@ -1,0 +1,24 @@
+[
+  {
+    "type": "doc",
+    "label": "Overview",
+    "id": "index"
+  },
+  {
+    "type": "category",
+    "label": "Showcase",
+    "items": [
+      "showcase/instancing",
+      "showcase/persistence"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Tutorials",
+    "items": [
+      "getting-started/hello-triangle",
+      "getting-started/hello-cube",
+      "getting-started/lighting"
+    ]
+  }
+]
