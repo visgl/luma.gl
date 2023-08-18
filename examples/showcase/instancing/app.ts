@@ -121,9 +121,7 @@ class InstancedCube extends Model {
         instancePickingColors: pickingColorsBuffer
       },
       bufferMap: [
-        /** @ts-expect-error */
         {name: 'instanceColors', format: 'unorm8x4'},
-        /** @ts-expect-error */
         {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
       parameters: {
