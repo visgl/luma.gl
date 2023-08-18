@@ -1,6 +1,6 @@
 /* eslint-enable camelcase */
-// import {Buffer} from '@luma.gl/api';
-import {Framebuffer, getRandom, glsl} from '@luma.gl/api';
+// import {Buffer} from '@luma.gl/core';
+import {Framebuffer, getRandom, glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, Transform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 

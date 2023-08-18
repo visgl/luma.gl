@@ -10,7 +10,7 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../api"},
+    {"path": "../core"},
     {"path": "../constants"},
     {"path": "../shadertools"},
     {"path": "../webgl"}

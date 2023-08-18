@@ -2,7 +2,7 @@
 // @ts-nocheck
 /* eslint-disable */
 
-import {Buffer, RenderPipelineParameters} from '@luma.gl/api';
+import {Buffer, RenderPipelineParameters} from '@luma.gl/core';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 

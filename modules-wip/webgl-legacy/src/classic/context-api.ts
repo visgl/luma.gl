@@ -3,7 +3,7 @@
 // DEPRECATED API - may be removed in luma.gl v9 or v10.
 
 /* eslint-disable quotes */
-import type {Device, DeviceProps} from '@luma.gl/api';
+import type {Device, DeviceProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {DEPRECATED_FEATURES, DEPRECATED_TO_CLASSIC_FEATURES} from './features';

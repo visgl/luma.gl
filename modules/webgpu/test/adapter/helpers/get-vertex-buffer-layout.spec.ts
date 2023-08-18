@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {ShaderLayout} from '@luma.gl/api';
+import {ShaderLayout} from '@luma.gl/core';
 import {getVertexBufferLayout} from '@luma.gl/webgpu/adapter/helpers/get-vertex-buffer-layout';
 
 const shaderLayout: ShaderLayout = {

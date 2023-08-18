@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import type {ShaderProps, CompilerMessage} from '@luma.gl/api';
-import {Shader, log} from '@luma.gl/api';
+import type {ShaderProps, CompilerMessage} from '@luma.gl/core';
+import {Shader, log} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 
 export type WebGPUShaderProps = ShaderProps & {

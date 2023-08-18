@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-// import {luma} from '@luma.gl/api';
+// import {luma} from '@luma.gl/core';
 
 test('WebGLDevice#info', (t) => {
   for (const device of getWebGLTestDevices()) {

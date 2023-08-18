@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {CanvasContext, Framebuffer} from '@luma.gl/api';
+import {CanvasContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
 
 // @ts-expect-error

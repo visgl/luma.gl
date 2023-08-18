@@ -1,9 +1,9 @@
 {
   "name": "@luma.gl/api",
   "version": "9.0.0-alpha.29",
-  "description": "luma.gl API",
-  "license": "MIT",
+  "description": "Deprecated module",
   "type": "module",
+  "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
@@ -40,7 +40,10 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@types/offscreencanvas": "^2019.6.4"
+    "@luma.gl/constants": "9.0.0-alpha.29",
+    "@luma.gl/engine": "9.0.0-alpha.29",
+    "@luma.gl/shadertools": "9.0.0-alpha.29",
+    "@luma.gl/webgl": "9.0.0-alpha.29"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

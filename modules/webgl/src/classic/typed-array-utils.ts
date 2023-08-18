@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {TypedArray, TypedArrayConstructor} from '@luma.gl/api';
+import {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
 import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';

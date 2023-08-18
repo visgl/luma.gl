@@ -1,7 +1,7 @@
 // Contains metadata describing attribute configurations for a program's shaders
 // Much of this is automatically extracted from shaders after program linking
 // import Accessor from './accessor';
-import type {AttributeBinding, VaryingBinding} from '@luma.gl/api';
+import type {AttributeBinding, VaryingBinding} from '@luma.gl/core';
 import {getProgramBindings} from '@luma.gl/webgl';
 import type Program from './program';
 

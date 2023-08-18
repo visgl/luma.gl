@@ -20,8 +20,8 @@ import type {
   RenderPassProps,
   ComputePassProps,
   // CommandEncoderProps
-} from '@luma.gl/api';
-import {Device, CanvasContext, log, uid} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';

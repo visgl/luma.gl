@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
 export function getKeyValue(gl: WebGLRenderingContext, name: string | number): number   {

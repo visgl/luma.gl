@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 import {WebGLDevice, registerHeadlessGL} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
 

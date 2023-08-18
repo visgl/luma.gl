@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 import {AnimationLoopTemplate} from './render-loop'
 import {AnimationLoop, AnimationLoopProps} from './animation-loop'
 import type {AnimationProps} from './animation-props';

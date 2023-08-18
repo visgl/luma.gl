@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';
 export const ERR_WEBGL = ERR_CONTEXT;

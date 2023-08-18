@@ -1,6 +1,6 @@
 import React, {FC, useEffect, useRef, useState, useCallback, forwardRef} from 'react'; // eslint-disable-line
 import {isBrowser} from '@probe.gl/env';
-import {Device, log, luma, setPathPrefix} from '@luma.gl/api';
+import {Device, log, luma, setPathPrefix} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
 
 // import StatsWidget from '@probe.gl/stats-widget';

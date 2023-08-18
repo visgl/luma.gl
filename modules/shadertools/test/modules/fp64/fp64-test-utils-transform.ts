@@ -3,7 +3,7 @@
 
 /* eslint-disable camelcase, prefer-template, max-len */
 
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {Transform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {decodeTextureFormat, TextureFormat} from '@luma.gl/api';
+import {decodeTextureFormat, TextureFormat} from '@luma.gl/core';
 
 // prettier-ignore
 const TEST_CASES: {format: TextureFormat, result: any}[] = [

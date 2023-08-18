@@ -1,6 +1,6 @@
 /* eslint-disable no-inline-comments */
 import test from 'tape-promise/tape';
-import {Texture} from '@luma.gl/api';
+import {Texture} from '@luma.gl/core';
 import {Program, Texture2D} from '@luma.gl/webgl-legacy';
 import {isBrowser} from '@probe.gl/env';
 import {equals} from '@math.gl/core';

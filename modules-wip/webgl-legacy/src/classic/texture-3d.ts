@@ -1,4 +1,4 @@
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {assertWebGL2Context} from '@luma.gl/webgl';
 import Texture, {TextureProps} from './texture';

@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
-import {Framebuffer} from '@luma.gl/api';
+import {Framebuffer} from '@luma.gl/core';
 import {webgl1Device, getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const TEST_CASES = [

@@ -1,6 +1,6 @@
 /*
 import test from 'tape-promise/tape';
-import {UniformBufferLayout, UniformBlock} from '@luma.gl/api';
+import {UniformBufferLayout, UniformBlock} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 
 const UBO_INDEX = 0;

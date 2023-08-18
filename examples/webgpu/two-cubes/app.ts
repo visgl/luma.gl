@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {ShaderLayout, RenderPipelineParameters, Buffer, glsl} from '@luma.gl/api';
+import {ShaderLayout, RenderPipelineParameters, Buffer, glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';

@@ -1,4 +1,4 @@
-import {Sampler, SamplerProps} from '@luma.gl/api';
+import {Sampler, SamplerProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 
 export type WebGPUSamplerProps = SamplerProps & {

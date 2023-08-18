@@ -1,4 +1,4 @@
-import {uid} from '@luma.gl/api';
+import {uid} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
 import {Geometry} from '../geometry/geometry';
 

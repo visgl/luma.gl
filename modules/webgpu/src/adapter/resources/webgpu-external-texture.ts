@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '@luma.gl/api';
+import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 

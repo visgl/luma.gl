@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Device, Resource, assert} from '@luma.gl/api';
+import {Device, Resource, assert} from '@luma.gl/core';
 import {isWebGL2} from '@luma.gl/webgl';
 
 import type {TransformProps, TransformDrawOptions, TransformRunOptions} from './transform';

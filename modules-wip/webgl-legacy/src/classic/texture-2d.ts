@@ -1,4 +1,4 @@
-import {Device, TextureData, TextureFormat} from '@luma.gl/api';
+import {Device, TextureData, TextureFormat} from '@luma.gl/core';
 import Texture, {TextureProps} from './texture';
 
 export type Texture2DProps = Omit<TextureProps, 'format'> & {

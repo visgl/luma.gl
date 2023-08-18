@@ -1,4 +1,4 @@
-import {log} from '@luma.gl/api';
+import {log} from '@luma.gl/core';
 
 export {makeDebugContext} from './webgl-api-tracing/webgl-debug-context';
 

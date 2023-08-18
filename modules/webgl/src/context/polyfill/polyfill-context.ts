@@ -7,7 +7,7 @@
 // This is intended to be a stand-alone file with minimal dependencies,
 // easy to reuse or repurpose in other projects.
 
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 import {polyfillVertexArrayObject} from './polyfill-vertex-array-object';
 
 import {WEBGL2_CONTEXT_POLYFILLS, WEBGL2_CONTEXT_OVERRIDES} from './polyfill-table';

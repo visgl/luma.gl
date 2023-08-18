@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import type {Device, DeviceProps} from '@luma.gl/api';
-import {luma} from '@luma.gl/api';
+import type {Device, DeviceProps} from '@luma.gl/core';
+import {luma} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
 

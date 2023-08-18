@@ -1,4 +1,4 @@
-import {Device, SamplerProps, Texture} from '@luma.gl/api';
+import {Device, SamplerProps, Texture} from '@luma.gl/core';
 import {loadImage} from '@loaders.gl/images';
 
 type TextureCube = Texture;

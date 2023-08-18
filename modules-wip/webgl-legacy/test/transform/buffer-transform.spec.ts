@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import BufferTransform from '@luma.gl/webgl-legacy/transform/buffer-transform';
 import {Buffer, TransformFeedback} from '@luma.gl/webgl-legacy';
 import {ClassicModel as Model} from '@luma.gl/webgl-legacy';

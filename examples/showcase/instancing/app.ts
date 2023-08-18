@@ -1,4 +1,4 @@
-import {Device, Framebuffer, getRandom, glsl} from '@luma.gl/api';
+import {Device, Framebuffer, getRandom, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';

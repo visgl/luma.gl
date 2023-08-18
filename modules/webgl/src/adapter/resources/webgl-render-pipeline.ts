@@ -9,8 +9,8 @@ import type {
   AttributeLayout,
   TypedArray,
   BufferMapping
-} from '@luma.gl/api';
-import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {getWebGLDataType} from '../converters/texture-formats';

@@ -8,8 +8,8 @@ import {
   Binding,
   PrimitiveTopology,
   log
-} from '@luma.gl/api';
-import {RenderPipeline} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {RenderPipeline} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';

@@ -1,4 +1,4 @@
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {Buffer, Texture2D} from '@luma.gl/webgl-legacy';
 import {Transform} from '@luma.gl/webgl-legacy';

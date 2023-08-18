@@ -3,7 +3,7 @@ import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast,
   CopyTextureToBufferOptions
   // CopyBufferToTextureOptions,
   // CopyBufferToBufferOptions,
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';

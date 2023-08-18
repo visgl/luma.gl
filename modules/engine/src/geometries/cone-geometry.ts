@@ -1,4 +1,4 @@
-import {uid} from '@luma.gl/api';
+import {uid} from '@luma.gl/core';
 import {TruncatedConeGeometry} from './truncated-cone-geometry';
 
 export type ConeGeometryProps = {

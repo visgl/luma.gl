@@ -1,4 +1,4 @@
-import {formatValue} from '@luma.gl/api';
+import {formatValue} from '@luma.gl/core';
 import Buffer from '../classic/buffer';
 import {getKey} from '../webgl-utils/constants-to-keys';
 import {getCompositeGLType} from '../webgl-utils/attribute-utils';

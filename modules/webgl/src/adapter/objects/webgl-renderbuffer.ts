@@ -1,4 +1,4 @@
-import {assert, ResourceProps, TextureFormat} from '@luma.gl/api';
+import {assert, ResourceProps, TextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WebGLResource} from './webgl-resource';

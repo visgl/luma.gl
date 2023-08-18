@@ -1,5 +1,5 @@
 // SAMPLER FILTERS
-import {SamplerParameters} from '@luma.gl/api';
+import {SamplerParameters} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {convertCompareFunction, convertToCompareFunction} from './device-parameters';
 

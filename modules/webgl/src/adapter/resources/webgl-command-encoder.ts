@@ -1,10 +1,10 @@
-import {CommandEncoder, CommandEncoderProps} from '@luma.gl/api';
+import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 
 import {WEBGLCommandBuffer} from './webgl-command-buffer';
 import {WebGLDevice} from '../webgl-device';

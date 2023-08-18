@@ -1,4 +1,4 @@
-import {Framebuffer, getRandom, glsl} from '@luma.gl/api';
+import {Framebuffer, getRandom, glsl} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   Geometry,

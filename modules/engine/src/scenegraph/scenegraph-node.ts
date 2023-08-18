@@ -1,4 +1,4 @@
-import {assert, uid, NumericArray} from '@luma.gl/api';
+import {assert, uid, NumericArray} from '@luma.gl/core';
 import {Vector3, Matrix4} from '@math.gl/core';
 
 /** Properties for creating a new Scenegraph */

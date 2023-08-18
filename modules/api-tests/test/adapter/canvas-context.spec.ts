@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils'
 
-import {CanvasContext} from '@luma.gl/api';
+import {CanvasContext} from '@luma.gl/core';
 
 test('CanvasContext#defined', (t) => {
   t.ok(CanvasContext, 'CanvasContext defined');

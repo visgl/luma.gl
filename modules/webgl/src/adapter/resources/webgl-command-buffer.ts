@@ -5,13 +5,13 @@ import type {
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 import {
   CommandBuffer,
   Texture,
   // Buffer,
   Framebuffer
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../../classic/typed-array-utils';

@@ -2,7 +2,7 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
-import {DeviceFeature} from '@luma.gl/api';
+import {DeviceFeature} from '@luma.gl/core';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {isOldIE} from './is-old-ie';
 import {getTextureFeatures, _checkFloat32ColorAttachment} from '../converters/texture-formats';

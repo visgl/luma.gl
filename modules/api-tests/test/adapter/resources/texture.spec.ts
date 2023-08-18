@@ -5,9 +5,8 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, cast} from '@luma.gl/api';
+import {Device, Texture, TextureFormat, cast} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-// import {readPixelsToArray} from '@luma.gl/webgl-legacy';
 
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';

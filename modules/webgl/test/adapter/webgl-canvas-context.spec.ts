@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {createTestDevice} from '@luma.gl/test-utils'
 import {WebGLCanvasContext} from '@luma.gl/webgl';
-import {CanvasContext} from '@luma.gl/api';
+import {CanvasContext} from '@luma.gl/core';
 
 // Create a fresh device since are going to modify it
 const canvasContextDevice = createTestDevice();

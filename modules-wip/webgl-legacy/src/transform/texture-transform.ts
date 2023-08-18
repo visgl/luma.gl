@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import {GL} from '@luma.gl/constants';
-import {Device, Framebuffer} from '@luma.gl/api';
+import {Device, Framebuffer} from '@luma.gl/core';
 
 import {
   _transform as transformModule,

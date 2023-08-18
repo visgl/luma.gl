@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 
 export const POLY_TEX_VS = glsl`\
 uniform vec4 boundingBoxOriginSize; //[xMin, yMin, xSize, ySize]

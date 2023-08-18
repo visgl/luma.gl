@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {TransformFeedback, Buffer} from '@luma.gl/webgl-legacy';
 // TODO - tests shouldn't depend on higher level module?

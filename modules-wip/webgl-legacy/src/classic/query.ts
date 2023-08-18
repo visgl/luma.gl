@@ -1,5 +1,5 @@
 // WebGL2 Query (also handles disjoint timer extensions)
-import {assert, ResourceProps} from '@luma.gl/api';
+import {assert, ResourceProps} from '@luma.gl/core';
 import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
 import {isWebGL2} from '@luma.gl/webgl';
 

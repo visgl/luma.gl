@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, Transform} from '@luma.gl/engine';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';

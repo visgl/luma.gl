@@ -2,7 +2,7 @@
 
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
 import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-import {setPathPrefix} from '@luma.gl/api';
+import {setPathPrefix} from '@luma.gl/core';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 

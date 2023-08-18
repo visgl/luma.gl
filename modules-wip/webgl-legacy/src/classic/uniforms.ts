@@ -1,4 +1,4 @@
-import {log, assert} from '@luma.gl/api';
+import {log, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WEBGLTexture, WEBGLFramebuffer, WEBGLRenderbuffer} from '@luma.gl/webgl';
 

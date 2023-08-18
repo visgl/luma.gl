@@ -1,5 +1,5 @@
-import type {BufferProps} from '@luma.gl/api';
-import {Buffer, assert} from '@luma.gl/api';
+import type {BufferProps} from '@luma.gl/core';
+import {Buffer, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 

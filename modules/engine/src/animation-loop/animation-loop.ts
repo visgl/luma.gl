@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import {luma, Device} from '@luma.gl/api';
-import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/api';
+import {luma, Device} from '@luma.gl/core';
+import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/core';
 import {Timeline} from '../animation/timeline';
 import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';

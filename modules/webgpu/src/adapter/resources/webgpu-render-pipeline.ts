@@ -1,7 +1,7 @@
 // luma.gl MIT license
 
-import type {Binding, RenderPass, TypedArray} from '@luma.gl/api';
-import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/api';
+import type {Binding, RenderPass, TypedArray} from '@luma.gl/core';
+import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';

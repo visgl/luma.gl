@@ -1,4 +1,4 @@
-import {RenderPass, RenderPassProps, NumericArray, RenderPassParameters} from '@luma.gl/api';
+import {RenderPass, RenderPassProps, NumericArray, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withParameters} from '../../context/state-tracker/with-parameters';

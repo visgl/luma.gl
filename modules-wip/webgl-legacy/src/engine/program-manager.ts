@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type {RenderPipelineParameters} from '@luma.gl/api';
+import type {RenderPipelineParameters} from '@luma.gl/core';
 import {Device} from '@luma.gl/api/';
 import {ShaderModule, assembleShaders} from '@luma.gl/shadertools';
 import Program from '../classic/program';

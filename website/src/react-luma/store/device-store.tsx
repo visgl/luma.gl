@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 
-import {luma, Device} from '@luma.gl/api';
+import {luma, Device} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
 

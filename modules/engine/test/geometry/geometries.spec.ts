@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {TypedArrayConstructor} from '@luma.gl/api';
+import {TypedArrayConstructor} from '@luma.gl/core';
 import {
   ConeGeometry,
   CubeGeometry,

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {decodeVertexFormat, VertexFormat} from '@luma.gl/api';
+import {decodeVertexFormat, VertexFormat} from '@luma.gl/core';
 
 // prettier-ignore
 const TEST_CASES: {format: VertexFormat, result: any}[] = [

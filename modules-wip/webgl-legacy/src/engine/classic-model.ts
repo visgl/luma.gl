@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type {RenderPipelineParameters, Shader} from '@luma.gl/api';
-import {Device, Buffer, log, isObjectEmpty, uid, assert} from '@luma.gl/api';
+import type {RenderPipelineParameters, Shader} from '@luma.gl/core';
+import {Device, Buffer, log, isObjectEmpty, uid, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
 import type {ProgramProps} from '../classic/program';

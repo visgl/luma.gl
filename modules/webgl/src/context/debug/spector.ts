@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {log, loadScript} from '@luma.gl/api';
+import {log, loadScript} from '@luma.gl/core';
 
 /** Spector debug initialization options */
 type SpectorProps = {

@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 
 import test from 'tape-promise/tape';
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {UniformBufferLayout, Buffer, Program} from '@luma.gl/webgl-legacy';
 // TODO - tests shouldn't depend on higher level module?

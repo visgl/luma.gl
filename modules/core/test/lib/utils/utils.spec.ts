@@ -1,4 +1,4 @@
-import {uid, isPowerOfTwo} from '@luma.gl/api';
+import {uid, isPowerOfTwo} from '@luma.gl/core';
 import test from 'tape-promise/tape';
 
 test('Utils#uid', (t) => {

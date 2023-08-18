@@ -2,13 +2,13 @@
 
 ## WebGL Device Adapter
 
-This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/api`).
+This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
 Simply importing `@luma.gl/webgl` installs the adapter and enables WebGL devices to
 be created using `luma.createDevice(...)`:
 
 ```typescript
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 import '@luma.gl/webgl'; // Installs the WebGLDevice adapter
 
 const device = await luma.createDevice({type: 'webgl', canvas: ...});
@@ -29,7 +29,7 @@ With a bit more work, typescript users can retrieve the `WebGLRenderingContext`
 without ignoring type errors:
 
 ```typescript
-import {cast} from '@luma.gl/api';
+import {cast} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl'; // Installs the WebGLDevice adapter
 
 const webglDevice = cast<WebGPUDevice>(device);
