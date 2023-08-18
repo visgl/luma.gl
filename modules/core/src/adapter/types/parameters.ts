@@ -17,11 +17,11 @@ export type PrimitiveTopology =
   'line-list' |
   'line-strip' |
   /** @deprecated */
-  'line-loop' |
+  'line-loop-webgl' |
   'triangle-list' |
   'triangle-strip' |
   /** @deprecated */
-  'triangle-fan';
+  'triangle-fan-webgl';
 
 export type IndexFormat = 'uint16' | 'uint32';
 

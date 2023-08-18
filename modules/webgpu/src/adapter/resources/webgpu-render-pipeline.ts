@@ -146,8 +146,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // WebGPU has more restrictive topology support than WebGL
     switch (this.props.topology) {
-      case 'triangle-fan':
-      case 'line-loop':
+      case 'triangle-fan-webgl':
+      case 'line-loop-webgl':
         throw new Error(`WebGPU does not support primitive topology ${this.props.topology}`);
       default:
     }

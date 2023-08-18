@@ -1,23 +1,40 @@
 import {VertexFormat, VertexType} from '../types/vertex-formats';
-import { decodeVertexType } from './decode-data-type';
+import {decodeVertexType} from './decode-data-type';
+
+export type VertexFormatInfo = {
+  /** Length in bytes */
+  byteLength: number;
+  /** Type of each component */
+  type: VertexType;
+  /** Number of components per vertex / row */
+  components: number;
+  /** Is this an integer format (normalized integer formats are not integer) */
+  integer: boolean;
+  /** Is this a signed format? */
+  signed: boolean;
+  /** Is this a normalized format? */
+  normalized: boolean;
+  /** Is this a webgl only format? */
+  webglOnly?: boolean;
+};
 
 /**
  * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
  */
-export function decodeVertexFormat(format: VertexFormat): {
-  /** Length in bytes */
-  byteLength: number;
-  type: VertexType;
-  components: number;
-  integer: boolean;
-  signed: boolean;
-  normalized: boolean;
-} {
+export function decodeVertexFormat(format: VertexFormat): VertexFormatInfo {
+  // Strip the -webgl ending if present
+  let webglOnly: boolean | undefined;
+  if (format.endsWith('-webgl')) {
+    format.replace('-webgl', '');
+    webglOnly = true;
+  }
+  // split components from type
   const [type_, count] = format.split('x');
   const type = type_ as VertexType;
   const components = count ? parseInt(count) : 1;
+  // decode the type
   const decodedType = decodeVertexType(type);
-  return {
+  const result: VertexFormatInfo = {
     type,
     components,
     byteLength: decodedType.byteLength * components,
@@ -25,4 +42,8 @@ export function decodeVertexFormat(format: VertexFormat): {
     signed: decodedType.signed,
     normalized: decodedType.normalized
   };
+  if (webglOnly) {
+    result.webglOnly = true;
+  }
+  return result;
 }

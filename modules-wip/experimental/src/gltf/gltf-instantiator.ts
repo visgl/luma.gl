@@ -140,7 +140,7 @@ export class GLTFInstantiator {
       this.device,
       {
         id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-        topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
+        topology: convertGLPrimitiveTopologyToTopology(gltfPrimitive.mode || 4),
         vertexCount,
         attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
         ...this.options
@@ -236,17 +236,17 @@ enum GL {
   TRIANGLE_FAN = 0x6
 }
 
-export function convertGLDrawModeToTopology(
+export function convertGLPrimitiveTopologyToTopology(
   drawMode: GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN,
 ): PrimitiveTopology  {
   switch (drawMode) {
     case GL.POINTS: return 'point-list';
     case GL.LINES: return 'line-list';
     case GL.LINE_STRIP: return 'line-strip';
-    case GL.LINE_LOOP: return 'line-loop';
+    case GL.LINE_LOOP: return 'line-loop-webgl';
     case GL.TRIANGLES: return 'triangle-list';
     case GL.TRIANGLE_STRIP: return 'triangle-strip';
-    case GL.TRIANGLE_FAN: return 'triangle-fan';
+    case GL.TRIANGLE_FAN: return 'triangle-fan-webgl';
     default: throw new Error(drawMode);
   }
 }

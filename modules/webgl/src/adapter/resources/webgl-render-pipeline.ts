@@ -437,10 +437,10 @@ function getDrawMode(
     case 'point-list': return GL.POINTS;
     case 'line-list': return GL.LINES;
     case 'line-strip': return GL.LINE_STRIP;
-    case 'line-loop': return GL.LINE_LOOP;
+    case 'line-loop-webgl': return GL.LINE_LOOP;
     case 'triangle-list': return GL.TRIANGLES;
     case 'triangle-strip': return GL.TRIANGLE_STRIP;
-    case 'triangle-fan': return GL.TRIANGLE_FAN;
+    case 'triangle-fan-webgl': return GL.TRIANGLE_FAN;
     default: throw new Error(topology);
   }
 }
@@ -452,10 +452,10 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
     case 'point-list': return GL.POINTS;
     case 'line-list': return GL.LINES;
     case 'line-strip': return GL.LINES;
-    case 'line-loop': return GL.LINES;
+    case 'line-loop-webgl': return GL.LINES;
     case 'triangle-list': return GL.TRIANGLES;
     case 'triangle-strip': return GL.TRIANGLES;
-    case 'triangle-fan': return GL.TRIANGLES;
+    case 'triangle-fan-webgl': return GL.TRIANGLES;
     default: throw new Error(topology);
   }
 }

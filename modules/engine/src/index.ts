@@ -29,6 +29,7 @@ export {GroupNode} from './scenegraph/group-node';
 export {ModelNode} from './scenegraph/model-node';
 
 // Geometries
+export type {GeometryProps} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
 
 // Primitives
