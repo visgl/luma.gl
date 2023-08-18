@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type {PrimitiveTopology, TypedArray} from '@luma.gl/api';
-import {uid, assert} from '@luma.gl/api';
+import type {PrimitiveTopology, TypedArray} from '@luma.gl/core';
+import {uid, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 /**

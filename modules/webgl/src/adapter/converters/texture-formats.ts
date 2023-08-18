@@ -1,5 +1,5 @@
-import type {TextureFormat, DeviceFeature} from '@luma.gl/api';
-import {decodeTextureFormat} from '@luma.gl/api';
+import type {TextureFormat, DeviceFeature} from '@luma.gl/core';
+import {decodeTextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 

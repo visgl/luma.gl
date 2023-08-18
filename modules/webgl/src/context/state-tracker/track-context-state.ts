@@ -1,6 +1,6 @@
 // Support for listening to context state changes and intercepting state queries
 // NOTE: this system does not handle buffer bindings
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS, NON_CACHE_PARAMETERS} from '../parameters/webgl-parameter-tables';
 import {setParameters, getParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';

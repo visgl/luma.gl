@@ -98,7 +98,7 @@
       "api-reference/README",
         {
         "type": "category",
-        "label": "@luma.gl/api",
+        "label": "@luma.gl/core",
         "items": [
           "api-reference/api/README",
           "api-reference/api/device",

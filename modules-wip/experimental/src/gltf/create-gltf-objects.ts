@@ -1,4 +1,4 @@
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {ScenegraphNode} from '../scenegraph/scenegraph-node';
 import {GLTFInstantiator} from './gltf-instantiator';
 import {GLTFAnimator} from './gltf-animator';

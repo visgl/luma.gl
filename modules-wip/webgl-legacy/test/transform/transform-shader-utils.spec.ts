@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {updateForTextures} from '@luma.gl/webgl-legacy/transform/transform-shader-utils';
 import {Texture2D} from '@luma.gl/webgl-legacy';
 import test from 'tape-promise/tape';

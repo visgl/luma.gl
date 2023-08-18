@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {formatCompilerLog, CompilerMessage} from '@luma.gl/api';
+import {formatCompilerLog, CompilerMessage} from '@luma.gl/core';
 
 const ERROR_LOG: CompilerMessage[] = [
   {

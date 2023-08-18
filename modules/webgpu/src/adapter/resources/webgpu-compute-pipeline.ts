@@ -1,5 +1,5 @@
 // prettier-ignore
-import {ComputePipeline, ComputePipelineProps, cast} from '@luma.gl/api';
+import {ComputePipeline, ComputePipelineProps, cast} from '@luma.gl/core';
 
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';

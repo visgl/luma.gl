@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import type {FramebufferProps, TextureFormat} from '@luma.gl/api';
-import {Framebuffer, Texture, assert} from '@luma.gl/api';
+import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
+import {Framebuffer, Texture, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';

@@ -6,8 +6,8 @@ import type {
   DeviceFeature,
   CanvasContextProps,
   TextureFormat
-} from '@luma.gl/api';
-import {Device, CanvasContext, log, uid} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {popContextState, pushContextState, trackContextState} from '../context/state-tracker/track-context-state';
@@ -48,7 +48,7 @@ import type {
   ComputePassProps,
   // CommandEncoder,
   CommandEncoderProps
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 
 import {BufferWithAccessor} from '../classic/buffer-with-accessor';
 import {WEBGLBuffer} from './resources/webgl-buffer';

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type {CanvasContextProps} from '@luma.gl/api';
-import {CanvasContext} from '@luma.gl/api';
+import type {CanvasContextProps} from '@luma.gl/core';
+import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 

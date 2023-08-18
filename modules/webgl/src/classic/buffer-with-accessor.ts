@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import type {Device, BufferProps, TypedArray} from '@luma.gl/api';
-import {assert, checkProps} from '@luma.gl/api';
+import type {Device, BufferProps, TypedArray} from '@luma.gl/core';
+import {assert, checkProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {assertWebGL2Context} from '../context/context/webgl-checks';
 import {AccessorObject} from '../types';

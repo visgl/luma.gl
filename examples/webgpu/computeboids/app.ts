@@ -5,8 +5,8 @@
 
 import updateSprites from './update-sprites.wgsl?raw';
 import sprites from './sprites.wgsl?raw';
-import {Buffer} from '@luma.gl/api';
-// import { RenderPipelineParameters} from '@luma.gl/api';
+import {Buffer} from '@luma.gl/core';
+// import { RenderPipelineParameters} from '@luma.gl/core';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 // import {Matrix4} from '@math.gl/core';
 

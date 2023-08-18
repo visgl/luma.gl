@@ -23,7 +23,7 @@ Specifying the `type: 'comparison-sampler'` sampler property creates a compariso
 Create a new `Sampler`
 
 ```typescript
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 const device = await luma.createDevice();
 const sampler = device.createSampler(gl, {
   addressModeU: 'clamp-to-edge'

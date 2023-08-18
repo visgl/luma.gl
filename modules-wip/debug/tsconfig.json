@@ -9,6 +9,6 @@
   },
   "references": [
     {"path": "../constants"},
-    {"path": "../api"}
+    {"path": "../core"}
   ]
 }

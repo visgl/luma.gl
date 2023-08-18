@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {log, assert, Texture, Framebuffer} from '@luma.gl/api';
+import {log, assert, Texture, Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WEBGLTexture, WEBGLFramebuffer, assertWebGL2Context} from '@luma.gl/webgl';
 import {withParameters} from '@luma.gl/webgl';

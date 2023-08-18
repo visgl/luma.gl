@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {assert, Texture} from '@luma.gl/api';
+import {assert, Texture} from '@luma.gl/core';
 import {combineInjects, getQualifierDetails, typeToChannelSuffix} from '@luma.gl/shadertools';
 import Texture2D from '../classic/texture-2d';
 

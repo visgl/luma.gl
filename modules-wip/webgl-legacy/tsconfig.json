@@ -11,7 +11,7 @@
   },
   "references": [
     {"path": "../constants"},
-    {"path": "../api"},
+    {"path": "../core"},
     {"path": "../engine"},
     {"path": "../shadertools"},
     {"path": "../webgl"}

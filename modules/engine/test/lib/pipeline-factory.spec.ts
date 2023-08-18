@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {webgl1Device} from '@luma.gl/test-utils';
 
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {PipelineFactory} from '@luma.gl/engine';
 import {dirlight, picking} from '@luma.gl/shadertools';
 

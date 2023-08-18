@@ -1,9 +1,9 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, Timeline, KeyFrames} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-import {getRandom} from '@luma.gl/api';
+import {getRandom} from '@luma.gl/core';
 
 // Ensure repeatable rendertests
 const random = getRandom();

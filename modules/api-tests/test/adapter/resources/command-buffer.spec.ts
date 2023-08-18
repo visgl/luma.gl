@@ -50,9 +50,8 @@ test('CommandBuffer#copyBufferToBuffer', t => {
 
 /*
 
-import type {TextureFormat} from '@luma.gl/api';
-import {Device, CommandEncoder, Framebuffer, Renderbuffer, Texture, Buffer} from '@luma.gl/api';
-import {GL, getKey, readPixelsToArray} from '@luma.gl/webgl-legacy';
+import type {TextureFormat} from '@luma.gl/core';
+import {Device, CommandEncoder, Framebuffer, Renderbuffer, Texture, Buffer} from '@luma.gl/core';
 
 const EPSILON = 1e-6;
 const {abs} = Math;

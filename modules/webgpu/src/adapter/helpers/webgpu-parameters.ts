@@ -1,4 +1,4 @@
-import {Parameters} from '@luma.gl/api';
+import {Parameters} from '@luma.gl/core';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {

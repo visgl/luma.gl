@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {luma, glsl} from '@luma.gl/api';
+import {luma, glsl} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {Transform} from '@luma.gl/webgl-legacy';
 import {Buffer, Texture2D, setParameters, getParameters} from '@luma.gl/webgl-legacy';

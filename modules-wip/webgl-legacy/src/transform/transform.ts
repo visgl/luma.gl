@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/api';
+import {Device, assert, isObjectEmpty, Framebuffer} from '@luma.gl/core';
 import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice, GLParameters} from '@luma.gl/webgl';

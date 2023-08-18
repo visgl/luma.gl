@@ -1,5 +1,5 @@
 
-import {getRandom, glsl} from '@luma.gl/api';
+import {getRandom, glsl} from '@luma.gl/core';
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {AnimationLoopTemplate, AnimationProps, Model, PipelineFactory, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';

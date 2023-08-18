@@ -54,7 +54,7 @@ const config = {
     [
       './src/ocular-docusaurus/ocular-docusaurus-plugin',
       {alias: {
-          '@luma.gl/api': `${__dirname}/../modules/api/src`,
+          '@luma.gl/core': `${__dirname}/../modules/api/src`,
           '@luma.gl/core': `${__dirname}/../modules/core/src`,
           '@luma.gl/engine': `${__dirname}/../modules/engine/src`,
           '@luma.gl/experimental': `${__dirname}/../modules/experimental/src`,

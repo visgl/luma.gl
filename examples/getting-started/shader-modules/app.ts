@@ -1,4 +1,4 @@
-import {Buffer} from '@luma.gl/api';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 const INFO_HTML = `

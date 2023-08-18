@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {assert, uid, ShaderProps} from '@luma.gl/api';
+import {assert, uid, ShaderProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getShaderInfo} from '@luma.gl/shadertools';
 import {WebGLDevice, WEBGLShader} from '@luma.gl/webgl';

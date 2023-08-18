@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type {CompilerMessage} from '@luma.gl/api';
+import type {CompilerMessage} from '@luma.gl/core';
 
 const MESSAGE_TYPES = ['warning', 'error', 'info'];
 

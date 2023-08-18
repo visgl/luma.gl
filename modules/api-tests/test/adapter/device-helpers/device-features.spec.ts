@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
-import {DeviceFeature} from '@luma.gl/api';
+import {DeviceFeature} from '@luma.gl/core';
 
 // true: always supported in WebGL2, false: never supported in WebGL1
 const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [

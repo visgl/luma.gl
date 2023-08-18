@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
-import type {Device, RenderPipelineProps, RenderPipelineParameters, RenderPass} from '@luma.gl/api';
-import {log, assert, uid, cast, Shader} from '@luma.gl/api';
+import type {Device, RenderPipelineProps, RenderPipelineParameters, RenderPass} from '@luma.gl/core';
+import {log, assert, uid, cast, Shader} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {parseUniformName, getUniformSetter} from './uniforms';
 import ProgramConfiguration from './program-configuration';

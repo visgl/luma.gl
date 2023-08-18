@@ -1,4 +1,4 @@
-import type {Device} from '@luma.gl/api';
+import type {Device} from '@luma.gl/core';
 import {WebGLDevice} from '../../adapter/webgl-device';
 import {GLParameters, setParameters} from '../parameters/unified-parameter-api';
 import {pushContextState, popContextState} from './track-context-state';

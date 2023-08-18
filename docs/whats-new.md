@@ -28,16 +28,16 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 - The core module no longer exports the luma.gl v8 API. Update your applications to import from `@luma.gl/webgl-legacy`).
 - The core module still exports `@luma.gl/engine` classes.
 
-#### `@luma.gl/api` (new module)
+#### `@luma.gl/core` (new module)
 
 - The new cross-platform luma.gl API exported as a set of interfaces and abstract classes.
-- The core `Device` API that is exposed through the new `@luma.gl/api` module.
-- Applications written against `@luma.gl/api` can run on both WebGPU, WebGL2 and WebGL devices.
+- The core `Device` API that is exposed through the new `@luma.gl/core` module.
+- Applications written against `@luma.gl/core` can run on both WebGPU, WebGL2 and WebGL devices.
 
 #### `@luma.gl/engine` (breaking changes)
 
 - The `@luma.gl/engine` module still exports the classic luma.gl classes such as `Model` and `AnimationLoop`. 
-- However all engine classes are now implemented on top of `@luma.gl/api`, allowing them to work portably on both WebGPU and WebGL.
+- However all engine classes are now implemented on top of `@luma.gl/core`, allowing them to work portably on both WebGPU and WebGL.
 - For backwards compatibility, the `WebGLRenderingContext`-dependent versions have been moved to `@luma.gl/webgl-legacy`
 - Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`) are now exported from `@luma.gl/engine`.
 
@@ -47,12 +47,12 @@ Note that adoption of the new v9 luma.gl API will require existing luma.gl v8 ap
 
 #### `@luma.gl/webgpu` (new module)
 
-- Provides a WebGPU implementation of the luma.gl API (`@luma.gl/api`). 
+- Provides a WebGPU implementation of the luma.gl API (`@luma.gl/core`). 
 - Importing this module enables the application to create `Device`s of type `'webgpu'` (when run in a browser that supports WebGPU API).
 
 #### `@luma.gl/webgl` (breaking changes)
 
-- Exports `WebGLDevice`, a WebGL / WebGL 2 backend implementation of the luma.gl API (`@luma.gl/api`). 
+- Exports `WebGLDevice`, a WebGL / WebGL 2 backend implementation of the luma.gl API (`@luma.gl/core`). 
 - Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'`.
 
 #### `@luma.gl/constants` (breaking changes, deprecated)

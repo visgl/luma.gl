@@ -1,6 +1,6 @@
-import {Buffer, Texture, loadImageBitmap, ShaderLayout, glsl} from '@luma.gl/api';
+import {Buffer, Texture, loadImageBitmap, ShaderLayout, glsl} from '@luma.gl/core';
 import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-// import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/api';
+// import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/core';
 // import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
 import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';

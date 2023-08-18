@@ -1,5 +1,5 @@
-import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/api';
-import {CanvasContext, log} from '@luma.gl/api';
+import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
+import {CanvasContext, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';

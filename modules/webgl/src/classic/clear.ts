@@ -1,4 +1,4 @@
-import {Device, Framebuffer, assert} from '@luma.gl/api';
+import {Device, Framebuffer, assert} from '@luma.gl/core';
 import {WebGLDevice} from '../adapter/webgl-device';
 import {withParameters} from '../context/state-tracker/with-parameters';
 

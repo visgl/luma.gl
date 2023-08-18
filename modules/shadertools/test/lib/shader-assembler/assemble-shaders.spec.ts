@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 import {assembleShaders, picking, fp64, pbr, glsl} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';

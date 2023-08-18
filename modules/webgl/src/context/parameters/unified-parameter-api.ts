@@ -1,7 +1,7 @@
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import type {GLParameters} from '@luma.gl/constants';
 import {
   GL_PARAMETER_DEFAULTS,

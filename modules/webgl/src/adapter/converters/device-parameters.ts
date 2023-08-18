@@ -5,7 +5,7 @@ import {
   StencilOperation,
   log,
   isObjectEmpty
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import type {GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';

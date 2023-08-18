@@ -1,5 +1,5 @@
-import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/api';
-import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/api';
+import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/core';
+import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';

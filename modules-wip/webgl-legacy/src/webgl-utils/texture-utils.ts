@@ -1,5 +1,5 @@
 // TODO: Two subdirectories must not depend on each other (classes vs utils)!
-import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/api';
+import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 // import Texture as ClassicTexture from '../classic/texture';
 import Texture2D from '../classic/texture-2d';
 import TextureCube from '../classic/texture-cube';

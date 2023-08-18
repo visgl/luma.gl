@@ -1,5 +1,5 @@
-import type {ShaderLayout, BufferMapping, AttributeLayout} from '@luma.gl/api';
-import {decodeVertexFormat} from '@luma.gl/api';
+import type {ShaderLayout, BufferMapping, AttributeLayout} from '@luma.gl/core';
+import {decodeVertexFormat} from '@luma.gl/core';
 
 /**
  * Build a WebGPU vertex buffer layout intended for use in a GPURenderPassDescriptor.

@@ -12,8 +12,8 @@ import {
   SamplerParameters,
   TypedArray,
   isObjectEmpty
-} from '@luma.gl/api';
-import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withParameters} from '../../context/state-tracker/with-parameters';
 import {

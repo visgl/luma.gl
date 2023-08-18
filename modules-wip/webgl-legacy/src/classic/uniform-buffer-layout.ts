@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import {assert} from '@luma.gl/api';
+import {assert} from '@luma.gl/core';
 import {decomposeCompositeGLType} from '../webgl-utils/attribute-utils';
 
 const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';

@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/api';
+import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {BufferWithAccessor as Buffer} from './buffer-with-accessor';

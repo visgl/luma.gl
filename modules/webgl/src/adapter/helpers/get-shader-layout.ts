@@ -10,8 +10,8 @@ import type {
   AccessorObject,
   BufferMapping,
   VertexFormat
-} from '@luma.gl/api';
-import {log} from '@luma.gl/api';
+} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
@@ -429,7 +429,7 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
 
 /**
  * TODO - verify this is a copy of above and delete
- * import type {TextureFormat} from '@luma.gl/api';
+ * import type {TextureFormat} from '@luma.gl/core';
 * Extract info about all "active" uniform blocks
  * ("Active" just means that unused (inactive) blocks may have been optimized away during linking)
  *

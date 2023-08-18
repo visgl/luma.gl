@@ -1,6 +1,6 @@
 /* eslint-disable camelcase, no-console, no-undef */
 import test from 'tape-promise/tape';
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {webgl1Device} from '@luma.gl/test-utils';
 import {assembleShaders, glsl} from '@luma.gl/shadertools';
 import {

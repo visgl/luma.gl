@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import type {TypedArray, VertexFormat} from '@luma.gl/api';
+import type {TypedArray, VertexFormat} from '@luma.gl/core';
 
 /** Holds one geometry */
 export type GeometryTable = {

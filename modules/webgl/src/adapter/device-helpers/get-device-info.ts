@@ -1,4 +1,4 @@
-import {DeviceInfo} from '@luma.gl/api';
+import {DeviceInfo} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import type { Device } from '@luma.gl/api';
+import type { Device } from '@luma.gl/core';
 import {Buffer, copyToTexture, cloneTextureFrom} from '@luma.gl/webgl-legacy';
 import {GL, Transform} from '@luma.gl/webgl-legacy';
 import {

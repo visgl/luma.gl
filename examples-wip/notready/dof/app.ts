@@ -4,7 +4,7 @@
 */
 // @ts-nocheck
 
-import {glsl,} from '@luma.gl/api';
+import {glsl,} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {
   GL,
@@ -13,7 +13,7 @@ import {
   VertexArray,
   UniformBufferLayout,
   Buffer,
-} from '@luma.gl/webgl-legacy';
+} from '@luma.gl/core';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `

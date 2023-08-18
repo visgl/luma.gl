@@ -1,4 +1,4 @@
-import {UniformFormat, VertexFormat} from '@luma.gl/api';
+import {UniformFormat, VertexFormat} from '@luma.gl/core';
 import {GL, GLUniformType, GLSamplerType, GLCompositeType, GLDataType} from '@luma.gl/constants';
 
 /** Check is uniform is of sampler type */

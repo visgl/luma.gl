@@ -9,7 +9,7 @@
     "outDir": "dist"
   },
   "references": [
-    {"path": "../api"},
+    {"path": "../core"},
     {"path": "../webgl"},
     {"path": "../webgpu"}
   ]

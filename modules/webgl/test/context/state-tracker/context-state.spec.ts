@@ -3,7 +3,7 @@ import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 
-import type {TypedArray} from '@luma.gl/api'
+import type {TypedArray} from '@luma.gl/core'
 import type {GLParameters} from '@luma.gl/webgl';
 import {getParameters, setParameters, resetParameters, withParameters} from '@luma.gl/webgl';
 

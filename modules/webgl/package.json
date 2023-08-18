@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/api": "9.0.0-alpha.29",
+    "@luma.gl/core": "9.0.0-alpha.29",
     "@luma.gl/constants": "9.0.0-alpha.29",
     "@probe.gl/env": "^4.0.2"
   },

@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/api';
-import type {Device, ResourceProps} from '@luma.gl/api';
+import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/core';
+import type {Device, ResourceProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2, assertWebGLContext} from '../../context/context/webgl-checks';
 import {WebGLDevice} from '../webgl-device';

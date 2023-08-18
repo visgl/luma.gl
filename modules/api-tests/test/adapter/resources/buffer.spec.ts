@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {Buffer} from '@luma.gl/api';
+import {Buffer} from '@luma.gl/core';
 import {WEBGLBuffer} from '@luma.gl/webgl';
 import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';

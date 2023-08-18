@@ -1,5 +1,5 @@
 import {GL} from '@luma.gl/constants';
-import {VertexFormat} from '@luma.gl/api';
+import {VertexFormat} from '@luma.gl/core';
 
 export function getVertexFormat(type: GL, components: number): VertexFormat {
   const base = getDataFormat(type);

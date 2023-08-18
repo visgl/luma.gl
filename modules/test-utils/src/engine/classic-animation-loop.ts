@@ -7,7 +7,7 @@ import {
   log,
   requestAnimationFrame,
   cancelAnimationFrame
-} from '@luma.gl/api';
+} from '@luma.gl/core';
 import {Timeline, AnimationProps} from '@luma.gl/engine';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';

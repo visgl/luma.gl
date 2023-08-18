@@ -1,4 +1,4 @@
-import {Device, ResourceProps, log, isObjectEmpty} from '@luma.gl/api';
+import {Device, ResourceProps, log, isObjectEmpty} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
 import {isWebGL2} from '@luma.gl/webgl';

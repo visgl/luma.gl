@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {fillArray} from '@luma.gl/api';
+import {fillArray} from '@luma.gl/core';
 
 const FILL_ARRAY_TEST_CASES = [
   {

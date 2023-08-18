@@ -15,10 +15,10 @@ Core responsibilities for any GPU library are to enable applications to perform:
 
 luma.gl enables the creation of portable applications that can run on top of either WebGPU, WebGL 2, or WebGL.
 
-The `@luma.gl/api` module provides an abstract API for writing application code
+The `@luma.gl/core` module provides an abstract API for writing application code
 that works with both WebGPU and WebGL.
 
-The `@luma.gl/api` module cannot be used on its own: it relies on being backed up by another module
+The `@luma.gl/core` module cannot be used on its own: it relies on being backed up by another module
 that implements the API. luma.gl provides adapters (implementations of the abstract API)
 through the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
 

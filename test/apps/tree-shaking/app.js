@@ -1,5 +1,5 @@
 /* eslint-disable no-var, max-statements */
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 // eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/engine';

@@ -12,7 +12,7 @@ as a "bag" of different stats (or performance measurements), and luma.gl itself
 automatically populates `Stats` objects that can be inspected by the application.
 
 ```typescript
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 
 console.log(luma.stats.getTable());
 ```

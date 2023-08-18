@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/api';
+import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {Transform} from '@luma.gl/engine';
 

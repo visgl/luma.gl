@@ -22,14 +22,14 @@ based on what the run-time environment (ie. browser or Node.js) supports.
 Creates a WebGL2 or WebGL context, auto creating a canvas
 
 ```typescript
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 const device = new Device(); // Prefers WebGL 2 but falls back to WebGL 1
 ```
 
 Creates a WebGL 2 context (throws if WebGL2 not supported)
 
 ```typescript
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 const device = createGLContext({
   webgl1: false
 });
@@ -39,7 +39,7 @@ Attaching a Device to an externally created WebGLRendering context instruments i
 so that it works with other luma.gl classes.
 
 ```typescript
-import {Device} from '@luma.gl/api';
+import {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
 const device = Device.attach(gl); // "instruments" the external context

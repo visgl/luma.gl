@@ -1,5 +1,5 @@
-import type {FramebufferProps} from '@luma.gl/api';
-import {Framebuffer} from '@luma.gl/api';
+import type {FramebufferProps} from '@luma.gl/core';
+import {Framebuffer} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
 /**

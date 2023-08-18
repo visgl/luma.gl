@@ -1,4 +1,4 @@
-import {DeviceProps} from '@luma.gl/api';
+import {DeviceProps} from '@luma.gl/core';
 import {AnimationLoop, AnimationProps} from '@luma.gl/engine';
 import {assembleShaders} from '@luma.gl/shadertools';
 

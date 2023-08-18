@@ -1,4 +1,4 @@
-import {Device, RenderPass} from '@luma.gl/api';
+import {Device, RenderPass} from '@luma.gl/core';
 import {Timeline} from '../animation/timeline'
 import type {AnimationLoop} from './animation-loop';
 

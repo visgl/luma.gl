@@ -1,5 +1,5 @@
 // WEBGPU Buffer implementation
-import {Buffer, BufferProps} from '@luma.gl/api';
+import {Buffer, BufferProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 
 function getByteLength(props: BufferProps): number {

@@ -1,5 +1,5 @@
-import type {Device, Buffer, ResourceProps, TypedArray, NumericArray} from '@luma.gl/api';
-import {Resource, assert, getScratchArray, fillArray} from '@luma.gl/api';
+import type {Device, Buffer, ResourceProps, TypedArray, NumericArray} from '@luma.gl/core';
+import {Resource, assert, getScratchArray, fillArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 

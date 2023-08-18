@@ -1,4 +1,4 @@
-import {RenderPass} from '@luma.gl/api';
+import {RenderPass} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 import {Model} from '../model/model';
 

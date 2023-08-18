@@ -1,4 +1,4 @@
-import {uid} from '@luma.gl/api';
+import {uid} from '@luma.gl/core';
 import {Geometry} from '../geometry/geometry';
 import {unpackIndexedGeometry} from '../geometry/geometry-utils';
 

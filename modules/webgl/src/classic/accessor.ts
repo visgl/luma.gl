@@ -1,4 +1,4 @@
-import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/api';
+import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
 

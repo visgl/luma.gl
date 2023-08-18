@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import test from 'tape-promise/tape';
-import {formatValue} from '@luma.gl/api';
+import {formatValue} from '@luma.gl/core';
 
 const FORMAT_VALUE_TEST_CASES = [
   {

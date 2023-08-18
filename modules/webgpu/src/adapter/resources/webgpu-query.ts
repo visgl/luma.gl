@@ -1,5 +1,5 @@
 /*
-import {Resource, Query, QueryProps} from '@luma.gl/api';
+import {Resource, Query, QueryProps} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
 export type WebGPUQueryProps = QueryProps & {

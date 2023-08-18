@@ -2,7 +2,7 @@
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.
 
-import {Device, DeviceFeature, assert} from '@luma.gl/api';
+import {Device, DeviceFeature, assert} from '@luma.gl/core';
 import {WebGLDevice, _checkFloat32ColorAttachment} from '@luma.gl/webgl';
 
 // TODO - this should be the default export, test cases need updating

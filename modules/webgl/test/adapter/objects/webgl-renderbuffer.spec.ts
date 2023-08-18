@@ -1,7 +1,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-import {TextureFormat} from '@luma.gl/api';
+import {TextureFormat} from '@luma.gl/core';
 import {WEBGLRenderbuffer, _TEXTURE_FORMATS} from '@luma.gl/webgl';
 
 // const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];

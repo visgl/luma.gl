@@ -2,14 +2,14 @@
 // Imports tests for all modules that do not depend on WebGL
 
 // Make sure the WebGL developer tools are pre-loaded. Test contexts are created synchronously
-import {luma} from '@luma.gl/api';
+import {luma} from '@luma.gl/core';
 luma.log.set('debug', true);
 
 // Shadertools is a GLSL textual processing library, no actual WebGL dependencies
 import '@luma.gl/shadertools/test';
 
 // DEVICE INDEPENDENT TESTS
-import '@luma.gl/api/test';
+import '@luma.gl/core/test';
 import '@luma.gl/api-tests/test';
 
 // WEBGL ADAPTER TESTS
@@ -24,4 +24,3 @@ import '@luma.gl/engine/test';
 
 // DEPRECATED TESTS
 import '@luma.gl/constants/test';
-// import '@luma.gl/webgl-legacy/test';
