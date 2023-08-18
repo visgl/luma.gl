@@ -1,5 +1,5 @@
 import React from 'react';
-import {Device, DeviceInfo, DeviceLimits, TextureFormat, cast} from '@luma.gl/api';
+import {Device, DeviceFeature, DeviceInfo, DeviceLimits, TextureFormat, cast} from '@luma.gl/api';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
@@ -10,7 +10,7 @@ function getLimit(device: Device, feature: keyof DeviceLimits): string {
 }
 
 function getFeature(device: Device, feature: string): string {
-  return device ? device.features.has(feature) ? '✅' : '❌' : 'N/A';
+  return device ? device.features.has(feature as DeviceFeature) ? '✅' : '❌' : 'N/A';
 }
 
 function getFormat(device: Device, format: TextureFormat): string {

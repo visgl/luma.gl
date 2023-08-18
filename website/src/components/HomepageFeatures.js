@@ -4,31 +4,30 @@ import styles from './HomepageFeatures.module.css';
 
 const FeatureList = [
   {
+    title: 'The Right Stuff',
+    Svg: require('../../static/img/icon-high-precision.svg').default,
+    description: (
+      <>
+        Focused on high-performance data processing, e.g. instanced rendering and GPU compute.
+      </>
+    ),
+  },
+  {
     title: 'Battle Tested',
     Svg: require('../../static/img/icon-high-precision.svg').default,
     description: (
       <>
-        The core 3D rendering technology behind the vis.gl suite of data visualization tools,
-        including deck.gl, kepler.gl, and avs.auto..
+        The core 3D rendering technology behind tools such as
+        deck.gl, kepler.gl, and avs.auto.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Modern, Portable API',
     Svg: require('../../static/img/icon-high-precision.svg').default,
     description: (
       <>
-        Provides simple abstractions for high-performance data
-        visualization APIs like instanced rendering andGPU compute..
-      </>
-    ),
-  },
-  {
-    title: 'Modern API',
-    Svg: require('../../static/img/icon-high-precision.svg').default,
-    description: (
-      <>
-        Work with a modern, WebGPU friendly API across WebGPU, WebGL 2 and WebGL 1.
+        A clean TypeScript and WebGPU friendly GPU API that works across WebGPU, WebGL 2 and WebGL.
       </>
     ),
   },

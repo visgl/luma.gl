@@ -5,7 +5,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import styles from './index.module.css';
 import HomepageFeatures from '../components/HomepageFeatures';
-import {InstancingShowcaseExample} from '../templates/showcase/example-instancing';
+import {InstancingExample} from '../examples/templates/showcase/example-instancing';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
@@ -33,7 +33,7 @@ export default function Home() {
       title={`${siteConfig.title}`}
       description="WebGPU and WebGL 2 APIs<head />">
       <main>
-        <InstancingShowcaseExample />
+        <InstancingExample />
         <HomepageFeatures />
       </main>
     </Layout>
