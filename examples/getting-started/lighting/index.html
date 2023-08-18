@@ -2,7 +2,7 @@
 <!doctype html>
 <script type="module">
   import AnimationLoopTemplate from './app.ts';
-  import {luma} from '@luma.gl/api';
+  import {luma} from '@luma.gl/core';
   import {makeAnimationLoop} from '@luma.gl/engine';
   makeAnimationLoop(AnimationLoopTemplate, {device: luma.createDevice()}).start();
 </script>
