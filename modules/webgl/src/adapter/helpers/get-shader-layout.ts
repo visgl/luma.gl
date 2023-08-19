@@ -155,8 +155,8 @@ function overrideShaderLayoutAttribute(
   attributeOverride: {name: string; format?: VertexFormat}
 ): void {
   const attribute = getAttributeFromLayout(layout, attributeOverride.name);
-  if (attribute && attributeOverride.format) {
-    attribute.format = attributeOverride.format;
+  if (attribute) {
+    Object.assign(attribute, attributeOverride);
   }
 }
 

@@ -219,8 +219,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
-    // @ts-expect-error
-    const glTarget = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    const glTarget = this.gl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
     this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
@@ -431,8 +430,7 @@ export class BufferWithAccessor extends WEBGLBuffer {
   // Binding a buffer for the first time locks the type
   // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
   _getTarget() {
-    // @ts-expect-error
-    return this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    return this.gl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
   }
 
   _getAvailableElementCount(srcByteOffset: number) {

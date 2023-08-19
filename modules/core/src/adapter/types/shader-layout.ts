@@ -42,6 +42,10 @@ export type AttributeLayout = {
   format: VertexFormat;
   /** @note defaults to vertex */
   stepMode?: 'vertex' | 'instance';
+  /** bytes between successive elements @note `stride` is auto calculated if omitted */
+  byteStride?: number;
+  /** offset into buffer. Defaults to `0` */
+  byteOffset?: number;
 };
 
 // BUFFER MAP

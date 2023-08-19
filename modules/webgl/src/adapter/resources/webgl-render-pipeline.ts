@@ -126,8 +126,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
         size,
         type,
-        stride,
-        offset: 0,
+        stride: attribute.byteStride || stride,
+        offset: attribute.byteOffset || 0,
         normalized,
         integer,
         divisor
