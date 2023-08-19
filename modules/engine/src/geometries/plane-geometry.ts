@@ -19,6 +19,7 @@ export class PlaneGeometry extends Geometry {
     super({
       ...props,
       id,
+      topology: 'triangle-list',
       indices,
       attributes: {...attributes, ...props.attributes}
     });

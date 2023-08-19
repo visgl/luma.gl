@@ -23,7 +23,7 @@ export type NumberArray = number[] | TypedArray;
 type Framebuffer = unknown;
 
 /** Rendering primitives. Constants passed to drawElements() or drawArrays() to specify what kind of primitive to render. */
-export type GLDrawMode =
+export type GLPrimitiveTopology =
   | GL.POINTS
   | GL.LINES
   | GL.LINE_STRIP

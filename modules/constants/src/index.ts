@@ -3,7 +3,7 @@ export {GL} from './constants-enum';
 
 // WebGL types
 export type {
-  GLDrawMode,
+  GLPrimitiveTopology,
   GLPrimitive,
   GLDataType,
   GLPixelType,

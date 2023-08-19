@@ -56,15 +56,14 @@ test('Object#Geometries', (t) => {
     const testProps = [undefined].concat(geometryTest.props || []);
 
     for (const props of testProps) {
-      if (props && props._shouldThrow) {
+      if (props?._shouldThrow) {
         t.throws(() => new Geometry(props), `${name}: should throw`);
         continue; // eslint-disable-line
       }
 
       const geometry = new Geometry(props);
 
-      t.is(typeof geometry.drawMode, 'number', `${name}: .drawMode is a number`);
-      t.is(typeof geometry.mode, 'number', `${name}: .mode is a number`);
+      t.is(typeof geometry.topology, 'string', `${name}: .topology is a string`);
       t.is(typeof geometry.vertexCount, 'number', `${name}: .vertexCount is a number`);
 
       const attributes = geometry.attributes;

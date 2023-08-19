@@ -1,6 +1,5 @@
 
 // ClipSpace
-import {GL} from '@luma.gl/constants';
 import {Device, glsl} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Model, ModelProps} from '../model/model';
@@ -40,7 +39,7 @@ export class ClipSpace extends Model {
         vs: CLIPSPACE_VERTEX_SHADER,
         vertexCount: 4,
         geometry: new Geometry({
-          drawMode: GL.TRIANGLE_STRIP,
+          topology: 'triangle-strip',
           vertexCount: 4,
           attributes: {
             aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},

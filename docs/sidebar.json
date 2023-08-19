@@ -54,11 +54,8 @@
         "type": "category",
         "label": "V8 API Reference",
         "items": [
-          {
-            "type": "category",
-            "label": "@luma.gl/webgl-legacy",
-            "items": [
               "api-reference-v8/webgl-legacy/README",
+              "api-reference-v8/constants/README",
               "api-reference-v8/webgl-legacy/class-list",
               "api-reference-v8/webgl-legacy/accessors",
               "api-reference-v8/webgl-legacy/context/context-api",
@@ -84,13 +81,6 @@
               "api-reference-v8/webgl-legacy/classes/uniform-buffer-layout",
               "api-reference-v8/webgl-legacy/classes/vertex-array",
               "api-reference-v8/webgl-legacy/classes/vertex-array-object"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "@luma.gl/constants",
-            "items": [
-              "api-reference-v8/constants/README"
             ]
           }
         ]

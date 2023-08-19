@@ -40,6 +40,7 @@ export class TruncatedConeGeometry extends Geometry {
     super({
       ...props,
       id,
+      topology: 'triangle-list',
       indices,
       attributes: {
         POSITION: {size: 3, value: attributes.POSITION},

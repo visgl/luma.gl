@@ -165,6 +165,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
 
     const quadGeometry = new Geometry({
+      topology: 'triangle-list',
       attributes: {
         aPosition: {
           value: new Float32Array(QUAD_POSITIONS),

@@ -1,7 +1,7 @@
-import {GL, GLDrawMode, GLPrimitive} from '@luma.gl/constants';
+import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/constants';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
-export function getPrimitiveDrawMode(drawMode: GLDrawMode): GLPrimitive {
+export function getPrimitiveDrawMode(drawMode: GLPrimitiveTopology): GLPrimitive {
   switch (drawMode) {
     case GL.POINTS:
       return GL.POINTS;
@@ -23,7 +23,7 @@ export function getPrimitiveDrawMode(drawMode: GLDrawMode): GLPrimitive {
 }
 
 // Counts the number of complete "primitives" given a number of vertices and a drawMode
-export function getPrimitiveCount(options: {drawMode: GLDrawMode, vertexCount: number}): number {
+export function getPrimitiveCount(options: {drawMode: GLPrimitiveTopology, vertexCount: number}): number {
   const {drawMode, vertexCount} = options;
   switch (drawMode) {
     case GL.POINTS:
@@ -44,7 +44,7 @@ export function getPrimitiveCount(options: {drawMode: GLDrawMode, vertexCount: n
 }
 
 // Counts the number of vertices after splitting the vertex stream into separate "primitives"
-export function getVertexCount(options: {drawMode: GLDrawMode, vertexCount: number}): number {
+export function getVertexCount(options: {drawMode: GLPrimitiveTopology, vertexCount: number}): number {
   const {drawMode, vertexCount} = options;
   const primitiveCount = getPrimitiveCount({drawMode, vertexCount});
   switch (getPrimitiveDrawMode(drawMode)) {

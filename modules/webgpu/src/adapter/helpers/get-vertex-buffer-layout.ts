@@ -1,5 +1,13 @@
-import type {ShaderLayout, BufferMapping, AttributeLayout} from '@luma.gl/core';
+import type {ShaderLayout, BufferMapping, AttributeLayout, VertexFormat} from '@luma.gl/core';
 import {decodeVertexFormat} from '@luma.gl/core';
+
+/** Throw error on any WebGL-only vertex formats */
+function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
+  if (format.endsWith('-webgl')) {
+    throw new Error(`WebGPU does not support vertex format ${format}`);
+  }
+  return format as GPUVertexFormat;
+}
 
 /**
  * Build a WebGPU vertex buffer layout intended for use in a GPURenderPassDescriptor.
@@ -30,7 +38,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
 
         stepMode = attributeLayout.stepMode || 'vertex';
         vertexAttributes.push({
-          format: attributeLayout.format,
+          format: getWebGPUVertexFormat(attributeLayout.format),
           offset: byteOffset + byteStride,
           shaderLocation: attributeLayout.location
         });
@@ -44,7 +52,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
 
       stepMode = attributeLayout.stepMode || 'vertex';
       vertexAttributes.push({
-        format: attributeLayout.format,
+        format: getWebGPUVertexFormat(attributeLayout.format),
         offset: byteOffset,
         shaderLocation: attributeLayout.location
       });
@@ -65,7 +73,7 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
         arrayStride: decodeVertexFormat(attribute.format).byteLength,
         stepMode: attribute.stepMode || 'vertex',
         attributes: [{
-          format: attribute.format,
+          format: getWebGPUVertexFormat(attribute.format),
           offset: 0,
           shaderLocation: attribute.location
         }]

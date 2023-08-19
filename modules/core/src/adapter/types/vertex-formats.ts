@@ -37,9 +37,13 @@ export type VertexFormat =
   'uint8x4' |
   'sint8x2' |
   'sint8x4' |
+  'unorm8-webgl' |
   'unorm8x2' |
+  'unorm8x3-webgl' |
   'unorm8x4' |
+  'snorm8-webgl' |
   'snorm8x2' |
+  'snorm8x3-webgl' |
   'snorm8x4' |
   'uint16x2' |
   'uint16x4' |
