@@ -44,7 +44,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.vs = cast<WebGPUShader>(props.vs);
     this.fs = cast<WebGPUShader>(props.fs);
 
-    this._bufferSlots = getBufferSlots(this.props.layout, this.props.bufferMap);
+    this._bufferSlots = getBufferSlots(this.props.shaderLayout, this.props.bufferLayout);
     this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
     this._bindGroupLayout = this.handle.getBindGroupLayout(0);
   }
@@ -87,7 +87,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Constant attributes are not available in WebGPU */
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
-    console.error('not implemented');
+    throw new Error('not implemented');
   }
 
   /** Set the bindings */
@@ -98,7 +98,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       this._bindGroup = getBindGroup(
         this.device.handle,
         this._bindGroupLayout,
-        this.props.layout,
+        this.props.shaderLayout,
         this.props.bindings
       );
     }
@@ -126,7 +126,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const vertex: GPUVertexState = {
       module: cast<WebGPUShader>(this.props.vs).handle,
       entryPoint: this.props.vsEntryPoint || 'main',
-      buffers: getVertexBufferLayout(this.props.layout, this.props.bufferMap)
+      buffers: getVertexBufferLayout(this.props.shaderLayout, this.props.bufferLayout)
     };
 
     // Set up the fragment stage
@@ -221,7 +221,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     for (let i = 0; i < buffers.length; ++i) {
       const buffer = cast<WebGPUBuffer>(buffers[i]);
       if (!buffer) {
-        const attribute = this.props.layout.attributes.find(
+        const attribute = this.props.shaderLayout.attributes.find(
           (attribute) => attribute.location === i
         );
         throw new Error(
@@ -233,7 +233,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // TODO - HANDLE buffer maps
     /*
-    for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferMap)) {
+    for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferLayout)) {
       const buffer = cast<WebGPUBuffer>(this.props.attributes[bufferName]);
       if (!buffer) {
         log.warn(`Missing buffer for buffer map ${bufferName}`)();

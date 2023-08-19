@@ -1,4 +1,4 @@
-import {UniformFormat, VertexFormat} from '@luma.gl/core';
+import {ShaderUniformType, ShaderAttributeType, VertexFormat} from '@luma.gl/core';
 import {GL, GLUniformType, GLSamplerType, GLCompositeType, GLDataType} from '@luma.gl/constants';
 
 /** Check is uniform is of sampler type */
@@ -27,7 +27,7 @@ const SAMPLER_TYPES: GLSamplerType[] = [
 // Composite types table
 const COMPOSITE_GL_TYPES: Record<
   GLCompositeType,
-  [GLDataType, number, string, UniformFormat, VertexFormat?]
+  [GLDataType, number, string, ShaderUniformType, VertexFormat?]
 > = {
   [GL.FLOAT]: [GL.FLOAT, 1, 'float', 'f32', 'float32'],
   [GL.FLOAT_VEC2]: [GL.FLOAT, 2, 'vec2', 'vec2<f32>', 'float32x2'],
@@ -44,11 +44,12 @@ const COMPOSITE_GL_TYPES: Record<
   [GL.UNSIGNED_INT_VEC3]: [GL.UNSIGNED_INT, 3, 'uvec3', 'vec3<u32>', 'uint32x3'],
   [GL.UNSIGNED_INT_VEC4]: [GL.UNSIGNED_INT, 4, 'uvec4', 'vec4<u32>', 'uint32x4'],
 
-  [GL.BOOL]: [GL.FLOAT, 1, 'bool', 'f32', 'float32x2'],
-  [GL.BOOL_VEC2]: [GL.FLOAT, 2, 'bvec2', 'vec2<f32>'],
-  [GL.BOOL_VEC3]: [GL.FLOAT, 3, 'bvec3', 'vec3<f32>'],
-  [GL.BOOL_VEC4]: [GL.FLOAT, 4, 'bvec4', 'vec4<f32>'],
+  [GL.BOOL]: [GL.FLOAT, 1, 'bool', 'f32', 'float32'],
+  [GL.BOOL_VEC2]: [GL.FLOAT, 2, 'bvec2', 'vec2<f32>', 'float32x2'],
+  [GL.BOOL_VEC3]: [GL.FLOAT, 3, 'bvec3', 'vec3<f32>', 'float32x3'],
+  [GL.BOOL_VEC4]: [GL.FLOAT, 4, 'bvec4', 'vec4<f32>', 'float32x4'],
 
+  // TODO - are sizes/components below correct?
   [GL.FLOAT_MAT2]: [GL.FLOAT, 8, 'mat2', 'mat2x2<f32>'], // 4
   [GL.FLOAT_MAT2x3]: [GL.FLOAT, 8, 'mat2x3', 'mat2x3<f32>'], // 6
   [GL.FLOAT_MAT2x4]: [GL.FLOAT, 8, 'mat2x4', 'mat2x4<f32>'], // 8
@@ -62,11 +63,11 @@ const COMPOSITE_GL_TYPES: Record<
   [GL.FLOAT_MAT4]: [GL.FLOAT, 16, 'mat4', 'mat4x4<f32>'] // 16
 };
 
-/** Decomposes a composite type GL.VEC3 into a basic type (GL.FLOAT) and components (3) */
-export function decodeUniformType(
-  uniformType: GL
-): {format: UniformFormat; components: number; glType: GLDataType} {
-  const typeAndSize = COMPOSITE_GL_TYPES[uniformType];
+/** Decomposes a composite type (GL.VEC3) into a basic type (GL.FLOAT) and components (3) */
+export function decodeGLUniformType(
+  glUniformType: GL
+): {format: ShaderUniformType; components: number; glType: GLDataType} {
+  const typeAndSize = COMPOSITE_GL_TYPES[glUniformType];
   if (!typeAndSize) {
     throw new Error('uniform');
   }
@@ -74,17 +75,21 @@ export function decodeUniformType(
   return {format, components, glType};
 }
 
-export function decodeAttributeType(attributeType: GL): {
-  format: VertexFormat;
+/** Decomposes a composite type (GL.VEC3) into a basic type (GL.FLOAT) and components (3) */
+export function decodeGLAttributeType(glAttributeType: GL): {
+  attributeType: ShaderAttributeType;
+  vertexFormat: VertexFormat;
   components: number;
-  glType: GLDataType;
+  // glType: GLDataType;
 } {
-  const typeAndSize = COMPOSITE_GL_TYPES[attributeType];
+  const typeAndSize = COMPOSITE_GL_TYPES[glAttributeType];
   if (!typeAndSize) {
     throw new Error('attribute')
   }
-  const [glType, components, , , format] = typeAndSize;
-  return {format, components, glType};
+  const [, components, , shaderType, vertexFormat] = typeAndSize;
+  // TODO sanity - if (shaderType.startsWith('mat' ...))
+  const attributeType = shaderType as unknown as ShaderAttributeType
+  return {attributeType, vertexFormat, components}; // , glType};
 }
 
 /** Decomposes a composite type GL.VEC3 into a basic type (GL.FLOAT) and components (3) */

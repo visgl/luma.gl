@@ -56,8 +56,6 @@ pipeline.setUniforms({
 });
 ```
 
-
-
 ## Types
 
 ### RenderPipelineProps
@@ -73,14 +71,14 @@ pipeline.setUniforms({
 | `fsConstants?`   | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)               |
 | ShaderLayout     |
 | `topology?`      | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes            |
-| `layout?`        | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s). |
-| `bufferMap?`     | `BufferMapping[]`          |         |          |                                                                          |
+| `shaderLayout?`  | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s). |
+| `bufferLayout?`  | `BufferLayout`             |         |          |                                                                          |
 | GPU Parameters   |
 | `parameters?`    | `RenderPipelineParameters` |         |          | Parameters that are controlled by pipeline                               |
 | Dynamic settings |
 | `vertexCount?`   | `number`                   |         |          | Number of "rows" in 'vertex' buffers                                     |
 | `instanceCount?` | `number`                   |         |          | Number of "rows" in 'instance' buffers                                   |
-| `indices?`       | `Buffer`                  | `null`  |          | Optional index buffer                                                    |
+| `indices?`       | `Buffer`                   | `null`  |          | Optional index buffer                                                    |
 | `attributes?`    | `Record<string, Buffer>`   |         |          | Buffers for attributes                                                   |
 | `bindings?`      | `Record<string, Binding>`  |         |          | Buffers, Textures, Samplers for the shader bindings                      |
 | `uniforms?`      | `Record<string, any>`      |         |          | uniforms (WebGL only)                                                    |

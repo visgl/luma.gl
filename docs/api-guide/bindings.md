@@ -72,7 +72,7 @@ Buffer mapping is an optional feature enabling custom buffer layouts and buffer 
 Note that buffer mappings need to be defined when a pipeline is created, 
 and all buffers subsequently supplied to that pipeline need to conform to the buffer mapping.
 
-Example: The `bufferMap` field in the example below specifies that both the 
+Example: The `bufferLayout` field in the example below specifies that both the 
 `instancePositions` and `instanceVelocities` attributes should be read from a single,
 interleaved buffer. In this example, since no strides are provided, supplied buffers are assumed to be "packed",
 with alternating "position" and "velocity" values with no padding in between.
@@ -88,7 +88,7 @@ device.createRenderPipeline({
     ...
   },
   // We want to use "non-standard" buffers: two attributes interleaved in same buffer
-  bufferMap: [
+  bufferLayout: [
     {name: 'particles', attributes: [
       {name: 'instancePositions'},
       {name: 'instanceVelocities'}

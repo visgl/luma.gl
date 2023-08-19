@@ -9,16 +9,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model: Model;
-  positionBuffer: Buffer;
-  colorBuffer: Buffer;
+  interleavedBuffer: Buffer;
+  // positionBuffer: Buffer;
+  // colorBuffer: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
 
+    // prettier-ignore
+    const interleavedData = new Float32Array([
+      // vertex 1: 2D positions XY,  colors RGB
+      -0.5, -0.5,  1, 0, 0,
+      // vertex 2: 2D positions XY,  colors RGB
+      0.5, -0.5,  0, 1, 0,
+      // vertex 3: 2D positions XY,  colors RGB
+      0.0, 0.5,  0, 0, 1
+    ])
+    this.interleavedBuffer = device.createBuffer(interleavedData);
+        
     // 3 corner points [x,y,...]
-    this.positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    // this.positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
     // 3 colors [R,G,B, ...]
-    this.colorBuffer = device.createBuffer(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
+    // this.colorBuffer = device.createBuffer(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
 
     const vs = `
       attribute vec2 position;
@@ -44,20 +56,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       attributes: {
-        position: this.positionBuffer,
-        color: this.colorBuffer
+        interleaved: this.interleavedBuffer,
+        // position: this.positionBuffer,
+        // color: this.colorBuffer
       },
+      bufferLayout: [
+        {name: 'vertexData', attributes: [
+          {name: 'position', format: 'float32x2'},
+          {name: 'color', format: 'float32x3'},
+        ]}
+      ],
       vertexCount: 3
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
-    this.positionBuffer.destroy();
-    this.colorBuffer.destroy();
+    this.interleavedBuffer.destroy();
+    // this.positionBuffer.destroy();
+    // this.colorBuffer.destroy();
   }
 
-  override onRender({device}: AnimationProps): void {
+  onRender({device}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.draw(renderPass);
     renderPass.end();

@@ -1,19 +1,22 @@
 //
-import {BindingLayout} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
+import {BindingDeclaration} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
+/**
+ * Properties for a compute pipeline
+ */
 export type ComputePipelineProps = ResourceProps & {
   handle?: unknown;
   cs: Shader;
   csEntryPoint?: string;
   csConstants?: Record<string, number>; // WGSL only
-  layout?: BindingLayout[];
+  shaderLayout?: BindingDeclaration[];
 };
 
-
 /**
+ * A compiled and linked shader program for compute
  */
 export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   static override defaultProps: Required<ComputePipelineProps> = {
@@ -21,7 +24,7 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
     cs: undefined,
     csEntryPoint: undefined,
     csConstants: {},
-    layout: []
+    shaderLayout: []
   };  
 
   override get [Symbol.toStringTag](): string {

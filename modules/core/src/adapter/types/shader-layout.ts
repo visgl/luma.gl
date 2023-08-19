@@ -1,18 +1,24 @@
 // luma.gl, MIT license
-import {TextureFormat} from '../types/texture-formats';
-import {VertexFormat} from '../types/vertex-formats';
+import type {TextureFormat} from '../types/texture-formats';
+import type {VertexFormat} from './vertex-formats';
+import type {ShaderUniformType, ShaderAttributeType} from './shader-formats';
 import {AccessorObject} from '../types/accessor';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';
 import type {Texture} from '../resources/texture';
-import {UniformFormat} from './uniform-formats';
 
 /**
- * Describes an attribute binding for a program
+ * Describes all shader binding points for a `RenderPipeline` or `ComputePipeline`
+ * A ShaderLayout describes the static structure of a shader pipeline.
+ * It also allows the numeric locations in the shader to accessed with the same variable names
+ * used in the shader.
+ * @note A ShaderLayout needs to be complemented by a BufferLayout that describes 
+ * the actual memory layout of the buffers that will be used with the pipeline.
+ * 
  * @example
  * ```
   device.createRenderPipeline({
-    layout: [
+    shaderLayout: [
       attributes: [
         {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
         {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
@@ -24,27 +30,94 @@ import {UniformFormat} from './uniform-formats';
  * ```
  */
 export type ShaderLayout = {
-  attributes: AttributeLayout[];
-  bindings: BindingLayout[];
+  /** All attributes, their locations, and basic type information. Also an auto-deduced step mode */
+  attributes: AttributeDeclaration[];
+  /** All bidning points (textures, samplers, uniform buffers) with their locations and type */
+  bindings: BindingDeclaration[];
   /** WebGL only (WebGPU use bindings and uniform buffers) */
   uniforms?: any[];
   /** WebGL2 only (WebGPU use compute shaders) */
   varyings?: any[];
 };
 
-/** ShaderLayout for attributes */
-export type AttributeLayout = {
+/** 
+ * Declares one for attributes 
+ */
+export type AttributeDeclaration = {
   /** The name of this attribute in the shader */
   name: string;
   /** The index into the GPU's vertex array buffer bank (usually between 0-15) */
   location: number;
-  /** WebGPU-style format, such as float32x3 or uint8x4 */
-  format: VertexFormat;
-  /** @note defaults to vertex */
+  /** WebGPU-style shader type. The declared format of the attribute in the shader code. Buffer's vertex format needs to map to this. */
+  type: ShaderAttributeType;
+  /** Inferred from attribute name. @note Technically not part of static structure of shader */
   stepMode?: 'vertex' | 'instance';
 };
 
-// BUFFER MAP
+// BUFFER LAYOUT
+
+/** 
+ * A BufferLayout complements the static structure in a ShaderLayout with information
+ * about the dynamic memory layout of the buffers that will be used with the pipeline.
+ * 
+ * Provides specific details about the memory layout of the actual buffers 
+ * that will be provided to a `RenderPipeline`.
+ */
+export type SingleBufferLayout = BufferLayout;
+
+/** 
+ * Specify memory layout for a buffer that is only used by one attribute
+ * @note Specifies format, stride, offset and step mode
+ * @note The buffer can be set using the attribute name. 
+ */
+export type BufferLayout = {
+  /** Name of attribute to adjust */
+  name: string;
+  /** Whether the attribute is instanced. @note Only needs to be provided if auto deduction failed. */
+  stepMode?: 'vertex' | 'instance';
+  /** offset into buffer. Defaults to `0` */
+  byteOffset?: number;
+  /** bytes between successive elements. If omitted, stride is set to reflect a "packed" buffer */
+  byteStride?: number;
+  /** vertex format. Auto calculated. @note Needs to match type/components of the ShaderLayout ('f32', 'i32', 's32') */
+  format?: VertexFormat;
+  /** Attributes that read from this buffer */
+  attributes?: InterleavedAttributeLayout[];
+};
+
+/**  */
+export type InterleavedAttributeLayout = {
+  /** Name of attribute that maps to an interleaved "view" of this buffer */
+  name: string;
+  /** vertex format override, when using formats other than float32 (& uint32, sint32) */
+  format?: VertexFormat;
+  /** 
+   * offset into one stride. 
+   * @note additive to the parent's buffer byteOffset
+   * @note if not supplied, offset for each attribute is auto calculated starting from zero assuming aligned packing
+   */
+  byteStrideOffset?: number;
+};
+
+/** 
+ * Map an interleaved buffer whose values 
+ * @note The buffer can be set using the defined buffer name. 
+ */
+// export type InterleavedBufferLayout = {
+//   /** Mark this as interleaved */
+//   type: 'interleave';
+//   /** Name of buffer (to which the multiple attributes are to be bound) */
+//   name: string;
+//   /** bytes between successive elements. Assumes tight packing if omitted */
+//   byteStride?: number;
+//   /** offset into buffer Defaults to `0` */
+//   byteOffset?: number;
+//   /** Attributes that read from this buffer */
+//   attributes: InterleavedAttribute[];
+//   /** @deprecated Dummy for typing */
+//   format?: VertexFormat;
+// };
+
 
 /**
  * A buffer map is used to specify "non-standard" buffer layouts (buffers with offsets, interleaved buffers etc)
@@ -52,9 +125,9 @@ export type AttributeLayout = {
  * @example
  * ```
   device.createRenderPipeline({
-    layout: shaderLayout,
+    shaderLayout: shaderLayout,
     // interleaved bindings, auto offset
-    bufferMap: [
+    bufferLayout: [
       {name: 'interleavedPositions', attributes: [...]}
       {name: 'position', byteOffset: 1024}
       // single buffer per binding
@@ -68,52 +141,52 @@ export type AttributeLayout = {
   ];
   ```
  */
-export type BufferMapping = SingleBufferMapping | InterleavedBufferMapping;
+// export type BufferLayout = SingleBufferLayout | InterleavedBufferLayout;
 
-/** Specify stride and offset for a buffer that only handles one attribute*/
-export type SingleBufferMapping = {
-  /** Mark this as interleaved */
-  type?: 'override';
-  /** Name of attribute to adjust */
-  name: string;
-  /** vertex format override, when using formats other than float32, uint32, sint32 */
-  format: VertexFormat;
-  /** bytes between successive elements @note `stride` is auto calculated if omitted */
-  byteStride?: number;
-  /** offset into buffer. Defaults to `0` */
-  byteOffset?: number;
-};
+// /** Specify stride and offset for a buffer that only handles one attribute*/
+// export type SingleBufferLayout = {
+//   /** Mark this as interleaved */
+//   type?: 'override';
+//   /** Name of attribute to adjust */
+//   name: string;
+//   /** vertex format override, when using formats other than float32, uint32, sint32 */
+//   format: VertexFormat;
+//   /** bytes between successive elements @note `stride` is auto calculated if omitted */
+//   byteStride?: number;
+//   /** offset into buffer. Defaults to `0` */
+//   byteOffset?: number;
+// };
 
-/** Map an interleaved buffer */
-export type InterleavedBufferMapping = {
-  /** Mark this as interleaved */
-  type: 'interleave';
-  /** Name of buffer (to which the multiple attributes are to be bound) */
-  name: string;
-  /** bytes between successive elements. Assumes tight packing if omitted */
-  byteStride?: number;
-  /** offset into buffer Defaults to `0` */
-  byteOffset?: number;
-  /** Attributes that read from this buffer */
-  attributes: InterleavedAttribute[];
-  /** @deprecated Dummy for typing */
-  format?: VertexFormat;
-};
+// /** Map an interleaved buffer */
+// export type InterleavedBufferLayout = {
+//   /** Mark this as interleaved */
+//   type: 'interleave';
+//   /** Name of buffer (to which the multiple attributes are to be bound) */
+//   name: string;
+//   /** bytes between successive elements. Assumes tight packing if omitted */
+//   byteStride?: number;
+//   /** offset into buffer Defaults to `0` */
+//   byteOffset?: number;
+//   /** Attributes that read from this buffer */
+//   attributes: InterleavedAttribute[];
+//   /** @deprecated Dummy for typing */
+//   format?: VertexFormat;
+// };
 
-/** @note Not public: not exported outside of api module */
-export type InterleavedAttribute = {
-  /** Name of attribute that maps to an interleaved "view" of this buffer */
-  name: string;
-  /** vertex format override, when using formats other than float32 (& uint32, sint32) */
-  format?: VertexFormat;
-  /** 
-   * offset into one stride. 
-   * @note additive to the parent's buffer byteOffset
-   * @note if not supplied, offset for each attribute is auto calculated starting 
-   * from zero assuming aligned packing
-   */
-  byteOffset?: number;
-};
+// /** @note Not public: not exported outside of api module */
+// export type InterleavedAttribute = {
+//   /** Name of attribute that maps to an interleaved "view" of this buffer */
+//   name: string;
+//   /** vertex format override, when using formats other than float32 (& uint32, sint32) */
+//   format?: VertexFormat;
+//   /** 
+//    * offset into one stride. 
+//    * @note additive to the parent's buffer byteOffset
+//    * @note if not supplied, offset for each attribute is auto calculated starting 
+//    * from zero assuming aligned packing
+//    */
+//   byteOffset?: number;
+// };
 
 // BINDING LAYOUTS
 
@@ -144,7 +217,7 @@ type Binding = {
 */
 
 /** ShaderLayout for bindings */
-export type BindingLayout =
+export type BindingDeclaration =
   | UniformBufferBindingLayout 
   | BufferBindingLayout
   | TextureBindingLayout
@@ -163,7 +236,7 @@ export type UniformBufferBindingLayout = {
 
 export type UniformInfo = {
   name: string;
-  format: UniformFormat;
+  format: ShaderUniformType;
   type?: string;
   arrayLength: number;
   byteOffset: number;

@@ -9,7 +9,7 @@
 - docs: website examples (#1782)
 ## v9.0.0-alpha.29
 
-- feat(webgl): Implement ShaderLayout.bufferMap in webgl (#1780)
+- feat(webgl): Implement ShaderLayout.bufferLayout in webgl (#1780)
 - feat(engine): model cleanup (#1779)
 
 ## v9.0.0-alpha.28

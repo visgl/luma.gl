@@ -86,8 +86,8 @@ const UNIFORM_BUFFER_SIZE = NUMBER_OF_INSTANCES * MATRIX_SIZE; // 4x4 (x4 bytes)
 
 const CUBE_ATTRIBUTE_LAYOUTS: ShaderLayout = {
   attributes: [
-    {name: 'position', location: 0, format: 'float32x4'},
-    {name: 'uv', location: 1, format: 'float32x2'}
+    {name: 'position', location: 0, type: 'vec4<f32>'},
+    {name: 'uv', location: 1, type: 'vec2<f32>'}
   ],
   bindings: [
     {name: 'uniforms', location: 0, type: 'uniform'}
@@ -129,7 +129,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs: SHADERS.vs,
       fs: SHADERS.fs,
       topology: 'triangle-list',
-      layout: CUBE_ATTRIBUTE_LAYOUTS,
+      shaderLayout: CUBE_ATTRIBUTE_LAYOUTS,
       attributes: {
         position: positionBuffer,
         uv: uvBuffer

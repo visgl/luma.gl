@@ -88,8 +88,8 @@ fn main([[location(0)]] fragUV: vec2<f32>,
 
 const SHADER_LAYOUT: ShaderLayout = {
   attributes: [
-    {name: 'positions', location: 0, format: 'float32x4'},
-    {name: 'uvs', location: 1, format: 'float32x2'}
+    {name: 'position', location: 0, type: 'vec4<f32>'},
+    {name: 'uv', location: 1, type: 'vec2<f32>'}
   ],
   bindings: [
     {name: 'uniforms', location: 0, type: 'uniform'},
@@ -130,7 +130,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // Shader description
       vs: SHADERS.vs,
       fs: SHADERS.fs,
-      layout: SHADER_LAYOUT,
+      shaderLayout: SHADER_LAYOUT,
       //
       topology: 'triangle-list',
       vertexCount: cube.vertexCount,

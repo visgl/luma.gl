@@ -2,6 +2,19 @@
 
 export {VERSION} from './init';
 
+// GENERAL TYPES
+export type {ConstructorOf, PartialBy} from './types';
+
+// NUMERIC TYPES - TODO: could be imported from @math.gl/types
+export type {
+  TypedArray,
+  TypedArrayConstructor,
+  NumberArray,
+  NumericArray,
+  BigIntOrNumberArray,
+  BigIntOrNumericArray
+} from './types';
+
 // MAIN API ACCESS POINTS
 export {luma} from './lib/luma';
 
@@ -60,21 +73,29 @@ export type {
   RenderPipelineParameters
 } from './adapter/types/parameters';
 
-export type {VertexFormat} from './adapter/types/vertex-formats';
-export type {UniformFormat} from './adapter/types/uniform-formats';
+// MEMORY LAYOUT TYPES
+export type {VertexFormat, VertexType} from './adapter/types/vertex-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
   DepthStencilTextureFormat
 } from './adapter/types/texture-formats';
+export type {
+  ShaderDataType,
+  ShaderAttributeType,
+  ShaderUniformType
+} from './adapter/types/shader-formats';
+
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
 export type {
   ShaderLayout,
-  AttributeLayout,
-  BindingLayout,
-  Binding,
-  BufferMapping,
+  AttributeDeclaration,
+  BindingDeclaration,
+  Binding
+} from './adapter/types/shader-layout';
+export type {BufferLayout} from './adapter/types/shader-layout';
+export type {
   // Deprecated, todo
   AttributeBinding,
   UniformBinding,
@@ -85,29 +106,21 @@ export type {
 export {UniformBufferLayout} from './lib/uniform-buffer-layout';
 export {UniformBlock} from './lib/uniform-block';
 
-// API UTILS
-export {decodeVertexFormat} from './adapter/utils/decode-vertex-format';
-export {decodeTextureFormat} from './adapter/utils/decode-texture-format';
+// TYPE UTILS
+export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
+export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
+export {decodeShaderUniformType} from './adapter/type-utils/decode-uniform-type';
+export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
 
 // COMPILER LOG
 export type {CompilerMessage} from './lib/compiler-log/compiler-message';
 export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
 
-// GENERAL TYPES
-
-export type {ConstructorOf, PartialBy} from './types';
-
-// NUMERIC TYPES
-
-// TODO: could be imported from @math.gl/types
-export type {
-  TypedArray,
-  TypedArrayConstructor,
-  NumberArray,
-  NumericArray,
-  BigIntOrNumberArray,
-  BigIntOrNumericArray
-} from './types';
+//
+export {
+  getAttributeInfoFromLayouts,
+  mergeShaderLayout
+} from './adapter/attribute-utils/get-attribute-from-layouts';
 
 // GENERAL UTILS
 
@@ -119,7 +132,13 @@ export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
 export {formatValue} from './lib/utils/format-value';
 export {stubRemovedMethods} from './lib/utils/stub-methods';
 export {checkProps} from './lib/utils/check-props';
-export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './lib/utils/load-file';
+export {
+  setPathPrefix,
+  loadFile,
+  loadImage,
+  loadImageBitmap,
+  loadScript
+} from './lib/utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
 export {getRandom, random} from './lib/utils/random';
 export {deepEqual} from './lib/utils/deep-equal';

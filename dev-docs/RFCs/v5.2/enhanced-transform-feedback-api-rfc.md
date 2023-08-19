@@ -54,7 +54,7 @@ Swap source destination buffers.
 Create `Transform` object with sourceBuffers, feedbackMap and number of elements to process.
 
 ```typescript
-const bufferMap = new Transform(gl2, {
+const bufferLayout = new Transform(gl2, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -72,23 +72,23 @@ Destination buffers and varying map required to perform transform feedback opera
 Perform one iteration of transform feedback.
 
 ```typescript
-bufferMap.run();
+bufferLayout.run();
 ```
 
 If needed switch all buffers with one call and re-run.
 
 ```typescript
-bufferMap.swapBuffers();
+bufferLayout.swapBuffers();
 
 // Consume destination buffer data.
 
-bufferMap.run();
+bufferLayout.run();
 ```
 
 Now destination buffers can be retrieved and used as to set attribute buffers or data can be processed by CPU using `Buffer.getData`.
 
 ```typescript
-bufferWithNewData = bufferMap.getBuffer('outValue');
+bufferWithNewData = bufferLayout.getBuffer('outValue');
 newData = bufferWithNewData.getData();
 ```
 

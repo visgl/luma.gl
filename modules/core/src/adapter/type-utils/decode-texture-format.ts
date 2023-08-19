@@ -7,7 +7,7 @@ const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
 export type DecodedTextureFormat = {
   format: string;
   components: number;
-  dataType: VertexType;
+  dataType?: VertexType;
   srgb: boolean;
   webgl: boolean;
   unsized: boolean;

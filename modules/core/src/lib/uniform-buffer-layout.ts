@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type {UniformFormat, UniformDataType} from '../adapter/types/uniform-formats';
-import {decodeUniformFormat, alignTo} from '../adapter/utils/decode-uniform-format';
+import type {ShaderUniformType, ShaderDataType} from '../adapter/types/shader-formats';
+import {decodeShaderUniformType, alignTo} from '../adapter/type-utils/decode-uniform-type';
 
 // const ERR_ARGUMENT = 'UniformBufferLayout illegal argument';
 
@@ -10,13 +10,13 @@ import {decodeUniformFormat, alignTo} from '../adapter/utils/decode-uniform-form
  * TODO - Parse shader and build a layout?
  */
 export class UniformBufferLayout {
-  readonly layout: Record<string, {offset: number, size: number, type: UniformDataType}> = {};
+  readonly layout: Record<string, {offset: number, size: number, type: ShaderDataType}> = {};
   readonly size: number = 0;
 
-  constructor(uniforms: Record<string, UniformFormat>) {
+  constructor(uniforms: Record<string, ShaderUniformType>) {
     // Add layout (type, size and offset) definitions for each uniform in the layout
     for (const [key, uniformType] of Object.entries(uniforms)) {
-      const typeAndComponents = decodeUniformFormat(uniformType);
+      const typeAndComponents = decodeShaderUniformType(uniformType);
       const {type, components: count} = typeAndComponents;
       // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
       this.size = alignTo(this.size, count);

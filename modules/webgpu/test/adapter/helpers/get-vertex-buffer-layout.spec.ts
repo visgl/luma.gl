@@ -4,25 +4,25 @@ import {getVertexBufferLayout} from '@luma.gl/webgpu/adapter/helpers/get-vertex-
 
 const shaderLayout: ShaderLayout = {
   attributes: [
-    {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-    {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-    {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
+    {name: 'instancePositions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'instanceVelocities', location: 1, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'vertexPositions', location: 2, type: 'vec2<f32>', stepMode: 'vertex'}
   ],
   bindings: []
 };
 
 // We want to use "non-standard" buffers: two attributes interleaved in same buffer
-const bufferMap = [
+const bufferLayout = [
   {name: 'particles', attributes: [
     {name: 'instancePositions'},
     {name: 'instanceVelocities'}
   ]}
 ];
 
-const TEST_CASES: {shaderLayout: ShaderLayout, bufferMap, vertexBufferLayout: GPUVertexBufferLayout[]}[] = [
+const TEST_CASES: {shaderLayout: ShaderLayout, bufferLayout, vertexBufferLayout: GPUVertexBufferLayout[]}[] = [
   {
     shaderLayout,
-    bufferMap: [],
+    bufferLayout: [],
 
     vertexBufferLayout: [
       {
@@ -62,7 +62,7 @@ const TEST_CASES: {shaderLayout: ShaderLayout, bufferMap, vertexBufferLayout: GP
   },
   {
     shaderLayout,
-    bufferMap,
+    bufferLayout,
 
     vertexBufferLayout: [
       {
@@ -96,9 +96,9 @@ const TEST_CASES: {shaderLayout: ShaderLayout, bufferMap, vertexBufferLayout: GP
   }
 ];
 
-test('WebGPU#getVertexBufferLayout', t => {
+test.only('WebGPU#getVertexBufferLayout', t => {
   for (const tc of TEST_CASES) {
-    const vertexBufferLayout = getVertexBufferLayout(tc.shaderLayout, tc.bufferMap);
+    const vertexBufferLayout = getVertexBufferLayout(tc.shaderLayout, tc.bufferLayout);
     t.deepEqual(vertexBufferLayout, tc.vertexBufferLayout);
     // t.comment(JSON.stringify(vertexBufferLayout));
   }

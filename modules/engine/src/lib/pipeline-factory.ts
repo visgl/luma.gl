@@ -7,7 +7,7 @@ export type GetRenderPipelineOptions = {
   vs: string;
   fs: string | null;
   topology: PrimitiveTopology;
-  layout?: ShaderLayout | null;
+  shaderLayout?: ShaderLayout | null;
   parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
@@ -21,7 +21,8 @@ export type GetRenderPipelineOptions = {
 
 export type GetComputePipelineOptions = {
   cs: string;
-    parameters?: RenderPipelineParameters;
+
+  parameters?: RenderPipelineParameters;
 
   modules?: ShaderModule[];
   defines?: Record<string, string>;
@@ -39,7 +40,7 @@ const DEFAULT_RENDER_PIPELINE_OPTIONS: Required<GetRenderPipelineOptions> = {
   defines: {},
   inject: {},
   transpileToGLSL100: false,
-  layout: null,
+  shaderLayout: null,
 
   varyings: [],
   bufferMode: 0x8c8d, // // varyings/bufferMode for xform feedback, 0x8c8d: SEPARATE_ATTRIBS

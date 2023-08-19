@@ -98,13 +98,13 @@ class InstancedCube extends Model {
       modules: [dirlight, picking],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry(),
-      layout: {
+      shaderLayout: {
         attributes: [
-          {name: 'positions', location: 0, format: 'float32x3', stepMode: 'vertex'},
-          {name: 'normals', location: 1, format: 'float32x3', stepMode: 'vertex'},
-          {name: 'instanceOffsets', location: 2, format: 'float32x2', stepMode: 'instance'},
-          {name: 'instanceColors', location: 3, format: 'float32x3', stepMode: 'instance'},
-          {name: 'instancePickingColors', location: 4, format: 'float32x2', stepMode: 'instance'}
+          {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
+          {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
+          {name: 'instanceOffsets', location: 2, type: 'vec2<f32>', stepMode: 'instance'},
+          {name: 'instanceColors', location: 3, type: 'vec3<f32>', stepMode: 'instance'},
+          {name: 'instancePickingColors', location: 4, type: 'vec2<f32>', stepMode: 'instance'}
         ],
         bindings: []
       },
@@ -114,7 +114,7 @@ class InstancedCube extends Model {
         instanceColors: colorsBuffer,
         instancePickingColors: pickingColorsBuffer
       },
-      bufferMap: [
+      bufferLayout: [
         {name: 'instanceColors', format: 'unorm8x4'},
         {name: 'instancePickingColors', format: 'uint8x2'},
       ],
@@ -231,7 +231,7 @@ export function pickInstance(
   });
 
   if (color[0] + color[1] + color[2] > 0) {
-    console.log('setting picking color', color);
+    // console.log('setting picking color', color);
     model.updateModuleSettings({
       pickingSelectedColor: color
     });

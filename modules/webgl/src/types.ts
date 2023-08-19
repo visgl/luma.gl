@@ -5,4 +5,6 @@ export type AccessorObject = {
   divisor?: number;
   offset?: number;
   stride?: number;
+  normalized?: boolean;
+  integer?: boolean;
 };

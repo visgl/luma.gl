@@ -5,16 +5,18 @@ import type {
   Binding,
   ShaderLayout,
   PrimitiveTopology,
-  // BindingLayout,
-  AttributeLayout,
   TypedArray,
-  BufferMapping
+  BufferLayout
 } from '@luma.gl/core';
-import {RenderPipeline, cast, log, decodeVertexFormat} from '@luma.gl/core';
+import {RenderPipeline, cast, log} from '@luma.gl/core';
+import {
+  mergeShaderLayout,
+  getAttributeInfoFromLayouts
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {getWebGLDataType} from '../converters/texture-formats';
-import {getShaderLayout, mergeShaderLayout, mergeBufferMap} from '../helpers/get-shader-layout';
+import {getGLFromVertexType} from '../converters/vertex-formats';
+import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceParameters, withGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
@@ -38,12 +40,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   vs: WEBGLShader;
   /** fragment shader */
   fs: WEBGLShader;
-  /** The merged layout */
-  layout: ShaderLayout;
   /** The layout extracted from shader by WebGL introspection APIs */
   introspectedLayout: ShaderLayout;
+  /** The merged layout */
+  shaderLayout: ShaderLayout;
   /** Buffer map describing buffer interleaving etc */
-  bufferMap: BufferMapping[];
+  bufferLayout: BufferLayout[];
 
   /** Uniforms set on this model */
   uniforms: Record<string, any> = {};
@@ -89,10 +91,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
     // Merge provided layout with introspected layout
-    this.layout = mergeShaderLayout(this.introspectedLayout, props.layout); 
+    this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
     // Merge layout with any buffer map overrides
-    this.bufferMap = props.bufferMap || [];
-    this.layout = mergeBufferMap(this.layout, this.bufferMap); 
+    this.bufferLayout = props.bufferLayout || [];
+    // this.shaderLayout = mergeBufferMap(this.shaderLayout, this.bufferLayout);
     this.vertexArrayObject = new WEBGLVertexArrayObject(this.device);
   }
 
@@ -114,28 +116,27 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   setAttributes(attributes: Record<string, Buffer>): void {
     for (const [name, buffer] of Object.entries(attributes)) {
       const webglBuffer = cast<WEBGLBuffer>(buffer);
-      const attribute = getAttributeLayout(this.layout, name);
-      if (!attribute) {
-        log.warn(`Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`)();
+      const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
+      if (!attributeInfo) {
+        log.warn(
+          `Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`
+        )();
         continue; // eslint-disable-line no-continue
       }
-      const decoded = decodeVertexFormat(attribute.format);
-      const {type: typeString, components: size, byteLength: stride, normalized /* , integer*/} = decoded;
-      const divisor = attribute.stepMode === 'instance' ? 1 : 0;
-      const type = getWebGLDataType(typeString);
-      this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
-        size,
-        type,
-        stride,
-        offset: 0,
-        normalized,
-        // it is the shader attribute declaration, not the vertex memory format, 
+      const glType = getGLFromVertexType(attributeInfo.bufferDataType);
+      this.vertexArrayObject.setBuffer(attributeInfo.location, webglBuffer, {
+        size: attributeInfo.bufferComponents,
+        type: glType,
+        stride: attributeInfo.byteStride,
+        offset: attributeInfo.byteOffset,
+        normalized: attributeInfo.normalized,
+        // it is the shader attribute declaration, not the vertex memory format,
         // that determines if the data in the buffer will be treated as integers.
         // /
         // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
         // but as far as we can tell, WebGPU does not.
-        integer: false,
-        divisor
+        integer: attributeInfo.integer,
+        divisor: attributeInfo.stepMode === 'instance' ? 1 : 0
       });
     }
   }
@@ -144,23 +145,26 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Constant attributes are only supported in WebGL, not in WebGPU
    * Any attribute that is disabled in the current vertex array object
    * is read from the context's global constant value for that attribute location.
-   * @param attributes 
+   * @param attributes
    */
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
-    for (const [name, value] of Object.entries(attributes)) {
-      const attribute = getAttributeLayout(this.layout, name);
-      if (!attribute) {
-        log.warn(`Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`)();
-        continue; // eslint-disable-line no-continue
-      }
-      this.vertexArrayObject.setConstant(attribute.location, value);
-    }
+    // TODO - there should be no advantage to setting these here vs in _applyConstantAttributes
+    // for (const [name, value] of Object.entries(attributes)) {
+    //   const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
+    //   if (!attributeInfo) {
+    //     log.warn(
+    //       `Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`
+    //     )();
+    //     continue; // eslint-disable-line no-continue
+    //   }
+    //   this.vertexArrayObject.setConstant(attributeInfo.location, value);
+    // }
     Object.assign(this.constantAttributes, attributes);
   }
 
-  /** 
+  /**
    * Bindings include: textures, samplers and uniform buffers
-   * @todo needed for portable model 
+   * @todo needed for portable model
    */
   setBindings(bindings: Record<string, Binding>): void {
     // if (log.priority >= 2) {
@@ -168,7 +172,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // }
 
     for (const [name, value] of Object.entries(bindings)) {
-      const binding = this.layout.bindings.find((binding) => binding.name === name);
+      const binding = this.shaderLayout.bindings.find(binding => binding.name === name);
       if (!binding) {
         log.warn(`Unknown binding ${name} in render pipeline ${this.id}`)();
         continue; // eslint-disable-line no-continue
@@ -223,13 +227,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       vertexCount,
       // indexCount,
       instanceCount,
-      firstVertex = 0,
+      firstVertex = 0
       // firstIndex,
       // firstInstance,
       // baseVertex
     } = options;
 
-    const drawMode = getDrawMode(this.props.topology);
+    const drawMode = getGLDrawMode(this.props.topology);
     const isIndexed: boolean = Boolean(this._indexBuffer);
     const indexType = this._indexBuffer?.glIndexType;
     const isInstanced: boolean = Number(options.instanceCount) > 0;
@@ -277,7 +281,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           } else if (isIndexed) {
             this.device.gl.drawElements(drawMode, vertexCount || 0, indexType, firstVertex); // indexCount?
           } else if (isInstanced) {
-            this.device.gl2?.drawArraysInstanced(drawMode, firstVertex, vertexCount || 0, instanceCount || 0);
+            this.device.gl2?.drawArraysInstanced(
+              drawMode,
+              firstVertex,
+              vertexCount || 0,
+              instanceCount || 0
+            );
           } else {
             this.device.gl.drawArrays(drawMode, firstVertex, vertexCount || 0);
           }
@@ -344,7 +353,26 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     return texturesRenderable;
   }
 
-  /** Apply any bindings */
+  /**
+   * Constant attributes need to be reset before every draw call
+   * Any attribute that is disabled in the current vertex array object
+   * is read from the context's global constant value for that attribute location.
+   * @note Constant attributes are only supported in WebGL, not in WebGPU
+   */
+  _applyConstantAttributes(): void {
+    for (const [name, value] of Object.entries(this.constantAttributes)) {
+      const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
+      if (!attributeInfo) {
+        log.warn(
+          `Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`
+        )();
+        continue; // eslint-disable-line no-continue
+      }
+      this.vertexArrayObject.setConstant(attributeInfo.location, value);
+    }
+  }
+
+  /** Apply any bindings (before each draw call) */
   _applyBindings() {
     this.device.gl.useProgram(this.handle);
 
@@ -355,7 +383,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     let textureUnit = 0;
     let uniformBufferIndex = 0;
-    for (const binding of this.layout.bindings) {
+    for (const binding of this.shaderLayout.bindings) {
       const value = this.bindings[binding.name];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
@@ -406,8 +434,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
+  /**
+   * Due to program sharing, uniforms need to be reset before every draw call
+   * (though caching will avoid redundant WebGL calls)
+   */
   _applyUniforms() {
-    for (const uniformLayout of this.layout.uniforms || []) {
+    for (const uniformLayout of this.shaderLayout.uniforms || []) {
       const {name, location, type, textureUnit} = uniformLayout;
       const value = this.uniforms[name] ?? textureUnit;
       if (value !== undefined) {
@@ -415,28 +447,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       }
     }
   }
-
-  /**
-   * Constant attributes are only supported in WebGL, not in WebGPU
-   * Any attribute that is disabled in the current vertex array object
-   * is read from the context's global constant value for that attribute location.
-   */
-  _applyConstantAttributes(): void {
-    for (const [name, value] of Object.entries(this.constantAttributes)) {
-      const attribute = getAttributeLayout(this.layout, name);
-      if (!attribute) {
-        log.warn(`Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`)();
-        continue; // eslint-disable-line no-continue
-      }
-      this.vertexArrayObject.setConstant(attribute.location, value);
-    }
-  }  
 }
 
 /** Get the primitive type for draw */
-function getDrawMode(
+function getGLDrawMode(
   topology: PrimitiveTopology
-): GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN {
+):
+  | GL.POINTS
+  | GL.LINES
+  | GL.LINE_STRIP
+  | GL.LINE_LOOP
+  | GL.TRIANGLES
+  | GL.TRIANGLE_STRIP
+  | GL.TRIANGLE_FAN {
   // prettier-ignore
   switch (topology) {
     case 'point-list': return GL.POINTS;
@@ -463,8 +486,4 @@ function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.
     case 'triangle-fan-webgl': return GL.TRIANGLES;
     default: throw new Error(topology);
   }
-}
-
-function getAttributeLayout(layout: ShaderLayout, name: string): AttributeLayout | null {
-  return layout.attributes.find((binding) => binding.name === name) || null;
 }

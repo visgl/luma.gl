@@ -1,7 +1,10 @@
 /*
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
-import {getShaderLayout} from '@luma.gl/webgl';
+import {GL} from '@luma.gl/constants';
+import {Program} from '@luma.gl/webgl-legacy';
+import ShaderLayout from '@luma.gl/webgl-legacy/classic/program-configuration';
+import {fixture} from 'test/setup';
 
 const TEST_CASES = [
   {
@@ -136,34 +139,61 @@ void main(void) {
     }
   }
 ];
-*/
 
-/** TODO - hard to make this work consistently across local env and CI
-test.skip('WebGL#getShaderLayout#varyings', async (t) => {
+const vs = `
+attribute vec3 positions;
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+varying vec3 vPosition;
 
-  for (const tc of TEST_CASES) {
-    for (const device of await getWebGLTestDevices()) {
-      if (tc.skipWebgl1 && device.info.type === 'webgl') {
-        continue;
-      }
-      const vs = device.createShader({stage: 'vertex', source: tc.vs});
-      const fs = device.createShader({stage: 'fragment', source: tc.fs});
+void main(void) {
+  gl_Position = uPMatrix * uMVMatrix * vec4(positions, 1.0);
+  vPosition = positions;
+}
+`;
 
-      const program = device.createRenderPipeline({vs, fs, varyings: tc.varyings});
-      const shaderLayout = getShaderLayout(device.gl, program.handle);
+const fs = `
+void main(void) {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+`;
 
-      // headless gl has complex uniform location structs
-      for (const uniform of shaderLayout.uniforms || []) {
-        uniform.location = {};
-      }
+test('WebGLRenderPipeline#ShaderLayout', (t) => {
+  for (const device of getWebGLTestDevices()) {
 
-      t.deepEquals(shaderLayout, tc.expected, `${device.info.type}: ${tc.title}`);
+  const pipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+  const shaderLayout = pipeline.introspectedLayout;
 
-      program.destroy();
-      vs.destroy();
-      fs.destroy();
-    }
-  }
+  t.ok(shaderLayout, 'ShaderLayout construction successful');
+
+  // TODO - check that info about attributes and varyings have been correctly extracted
+
   t.end();
 });
- */
+
+test('WebGLRenderPipeline#ShaderLayout#varyings', (t) => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+
+  let program = new Program(gl2, {fs, vs, varyings: ['vPosition', 'gl_Position']});
+
+  let varyingMap = program.configuration.varyingInfosByName;
+  t.equals(varyingMap.vPosition.location, 0);
+  t.equals(varyingMap.gl_Position.location, 1);
+
+  program = new Program(gl2, {
+    fs,
+    vs,
+    varyings: ['vPosition', 'gl_Position'],
+    bufferMode: GL.INTERLEAVED_ATTRIBS
+  });
+  varyingMap = program.configuration.varyingInfosByName;
+  t.equals(varyingMap.vPosition.location, 0);
+  t.equals(varyingMap.gl_Position.location, 1);
+  t.end();
+});
+*/

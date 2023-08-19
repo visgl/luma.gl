@@ -3,9 +3,11 @@ import './lib/utils/array-utils-flat.spec';
 import './lib/utils/utils.spec';
 import './lib/utils/format-value.spec';
 
-// api utils
-import './adapter/utils/decode-vertex-format.spec';
-import './adapter/utils/decode-texture-format.spec';
+// type utils
+import './adapter/type-utils/decode-attribute-type.spec';
+
+import './adapter/type-utils/decode-vertex-format.spec';
+import './adapter/type-utils/decode-texture-format.spec';
 
 // adapter
 import './adapter/canvas-context.spec';

@@ -112,7 +112,7 @@ export class Model {
       topology: this.topology,
       defines: props.defines,
       parameters: props.parameters,
-      layout: props.layout
+      shaderLayout: props.shaderLayout
     });
 
     this.pipeline = pipeline;
@@ -163,7 +163,7 @@ export class Model {
     this.setUniforms(uniforms);
   }
 
-  setIndexBuffer(indices: Buffer): void {
+  setIndexBuffer(indices: Buffer | null): void {
     this.pipeline.setIndexBuffer(indices);
     // this._indices = indices;
   }
