@@ -2,16 +2,6 @@
 
 Manages an animation loop and optionally a WebGL context and a WebGL canvas. It provides a number of features related to initialization and animation of a WebGL context.
 
-- Provides a number of commonly needed variables as part of the `context` object which is passed to `onRender` and `onFinalize` callbacks.
-- Objects returned by `onInitialize` will be appended to `context` object hence available to `onRender` and `onFinalize`.
-- To avoid problems with page load timing, move context creation to the `onCreateContext` method.
-- By default, `onRender` method manages resizing of canvas, viewport and framebuffer.
-- Makes it easy to wait for the HTML page to load before creating a canvas and WebGL resources.
-
-References:
-
-- [WebGL Fundamentals](https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html#drawingbuffer) contains excellent information on the subtleties of the how the WebGL context's drawing buffer and the HTML canvas interact.
-- When running in the browser, this class uses [`requestAnimationFrame`](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame)
 
 ## Usage
 

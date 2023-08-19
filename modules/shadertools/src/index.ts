@@ -4,6 +4,7 @@
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
 
+export type {HookFunction} from './lib/shader-assembler/assemble-shaders';
 export {assembleShaders} from './lib/shader-assembler/assemble-shaders';
 
 // HELPERS

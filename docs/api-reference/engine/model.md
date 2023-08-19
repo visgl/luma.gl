@@ -1,128 +1,114 @@
 # Model
 
-A `Model` holds all the data necessary to draw an object, e.g.:
+:::caution
+The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
+:::
 
-- **shaders** (via a [`RenderPipeline`](/docs/api-reference/api/resources/render-pipeline) instance)
-- **uniforms** these can also reference textures.
-- **vertex attributes** (holds a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
+The `Model` class is the centerpiece of the luma.gl API. It brings together all the different functionality needed to run shaders and perform draw calls in a single, easy-to-use interface.
 
-The `Model` class also provides the following features:
+- **render pipeline creation** -
+- **attributes**
+- **bindings** these can reference textures and uniform buffers
+- **uniforms** WebGL only uniforms
+- **shader module injection**
+- **shader transpilation****
+- **debugging** - Detailed debug logging of draw calls
 
-- Shader Module integration: [see `Shader Assembly`](/docs/api-reference/shadertools/assemble-shaders)
-- Automatic creation of GPU `Buffer`s from typed array attributes
-- Detailed debug logging of draw calls
-- Exposes the functionality provided by the managed WebGL resources
+
+The `Model` class integrates with the `@luma.gl/shadertools` shader module system: [see `Shader Assembly`](/docs/api-reference/shadertools/assemble-shaders).
+
+
+ (Accepts a [`Mesh`] or a [`Geometry`](/docs/- - api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
 ## Usage
 
-### Provide attribute data using Geometry object
+```typescript
+import {Model} from `@luma.gl/engine`;
+```
+
+One of the simplest way to provide attribute data is by using a Geometry object.
 
 Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
 
 ```typescript
+import {Model, CubeGeometry} from `@luma.gl/engine`;
 // construct the model.
-const model =  new Model(gl, {
+const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  uniforms: {uSampler: texture},
-  geometry: geometryObject,
+  geometry: new CubeGeometry(),
+  bindings: {
+    uSampler: texture
+  },
 })
-
-// and on each frame update any uniforms (typically matrices) and call render.
-model
-  .setUniforms({
-    uPMatrix: currentProjectionMatrix,
-    uMVMatrix: current ModelViewMatrix
-  })
-  .draw();
 ```
-
 ### Provide attribute data using Buffer
 
 When using `Buffer` objects, data remains on GPU and same `Buffer` object can be shared between multiple models.
 
 ```typescript
 // construct the model.
-const model =  new Model(gl, {
+const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  uniforms: {uSampler: texture},
+  topology: 'triangle-list',
+  vertexCount: 3,
   attributes: {
     attributeName1: bufferObject,
-    attributeName2: [new Buffer(gl, new Float32Array(...)), {size: 3, type: GL.FLOAT}]
-  }
-  drawMode: gl.TRIANGLE_FAN,
-  vertexCount: 3,
+    attributeName2: device.createBuffer(new Float32Array(...))
+  },
+  uniforms: {uSampler: texture},
 })
 
-// and on each frame update any uniforms (typically matrices) and call render.
-model
-  .setUniforms({
-    uPMatrix: currentProjectionMatrix,
-    uMVMatrix: current ModelViewMatrix
-  })
-  .draw();
 ```
 
-### Provide attribute data using VertexArray object
 
-A `VertexArray` object can be build and passed to `Model.draw()` to provide attribute data. Attribute data can be changed by changing `VertexArray` object.
+On each frame, call the `model.draw()` function after updating any uniforms (typically matrices).
 
-```typescript
-// construct the model.
-const model = new Model(gl, {
-  vs: VERTEX_SHADER,
-  fs: FRAGMENT_SHADER,
-  uniforms: {uSampler: texture},
-  drawMode: gl.TRIANGLE_FAN,
-  vertexCount: 3
-});
-
-const ATTRIBUTE1_LOCATION = 0;
-const ATTRIBUTE2_LOCATION = 1;
-const vertexArray1 = new VertexArray(gl, {
-  buffers: {
-    [ATTRIBUTE1_LOCATION]: buffer1,
-    [ATTRIBUTE2_LOCATION]: buffer2
-  }
-});
-const vertexArray2 = new VertexArray(gl, {
-  buffers: {
-    [ATTRIBUTE1_LOCATION]: buffer3,
-    [ATTRIBUTE2_LOCATION]: buffer4
-  }
-});
-
-//Render using attribute data from vertexArray1.
-model.draw({
-  uniforms: {
-    uPMatrix: currentProjectionMatrix,
-    uMVMatrix: currentModelViewMatrix
-  },
-  vertexArray: vertexArray1
-});
-
-// Switch attribute data to vertexArray2
-model.draw({
-  uniforms: {
-    uPMatrix: currentProjectionMatrix,
-    uMVMatrix: currentModelViewMatrix
-  },
-  vertexArray: vertexArray2
-});
 ```
+model.setUniforms({
+  uPMatrix: currentProjectionMatrix,
+  uMVMatrix: current ModelViewMatrix
+});
+model.draw();
+```
+
+
+## Types
+
+### ModelProps
+
+| Property             | Type                 | Description                                                                                                                    |
+| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `vs`                 | `Shader` \| _string_ | A vertex shader object, or source as a string.                                                                                 |
+| `fs`                 | `Shader` \| _string_ | A fragment shader object, or source as a string.                                                                               |
+| `modules`            |                      | shader modules to be applied (shadertools).                                                                                    |
+| `programManager`     |                      | `ProgramManager` to use for program creation and caching.                                                                      |
+| `varyings`           | (WebGL 2)            | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).                        |
+| `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `GL.SEPARATE_ATTRIBS`. |
+| `transpileToGLSL100` |                      | Transpile vertex and fragment shaders to GLSL 1.0.                                                                             |
+
+`ModelProps` passes through `RenderPipelineProps`
+
+| Property      | Type                       | Description                                                                             |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `layout`      | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
+| `topology?`   |                            | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
+| `parameters?` | `RenderPipelineParameters` |                                                                                         |
+| Property          | Type                     | Description                                                         |
+| ----------------- | ------------------------ | ------------------------------------------------------------------- |
+| `vertexCount?`    | `number`                 |                                                                     |
+| `instanceCount?`  | `number`                 |                                                                     |
+| `moduleSettings?` | `Record<string, any>`    | any values required by shader modules (will be mapped to uniforms). |
+| `uniforms?`       | `Record<string, any>`    | any non-binding uniform values                                      |
+| `bindings?`       | `Record<string, any>`    |                                                                     |
+| `buffers?`        | `Record<string, Buffer>` |                                                                     |
 
 ## Properties
 
-`Model` extends the `BaseModel` class and inherits all properties from that class.
+### renderPipeline: RenderPipeline
 
-### moduleSettings: object
-
-any uniforms needed by shader modules.
-
-### uniforms: object
-
-uniform values to be used for drawing.
+Get model's `Program` instance
 
 ### onBeforeRender
 
@@ -132,17 +118,6 @@ function to be called before every time this model is drawn.
 
 function to be called after every time this model is drawn.
 
-
-## Deprecated Properties in v7
-
-### geometry
-
-`Geometry` object, from which attributes, vertex count and drawing mode are deduced.
-
-### isInstanced: boolean
-
-default value is false.
-
 ### instanceCount: number
 
 default value is 0.
@@ -151,62 +126,29 @@ default value is 0.
 
 when not provided will be deduced from `geometry` object.
 
-## Constructor
+## Methods
 
-### Model(gl: WebGLRenderingContext, props: object)
+### constructor(device: Device, props: ModelProps)
 
 The constructor for the Model class. Use this to create a new Model.
 
-- `vs` - (VertexShader|_string_) - A vertex shader object, or source as a string.
-- `fs` - (FragmentShader|_string_) - A fragment shader object, or source as a string.
-- `varyings` (WebGL 2) - An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).
-- `bufferMode` (WebGL 2) - Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `gl.SEPARATE_ATTRIBS`.
-- `modules` - shader modules to be applied.
-- `program` - pre created program to use, when provided, vs, ps and modules are not used.
-- `programManager` - `ProgramManager` to use for program creation and caching.
-- `transpileToGLSL100` - Transpile vertex and fragment shaders to GLSL 1.0.
+### destroy(): void
 
-### delete()
+Free GPU resources associated with this model immediately, instead of waiting for garbage collection.
 
-Free WebGL resources associated with this model
-
-## Methods
-
-### setProps(props: object); this
-
-Updates properties
-
-### isAnimated(): boolean
-
-Returns `true` if the model is animated (i.e. needs to be redrawn every frame).
-
-### getProgram(): Program
-
-Get model's `Program` instance
-
-### getUniforms(): object
-
-Returns map of currently stored uniforms
-
-### setUniforms(uniforms: object); this
-
-Stores named uniforms {key, value}
-
-### updateModuleSettings(moduleSettings: object); this
-
-### draw(options: object): boolean
+### draw(options: DrawOptions): boolean
 
 Renders the model with provided uniforms, attributes and samplers
 
 ```typescript
 model.draw({
+  renderPass,
   moduleSettings = null,
   uniforms = {},
   attributes = {},
   samplers = {},
   parameters = {},
   settings,
-  framebuffer = null,
   vertexArray = null,
   transformFeedback = null
 });
@@ -228,46 +170,6 @@ The remaining draw options are passed directly to `Program.draw()`:
 - `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 - `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
-### transform(options: object); this
-
-Renders the model with provided uniforms, and samplers. Calls `Program.draw()` with rasterization turned off.
-
-- `discard`=`true` (Boolean) - Turns off rasterization
-- `feedbackBuffers`=`null` (Object) - Optional map of feedback buffers. A `TransformFeedback` object will be created, initialized with these buffers, and passed to `Model.draw`.
-- `unbindModels`=`[]` (Model[]) - Array of models whose VertexAttributes will be temporarily unbound during the transform feeback to avoid triggering a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
-  .
-
-```typescript
-model.transform({
-  discard: false
-});
-```
-
-### clear(options: object); this
-
-## Deprecated Methods in v7
-
-### render(options: object): boolean
-
-Use Model.setUniforms() and Model.draw()
-
-### getDrawMode(): Enum
-
-Gets the WebGL drawMode
-
-### getVertexCount(): GLInt
-
-Gets vertex count
-
-Note: might be autocalculated from `Geometry`
-
-### getInstanceCount(): GLInt
-
-Defaults to 0
-
-### getAttributes(): object
-
-Get a map of named attributes
 
 ### setDrawMode(); this
 
@@ -290,6 +192,14 @@ Use a `Geometry` instance to define attribute buffers
 ### setAttributes(attributes: object); this
 
 Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference-v8/webgl-legacy/classes/vertex-array))
+
+### setUniforms(uniforms: object): void
+
+Stores named uniforms {key, value}
+
+
+### updateModuleSettings(moduleSettings: object): void
+
 
 ## Remarks
 

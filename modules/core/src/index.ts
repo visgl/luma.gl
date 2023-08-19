@@ -122,6 +122,7 @@ export {checkProps} from './lib/utils/check-props';
 export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './lib/utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
 export {getRandom, random} from './lib/utils/random';
+export {deepEqual} from './lib/utils/deep-equal';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
 export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';
