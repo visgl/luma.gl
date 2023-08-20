@@ -38,11 +38,7 @@ export function decodeVertexFormat(format: VertexFormat): VertexFormatInfo {
     type,
     components,
     byteLength: decodedType.byteLength * components,
-    // It is not the vertex memory format that determines if the data will be treated as an integer,
-    // it is the shader attribute declaration. 
-    // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
-    // but as far as we can tell, WebGPU does not.
-    integer: false, // decodedType.integer,
+    integer: decodedType.integer,
     signed: decodedType.signed,
     normalized: decodedType.normalized
   };

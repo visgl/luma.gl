@@ -120,7 +120,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         continue; // eslint-disable-line no-continue
       }
       const decoded = decodeVertexFormat(attribute.format);
-      const {type: typeString, components: size, byteLength: stride, normalized, integer} = decoded;
+      const {type: typeString, components: size, byteLength: stride, normalized /* , integer*/} = decoded;
       const divisor = attribute.stepMode === 'instance' ? 1 : 0;
       const type = getWebGLDataType(typeString);
       this.vertexArrayObject.setBuffer(attribute.location, webglBuffer, {
@@ -129,7 +129,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         stride,
         offset: 0,
         normalized,
-        integer,
+        // it is the shader attribute declaration, not the vertex memory format, 
+        // that determines if the data in the buffer will be treated as integers.
+        // /
+        // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
+        // but as far as we can tell, WebGPU does not.
+        integer: false,
         divisor
       });
     }
