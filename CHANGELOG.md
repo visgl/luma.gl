@@ -1,9 +1,20 @@
 # luma.gl CHANGELOG
 
-## v9.0.0-alpha.28
+## v9.0.0-alpha.30
+
+- fixe(core) boolean uniform fix (#1789)
+- docs: consolidation (#1787)
+- feat(webgl): Enforce WebGPU style topology (#1781)
+- chore(core): Rename api to core (#1783)
+- docs: website examples (#1782)
+## v9.0.0-alpha.29
 
 - feat(webgl): Implement ShaderLayout.bufferMap in webgl (#1780)
 - feat(engine): model cleanup (#1779)
+
+## v9.0.0-alpha.28
+
+N/A Failed publish.
 
 ## v9.0.0-alpha.27
 
