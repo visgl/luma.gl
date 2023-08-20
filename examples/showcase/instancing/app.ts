@@ -53,7 +53,6 @@ varying vec3 color;
 void main(void) {
   gl_FragColor = vec4(color, 1.);
   gl_FragColor = dirlight_filterColor(gl_FragColor);
-  // TODO - 
   gl_FragColor = picking_filterColor(gl_FragColor);
 }
 `;
@@ -91,11 +90,6 @@ class InstancedCube extends Model {
     const colorsBuffer = device.createBuffer(colors);
     const pickingColorsBuffer = device.createBuffer(pickingColors);
 
-    // TODO - Should we really be setting global hooks in a simple example?
-    // const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
-    // pipelineFactory.addShaderHook('vs:MY_SHADER_HOOK_pickColor(inout vec4 color)');
-    // pipelineFactory.addShaderHook('fs:MY_SHADER_HOOK_fragmentColor(inout vec4 color)');
-
     // Model
     super(device, {
       ...props,
@@ -122,7 +116,7 @@ class InstancedCube extends Model {
       },
       bufferMap: [
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x2'},
+        {name: 'instancePickingColors', format: 'uint8x2'},
       ],
       parameters: {
         depthWriteEnabled: true,
@@ -233,9 +227,7 @@ export function pickInstance(
     sourceX: pickX,
     sourceY: pickY,
     sourceWidth: 1,
-    sourceHeight: 1,
-    // sourceFormat: GL.RGBA,
-    // sourceType: GL.UNSIGNED_BYTE
+    sourceHeight: 1
   });
 
   if (color[0] + color[1] + color[2] > 0) {

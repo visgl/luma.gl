@@ -9,7 +9,7 @@ export function setUniform(
   gl: WebGLRenderingContext,
   location: WebGLUniformLocation,
   type: GL,
-  value: number | Float32Array | Int32Array | Uint32Array
+  value: number | Float32Array | Int32Array | Uint32Array | boolean
 ): void {
   const gl2 = gl as WebGL2RenderingContext;
 
@@ -37,13 +37,12 @@ export function setUniform(
     }
   }
 
-  // @ts-expect-error
   if (value === true) {
     value = 1;
   }
-  // @ts-expect-error
+
   if (value === false) {
-    value = 1;
+    value = 0;
   }
   const arrayValue = (typeof value === 'number') ? [value] : value;
 
