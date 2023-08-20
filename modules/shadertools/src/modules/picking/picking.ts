@@ -80,7 +80,7 @@ void picking_setPickingColor(vec3 pickingColor) {
 
     // if (!picking_uAttribute) {
       // Stores the picking color so that the fragment shader can render it during picking
-      picking_vRGBcolor_Avalid.rgb = pickingColor; //  * COLOR_SCALE;
+      picking_vRGBcolor_Avalid.rgb = pickingColor * COLOR_SCALE;
     // }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
