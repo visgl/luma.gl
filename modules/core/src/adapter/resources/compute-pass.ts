@@ -1,4 +1,4 @@
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 import {ComputePipeline} from './compute-pipeline';
 import {Buffer} from './buffer';
 import type {Device} from '../device';
@@ -6,12 +6,16 @@ import type {Device} from '../device';
 export type ComputePassProps = ResourceProps & {};
 
 export abstract class ComputePass extends Resource<ComputePassProps> {
+  static override defaultProps: Required<ComputePassProps> = {
+    ...Resource.defaultProps
+  }
+
   override get [Symbol.toStringTag](): string {
     return 'ComputePass';
   }
 
   constructor(device: Device, props: ComputePassProps) {
-    super(device, props, DEFAULT_RESOURCE_PROPS);
+    super(device, props, Resource.defaultProps);
   }
 
   abstract override destroy(): void;

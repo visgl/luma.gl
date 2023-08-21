@@ -1,6 +1,6 @@
 //
 import {BindingLayout} from '../types/shader-layout';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
@@ -12,18 +12,18 @@ export type ComputePipelineProps = ResourceProps & {
   layout?: BindingLayout[];
 };
 
-// @ts-expect-error
-const DEFAULT_COMPUTE_PIPELINE_PROPS: Required<ComputePipelineProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  // cs: undefined,
-  // csEntryPoint: undefined,
-  csConstants: {},
-  layout: []
-};
 
 /**
  */
 export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
+  static override defaultProps: Required<ComputePipelineProps> = {
+    ...Resource.defaultProps,
+    cs: undefined,
+    csEntryPoint: undefined,
+    csConstants: {},
+    layout: []
+  };  
+
   override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }
@@ -31,6 +31,6 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   hash: string = '';
 
   constructor(device: Device, props: ComputePipelineProps) {
-    super(device, props, DEFAULT_COMPUTE_PIPELINE_PROPS);
+    super(device, props, ComputePipeline.defaultProps);
   }
 }

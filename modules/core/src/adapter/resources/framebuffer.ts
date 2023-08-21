@@ -2,7 +2,7 @@
 
 import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from '../types/texture-formats';
 import type {Device} from '../device';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
 import {log} from '../../lib/utils/log';
 
@@ -13,19 +13,19 @@ export type FramebufferProps = ResourceProps & {
   depthStencilAttachment?: (Texture | DepthStencilTextureFormat) | null;
 };
 
-const DEFAULT_FRAMEBUFFER_PROPS: Required<FramebufferProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  width: 1,
-  height: 1,
-  colorAttachments: [], // ['rgba8unorm-unsized'],
-  depthStencilAttachment: null // 'depth24plus-stencil8'
-};
-
 /**
  * Create new textures with correct size for all attachments.
  * @note resize() destroys existing textures (if size has changed).
  */
 export abstract class Framebuffer extends Resource<FramebufferProps> {
+  static override defaultProps: Required<FramebufferProps> = {
+    ...Resource.defaultProps,
+    width: 1,
+    height: 1,
+    colorAttachments: [], // ['rgba8unorm-unsized'],
+    depthStencilAttachment: null // 'depth24plus-stencil8'
+  };  
+
   override get [Symbol.toStringTag](): string {
     return 'Framebuffer';
   }
@@ -40,7 +40,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   depthStencilAttachment: Texture | null = null;
 
   constructor(device: Device, props: FramebufferProps = {}) {
-    super(device, props, DEFAULT_FRAMEBUFFER_PROPS);
+    super(device, props, Framebuffer.defaultProps);
     this.width = this.props.width;
     this.height = this.props.height;
 

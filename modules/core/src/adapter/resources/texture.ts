@@ -2,7 +2,7 @@
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
 import type {TextureFormat} from '../types/texture-formats';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
 
 // required GPUExtent3D size;
@@ -61,6 +61,10 @@ export type TextureViewProps = {
   baseMipLevel?: number;
 };
 
+/** 
+ * @deprecated
+ * @todo remove, are these even used anymore?
+ */
 export type DeprecatedWebGLTextureProps = {
   /** @deprecated use props.sampler */
   parameters?: Record<number, number>;
@@ -78,39 +82,32 @@ export type DeprecatedWebGLTextureProps = {
   target?: number;
 };
 
-const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  data: null,
-  dimension: '2d',
-  format: 'rgba8unorm',
-  width: undefined!,
-  height: undefined!,
-  depth: 1,
-  mipmaps: true,
-  sampler: {},
-  // type: undefined,
-  compressed: false,
-  // mipLevels: 1,
-  usage: 0,
-  mipLevels: undefined!,
-  samples: undefined!,
-  type: undefined!
-};
-
-// const DEFAULT_TEXTURE_PROPS: Required<TextureProps> = {
-//   handle: undefined,
-//   id: undefined,
-//   depth: 1,
-//   format: 'rgba8unorm',
-//   usage: GPUTextureUsage.COPY_DST
-// };
-
 /**
  * Abstract Texture interface
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
 export abstract class Texture<Props extends TextureProps = TextureProps> extends Resource<Props> {
+  static override defaultProps: Required<TextureProps> = {
+    ...Resource.defaultProps,
+    data: null,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    width: undefined!,
+    height: undefined!,
+    depth: 1,
+    mipmaps: true,
+    sampler: {},
+    // type: undefined,
+    compressed: false,
+    // mipLevels: 1,
+    usage: 0,
+    // usage: GPUTextureUsage.COPY_DST
+    mipLevels: undefined!,
+    samples: undefined!,
+    type: undefined!
+  };
+  
   static COPY_SRC = 0x01;
   static COPY_DST = 0x02;
   static TEXTURE_BINDING = 0x04;
@@ -132,7 +129,7 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   /** Default sampler for this texture */
   abstract sampler: Sampler;
 
-  constructor(device: Device, props: Props, defaultProps = DEFAULT_TEXTURE_PROPS as Required<Props>) {
+  constructor(device: Device, props: Props, defaultProps = Texture.defaultProps as Required<Props>) {
     super(device, props, defaultProps);
     this.dimension = this.props.dimension;
     this.format = this.props.format ;

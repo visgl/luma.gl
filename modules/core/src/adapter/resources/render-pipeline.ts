@@ -4,7 +4,7 @@ import type {TypedArray} from '../../types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 import type {Buffer} from './buffer';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
@@ -43,12 +43,10 @@ export type RenderPipelineProps = ResourceProps & {
   bufferMap?: BufferMapping[], // Record<string, Omit<BufferMapping, 'name'>
 
   // Can be changed after creation
-  // TODO - could be supplied to draw, making pipeline immutable
+  // TODO make pipeline immutable?
+  // - these could be supplied to draw as parameters,
+  // - in WebGPU they are set on the render pass 
 
-  /** Number of "rows" in 'vertex' buffers */
-  vertexCount?: number;
-  /** Number of "rows" in 'instance' buffers */
-  instanceCount?: number;
   /** Optional index buffer */
   indices?: Buffer | null;
   /** Buffers for attributes */
@@ -59,38 +57,35 @@ export type RenderPipelineProps = ResourceProps & {
   uniforms?: Record<string, any>;
 };
 
-export const DEFAULT_RENDER_PIPELINE_PROPS: Required<RenderPipelineProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-
-  vs: null,
-  vsEntryPoint: '', // main
-  vsConstants: {},
-
-  fs: null,
-  fsEntryPoint: '', // main
-  fsConstants: {},
-
-  layout: null, // {attributes: [], bindings: []},
-
-  topology: 'triangle-list',
-  // targets:
-
-  parameters: {},
-  bufferMap: [],
-
-  vertexCount: 0,
-  instanceCount: 0,
-
-  indices: null,
-  attributes: {},
-  bindings: {},
-  uniforms: {}
-};
-
 /**
  * A compiled and linked shader program
  */
 export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
+  static override defaultProps: Required<RenderPipelineProps> = {
+    ...Resource.defaultProps,
+  
+    vs: null,
+    vsEntryPoint: '', // main
+    vsConstants: {},
+  
+    fs: null,
+    fsEntryPoint: '', // main
+    fsConstants: {},
+  
+    layout: null, // {attributes: [], bindings: []},
+  
+    topology: 'triangle-list',
+    // targets:
+  
+    parameters: {},
+    bufferMap: [],
+  
+    indices: null,
+    attributes: {},
+    bindings: {},
+    uniforms: {}
+  }; 
+
   override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   hash: string = '';
@@ -98,7 +93,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   abstract fs: Shader | null;
 
   constructor(device: Device, props: RenderPipelineProps) {
-    super(device, props, DEFAULT_RENDER_PIPELINE_PROPS);
+    super(device, props, RenderPipeline.defaultProps);
   }
 
   /** Set attributes (stored on pipeline and set before each call) */
@@ -114,16 +109,18 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
 
   /** Draw call */ 
   abstract draw(options: {
+    /** Render pass to draw into (targeting screen or framebuffer) */
     renderPass?: RenderPass;
+    /** Number of "rows" in 'vertex' buffers */
     vertexCount?: number;
-    indexCount?: number;
+    /** Number of "rows" in 'instance' buffers */
     instanceCount?: number;
+    /** First vertex to draw from */
     firstVertex?: number;
+    /** First index to draw from */
     firstIndex?: number;
+    /** First instance to draw from */
     firstInstance?: number;
     baseVertex?: number;
   }): void;
-
-  /** Private "export" for Model class */
-  static _DEFAULT_PROPS = DEFAULT_RENDER_PIPELINE_PROPS;
 }
