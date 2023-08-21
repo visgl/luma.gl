@@ -29,10 +29,12 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   geometry?: Geometry | null;
   /** deprecated pipeline factory to use to create renderpipelines */
   pipelineFactory?: PipelineFactory;
+  vertexCount?: number;
+  instanceCount?: number;
 };
 
 const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
-  ...RenderPipeline._DEFAULT_PROPS,
+  ...RenderPipeline.defaultProps,
   vs: null,
   fs: null,
   id: 'unnamed',
@@ -42,7 +44,9 @@ const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
   modules: [],
   moduleSettings: {},
   geometry: null,
-  pipelineFactory: undefined
+  pipelineFactory: undefined,
+  vertexCount: 0,
+  instanceCount: 0
 };
 
 /** v9 API */
