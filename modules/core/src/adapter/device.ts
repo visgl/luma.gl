@@ -213,10 +213,16 @@ export abstract class Device {
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
+  /** id of this device, primarily for debugging */
   readonly id: string;
+  /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
-  userData: {[key: string]: any} = {};
+  /** Available for the application to store data on the device */
+  userData: {[key: string]: unknown} = {};
+  /** Used by other luma.gl modules to store data on the device */
+  _lumaData: {[key: string]: unknown} = {};
 
   // Capabilities
 

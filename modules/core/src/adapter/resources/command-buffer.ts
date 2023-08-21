@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 
 // interface Queue {
 //   submit(commandBuffers);
@@ -19,14 +19,14 @@ import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
 export type CommandBufferProps = ResourceProps & {
 };
 
-const DEFAULT_COMMAND_ENCODER_PROPS = {
-  ...DEFAULT_RESOURCE_PROPS
-};
-
 /**
  * Encodes commands to queue that can be executed later
  */
 export abstract class CommandBuffer extends Resource<CommandBufferProps> {
+  static override defaultProps: Required<CommandBufferProps> = {
+    ...Resource.defaultProps
+  };
+  
   override get [Symbol.toStringTag](): string {
     return 'CommandBuffer';
   }

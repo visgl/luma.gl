@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import {TypedArray} from '../..';
 import type {Device} from '../device';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 
 export type BufferProps = ResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
@@ -21,18 +21,18 @@ export type BufferProps = ResourceProps & {
   mappedAtCreation?: boolean;
 }
 
-const DEFAULT_BUFFER_PROPS: Required<BufferProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
-  byteLength: 0,
-  byteOffset: 0,
-  data: null,
-  indexType: 'uint16',
-  mappedAtCreation: false
-};
-
 /** Abstract GPU buffer */
 export abstract class Buffer extends Resource<BufferProps> {
+  static override defaultProps: Required<BufferProps> = {
+    ...Resource.defaultProps,
+    usage: 0, // Buffer.COPY_DST | Buffer.COPY_SRC
+    byteLength: 0,
+    byteOffset: 0,
+    data: null,
+    indexType: 'uint16',
+    mappedAtCreation: false
+  };
+
   // Usage Flags
   static MAP_READ = 0x01;
   static MAP_WRITE = 0x02;
@@ -62,7 +62,7 @@ export abstract class Buffer extends Resource<BufferProps> {
       }
     }
 
-    super(device, deducedProps, DEFAULT_BUFFER_PROPS);
+    super(device, deducedProps, Buffer.defaultProps);
   }
 
   write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }

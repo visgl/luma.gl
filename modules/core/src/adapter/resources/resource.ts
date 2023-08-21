@@ -11,22 +11,16 @@ export type ResourceProps = {
   userData?: {[key: string]: any};
 }
 
-/** 
- * Default properties for resource 
- * @deprecated Use Resource.defaultProps
- */
-export const DEFAULT_RESOURCE_PROPS: Required<ResourceProps> = {
-  id: 'undefined',
-  handle: undefined,
-  userData: undefined,
-};
-
 /**
  * Base class for GPU (WebGPU/WebGL) Resources
  */
 export abstract class Resource<Props extends ResourceProps> {
   /** Default properties for resource */
-  static defaultProps: Required<ResourceProps> = DEFAULT_RESOURCE_PROPS
+  static defaultProps: Required<ResourceProps> = {
+    id: 'undefined',
+    handle: undefined,
+    userData: undefined,
+  };
   
   abstract get [Symbol.toStringTag](): string;
 

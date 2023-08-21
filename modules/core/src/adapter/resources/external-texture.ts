@@ -1,21 +1,20 @@
 import type {Device} from '../device';
-import {Resource, ResourceProps, DEFAULT_RESOURCE_PROPS} from './resource';
+import {Resource, ResourceProps} from './resource';
 
 export type ExternalTextureProps = ResourceProps & {
   source: HTMLVideoElement | null;
   colorSpace?: 'srgb';
 }
-
-const DEFAULT_TEXTURE_PROPS: Required<ExternalTextureProps> = {
-  ...DEFAULT_RESOURCE_PROPS,
-  source: null,
-  colorSpace: 'srgb'
-};
-
 export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
+  static override defaultProps: Required<ExternalTextureProps> = {
+    ...Resource.defaultProps,
+    source: null,
+    colorSpace: 'srgb'
+  };
+
   override get [Symbol.toStringTag](): string { return 'ExternalTexture'; }
 
   constructor(device: Device, props: ExternalTextureProps) {
-    super(device, props, DEFAULT_TEXTURE_PROPS);
+    super(device, props, ExternalTexture.defaultProps);
   }
 }
