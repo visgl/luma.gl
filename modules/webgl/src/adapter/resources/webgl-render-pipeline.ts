@@ -11,7 +11,7 @@ import type {
 import {RenderPipeline, cast, log} from '@luma.gl/core';
 import {
   mergeShaderLayout,
-  getAttributeInfoFromLayouts
+  getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
@@ -112,32 +112,56 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this._indexBuffer = webglBuffer;
   }
 
+
   /** @todo needed for portable model */
-  setAttributes(attributes: Record<string, Buffer>): void {
-    for (const [name, buffer] of Object.entries(attributes)) {
-      const webglBuffer = cast<WEBGLBuffer>(buffer);
-      const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
-      if (!attributeInfo) {
-        log.warn(
-          `Ignoring buffer supplied for unknown attribute "${name}" in pipeline "${this.id}" (buffer "${buffer.id}")`
-        )();
-        continue; // eslint-disable-line no-continue
+  setAttributes(buffers: Record<string, Buffer>): void {
+    const attributeInfos = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout);
+
+    for (const [bufferName, buffer] of Object.entries(buffers)) {
+      let set = false;
+      for (const attributeInfo of Object.values(attributeInfos)) {
+        if (attributeInfo.bufferName !== bufferName) {
+          continue; // eslint-disable-line no-continue
+        }
+        const webglBuffer = cast<WEBGLBuffer>(buffer);
+
+        const glType = getGLFromVertexType(attributeInfo.bufferDataType);
+        // TODO remove when we have more confidence
+        log.log(1, {
+          setAttribute: attributeInfo.name,
+          toBuffer: bufferName,
+          size: attributeInfo.bufferComponents,
+          type: glType,
+          stride: attributeInfo.byteStride,
+          offset: attributeInfo.byteOffset,
+          normalized: attributeInfo.normalized,
+          // it is the shader attribute declaration, not the vertex memory format,
+          // that determines if the data in the buffer will be treated as integers.
+          // /
+          // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
+          // but as far as we can tell, WebGPU does not.
+          integer: attributeInfo.integer,
+          divisor: attributeInfo.stepMode === 'instance' ? 1 : 0
+        })();
+        this.vertexArrayObject.setBuffer(attributeInfo.location, webglBuffer, {
+          size: attributeInfo.bufferComponents,
+          type: glType,
+          stride: attributeInfo.byteStride,
+          offset: attributeInfo.byteOffset,
+          normalized: attributeInfo.normalized,
+          // it is the shader attribute declaration, not the vertex memory format,
+          // that determines if the data in the buffer will be treated as integers.
+          // /
+          // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
+          // but as far as we can tell, WebGPU does not.
+          integer: attributeInfo.integer,
+          divisor: attributeInfo.stepMode === 'instance' ? 1 : 0
+        });
+        set = true;
       }
-      const glType = getGLFromVertexType(attributeInfo.bufferDataType);
-      this.vertexArrayObject.setBuffer(attributeInfo.location, webglBuffer, {
-        size: attributeInfo.bufferComponents,
-        type: glType,
-        stride: attributeInfo.byteStride,
-        offset: attributeInfo.byteOffset,
-        normalized: attributeInfo.normalized,
-        // it is the shader attribute declaration, not the vertex memory format,
-        // that determines if the data in the buffer will be treated as integers.
-        // /
-        // Also note that WebGL supports assigning non-normalized integer data to floating point attributes,
-        // but as far as we can tell, WebGPU does not.
-        integer: attributeInfo.integer,
-        divisor: attributeInfo.stepMode === 'instance' ? 1 : 0
-      });
+      if (!set)  {
+        log.warn(`setAttributes(): Ignoring (buffer "${buffer.id}" for unknown attribute "${name}" in pipeline "${this.id}"`)();
+      }
     }
   }
 
@@ -150,7 +174,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
     // TODO - there should be no advantage to setting these here vs in _applyConstantAttributes
     // for (const [name, value] of Object.entries(attributes)) {
-    //   const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
+    //   const attributeInfo = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout, name);
     //   if (!attributeInfo) {
     //     log.warn(
     //       `Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`
@@ -361,7 +385,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    */
   _applyConstantAttributes(): void {
     for (const [name, value] of Object.entries(this.constantAttributes)) {
-      const attributeInfo = getAttributeInfoFromLayouts(this.shaderLayout, this.bufferLayout, name);
+      const attributeInfo = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout, name);
       if (!attributeInfo) {
         log.warn(
           `Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`

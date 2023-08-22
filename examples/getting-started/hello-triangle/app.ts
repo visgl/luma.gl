@@ -18,6 +18,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // prettier-ignore
     const interleavedData = new Float32Array([
+      // Offset
+      0, 0,
       // vertex 1: 2D positions XY,  colors RGB
       -0.5, -0.5,  1, 0, 0,
       // vertex 2: 2D positions XY,  colors RGB
@@ -56,12 +58,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       attributes: {
-        interleaved: this.interleavedBuffer,
+        vertexData: this.interleavedBuffer,
         // position: this.positionBuffer,
         // color: this.colorBuffer
       },
       bufferLayout: [
-        {name: 'vertexData', attributes: [
+        {name: 'vertexData', byteOffset: 8, attributes: [
           {name: 'position', format: 'float32x2'},
           {name: 'color', format: 'float32x3'},
         ]}

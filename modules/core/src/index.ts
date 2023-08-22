@@ -117,8 +117,9 @@ export type {CompilerMessage} from './lib/compiler-log/compiler-message';
 export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
 
 //
+export type {AttributeInfo} from './adapter/attribute-utils/get-attribute-from-layouts';
 export {
-  getAttributeInfoFromLayouts,
+  getAttributeInfosFromLayouts,
   mergeShaderLayout
 } from './adapter/attribute-utils/get-attribute-from-layouts';
 

@@ -14,21 +14,27 @@ import {decodeVertexFormat} from '../type-utils/decode-vertex-format';
 
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {
+  /** Attribute name */
   name: string;
+  /** Location in shader */
   location: number;
-
+  /** Type / precision used in shader (buffer values may be converted) */
   shaderType: ShaderAttributeType;
   /** Calculations are done in this type in the shader's attribute declaration */
   shaderDataType: ShaderDataType;
   /** Components refer to the number of components in the shader's attribute declaration */
   shaderComponents: 1 | 2 | 3 | 4;
 
+  /** BufferName */
+  bufferName: String;
+  /** Format of buffer data */
   vertexFormat: VertexFormat;
   /** Memory data type refers to the data type in the buffer */
   bufferDataType: VertexType;
   /** Components refer to the number of components in the buffer's vertex format */
   bufferComponents: 1 | 2 | 3 | 4;
 
+  /** If not specified, the step mode is inferred from the attribute name in the shader (contains string instance) */
   stepMode: 'vertex' | 'instance';
 
   /** The byteOffset is encoded in the buffer layout */
@@ -41,28 +47,45 @@ export type AttributeInfo = {
   integer: boolean;
 };
 
+export function getAttributeInfosFromLayouts(
+  shaderLayout: ShaderLayout,
+  bufferLayout: BufferLayout[]
+): Record<string, AttributeInfo> {
+  const attributeInfos: Record<string, ReturnType<typeof getAttributeInfoFromLayouts>> = {};
+  for (const attribute of shaderLayout.attributes) {
+    attributeInfos[attribute.name] = getAttributeInfoFromLayouts(
+      shaderLayout,
+      bufferLayout,
+      attribute.name
+    );
+  }
+  return attributeInfos;
+}
+
 /**
  * Get the combined information from a shader layout and a buffer layout for a specific attribute
  */
-export function getAttributeInfoFromLayouts(
+function getAttributeInfoFromLayouts(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[],
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: BufferLayout = getAttributeFromBufferLayout(bufferLayout, name);
+  const bufferMapping: Partial<AttributeInfo> = getAttributeFromBufferLayout(bufferLayout, name);
 
+  // TODO should no longer happen
   if (!shaderDeclaration) {
     //  || !bufferMapping
     return null;
   }
 
   const attributeTypeInfo = decodeShaderAttributeType(shaderDeclaration.type);
-  const vertexFormat = bufferMapping?.format || attributeTypeInfo.defaultVertexFormat;
+  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat;
   const vertexFormatInfo = decodeVertexFormat(vertexFormat);
-    
+
   return {
     name,
+    bufferName: bufferMapping?.name || name,
     location: shaderDeclaration.location,
     shaderType: shaderDeclaration.type,
     shaderDataType: attributeTypeInfo.dataType,
@@ -70,7 +93,9 @@ export function getAttributeInfoFromLayouts(
     vertexFormat,
     bufferDataType: vertexFormatInfo.type,
     bufferComponents: vertexFormatInfo.components,
+    // normalized is a property of the buffer's vertex format
     normalized: vertexFormatInfo.normalized,
+    // integer is a property of the shader declaration
     integer: attributeTypeInfo.integer,
     stepMode: bufferMapping?.stepMode || shaderDeclaration.stepMode,
     byteOffset: bufferMapping?.byteOffset || 0,
@@ -92,7 +117,7 @@ function getAttributeFromShaderLayout(
 function getAttributeFromBufferLayout(
   bufferLayout: BufferLayout[],
   name: string
-): SingleBufferLayout | null {
+): Partial<AttributeInfo> | null {
   for (const bufferMapping of bufferLayout) {
     // If this is the mapping return
     if (bufferMapping.name === name) {
@@ -100,15 +125,23 @@ function getAttributeFromBufferLayout(
     }
 
     // Search interleaved attributes for buffer mapping
-    if (bufferMapping.attributes) {
-      const interleavedMapping = bufferMapping.attributes?.find(attr => attr.name === name);
-      if (interleavedMapping) {
+    let nextByteOffset = bufferMapping.byteOffset || 0;
+    let byteStride = 0;
+    for (const interleavedMapping of bufferMapping.attributes) {
+      const info = decodeVertexFormat(interleavedMapping.format);
+      byteStride += info.byteLength;
+    }
+    for (const interleavedMapping of bufferMapping.attributes) {
+      const byteOffset = nextByteOffset;
+      nextByteOffset += (interleavedMapping?.byteStrideOffset || decodeVertexFormat(interleavedMapping.format).byteLength);
+      // const interleavedMapping = bufferMapping.attributes?.find(attr => attr.name === name);
+      if (interleavedMapping.name === name) {
         return {
           ...bufferMapping,
-          name,
-          format: interleavedMapping.format
-          // TODO - how to handle undefined case.
-          // byteOffset: (bufferMapping.byteOffset || 0) + (interleavedMapping?.byteStrideOffset || 0),
+          bufferName: name,
+          vertexFormat: interleavedMapping.format,
+          byteOffset,
+          byteStride: bufferMapping.byteStride || byteStride,
         };
       }
     }
