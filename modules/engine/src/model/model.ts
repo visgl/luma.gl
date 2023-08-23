@@ -1,61 +1,94 @@
 // luma.gl, MIT license
 
-import type {RenderPipelineProps, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
+import type {TypedArray, RenderPipelineProps, RenderPipelineParameters, BufferLayout} from '@luma.gl/core';
+import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
-import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
+import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
-import {TypedArray} from '@math.gl/core';
+import {buildShaders} from './model-shaders';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
-  // Model also accepts a string
-  vs?: {glsl?: string; wgsl?: string} | string | null;
-  fs?: {glsl?: string; wgsl?: string} | string | null;
-  defines?: Record<string, string | number | boolean>;
+  // Model also accepts a string shaders
+  vs: {glsl?: string; wgsl?: string} | string | null;
+  fs: {glsl?: string; wgsl?: string} | string | null;
+  /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];
-  moduleSettings?: Record<string, Record<string, any>>;
-  geometry?: Geometry | null;
-  /** deprecated pipeline factory to use to create renderpipelines */
+  /** Shadertool module defines (configures shader code)*/
+  defines?: Record<string, string | number | boolean>;
+  // TODO - injections, hooks etc?
+
+
+  /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
   pipelineFactory?: PipelineFactory;
+  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
+  shaderAssembler?: ShaderAssembler;
+  
+  /** Geometry */
+  geometry?: GPUGeometry | Geometry | null;
+  /** Parameters that are built into the pipeline */
+  parameters?: RenderPipelineParameters;
+  /** shadertool modules */
+  moduleSettings?: Record<string, Record<string, any>>;
+  /** Vertex count */
   vertexCount?: number;
+  /** instance count */
   instanceCount?: number;
 };
 
-const DEFAULT_MODEL_PROPS: Required<ModelProps> = {
-  ...RenderPipeline.defaultProps,
-  vs: null,
-  fs: null,
-  id: 'unnamed',
-  handle: undefined,
-  userData: {},
-  defines: {},
-  modules: [],
-  moduleSettings: {},
-  geometry: null,
-  pipelineFactory: undefined,
-  vertexCount: 0,
-  instanceCount: 0
-};
-
-/** v9 API */
+/**
+ * v9 Model API
+ * A model
+ * - automatically reuses pipelines (programs) when possible
+ * - automatically rebuilds pipelines if necessary to accommodate changed settings
+ * shadertools integration
+ * - accepts modules and performs shader transpilation
+ */
 export class Model {
+  static defaultProps: Required<ModelProps> = {
+    ...RenderPipeline.defaultProps,
+    vs: null,
+    fs: null,
+    id: 'unnamed',
+    handle: undefined,
+    userData: {},
+    defines: {},
+    modules: [],
+    moduleSettings: {},
+    geometry: null,
+
+    pipelineFactory: undefined!,
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+  };
+
   readonly device: Device;
   readonly id: string;
   readonly vs: string;
-  readonly fs: string | null = null;
-  readonly topology: PrimitiveTopology;
+  readonly fs: string;
   readonly pipelineFactory: PipelineFactory;
-  /** The underlying GPU "program". @note May be recreated if parameters change */
-  pipeline: RenderPipeline;
   userData: {[key: string]: any} = {};
 
-  // readonly props: Required<ModelProps>;
+  // Fixed properties (change can trigger pipeline rebuild)
+
+  /** The render pipeline GPU parameters, depth testing etc */
+  parameters: RenderPipelineParameters;
+
+  /** The primitive topology */
+  topology: PrimitiveTopology;
+  /** Buffer layout */
+  bufferLayout: BufferLayout[];
+
+  // Dynamic properties
 
   /** Vertex count */
   vertexCount: number;
   /** instance count */
   instanceCount: number = 0;
+
+  /** Index buffer */
+  indices: Buffer | null = null;
   /** Buffer-valued attributes */
   bufferAttributes: Record<string, Buffer> = {};
   /** Constant-valued attributes */
@@ -65,71 +98,54 @@ export class Model {
   /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
   uniforms: Record<string, UniformValue> = {};
 
+  /** The underlying GPU "program". @note May be recreated if parameters change */
+  pipeline: RenderPipeline;
+  _pipelineNeedsUpdate: string | false = 'newly created';
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
+  private props: Required<ModelProps>;
 
   constructor(device: Device, props: ModelProps) {
-    props = {...DEFAULT_MODEL_PROPS, ...props};
-    this.id = props.id;
+    this.props = {...Model.defaultProps, ...props};
+    props = this.props;
+    this.id = props.id || uid('model');
     this.device = device;
 
     Object.assign(this.userData, props.userData);
 
-    // Create the pipeline
-    if (!props.vs) {
-      throw new Error('no vertex shader');
-    }
-    this.vs = getShaderSource(this.device, props.vs);
-    if (props.fs) {
-      this.fs = getShaderSource(this.device, props.fs);
-    }
+    const {vs, fs, getUniforms} = buildShaders(device, this.props);
+    this.vs = vs;
+    this.fs = fs;
+    this._getModuleUniforms = getUniforms;
 
-    this.vertexCount = props.vertexCount;
-    this.instanceCount = props.instanceCount;
-    this.topology = props.topology;
+    this.vertexCount = this.props.vertexCount;
+    this.instanceCount = this.props.instanceCount;
 
-    if (props.geometry) {
-      this.vertexCount = props.geometry.vertexCount;
-      this.topology = props.geometry.topology || 'triangle-list';
+    this.topology = this.props.topology;
+    this.bufferLayout = this.props.bufferLayout;
+    this.parameters = this.props.parameters;
+
+    // Geometry, if provided, sets several attributes, indices, and also vertex count and topology
+    const gpuGeometry = props.geometry && makeGPUGeometry(device, props.geometry);
+    if (gpuGeometry) {
+      this.setGeometry(gpuGeometry);
     }
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
-    const {pipeline, getUniforms} = this.pipelineFactory.createRenderPipeline({
-      ...props,
-      vs: this.vs,
-      fs: this.fs,
-      topology: this.topology,
-      defines: props.defines,
-      parameters: props.parameters,
-      shaderLayout: props.shaderLayout
-    });
 
-    this.pipeline = pipeline;
-    this._getModuleUniforms = getUniforms;
+    // Create the pipeline 
+    // @note order is important
+    this.pipeline = this._updatePipeline();
 
-    if (props.geometry) {
-      this._setGeometry(props.geometry);
+    // Now we can apply geometry attributes
+
+    // Apply any dynamic settings that will not trigger pipeline change
+    if (props.vertexCount) {
+      this.setVertexCount(props.vertexCount);
     }
-
-    this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
-
-    // Props can update any of the above, so call setProps last.
-    this.setProps(props);
-  }
-
-  destroy(): void {
-    this.pipelineFactory.release(this.pipeline);
-  }
-
-  draw(renderPass: RenderPass): void {
-    this.pipeline.draw({
-      renderPass,
-      vertexCount: this.vertexCount,
-      instanceCount: this.instanceCount
-    });
-  }
-
-  setProps(props: ModelProps): void {
+    if (props.instanceCount) {
+      this.setInstanceCount(props.instanceCount);
+    }
     if (props.indices) {
       this.setIndexBuffer(props.indices);
     }
@@ -145,76 +161,212 @@ export class Model {
     if (props.moduleSettings) {
       this.updateModuleSettings(props.moduleSettings);
     }
+
+    this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
+
+    // Catch any access to non-standard props
+    Object.seal(this);
   }
 
-  updateModuleSettings(props: Record<string, any>): void {
+  destroy(): void {
+    this.pipelineFactory.release(this.pipeline);
+  }
+
+  // Draw call
+
+  draw(renderPass: RenderPass): void {
+    // Check if the pipeline is invalidated
+    // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
+    this.pipeline = this._updatePipeline();
+
+    // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
+    // Any caching needs to be done inside the pipeline functions
+    this.pipeline.setIndexBuffer(this.indices);
+    this.pipeline.setAttributes(this.bufferAttributes);
+    this.pipeline.setConstantAttributes(this.constantAttributes);
+    this.pipeline.setBindings(this.bindings);
+    this.pipeline.setUniforms(this.uniforms);
+
+    this.pipeline.draw({
+      renderPass,
+      vertexCount: this.vertexCount,
+      instanceCount: this.instanceCount
+    });
+  }
+
+  // Update fixed fields (can trigger pipeline rebuild)
+
+  /** 
+   * Updates the optional geometry
+   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
+   */
+  setGeometry(geometry: GPUGeometry): void {
+    this.setTopology(geometry.topology || 'triangle-list');
+    this.bufferLayout = mergeBufferLayouts(this.bufferLayout, geometry.bufferLayout);
+
+    // TODO - delete previous geometry?
+    this.vertexCount = geometry.vertexCount;
+    this.setAttributes(geometry.attributes);
+    this.setIndexBuffer(geometry.indices);
+  }
+
+  /** 
+   * Updates the primitive topology ('triangle-list', 'triangle-strip' etc). 
+   * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
+   */
+  setTopology(topology: PrimitiveTopology): void {
+    if (topology !== this.topology) {
+      this.topology = topology;
+      // On WebGPU we need to rebuild the pipeline
+      if (this.device.info.type === 'webgpu') {
+        this._setPipelineNeedsUpdate('topology');
+      }
+    }
+  }
+
+  /** 
+   * Updates the buffer layout. 
+   * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
+   */
+  setBufferLayout(bufferLayout: BufferLayout[]): void {
+    if (bufferLayout !== this.bufferLayout) {
+      this.bufferLayout = bufferLayout;
+      // On WebGPU we need to rebuild the pipeline
+      if (this.device.info.type === 'webgpu') {
+        this._setPipelineNeedsUpdate('bufferLayout');
+      }
+    }
+  }
+
+  /**
+   * Set GPU parameters.
+   * @note Can trigger a pipeline rebuild / pipeline cache fetch.
+   * @param parameters
+   */
+  setParameters(parameters: RenderPipelineParameters) {
+    if (!deepEqual(parameters, this.parameters, 2)) {
+      this.parameters = parameters;
+      // On WebGPU we need to rebuild the pipeline
+      if (this.device.info.type === 'webgpu') {
+        this._setPipelineNeedsUpdate('parameters');
+      }
+    }
+  }
+    
+  // Update dynamic fields
+
+  /**
+   * Updates the vertex count (used in draw calls)
+   * @note Any attributes with stepMode=vertex need to be at least this big
+   */
+  setVertexCount(vertexCount: number): void {
+    this.vertexCount = vertexCount;
+  }
+
+  /**
+   * Updates the instance count (used in draw calls)
+   * @note Any attributes with stepMode=instance need to be at least this big
+   */
+  setInstanceCount(instanceCount: number): void {
+    this.instanceCount = instanceCount;
+  }
+
+  /**
+   * Updates shader module settings (which results in uniforms being set)
+   */
+  setShaderModuleProps(props: Record<string, any>): void {
     const uniforms = this._getModuleUniforms(props);
-    this.setUniforms(uniforms);
+    Object.assign(this.uniforms, uniforms);
   }
 
+  /**
+   * @deprecated Updates shader module settings (which results in uniforms being set)
+   */
+  updateModuleSettings(props: Record<string, any>): void {
+    this.setShaderModuleProps(props);
+  }
+
+  /**
+   * Sets the index buffer
+   * @todo - how to unset it if we change geometry?
+   */
   setIndexBuffer(indices: Buffer | null): void {
-    this.pipeline.setIndexBuffer(indices);
-    // this._indices = indices;
+    this.indices = indices;
   }
 
+  /**
+   * Sets attributes (buffers)
+   * @note Overrides any attributes previously set with the same name
+   */
   setAttributes(bufferAttributes: Record<string, Buffer>): void {
     if (bufferAttributes.indices) {
       log.warn(`Model:${this.id} setAttributes() - indices should be set using setIndexBuffer()`);
     }
 
-    this.pipeline.setAttributes(bufferAttributes);
     Object.assign(this.bufferAttributes, bufferAttributes);
   }
 
+  /**
+   * Sets constant attributes
+   * @note Overrides any attributes previously set with the same name
+   * @param constantAttributes
+   */
   setConstantAttributes(constantAttributes: Record<string, TypedArray>): void {
     // TODO - this doesn't work under WebGPU, we'll need to create buffers or inject uniforms
-    this.pipeline.setConstantAttributes(constantAttributes);
     Object.assign(this.constantAttributes, constantAttributes);
   }
 
-  /** Set the bindings */
+  /**
+   * Sets bindings (textures, samplers, uniform buffers)
+   */
   setBindings(bindings: Record<string, Binding>): void {
-    this.pipeline.setBindings(bindings);
     Object.assign(this.bindings, bindings);
   }
 
-  /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
+  /**
+   * Sets individual uniforms
+   * @deprecated WebGL only, use uniform buffers for portability
+   * @param uniforms
+   * @returns self for chaining
+   */
   setUniforms(uniforms: Record<string, UniformValue>): void {
     this.pipeline.setUniforms(uniforms);
     Object.assign(this.uniforms, uniforms);
   }
 
-  _setGeometry(geometry: Geometry): void {
-    // this._deleteGeometryBuffers();
+  _setPipelineNeedsUpdate(reason: string): void {
+    this._pipelineNeedsUpdate = this._pipelineNeedsUpdate || reason;
+  }
 
-    const geometryBuffers = getAttributeBuffersFromGeometry(this.device, geometry);
-    this.setAttributes(geometryBuffers);
-
-    const indexBuffer = getIndexBufferFromGeometry(this.device, geometry);
-    if (indexBuffer) {
-      this.setIndexBuffer(indexBuffer);
+  _updatePipeline(): RenderPipeline {
+    if (this._pipelineNeedsUpdate) {
+      log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+      this._pipelineNeedsUpdate = false;
+      this.pipeline = this.device.createRenderPipeline({
+        ...this.props,
+        bufferLayout: this.bufferLayout,
+        topology: this.topology,
+        parameters: this.parameters,
+        vs: this.device.createShader({stage: 'vertex', source: this.vs}),
+        fs: this.fs ? this.device.createShader({stage: 'fragment', source: this.fs}) : null
+      });
     }
+    return this.pipeline;
   }
 }
 
-/** Create a shader from the different overloads */
-function getShaderSource(device: Device, shader: string | {glsl?: string; wgsl?: string}): string {
-  // TODO - detect WGSL/GLSL and throw an error if not supported
-  if (typeof shader === 'string') {
-    return shader;
+/** TODO - move to core, document add tests */
+function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
+  const layouts = [...layouts1];
+  for (const attribute of layouts2) {
+    const index = layouts.findIndex(
+      (attribute2) => attribute2.name === attribute.name
+    );
+    if (index < 0) {
+      layouts.push(attribute);
+    } else {
+      layouts[index] = attribute;
+    }
   }
-
-  switch (device.info.type) {
-    case 'webgpu':
-      if (shader?.wgsl) {
-        return shader.wgsl;
-      }
-      throw new Error('WebGPU does not support GLSL shaders');
-
-    default:
-      if (shader?.glsl) {
-        return shader.glsl;
-      }
-      throw new Error('WebGL does not support WGSL shaders');
-  }
+  return layouts;
 }

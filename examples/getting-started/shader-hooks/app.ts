@@ -1,5 +1,8 @@
+// luma.gl, MIT license
+
 import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, PipelineFactory} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 
 const INFO_HTML = `
 Modifying shader behavior with shader hooks
@@ -47,37 +50,37 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const pipelineFactory = new PipelineFactory(device);
-    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
     this.model1 = new Model(device, {
       vs,
       fs,
-      pipelineFactory,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetLeftModule],
+      vertexCount: 3,
       attributes: {
         position: this.positionBuffer
       },
       uniforms: {
         color: [1.0, 0.0, 0.0]
-      },
-      vertexCount: 3
+      }
     });
 
     this.model2 = new Model(device, {
       vs,
       fs,
-      pipelineFactory,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      vertexCount: 3,
       modules: [offsetRightModule],
       attributes: {
         position: this.positionBuffer
       },
       uniforms: {
         color: [0.0, 0.0, 1.0]
-      },
-      vertexCount: 3
+      }
     });
   }
 

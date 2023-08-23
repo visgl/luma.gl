@@ -81,7 +81,6 @@ export type BufferWithAccessorProps = BufferProps & {
 
 /** WebGL Buffer interface */
 export class BufferWithAccessor extends WEBGLBuffer {
-  usage: number;
   accessor: Accessor;
 
   constructor(device: Device | WebGLRenderingContext, props?: BufferWithAccessorProps);

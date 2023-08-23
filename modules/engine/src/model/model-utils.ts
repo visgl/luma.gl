@@ -53,9 +53,9 @@ export function renameTableColumns(table: Table, map: (name: string) => string) 
 }
 */
 
-export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): Buffer | undefined {
+export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): Buffer | null {
   if (!geometry.indices) {
-    return undefined;
+    return null;
   }
 
   // @ts-expect-error

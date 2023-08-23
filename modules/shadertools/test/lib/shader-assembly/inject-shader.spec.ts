@@ -7,7 +7,7 @@ import {
   injectShader,
   combineInjects,
   DECLARATION_INJECT_MARKER
-} from '@luma.gl/shadertools/lib/shader-assembler/inject-shader';
+} from '@luma.gl/shadertools/lib/shader-assembly/inject-shader';
 
 function getInfo(device: Device) {
   return {
