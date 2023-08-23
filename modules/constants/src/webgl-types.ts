@@ -55,7 +55,10 @@ export type GLPixelType =
 /** Uniform Type */
 export type GLUniformType = GLSamplerType | GLCompositeType;
 
-/** Sampler uniform type */
+/** 
+ * Sampler uniform type
+ * @note These are all the valid sampler types used with `gl.uniform1i((location, value)`
+ */
 export type GLSamplerType =
   | GL.SAMPLER_2D
   | GL.SAMPLER_CUBE
@@ -73,7 +76,11 @@ export type GLSamplerType =
   | GL.UNSIGNED_INT_SAMPLER_CUBE
   | GL.UNSIGNED_INT_SAMPLER_2D_ARRAY;
 
-/** Composite types table  */ 
+/** 
+ * Composite types table 
+ * @note These are all the valid non-sampler uniform types, 
+ * Different `gl.uniformXXX(location, value)` functions must be used depending on which composite type is being set.
+ */ 
 export type GLCompositeType =
   | GL.FLOAT
   | GL.FLOAT_VEC2

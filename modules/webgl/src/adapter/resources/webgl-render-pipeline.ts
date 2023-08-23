@@ -1,18 +1,16 @@
+// luma.gl, MIT license
 import type {
+  TypedArray,
+  UniformValue,
   RenderPipelineProps,
-  RenderPass,
-  Buffer,
   Binding,
   ShaderLayout,
-  PrimitiveTopology,
-  TypedArray,
-  BufferLayout
+  BufferLayout,
+  PrimitiveTopology
 } from '@luma.gl/core';
+import type {RenderPass, Buffer} from '@luma.gl/core';
 import {RenderPipeline, cast, log} from '@luma.gl/core';
-import {
-  mergeShaderLayout,
-  getAttributeInfosFromLayouts
-} from '@luma.gl/core';
+import {mergeShaderLayout, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {getGLFromVertexType} from '../converters/vertex-formats';
@@ -112,7 +110,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this._indexBuffer = webglBuffer;
   }
 
-
   /** @todo needed for portable model */
   setAttributes(buffers: Record<string, Buffer>): void {
     const attributeInfos = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout);
@@ -159,8 +156,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         });
         set = true;
       }
-      if (!set)  {
-        log.warn(`setAttributes(): Ignoring (buffer "${buffer.id}" for unknown attribute "${name}" in pipeline "${this.id}"`)();
+      if (!set) {
+        log.warn(
+          `setAttributes(): Ignoring (buffer "${buffer.id}" for unknown attribute "${name}" in pipeline "${this.id}"`
+        )();
       }
     }
   }
@@ -227,7 +226,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  setUniforms(uniforms: Record<string, any>) {
+  setUniforms(uniforms: Record<string, UniformValue>) {
     // TODO - check against layout
     Object.assign(this.uniforms, uniforms);
   }

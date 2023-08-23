@@ -1,23 +1,12 @@
 // luma.gl, MIT license
 
-import {
-  Device,
-  Buffer,
-  RenderPipelineProps,
-  RenderPass,
-  Binding,
-  PrimitiveTopology,
-  log
-} from '@luma.gl/core';
-import {RenderPipeline} from '@luma.gl/core';
+import type {RenderPipelineProps, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
 import {getAttributeBuffersFromGeometry, getIndexBufferFromGeometry} from './model-utils';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {TypedArray} from '@math.gl/core';
-
-/** @todo import type */
-type UniformValue = unknown;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string
@@ -73,7 +62,7 @@ export class Model {
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding> = {};
-  /** Uniforms */
+  /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
   uniforms: Record<string, UniformValue> = {};
 
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
@@ -189,7 +178,8 @@ export class Model {
     Object.assign(this.bindings, bindings);
   }
 
-  setUniforms(uniforms: Record<string, any>): void {
+  /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
+  setUniforms(uniforms: Record<string, UniformValue>): void {
     this.pipeline.setUniforms(uniforms);
     Object.assign(this.uniforms, uniforms);
   }
