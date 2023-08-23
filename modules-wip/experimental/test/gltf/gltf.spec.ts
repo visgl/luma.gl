@@ -11,7 +11,6 @@ test.only('gltf#loading', async (t) => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
-  debugger
   const result = createGLTFObjects(webgl1Device, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');

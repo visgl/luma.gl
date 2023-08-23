@@ -151,7 +151,9 @@ module.exports = getESLintConfig({
           "GPUColorTargetState": true,
           "GPUBindGroupEntry": true,
           "GPUTextureFormat": true,
-          "GPUBufferUsage": true
+          "GPUBufferUsage": true,
+          "GPUVertexFormat": true,
+          "GPURenderPassDescriptor": true
         }
       }
     ],

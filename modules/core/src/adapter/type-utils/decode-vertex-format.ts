@@ -7,7 +7,7 @@ export type VertexFormatInfo = {
   /** Type of each component */
   type: VertexType;
   /** Number of components per vertex / row */
-  components: number;
+  components: 1 | 2 | 3 | 4;
   /** Is this an integer format (normalized integer formats are not integer) */
   integer: boolean;
   /** Is this a signed format? */
@@ -31,7 +31,7 @@ export function decodeVertexFormat(format: VertexFormat): VertexFormatInfo {
   // split components from type
   const [type_, count] = format.split('x');
   const type = type_ as VertexType;
-  const components = count ? parseInt(count) : 1;
+  const components = (count ? parseInt(count) : 1) as 1 | 2 | 3 | 4;
   // decode the type
   const decodedType = decodeVertexType(type);
   const result: VertexFormatInfo = {

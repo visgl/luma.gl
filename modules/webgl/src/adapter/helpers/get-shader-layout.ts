@@ -2,22 +2,16 @@
 
 import type {
   ShaderLayout,
-  AttributeLayout,
   UniformBinding,
   UniformBlockBinding,
-  AttributeBinding,
-  VaryingBinding,
-  AccessorObject,
-  BufferMapping,
-  VertexFormat
+  AttributeDeclaration,
+  VaryingBinding
 } from '@luma.gl/core';
-import {log} from '@luma.gl/core';
+
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
 import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
-import {decodeUniformType, decodeAttributeType} from './uniforms';
-import {getVertexFormat} from '../converters/vertex-formats';
-import {isSamplerUniform} from './uniforms';
+import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './decode-webgl-types';
 
 /**
  * Extract metadata describing binding information for a program's shaders
@@ -30,20 +24,7 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
     bindings: []
   };
 
-  const attributes: AttributeBinding[] = readAttributeBindings(gl, program);
-  for (const attribute of attributes) {
-    // TODO - multicolumn attributes like a matrix4 can be up to 16 elts...
-    const size = Math.min(attribute.accessor.size, 4);
-    const format =
-      // attribute.accessor.format ||
-      getVertexFormat(attribute.accessor.type || GL.FLOAT, size);
-    shaderLayout.attributes.push({
-      name: attribute.name,
-      location: attribute.location,
-      format,
-      stepMode: attribute.accessor.divisor === 1 ? 'instance' : 'vertex'
-    });
-  }
+  shaderLayout.attributes = readAttributeDeclarations(gl, program);
 
   // Uniform blocks
   const uniformBlocks: UniformBlockBinding[] = readUniformBlocks(gl, program);
@@ -98,79 +79,6 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
   return shaderLayout;
 }
 
-/**
- * Merges an provided shader layout into a base shader layout
- * In WebGL, this allows the auto generated shader layout to be overridden by the application
- * Typically to change the format of the vertex attributes (from float32x4 to uint8x4 etc).
- * @todo Drop this? This could also be done more clearly with bufferMapping
- */
-export function mergeShaderLayout(
-  baseLayout: ShaderLayout,
-  overrideLayout: ShaderLayout
-): ShaderLayout {
-  // Deep clone the base layout
-  const mergedLayout: ShaderLayout = {
-    ...baseLayout,
-    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
-  };
-  // Merge the attributes
-  for (const attribute of overrideLayout?.attributes || []) {
-    const baseAttribute = mergedLayout.attributes.find(attr => attr.name === attribute.name);
-    if (!baseAttribute) {
-      log.warn(`shader layout attribute ${attribute.name} not present in shader`);
-    } else {
-      baseAttribute.format = attribute.format || baseAttribute.format;
-      baseAttribute.stepMode = attribute.stepMode || baseAttribute.stepMode;
-    }
-  }
-  return mergedLayout;
-}
-
-export function mergeBufferMap(baseLayout: ShaderLayout, bufferMap: BufferMapping[]): ShaderLayout {
-  // Deep clone the base layout
-  const mergedLayout: ShaderLayout = {
-    ...baseLayout,
-    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
-  };
-  for (const bufferMapping of bufferMap) {
-    // Handle interleave
-    switch (bufferMapping.type) {
-      case 'interleave':
-        // Handle interleaved buffer mapping
-        for (const attributeOverride of bufferMapping.attributes) {
-          overrideShaderLayoutAttribute(mergedLayout, attributeOverride);
-        }
-        break;
-
-      default:
-        // Handle simple attribute overrides
-        overrideShaderLayoutAttribute(mergedLayout, bufferMapping);
-    }
-  }
-  return mergedLayout;
-}
-
-function overrideShaderLayoutAttribute(
-  layout: ShaderLayout,
-  attributeOverride: {name: string; format?: VertexFormat}
-): void {
-  const attribute = getAttributeFromLayout(layout, attributeOverride.name);
-  if (attribute && attributeOverride.format) {
-    attribute.format = attributeOverride.format;
-  }
-}
-
-export function getAttributeFromLayout(
-  shaderLayout: ShaderLayout,
-  name: string
-): AttributeLayout | null {
-  const attribute = shaderLayout.attributes.find(attr => attr.name === name);
-  if (!attribute) {
-    log.warn(`shader layout attribute "${name}" not present in shader`);
-  }
-  return attribute || null;
-}
-
 // HELPERS
 
 /**
@@ -178,11 +86,11 @@ export function getAttributeFromLayout(
  *
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
-function readAttributeBindings(
+function readAttributeDeclarations(
   gl: WebGLRenderingContext,
   program: WebGLProgram
-): AttributeBinding[] {
-  const attributes: AttributeBinding[] = [];
+): AttributeDeclaration[] {
+  const attributes: AttributeDeclaration[] = [];
 
   const count = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
@@ -191,23 +99,30 @@ function readAttributeBindings(
     if (!activeInfo) {
       throw new Error('activeInfo');
     }
-    const {name, type: compositeType, size} = activeInfo;
+    const {name, type: compositeType /* , size*/} = activeInfo;
     const location = gl.getAttribLocation(program, name);
-    // Add only user provided attributes, for built-in attributes like
-    // `gl_InstanceID` locaiton will be < 0
+    // Add only user provided attributes, for built-in attributes like `gl_InstanceID` location will be < 0
     if (location >= 0) {
-      const {glType, components} = decodeAttributeType(compositeType);
-      const accessor: AccessorObject = {type: glType, size: size * components};
-      // Any attribute name containing the word "instance" will be assumed to be instanced
-      if (/instance/i.test(name)) {
-        accessor.divisor = 1;
-      }
-      const attributeInfo = {location, name, accessor: new Accessor(accessor)}; // Base values
-      attributes.push(attributeInfo);
+      const {attributeType} = decodeGLAttributeType(compositeType);
+
+      // Whether an attribute is instanced is essentially fixed by the structure of the shader code, 
+      // so it is arguably a static property of the shader.
+      // There is no hint in the shader declarations
+      // Heuristic: Any attribute name containing the word "instance" will be assumed to be instanced
+      const stepMode = /instance/i.test(name) ? 'instance' : 'vertex';
+
+      attributes.push({
+        name,
+        location,
+        stepMode,
+        type: attributeType,
+        // size - for arrays, size is the number of elements in the array
+      });
     }
   }
 
-  attributes.sort((a: AttributeBinding, b: AttributeBinding) => a.location - b.location);
+  // Sort by declaration order
+  attributes.sort((a: AttributeDeclaration, b: AttributeDeclaration) => a.location - b.location);
   return attributes;
 }
 
@@ -231,7 +146,7 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
       throw new Error('activeInfo');
     }
     const {name, type: compositeType, size} = activeInfo;
-    const {glType, components} = decodeUniformType(compositeType);
+    const {glType, components} = decodeGLUniformType(compositeType);
     const accessor = new Accessor({type: glType, size: size * components});
     const varying = {location, name, accessor}; // Base values
     varyings.push(varying);
@@ -290,9 +205,7 @@ function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): 
 
 /**
  * Extract info about all "active" uniform blocks
- *
- * ("Active" just means that unused (aka inactive) blocks may have been
- * optimized away during linking)
+ * @note In WebGL, "active" just means that unused (inactive) blocks may have been optimized away during linking)
  */
 function readUniformBlocks(
   gl: WebGLRenderingContext,
@@ -346,7 +259,7 @@ function readUniformBlocks(
 
       blockInfo.uniforms.push({
         name: activeInfo.name,
-        format: decodeUniformType(uniformType[i]).format,
+        format: decodeGLUniformType(uniformType[i]).format,
         type: uniformType[i],
         arrayLength: uniformArrayLength[i],
         byteOffset: uniformOffset[i],
@@ -362,6 +275,27 @@ function readUniformBlocks(
   uniformBlocks.sort((a, b) => a.location - b.location);
   return uniformBlocks;
 }
+
+/**
+ * TOOD - compare with a above, confirm copy, then delete
+  const bindings: Binding[] = [];
+  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
+  for (let blockIndex = 0; blockIndex < count; blockIndex++) {
+    const vertex = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
+    const fragment = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
+    const visibility = (vertex) + (fragment);
+    const binding: BufferBinding = {
+      location: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_BINDING),
+      // name: gl.getActiveUniformBlockName(program, blockIndex),
+      type: 'uniform',
+      visibility,
+      minBindingSize: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE),
+      // uniformCount: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
+      // uniformIndices: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
+    }
+    bindings.push(binding);
+  }
+*/
 
 const SAMPLER_UNIFORMS_GL_TO_GPU: Record<
   number,
@@ -426,45 +360,3 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
     isArray: Boolean(matches[2])
   };
 }
-
-/**
- * TODO - verify this is a copy of above and delete
- * import type {TextureFormat} from '@luma.gl/core';
-* Extract info about all "active" uniform blocks
- * ("Active" just means that unused (inactive) blocks may have been optimized away during linking)
- *
- function getUniformBlockBindings(gl: WebGLRenderingContext, program): Binding[] {
-  if (!isWebGL2(gl)) {
-    return;
-  }
-  const bindings: Binding[] = [];
-  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
-  for (let blockIndex = 0; blockIndex < count; blockIndex++) {
-    const vertex = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
-    const fragment = gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER),
-    const visibility = (vertex) + (fragment);
-    const binding: BufferBinding = {
-      location: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_BINDING),
-      // name: gl.getActiveUniformBlockName(program, blockIndex),
-      type: 'uniform',
-      visibility,
-      minBindingSize: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE),
-      // uniformCount: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORMS),
-      // uniformIndices: gl.getActiveUniformBlockParameter(program, blockIndex, gl.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES),
-    }
-    bindings.push(binding);
-  }
-  return bindings;
-}
-
-function setBindings(gl2: WebGL2RenderingContext, program: WebGLProgram, bindings: Binding[][]): void {
-  for (const bindGroup of bindings) {
-    for (const binding of bindGroup) {
-
-    }
-  }
-
-  // Set up indirection table
-  // this.gl2.uniformBlockBinding(this.handle, blockIndex, blockBinding);
-}
- */

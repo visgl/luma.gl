@@ -2,7 +2,7 @@
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
-import type {ShaderLayout, BufferMapping, Binding} from '../types/shader-layout';
+import type {ShaderLayout, BufferLayout, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
 import {Resource, ResourceProps} from './resource';
 import type {Buffer} from './buffer';
@@ -26,26 +26,25 @@ export type RenderPipelineProps = ResourceProps & {
   fsConstants?: Record<string, number>;
 
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
-  layout?: ShaderLayout | null;
+  shaderLayout?: ShaderLayout | null;
+  /**
+   * Describes the buffers accepted by this pipeline and how they are mapped to shader attributes.
+   * A default mapping of one buffer per attribute is always created.
+   */
+  bufferLayout?: BufferLayout[], // Record<string, Omit<BufferLayout, 'name'>
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: PrimitiveTopology;
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
-  // targets...
-
-  /**
-   * Describes the buffers accepted by this pipeline and how they are mapped to shader attributes.
-   * A default mapping of one buffer per attribute is always created.
-   * @note interleaving attributes into the same buffer does not increase the number of attributes
-   * that can be used in a shader (16 on many systems).
-   */
-  bufferMap?: BufferMapping[], // Record<string, Omit<BufferMapping, 'name'>
 
   // Can be changed after creation
-  // TODO make pipeline immutable?
-  // - these could be supplied to draw as parameters,
-  // - in WebGPU they are set on the render pass 
+  // TODO make pipeline immutable? these could be supplied to draw as parameters, in WebGPU they are set on the render pass 
+
+  /** Number of vertices */
+  vertexCount?: number;
+  /** Number of instances */
+  instanceCount?: number;
 
   /** Optional index buffer */
   indices?: Buffer | null;
@@ -72,13 +71,13 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     fsEntryPoint: '', // main
     fsConstants: {},
   
-    layout: null, // {attributes: [], bindings: []},
-  
+    shaderLayout: null,
+    bufferLayout: [],
     topology: 'triangle-list',
-    // targets:
-  
     parameters: {},
-    bufferMap: [],
+  
+    vertexCount: 0,
+    instanceCount: 0,
   
     indices: null,
     attributes: {},
@@ -97,7 +96,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   }
 
   /** Set attributes (stored on pipeline and set before each call) */
-  abstract setIndexBuffer(indices: Buffer): void;
+  abstract setIndexBuffer(indices: Buffer | null): void;
   /** Set attributes (stored on pipeline and set before each call) */
   abstract setAttributes(attributes: Record<string, Buffer>): void;
   /** Set constant attributes (WebGL only) */

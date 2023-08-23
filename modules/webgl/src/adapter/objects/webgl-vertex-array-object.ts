@@ -8,6 +8,7 @@ import {WebGLResource} from './webgl-resource';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
 import {BufferWithAccessor} from '../../classic/buffer-with-accessor';
+import {AccessorObject} from '../..';
 
 const ERR_ELEMENTS = 'elements must be GL.ELEMENT_ARRAY_BUFFER';
 
@@ -93,7 +94,7 @@ export class WEBGLVertexArrayObject extends WebGLResource<VertexArrayObjectProps
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
-  setBuffer(location: number, buffer: WEBGLBuffer, accessor: any): void {
+  setBuffer(location: number, buffer: WEBGLBuffer, accessor: AccessorObject): void {
     // Check target
     if (buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER) {
       this.setElementBuffer(buffer, accessor);

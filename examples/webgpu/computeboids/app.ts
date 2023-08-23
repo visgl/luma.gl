@@ -38,7 +38,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     vsEntryPoint: 'vert_main',
     fs: spriteShaderModule,
     fsEntryPoint: 'frag_main',
-    layout: {
+    shaderLayout: {
       attributes: [
         {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
         {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
@@ -46,7 +46,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
       ],
       bindings: []
     },
-    bufferMap: [
+    bufferLayout: [
       {name: 'particles', attributes: [
         {name: 'instancePositions'},
         {name: 'instanceVelocities'}

@@ -74,10 +74,10 @@ Buffer mappings offer control of GPU buffer vertex formats, as well as offsets, 
 Pipeline attribute layouts are immutable and need to be defined when a pipeline is created. All buffers subsequently supplied to that pipeline need to conform to any buffer mapping properties specified during pipeline creation (e.g. the vertex format may be locked to `unorm8x4`).
 :::
 
-The bufferMap field in the example below specifies that
+The bufferLayout field in the example below specifies that
 
 ```typescript
-const bufferMap: BufferMap = {
+const bufferLayout: BufferLayout = {
   {name: 'instanceColors', format: 'unorm8x4'},
   {name: 'instanceVelocities', format: 'interleaved', attributes: [
     {name: 'instancePositions'}
@@ -89,7 +89,7 @@ const bufferMap: BufferMap = {
 device.createRenderPipeline({
   shaderLayout,
   // We want to use "non-standard" buffers: two attributes interleaved in same buffer
-  bufferMap: [
+  bufferLayout: [
     {name: 'instanceColors', format: 'unorm8x4'},
   ],
   attributes: {},

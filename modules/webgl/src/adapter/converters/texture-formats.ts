@@ -2,6 +2,7 @@ import type {TextureFormat, DeviceFeature} from '@luma.gl/core';
 import {decodeTextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../../context/context/webgl-checks';
+import { getGLFromVertexType } from './vertex-formats';
 
 /* eslint-disable camelcase */
 
@@ -603,7 +604,8 @@ export function getWebGLTextureParameters(formatOrGL: TextureFormat | GL, isWebG
       decoded.normalized,
       webglFormat
     ),
-    type: getWebGLDataType(decoded.dataType),
+    // depth formats don't have a type
+    type: decoded.dataType ? getGLFromVertexType(decoded.dataType) : GL.UNSIGNED_BYTE,
     // @ts-expect-error
     compressed: decoded.compressed
   };
@@ -697,20 +699,5 @@ function getWebGLPixelDataFormat(
     case 'rgb': return integer && !normalized ? GL.RGB_INTEGER : GL.RGB;
     case 'rgba': return integer && !normalized ? GL.RGBA_INTEGER : GL.RGBA;
     default: return GL.RGBA;
-  }
-}
-
-export function getWebGLDataType(dataType: string): GL {
-  // prettier-ignore
-  switch (dataType) {
-    case 'uint8': return GL.UNSIGNED_BYTE;
-    case 'sint8': return GL.BYTE;
-    case 'uint16': return GL.UNSIGNED_SHORT;
-    case 'sint16': return GL.SHORT;
-    case 'uint32': return GL.UNSIGNED_INT;
-    case 'sint32': return GL.INT;
-    case 'float16': return GL.HALF_FLOAT;
-    case 'float32': return GL.FLOAT;
-    default: return GL.UNSIGNED_BYTE;
   }
 }

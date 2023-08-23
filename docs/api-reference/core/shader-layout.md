@@ -4,21 +4,28 @@
 The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
 :::
 
-luma.gl defines the `ShaderLayout` type to collect a description of a (pair of) shaders. 
-A `ShaderLayout` is used when creating a `RenderPipeline` or `ComputePipeline`.
+A `ShaderLayout` object describes the static structure a `RenderPipeline, "location" and structure of binding points of shaders,
+ including attributes, bindings (textures, samplers, uniform buffers), and uniforms (under WebGL) and also lets the application
+ assign a name to each binding point (typically matching the name used in the shader code).
 
-The binding of data is performed in JavaScript on the CPU. For this to work,
-a certain amount of metadata is needed in JavaScript that describes the layout of a
-render or compute pipeline's specific shaders.
+Note that a `ShaderLayout` only describes static data and it is typically complemented by a [`BufferLayout`](./buffer-layout.md), which contains
+"dynamic" data such as the specific layout and structure of the buffers that will be provided to a `RenderPipeline`. The application
+could choose to provide buffers with different vertex formats, strides, and offsets, without changing the shader.
 
-Shader code contains declarations of attributes, uniform blocks, samplers etc in WGSL or GLSL code. After compilation and linking of fragment and vertex shaders into a pipeline, the resolved declarations collectively define the layout of the data that needs to be bound before the shader can execute on the GPU.
+Shader code (WGSL and GLSL) contains declarations of attributes, uniform blocks, samplers etc, describing all required data inputs and outputs. After compilation and linking of fragment and vertex shaders into a pipeline, the resolved declarations collectively define the layout of the data that needs to be bound before the shader can execute on the GPU.
 
-`ShaderLayout`s can be created manually by a programmer (by reading the shader code
-and copying the relevant declarations).
+As a preparation to a `RenderPipeline` `draw()` call, the GPU data 
+required by the pipeline's shaders must be bound on the CPU via luma.gl calls such as `setAttributes()`, `setIndexBuffer()`, `setBindings()` etc. 
+For these calls to work, the metadata in the `ShaderLayout` object is needed in JavaScript.
 
-:::info
-A default `ShaderLayout` is be extracted programmatically by the `RenderPipeline` in WebGL, but this is not yet possible in WebGPU. Therefore it is necessary to provide an explicit `layout` property to any `RenderPipeline` that is expected to run in WebGPU. This restriction may be lifted in the future.
-:::
+Note that `ShaderLayout`s are designed to be created manually by a programmer (who needs to make sure all relevant declarations in the shader code are described in the `ShaderLayout`).
+
+Remarks:
+- In WebGL, a default `ShaderLayout` is extracted automatically by the `RenderPipeline` in WebGL. 
+However this is not yet possible in WebGPU. Therefore it is necessary to provide an explicit `layout` property to any `RenderPipeline` that is expected to run in WebGPU. This restriction may be lifted in the future.
+- It is not possible to automatically infer from a shader which attributes should have instanced step modes. The heuristic applied by luma.gl under WebGL is that any attribute which contains the string `instanced` will be assumed to have `stepMode='instance'`.
+-  
+## Usage
 
 ```typescript
 type ShaderLayout = {
@@ -28,7 +35,7 @@ type ShaderLayout = {
     vertexPositions: {location: 2, format: 'float32x2', stepMode: 'vertex'}
   ],
 
-  bindings: {[bindingName: string]: BindingLayout};
+  bindings: {
     projectionUniforms: {location: 0, type: 'uniforms'},
     textureSampler: {location: 1, type: 'sampler'},
     texture: {location: 2, type: 'texture'}
@@ -77,6 +84,11 @@ It contains  fixed information about each attribute such as its location (the in
   }
 ```
 
+- `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
+- `format: VertexFormat`
+- `stepMode: 'vertex' | 'instance'` - 
+
+
 ### bindings
 
 Bindings cover textures, samplers and uniform buffers. location (index on the GPU)
@@ -90,12 +102,14 @@ and type are the key pieces of information that need to be provided.
   }
 ```
 
+- `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
+- `type: 'texture' | 'sampler' | uniform'` The type of bind point (texture, sampler or uniform buffer). WebGPU requires separate bind points for textures and samplers. 
+
 
 ### uniforms
 
-And "free" uniforms (not part of a uniform buffer) are declared in this field.
-
 :::caution
-Uniforms are a WebGL-only concept, and it is strongly recommended to use uniform 
-buffers instead.
+Uniforms are a WebGL-only concept. For portability it is recommended to use uniform buffers instead.
 :::
+
+Any top-level shader uniforms (not part of a uniform buffer) should be declared in this field.

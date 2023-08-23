@@ -27,7 +27,7 @@ type StorageTextureBindingLayout = {
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
 };
 
-export type BindingLayout = BufferBindingLayout | TextureBindingLayout | StorageTextureBindingLayout;
+export type BindingDeclaration = BufferBindingLayout | TextureBindingLayout | StorageTextureBindingLayout;
 
 // BINDINGS
 

@@ -73,7 +73,7 @@ class InstancedCube extends Model {
 
     const offsets32 = new Float32Array(offsets);
 
-    const pickingColors = new Uint8Array(SIDE * SIDE * 2);
+    const pickingColors = new Float32Array(SIDE * SIDE * 2);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
         pickingColors[(i * SIDE + j) * 2 + 0] = i;
@@ -98,26 +98,28 @@ class InstancedCube extends Model {
       modules: [dirlight, picking],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry(),
-      layout: {
+      shaderLayout: {
         attributes: [
-          {name: 'positions', location: 0, format: 'float32x3', stepMode: 'vertex'},
-          {name: 'normals', location: 1, format: 'float32x3', stepMode: 'vertex'},
-          {name: 'instanceOffsets', location: 2, format: 'float32x2', stepMode: 'instance'},
-          {name: 'instanceColors', location: 3, format: 'float32x3', stepMode: 'instance'},
-          {name: 'instancePickingColors', location: 4, format: 'float32x2', stepMode: 'instance'}
+          {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
+          {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
+          {name: 'instanceOffsets', location: 2, type: 'vec2<f32>', stepMode: 'instance'},
+          {name: 'instanceColors', location: 3, type: 'vec3<f32>', stepMode: 'instance'},
+          {name: 'instancePickingColors', location: 4, type: 'vec2<f32>', stepMode: 'instance'}
         ],
         bindings: []
       },
+      bufferLayout: [
+        // float32 attributes are automatically assigned float32x... vertex formats, no need to list them
+        {name: 'instanceColors', format: 'unorm8x4'},
+        // TODO - normalizing picking colors breaks picking 
+        // {name: 'instancePickingColors', format: 'unorm8x2'},
+      ],
       attributes: {
         // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
         instanceOffsets: offsetsBuffer,
         instanceColors: colorsBuffer,
         instancePickingColors: pickingColorsBuffer
       },
-      bufferMap: [
-        {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'uint8x2'},
-      ],
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal'
@@ -231,7 +233,7 @@ export function pickInstance(
   });
 
   if (color[0] + color[1] + color[2] > 0) {
-    console.log('setting picking color', color);
+    // console.log('setting picking color', color);
     model.updateModuleSettings({
       pickingSelectedColor: color
     });

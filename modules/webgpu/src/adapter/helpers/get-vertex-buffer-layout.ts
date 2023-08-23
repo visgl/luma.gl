@@ -1,4 +1,4 @@
-import type {ShaderLayout, BufferMapping, AttributeLayout, VertexFormat} from '@luma.gl/core';
+import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
 import {decodeVertexFormat} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
@@ -13,15 +13,18 @@ function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
  * Build a WebGPU vertex buffer layout intended for use in a GPURenderPassDescriptor.
  * Converts luma.gl attribute definitions to a WebGPU GPUVertexBufferLayout[] array
  * @param layout
- * @param bufferMap The buffer map is optional
+ * @param bufferLayout The buffer map is optional
  * @returns WebGPU layout intended for a GPURenderPassDescriptor.
  */
-export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMapping[]): GPUVertexBufferLayout[] {
+export function getVertexBufferLayout(
+  shaderLayout: ShaderLayout,
+  bufferLayout: BufferLayout[]
+): GPUVertexBufferLayout[] {
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
-  // First handle any buffers mentioned in `bufferMapping`
-  for (const mapping of bufferMap) {
+  // First handle any buffers mentioned in `bufferLayout`
+  for (const mapping of bufferLayout) {
     // Build vertex attributes for one buffer
     const vertexAttributes: GPUVertexAttribute[] = [];
 
@@ -31,28 +34,28 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
     const byteOffset = mapping.byteOffset || 0;
 
     // interleaved mapping {..., attributes: [{...}, ...]}
-    if ('attributes' in mapping) {
-      // const arrayStride = mapping.byteStride; TODO 
+    if (mapping.attributes) {
+      // const arrayStride = mapping.byteStride; TODO
       for (const interleaved of mapping.attributes) {
-        const attributeLayout = findAttributeLayout(layout, interleaved.name, usedAttributes);
+        const attributeLayout = findAttributeLayout(shaderLayout, interleaved.name, usedAttributes);
 
         stepMode = attributeLayout.stepMode || 'vertex';
         vertexAttributes.push({
-          format: getWebGPUVertexFormat(attributeLayout.format),
+          format: getWebGPUVertexFormat(interleaved.format || mapping.format),
           offset: byteOffset + byteStride,
           shaderLocation: attributeLayout.location
         });
 
-        byteStride += decodeVertexFormat(attributeLayout.format).byteLength;
+        byteStride += decodeVertexFormat(mapping.format).byteLength;
       }
       // non-interleaved mapping (just set offset and stride)
     } else {
-      const attributeLayout = findAttributeLayout(layout, mapping.name, usedAttributes);
-      byteStride = decodeVertexFormat(attributeLayout.format).byteLength;
+      const attributeLayout = findAttributeLayout(shaderLayout, mapping.name, usedAttributes);
+      byteStride = decodeVertexFormat(mapping.format).byteLength;
 
       stepMode = attributeLayout.stepMode || 'vertex';
       vertexAttributes.push({
-        format: getWebGPUVertexFormat(attributeLayout.format),
+        format: getWebGPUVertexFormat(mapping.format),
         offset: byteOffset,
         shaderLocation: attributeLayout.location
       });
@@ -66,17 +69,19 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
     });
   }
 
-  // Add any non-mapped attributes
-  for (const attribute of layout.attributes) {
+  // Add any non-mapped attributes - TODO - avoid hardcoded types
+  for (const attribute of shaderLayout.attributes) {
     if (!usedAttributes.has(attribute.name)) {
       vertexBufferLayouts.push({
-        arrayStride: decodeVertexFormat(attribute.format).byteLength,
+        arrayStride: decodeVertexFormat('float32x3').byteLength,
         stepMode: attribute.stepMode || 'vertex',
-        attributes: [{
-          format: getWebGPUVertexFormat(attribute.format),
-          offset: 0,
-          shaderLocation: attribute.location
-        }]
+        attributes: [
+          {
+            format: getWebGPUVertexFormat('float32x3'),
+            offset: 0,
+            shaderLocation: attribute.location
+          }
+        ]
       });
     }
   }
@@ -84,13 +89,16 @@ export function getVertexBufferLayout(layout: ShaderLayout, bufferMap: BufferMap
   return vertexBufferLayouts;
 }
 
-export function getBufferSlots(layout: ShaderLayout, bufferMap: BufferMapping[]): Record<string, number> {
+export function getBufferSlots(
+  shaderLayout: ShaderLayout,
+  bufferLayout: BufferLayout[]
+): Record<string, number> {
   const usedAttributes = new Set<string>();
   let bufferSlot = 0;
   const bufferSlots: Record<string, number> = {};
 
-  // First handle any buffers mentioned in `bufferMapping`
-  for (const mapping of bufferMap) {
+  // First handle any buffers mentioned in `bufferLayout`
+  for (const mapping of bufferLayout) {
     // interleaved mapping {..., attributes: [{...}, ...]}
     if ('attributes' in mapping) {
       for (const interleaved of mapping.attributes) {
@@ -104,7 +112,7 @@ export function getBufferSlots(layout: ShaderLayout, bufferMap: BufferMapping[])
   }
 
   // Add any non-mapped attributes
-  for (const attribute of layout.attributes) {
+  for (const attribute of shaderLayout.attributes) {
     if (!usedAttributes.has(attribute.name)) {
       bufferSlots[attribute.name] = bufferSlot++;
     }
@@ -118,8 +126,12 @@ export function getBufferSlots(layout: ShaderLayout, bufferMap: BufferMapping[])
  * @throws if name is not in ShaderLayout
  * @throws if name has already been referenced
  */
-function findAttributeLayout(layout: ShaderLayout, name: string, attributeNames: Set<string>): AttributeLayout {
-  const attribute = layout.attributes.find(attribute => attribute.name === name);
+function findAttributeLayout(
+  shaderLayout: ShaderLayout,
+  name: string,
+  attributeNames: Set<string>
+): AttributeDeclaration {
+  const attribute = shaderLayout.attributes.find(attribute => attribute.name === name);
   if (!attribute) {
     throw new Error(`Unknown attribute ${name}`);
   }

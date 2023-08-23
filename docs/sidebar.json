@@ -1,6 +1,6 @@
 [
   "README",
-  "whats-new", 
+  "whats-new",
   {
     "type": "category",
     "label": "Tutorials",
@@ -26,16 +26,13 @@
       {
         "type": "category",
         "label": "Background",
-        "items": [
-          "api-guide/background/api-design",
-          "api-guide/background/webgpu-vs-webgl"
-        ]
+        "items": ["api-guide/background/api-design", "api-guide/background/webgpu-vs-webgl"]
       },
       "public-review",
       "api-guide/README",
       "api-guide/device",
       "api-guide/resources",
-      "api-guide/memory",      
+      "api-guide/memory",
       "api-guide/buffers",
       "api-guide/textures",
       "api-guide/rendering",
@@ -54,67 +51,63 @@
         "type": "category",
         "label": "V8 API Reference",
         "items": [
-              "api-reference-v8/webgl-legacy/README",
-              "api-reference-v8/constants/README",
-              "api-reference-v8/webgl-legacy/class-list",
-              "api-reference-v8/webgl-legacy/accessors",
-              "api-reference-v8/webgl-legacy/context/context-api",
-              "api-reference-v8/webgl-legacy/context/context-properties",
-              "api-reference-v8/webgl-legacy/context/parameter-setting",
-              "api-reference-v8/webgl-legacy/context/feature-checking",
-              "api-reference-v8/webgl-legacy/context/device-pixels",
-              "api-reference-v8/webgl-legacy/parameters-legacy",
-              "api-reference-v8/webgl-legacy/classes/accessor",
-              "api-reference-v8/webgl-legacy/classes/buffer",
-              "api-reference-v8/webgl-legacy/classes/framebuffer",
-              "api-reference-v8/webgl-legacy/classes/moving-data",
-              "api-reference-v8/webgl-legacy/classes/program",
-              "api-reference-v8/webgl-legacy/classes/query",
-              "api-reference-v8/webgl-legacy/classes/renderbuffer",
-              "api-reference-v8/webgl-legacy/classes/resource",
-              "api-reference-v8/webgl-legacy/classes/shader",
-              "api-reference-v8/webgl-legacy/classes/texture",
-              "api-reference-v8/webgl-legacy/classes/texture-2d",
-              "api-reference-v8/webgl-legacy/classes/texture-3d",
-              "api-reference-v8/webgl-legacy/classes/texture-cube",
-              "api-reference-v8/webgl-legacy/classes/transform-feedback",
-              "api-reference-v8/webgl-legacy/classes/uniform-buffer-layout",
-              "api-reference-v8/webgl-legacy/classes/vertex-array",
-              "api-reference-v8/webgl-legacy/classes/vertex-array-object"
-            ]
-          }
+          "api-reference-v8/webgl-legacy/README",
+          "api-reference-v8/constants/README",
+          "api-reference-v8/webgl-legacy/class-list",
+          "api-reference-v8/webgl-legacy/accessors",
+          "api-reference-v8/webgl-legacy/context/context-api",
+          "api-reference-v8/webgl-legacy/context/context-properties",
+          "api-reference-v8/webgl-legacy/context/parameter-setting",
+          "api-reference-v8/webgl-legacy/context/feature-checking",
+          "api-reference-v8/webgl-legacy/context/device-pixels",
+          "api-reference-v8/webgl-legacy/parameters-legacy",
+          "api-reference-v8/webgl-legacy/classes/accessor",
+          "api-reference-v8/webgl-legacy/classes/buffer",
+          "api-reference-v8/webgl-legacy/classes/framebuffer",
+          "api-reference-v8/webgl-legacy/classes/moving-data",
+          "api-reference-v8/webgl-legacy/classes/program",
+          "api-reference-v8/webgl-legacy/classes/query",
+          "api-reference-v8/webgl-legacy/classes/renderbuffer",
+          "api-reference-v8/webgl-legacy/classes/resource",
+          "api-reference-v8/webgl-legacy/classes/shader",
+          "api-reference-v8/webgl-legacy/classes/texture",
+          "api-reference-v8/webgl-legacy/classes/texture-2d",
+          "api-reference-v8/webgl-legacy/classes/texture-3d",
+          "api-reference-v8/webgl-legacy/classes/texture-cube",
+          "api-reference-v8/webgl-legacy/classes/transform-feedback",
+          "api-reference-v8/webgl-legacy/classes/uniform-buffer-layout",
+          "api-reference-v8/webgl-legacy/classes/vertex-array",
+          "api-reference-v8/webgl-legacy/classes/vertex-array-object"
         ]
       },
       "api-reference/README",
-        {
+      {
         "type": "category",
         "label": "@luma.gl/core",
         "items": [
-          "api-reference/api/README",
-          "api-reference/api/device",
-          "api-reference/api/device-features",
-          "api-reference/api/device-limits",
-          "api-reference/api/canvas-context",
-          "api-reference/api/parameters",
-          "api-reference/api/bindings",
-          "api-reference/api/types/shader-layout",
-          "api-reference/api/texture-formats",
-          "api-reference/api/resources/buffer",
-          "api-reference/api/resources/compute-pipeline",
-          "api-reference/api/resources/framebuffer",
-          "api-reference/api/resources/pipeline",
-          "api-reference/api/resources/render-pipeline",
-          "api-reference/api/resources/sampler",
-          "api-reference/api/resources/shader",
-          "api-reference/api/resources/texture"
+          "api-reference/core/README",
+          "api-reference/core/device",
+          "api-reference/core/device-features",
+          "api-reference/core/device-limits",
+          "api-reference/core/canvas-context",
+          "api-reference/core/parameters",
+          "api-reference/core/bindings",
+          "api-reference/core/shader-layout",
+          "api-reference/core/texture-formats",
+          "api-reference/core/resources/buffer",
+          "api-reference/core/resources/compute-pipeline",
+          "api-reference/core/resources/framebuffer",
+          "api-reference/core/resources/pipeline",
+          "api-reference/core/resources/render-pipeline",
+          "api-reference/core/resources/sampler",
+          "api-reference/core/resources/shader",
+          "api-reference/core/resources/texture"
         ]
       },
       {
         "type": "category",
         "label": "@luma.gl/core",
-        "items": [
-          "api-reference/core/README"
-        ]
+        "items": ["api-reference/core/README"]
       },
       {
         "type": "category",
@@ -126,7 +119,6 @@
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
           "api-reference/engine/model",
-          "api-reference/engine/model2",
           "api-reference/engine/pipeline-factory",
           "api-reference/engine/transform",
           "api-reference/engine/transform/buffer-transform",
@@ -168,20 +160,15 @@
       {
         "type": "category",
         "label": "@luma.gl/webgl",
-        "items": [
-          "api-reference/webgl/README",
-          "api-reference/webgl/adapter/webgl-device"
-        ]
+        "items": ["api-reference/webgl/README", "api-reference/webgl/adapter/webgl-device"]
       },
       {
         "type": "category",
         "label": "@luma.gl/webgpu",
-        "items": [
-          "api-reference/webgpu/README"
-        ]
+        "items": ["api-reference/webgpu/README"]
       }
     ]
-  },  
+  },
   {
     "type": "category",
     "label": "Developer Guide",

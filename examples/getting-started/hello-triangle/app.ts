@@ -9,16 +9,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model: Model;
-  positionBuffer: Buffer;
-  colorBuffer: Buffer;
+  interleavedBuffer: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
-
-    // 3 corner points [x,y,...]
-    this.positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
-    // 3 colors [R,G,B, ...]
-    this.colorBuffer = device.createBuffer(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
 
     const vs = `
       attribute vec2 position;
@@ -40,24 +34,41 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     `;
 
+    // prettier-ignore
+    const interleavedData = new Float32Array([
+      // Offset
+      0, 0,
+      // vertex 1: 2D positions XY,  colors RGB
+      -0.5, -0.5,  1, 0, 0,
+      // vertex 2: 2D positions XY,  colors RGB
+      0.5, -0.5,  0, 1, 0,
+      // vertex 3: 2D positions XY,  colors RGB
+      0.0, 0.5,  0, 0, 1
+    ])
+    this.interleavedBuffer = device.createBuffer(interleavedData);
+        
     this.model = new Model(device, {
       vs,
       fs,
+      bufferLayout: [
+        {name: 'vertexData', byteOffset: 8, attributes: [
+          {name: 'position', format: 'float32x2'},
+          {name: 'color', format: 'float32x3'},
+        ]}
+      ],
       attributes: {
-        position: this.positionBuffer,
-        color: this.colorBuffer
+        vertexData: this.interleavedBuffer,
       },
       vertexCount: 3
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
-    this.positionBuffer.destroy();
-    this.colorBuffer.destroy();
+    this.interleavedBuffer.destroy();
   }
 
-  override onRender({device}: AnimationProps): void {
+  onRender({device}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.draw(renderPass);
     renderPass.end();

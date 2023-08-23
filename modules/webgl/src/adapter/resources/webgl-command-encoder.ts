@@ -15,7 +15,7 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   readonly commandBuffer: WEBGLCommandBuffer;
 
   constructor(device: WebGLDevice, props: CommandEncoderProps) {
-    super(props);
+    super(device, props);
     this.device = device;
     this.commandBuffer = new WEBGLCommandBuffer(device);
   }

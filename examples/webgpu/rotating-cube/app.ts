@@ -101,10 +101,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       id: 'cube',
       vs: SHADERS.vs,
       fs: SHADERS.fs,
-      layout: {
+      shaderLayout: {
         attributes: [
-          {name: 'position', location: 0, format: 'float32x4'},
-          {name: 'uv', location: 1, format: 'float32x2'}
+          {name: 'position', location: 0, type: 'vec4<f32>'},
+          {name: 'uv', location: 1, type: 'vec2<f32>'}
         ],
         bindings: [
           {name: 'uniforms', location: 0, type: 'uniform'}

@@ -13,7 +13,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   readonly handle: GPUCommandEncoder;
 
   constructor(device: WebGPUDevice, props: CommandEncoderProps) {
-    super(props);
+    super(device, props);
     this.device = device;
     this.handle = props.handle || this.device.handle.createCommandEncoder({
       // TODO was this removed in standard?
