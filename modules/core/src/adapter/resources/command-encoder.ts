@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
@@ -135,9 +136,8 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     return 'CommandEncoder';
   }
 
-  constructor(props: CommandEncoderProps) {
-    // @ts-expect-error
-    super(props, DEFAULT_COMMAND_ENCODER_PROPS);
+  constructor(device: Device, props: CommandEncoderProps) {
+    super(device, props, CommandEncoder.defaultProps);
   }
   
   abstract finish(): void; // TODO - return the CommandBuffer?

@@ -33,6 +33,6 @@ export abstract class CommandBuffer extends Resource<CommandBufferProps> {
 
   constructor(props: CommandBufferProps) {
     // @ts-expect-error
-    super(props, DEFAULT_COMMAND_ENCODER_PROPS);
+    super(props, CommandBuffer.defaultProps);
   }
 }

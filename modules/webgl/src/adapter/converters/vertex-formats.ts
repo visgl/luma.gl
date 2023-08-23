@@ -1,15 +1,26 @@
 import {GL} from '@luma.gl/constants';
 import {VertexFormat, VertexType} from '@luma.gl/core';
 
+type GLDataType = 
+  | GL.UNSIGNED_BYTE
+  | GL.BYTE
+  | GL.UNSIGNED_SHORT
+  | GL.SHORT
+  | GL.UNSIGNED_INT
+  | GL.INT
+  | GL.HALF_FLOAT
+  | GL.FLOAT;
+
+
 /** Get vertex format from GL constants */
-export function getVertexFormatFromGL(type: GL, components: 1 | 2 | 3 | 4): VertexFormat {
+export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
   const base = getVertexTypeFromGL(type);
   // prettier-ignore
   switch (components) {
-    //@ts-expect-error TODO deal with lack of formats
+    // @ts-expect-error TODO deal with lack of formats
     case 1: return base;
     case 2: return `${base}x2`;
-    //@ts-expect-error TODO deal with lack of formats
+    // @ts-expect-error TODO deal with lack of formats
     case 3: return `${base}x3`;
     case 4: return `${base}x4`;
   }
@@ -18,7 +29,7 @@ export function getVertexFormatFromGL(type: GL, components: 1 | 2 | 3 | 4): Vert
 }
 
 /** Get data type from GL constants */
-export function getVertexTypeFromGL(type: GL, normalized = false): VertexType {
+export function getVertexTypeFromGL(type: GLDataType, normalized = false): VertexType {
   // prettier-ignore
   switch (type) {
     // WebGPU does not support normalized 32 bit integer attributes
@@ -65,6 +76,5 @@ export function getGLFromVertexType(
     case 'float32': return GL.FLOAT;
   }
   // @ts-ignore unreachable
-  debugger
   throw new Error(String(dataType));
 }
