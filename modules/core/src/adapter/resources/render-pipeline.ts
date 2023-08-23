@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
+import type {UniformValue} from '../types/types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, BufferLayout, Binding} from '../types/shader-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
@@ -52,8 +53,8 @@ export type RenderPipelineProps = ResourceProps & {
   attributes?: Record<string, Buffer>;
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
-  /** uniforms (WebGL only) */
-  uniforms?: Record<string, any>;
+  /** @deprecated uniforms (WebGL only) */
+  uniforms?: Record<string, UniformValue>;
 };
 
 /**
@@ -103,8 +104,12 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   abstract setConstantAttributes(attributes: Record<string, TypedArray>): void;
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
-  /** Uniforms (only supported on WebGL devices. Reset before each call to enable pipeline sharing) */
-  abstract setUniforms(bindings: Record<string, any>): void;
+  /** Uniforms 
+   * @deprecated Only supported on WebGL devices.
+   * @note textures, samplers and uniform buffers should be set via `setBindings()`, these are not considered uniforms.
+   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing. 
+   */
+  abstract setUniforms(bindings: Record<string, UniformValue>): void;
 
   /** Draw call */ 
   abstract draw(options: {

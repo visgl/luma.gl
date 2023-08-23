@@ -322,12 +322,6 @@ Create a `VertexArray` to store buffer values for the vertices of a triangle and
 ```typescript
 const pipeline = device.createRenderPipeline({vs, fs});
 
-const vertexArray = new VertexArray(gl, {pipeline});
-
-vertexArray.setAttributes({
-  aVertexPosition: new Buffer(gl, {data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])})
-});
-
 pipeline.draw({vertexArray, ...});
 ```
 
@@ -343,9 +337,12 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 - `handle` : `WebGLProgram` - The WebGL `WebGLProgram` instance.
 - `id` : `String` - `id` string for debugging.
 
-## Constructor
 
-### RenderPipeline(gl : WebGLRenderingContext, props : Object)
+## Methods
+
+### constructor
+
+RenderPipeline(gl : WebGLRenderingContext, props : Object)
 
 Creates a new pipeline using the supplied vertex and fragment shaders. The shaders are compiled into WebGLShaders and is created and the shaders are linked.
 
@@ -362,12 +359,7 @@ const pipeline = device.createRenderPipeline({
 - `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 - `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
 - `varyings` WebGL 2 (`String[]`) - a list of names of varyings.
-- `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL 2 (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
 
-| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | Description                  |
-| ----------------------------------- | ---------------------------- |
-| `GL.SEPARATE_ATTRIBS`               | One varying per buffer       |
-| `GL.INTERLEAVED_ATTRIBS`            | Multiple varyings per buffer |
 
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
@@ -381,7 +373,11 @@ Deletes resources held by pipeline. Note: Does not currently delete shaders (to 
 
 Relinks a pipeline. Takes the same options as the constructor
 
-### setUniforms(uniforms : Object) : RenderPipeline
+### setUniforms()
+
+```typescript
+  setUniforms(uniforms: Record<string, UniformValue>): void
+```
 
 Sets named uniforms from a map, ignoring names
 

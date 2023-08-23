@@ -103,6 +103,7 @@ export type {
   VaryingBinding
 } from './adapter/types/shader-layout';
 
+export type {UniformValue} from './adapter/types/types';
 export {UniformBufferLayout} from './lib/uniform-buffer-layout';
 export {UniformBlock} from './lib/uniform-block';
 

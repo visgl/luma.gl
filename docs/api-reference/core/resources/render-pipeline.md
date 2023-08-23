@@ -110,7 +110,6 @@ Describes how primitives (points, lines or triangles) are formed from vertexes.
 - `props`: `BufferProps` - holds a copy of the `BufferProps` used to create this `Buffer`.
 
 
-
 ## Methods
 
 ## constructor
@@ -163,9 +162,8 @@ TODO - update
 
 Main parameters
 
-- `vertexArray` - a `VertexArray` object that will be bound and unbound before and after the draw call.
 - `uniforms`=`{}` - a map of uniforms that will be set just before the draw call (and remain set after the call).
-- `samplers`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
+- `bindings`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
 - `parameters` - temporary gl settings to be applied to this draw call.
 - `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
 

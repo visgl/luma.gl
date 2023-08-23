@@ -1,6 +1,6 @@
 // luma.gl MIT license
 
-import type {Binding, RenderPass, TypedArray} from '@luma.gl/core';
+import type {TypedArray, Binding, UniformValue, RenderPass} from '@luma.gl/core';
 import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -85,12 +85,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // }
   }
 
-  /** Constant attributes are not available in WebGPU */
   setConstantAttributes(attributes: Record<string, TypedArray>): void {
     throw new Error('not implemented');
   }
 
-  /** Set the bindings */
   setBindings(bindings: Record<string, Binding>): void {
     if (!isObjectEmpty(this.props.bindings)) {
       Object.assign(this.props.bindings, bindings);
@@ -104,7 +102,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
   }
 
-  setUniforms(uniforms: Record<string, any>): void {
+  setUniforms(uniforms: Record<string, UniformValue>): void {
     if (!isObjectEmpty(uniforms)) {
       throw new Error('WebGPU does not support uniforms');
     }

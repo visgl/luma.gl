@@ -1,53 +1,53 @@
 /* eslint-disable */
 
 // Uniforms
-import {GL} from '@luma.gl/constants';
+import type {UniformValue} from '@luma.gl/core';
+import {GL, GLCompositeType, GLSamplerType} from '@luma.gl/constants';
 
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */
 export function setUniform(
   gl: WebGLRenderingContext,
   location: WebGLUniformLocation,
-  type: GL,
-  value: number | Float32Array | Int32Array | Uint32Array | boolean
+  type: GLCompositeType | GLSamplerType,
+  value: UniformValue
 ): void {
   const gl2 = gl as WebGL2RenderingContext;
 
-  if (typeof value === 'number') {
-    // prettier-ignore
-    switch (type) {
-      // WebGL1 samplers
-      case GL.SAMPLER_2D:
-      case GL.SAMPLER_CUBE:
-      // WebGL2 samplers
-      case GL.SAMPLER_3D:
-      case GL.SAMPLER_2D_SHADOW:
-      case GL.SAMPLER_2D_ARRAY:
-      case GL.SAMPLER_2D_ARRAY_SHADOW:
-      case GL.SAMPLER_CUBE_SHADOW:
-      case GL.INT_SAMPLER_2D:
-      case GL.INT_SAMPLER_3D:
-      case GL.INT_SAMPLER_CUBE:
-      case GL.INT_SAMPLER_2D_ARRAY:
-      case GL.UNSIGNED_INT_SAMPLER_2D:
-      case GL.UNSIGNED_INT_SAMPLER_3D:
-      case GL.UNSIGNED_INT_SAMPLER_CUBE:
-      case GL.UNSIGNED_INT_SAMPLER_2D_ARRAY:
-        return gl.uniform1i(location, value);
-    }
+  // Prepare the value for WebGL setters
+  let uniformValue = value;
+  if (uniformValue === true) {
+    uniformValue = 1;
   }
-
-  if (value === true) {
-    value = 1;
+  if (uniformValue === false) {
+    uniformValue = 0;
   }
-
-  if (value === false) {
-    value = 0;
-  }
-  const arrayValue = (typeof value === 'number') ? [value] : value;
+  const arrayValue = typeof uniformValue === 'number' ? [uniformValue] : uniformValue;
 
   // prettier-ignore
   switch (type) {
+    // WebGL1 samplers
+    case GL.SAMPLER_2D:
+    case GL.SAMPLER_CUBE:
+    // WebGL2 samplers
+    case GL.SAMPLER_3D:
+    case GL.SAMPLER_2D_SHADOW:
+    case GL.SAMPLER_2D_ARRAY:
+    case GL.SAMPLER_2D_ARRAY_SHADOW:
+    case GL.SAMPLER_CUBE_SHADOW:
+    case GL.INT_SAMPLER_2D:
+    case GL.INT_SAMPLER_3D:
+    case GL.INT_SAMPLER_CUBE:
+    case GL.INT_SAMPLER_2D_ARRAY:
+    case GL.UNSIGNED_INT_SAMPLER_2D:
+    case GL.UNSIGNED_INT_SAMPLER_3D:
+    case GL.UNSIGNED_INT_SAMPLER_CUBE:
+    case GL.UNSIGNED_INT_SAMPLER_2D_ARRAY:
+      if (typeof value !== 'number') {
+        throw new Error('samplers must be set to integers');
+      }
+      return gl.uniform1i(location, value);
+
     case GL.FLOAT: return gl.uniform1fv(location, arrayValue);
     case GL.FLOAT_VEC2: return gl.uniform2fv(location, arrayValue);
     case GL.FLOAT_VEC3: return gl.uniform3fv(location, arrayValue);

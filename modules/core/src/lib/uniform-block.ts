@@ -8,6 +8,7 @@ import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../adapter/
 export class UniformBlock<TUniforms extends object = Record<string, unknown>> {
   // readonly layout: UniformBufferLayout;
   readonly layout: Record<string, UniformInfo> = {};
+  // TODO use UniformValue type?
   uniforms: Record<string, unknown> = {};
 
   protected size: number;

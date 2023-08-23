@@ -39,6 +39,7 @@
       "api-guide/parameters",
       "api-guide/bindings",
       "api-guide/attributes",
+      "api-guide/uniforms",
       "api-guide/transforms",
       "api-guide/shader-modules"
     ]
@@ -97,7 +98,6 @@
           "api-reference/core/resources/buffer",
           "api-reference/core/resources/compute-pipeline",
           "api-reference/core/resources/framebuffer",
-          "api-reference/core/resources/pipeline",
           "api-reference/core/resources/render-pipeline",
           "api-reference/core/resources/sampler",
           "api-reference/core/resources/shader",

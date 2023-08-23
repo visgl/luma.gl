@@ -4,8 +4,10 @@
 The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
 :::
 
-> `ComputePipeline` is only available on WebGPU. Note that you can still perform
-> many GPU computations on WebGL using `RenderPipeline`.
+:::info
+`ComputePipeline` is only available on WebGPU. Note that you can still perform
+many GPU computations on WebGL using `RenderPipeline`.
+:::
 
 A `ComputePipeline` holds a compiled and linked compute shader.
 
@@ -17,10 +19,18 @@ A `ComputePipeline` holds a compiled and linked compute shader.
 
 ## Methods
 
-### `constructor(props: ComputePipelineProps)`
+### `constructor()`
 
-`ComputePipeline` is an abstract class and cannot be instantiated directly. Create with `device.createComputePipeline(...)`.
+`ComputePipeline` is an abstract class and cannot be instantiated directly. Create with 
+
+```typescript
+const computePipeline = device.createComputePipeline({...})
+```
 
 ### `destroy(): void`
+
+```typescript
+destroy(): void
+```
 
 Free up any GPU resources associated with this compute pipeline immediately (instead of waiting for garbage collection).

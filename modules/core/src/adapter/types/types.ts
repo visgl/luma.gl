@@ -1,17 +1,35 @@
 // luma.gl, MIT license
+import {NumericArray} from '../../types';
 import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from './texture-formats';
+import type {Buffer} from '../resources/buffer';
+import type {Texture} from '../resources/texture'; // TextureView...
+
+// UNIFORMS
+
+/** Valid values for uniforms. @note boolean values get converted to 0 or 1 before setting */
+export type UniformValue = number | boolean | Float32Array | Int32Array | Uint32Array | NumericArray;
+
+// BINDINGS
+
+/** Buffer bindings */
+export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
 
 // BINDING LAYOUTS
 
+/** Describes a buffer binding layout */
 type BufferBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
   location?: number;
   visibility: number;
+  /** type of buffer */
   type: 'uniform' | 'storage' | 'read-only-storage';
   hasDynamicOffset?: boolean;
   minBindingSize?: number;
 }
 
+/** Describes a texture binding */
 type TextureBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
   location?: number;
   visibility: number;
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -19,7 +37,9 @@ type TextureBindingLayout = {
   multisampled?: boolean;
 };
 
+/** Describes a storage texture binding */
 type StorageTextureBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
   location?: number;
   visibility: number;
   access?: 'write-only';
@@ -28,13 +48,6 @@ type StorageTextureBindingLayout = {
 };
 
 export type BindingDeclaration = BufferBindingLayout | TextureBindingLayout | StorageTextureBindingLayout;
-
-// BINDINGS
-
-import type {Buffer} from '../resources/buffer';
-import type {Texture} from '../resources/texture'; // TextureView...
-
-export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
 
 // TEXTURE VIEWS
 
