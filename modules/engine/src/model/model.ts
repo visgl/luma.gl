@@ -122,9 +122,12 @@ export class Model {
     this.parameters = this.props.parameters;
 
     // Geometry, if provided, sets several attributes, indices, and also vertex count and topology
-    if (props.geometry) {
-      const gpuGeometry = makeGPUGeometry(device, props.geometry);
-      this.setGeometry(gpuGeometry);
+    const gpuGeometry = props.geometry && makeGPUGeometry(device, props.geometry);
+    if (gpuGeometry) {
+      // Since we haven't yet created the pipeline, we can't actually set attributes.
+      // We only set the properties that affect pipeline creations
+      this.setTopology(gpuGeometry.topology);
+      this.bufferLayout = mergeBufferLayouts(this.bufferLayout, gpuGeometry.bufferLayout);
     }
 
     this.pipelineFactory =
@@ -133,6 +136,9 @@ export class Model {
     // Create the pipeline 
     // @note order is important
     this.pipeline = this._updatePipeline();
+
+    // Now we can apply geometry attributes
+    this.setGeometry(gpuGeometry);
 
     // Apply any dynamic settings that will not trigger pipeline change
     if (props.vertexCount) {
@@ -187,11 +193,11 @@ export class Model {
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   setGeometry(geometry: GPUGeometry): void {
-    // TODO - delete previous geometry?
-
-    this.vertexCount = geometry.vertexCount;
     this.setTopology(geometry.topology || 'triangle-list');
     this.bufferLayout = mergeBufferLayouts(this.bufferLayout, geometry.bufferLayout);
+
+    // TODO - delete previous geometry?
+    this.vertexCount = geometry.vertexCount;
     this.setAttributes(geometry.attributes);
     this.setIndexBuffer(geometry.indices);
   }
@@ -229,15 +235,15 @@ export class Model {
    * @note Can trigger a pipeline rebuild / pipeline cache fetch.
    * @param parameters
    */
-    setParameters(parameters: RenderPipelineParameters) {
-      if (!deepEqual(parameters, this.parameters, 2)) {
-        this.parameters = parameters;
-        // On WebGPU we need to rebuild the pipeline
-        if (this.device.info.type === 'webgpu') {
-          this._setPipelineNeedsUpdate('parameters');
-        }
+  setParameters(parameters: RenderPipelineParameters) {
+    if (!deepEqual(parameters, this.parameters, 2)) {
+      this.parameters = parameters;
+      // On WebGPU we need to rebuild the pipeline
+      if (this.device.info.type === 'webgpu') {
+        this._setPipelineNeedsUpdate('parameters');
       }
     }
+  }
     
   // Update dynamic fields
 
@@ -345,6 +351,7 @@ export class Model {
   }
 }
 
+/** TODO - move to core, document add tests */
 function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
   const layouts = [...layouts1];
   for (const attribute of layouts2) {

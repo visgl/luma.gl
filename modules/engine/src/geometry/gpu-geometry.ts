@@ -86,7 +86,7 @@ export class GPUGeometry {
 
   _calculateVertexCount(positions: Buffer): number {
     // Assume that positions is a fully packed float32x3 buffer
-    let vertexCount = positions.byteLength / 12;
+    const vertexCount = positions.byteLength / 12;
     return vertexCount;
   }
 }
