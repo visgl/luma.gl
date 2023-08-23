@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+## v9.0.0-alpha.31
+
+- chore(core): Clean up buffer map
+- chore(core): default props cleanup (#1791)
+
 ## v9.0.0-alpha.30
 
 - fixe(core) boolean uniform fix (#1789)
