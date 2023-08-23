@@ -384,8 +384,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * @note Constant attributes are only supported in WebGL, not in WebGPU
    */
   _applyConstantAttributes(): void {
+    const attributeInfos = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout);
     for (const [name, value] of Object.entries(this.constantAttributes)) {
-      const attributeInfo = getAttributeInfosFromLayouts(this.shaderLayout, this.bufferLayout, name);
+      const attributeInfo = attributeInfos[name];
       if (!attributeInfo) {
         log.warn(
           `Ignoring constant value supplied for unknown attribute "${name}" in pipeline "${this.id}"`

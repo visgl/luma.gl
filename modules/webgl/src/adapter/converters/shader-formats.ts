@@ -16,7 +16,6 @@ export function getShaderAttributeTypeFromGL(type: GL, components: 1 | 2 | 3 | 4
 /** Get shader data type from GL constants */
 export function getShaderDataTypeFromGL(type: GL): ShaderDataType {
   switch (type) {
-    // TODO
     case GL.INT: return 'i32';
     case GL.UNSIGNED_INT: return 'u32';
     case GL.SHORT: return 'i32';

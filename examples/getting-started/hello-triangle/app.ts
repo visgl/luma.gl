@@ -10,29 +10,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   model: Model;
   interleavedBuffer: Buffer;
-  // positionBuffer: Buffer;
-  // colorBuffer: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
-
-    // prettier-ignore
-    const interleavedData = new Float32Array([
-      // Offset
-      0, 0,
-      // vertex 1: 2D positions XY,  colors RGB
-      -0.5, -0.5,  1, 0, 0,
-      // vertex 2: 2D positions XY,  colors RGB
-      0.5, -0.5,  0, 1, 0,
-      // vertex 3: 2D positions XY,  colors RGB
-      0.0, 0.5,  0, 0, 1
-    ])
-    this.interleavedBuffer = device.createBuffer(interleavedData);
-        
-    // 3 corner points [x,y,...]
-    // this.positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
-    // 3 colors [R,G,B, ...]
-    // this.colorBuffer = device.createBuffer(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
 
     const vs = `
       attribute vec2 position;
@@ -54,20 +34,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     `;
 
+    // prettier-ignore
+    const interleavedData = new Float32Array([
+      // Offset
+      0, 0,
+      // vertex 1: 2D positions XY,  colors RGB
+      -0.5, -0.5,  1, 0, 0,
+      // vertex 2: 2D positions XY,  colors RGB
+      0.5, -0.5,  0, 1, 0,
+      // vertex 3: 2D positions XY,  colors RGB
+      0.0, 0.5,  0, 0, 1
+    ])
+    this.interleavedBuffer = device.createBuffer(interleavedData);
+        
     this.model = new Model(device, {
       vs,
       fs,
-      attributes: {
-        vertexData: this.interleavedBuffer,
-        // position: this.positionBuffer,
-        // color: this.colorBuffer
-      },
       bufferLayout: [
         {name: 'vertexData', byteOffset: 8, attributes: [
           {name: 'position', format: 'float32x2'},
           {name: 'color', format: 'float32x3'},
         ]}
       ],
+      attributes: {
+        vertexData: this.interleavedBuffer,
+      },
       vertexCount: 3
     });
   }
@@ -75,8 +66,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize() {
     this.model.destroy();
     this.interleavedBuffer.destroy();
-    // this.positionBuffer.destroy();
-    // this.colorBuffer.destroy();
   }
 
   onRender({device}: AnimationProps): void {

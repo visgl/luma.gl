@@ -73,15 +73,15 @@ export type SingleBufferLayout = BufferLayout;
 export type BufferLayout = {
   /** Name of attribute to adjust */
   name: string;
-  /** Whether the attribute is instanced. @note Only needs to be provided if auto deduction failed. */
-  stepMode?: 'vertex' | 'instance';
+  /** vertex format. Auto calculated. @note Needs to match type/components of the ShaderLayout ('f32', 'i32', 's32') */
+  format?: VertexFormat;
   /** offset into buffer. Defaults to `0` */
   byteOffset?: number;
   /** bytes between successive elements. If omitted, stride is set to reflect a "packed" buffer */
   byteStride?: number;
-  /** vertex format. Auto calculated. @note Needs to match type/components of the ShaderLayout ('f32', 'i32', 's32') */
-  format?: VertexFormat;
-  /** Attributes that read from this buffer */
+  /** Whether the attribute is instanced. @note Only needs to be provided if auto deduction failed. */
+  stepMode?: 'vertex' | 'instance';
+  /** Optional: interleaved attributes that read from this buffer */
   attributes?: InterleavedAttributeLayout[];
 };
 

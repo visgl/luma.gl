@@ -8,7 +8,7 @@ A `ShaderLayout` object describes the static structure a `RenderPipeline, "locat
  including attributes, bindings (textures, samplers, uniform buffers), and uniforms (under WebGL) and also lets the application
  assign a name to each binding point (typically matching the name used in the shader code).
 
-Note that a `ShaderLayout` only describes static data and it is typically complemented by a [`BufferLayout`](), which contains
+Note that a `ShaderLayout` only describes static data and it is typically complemented by a [`BufferLayout`](./buffer-layout.md), which contains
 "dynamic" data such as the specific layout and structure of the buffers that will be provided to a `RenderPipeline`. The application
 could choose to provide buffers with different vertex formats, strides, and offsets, without changing the shader.
 

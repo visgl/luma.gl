@@ -118,9 +118,6 @@ function readAttributeDeclarations(
         type: attributeType,
         // size - for arrays, size is the number of elements in the array
       });
-    } else {
-      // eslint-disable-next-line no-debugger
-      debugger // built-in attribute?
     }
   }
 

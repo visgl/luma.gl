@@ -10,6 +10,7 @@ export type PickingOptions = {
   pickingHighlightColor?: NumberArray, // Color of visual highlight of "selected" item
   pickingActive?: boolean, // Set to true when rendering to off-screen "picking" buffer
   pickingAttribute: boolean // Set to true when picking an attribute value instead of object index
+  pickingColorRange?: 1 | 255;
 }
 
 export type PickingUniforms = {
@@ -18,6 +19,7 @@ export type PickingUniforms = {
   picking_uSelectedColorValid?: number;
   picking_uSelectedColor?: NumberArray;
   picking_uHighlightColor?: NumberArray;
+  picking_uColorRange?: number;
 }
 
 const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
@@ -25,6 +27,7 @@ const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
   pickingAttribute: false, // Set to true when picking an attribute value instead of object index
   pickingSelectedColor: null, //  Set to a picking color to visually highlight that item
   pickingHighlightColor: DEFAULT_HIGHLIGHT_COLOR, // Color of visual highlight of "selected" item
+  pickingColorRange: 255
 };
 
 function getUniforms(options = DEFAULT_MODULE_OPTIONS): PickingUniforms {
@@ -50,6 +53,9 @@ function getUniforms(options = DEFAULT_MODULE_OPTIONS): PickingUniforms {
     }
     uniforms.picking_uHighlightColor = color;
   }
+  if (options.pickingColorRange) {
+    uniforms.picking_uColorRange = options.pickingColorRange;
+  }
   return uniforms;
 }
 
@@ -58,10 +64,11 @@ uniform bool picking_uActive;
 uniform bool picking_uAttribute;
 uniform vec3 picking_uSelectedColor;
 uniform bool picking_uSelectedColorValid;
+uniform float picking_uColorRange;
 
 out vec4 picking_vRGBcolor_Avalid;
 
-const float COLOR_SCALE = 1. / 255.;
+float COLOR_SCALE = 1. / picking_uColorRange;
 
 bool picking_isColorValid(vec3 color) {
   return dot(color, vec3(1.0)) > 0.001;

@@ -1,12 +1,7 @@
 // luma.gl, MIT license
 
 import {log} from '../../lib/utils/log';
-import type {
-  ShaderLayout,
-  AttributeDeclaration,
-  BufferLayout,
-  SingleBufferLayout
-} from '../types/shader-layout';
+import type {ShaderLayout, AttributeDeclaration, BufferLayout} from '../types/shader-layout';
 import type {ShaderDataType, ShaderAttributeType} from '../types/shader-formats';
 import {decodeShaderAttributeType} from '../type-utils/decode-attribute-type';
 import type {VertexFormat, VertexType} from '../types/vertex-formats';
@@ -24,6 +19,8 @@ export type AttributeInfo = {
   shaderDataType: ShaderDataType;
   /** Components refer to the number of components in the shader's attribute declaration */
   shaderComponents: 1 | 2 | 3 | 4;
+  /** It is the shader attribute declaration that determines whether GPU will process as integer or float */
+  integer: boolean;
 
   /** BufferName */
   bufferName: String;
@@ -33,18 +30,16 @@ export type AttributeInfo = {
   bufferDataType: VertexType;
   /** Components refer to the number of components in the buffer's vertex format */
   bufferComponents: 1 | 2 | 3 | 4;
+  /** Normalization is encoded in the buffer layout's vertex format... */
+  normalized: boolean;
 
   /** If not specified, the step mode is inferred from the attribute name in the shader (contains string instance) */
   stepMode: 'vertex' | 'instance';
 
-  /** The byteOffset is encoded in the buffer layout */
+  /** The byteOffset is encoded in or calculated from the buffer layout */
   byteOffset: number;
-  /** The byteStride is encoded in the buffer layout */
+  /** The byteStride is encoded in or calculated from the buffer layout */
   byteStride: number;
-  /** Normalization is encoded in the buffer layout's vertex format... */
-  normalized: boolean;
-  /** It is the shader attribute declaration that determines whether GPU will process as integer or float */
-  integer: boolean;
 };
 
 export function getAttributeInfosFromLayouts(
@@ -121,31 +116,41 @@ function getAttributeFromBufferLayout(
   for (const bufferMapping of bufferLayout) {
     // If this is the mapping return
     if (bufferMapping.name === name) {
-      return bufferMapping;
+      return {
+        name: bufferMapping.name,
+        bufferName: name,
+        vertexFormat: bufferMapping.format,
+        byteOffset: bufferMapping.byteOffset || 0,
+        byteStride: bufferMapping.byteStride || 0
+      };
     }
 
     // Search interleaved attributes for buffer mapping
     let nextByteOffset = bufferMapping.byteOffset || 0;
     let byteStride = 0;
-    for (const interleavedMapping of bufferMapping.attributes) {
+    for (const interleavedMapping of bufferMapping.attributes || []) {
       const info = decodeVertexFormat(interleavedMapping.format);
       byteStride += info.byteLength;
     }
-    for (const interleavedMapping of bufferMapping.attributes) {
+    for (const interleavedMapping of bufferMapping.attributes || []) {
       const byteOffset = nextByteOffset;
-      nextByteOffset += (interleavedMapping?.byteStrideOffset || decodeVertexFormat(interleavedMapping.format).byteLength);
+      nextByteOffset +=
+        interleavedMapping?.byteStrideOffset ||
+        decodeVertexFormat(interleavedMapping.format).byteLength;
       // const interleavedMapping = bufferMapping.attributes?.find(attr => attr.name === name);
       if (interleavedMapping.name === name) {
         return {
-          ...bufferMapping,
+          name: bufferMapping.name,
           bufferName: name,
           vertexFormat: interleavedMapping.format,
           byteOffset,
-          byteStride: bufferMapping.byteStride || byteStride,
+          byteStride: bufferMapping.byteStride || byteStride
         };
       }
     }
   }
+
+  // Didn't return...
   log.warn(`layout for attribute "${name}" not present in buffer layout`);
   return null;
 }
