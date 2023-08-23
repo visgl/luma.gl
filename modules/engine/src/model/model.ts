@@ -86,6 +86,9 @@ export class Model {
   vertexCount: number;
   /** instance count */
   instanceCount: number = 0;
+
+  /** Index buffer */
+  indices: Buffer | null = null;
   /** Buffer-valued attributes */
   bufferAttributes: Record<string, Buffer> = {};
   /** Constant-valued attributes */
@@ -124,10 +127,7 @@ export class Model {
     // Geometry, if provided, sets several attributes, indices, and also vertex count and topology
     const gpuGeometry = props.geometry && makeGPUGeometry(device, props.geometry);
     if (gpuGeometry) {
-      // Since we haven't yet created the pipeline, we can't actually set attributes.
-      // We only set the properties that affect pipeline creations
-      this.setTopology(gpuGeometry.topology);
-      this.bufferLayout = mergeBufferLayouts(this.bufferLayout, gpuGeometry.bufferLayout);
+      this.setGeometry(gpuGeometry);
     }
 
     this.pipelineFactory =
@@ -138,7 +138,6 @@ export class Model {
     this.pipeline = this._updatePipeline();
 
     // Now we can apply geometry attributes
-    this.setGeometry(gpuGeometry);
 
     // Apply any dynamic settings that will not trigger pipeline change
     if (props.vertexCount) {
@@ -176,8 +175,17 @@ export class Model {
   // Draw call
 
   draw(renderPass: RenderPass): void {
-    // TODO - this is likely the worst place to do this from performance perspective
+    // Check if the pipeline is invalidated
+    // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
     this.pipeline = this._updatePipeline();
+
+    // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
+    // Any caching needs to be done inside the pipeline functions
+    this.pipeline.setIndexBuffer(this.indices);
+    this.pipeline.setAttributes(this.bufferAttributes);
+    this.pipeline.setConstantAttributes(this.constantAttributes);
+    this.pipeline.setBindings(this.bindings);
+    this.pipeline.setUniforms(this.uniforms);
 
     this.pipeline.draw({
       renderPass,
@@ -268,7 +276,7 @@ export class Model {
    */
   setShaderModuleProps(props: Record<string, any>): void {
     const uniforms = this._getModuleUniforms(props);
-    this.setUniforms(uniforms);
+    Object.assign(this.uniforms, uniforms);
   }
 
   /**
@@ -283,8 +291,7 @@ export class Model {
    * @todo - how to unset it if we change geometry?
    */
   setIndexBuffer(indices: Buffer | null): void {
-    this.pipeline.setIndexBuffer(indices);
-    // this._indices = indices;
+    this.indices = indices;
   }
 
   /**
@@ -296,7 +303,6 @@ export class Model {
       log.warn(`Model:${this.id} setAttributes() - indices should be set using setIndexBuffer()`);
     }
 
-    this.pipeline.setAttributes(bufferAttributes);
     Object.assign(this.bufferAttributes, bufferAttributes);
   }
 
@@ -307,7 +313,6 @@ export class Model {
    */
   setConstantAttributes(constantAttributes: Record<string, TypedArray>): void {
     // TODO - this doesn't work under WebGPU, we'll need to create buffers or inject uniforms
-    this.pipeline.setConstantAttributes(constantAttributes);
     Object.assign(this.constantAttributes, constantAttributes);
   }
 
@@ -315,7 +320,6 @@ export class Model {
    * Sets bindings (textures, samplers, uniform buffers)
    */
   setBindings(bindings: Record<string, Binding>): void {
-    this.pipeline.setBindings(bindings);
     Object.assign(this.bindings, bindings);
   }
 

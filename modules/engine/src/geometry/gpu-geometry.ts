@@ -49,12 +49,9 @@ export class GPUGeometry {
     this.topology = props.topology;
     this.indices = props.indices || null;
     this.attributes = props.attributes;
+
     // 
     this.vertexCount = props.vertexCount || this._calculateVertexCount(this.attributes.positions);
-
-    if (this.indices) {
-      assert(this.indices.usage === Buffer.INDEX);
-    }
 
     // Populate default bufferLayout
     this.bufferLayout = props.bufferLayout || [];
@@ -70,6 +67,18 @@ export class GPUGeometry {
     if (!this.bufferLayout.find(layout => layout.name === 'colors')) {
       this.bufferLayout.push({name: 'colors', format: 'float32x3'});
     }
+
+    if (this.indices) {
+      assert(this.indices.usage === Buffer.INDEX);
+    }
+  }
+
+  destroy(): void {
+    this.indices.destroy();
+    this.attributes.positions.destroy();
+    this.attributes.normals.destroy();
+    this.attributes.texCoords.destroy();
+    this.attributes.colors?.destroy();
   }
 
   getVertexCount(): number {

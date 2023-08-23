@@ -6,7 +6,7 @@ import './geometry/geometries.spec';
 import './geometry/geometry.spec';
 import './geometry/geometry-utils.spec';
 
-import './geometry/binary-geometry.spec';
+import './geometry/gpu-geometry.spec';
 
 import './animation/timeline.spec';
 import './animation/key-frames.spec';
