@@ -125,9 +125,8 @@ export class Model {
     this.parameters = this.props.parameters;
 
     // Geometry, if provided, sets several attributes, indices, and also vertex count and topology
-    const gpuGeometry = props.geometry && makeGPUGeometry(device, props.geometry);
-    if (gpuGeometry) {
-      this.setGeometry(gpuGeometry);
+    if (props.geometry) {
+      this.setGeometry(props.geometry);
     }
 
     this.pipelineFactory =
@@ -198,16 +197,18 @@ export class Model {
 
   /** 
    * Updates the optional geometry
+  * Geometry, sets several attributes, indices, and also vertex count and topology
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
-  setGeometry(geometry: GPUGeometry): void {
-    this.setTopology(geometry.topology || 'triangle-list');
-    this.bufferLayout = mergeBufferLayouts(this.bufferLayout, geometry.bufferLayout);
+  setGeometry(geometry: GPUGeometry | Geometry): void {
+    const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
+    this.setTopology(gpuGeometry.topology || 'triangle-list');
+    this.bufferLayout = mergeBufferLayouts(this.bufferLayout, gpuGeometry.bufferLayout);
 
     // TODO - delete previous geometry?
-    this.vertexCount = geometry.vertexCount;
-    this.setAttributes(geometry.attributes);
-    this.setIndexBuffer(geometry.indices);
+    this.vertexCount = gpuGeometry.vertexCount;
+    this.setAttributes(gpuGeometry.attributes);
+    this.setIndexBuffer(gpuGeometry.indices);
   }
 
   /** 
