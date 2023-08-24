@@ -1,17 +1,15 @@
 // shadertools exports
 
-// DOCUMENTED APIS
+// ShaderAssembler
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
+export type {PlatformInfo} from './lib/shader-assembly/platform-info';
+export type {HookFunction} from './lib/shader-assembly/assemble-shaders';
 
 export {ShaderAssembler} from './lib/shader-assembler';
 
-export type {PlatformInfo} from './lib/shader-assembly/platform-defines';
-
-export type {HookFunction} from './lib/shader-assembly/assemble-shaders';
+// Detailed API (normally recommended to use ShaderAssembler instead)
 export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
-
-// HELPERS
 export {combineInjects} from './lib/shader-assembly/inject-shader';
 export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
 

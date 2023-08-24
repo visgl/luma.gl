@@ -3,12 +3,11 @@
 import type {TypedArray, RenderPipelineProps, RenderPipelineParameters, BufferLayout} from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
-import {buildShaders} from './model-shaders';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string shaders
@@ -112,7 +111,15 @@ export class Model {
 
     Object.assign(this.userData, props.userData);
 
-    const {vs, fs, getUniforms} = buildShaders(device, this.props);
+    /** Create a shadertools platform info from the Device */
+    const platformInfo: PlatformInfo = {
+      type: device.info.type,
+      shaderLanguage: device.info.shadingLanguages[0],
+      gpu: device.info.gpu,
+      features: device.features
+    };
+
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(platformInfo, this.props);
     this.vs = vs;
     this.fs = fs;
     this._getModuleUniforms = getUniforms;
