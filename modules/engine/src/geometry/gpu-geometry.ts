@@ -106,7 +106,7 @@ export function makeGPUGeometry(device: Device, geometry: Geometry | GPUGeometry
   }
 
   const indices = getIndexBufferFromGeometry(device, geometry);
-  const {attributes, bufferLayout, vertexCount} = getAttributeBuffersFromGeometry(device, geometry);
+  const {attributes, bufferLayout} = getAttributeBuffersFromGeometry(device, geometry);
   return new GPUGeometry({
     topology: geometry.topology || 'triangle-list',
     bufferLayout,
