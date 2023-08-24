@@ -13,7 +13,7 @@ import './disable-example-startup';
 import helloTriangle from '../../examples/getting-started/hello-triangle/app';
 import helloInstancing from '../../examples/getting-started/hello-instancing/app';
 import shaderModules from '../../examples/getting-started/shader-modules/app';
-// import shaderHooks from '../../examples/getting-started/shader-hooks/app';
+import shaderHooks from '../../examples/getting-started/shader-hooks/app';
 // import transformFeedback from '../../examples/getting-started/transform-feedback/app';
 
 // API
@@ -22,8 +22,8 @@ import animation from '../../examples/api/animation/app';
 // import programManagement from '../../examples/api/program-management/app';
 
 // showcases
-// import instancing from '../../examples/showcase/instancing/app';
-// import persistence from '../../examples/showcase/persistence/app';
+import instancing from '../../examples/showcase/instancing/app';
+import persistence from '../../examples/showcase/persistence/app';
 // import wandering from '../../examples/showcase/wandering/app';
 
 // webgl
@@ -35,7 +35,7 @@ const examples = {
   helloTriangle,
   helloInstancing,
   shaderModules,
-  // shaderHooks,
+  shaderHooks,
   // transformFeedback,
 
   // API
@@ -44,8 +44,8 @@ const examples = {
   // programManagement,
 
   // showcases
-  // instancing,
-  // persistence,
+  instancing,
+  persistence,
   // wandering,
 
   // webgl - TODO - animation loop issue

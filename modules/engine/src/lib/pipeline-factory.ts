@@ -1,3 +1,4 @@
+// luma.gl, MIT license
 import type {RenderPipelineProps} from '@luma.gl/core';
 import {Device, RenderPipeline} from '@luma.gl/core';
 
@@ -87,21 +88,23 @@ export class PipelineFactory {
     const vsHash = this._getHash(props.vs);
     const fsHash = props.fs ? this._getHash(props.fs) : 0;
 
-    // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
-    // create a deepHash() to deduplicate?
-
-    // hash parameters
-    const parameterHash = this._getHash(JSON.stringify(props.parameters));
-
-    // hash buffer layouts
-    const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
-
     // WebGL specific
     // const {varyings = [], bufferMode = {}} = props;
     // const varyingHashes = varyings.map((v) => this._getHash(v));
     const varyingHash = '-'; // `${varyingHashes.join('/')}B${bufferMode}`
 
-    return `${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}}`;
+    switch (this.device.info.type) {
+      case 'webgpu':
+        // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
+        const parameterHash = this._getHash(JSON.stringify(props.parameters));
+        const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
+        // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
+        // create a deepHash() to deduplicate?
+        return `${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}}`;
+      default:
+        // WebGL is more dynamic
+        return `${vsHash}/${fsHash}V${varyingHash}`;
+    }
   }
 
   _getHash(key: string): number {
