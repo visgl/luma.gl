@@ -106,11 +106,11 @@ export function makeGPUGeometry(device: Device, geometry: Geometry | GPUGeometry
   }
 
   const indices = getIndexBufferFromGeometry(device, geometry);
-  const {attributes, bufferLayout} = getAttributeBuffersFromGeometry(device, geometry);
+  const {attributes, bufferLayout, vertexCount} = getAttributeBuffersFromGeometry(device, geometry);
   return new GPUGeometry({
     topology: geometry.topology || 'triangle-list',
     bufferLayout,
-    vertexCount: geometry.vertexCount,
+    vertexCount,
     indices,
     attributes
   });
@@ -133,7 +133,7 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
 export function getAttributeBuffersFromGeometry(
   device: Device,
   geometry: Geometry
-): {attributes: GPUGeometryAttributes, bufferLayout: BufferLayout[]} {
+): {attributes: GPUGeometryAttributes, bufferLayout: BufferLayout[], vertexCount: number} {
   const positions = geometry.attributes.positions || geometry.attributes.POSITION;
   const normals = geometry.attributes.normals || geometry.attributes.NORMAL;
   const texCoords = geometry.attributes.texCoords || geometry.attributes.TEXCOORD_0;
@@ -153,7 +153,9 @@ export function getAttributeBuffersFromGeometry(
     bufferLayout.push({name: 'texCoords', format: `float32x${texCoords.size as 2 | 3 | 4}`});
   }
 
-  return {attributes, bufferLayout};
+  const vertexCount = geometry._calculateVertexCount(geometry.indices, geometry.attributes)
+
+  return {attributes, bufferLayout, vertexCount};
 }
 
 // Support for mapping new geometries with glTF attribute names to "classic" luma.gl shader names
