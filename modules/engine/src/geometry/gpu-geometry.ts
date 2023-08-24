@@ -39,8 +39,8 @@ export class GPUGeometry {
   readonly indices?: Buffer | null;
   readonly attributes: {
     positions: Buffer;
-    normals: Buffer;
-    texCoords: Buffer;
+    normals?: Buffer;
+    texCoords?: Buffer;
     colors?: Buffer;
   };
 
@@ -64,7 +64,7 @@ export class GPUGeometry {
     if (this.attributes.texCoords && !this.bufferLayout.find(layout => layout.name === 'texCoords')) {
       this.bufferLayout.push({name: 'texCoords', format: 'float32x2'});
     }
-    if ((this.attributes.colors && !this.bufferLayout.find(layout => layout.name === 'colors')) {
+    if (this.attributes.colors && !this.bufferLayout.find(layout => layout.name === 'colors')) {
       this.bufferLayout.push({name: 'colors', format: 'float32x3'});
     }
 
@@ -146,11 +146,11 @@ export function getAttributeBuffersFromGeometry(
   ];
   if (normals) {
     attributes.normals = device.createBuffer({data: normals.value, id: 'normals-buffer'});
-    bufferLayout.push({name: 'normals', format: `float32x${normals.size as 2 | 3 | 4}`}
+    bufferLayout.push({name: 'normals', format: `float32x${normals.size as 2 | 3 | 4}`});
   }
   if (texCoords) {
     attributes.texCoords = device.createBuffer({data: texCoords.value, id: 'texCoords-buffer'});
-    bufferLayout.push({name: 'texCoords', format: `float32x${texCoords.size as 2 | 3 | 4}`}
+    bufferLayout.push({name: 'texCoords', format: `float32x${texCoords.size as 2 | 3 | 4}`});
   }
 
   return {attributes, bufferLayout};
