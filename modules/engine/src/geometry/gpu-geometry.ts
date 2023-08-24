@@ -14,16 +14,16 @@ export type GPUGeometryProps = {
     | 'triangle-strip'
     | 'triangle-fan-webgl';
   /** Auto calculated from attributes if not provided */
-  vertexCount?: number;
-  bufferLayout?: BufferLayout[];
+  vertexCount: number;
+  bufferLayout: BufferLayout[];
   indices?: Buffer | null;
   attributes: GPUGeometryAttributes;
 };
 
 export type GPUGeometryAttributes = {
   positions: Buffer;
-  normals: Buffer;
-  texCoords: Buffer;
+  normals?: Buffer;
+  texCoords?: Buffer;
   colors?: Buffer;
 };
 
@@ -39,8 +39,8 @@ export class GPUGeometry {
   readonly indices?: Buffer | null;
   readonly attributes: {
     positions: Buffer;
-    normals: Buffer;
-    texCoords: Buffer;
+    normals?: Buffer;
+    texCoords?: Buffer;
     colors?: Buffer;
   };
 
@@ -50,21 +50,21 @@ export class GPUGeometry {
     this.indices = props.indices || null;
     this.attributes = props.attributes;
 
-    // 
-    this.vertexCount = props.vertexCount || this._calculateVertexCount(this.attributes.positions);
+    //
+    this.vertexCount = props.vertexCount;
 
     // Populate default bufferLayout
     this.bufferLayout = props.bufferLayout || [];
     if (!this.bufferLayout.find(layout => layout.name === 'positions')) {
       this.bufferLayout.push({name: 'positions', format: 'float32x3'});
     }
-    if (!this.bufferLayout.find(layout => layout.name === 'normals')) {
+    if (this.attributes.normals && !this.bufferLayout.find(layout => layout.name === 'normals')) {
       this.bufferLayout.push({name: 'normals', format: 'float32x3'});
     }
-    if (!this.bufferLayout.find(layout => layout.name === 'texCoords')) {
+    if (this.attributes.texCoords && !this.bufferLayout.find(layout => layout.name === 'texCoords')) {
       this.bufferLayout.push({name: 'texCoords', format: 'float32x2'});
     }
-    if (!this.bufferLayout.find(layout => layout.name === 'colors')) {
+    if (this.attributes.colors && !this.bufferLayout.find(layout => layout.name === 'colors')) {
       this.bufferLayout.push({name: 'colors', format: 'float32x3'});
     }
 
@@ -106,11 +106,12 @@ export function makeGPUGeometry(device: Device, geometry: Geometry | GPUGeometry
   }
 
   const indices = getIndexBufferFromGeometry(device, geometry);
-  const attributes = getAttributeBuffersFromGeometry(device, geometry);
+  const {attributes, bufferLayout} = getAttributeBuffersFromGeometry(device, geometry);
   return new GPUGeometry({
-    topology: geometry.topology, 
-    vertexCount: geometry.vertexCount, 
-    indices, 
+    topology: geometry.topology || 'triangle-list',
+    bufferLayout,
+    vertexCount: geometry.vertexCount,
+    indices,
     attributes
   });
 }
@@ -120,8 +121,7 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
     return undefined;
   }
 
-  // @ts-expect-error
-  const data = geometry.indices.value || geometry.indices;
+  const data = geometry.indices.value;
   assert(
     data instanceof Uint16Array || data instanceof Uint32Array,
     'attribute array for "indices" must be of integer type'
@@ -129,31 +129,30 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
   return device.createBuffer({usage: Buffer.INDEX, data});
 }
 
-export function getAttributeBuffersFromGeometry(device: Device, geometry: Geometry): GPUGeometryAttributes {
+export function getAttributeBuffersFromGeometry(
+  device: Device,
+  geometry: Geometry
+): {attributes: GPUGeometryAttributes, bufferLayout: BufferLayout[], vertexCount: number} {
   const positions = geometry.attributes.positions || geometry.attributes.POSITION;
   const normals = geometry.attributes.normals || geometry.attributes.NORMAL;
   const texCoords = geometry.attributes.texCoords || geometry.attributes.TEXCOORD_0;
 
-  const buffers: GPUGeometryAttributes = {
-    positions: device.createBuffer({data: positions.value, id: 'positions-buffer'}),
-    normals: device.createBuffer({data: normals.value, id: 'normals-buffer'}),
-    texCoords: device.createBuffer({data: texCoords.value, id: 'texCoords-buffer'})
+  const attributes: GPUGeometryAttributes = {
+    positions: device.createBuffer({data: positions.value, id: 'positions-buffer'})
   };
+  const bufferLayout: BufferLayout[] = [
+    {name: 'positions', format: `float32x${positions.size as 2 | 3 | 4}`}
+  ];
+  if (normals) {
+    attributes.normals = device.createBuffer({data: normals.value, id: 'normals-buffer'});
+    bufferLayout.push({name: 'normals', format: `float32x${normals.size as 2 | 3 | 4}`});
+  }
+  if (texCoords) {
+    attributes.texCoords = device.createBuffer({data: texCoords.value, id: 'texCoords-buffer'});
+    bufferLayout.push({name: 'texCoords', format: `float32x${texCoords.size as 2 | 3 | 4}`});
+  }
 
-  return buffers;
-}
+  const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)
 
-// Support for mapping new geometries with glTF attribute names to "classic" luma.gl shader names
-const GLTF_TO_LUMA_ATTRIBUTE_MAP = {
-  POSITION: 'positions',
-  NORMAL: 'normals',
-  COLOR_0: 'colors',
-  TEXCOORD_0: 'texCoords',
-  TEXCOORD_1: 'texCoords1',
-  TEXCOORD_2: 'texCoords2'
-};
-
-export function mapAttributeName(name: string): string {
-  // @ts-ignore-error
-  return GLTF_TO_LUMA_ATTRIBUTE_MAP[name] || name;
+  return {attributes, bufferLayout, vertexCount};
 }

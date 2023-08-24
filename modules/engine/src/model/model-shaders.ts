@@ -2,6 +2,7 @@ import type {Device} from '@luma.gl/core';
 import type {ShaderModule, HookFunction} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
+// TODO - move to shadertools
 export type ModelShaderProps = {
   // Model also accepts a string shaders
   vs?: {glsl?: string; wgsl?: string} | string | null;
