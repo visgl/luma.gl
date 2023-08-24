@@ -10,8 +10,6 @@ import {Buffer} from '@luma.gl/webgl';
 import {CubeGeometry} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 
-import {getBuffersFromGeometry} from '@luma.gl/engine/lib-classic/model-utils';
-
 const stats = luma.stats.get('Resource Counts');
 
 const DUMMY_VS = `

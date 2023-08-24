@@ -24,7 +24,7 @@ export type GeometryAttributes = {
   NORMAL: GeometryAttribute;
   TEXCOORD_0: GeometryAttribute;
   COLOR_0?: GeometryAttribute;
-  indices?: {size?: number; value: Uint32Array | Uint16Array};
+  indices?: GeometryAttribute & {size: 1; value: Uint32Array | Uint16Array};
 };
 
 export type GeometryAttribute = {
@@ -38,7 +38,7 @@ export class Geometry {
   /** Determines how vertices are read from the 'vertex' attributes */
   readonly topology?: PrimitiveTopology;
   readonly vertexCount: number;
-  readonly indices?: Uint16Array | Uint32Array;
+  readonly indices?: GeometryAttribute;
   readonly attributes: {
     POSITION: GeometryAttribute;
     NORMAL: GeometryAttribute;
@@ -56,7 +56,6 @@ export class Geometry {
     this.topology = props.topology;
 
     if (indices) {
-      // @ts-expect-error
       this.indices = ArrayBuffer.isView(indices) ? {value: indices, size: 1} : indices;
     }
 
@@ -81,17 +80,14 @@ export class Geometry {
       // Move indices to separate field
       if (attributeName === 'indices') {
         assert(!this.indices);
-        // @ts-expect-error
         this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;
       }
     }
 
-    // @ts-expect-error
     if (this.indices && this.indices.isIndexed !== undefined) {
       this.indices = Object.assign({}, this.indices);
-      // @ts-expect-error
       delete this.indices.isIndexed;
     }
 
@@ -102,9 +98,11 @@ export class Geometry {
     return this.vertexCount;
   }
 
-  // Return an object with all attributes plus indices added as a field.
+  /** 
+   * Return an object with all attributes plus indices added as a field.
+   * TODO Geometry types are a mess
+   */
   getAttributes(): GeometryAttributes {
-    // @ts-expect-error Geometry types are a mess
     return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
   }
 
@@ -114,22 +112,27 @@ export class Geometry {
     return `Geometry ${this.id} attribute ${attributeName}`;
   }
 
-  // GeometryAttribute
-  // value: typed array
-  // type: indices, vertices, uvs
-  // size: elements per vertex
-  // target: WebGL buffer type (string or constant)
+  /**
+   * GeometryAttribute
+   * value: typed array
+   * type: indices, vertices, uvs
+   * size: elements per vertex
+   * target: WebGL buffer type (string or constant)
+   * 
+   * @param attributes 
+   * @param indices 
+   * @returns 
+   */
   _setAttributes(attributes: Record<string, GeometryAttribute>, indices: any): this {
     return this;
   }
 
-  _calculateVertexCount(attributes: any, indices: any): number {
+  _calculateVertexCount(attributes: GeometryAttributes, indices: GeometryAttribute): number {
     if (indices) {
       return indices.value.length;
     }
     let vertexCount = Infinity;
-    for (const attributeName in attributes) {
-      const attribute = attributes[attributeName];
+    for (const attribute of Object.values(attributes)) {
       const {value, size, constant} = attribute;
       if (!constant && value && size >= 1) {
         vertexCount = Math.min(vertexCount, value.length / size);

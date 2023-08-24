@@ -14,8 +14,8 @@ export type GPUGeometryProps = {
     | 'triangle-strip'
     | 'triangle-fan-webgl';
   /** Auto calculated from attributes if not provided */
-  vertexCount?: number;
-  bufferLayout?: BufferLayout[];
+  vertexCount: number;
+  bufferLayout: BufferLayout[];
   indices?: Buffer | null;
   attributes: GPUGeometryAttributes;
 };
@@ -51,7 +51,7 @@ export class GPUGeometry {
     this.attributes = props.attributes;
 
     //
-    this.vertexCount = props.vertexCount || this._calculateVertexCount(this.attributes.positions);
+    this.vertexCount = props.vertexCount;
 
     // Populate default bufferLayout
     this.bufferLayout = props.bufferLayout || [];
@@ -121,8 +121,7 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
     return undefined;
   }
 
-  // @ts-expect-error
-  const data = geometry.indices.value || geometry.indices;
+  const data = geometry.indices.value;
   assert(
     data instanceof Uint16Array || data instanceof Uint32Array,
     'attribute array for "indices" must be of integer type'
@@ -153,22 +152,7 @@ export function getAttributeBuffersFromGeometry(
     bufferLayout.push({name: 'texCoords', format: `float32x${texCoords.size as 2 | 3 | 4}`});
   }
 
-  const vertexCount = geometry._calculateVertexCount(geometry.indices, geometry.attributes)
+  const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)
 
   return {attributes, bufferLayout, vertexCount};
-}
-
-// Support for mapping new geometries with glTF attribute names to "classic" luma.gl shader names
-const GLTF_TO_LUMA_ATTRIBUTE_MAP = {
-  POSITION: 'positions',
-  NORMAL: 'normals',
-  COLOR_0: 'colors',
-  TEXCOORD_0: 'texCoords',
-  TEXCOORD_1: 'texCoords1',
-  TEXCOORD_2: 'texCoords2'
-};
-
-export function mapAttributeName(name: string): string {
-  // @ts-ignore-error
-  return GLTF_TO_LUMA_ATTRIBUTE_MAP[name] || name;
 }
