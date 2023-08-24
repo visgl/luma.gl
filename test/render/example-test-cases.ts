@@ -17,13 +17,13 @@ import shaderHooks from '../../examples/getting-started/shader-hooks/app';
 // import transformFeedback from '../../examples/getting-started/transform-feedback/app';
 
 // API
-import animation from '../../examples/api/animation/app';
+// import animation from '../../examples/api/animation/app';
 // import texture3d from '../../examples/api/texture-3d/app';
 // import programManagement from '../../examples/api/program-management/app';
 
 // showcases
-import instancing from '../../examples/showcase/instancing/app';
-import persistence from '../../examples/showcase/persistence/app';
+// import instancing from '../../examples/showcase/instancing/app';
+// import persistence from '../../examples/showcase/persistence/app';
 // import wandering from '../../examples/showcase/wandering/app';
 
 // webgl
@@ -39,13 +39,13 @@ const examples = {
   // transformFeedback,
 
   // API
-  animation,
+  // animation,
   // texture3d,
   // programManagement,
 
   // showcases
-  instancing,
-  persistence,
+  // instancing,
+  // persistence,
   // wandering,
 
   // webgl - TODO - animation loop issue
