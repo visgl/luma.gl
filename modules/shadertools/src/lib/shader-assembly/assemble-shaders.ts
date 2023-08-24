@@ -1,7 +1,8 @@
 // luma.gl, MIT license
 import {glsl} from '../glsl-utils/highlight';
 import {resolveModules} from './resolve-modules';
-import {getPlatformShaderDefines, getVersionDefines, PlatformInfo} from './platform-defines';
+import {PlatformInfo} from './platform-info';
+import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './inject-shader';
 import {transpileShader} from '../transpiler/transpile-shader';
 import {assert} from '../utils/assert';

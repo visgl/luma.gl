@@ -1,9 +1,10 @@
 // luma.gl, MIT license
 
 import type {ShaderModule} from './shader-module/shader-module';
+import type {PlatformInfo} from './shader-assembly/platform-info';
 import {ShaderModuleInstance} from './shader-module/shader-module-instance';
-import {assembleShaders, AssembleShaderOptions} from './shader-assembly/assemble-shaders';
-import {PlatformInfo} from './shader-assembly/platform-defines';
+import {assembleShaders} from './shader-assembly/assemble-shaders';
+import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
 
 /**
  * A stateful version of `assembleShaders` that can be used to assemble shaders.
@@ -65,10 +66,11 @@ export class ShaderAssembler {
    * @param props 
    * @returns 
    */
-  assembleShaders(platformInfo: PlatformInfo, props: AssembleShaderOptions) {
+  assembleShaders(platformInfo: PlatformInfo, props: AssembleShaderProps) {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const assembled = assembleShaders(platformInfo, {...props, modules, hookFunctions});
+    const options = selectShaders(platformInfo, props);
+    const assembled = assembleShaders(platformInfo, {...options, modules, hookFunctions});
     return assembled;
   }
 

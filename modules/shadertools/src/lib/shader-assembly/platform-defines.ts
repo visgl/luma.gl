@@ -1,11 +1,7 @@
 // luma.gl, MIT license
 
 import {glsl} from '../glsl-utils/highlight';
-
-export type PlatformInfo = {
-  gpu: string;
-  features: Set<string>;
-};
+import { PlatformInfo } from './platform-info';
 
 /** Adds defines to help identify GPU architecture / platform */
 export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {

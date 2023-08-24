@@ -2,7 +2,9 @@ import test from 'tape-promise/tape';
 import {ShaderAssembler, PlatformInfo, glsl, picking, dirlight} from '@luma.gl/shadertools';
 
 const platformInfo: PlatformInfo = {
+  type: 'webgl',
   gpu: 'test-gpu',
+  shaderLanguage: 'glsl',
   features: new Set()
 };
 

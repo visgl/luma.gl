@@ -7,7 +7,9 @@ import {isBrowser} from '@probe.gl/env';
 
 function getInfo(device: Device) {
   return {
+    type: device.info.type,
     gpu: device.info.gpu,
+    shaderLanguage: device.info.shadingLanguages[0],
     features: device.features
   };
 }
