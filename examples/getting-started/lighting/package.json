@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-lighting",
-  "version": "9.0.0-alpha.32",
+  "version": "9.0.0-alpha.33",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.32",
-    "@luma.gl/shadertools": "9.0.0-alpha.32",
-    "@luma.gl/webgl": "9.0.0-alpha.32",
+    "@luma.gl/engine": "9.0.0-alpha.33",
+    "@luma.gl/shadertools": "9.0.0-alpha.33",
+    "@luma.gl/webgl": "9.0.0-alpha.33",
     "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {
