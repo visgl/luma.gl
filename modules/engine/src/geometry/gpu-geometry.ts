@@ -110,7 +110,7 @@ export function makeGPUGeometry(device: Device, geometry: Geometry | GPUGeometry
   return new GPUGeometry({
     topology: geometry.topology || 'triangle-list',
     bufferLayout,
-    vertexCount,
+    vertexCount: geometry.vertexCount,
     indices,
     attributes
   });
