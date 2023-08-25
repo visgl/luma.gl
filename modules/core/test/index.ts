@@ -5,6 +5,8 @@ import './lib/utils/format-value.spec';
 import './lib/utils/deep-equal.spec';
 
 // type utils
+import './adapter/attribute-utils/get-attribute-from-layout.spec';
+
 import './adapter/type-utils/decode-attribute-type.spec';
 
 import './adapter/type-utils/decode-vertex-format.spec';

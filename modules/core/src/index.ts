@@ -94,7 +94,7 @@ export type {
   BindingDeclaration,
   Binding
 } from './adapter/types/shader-layout';
-export type {BufferLayout} from './adapter/types/shader-layout';
+export type {BufferLayout, InterleavedAttributeLayout} from './adapter/types/shader-layout';
 export type {
   // Deprecated, todo
   AttributeBinding,

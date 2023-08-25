@@ -96,7 +96,7 @@ export type InterleavedAttributeLayout = {
    * @note additive to the parent's buffer byteOffset
    * @note if not supplied, offset for each attribute is auto calculated starting from zero assuming aligned packing
    */
-  byteStrideOffset?: number;
+  byteOffset?: number;
 };
 
 /** 
