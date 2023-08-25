@@ -13,11 +13,11 @@ import './disable-example-startup';
 import helloTriangle from '../../examples/getting-started/hello-triangle/app';
 import helloInstancing from '../../examples/getting-started/hello-instancing/app';
 import shaderModules from '../../examples/getting-started/shader-modules/app';
-// import shaderHooks from '../../examples/getting-started/shader-hooks/app';
+import shaderHooks from '../../examples/getting-started/shader-hooks/app';
 // import transformFeedback from '../../examples/getting-started/transform-feedback/app';
 
 // API
-import animation from '../../examples/api/animation/app';
+// import animation from '../../examples/api/animation/app';
 // import texture3d from '../../examples/api/texture-3d/app';
 // import programManagement from '../../examples/api/program-management/app';
 
@@ -35,11 +35,11 @@ const examples = {
   helloTriangle,
   helloInstancing,
   shaderModules,
-  // shaderHooks,
+  shaderHooks,
   // transformFeedback,
 
   // API
-  animation,
+  // animation,
   // texture3d,
   // programManagement,
 

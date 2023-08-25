@@ -225,10 +225,7 @@ export class Model {
   setTopology(topology: PrimitiveTopology): void {
     if (topology !== this.topology) {
       this.topology = topology;
-      // On WebGPU we need to rebuild the pipeline
-      if (this.device.info.type === 'webgpu') {
-        this._setPipelineNeedsUpdate('topology');
-      }
+      this._setPipelineNeedsUpdate('topology');
     }
   }
 
@@ -239,10 +236,7 @@ export class Model {
   setBufferLayout(bufferLayout: BufferLayout[]): void {
     if (bufferLayout !== this.bufferLayout) {
       this.bufferLayout = bufferLayout;
-      // On WebGPU we need to rebuild the pipeline
-      if (this.device.info.type === 'webgpu') {
-        this._setPipelineNeedsUpdate('bufferLayout');
-      }
+      this._setPipelineNeedsUpdate('bufferLayout');
     }
   }
 
@@ -254,10 +248,7 @@ export class Model {
   setParameters(parameters: RenderPipelineParameters) {
     if (!deepEqual(parameters, this.parameters, 2)) {
       this.parameters = parameters;
-      // On WebGPU we need to rebuild the pipeline
-      if (this.device.info.type === 'webgpu') {
-        this._setPipelineNeedsUpdate('parameters');
-      }
+      this._setPipelineNeedsUpdate('parameters');
     }
   }
     

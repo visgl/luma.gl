@@ -326,7 +326,7 @@ export abstract class Device {
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
 
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
-      return {data: props};
+      props = {data: props};
     }
 
     // TODO - fragile, as this is done before we merge with default options
@@ -339,6 +339,8 @@ export abstract class Device {
         newProps.indexType = 'uint32';
       } else if (props.data instanceof Uint16Array) {
         newProps.indexType = 'uint16';
+      } else {
+        log.warn('indices buffer content must be of integer type')();
       }
     }
     return newProps;    
