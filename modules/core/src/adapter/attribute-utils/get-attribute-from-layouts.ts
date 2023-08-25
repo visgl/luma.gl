@@ -114,18 +114,8 @@ function getAttributeFromBufferLayout(
   name: string
 ): Partial<AttributeInfo> | null {
   for (const bufferMapping of bufferLayout) {
-    // If this is the mapping return
-    if (bufferMapping.name === name) {
-      return {
-        name: bufferMapping.name,
-        bufferName: name,
-        vertexFormat: bufferMapping.format,
-        byteOffset: bufferMapping.byteOffset || 0,
-        byteStride: bufferMapping.byteStride || 0
-      };
-    }
-
-    // Search interleaved attributes for buffer mapping
+    // Search interleaved attributes for buffer mapping. 
+    // The name of the buffer might be the same as one of the interleaved attributes.
     let nextByteOffset = bufferMapping.byteOffset || 0;
     let byteStride = 0;
     for (const interleavedMapping of bufferMapping.attributes || []) {
@@ -135,7 +125,7 @@ function getAttributeFromBufferLayout(
     for (const interleavedMapping of bufferMapping.attributes || []) {
       const byteOffset = nextByteOffset;
       nextByteOffset +=
-        interleavedMapping?.byteStrideOffset ||
+        interleavedMapping?.byteOffset ||
         decodeVertexFormat(interleavedMapping.format).byteLength;
       // const interleavedMapping = bufferMapping.attributes?.find(attr => attr.name === name);
       if (interleavedMapping.name === name) {
@@ -143,8 +133,19 @@ function getAttributeFromBufferLayout(
           name: bufferMapping.name,
           bufferName: name,
           vertexFormat: interleavedMapping.format,
-          byteOffset,
+          byteOffset: interleavedMapping.byteOffset ?? byteOffset,
           byteStride: bufferMapping.byteStride || byteStride
+        };
+      }
+
+      // No interleaved attribute matched. If this is the mapping return it.
+      if (bufferMapping.name === name) {
+        return {
+          name: bufferMapping.name,
+          bufferName: name,
+          vertexFormat: bufferMapping.format,
+          byteOffset: bufferMapping.byteOffset || 0,
+          byteStride: bufferMapping.byteStride || 0
         };
       }
     }
