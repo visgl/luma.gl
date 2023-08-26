@@ -1,5 +1,23 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.34
+
+- feat(core): Address feedback on BufferLayout (#1799)
+- fix: interleaved stride and buffer/attribute name conflict (#1798)
+- fix(engine): More model fixes (#1797)
+- chore: Bump ocular-dev-tools (#1796)
+
+### v9.0.0-alpha.33
+
+- feat(shadertools): Move multi-language shader support into ShaderAssembler (#1795)
+- fix(engine): Various Model and GPUGeometry fixes (#1794)
+
+### v9.0.0-alpha.32
+
+- feat(engine): Model cleanup (#1790)
+- feat(core): Add UniformValue type for .setUniforms() etc (#1792)
+- chore: Upgrade dependencies (#1793)
+
 ## v9.0.0-alpha.31
 
 - chore(core): Clean up buffer map
@@ -12,6 +30,7 @@
 - feat(webgl): Enforce WebGPU style topology (#1781)
 - chore(core): Rename api to core (#1783)
 - docs: website examples (#1782)
+
 ## v9.0.0-alpha.29
 
 - feat(webgl): Implement ShaderLayout.bufferLayout in webgl (#1780)
