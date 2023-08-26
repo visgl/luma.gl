@@ -89,8 +89,8 @@ function getAttributeInfoFromLayouts(
   const vertexFormatInfo = decodeVertexFormat(vertexFormat);
 
   return {
-    attributeName: bufferMapping.attributeName,
-    bufferName: bufferMapping.bufferName,
+    attributeName: bufferMapping?.attributeName || shaderDeclaration.name,
+    bufferName: bufferMapping?.bufferName || shaderDeclaration.name,
     location: shaderDeclaration.location,
     shaderType: shaderDeclaration.type,
     shaderDataType: attributeTypeInfo.dataType,
