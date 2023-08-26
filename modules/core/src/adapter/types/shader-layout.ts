@@ -1,6 +1,5 @@
 // luma.gl, MIT license
 import type {TextureFormat} from '../types/texture-formats';
-import type {VertexFormat} from './vertex-formats';
 import type {ShaderUniformType, ShaderAttributeType} from './shader-formats';
 import {AccessorObject} from '../types/accessor';
 import type {Buffer} from '../resources/buffer';
@@ -20,9 +19,9 @@ import type {Texture} from '../resources/texture';
   device.createRenderPipeline({
     shaderLayout: [
       attributes: [
-        {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-        {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-        {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
+        {name: 'instancePositions', location: 0, format: 'vec3<f32>', stepMode: 'instance'},
+        {name: 'instanceVelocities', location: 1, format: 'vec3<f32>', stepMode: 'instance'},
+        {name: 'vertexPositions', location: 2, format: 'vec3<f32>', stepMode: 'vertex'}
       ],
       bindings: [...]
     ]
@@ -53,140 +52,6 @@ export type AttributeDeclaration = {
   /** Inferred from attribute name. @note Technically not part of static structure of shader */
   stepMode?: 'vertex' | 'instance';
 };
-
-// BUFFER LAYOUT
-
-/** 
- * A BufferLayout complements the static structure in a ShaderLayout with information
- * about the dynamic memory layout of the buffers that will be used with the pipeline.
- * 
- * Provides specific details about the memory layout of the actual buffers 
- * that will be provided to a `RenderPipeline`.
- */
-export type SingleBufferLayout = BufferLayout;
-
-/** 
- * Specify memory layout for a buffer that is only used by one attribute
- * @note Specifies format, stride, offset and step mode
- * @note The buffer can be set using the attribute name. 
- */
-export type BufferLayout = {
-  /** Name of attribute to adjust */
-  name: string;
-  /** vertex format. Auto calculated. @note Needs to match type/components of the ShaderLayout ('f32', 'i32', 's32') */
-  format?: VertexFormat;
-  /** offset into buffer. Defaults to `0` */
-  byteOffset?: number;
-  /** bytes between successive elements. If omitted, stride is set to reflect a "packed" buffer */
-  byteStride?: number;
-  /** Whether the attribute is instanced. @note Only needs to be provided if auto deduction failed. */
-  stepMode?: 'vertex' | 'instance';
-  /** Optional: interleaved attributes that read from this buffer */
-  attributes?: InterleavedAttributeLayout[];
-};
-
-/**  */
-export type InterleavedAttributeLayout = {
-  /** Name of attribute that maps to an interleaved "view" of this buffer */
-  name: string;
-  /** vertex format override, when using formats other than float32 (& uint32, sint32) */
-  format?: VertexFormat;
-  /** 
-   * offset into one stride. 
-   * @note additive to the parent's buffer byteOffset
-   * @note if not supplied, offset for each attribute is auto calculated starting from zero assuming aligned packing
-   */
-  byteOffset?: number;
-};
-
-/** 
- * Map an interleaved buffer whose values 
- * @note The buffer can be set using the defined buffer name. 
- */
-// export type InterleavedBufferLayout = {
-//   /** Mark this as interleaved */
-//   type: 'interleave';
-//   /** Name of buffer (to which the multiple attributes are to be bound) */
-//   name: string;
-//   /** bytes between successive elements. Assumes tight packing if omitted */
-//   byteStride?: number;
-//   /** offset into buffer Defaults to `0` */
-//   byteOffset?: number;
-//   /** Attributes that read from this buffer */
-//   attributes: InterleavedAttribute[];
-//   /** @deprecated Dummy for typing */
-//   format?: VertexFormat;
-// };
-
-
-/**
- * A buffer map is used to specify "non-standard" buffer layouts (buffers with offsets, interleaved buffers etc)
- *
- * @example
- * ```
-  device.createRenderPipeline({
-    shaderLayout: shaderLayout,
-    // interleaved bindings, auto offset
-    bufferLayout: [
-      {name: 'interleavedPositions', attributes: [...]}
-      {name: 'position', byteOffset: 1024}
-      // single buffer per binding
-      {name: 'vertexPositions', location: 2, accessor: {format: 'float32x2'}}
-      // interleaved bindings, auto offset
-      {name: 'particles', stepMode: 'instance', fields: [
-        {name: 'instancePositions', location: 0, format: 'float32x4'},
-        {name: 'instanceVelocities', location: 1, format: 'float32x4'}
-      ]},
-    ]
-  ];
-  ```
- */
-// export type BufferLayout = SingleBufferLayout | InterleavedBufferLayout;
-
-// /** Specify stride and offset for a buffer that only handles one attribute*/
-// export type SingleBufferLayout = {
-//   /** Mark this as interleaved */
-//   type?: 'override';
-//   /** Name of attribute to adjust */
-//   name: string;
-//   /** vertex format override, when using formats other than float32, uint32, sint32 */
-//   format: VertexFormat;
-//   /** bytes between successive elements @note `stride` is auto calculated if omitted */
-//   byteStride?: number;
-//   /** offset into buffer. Defaults to `0` */
-//   byteOffset?: number;
-// };
-
-// /** Map an interleaved buffer */
-// export type InterleavedBufferLayout = {
-//   /** Mark this as interleaved */
-//   type: 'interleave';
-//   /** Name of buffer (to which the multiple attributes are to be bound) */
-//   name: string;
-//   /** bytes between successive elements. Assumes tight packing if omitted */
-//   byteStride?: number;
-//   /** offset into buffer Defaults to `0` */
-//   byteOffset?: number;
-//   /** Attributes that read from this buffer */
-//   attributes: InterleavedAttribute[];
-//   /** @deprecated Dummy for typing */
-//   format?: VertexFormat;
-// };
-
-// /** @note Not public: not exported outside of api module */
-// export type InterleavedAttribute = {
-//   /** Name of attribute that maps to an interleaved "view" of this buffer */
-//   name: string;
-//   /** vertex format override, when using formats other than float32 (& uint32, sint32) */
-//   format?: VertexFormat;
-//   /** 
-//    * offset into one stride. 
-//    * @note additive to the parent's buffer byteOffset
-//    * @note if not supplied, offset for each attribute is auto calculated starting 
-//    * from zero assuming aligned packing
-//    */
-//   byteOffset?: number;
-// };
 
 // BINDING LAYOUTS
 

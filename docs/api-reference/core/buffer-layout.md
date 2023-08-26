@@ -1,76 +1,81 @@
 # BufferLayout
 
-The bufferLayout type provides information about how the buffers the application is planning to bind map to the attributes. 
-The `BufferLayout` stores the dynamic structure of a render pipeline binding points.
+The bufferLayout type provides information about how the application is planning to 
+map the attributes in its pipelines to the memory in GPU buffers. 
 
-`BufferLayout` affects buffers bound with `RenderPipeline.setAttributes()` or `Model.setAttributes()`. The names
-of buffer bindings are determined by the buffer mapping.  Buffer names will match the attribute names, 
-however for interleaved buffers the buffer layout defines new buffer names,
-that then becomes valid in `RenderPipeline.setAttributes()` and `Model.setAttributes()`.
+`BufferLayout` affects buffers bound with `RenderPipeline.setAttributes({[bufferName]: Buffer})` or 
+`Model.setAttributes({[bufferName]: Buffer})`. The names of buffer bind points are determined by the `bufferLayout` mapping supplied to `createRenderPipeline()` or `new Model()`. 
+This buffer name then becomes valid in `RenderPipeline.setAttributes()` and `Model.setAttributes()`.
 
 ## Usage
 
 The simplest use case is to provide a non-default vertex type:
 
 ```typescript
-  bufferLayout: {
-    attributes: [
-      {name: 'instancePositions', format: 'float32x3'}
-      ...
-      // RGBA colors can be efficiently encoded in 4 8bit bytes, instead of 4 32bit floats
-      {name: 'instanceColors': format: 'uint8normx4'},
-    ]
+  bufferLayout: [
+    {name: 'instancePositions', format: 'float32x3'}
+    ...
+    // RGBA colors can be efficiently encoded in 4 8bit bytes, instead of 4 32bit floats
+    {name: 'instanceColors', format: 'uint8normx4'},
   ],
 ```
 
-```typescript
-  bufferLayout: {
-    attributes: [
-      {name: 'instancePositions', format: 'float32x3'}
-      ...
-      // RGBA colors can be efficiently encoded in 4 8bit bytes, instead of 4 32bit floats
-      {name: 'instanceColors': format: 'uint8normx4'},
-    ],
-  }
-```
 
-A more advanced use case is interleaving: two attributes access the same buffer in an interleaved way.
-Note that this introduces a new buffer name that can be referenced in `setAttributes()`
+This is short hand for specifying an attribute with the same name as the buffer
 
 ```typescript
   bufferLayout: [
-    {name: 'particles', attributes: [
-      // Note that strides are automatically calculated assuming a packed buffer.
-      {name: 'instancePositions'},
-      {name: 'instanceVelocities'}
-    ]
+    {name: 'instancePositions', attributes: [{attribute: 'instancePositions', format: 'float32x3'}]},
+    {name: 'instanceColors', attributes: [{attribute: 'instanceColors', format: 'uint8normx4'}]},
+  ]
+```
+
+A more advanced use case is interleaving: two attributes access the same buffer sin an interleaved way.
+Note that this introduces a buffer name that is different from attribute names. This buffer name can be specified in `setAttributes({[bufferName]: Buffer})` method on the `RenderPipeline` and `Model` classes.
+
+```typescript
+  bufferLayout: [
+    {
+      name: 'particles', stepMode: 'instance', byteStride: 24, attributes: [
+        // Note that strides are automatically calculated assuming a packed buffer.
+        {attribute: 'instancePositions', format: 'float32x3', byteOffset: 0},
+        {attribute: 'instanceVelocities', format: 'float32x3', byteOffset: 12}
+      ]
+    }
   ],
 ```
 
-In the above case case a new buffer name `particles` is defined and `setAttributes()`
-calls will recognize that name and bind the provided buffer to all the interleaved 
-attributes.
+In the above case case a new buffer name `particles` is defined and `setAttributes({particles: Buffer})`
+calls will recognize that name and bind the provided buffer to all the interleaved attributes.
 
+## `BufferLayout` Fields
 
-## Fields
+Each `BufferLayout` describes how the memory content of one buffer is mapped to one or more shader attributes, via the following fields:  
 
-Each row in the buffer mapping describes one buffer. 
-
-- `name: string` the name of the attribute and the buffer
-- `format: VertexFormat` the format of the buffer's memory.
-- `byteOffset?: number` the offset into the buffer (defaults to `0`)
+- `name: string` defines the name of this buffer for use in `setAttributes()` methods. THe application is free to select this name.
+- `stepMode: 'vertex' | 'instance'` Whether attributes in this buffer will be treated as instanced. 
 - `byteStride?: number` the stride between elements in the buffer (default assumes a packed buffer)
+- `attributes?: BufferAttributeLayout[]` - A list of attributes that will be bound to this buffer.
+- `format?: VertexFormat` - Shorthand that allows specification of a single attribute with the same name as the buffer. 
 
-- `attributes: InterleavedAttribute[]`
+Remarks:
+Attributes whose name includes the string `instance` will default to `stepMode: 'instance'` and all other attributes will default to `stepMode: 'vertex'`.
 
-Interleaved Attribute Description
-
-- `name: string` the name of the attribute and the buffer
-- `format: VertexFormat` the format of the buffer's memory.
-
-
-:::info 
-Interleaving attributes into the same buffer does not increase the number of attributes
-that can be used in a shader (16 on many systems). 
+:::caution 
+One of `attributes` and `format` must be supplied, but not both.
+The `format` field is equivalent to specifying `{name: _bufferName_, attributes: [{attribute: _layout_.name, format: _layout_.format, byteOffset: 0}]`
 :::
 
+
+## `BufferAttributeLayout` Fields
+
+The attributes field must contain an array of `BufferAttributeLayout` objects.
+
+- `attribute: string` the name of the attribute.
+- `format: VertexFormat` the format of (the subset of) the buffer's memory being mapped to this attribute.
+- `byteOffset?: number` the offset into the buffer (defaults to `0`). This should be a sum of any global offset into the buffer plus any small offset into the `byteStride` for interleaved attributes.
+
+:::info 
+Unfortunately, interleaving attributes into the same buffer does not help avoid the
+limit on the number of attributes that can be used in a shader (16 on many systems). 
+:::

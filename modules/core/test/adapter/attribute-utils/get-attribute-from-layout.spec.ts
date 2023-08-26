@@ -50,32 +50,32 @@ const bufferLayout: BufferLayout[] = [
     byteStride: 24,
     attributes: [
       {
-        name: 'vertexPositions',
+        attribute: 'vertexPositions',
         format: 'float32x3',
         byteOffset: 0
       },
       {
-        name: 'vertexPositions64Low',
+        attribute: 'vertexPositions64Low',
         format: 'float32x3',
         byteOffset: 12
       },
       {
-        name: 'instancePositions',
+        attribute: 'instancePositions',
         format: 'float32x3',
         byteOffset: 24
       },
       {
-        name: 'instancePositions64Low',
+        attribute: 'instancePositions64Low',
         format: 'float32x3',
         byteOffset: 12
       },
       {
-        name: 'instanceNextPositions',
+        attribute: 'instanceNextPositions',
         format: 'float32x3',
         byteOffset: 24
       },
       {
-        name: 'instanceNextPositions64Low',
+        attribute: 'instanceNextPositions64Low',
         format: 'float32x3',
         byteOffset: 36
       }
@@ -85,7 +85,7 @@ const bufferLayout: BufferLayout[] = [
 
 const resolvedLayout = {
   vertexPositions: {
-    name: 'vertexPositions',
+    attributeName: 'vertexPositions',
     bufferName: 'vertexPositions',
     location: 0,
     shaderType: 'vec3<f32>',
@@ -101,7 +101,7 @@ const resolvedLayout = {
     byteStride: 24
   },
   vertexPositions64Low: {
-    name: 'vertexPositions64Low',
+    attributeName: 'vertexPositions64Low',
     bufferName: 'vertexPositions',
     location: 1,
     shaderType: 'vec3<f32>',
@@ -117,7 +117,7 @@ const resolvedLayout = {
     byteStride: 24
   },
   instancePositions: {
-    name: 'instancePositions',
+    attributeName: 'instancePositions',
     bufferName: 'vertexPositions',
     location: 0,
     shaderType: 'vec3<f32>',
@@ -133,7 +133,7 @@ const resolvedLayout = {
     byteStride: 24
   },
   instancePositions64Low: {
-    name: 'instancePositions64Low',
+    attributeName: 'instancePositions64Low',
     bufferName: 'vertexPositions',
     location: 2,
     shaderType: 'vec3<f32>',
@@ -149,7 +149,7 @@ const resolvedLayout = {
     byteStride: 24
   },
   instanceNextPositions: {
-    name: 'instanceNextPositions',
+    attributeName: 'instanceNextPositions',
     bufferName: 'vertexPositions',
     location: 1,
     shaderType: 'vec3<f32>',
@@ -165,7 +165,7 @@ const resolvedLayout = {
     byteStride: 24
   },
   instanceNextPositions64Low: {
-    name: 'instanceNextPositions64Low',
+    attributeName: 'instanceNextPositions64Low',
     bufferName: 'vertexPositions',
     location: 3,
     shaderType: 'vec3<f32>',

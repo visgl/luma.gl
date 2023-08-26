@@ -1,7 +1,8 @@
 // luma.gl, MIT license
 
 import {log} from '../../lib/utils/log';
-import type {ShaderLayout, AttributeDeclaration, BufferLayout} from '../types/shader-layout';
+import type {ShaderLayout, AttributeDeclaration} from '../types/shader-layout';
+import type {BufferLayout} from '../types/buffer-layout';
 import type {ShaderDataType, ShaderAttributeType} from '../types/shader-formats';
 import {decodeShaderAttributeType} from '../type-utils/decode-attribute-type';
 import type {VertexFormat, VertexType} from '../types/vertex-formats';
@@ -10,7 +11,7 @@ import {decodeVertexFormat} from '../type-utils/decode-vertex-format';
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {
   /** Attribute name */
-  name: string;
+  attributeName: string;
   /** Location in shader */
   location: number;
   /** Type / precision used in shader (buffer values may be converted) */
@@ -23,7 +24,7 @@ export type AttributeInfo = {
   integer: boolean;
 
   /** BufferName */
-  bufferName: String;
+  bufferName: string;
   /** Format of buffer data */
   vertexFormat: VertexFormat;
   /** Memory data type refers to the data type in the buffer */
@@ -39,6 +40,15 @@ export type AttributeInfo = {
   /** The byteOffset is encoded in or calculated from the buffer layout */
   byteOffset: number;
   /** The byteStride is encoded in or calculated from the buffer layout */
+  byteStride: number;
+};
+
+type BufferAttributeInfo = {
+  attributeName: string;
+  bufferName: string;
+  stepMode?: 'vertex' | 'instance';
+  vertexFormat: VertexFormat;
+  byteOffset: number;
   byteStride: number;
 };
 
@@ -66,7 +76,7 @@ function getAttributeInfoFromLayouts(
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: Partial<AttributeInfo> = getAttributeFromBufferLayout(bufferLayout, name);
+  const bufferMapping: BufferAttributeInfo = getAttributeFromBufferLayout(bufferLayout, name);
 
   // TODO should no longer happen
   if (!shaderDeclaration) {
@@ -79,8 +89,8 @@ function getAttributeInfoFromLayouts(
   const vertexFormatInfo = decodeVertexFormat(vertexFormat);
 
   return {
-    name,
-    bufferName: bufferMapping?.name || name,
+    attributeName: bufferMapping?.attributeName || shaderDeclaration.name,
+    bufferName: bufferMapping?.bufferName || shaderDeclaration.name,
     location: shaderDeclaration.location,
     shaderType: shaderDeclaration.type,
     shaderDataType: attributeTypeInfo.dataType,
@@ -110,49 +120,92 @@ function getAttributeFromShaderLayout(
 }
 
 function getAttributeFromBufferLayout(
-  bufferLayout: BufferLayout[],
+  bufferLayouts: BufferLayout[],
   name: string
-): Partial<AttributeInfo> | null {
-  for (const bufferMapping of bufferLayout) {
-    // Search interleaved attributes for buffer mapping. 
-    // The name of the buffer might be the same as one of the interleaved attributes.
-    let nextByteOffset = bufferMapping.byteOffset || 0;
-    let byteStride = 0;
-    for (const interleavedMapping of bufferMapping.attributes || []) {
-      const info = decodeVertexFormat(interleavedMapping.format);
-      byteStride += info.byteLength;
-    }
-    for (const interleavedMapping of bufferMapping.attributes || []) {
-      const byteOffset = nextByteOffset;
-      nextByteOffset +=
-        interleavedMapping?.byteOffset ||
-        decodeVertexFormat(interleavedMapping.format).byteLength;
-      // const interleavedMapping = bufferMapping.attributes?.find(attr => attr.name === name);
-      if (interleavedMapping.name === name) {
-        return {
-          name: bufferMapping.name,
-          bufferName: name,
-          vertexFormat: interleavedMapping.format,
-          byteOffset: interleavedMapping.byteOffset ?? byteOffset,
-          byteStride: bufferMapping.byteStride || byteStride
-        };
-      }
+): BufferAttributeInfo | null {
+  // Check that bufferLayouts are valid (each either has format or attribute)
+  checkBufferLayouts(bufferLayouts);
 
-      // No interleaved attribute matched. If this is the mapping return it.
-      if (bufferMapping.name === name) {
-        return {
-          name: bufferMapping.name,
-          bufferName: name,
-          vertexFormat: bufferMapping.format,
-          byteOffset: bufferMapping.byteOffset || 0,
-          byteStride: bufferMapping.byteStride || 0
-        };
+  let bufferLayoutInfo = getAttributeFromShortHand(bufferLayouts, name);
+  if (bufferLayoutInfo) {
+    return bufferLayoutInfo;
+  }
+
+  bufferLayoutInfo = getAttributeFromAttributesList(bufferLayouts, name);
+  if (bufferLayoutInfo) {
+    return bufferLayoutInfo;
+  }
+
+  // Didn't find...
+  log.warn(`layout for attribute "${name}" not present in buffer layout`);
+  return null;
+}
+
+/** Check that bufferLayouts are valid (each either has format or attribute) */
+function checkBufferLayouts(bufferLayouts: BufferLayout[]) {
+  for (const bufferLayout of bufferLayouts) {
+    if (
+      (bufferLayout.attributes && bufferLayout.format) ||
+      (!bufferLayout.attributes && !bufferLayout.format)
+    ) {
+      log.warn(`BufferLayout ${name} must have either 'attributes' or 'format' field`);
+    }
+  }
+}
+
+/** Get attribute from format shorthand if specified */
+function getAttributeFromShortHand(
+  bufferLayouts: BufferLayout[],
+  name: string
+): BufferAttributeInfo | null {
+  for (const bufferLayout of bufferLayouts) {
+    if (bufferLayout.format && bufferLayout.name === name) {
+      return {
+        attributeName: bufferLayout.name,
+        bufferName: name,
+        stepMode: bufferLayout.stepMode,
+        vertexFormat: bufferLayout.format,
+        // If offset is needed, use `attributes` field.
+        byteOffset: 0,
+        byteStride: bufferLayout.byteStride || 0
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Search attribute mappings (e.g. interleaved attributes) for buffer mapping.
+ * Not the name of the buffer might be the same as one of the interleaved attributes.
+ */
+function getAttributeFromAttributesList(
+  bufferLayouts: BufferLayout[],
+  name: string
+): BufferAttributeInfo | null {
+  for (const bufferLayout of bufferLayouts) {
+    let byteStride: number | undefined = bufferLayout.byteStride;
+
+    // Calculate a default byte stride if not provided
+    if (typeof bufferLayout.byteStride !== 'number') {
+      for (const attributeMapping of bufferLayout.attributes || []) {
+        const info = decodeVertexFormat(attributeMapping.format);
+        byteStride += info.byteLength;
       }
+    }
+
+    const attributeMapping = bufferLayout.attributes?.find(mapping => mapping.attribute === name);
+    if (attributeMapping) {
+      return {
+        attributeName: attributeMapping.attribute,
+        bufferName: bufferLayout.name,
+        stepMode: bufferLayout.stepMode,
+        vertexFormat: attributeMapping.format,
+        byteOffset: attributeMapping.byteOffset,
+        byteStride
+      };
     }
   }
 
-  // Didn't return...
-  log.warn(`layout for attribute "${name}" not present in buffer layout`);
   return null;
 }
 

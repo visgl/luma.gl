@@ -48,12 +48,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.interleavedBuffer = device.createBuffer(interleavedData);
         
     this.model = new Model(device, {
+      id: 'triangle',
       vs,
       fs,
       bufferLayout: [
-        {name: 'vertexData', byteOffset: 8, attributes: [
-          {name: 'position', format: 'float32x2'},
-          {name: 'color', format: 'float32x3'},
+        {name: 'vertexData', byteStride: 20, attributes: [
+          {attribute: 'position', format: 'float32x2', byteOffset: 8 + 0},
+          {attribute: 'color', format: 'float32x3', byteOffset: 8 + 8},
         ]}
       ],
       attributes: {
