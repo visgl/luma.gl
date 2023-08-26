@@ -1,5 +1,5 @@
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {decodeVertexFormat} from '@luma.gl/core';
+import {getAttributeInfosFromLayouts, decodeVertexFormat} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
 function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
@@ -20,6 +20,9 @@ export function getVertexBufferLayout(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[]
 ): GPUVertexBufferLayout[] {
+  // @ts-expect-error Deduplicate and make use of the new core attribute logic here in webgpu module
+  const attributeInfos = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
+
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
@@ -31,18 +34,17 @@ export function getVertexBufferLayout(
     // TODO verify that all stepModes for one buffer are the same
     let stepMode: 'vertex' | 'instance' = 'vertex';
     let byteStride = 0;
-    const byteOffset = mapping.byteOffset || 0;
-
     // interleaved mapping {..., attributes: [{...}, ...]}
     if (mapping.attributes) {
       // const arrayStride = mapping.byteStride; TODO
-      for (const interleaved of mapping.attributes) {
-        const attributeLayout = findAttributeLayout(shaderLayout, interleaved.name, usedAttributes);
+      for (const attributeMapping of mapping.attributes) {
+        const attributeName = attributeMapping.attribute;
+        const attributeLayout = findAttributeLayout(shaderLayout, attributeName, usedAttributes);
 
         stepMode = attributeLayout.stepMode || 'vertex';
         vertexAttributes.push({
-          format: getWebGPUVertexFormat(interleaved.format || mapping.format),
-          offset: byteOffset + byteStride,
+          format: getWebGPUVertexFormat(attributeMapping.format || mapping.format),
+          offset: attributeMapping.byteOffset,
           shaderLocation: attributeLayout.location
         });
 
@@ -56,7 +58,8 @@ export function getVertexBufferLayout(
       stepMode = attributeLayout.stepMode || 'vertex';
       vertexAttributes.push({
         format: getWebGPUVertexFormat(mapping.format),
-        offset: byteOffset,
+        // We only support 0 offset for non-interleaved buffer layouts
+        offset: 0,
         shaderLocation: attributeLayout.location
       });
     }
@@ -102,7 +105,7 @@ export function getBufferSlots(
     // interleaved mapping {..., attributes: [{...}, ...]}
     if ('attributes' in mapping) {
       for (const interleaved of mapping.attributes) {
-        usedAttributes.add(interleaved.name);
+        usedAttributes.add(interleaved.attribute);
       }
       // non-interleaved mapping (just set offset and stride)
     } else {

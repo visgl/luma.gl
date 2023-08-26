@@ -124,8 +124,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
         const glType = getGLFromVertexType(attributeInfo.bufferDataType);
         // TODO remove when we have more confidence
-        log.log(1, {
-          setAttribute: attributeInfo.name,
+        log.log(2, {
+          setAttribute: attributeInfo.attributeName,
           toBuffer: bufferName,
           size: attributeInfo.bufferComponents,
           type: glType,

@@ -21,10 +21,24 @@ declared in the shader source code. This includes:
 - a step mode ('vertex' or 'instance').
 - whether calculations will be performed in integer or floating point arithmetic.
 
-A `BufferLayout` describes the dynamic structure of the memory / buffers that will be bound to the attributes, i.e: 
-- the memory format, e.g. floats, or integers (bytes, shorts, ints)
-- number of components per "row" or "vertex"
-- Whether the memory represents normalized integers.
+A `BufferLayout` describes the dynamic structure of one buffer (the actual GPU memory) 
+that is expected be bound to the pipeline before `draw()` or `run()` is called. 
+Specifically it
+
+## Data Formats
+
+A `BufferLayout` enumerates the attributes that will be read from the memory in each bound buffer.
+- the data format of the memory in the buffer, i.e: the primitive data type (float, int, short, byte etc)
+- and the number of components per "row" or "vertex"
+- the data format also describes if the memory represents normalized integers.
+
+Note that data formats are allowed to differ between attributes even when they are stored in the same GPU buffer.
+
+## Interleaved Data
+
+While buffers supplied by applications to define attribute values often contain 
+only a contiguous block of memory for a single attribute, a buffer can also be set up to 
+contain the memory for multiple attributes, either in sequence, or interleaved.
 
 ## Binding Buffers
 
@@ -91,6 +105,7 @@ When it comes to attributes, [WebGPU](https://www.w3.org/TR/webgpu/#vertex-state
 | Feature                       | WebGL | WebGPU | Comment                                                                                                                    |
 | ----------------------------- | ----- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
 | Dynamic `VertexFormat`        | ✅     | ❌      | Buffers with different structure (different `BufferLayout`) can be provided without relinking the `RenderPipeline`      |
+| Per-attribute`stepMode`        | ✅     | ❌      | `stepMode` (WebGL: `divisor`, controls whether an attribute is instanced) can be set per-attribute, even when multiple attributes bing to the same buffer. |
 | Constant attributes           | ✅     | ❌      | (attribute locations can be disabled in which case a constant value is read from the WebGLRenderingContext)                |
 | Component mismatch            | ✅     | ❌      | Use buffers with more or fewer components than expected by the shader (missing values will be filled with `[0, 0, 0, 1]`). |
 | Non-normalized integers       | ✅     | ❌      | Non-normalized integer attributes can be assigned to floating point GLSL shader variables (e.g. `vec4`).                   |
