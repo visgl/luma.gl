@@ -102,16 +102,17 @@ Each vertex data type can map to any WGSL scalar type of the same base type, reg
 
 When it comes to attributes, [WebGPU](https://www.w3.org/TR/webgpu/#vertex-state) is significantly more restrictive than WebGL:
 
-| Feature                       | WebGL | WebGPU | Comment                                                                                                                    |
-| ----------------------------- | ----- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| Dynamic `VertexFormat`        | ✅     | ❌      | Buffers with different structure (different `BufferLayout`) can be provided without relinking the `RenderPipeline`      |
-| Per-attribute`stepMode`        | ✅     | ❌      | `stepMode` (WebGL: `divisor`, controls whether an attribute is instanced) can be set per-attribute, even when multiple attributes bing to the same buffer. |
-| Constant attributes           | ✅     | ❌      | (attribute locations can be disabled in which case a constant value is read from the WebGLRenderingContext)                |
-| Component mismatch            | ✅     | ❌      | Use buffers with more or fewer components than expected by the shader (missing values will be filled with `[0, 0, 0, 1]`). |
-| Non-normalized integers       | ✅     | ❌      | Non-normalized integer attributes can be assigned to floating point GLSL shader variables (e.g. `vec4`).                   |
-| Alignment free 8-bit formats  | ✅     | ❌      | WebGPU 8 bit integers must be aligned to 16 bits (`uint8x1`, `uint8x3`, `unorm8x1`, `unorm8x3` etc` are not supported)      |
-| Alignment free 16-bit formats | ✅     | ❌      | WebGPU 16 bit integers must be aligned to 32 bits (`uint16x1`, `uint16x3`, `unorm16x1`, `unorm16x3` etc` are not supported) |
-| Normalized 32-bit integers    | ✅     | ❌      | WebGPU 32 bit integer formats cannot be normalized                                                                         |
+| Feature                       | WebGL | WebGPU | Comment                                                                                                                                                        |
+| ----------------------------- | ----- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dynamic `VertexFormat`        | ✅     | ❌      | Buffers with different structure (different `BufferLayout`) can be provided without relinking the `RenderPipeline`                                             |
+| Constant attributes           | ✅     | ❌      | (attribute locations can be disabled in which case a constant value is read from the WebGLRenderingContext)                                                    |
+| Component mismatch            | ✅     | ❌      | Use buffers with more or fewer components than expected by the shader (missing values will be filled with `[0, 0, 0, 1]`).                                     |
+| Non-normalized integers       | ✅     | ❌      | Non-normalized integer attributes can be assigned to floating point GLSL shader variables (e.g. `vec4`).                                                       |
+| Alignment free 8-bit formats  | ✅     | ❌      | WebGPU 8 bit integers must be aligned to 16 bits (`uint8x1`, `uint8x3`, `unorm8x1`, `unorm8x3` etc` are not supported)                                         |
+| Alignment free 16-bit formats | ✅     | ❌      | WebGPU 16 bit integers must be aligned to 32 bits (`uint16x1`, `uint16x3`, `unorm16x1`, `unorm16x3` etc` are not supported)                                    |
+| Normalized 32-bit integers    | ✅     | ❌      | WebGPU 32 bit integer formats cannot be normalized                                                                                                             |
+| Per-attribute`stepMode`       | ✅     | ❌      | `stepMode` (WebGL: `divisor`, controls whether an attribute is instanced) can be set per-attribute, even when multiple attributes bind to the same buffer.     |
+| Per-attribute`byteStride`     | ✅     | ❌      | `byteStride` (controls byte distance between two successive values in memory) can be set per-attribute, even when multiple attributes bind to the same buffer. |
 
 Presumably, the heavy restrictions in WebGPU support reduced run-time validation overhead, additional optimizations during shader compilation and/or portability across Vulkan/Metal/D3D12.
 

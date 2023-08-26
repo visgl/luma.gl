@@ -9,5 +9,5 @@ test.onFailure(() => {
 // hack: prevent example imports from starting their own animation loop
 globalThis.website = true;
 
-import './modules';
+// import './modules';
 import './render/render.spec';

@@ -115,7 +115,7 @@ export function getAttributeBuffersFromGeometry(
     }
 
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
-    bufferLayout.push({name: 'normals', format: `float32x${attribute.size as 2 | 3 | 4}`});
+    bufferLayout.push({name, format: `float32x${attribute.size as 2 | 3 | 4}`});
   }
 
   const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)

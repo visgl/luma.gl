@@ -76,7 +76,7 @@ function getAttributeInfoFromLayouts(
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: Partial<AttributeInfo> = getAttributeFromBufferLayout(bufferLayout, name);
+  const bufferMapping: BufferAttributeInfo = getAttributeFromBufferLayout(bufferLayout, name);
 
   // TODO should no longer happen
   if (!shaderDeclaration) {
@@ -193,8 +193,8 @@ function getAttributeFromAttributesList(
       }
     }
 
-    const attributeMapping = bufferLayout.attributes.find(mapping => mapping.attribute === name);
-    if (attributeMapping?.attribute === name) {
+    const attributeMapping = bufferLayout.attributes?.find(mapping => mapping.attribute === name);
+    if (attributeMapping) {
       return {
         attributeName: attributeMapping.attribute,
         bufferName: bufferLayout.name,

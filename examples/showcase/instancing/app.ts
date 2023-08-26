@@ -73,17 +73,17 @@ class InstancedCube extends Model {
 
     const offsets32 = new Float32Array(offsets);
 
+    const colors = new Uint8Array(SIDE * SIDE * 4).map((n, i) => (random() * 0.75 + 0.25) * 255);
+    for (let i = 0; i < colors.length; i += 4) {
+      colors[i + 3] = 255;
+    }
+
     const pickingColors = new Float32Array(SIDE * SIDE * 2);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
         pickingColors[(i * SIDE + j) * 2 + 0] = i;
         pickingColors[(i * SIDE + j) * 2 + 1] = j;
       }
-    }
-
-    const colors = new Uint8Array(SIDE * SIDE * 4).map((n, i) => (random() * 0.75 + 0.25) * 255);
-    for (let i = 0; i < colors.length; i += 4) {
-      colors[i + 3] = 255;
     }
 
     const offsetsBuffer = device.createBuffer(offsets32);
@@ -109,8 +109,9 @@ class InstancedCube extends Model {
         bindings: []
       },
       bufferLayout: [
-        // float32 attributes are automatically assigned float32x... vertex formats, no need to list them
+        {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
+        {name: 'instancePickingColors', format: 'unorm8x4'},
         // TODO - normalizing picking colors breaks picking 
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
