@@ -19,7 +19,7 @@ export type PickingUniforms = {
   picking_uSelectedColorValid?: number;
   picking_uSelectedColor?: NumberArray;
   picking_uHighlightColor?: NumberArray;
-  picking_uColorRange?: number;
+  picking_uColorScale?: number;
 }
 
 const DEFAULT_MODULE_OPTIONS: Required<PickingOptions> = {
@@ -54,7 +54,7 @@ function getUniforms(options = DEFAULT_MODULE_OPTIONS): PickingUniforms {
     uniforms.picking_uHighlightColor = color;
   }
   if (options.pickingColorRange) {
-    uniforms.picking_uColorRange = options.pickingColorRange;
+    uniforms.picking_uColorScale = 1 / options.pickingColorRange;
   }
   return uniforms;
 }
@@ -64,11 +64,9 @@ uniform bool picking_uActive;
 uniform bool picking_uAttribute;
 uniform vec3 picking_uSelectedColor;
 uniform bool picking_uSelectedColorValid;
-uniform float picking_uColorRange;
+uniform float picking_uColorScale;
 
 out vec4 picking_vRGBcolor_Avalid;
-
-float COLOR_SCALE = 1. / picking_uColorRange;
 
 bool picking_isColorValid(vec3 color) {
   return dot(color, vec3(1.0)) > 0.001;
@@ -87,7 +85,7 @@ void picking_setPickingColor(vec3 pickingColor) {
 
     // if (!picking_uAttribute) {
       // Stores the picking color so that the fragment shader can render it during picking
-      picking_vRGBcolor_Avalid.rgb = pickingColor * COLOR_SCALE;
+      picking_vRGBcolor_Avalid.rgb = pickingColor * picking_uColorScale;
     // }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
