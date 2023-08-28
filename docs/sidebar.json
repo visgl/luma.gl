@@ -101,6 +101,7 @@
           "api-reference/core/resources/render-pipeline",
           "api-reference/core/resources/sampler",
           "api-reference/core/resources/shader",
+          "api-reference/core/shader-logs",
           "api-reference/core/resources/texture",
           "api-reference/core/resources/vertex-array"
         ]
@@ -143,10 +144,10 @@
         "label": "@luma.gl/shadertools",
         "items": [
           "api-reference/shadertools/README",
-          "api-reference/shadertools/assemble-shaders",
-          "api-reference/shadertools/core-shader-modules",
+          "api-reference/shadertools/shader-assembler",
           "api-reference/shadertools/shader-info",
-          "api-reference/shadertools/shader-logs"
+          "api-reference/shadertools/core-shader-modules",
+          "api-reference/shadertools/effects-shader-modules"
         ]
       },
       {

@@ -7,7 +7,7 @@ import {
   injectShader,
   combineInjects,
   DECLARATION_INJECT_MARKER
-} from '@luma.gl/shadertools/lib/shader-assembly/inject-shader';
+} from '@luma.gl/shadertools/lib/shader-assembly/shader-injections';
 
 function getInfo(device: Device) {
   return {
@@ -110,7 +110,7 @@ test('injectShader#import', t => {
 test('injectShader#injectShader', t => {
   let injectResult;
 
-  injectResult = injectShader(VS_GLSL_TEMPLATE, 'vs', injectionData(INJECT), true);
+  injectResult = injectShader(VS_GLSL_TEMPLATE, 'vertex', injectionData(INJECT), true);
   t.ok(
     fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL),
     'declarations correctly injected in vertex shader'
@@ -121,7 +121,7 @@ test('injectShader#injectShader', t => {
   );
   t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
 
-  injectResult = injectShader(FS_GLSL_TEMPLATE, 'fs', injectionData(INJECT), true);
+  injectResult = injectShader(FS_GLSL_TEMPLATE, 'fragment', injectionData(INJECT), true);
   t.ok(
     fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL),
     'declarations correctly injected in vertex shader'

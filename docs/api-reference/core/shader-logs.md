@@ -1,7 +1,12 @@
 # Shader Logs
 
-shadertools provides utilities for platform independent handling of compiler logs,
+Shader compilation and linking logs contain important information about .
+luma.gl provides a single interface to 
 in the form of a compiler message type and an error log formatting function.
+
+## Usage
+
+
 
 ## Types
 

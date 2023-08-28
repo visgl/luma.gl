@@ -1,11 +1,12 @@
+// luma.gl, MIT license
+
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../modules/module-injectors';
-import type { Injection } from '../shader-module/shader-module-instance';
 import {assert} from '../utils/assert';
 
 // TODO - experimental
 const MODULE_INJECTORS = {
-  vs: MODULE_INJECTORS_VS,
-  fs: MODULE_INJECTORS_FS
+  vertex: MODULE_INJECTORS_VS,
+  fragment: MODULE_INJECTORS_FS
 };
 
 const REGEX_START_OF_MAIN = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
@@ -13,6 +14,54 @@ const REGEX_END_OF_MAIN = /}\n?[^{}]*$/; // End of main, assumes main is last fu
 const fragments: string[] = [];
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
+
+/**
+ * 
+ */
+export type ShaderInjection = {
+  injection: string;
+  order: number;
+};
+
+/**
+ *  ShaderInjections, parsed and split per shader
+ */
+export type ShaderInjections = {
+  vertex: Record<string, ShaderInjection>;
+  fragment: Record<string, ShaderInjection>;
+};
+
+/**
+ * 
+ */
+export function normalizeInjections(injections: Record<string, string | ShaderInjection>): ShaderInjections {
+  const result: ShaderInjections = {vertex: {}, fragment: {}};
+
+  for (const hook in injections) {
+    let injection = injections[hook];
+    const stage = getHookStage(hook);
+    if (typeof injection === 'string') {
+      injection = {
+        order: 0,
+        injection
+      };
+    }
+
+    result[stage][hook] = injection;
+  }
+
+  return result;
+}
+
+function getHookStage(hook: string): 'vertex' | 'fragment' {
+  const type = hook.slice(0, 2);
+  switch (type) {
+    case 'vs': return 'vertex';
+    case 'fs': return 'fragment';
+    default:
+      throw new Error(type);
+  }
+}
 
 /**
 // A minimal shader injection/templating system.
@@ -26,15 +75,15 @@ export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 // eslint-disable-next-line complexity
 export function injectShader(
   source: string, 
-  type: 'vs' | 'fs', 
-  inject: Record<string, Injection[]>, 
+  stage: 'vertex' | 'fragment', 
+  inject: Record<string, ShaderInjection[]>, 
   injectStandardStubs = false
 ): string {
-  const isVertex = type === 'vs';
+  const isVertex = stage === 'vertex';
 
   for (const key in inject) {
     const fragmentData = inject[key];
-    fragmentData.sort((a: Injection, b: Injection): number => a.order - b.order);
+    fragmentData.sort((a: ShaderInjection, b: ShaderInjection): number => a.order - b.order);
     fragments.length = fragmentData.length;
     for (let i = 0, len = fragmentData.length; i < len; ++i) {
       fragments[i] = fragmentData[i].injection;
@@ -91,7 +140,7 @@ export function injectShader(
 
   // Finally, if requested, insert an automatic module injector chunk
   if (injectStandardStubs) {
-    source = source.replace(/\}\s*$/, (match: string) => match + MODULE_INJECTORS[type]);
+    source = source.replace(/\}\s*$/, (match: string) => match + MODULE_INJECTORS[stage]);
   }
 
   return source;
