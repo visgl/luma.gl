@@ -27,11 +27,11 @@ export {WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
 export {WEBGLCommandEncoder} from './adapter/resources/webgl-command-encoder';
 export {WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
 // export {WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
+export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 
 // non-api resources
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
-export {WEBGLVertexArrayObject} from './adapter/objects/webgl-vertex-array-object';
 
 // WebGL adapter classes (Legacy will likely be removed)
 export {Accessor} from './classic/accessor';

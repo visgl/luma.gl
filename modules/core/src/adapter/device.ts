@@ -17,6 +17,7 @@ import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
+import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 
 /** Device properties */
 export type DeviceProps = {
@@ -114,7 +115,7 @@ export type DeviceLimits = {
   readonly minUniformBufferOffsetAlignment?: number;
   readonly minStorageBufferOffsetAlignment?: number;
   readonly maxVertexBuffers?: number;
-  readonly maxVertexAttributes?: number;
+  readonly maxVertexAttributes: number;
   readonly maxVertexBufferArrayStride?: number;
   readonly maxInterStageShaderComponents?: number;
   readonly maxComputeWorkgroupStorageSize?: number;
@@ -311,6 +312,9 @@ export abstract class Device {
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
     throw new Error('not implemented');
   }
+
+  /** Create a vertex array */
+  abstract createVertexArray(props: VertexArrayProps): VertexArray;
 
   /** Create a RenderPass */
   abstract beginRenderPass(props?: RenderPassProps): RenderPass;

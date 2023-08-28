@@ -52,11 +52,15 @@ type BufferAttributeInfo = {
   byteStride: number;
 };
 
+/** 
+ * Map from "attribute names" to "resolved attribute infos" 
+ * containing information about both buffer layouts and shader attribute declarations
+ */
 export function getAttributeInfosFromLayouts(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[]
 ): Record<string, AttributeInfo> {
-  const attributeInfos: Record<string, ReturnType<typeof getAttributeInfoFromLayouts>> = {};
+  const attributeInfos: Record<string, AttributeInfo> = {};
   for (const attribute of shaderLayout.attributes) {
     attributeInfos[attribute.name] = getAttributeInfoFromLayouts(
       shaderLayout,
@@ -65,6 +69,22 @@ export function getAttributeInfosFromLayouts(
     );
   }
   return attributeInfos;
+}
+
+/** 
+ * Array indexed by "location" holding "resolved attribute infos" 
+ */
+export function getAttributeInfosByLocation(
+  shaderLayout: ShaderLayout,
+  bufferLayout: BufferLayout[],
+  maxVertexAttributes: number = 16
+): AttributeInfo[] {
+  const attributeInfos = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
+  const locationInfos: AttributeInfo[] = new Array(maxVertexAttributes).fill(null);
+  for (const attributeInfo of Object.values(attributeInfos)) {
+    locationInfos[attributeInfo.location] = attributeInfo;
+  }
+  return locationInfos;
 }
 
 /**

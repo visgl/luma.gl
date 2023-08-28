@@ -1,15 +1,14 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
-import type {TypedArray} from '../../types';
 import type {UniformValue} from '../types/types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 // import {normalizeAttributeMap} from '../helpers/attribute-bindings';
 import {Resource, ResourceProps} from './resource';
-import type {Buffer} from './buffer';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
+import {VertexArray} from './vertex-array';
 
 export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
@@ -48,10 +47,6 @@ export type RenderPipelineProps = ResourceProps & {
   /** Number of instances */
   instanceCount?: number;
 
-  /** Optional index buffer */
-  indices?: Buffer | null;
-  /** Buffers for attributes */
-  attributes?: Record<string, Buffer>;
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
   /** @deprecated uniforms (WebGL only) */
@@ -81,8 +76,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     vertexCount: 0,
     instanceCount: 0,
   
-    indices: null,
-    attributes: {},
     bindings: {},
     uniforms: {}
   }; 
@@ -90,19 +83,19 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
 
   hash: string = '';
-  abstract vs: Shader;
-  abstract fs: Shader | null;
+  abstract readonly vs: Shader;
+  abstract readonly fs: Shader | null;
+  /** The merged layout */
+  shaderLayout: ShaderLayout;
+  /** Buffer map describing buffer interleaving etc */
+  readonly bufferLayout: BufferLayout[];
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, RenderPipeline.defaultProps);
+    this.shaderLayout = this.props.shaderLayout;
+    this.bufferLayout = this.props.bufferLayout || [];
   }
 
-  /** Set attributes (stored on pipeline and set before each call) */
-  abstract setIndexBuffer(indices: Buffer | null): void;
-  /** Set attributes (stored on pipeline and set before each call) */
-  abstract setAttributes(attributes: Record<string, Buffer>): void;
-  /** Set constant attributes (WebGL only) */
-  abstract setConstantAttributes(attributes: Record<string, TypedArray>): void;
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
   /** Uniforms 
@@ -116,6 +109,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   abstract draw(options: {
     /** Render pass to draw into (targeting screen or framebuffer) */
     renderPass?: RenderPass;
+    /** vertex attributes */
+    vertexArray: VertexArray;
     /** Number of "rows" in 'vertex' buffers */
     vertexCount?: number;
     /** Number of "rows" in 'instance' buffers */

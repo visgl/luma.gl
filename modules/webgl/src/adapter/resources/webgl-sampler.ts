@@ -30,7 +30,7 @@ export class WEBGLSampler extends Sampler {
   override destroy(): void {
     if (this.handle) {
       this.device.gl2.deleteSampler(this.handle);
-      // @ts-expect-error
+      // @ts-expect-error read-only/undefined
       this.handle = undefined;
     }
   }

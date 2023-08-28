@@ -333,8 +333,8 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   if (texture) {
     texture.unbind();
   }
-  // @ts-expect-error
-  device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+  // ts-expect-error
+  // device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (destroyFramebuffer) {
     framebuffer.destroy();
   }
