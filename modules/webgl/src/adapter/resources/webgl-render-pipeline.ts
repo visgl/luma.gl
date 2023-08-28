@@ -393,6 +393,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         continue; // eslint-disable-line no-continue
       }
       this.vertexArrayObject.setConstant(attributeInfo.location, value);
+      this.vertexArrayObject.enable(attributeInfo.location, false);
     }
   }
 
