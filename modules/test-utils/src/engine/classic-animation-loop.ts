@@ -12,7 +12,7 @@ import {Timeline, AnimationProps} from '@luma.gl/engine';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
-import {isWebGL, resetParameters} from '@luma.gl/webgl';
+import {isWebGL, resetGLParameters} from '@luma.gl/webgl';
 // import {default as Query} from '../classic/query';
 // import {ClassicFramebuffer} from '../classic/framebuffer';
 
@@ -580,7 +580,7 @@ export class ClassicAnimationLoop {
     }
 
     // Reset the WebGL context.
-    resetParameters(this.gl);
+    resetGLParameters(this.gl);
 
     this._createInfoDiv();
   }

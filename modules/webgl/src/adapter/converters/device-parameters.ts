@@ -9,7 +9,7 @@ import {
 import {GL} from '@luma.gl/constants';
 import type {GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
-import {setParameters} from '../../context/parameters/unified-parameter-api';
+import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
 
 /* eslint-disable no-unused-expressions */ // For expression ? gl.enable() : gl.disable()
@@ -37,7 +37,7 @@ export function withGLParameters<T = unknown>(
   // @ts-expect-error
   pushContextState(device.gl);
   try {
-    setParameters(device, parameters);
+    setGLParameters(device, parameters);
     return func(device);
   } finally {
     // @ts-expect-error

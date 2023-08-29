@@ -3,7 +3,7 @@ import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import {setDeviceParameters, GLParameters, getParameters, resetParameters} from '@luma.gl/webgl';
+import {setDeviceParameters, GLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 // import {createTestDevice} from '@luma.gl/test-utils';
 // const webgl1Device = createTestDevice({debug: true, webgl2: false});
@@ -20,12 +20,12 @@ const {gl} = fixture;
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
 const getGLParameter = (parameter: keyof GLParameters): any => {
-  const parameters = getParameters(gl, [parameter]);
+  const parameters = getGLParameters(gl, [parameter]);
   return parameters[parameter];
 }
 
 test('setDeviceParameters#cullMode', (t) => {
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
@@ -44,7 +44,7 @@ test('setDeviceParameters#cullMode', (t) => {
 });
 
 test('setDeviceParameters#frontFace', (t) => {
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
@@ -58,7 +58,7 @@ test('setDeviceParameters#frontFace', (t) => {
 });
 
 test('setDeviceParameters#depthWriteEnabled', (t) => {
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
@@ -85,11 +85,11 @@ test('setDeviceParameters#depthWriteEnabled', (t) => {
 
 
 test.skip('setDeviceParameters#depthClearValue', (t) => {
-  // let value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
+  // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   // t.is(value, 1, `got expected value ${stringify(value)}`);
 
   // // setDeviceParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
-  // value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
+  // value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   // t.is(value, -1, `got expected value ${stringify(value)}`);
 
   // // @ts-expect-error
@@ -104,11 +104,11 @@ test.skip('setDeviceParameters#depthClearValue', (t) => {
 type TestClause = {check?: GLParameters, set?: Parameters};
 
 function testClauses(t: Test, name: string, clauses: TestClause[]): void {
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   for (const clause of clauses) {
     if (clause.check) {
-      const values = getParameters(gl, clause.check);
+      const values = getGLParameters(gl, clause.check);
       for (const [key, value] of Object.entries(clause.check)) {
         t.deepEqual(values[key], value, `got expected value for ${name}`);
       }

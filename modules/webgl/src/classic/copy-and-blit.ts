@@ -5,7 +5,7 @@ import {GL} from '@luma.gl/constants';
 import {BufferWithAccessor as Buffer} from './buffer-with-accessor';
 import {WEBGLTexture}  from  '../adapter/resources/webgl-texture';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
-import {withParameters} from '../context/state-tracker/with-parameters';
+import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 
@@ -122,7 +122,7 @@ export function readPixelsToBuffer(
   }
 
   target.bind({glTarget: GL.PIXEL_PACK_BUFFER});
-  withParameters(gl2, {framebuffer}, () => {
+  withGLParameters(gl2, {framebuffer}, () => {
     gl2.readPixels(
       sourceX,
       sourceY,
