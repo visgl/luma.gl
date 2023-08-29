@@ -53,28 +53,19 @@ export {setDeviceParameters, withDeviceParameters} from './adapter/converters/de
 
 export type {GLParameters} from '@luma.gl/constants';
 export {
-  getParameters,
-  setParameters,
-  resetParameters
+  getGLParameters,
+  setGLParameters,
+  resetGLParameters
 } from './context/parameters/unified-parameter-api';
 
-export {
-  withParameters
-} from './context/state-tracker/with-parameters';
-
-// State tracking
-export {
-  trackContextState,
-  pushContextState,
-  popContextState
-} from './context/state-tracker/track-context-state';
-
-// Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
-export {polyfillContext} from './context/polyfill/polyfill-context';
+export {withGLParameters} from './context/state-tracker/with-parameters';
 
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
-export {convertGLToTextureFormat, _checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
+export {
+  convertGLToTextureFormat,
+  _checkFloat32ColorAttachment
+} from './adapter/converters/texture-formats';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
@@ -82,3 +73,11 @@ export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-
 // DEPRECATED EXPORTS
 export {clear} from './classic/clear';
 export {readPixelsToBuffer, readPixelsToArray, copyToTexture} from './classic/copy-and-blit';
+// State tracking
+export {
+  trackContextState,
+  pushContextState,
+  popContextState
+} from './context/state-tracker/track-context-state';
+// Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
+export {polyfillContext} from './context/polyfill/polyfill-context';

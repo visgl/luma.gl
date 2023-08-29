@@ -1,6 +1,6 @@
 import {Device, Framebuffer, assert} from '@luma.gl/core';
 import {WebGLDevice} from '../adapter/webgl-device';
-import {withParameters} from '../context/state-tracker/with-parameters';
+import {withGLParameters} from '../context/state-tracker/with-parameters';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
@@ -57,7 +57,7 @@ export function clear(
   assert(clearFlags !== 0, ERR_ARGUMENTS);
 
   // Temporarily set any clear "colors" and call clear
-  withParameters(device.gl, parameters, () => {
+  withGLParameters(device.gl, parameters, () => {
     device.gl.clear(clearFlags);
   });
 }
@@ -73,7 +73,7 @@ export function clearBuffer(
   const device = WebGLDevice.attach(gl);
 
   const {framebuffer = null, buffer = GL_COLOR, drawBuffer = 0, value = [0, 0, 0, 0]} = options || {};
-  withParameters(device.gl2, {framebuffer}, () => {
+  withGLParameters(device.gl2, {framebuffer}, () => {
     // Method selection per OpenGL ES 3 docs
     switch (buffer) {
       case GL_COLOR:

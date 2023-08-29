@@ -1,10 +1,10 @@
 import {RenderPass, RenderPassProps, NumericArray, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
-import {withParameters} from '../../context/state-tracker/with-parameters';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
+import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 
 // Should collapse during minification
-
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
 const GL_STENCIL_BUFFER_BIT = 0x00000400;
 const GL_COLOR_BUFFER_BIT = 0x00004000;
@@ -89,6 +89,8 @@ export class WEBGLRenderPass extends RenderPass {
     }
 
     this.glParameters = glParameters;
+
+    setGLParameters(this.device, glParameters);
   }
 
   // Internal
@@ -116,7 +118,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     if (clearMask !== 0) {
       // Temporarily set any clear "colors" and call clear
-      withParameters(this.device, glParameters, () => {
+      withGLParameters(this.device, glParameters, () => {
         this.device.gl.clear(clearMask);
       });
 
@@ -131,7 +133,7 @@ export class WEBGLRenderPass extends RenderPass {
    * WebGL2 - clear a specific color buffer 
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
-    withParameters(this.device.gl2, {framebuffer: this.props.framebuffer}, () => {
+    withGLParameters(this.device.gl2, {framebuffer: this.props.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int32Array:

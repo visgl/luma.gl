@@ -5,9 +5,9 @@ import {
   trackContextState,
   pushContextState,
   popContextState,
-  getParameters,
-  setParameters,
-  resetParameters,
+  getGLParameters,
+  setGLParameters,
+  resetGLParameters,
   WEBGLTexture
 } from '@luma.gl/webgl';
 
@@ -42,8 +42,8 @@ test('WebGLState#trackContextState', (t) => {
 test('WebGLState#push & pop', (t) => {
   const {gl} = device;
 
-  resetParameters(gl);
-  let parameters = getParameters(gl);
+  resetGLParameters(gl);
+  let parameters = getGLParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
@@ -58,8 +58,8 @@ test('WebGLState#push & pop', (t) => {
   pushContextState(gl);
 
   // Set custom values and verify.
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET1);
-  parameters = getParameters(gl);
+  setGLParameters(gl, ENUM_STYLE_SETTINGS_SET1);
+  parameters = getGLParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
     t.deepEqual(
@@ -72,8 +72,8 @@ test('WebGLState#push & pop', (t) => {
   pushContextState(gl);
 
   // Set custom values and verify
-  setParameters(gl, ENUM_STYLE_SETTINGS_SET2);
-  parameters = getParameters(gl);
+  setGLParameters(gl, ENUM_STYLE_SETTINGS_SET2);
+  parameters = getGLParameters(gl);
   for (const [key, value] of Object.entries(ENUM_STYLE_SETTINGS_SET2)) {
     t.deepEqual(
       value,
@@ -84,7 +84,7 @@ test('WebGLState#push & pop', (t) => {
 
   // Pop and verify values restore to previous state
   popContextState(gl);
-  parameters = getParameters(gl);
+  parameters = getGLParameters(gl);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
@@ -96,7 +96,7 @@ test('WebGLState#push & pop', (t) => {
   }
 
   popContextState(gl);
-  parameters = getParameters(gl);
+  parameters = getGLParameters(gl);
 
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
@@ -113,8 +113,8 @@ test('WebGLState#push & pop', (t) => {
 test('WebGLState#gl API', (t) => {
   const {gl} = device;
 
-  resetParameters(gl);
-  let parameters = getParameters(gl);
+  resetGLParameters(gl);
+  let parameters = getGLParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
@@ -138,12 +138,12 @@ test('WebGLState#gl API', (t) => {
     }
   }
 
-  parameters = getParameters(gl);
+  parameters = getGLParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
     if (!isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
       // @ts-expect-error
-      const value = getParameters(gl, [key])[key];
+      const value = getGLParameters(gl, [key])[key];
       t.deepEqual(
         value,
         ENUM_STYLE_SETTINGS_SET1[key],
@@ -153,7 +153,7 @@ test('WebGLState#gl API', (t) => {
   }
 
   popContextState(gl);
-  parameters = getParameters(gl);
+  parameters = getGLParameters(gl);
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
     t.deepEqual(
@@ -169,7 +169,7 @@ test('WebGLState#gl API', (t) => {
 test('WebGLState#intercept gl calls', (t) => {
   const {gl} = device;
 
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   pushContextState(gl);
 
@@ -178,22 +178,22 @@ test('WebGLState#intercept gl calls', (t) => {
   t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), buffer, 'buffer is bound');
 
   gl.blendEquation(gl.FUNC_SUBTRACT);
-  t.is(getParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
+  t.is(getGLParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
 
   gl.blendFunc(gl.ONE, gl.ONE);
-  t.is(getParameters(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
+  t.is(getGLParameters(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
 
   gl.stencilMask(8);
-  t.is(getParameters(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
+  t.is(getGLParameters(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
 
   gl.stencilFunc(gl.NEVER, 0, 1);
-  t.is(getParameters(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
+  t.is(getGLParameters(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
 
   gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
-  t.is(getParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
+  t.is(getGLParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
 
   popContextState(gl);
-  const parameters = getParameters(gl);
+  const parameters = getGLParameters(gl);
 
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
@@ -212,7 +212,7 @@ test('WebGLState#intercept gl calls', (t) => {
 test('WebGLState#not cached parameters', (t) => {
   const {gl} = device;
 
-  resetParameters(gl);
+  resetGLParameters(gl);
 
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 

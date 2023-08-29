@@ -20,7 +20,7 @@ export type {GLParameters};
  * @note requires a `cache` object to be set on the context (gl.state.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
-export function setParameters(
+export function setGLParameters(
   device: Device | WebGLRenderingContext,
   parameters: GLParameters
 ): void {
@@ -88,7 +88,7 @@ export function setParameters(
  * considered a very slow operation, to be used only if/when a context already manipulated
  * by external code needs to be synchronized for the first time
  */
-export function getParameters(
+export function getGLParameters(
   device: Device | WebGLRenderingContext,
   parameters: keyof GLParameters | (keyof GLParameters)[] | GLParameters = GL_PARAMETER_DEFAULTS
 ): GLParameters {
@@ -120,8 +120,8 @@ export function getParameters(
  * NOT the canvas size dimensions, so they will have to be properly set after
  * calling this function.
  */
-export function resetParameters(device: Device | WebGLRenderingContext): void {
-  setParameters(device, GL_PARAMETER_DEFAULTS);
+export function resetGLParameters(device: Device | WebGLRenderingContext): void {
+  setGLParameters(device, GL_PARAMETER_DEFAULTS);
 }
 
 // Helpers

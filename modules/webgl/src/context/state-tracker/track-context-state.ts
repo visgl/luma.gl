@@ -2,7 +2,7 @@
 // NOTE: this system does not handle buffer bindings
 import {assert} from '@luma.gl/core';
 import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS, NON_CACHE_PARAMETERS} from '../parameters/webgl-parameter-tables';
-import {setParameters, getParameters} from '../parameters/unified-parameter-api';
+import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
 
 // HELPER CLASS - GLState
@@ -24,7 +24,7 @@ class GLState {
     } = {}
   ) {
     this.gl = gl;
-    this.cache = copyState ? getParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
+    this.cache = copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
     this.log = log;
 
     this._updateCache = this._updateCache.bind(this);
@@ -39,7 +39,7 @@ class GLState {
     assert(this.stateStack.length > 0);
     // Use the saved values in the state stack to restore parameters
     const oldValues = this.stateStack[this.stateStack.length - 1];
-    setParameters(this.gl, oldValues);
+    setGLParameters(this.gl, oldValues);
     // Don't pop until we have reset parameters (to make sure other "stack frames" are not affected)
     this.stateStack.pop();
   }

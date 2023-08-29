@@ -15,7 +15,7 @@ import {
 } from '@luma.gl/core';
 import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
-import {withParameters} from '../../context/state-tracker/with-parameters';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
   convertTextureFormatToGL,
   getWebGLTextureParameters,
@@ -428,7 +428,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     this.mipmaps = true;
 
     this.gl.bindTexture(this.target, this.handle);
-    withParameters(this.gl, params, () => {
+    withGLParameters(this.gl, params, () => {
       this.gl.generateMipmap(this.target);
     });
     this.gl.bindTexture(this.target, null);
@@ -504,7 +504,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     let gl2;
 
-    withParameters(this.gl, parameters, () => {
+    withGLParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
           gl.texImage2D(target, level, glFormat, width, height, 0 /* border*/, dataFormat, type, data);
@@ -644,7 +644,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.gl.bindTexture(this.target, this.handle);
 
-    withParameters(this.gl, parameters, () => {
+    withGLParameters(this.gl, parameters, () => {
       // TODO - x,y parameters
       if (compressed) {
         this.gl.compressedTexSubImage2D(target, level, x, y, width, height, glFormat, data);
@@ -904,7 +904,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     const webglTextureFormat = getWebGLTextureParameters(format, this.device.isWebGL2);
 
-    withParameters(this.gl, parameters, () => {
+    withGLParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
         // @ts-expect-error
         this.gl.texImage3D(
