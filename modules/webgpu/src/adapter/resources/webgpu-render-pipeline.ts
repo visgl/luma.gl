@@ -66,27 +66,21 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
   }
 
-  setAttributes(attributes: Record<string, Buffer>): void {
-    for (const [name, buffer] of Object.entries(attributes)) {
+  setAttributes(attributes: Record<string, Buffer | TypedArray | null>): void {
+    for (const [name, value] of Object.entries(attributes)) {
+      if (ArrayBuffer.isView(value)) {
+        throw new Error('not implemented');
+      }
+
       const bufferIndex = this._bufferSlots[name];
       if (bufferIndex >= 0) {
-        this._buffers[bufferIndex] = buffer;
+        this._buffers[bufferIndex] = value;
       } else {
         throw new Error(
           `Setting attribute '${name}' not listed in shader layout for program ${this.id}`
         );
       }
     }
-    // for (let i = 0; i < this._bufferSlots.length; ++i) {
-    //   const bufferName = this._bufferSlots[i];
-    //   if (attributes[bufferName]) {
-    //     this.handle
-    //   }
-    // }
-  }
-
-  setConstantAttributes(attributes: Record<string, TypedArray>): void {
-    throw new Error('not implemented');
   }
 
   setBindings(bindings: Record<string, Binding>): void {

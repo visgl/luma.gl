@@ -97,12 +97,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     super(device, props, RenderPipeline.defaultProps);
   }
 
-  /** Set attributes (stored on pipeline and set before each call) */
+  /** Set index buffer (stored on pipeline and set before each call) */
   abstract setIndexBuffer(indices: Buffer | null): void;
-  /** Set attributes (stored on pipeline and set before each call) */
-  abstract setAttributes(attributes: Record<string, Buffer>): void;
-  /** Set constant attributes (WebGL only) */
-  abstract setConstantAttributes(attributes: Record<string, TypedArray>): void;
+  /** Set attributes */
+  abstract setAttributes(attributes: Record<string, Buffer | TypedArray | null>): void;
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
   /** Uniforms 

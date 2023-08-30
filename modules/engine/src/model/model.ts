@@ -89,9 +89,7 @@ export class Model {
   /** Index buffer */
   indices: Buffer | null = null;
   /** Buffer-valued attributes */
-  bufferAttributes: Record<string, Buffer> = {};
-  /** Constant-valued attributes */
-  constantAttributes: Record<string, TypedArray> = {};
+  attributes: Record<string, Buffer | TypedArray | null> = {};
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding> = {};
   /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
@@ -188,8 +186,7 @@ export class Model {
     // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
     // Any caching needs to be done inside the pipeline functions
     this.pipeline.setIndexBuffer(this.indices);
-    this.pipeline.setAttributes(this.bufferAttributes);
-    this.pipeline.setConstantAttributes(this.constantAttributes);
+    this.pipeline.setAttributes(this.attributes);
     this.pipeline.setBindings(this.bindings);
     this.pipeline.setUniforms(this.uniforms);
 
@@ -297,22 +294,12 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(bufferAttributes: Record<string, Buffer>): void {
-    if (bufferAttributes.indices) {
+  setAttributes(attributes: Record<string, Buffer | TypedArray | null>): void {
+    if (attributes.indices) {
       log.warn(`Model:${this.id} setAttributes() - indices should be set using setIndexBuffer()`);
     }
 
-    Object.assign(this.bufferAttributes, bufferAttributes);
-  }
-
-  /**
-   * Sets constant attributes
-   * @note Overrides any attributes previously set with the same name
-   * @param constantAttributes
-   */
-  setConstantAttributes(constantAttributes: Record<string, TypedArray>): void {
-    // TODO - this doesn't work under WebGPU, we'll need to create buffers or inject uniforms
-    Object.assign(this.constantAttributes, constantAttributes);
+    Object.assign(this.attributes, attributes);
   }
 
   /**
@@ -329,7 +316,6 @@ export class Model {
    * @returns self for chaining
    */
   setUniforms(uniforms: Record<string, UniformValue>): void {
-    this.pipeline.setUniforms(uniforms);
     Object.assign(this.uniforms, uniforms);
   }
 
