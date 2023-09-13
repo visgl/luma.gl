@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v8.5.21
+
+- Fix GLTF model defines (#1807)
+
 ## v8.5.20
 
 - Fix cssToDeviceRatio when auto resize is disabled (#1746)

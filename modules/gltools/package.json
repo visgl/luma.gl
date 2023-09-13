@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltools",
-  "version": "8.5.20",
+  "version": "8.5.21",
   "description": "WebGL2 API Polyfills for WebGL1 WebGLRenderingContext",
   "license": "MIT",
   "repository": {
@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/constants": "8.5.20",
+    "@luma.gl/constants": "8.5.21",
     "@probe.gl/env": "^3.5.0",
     "@probe.gl/log": "^3.5.0",
     "@types/offscreencanvas": "^2019.7.0"

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-instancing",
-  "version": "8.5.20",
+  "version": "8.5.21",
   "private": true,
   "scripts": {
     "start": "webpack-dev-server --progress --hot --open -d",
@@ -8,10 +8,10 @@
     "build": "webpack --env.local --env.analyze --profile --json > stats.json"
   },
   "dependencies": {
-    "@luma.gl/engine": "8.5.20",
-    "@luma.gl/gltools": "8.5.20",
-    "@luma.gl/shadertools": "8.5.20",
-    "@luma.gl/webgl": "8.5.20",
+    "@luma.gl/engine": "8.5.21",
+    "@luma.gl/gltools": "8.5.21",
+    "@luma.gl/shadertools": "8.5.21",
+    "@luma.gl/webgl": "8.5.21",
     "@math.gl/core": "^3.5.0"
   },
   "devDependencies": {
