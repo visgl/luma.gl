@@ -80,23 +80,18 @@ export default function createGLTFModel(gl, options) {
   managedResources.push(...materialParser.generatedTextures);
   managedResources.push(...Object.values(attributes).map(attribute => attribute.buffer));
 
-  const model = new ModelNode(
-    gl,
-    Object.assign(
-      {
-        id,
-        drawMode,
-        vertexCount,
-        modules: [pbr],
-        defines: materialParser.defines,
-        parameters: materialParser.parameters,
-        vs: addVersionToShader(gl, vs),
-        fs: addVersionToShader(gl, fs),
-        managedResources
-      },
-      modelOptions
-    )
-  );
+  const model = new ModelNode(gl, {
+    id,
+    drawMode,
+    vertexCount,
+    modules: [pbr],
+    parameters: materialParser.parameters,
+    vs: addVersionToShader(gl, vs),
+    fs: addVersionToShader(gl, fs),
+    managedResources,
+    ...modelOptions,
+    defines: {...materialParser.defines, ...modelOptions.defines}
+  });
 
   model.setProps({attributes});
   model.setUniforms(materialParser.uniforms);
