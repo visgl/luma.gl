@@ -60,6 +60,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs,
       shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetLeftModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+      ],
       vertexCount: 3,
       attributes: {
         position: this.positionBuffer
@@ -75,6 +78,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       vertexCount: 3,
       modules: [offsetRightModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+      ],
       attributes: {
         position: this.positionBuffer
       },
