@@ -10,7 +10,6 @@ import {WEBGLVertexArray} from '@luma.gl/webgl';
 
 test.only('VertexArray construct/delete', t => {
   for (const device of getWebGLTestDevices()) {
-    debugger
     const renderPipeline = device.createRenderPipeline({});
     const vertexArray = device.createVertexArray({renderPipeline});
     t.ok(vertexArray instanceof WEBGLVertexArray, 'VertexArray construction successful');
