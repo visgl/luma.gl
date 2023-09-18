@@ -1,7 +1,6 @@
 
 // ClipSpace
 import {Device, glsl} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
 import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
 
@@ -29,11 +28,11 @@ const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
  * A flat geometry that covers the "visible area" that the GPU renders.
  */
 export class ClipSpace extends Model {
-  constructor(device: Device | WebGLRenderingContext, opts?: ModelProps) {
+  constructor(device: Device, opts?: ModelProps) {
     const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
 
     super(
-      WebGLDevice.attach(device),
+      device,
       {
         ...opts,
         vs: CLIPSPACE_VERTEX_SHADER,

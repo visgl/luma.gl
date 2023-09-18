@@ -1,10 +1,11 @@
+
 // luma.gl, MIT license
 
 import {Device, Buffer, Texture, Framebuffer} from '@luma.gl/core';
-import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
-import {GL} from '@luma.gl/constants';
-import {WebGLDevice, GLParameters} from '@luma.gl/webgl';
-import {Model} from '../model/model';
+import {GLParameters} from '@luma.gl/constants';
+// import {getShaderInfo, getPassthroughFS} from '@luma.gl/shadertools';
+// import {GL} from '@luma.gl/constants';
+// import {Model} from '../model/model';
 
 // import {AccessorObject} from '@luma.gl/webgl';
 // import {default as TransformFeedback} from '../classic/transform-feedback';
@@ -86,7 +87,7 @@ export class Transform {
     return false;
   }
 
-  readonly device: WebGLDevice;
+  readonly device: Device;
   readonly gl: WebGL2RenderingContext;
   // model: Model;
   elementCount = 0;
@@ -95,6 +96,7 @@ export class Transform {
   elementIDBuffer: Buffer | null = null;
 
   constructor(device: Device | WebGLRenderingContext, props: TransformProps = {}) {
+    /*
     this.device = WebGLDevice.attach(device);
     // TODO assert webgl2?
     this.gl = this.device.gl2;
@@ -106,7 +108,6 @@ export class Transform {
       ...props,
       fs: props.fs || getPassthroughFS({version: getShaderInfo(props.vs).version}),
       id: props.id || 'transform-model',
-      // @ts-expect-error
       drawMode: props.drawMode || GL.POINTS,
       vertexCount: props.elementCount
     });
@@ -115,6 +116,7 @@ export class Transform {
     //   this.bufferTransform.setupResources({model: this.model});
     // }
     Object.seal(this);
+    */
   }
 
   /** Delete owned resources. */

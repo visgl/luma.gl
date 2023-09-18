@@ -38,7 +38,7 @@ export class WebGPUVertexArray extends VertexArray {
    */
   setIndexBuffer(buffer: Buffer | null): void {
     // assert(!elementBuffer || elementBuffer.glTarget === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
-    this.indices = buffer;
+    this.indexBuffer = buffer;
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
@@ -58,8 +58,8 @@ export class WebGPUVertexArray extends VertexArray {
 
   override bindBeforeRender(renderPass: RenderPass, firstIndex?: number, indexCount?: number): void {
     const webgpuRenderPass = renderPass as WebGPURenderPass;
-    const webgpuIndices = this.indices as WebGPUBuffer;
-    webgpuRenderPass.handle.setIndexBuffer(webgpuIndices?.handle, webgpuIndices?.indexType);
+    const webgpuIndexBuffer = this.indexBuffer as WebGPUBuffer;
+    webgpuRenderPass.handle.setIndexBuffer(webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType);
     for (let location = 0; location < this.maxVertexAttributes; location++) {
       const webgpuBuffer = this.attributes[location] as WebGPUBuffer;
       webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer.handle);

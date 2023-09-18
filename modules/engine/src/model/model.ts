@@ -37,16 +37,20 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Geometry */
   geometry?: GPUGeometry | Geometry | null;
+
   /** Vertex count */
   vertexCount?: number;
   /** instance count */
   instanceCount?: number;
 
-  /** shadertool modules */
-  moduleSettings?: Record<string, Record<string, any>>;
+  indexBuffer?: Buffer | null;
+  /** @note this is really a map of buffers, not a map of attributes */
+  attributes?: Record<string, Buffer>;
+  /**   */
+  constantAttributes?: Record<string, TypedArray>;
 
-  /** @deprecated Use props.indexBuffer */
-  indices?: Buffer | null;
+  /** Mapped uniforms for shadertool modules */
+  moduleSettings?: Record<string, Record<string, any>>;
 };
 
 /**
@@ -70,7 +74,6 @@ export class Model {
     moduleSettings: {},
     geometry: null,
     indexBuffer: null,
-    indices: null,
     attributes: {},
     constantAttributes: {},
 
@@ -190,14 +193,18 @@ export class Model {
     if (props.instanceCount) {
       this.setInstanceCount(props.instanceCount);
     }
+    // @ts-expect-error
     if (props.indices) {
-      this.setIndexBuffer(props.indices);
+      throw new Error('Model.props.indices removed. Use props.indexBuffer')
     }
     if (props.indexBuffer) {
       this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
       this.setAttributes(props.attributes);
+    }
+    if (props.constantAttributes) {
+      this.setConstantAttributes(props.constantAttributes);
     }
     if (props.bindings) {
       this.setBindings(props.bindings);
