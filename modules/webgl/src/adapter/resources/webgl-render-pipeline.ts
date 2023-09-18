@@ -160,8 +160,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     } = options;
 
     const glDrawMode = getGLDrawMode(this.props.topology);
-    const isIndexed: boolean = Boolean(vertexArray.indices);
-    const glIndexType = (vertexArray.indices as WEBGLBuffer)?.glIndexType;
+    const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
+    const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
     const isInstanced: boolean = Number(instanceCount) > 0;
 
     // Avoid WebGL draw call when not rendering any data or values are incomplete

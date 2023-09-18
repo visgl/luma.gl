@@ -35,10 +35,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
-  indexBuffer?: Buffer | null;
-  attributes?: Record<string, Buffer>;
-  constantAttributes?: Record<string, TypedArray>;
-
   /** Geometry */
   geometry?: GPUGeometry | Geometry | null;
   /** Vertex count */
@@ -395,7 +391,7 @@ export class Model {
       }
       if (!set) {
         log.warn(
-          `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${name}"`
+          `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
       }
     }

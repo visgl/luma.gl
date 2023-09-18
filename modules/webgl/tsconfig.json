@@ -6,7 +6,7 @@
     // "strict": true,
     // "noImplicitAny": true,
     "composite": true,
-    "rootDir": "src",
+    "rootDirs": ["src", "test"],
     "outDir": "dist"
   },
   "references": [

@@ -22,7 +22,7 @@ export class WEBGLVertexArray extends VertexArray {
   readonly device: WebGLDevice;
   readonly handle: WebGLVertexArrayObject;
 
-  /** Buffer constant */
+  /** Attribute 0 buffer constant */
   private buffer: BufferWithAccessor | null = null;
   private bufferValue = null;
 
@@ -61,12 +61,14 @@ export class WEBGLVertexArray extends VertexArray {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
-    if (buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
+    if (buffer && (buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER)) {
       throw new Error('Use .setBuffer()');
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
     this.device.gl2.bindVertexArray(this.handle);
     this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
+
+    this.indexBuffer = buffer;
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
@@ -96,6 +98,8 @@ export class WEBGLVertexArray extends VertexArray {
     this.device.gl.enableVertexAttribArray(location);
     // Set the step mode 0=vertex, 1=instance
     this.device.gl2.vertexAttribDivisor(location, divisor || 0);
+
+    this.attributes[location] = buffer;
   }
 
   /** Set a location in vertex attributes array to a constant value, disables the location */
