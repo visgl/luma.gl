@@ -4,16 +4,17 @@ import type {PlatformInfo} from './platform-info';
 import type {AssembleShaderOptions} from './assemble-shaders';
 
 /**
- * Shader selection 
+ * Options for `ShaderAssembler.assembleShaders()`
  */
 export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
-  // Model also accepts a string shaders
+  /** Vertex shader source. Can be GLSL or WGSL or both */
   vs?: {glsl?: string; wgsl?: string} | string | null;
+  /** Fragment shader source. Can be GLSL or WGSL or both */
   fs?: {glsl?: string; wgsl?: string} | string | null;  
 };
 
 /**
- * TODO - should this functionality move into shadertools / assembleShaders ?
+ * Shader selection 
  * @param device
  * @param props
  * @returns

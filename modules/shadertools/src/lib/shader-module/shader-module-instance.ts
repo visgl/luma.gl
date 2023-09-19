@@ -3,13 +3,9 @@
 import {assert} from '../utils/assert';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
 import {ShaderModule, ShaderModuleDeprecation} from './shader-module';
+import { ShaderInjection, normalizeInjections } from '../shader-assembly/shader-injections';
 
-export type Injection = {
-  injection: string;
-  order: number;
-}
-
-/** A processed ShaderModule, ready to use with `assembleShaders()` */
+/** An initialized ShaderModule, ready to use with `assembleShaders()` */
 export class ShaderModuleInstance {
   name: string;
   vs?: string;
@@ -19,31 +15,34 @@ export class ShaderModuleInstance {
   deprecations: ShaderModuleDeprecation[];
   defines: Record<string, string | number>;
   injections: {
-    vs: Record<string, Injection>;
-    fs: Record<string, Injection>;
+    vertex: Record<string, ShaderInjection>;
+    fragment: Record<string, ShaderInjection>;
   };
   uniforms: Record<string, PropValidator> = {};
   uniformFormats: Record<string, PropValidator> = {};
 
-  static instantiateModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
+  static instantiateModules(
+    modules: (ShaderModule | ShaderModuleInstance)[]
+  ): ShaderModuleInstance[] {
     return modules.map((module: ShaderModule | ShaderModuleInstance) => {
       if (module instanceof ShaderModuleInstance) {
         return module;
       }
-  
+
       assert(
         typeof module !== 'string',
         `Shader module use by name is deprecated. Import shader module '${module}' and use it directly.`
       );
       assert(module.name, 'shader module has no name');
-  
+
       const moduleObject = new ShaderModuleInstance(module);
-      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(module.dependencies || []);
-  
+      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(
+        module.dependencies || []
+      );
+
       return moduleObject;
     });
   }
-  
 
   constructor(props: ShaderModule) {
     const {
@@ -55,7 +54,7 @@ export class ShaderModuleInstance {
       getUniforms,
       deprecations = [],
       defines = {},
-      inject = {},
+      inject = {}
     } = props;
 
     assert(typeof name === 'string');
@@ -74,13 +73,13 @@ export class ShaderModuleInstance {
   }
 
   // Extracts the source code chunk for the specified shader type from the named shader module
-  getModuleSource(type: 'vs' | 'fs'): string {
+  getModuleSource(stage: 'vertex' | 'fragment'): string {
     let moduleSource;
-    switch (type) {
-      case 'vs':
+    switch (stage) {
+      case 'vertex':
         moduleSource = this.vs || '';
         break;
-      case 'fs':
+      case 'fragment':
         moduleSource = this.fs || '';
         break;
       default:
@@ -109,7 +108,7 @@ ${moduleSource}\
 
   // Warn about deprecated uniforms or functions
   checkDeprecations(shaderSource: string, log: any): void {
-    this.deprecations.forEach((def) => {
+    this.deprecations.forEach(def => {
       if (def.regex?.test(shaderSource)) {
         if (def.deprecated) {
           log.deprecated(def.old, def.new)();
@@ -121,7 +120,7 @@ ${moduleSource}\
   }
 
   _parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
-    deprecations.forEach((def) => {
+    deprecations.forEach(def => {
       switch (def.type) {
         case 'function':
           def.regex = new RegExp(`\\b${def.old}\\(`);
@@ -152,37 +151,4 @@ ${moduleSource}\
 
     return uniforms;
   }
-}
-
-
-function normalizeInjections(injections: Record<string, string | Injection>): {
-  vs: Record<string, Injection>, 
-  fs: Record<string, Injection>
-} {
-  const result: {
-    vs: Record<string, Injection>, 
-    fs: Record<string, Injection>
-  } = {
-    vs: {},
-    fs: {}
-  };
-
-  for (const hook in injections) {
-    let injection = injections[hook];
-    const stage = hook.slice(0, 2);
-    if (stage !== 'vs' && stage !== 'fs') {
-      throw new Error(stage);
-    }
-
-    if (typeof injection === 'string') {
-      injection = {
-        order: 0,
-        injection
-      };
-    }
-
-    result[stage][hook] = injection;
-  }
-
-  return result;
 }

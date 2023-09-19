@@ -1,12 +1,21 @@
 import {glsl} from '@luma.gl/shadertools';
 
+type TranspilationTestCase = {
+  title: string;
+  stage: 'vertex' | 'fragment';
+  GLSL_300: string;
+  GLSL_300_TRANSPILED: string;
+  GLSL_100: string;
+  GLSL_100_MINIFIED?: string;
+};
+
 /**
  *
  */
-export const TRANSPILATION_TEST_CASES = [
+export const TRANSPILATION_TEST_CASES: TranspilationTestCase[] = [
   {
     title: 'Vertex: textureCube, texture, texture*Lod, texture*LodEXT',
-    isVertex: true,
+    stage: 'vertex',
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
     GLSL_300: glsl`\
@@ -90,7 +99,7 @@ void main(void) {
   },
   {
     title: 'Fragment: textureCube, texture, texture*Lod, texture*LodEXT',
-    isVertex: false,
+    stage: 'fragment',
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
     GLSL_300: glsl`\

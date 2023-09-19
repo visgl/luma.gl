@@ -1,12 +1,12 @@
 import test from 'tape-promise/tape';
-import {ShaderModuleInstance} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
-import {normalizeShaderModule} from '@luma.gl/shadertools';
+import {normalizeShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
+// import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
 
 test('ShaderModuleInstance', (t) => {
   let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module'});
 
-  t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
-  t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
+  t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
+  t.ok(shaderModule.getModuleSource('fragment'), 'returns frqgment shader');
 
   shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
@@ -20,8 +20,8 @@ varying float vClipped;
 `
   });
 
-  t.ok(shaderModule.getModuleSource('vs'), 'returns vs shader');
-  t.ok(shaderModule.getModuleSource('fs'), 'returns fs shader');
+  t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
+  t.ok(shaderModule.getModuleSource('fragment'), 'returns fragment shader');
   // @ts-expect-error
   t.throws(() => shaderModule.getModuleSource(''), 'unknown shader type');
 

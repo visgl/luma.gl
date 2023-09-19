@@ -1,17 +1,26 @@
+// luma.gl, MIT license
 // shadertools exports
 
-// ShaderAssembler
+/**
+ * Marks GLSL shaders for syntax highlighting: glsl`...`
+ * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
+ */
+export {glsl} from './lib/glsl-utils/highlight';
+
+export type {PlatformInfo} from './lib/shader-assembly/platform-info';
+
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
-export type {PlatformInfo} from './lib/shader-assembly/platform-info';
-export type {HookFunction} from './lib/shader-assembly/assemble-shaders';
+export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
+export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
+export {ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
 
+// ShaderAssembler
 export {ShaderAssembler} from './lib/shader-assembler';
 
-// Detailed API (normally recommended to use ShaderAssembler instead)
-export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
-export {combineInjects} from './lib/shader-assembly/inject-shader';
 export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
+
+// SHADER HELPERS
 
 // Shader source introspection
 export {getShaderInfo} from './lib/glsl-utils/get-shader-info';
@@ -23,18 +32,17 @@ export {
   convertToVec4
 } from './lib/glsl-utils/shader-utils';
 
-// SHADER HELPERS
-
-/**
- * Marks GLSL shaders for syntax highlighting: glsl`...`
- * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
- */
-export {glsl} from './lib/glsl-utils/highlight';
-
-// TODO - experimental
+// EXPERIMENTAL - Do not use in production applications
 export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shader';
 export {generateShaderForModule} from './lib/shader-generator/generate-shader';
 export {capitalize} from './lib/shader-generator/utils/capitalize';
+
+// TEST EXPORTS - Do not use in production applications
+export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
+export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
+export {combineInjects} from './lib/shader-assembly/shader-injections';
+export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
 
 // SHADER MODULES
 
@@ -86,8 +94,3 @@ export {fxaa} from './modules/fxaa/fxaa';
 // experimental
 export {warp as _warp} from './modules/image-warp-filters/warp';
 export {transform as _transform} from './modules/transform/transform';
-
-// TEST EXPORTS
-export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
-export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
