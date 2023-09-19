@@ -14,7 +14,6 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 /** Define map */
 export type ShaderDefine = string | number | boolean;
 
-
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
 
 /**
@@ -26,9 +25,8 @@ precision highp float;
 
 `;
 
-/**
- * 
- */
+export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
+
 export type AssembleShaderOptions = {
   /** Inject shader id #defines */
   id?: string;
@@ -72,11 +70,22 @@ export function assembleShaders(
 } {
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
-  return {
-    vs: assembleShader(platformInfo, {...options, source: vs, stage: 'vertex', modules}),
-    fs: assembleShader(platformInfo, {...options, source: fs, stage: 'fragment', modules}),
-    getUniforms: assembleGetUniforms(modules)
-  };
+
+  switch (platformInfo.shaderLanguage) {
+    case 'glsl':
+      return {
+        vs: assembleGLSLShader(platformInfo, {...options, source: vs, stage: 'vertex', modules}),
+        fs: assembleGLSLShader(platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        getUniforms: assembleGetUniforms(modules)
+      };
+
+    case 'wgsl':
+      return {
+        vs: assembleWGSLShader(platformInfo, {...options, source: vs, stage: 'vertex', modules}),
+        fs: assembleWGSLShader(platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        getUniforms: assembleGetUniforms(modules)
+      };
+  }
 }
 
 /**
@@ -86,7 +95,143 @@ export function assembleShaders(
  * @param options
  * @returns
  */
-function assembleShader(
+function assembleWGSLShader(
+  platformInfo: PlatformInfo,
+  options: {
+    id?: string;
+    source: string;
+    stage: 'vertex' | 'fragment';
+    modules: any[];
+    defines?: Record<string, ShaderDefine>;
+    hookFunctions?: any[];
+    inject?: Record<string, any>;
+    transpileToGLSL100?: boolean;
+    prologue?: boolean;
+    log?: any;
+  }
+) {
+  const {
+    // id,
+    source,
+    stage,
+    modules,
+    defines = {},
+    hookFunctions = [],
+    inject = {},
+    log
+  } = options;
+
+  assert(typeof source === 'string', 'shader source must be a string');
+
+  // const isVertex = type === 'vs';
+  // const sourceLines = source.split('\n');
+
+  const coreSource = source;
+
+  // Combine Module and Application Defines
+  const allDefines = {};
+  modules.forEach(module => {
+    Object.assign(allDefines, module.getDefines());
+  });
+  Object.assign(allDefines, defines);
+
+  // Add platform defines (use these to work around platform-specific bugs and limitations)
+  // Add common defines (GLSL version compatibility, feature detection)
+  // Add precision declaration for fragment shaders
+  let assembledSource = '';
+  //   prologue
+  //     ? `\
+  // ${getShaderNameDefine({id, source, type})}
+  // ${getShaderType(type)}
+  // ${getPlatformShaderDefines(platformInfo)}
+  // ${getVersionDefines(platformInfo)}
+  // ${getApplicationDefines(allDefines)}
+  // ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
+  // `
+  // `;
+
+  const hookFunctionMap = normalizeShaderHooks(hookFunctions);
+
+  // Add source of dependent modules in resolved order
+  const hookInjections: Record<string, ShaderInjection[]> = {};
+  const declInjections: Record<string, ShaderInjection[]> = {};
+  const mainInjections: Record<string, ShaderInjection[]> = {};
+
+  for (const key in inject) {
+    const injection =
+      typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
+    const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
+    if (match) {
+      const hash = match[2];
+      const name = match[3];
+      if (hash) {
+        if (name === 'decl') {
+          declInjections[key] = [injection];
+        } else {
+          mainInjections[key] = [injection];
+        }
+      } else {
+        hookInjections[key] = [injection];
+      }
+    } else {
+      // Regex injection
+      mainInjections[key] = [injection];
+    }
+  }
+
+  for (const module of modules) {
+    if (log) {
+      module.checkDeprecations(coreSource, log);
+    }
+    const moduleSource = module.getModuleSource(stage, 'wgsl');
+    // Add the module source, and a #define that declares it presence
+    assembledSource += moduleSource;
+
+    const injections = module.injections[stage];
+    for (const key in injections) {
+      const match = /^(v|f)s:#([\w-]+)$/.exec(key);
+      if (match) {
+        const name = match[2];
+        const injectionType = name === 'decl' ? declInjections : mainInjections;
+        injectionType[key] = injectionType[key] || [];
+        injectionType[key].push(injections[key]);
+      } else {
+        hookInjections[key] = hookInjections[key] || [];
+        hookInjections[key].push(injections[key]);
+      }
+    }
+  }
+
+  // For injectShader
+  assembledSource += INJECT_SHADER_DECLARATIONS;
+
+  assembledSource = injectShader(assembledSource, stage, declInjections);
+
+  assembledSource += getShaderHooks(hookFunctionMap[stage], hookInjections);
+
+  // Add the version directive and actual source of this shader
+  assembledSource += coreSource;
+
+  // Apply any requested shader injections
+  assembledSource = injectShader(assembledSource, stage, mainInjections);
+
+  // assembledSource = transpileShader(
+  //   assembledSource,
+  //   transpileToGLSL100 ? 100 : glslVersion,
+  //   isVertex
+  // );
+
+  return assembledSource;
+}
+
+/**
+ * Pulls together complete source code for either a vertex or a fragment shader
+ * adding prologues, requested module chunks, and any final injections.
+ * @param gl
+ * @param options
+ * @returns
+ */
+function assembleGLSLShader(
   platformInfo: PlatformInfo,
   options: {
     id?: string;
@@ -266,6 +411,7 @@ function getShaderNameDefine(options: {
     : '';
 }
 
+
 /** Generates application defines from an object of key value pairs */
 function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {
   let count = 0;
@@ -286,3 +432,63 @@ function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): stri
   }
   return sourceText;
 }
+
+/*
+function getHookFunctions(
+  hookFunctions: Record<string, HookFunction>,
+  hookInjections: Record<string, Injection[]>
+): string {
+  let result = '';
+  for (const hookName in hookFunctions) {
+    const hookFunction = hookFunctions[hookName];
+    result += `void ${hookFunction.signature} {\n`;
+    if (hookFunction.header) {
+      result += `  ${hookFunction.header}`;
+    }
+    if (hookInjections[hookName]) {
+      const injections = hookInjections[hookName];
+      injections.sort((a: {order: number}, b: {order: number}): number => a.order - b.order);
+      for (const injection of injections) {
+        result += `  ${injection.injection}\n`;
+      }
+    }
+    if (hookFunction.footer) {
+      result += `  ${hookFunction.footer}`;
+    }
+    result += '}\n';
+  }
+
+  return result;
+}
+
+function normalizeHookFunctions(hookFunctions: (string | HookFunction)[]): {
+  vs: Record<string, HookFunction>;
+  fs: Record<string, HookFunction>;
+} {
+  const result: {vs: Record<string, any>; fs: Record<string, any>} = {
+    vs: {},
+    fs: {}
+  };
+
+  hookFunctions.forEach((hookFunction: string | HookFunction) => {
+    let opts: HookFunction;
+    let hook: string;
+    if (typeof hookFunction !== 'string') {
+      opts = hookFunction;
+      hook = opts.hook;
+    } else {
+      opts = {} as HookFunction;
+      hook = hookFunction;
+    }
+    hook = hook.trim();
+    const [stage, signature] = hook.split(':');
+    const name = hook.replace(/\(.+/, '');
+    if (stage !== 'vs' && stage !== 'fs') {
+      throw new Error(stage);
+    }
+    result[stage][name] = Object.assign(opts, {signature});
+  });
+
+  return result;
+}
+*/

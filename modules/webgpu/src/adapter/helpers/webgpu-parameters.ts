@@ -7,8 +7,8 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
     stencilFront: {},
     stencilBack: {},
     // TODO can this cause trouble? Should we set to WebGPU defaults? Are there defaults?
-    depthWriteEnabled: undefined!,
-    depthCompare: undefined!
+    depthWriteEnabled: false,
+    depthCompare: 'less-equal'
   };
   return descriptor.depthStencil;
 }

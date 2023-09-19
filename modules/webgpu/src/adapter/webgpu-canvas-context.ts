@@ -4,8 +4,8 @@ import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 
-/** 
- * Holds a WebGPU Canvas Context which handles resizing etc 
+/**
+ * Holds a WebGPU Canvas Context which handles resizing etc
  */
 export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
@@ -22,12 +22,13 @@ export class WebGPUCanvasContext extends CanvasContext {
     // TODO - hack to trigger resize?
     this.width = -1;
     this.height = -1;
-  
+
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     // @ts-ignore TODO - we don't handle OffscreenRenderingContext.
-    this.gpuCanvasContext = this.canvas.getContext('webgpu') ;
-    // @ts-expect-error TODO this has been replaced
-    this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
+    this.gpuCanvasContext = this.canvas.getContext('webgpu');
+    // TODO this has been replaced
+    // this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
+    this.format = 'bgra8unorm';
   }
 
   destroy(): void {
@@ -39,7 +40,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     // Ensure the canvas context size is updated
     this.update();
 
-    // Wrap the current canvas context texture in a luma.gl texture 
+    // Wrap the current canvas context texture in a luma.gl texture
     const currentColorAttachment = this.device.createTexture({
       id: 'default-render-target',
       handle: this.gpuCanvasContext.getCurrentTexture(),
@@ -84,7 +85,6 @@ export class WebGPUCanvasContext extends CanvasContext {
 
       log.log(1, `Resized to ${this.width}x${this.height}px`)();
     }
-
   }
 
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {

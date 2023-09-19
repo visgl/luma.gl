@@ -19,7 +19,7 @@ export type ShaderProps = ResourceProps & {
   // code: string;
   source: string;
   sourceMap?: string | null; // WebGPU only
-  language?: 'glsl' | 'wgsl'; // wgsl in WebGPU only
+  language?: 'glsl' | 'wgsl' | 'auto'; // wgsl in WebGPU only
   // entryPoint?: string;
 
   // WEBGL
@@ -37,7 +37,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     stage: 'vertex',
     source: '',
     sourceMap: null,
-    language: 'glsl',
+    language: 'auto',
     shaderType: 0
   };
   
