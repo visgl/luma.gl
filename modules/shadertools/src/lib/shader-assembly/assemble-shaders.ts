@@ -146,6 +146,7 @@ function assembleShader(
     ? `\
 ${versionLine}
 ${getShaderNameDefine({id, source, stage})}
+${`#define SHADER_TYPE_${stage.toUpperCase()}`}
 ${getPlatformShaderDefines(platformInfo)}
 ${getVersionDefines(platformInfo)}
 ${getApplicationDefines(allDefines)}

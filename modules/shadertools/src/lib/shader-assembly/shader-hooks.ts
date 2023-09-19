@@ -85,10 +85,10 @@ export function normalizeShaderHooks(hookFunctions: (string | ShaderHook)[]): Sh
     const normalizedHook: ShaderHook = Object.assign(opts, {signature});
     switch (shaderStage) {
       case 'vs':
-        result['vertex'][name] = normalizedHook;
+        result.vertex[name] = normalizedHook;
         break;
       case 'fs':
-        result['fragment'][name] = normalizedHook;
+        result.fragment[name] = normalizedHook;
         break;
       default:
         throw new Error(shaderStage);

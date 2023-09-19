@@ -9,13 +9,17 @@
 export function transpileGLSLShader(source: string, targetGLSLVersion: number, stage: 'vertex' | 'fragment'): string {
   switch (targetGLSLVersion) {
     case 300:
-      return stage === 'vertex'
-        ? convertShader(source, ES300_VERTEX_REPLACEMENTS)
-        : convertFragmentShaderTo300(source);
+      switch (stage) {
+        case 'vertex': return convertShader(source, ES300_VERTEX_REPLACEMENTS);
+        case 'fragment': return convertFragmentShaderTo300(source);
+        default: throw new Error(`unknown shader stage ${stage}`);
+      }
     case 100:
-      return stage === 'vertex'
-        ? convertShader(source, ES100_VERTEX_REPLACEMENTS)
-        : convertFragmentShaderTo100(source);
+      switch (stage) {
+        case 'vertex': return convertShader(source, ES100_VERTEX_REPLACEMENTS)
+        case 'fragment': return convertFragmentShaderTo100(source);
+        default: throw new Error(`unknown shader stage ${stage}`);
+      }
     default:
       throw new Error(`unknown GLSL version ${targetGLSLVersion}`);
   }
