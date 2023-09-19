@@ -23,5 +23,16 @@
       "getting-started/shader-modules",
       "getting-started/shader-hooks"
     ]
+  },
+  {
+    "type": "category",
+    "label": "WebGPU",
+    "items": [
+      "webgpu/hello-triangle",
+      "webgpu/rotating-cube",
+      "webgpu/textured-cube",
+      "webgpu/two-cubes",
+      "webgpu/instanced-cubes"
+    ]
   }
 ]

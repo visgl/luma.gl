@@ -118,7 +118,9 @@ export class WebGPURenderPipeline extends RenderPipeline {
     return this._bindGroup;
   }
 
-  /** Populate the complex WebGPU GPURenderPipelineDescriptor */
+  /** 
+   * Populate the complex WebGPU GPURenderPipelineDescriptor 
+   */
   protected _getRenderPipelineDescriptor() {
     // Set up the vertex stage
     const vertex: GPUVertexState = {

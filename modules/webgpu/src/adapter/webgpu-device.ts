@@ -107,7 +107,7 @@ export class WebGPUDevice extends Device {
       renderer: '',
       version: '',
       gpu: 'unknown', // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
-      shadingLanguages: ['glsl', 'wgsl'],
+      shadingLanguages: ['wgsl'],
       shadingLanguageVersions: {
         glsl: '450',
         wgsl: '100'
@@ -124,9 +124,9 @@ export class WebGPUDevice extends Device {
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    if (props.canvas) {
-      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {canvas: props.canvas});
-    }
+    // if (props.canvas) {
+    this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {canvas: props.canvas});
+    // }
 
     this.features = this._getFeatures();
   }

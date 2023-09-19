@@ -47,7 +47,7 @@ export class WebGPUShader extends Shader {
 
     let language = this.props.language;
     // Compile from src
-    if (!language) {
+    if (language === 'auto') {
       // wgsl uses C++ "auto" style arrow notation
       language = source.includes('->') ? 'wgsl' : 'glsl';
     }
