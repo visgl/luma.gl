@@ -253,7 +253,7 @@ export function copyToTexture(
     texture.unbind();
   }
   // @ts-expect-error
-  gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+  device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
   if (deleteFramebuffer) {
     framebuffer.destroy();
   }

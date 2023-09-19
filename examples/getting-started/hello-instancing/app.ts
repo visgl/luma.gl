@@ -55,6 +55,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
       `,
       modules: [colorShaderModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+        {name: 'instanceColor', format: 'float32x3', stepMode: 'instance'},
+        {name: 'instanceOffset', format: 'float32x2', stepMode: 'instance'},
+      ],
       attributes: {
         position: this.positionBuffer,
         instanceColor: this.colorBuffer,

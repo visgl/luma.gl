@@ -65,6 +65,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs: vs1,
       fs: fs1,
       modules: [colorModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+      ],
       attributes: {
         position: this.positionBuffer
       },
@@ -78,6 +81,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs: vs2,
       fs: fs2,
       modules: [colorModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+      ],
       attributes: {
         position: this.positionBuffer
       },

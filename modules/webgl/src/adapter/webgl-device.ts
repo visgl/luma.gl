@@ -5,12 +5,19 @@ import type {
   DeviceLimits,
   DeviceFeature,
   CanvasContextProps,
-  TextureFormat
+  TextureFormat,
+  VertexArray,
+  VertexArrayProps,
+  TypedArray
 } from '@luma.gl/core';
-import {Device, CanvasContext, log, uid} from '@luma.gl/core';
+import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
 import {polyfillContext} from '../context/polyfill/polyfill-context';
-import {popContextState, pushContextState, trackContextState} from '../context/state-tracker/track-context-state';
+import {
+  popContextState,
+  pushContextState,
+  trackContextState
+} from '../context/state-tracker/track-context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
 import {
   createHeadlessContext,
@@ -59,6 +66,7 @@ import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 import {WEBGLRenderPass} from './resources/webgl-render-pass';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
+import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 
 const LOG_LEVEL = 1;
 
@@ -133,7 +141,7 @@ export class WebGLDevice extends Device {
     if (log.get('debug') || props.debug) {
       await loadWebGLDeveloperTools();
     }
-    
+
     // @ts-expect-error spector not on props
     const {spector} = props;
     if (log.get('spector') || spector) {
@@ -167,7 +175,7 @@ export class WebGLDevice extends Device {
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, props);
 
-    this.lost = new Promise<{reason: 'destroyed'; message: string}>((resolve) => {
+    this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
     });
 
@@ -180,7 +188,9 @@ export class WebGLDevice extends Device {
     let gl: WebGLRenderingContext | WebGL2RenderingContext | null = props.gl || null;
     gl =
       gl ||
-      (isBrowser() ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost}) : null);
+      (isBrowser()
+        ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost})
+        : null);
     gl = gl || (!isBrowser() ? createHeadlessContext({...props, onContextLost}) : null);
 
     if (!gl) {
@@ -313,6 +323,10 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     return new WEBGLRenderPipeline(this, props);
   }
 
+  override createVertexArray(props: VertexArrayProps): VertexArray {
+    return new WEBGLVertexArray(this, props);
+  }
+
   beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
     return new WEBGLRenderPass(this, props);
   }
@@ -379,7 +393,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
   private _webglLimits?: WebGLLimits;
 
   /** Return WebGL specific limits */
-  get webglLimits() : WebGLLimits {
+  get webglLimits(): WebGLLimits {
     this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
     return this._webglLimits;
   }
@@ -413,8 +427,8 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     popContextState(this.gl);
   }
 
-  /** 
-   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension 
+  /**
+   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
    * luma.gl ids and props can be inspected
    */
   setSpectorMetadata(handle: unknown, props: Record<string, unknown>) {
@@ -423,13 +437,13 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     handle.__SPECTOR_Metadata = props;
   }
 
-  /** 
+  /**
    * Returns the GL.<KEY> constant that corresponds to a numeric value of a GL constant
    * Be aware that there are some duplicates especially for constants that are 0,
    * so this isn't guaranteed to return the right key in all cases.
    */
   getGLKey(value: unknown, gl?: WebGLRenderingContext): string {
-    // @ts-ignore expect-error depends on settings 
+    // @ts-ignore expect-error depends on settings
     gl = gl || this.gl2 || this.gl;
     const number = Number(value);
     for (const key in gl) {
@@ -440,6 +454,38 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     }
     // No constant found. Stringify the value and return it.
     return String(value);
+  }
+
+  /** Store constants */
+  _constants: (TypedArray | null)[];
+
+  /**
+   * Set a constant value for a location. Disabled attributes at that location will read from this value
+   * @note WebGL constants are stored globally on the WebGL context, not the VertexArray
+   * so they need to be updated before every render
+   * @todo - remember/cache values to avoid setting them unnecessarily?
+   */
+  setConstantAttribute(location: number, constant: TypedArray): void {
+    this._constants = this._constants || new Array(this.limits.maxVertexAttributes).fill(null);
+    const currentConstant = this._constants[location];
+    if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
+      log.info(1, `setConstantAttribute(${location}) could have been skipped, value unchanged`)();
+    }
+    this._constants[location] = constant;
+
+    switch (constant.constructor) {
+      case Float32Array:
+        setConstantFloatArray(this, location, constant as Float32Array);
+        break;
+      case Int32Array:
+        setConstantIntArray(this, location, constant as Int32Array);
+        break;
+      case Uint32Array:
+        setConstantUintArray(this, location, constant as Uint32Array);
+        break;
+      default:
+        assert(false);
+    }
   }
 }
 
@@ -462,4 +508,84 @@ function isWebGL2(gl: any): boolean {
   }
   // Look for debug contexts, headless gl etc
   return Boolean(gl && gl._version === 2);
+}
+
+/** Set constant float array attribute */
+function setConstantFloatArray(device: WebGLDevice, location: number, array: Float32Array): void {
+  switch (array.length) {
+    case 1:
+      device.gl.vertexAttrib1fv(location, array);
+      break;
+    case 2:
+      device.gl.vertexAttrib2fv(location, array);
+      break;
+    case 3:
+      device.gl.vertexAttrib3fv(location, array);
+      break;
+    case 4:
+      device.gl.vertexAttrib4fv(location, array);
+      break;
+    default:
+      assert(false);
+  }
+}
+
+/** Set constant signed int array attribute */
+function setConstantIntArray(device: WebGLDevice, location: number, array: Int32Array): void {
+  device.assertWebGL2();
+  device.gl2?.vertexAttribI4iv(location, array);
+  // TODO - not clear if we need to use the special forms, more testing needed
+  // switch (array.length) {
+  //   case 1:
+  //     gl.vertexAttribI1iv(location, array);
+  //     break;
+  //   case 2:
+  //     gl.vertexAttribI2iv(location, array);
+  //     break;
+  //   case 3:
+  //     gl.vertexAttribI3iv(location, array);
+  //     break;
+  //   case 4:
+  //     break;
+  //   default:
+  //     assert(false);
+  // }
+}
+
+/** Set constant unsigned int array attribute */
+function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array) {
+  device.assertWebGL2();
+  device.gl2?.vertexAttribI4uiv(location, array);
+  // TODO - not clear if we need to use the special forms, more testing needed
+  // switch (array.length) {
+  //   case 1:
+  //     gl.vertexAttribI1uiv(location, array);
+  //     break;
+  //   case 2:
+  //     gl.vertexAttribI2uiv(location, array);
+  //     break;
+  //   case 3:
+  //     gl.vertexAttribI3uiv(location, array);
+  //     break;
+  //   case 4:
+  //     gl.vertexAttribI4uiv(location, array);
+  //     break;
+  //   default:
+  //     assert(false);
+  // }
+}
+
+/**
+ *
+ */
+function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {
+  if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
+    return false;
+  }
+  for (let i = 0; i < v1.length; ++i) {
+    if (v1[i] !== v2[i]) {
+      return false;
+    }
+  }
+  return true;
 }

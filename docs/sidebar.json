@@ -101,7 +101,8 @@
           "api-reference/core/resources/render-pipeline",
           "api-reference/core/resources/sampler",
           "api-reference/core/resources/shader",
-          "api-reference/core/resources/texture"
+          "api-reference/core/resources/texture",
+          "api-reference/core/resources/vertex-array"
         ]
       },
       {

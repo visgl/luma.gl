@@ -1,8 +1,16 @@
 // luma.gl, MIT license
 
-import type {TypedArray, RenderPipelineProps, RenderPipelineParameters, BufferLayout} from '@luma.gl/core';
+import type {
+  TypedArray,
+  RenderPipelineProps,
+  RenderPipelineParameters,
+  BufferLayout,
+  VertexArray,
+  AttributeInfo
+} from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual} from '@luma.gl/core';
+import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import type {Geometry} from '../geometry/geometry';
@@ -19,22 +27,30 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   defines?: Record<string, string | number | boolean>;
   // TODO - injections, hooks etc?
 
-
   /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
   pipelineFactory?: PipelineFactory;
   /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
   shaderAssembler?: ShaderAssembler;
-  
-  /** Geometry */
-  geometry?: GPUGeometry | Geometry | null;
+
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
-  /** shadertool modules */
-  moduleSettings?: Record<string, Record<string, any>>;
+
+  /** Geometry */
+  geometry?: GPUGeometry | Geometry | null;
+
   /** Vertex count */
   vertexCount?: number;
   /** instance count */
   instanceCount?: number;
+
+  indexBuffer?: Buffer | null;
+  /** @note this is really a map of buffers, not a map of attributes */
+  attributes?: Record<string, Buffer>;
+  /**   */
+  constantAttributes?: Record<string, TypedArray>;
+
+  /** Mapped uniforms for shadertool modules */
+  moduleSettings?: Record<string, Record<string, any>>;
 };
 
 /**
@@ -57,9 +73,12 @@ export class Model {
     modules: [],
     moduleSettings: {},
     geometry: null,
+    indexBuffer: null,
+    attributes: {},
+    constantAttributes: {},
 
     pipelineFactory: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
   };
 
   readonly device: Device;
@@ -87,7 +106,7 @@ export class Model {
   instanceCount: number = 0;
 
   /** Index buffer */
-  indices: Buffer | null = null;
+  indexBuffer: Buffer | null = null;
   /** Buffer-valued attributes */
   bufferAttributes: Record<string, Buffer> = {};
   /** Constant-valued attributes */
@@ -99,7 +118,16 @@ export class Model {
 
   /** The underlying GPU "program". @note May be recreated if parameters change */
   pipeline: RenderPipeline;
+
+  /**
+   * VertexArray
+   * @note not implemented: if bufferLayout is updated, vertex array has to be rebuilt!
+   * @todo - allow application to define multiple vertex arrays?
+   * */
+  vertexArray: VertexArray;
+
   _pipelineNeedsUpdate: string | false = 'newly created';
+  _attributeInfos: Record<string, AttributeInfo> = {};
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
@@ -119,7 +147,10 @@ export class Model {
       features: device.features
     };
 
-    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(platformInfo, this.props);
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(
+      platformInfo,
+      this.props
+    );
     this.vs = vs;
     this.fs = fs;
     this._getModuleUniforms = getUniforms;
@@ -131,19 +162,29 @@ export class Model {
     this.bufferLayout = this.props.bufferLayout;
     this.parameters = this.props.parameters;
 
-    // Geometry, if provided, sets several attributes, indices, and also vertex count and topology
+    let gpuGeometry: GPUGeometry;
+    // Geometry, if provided, sets topology and vertex cound
     if (props.geometry) {
-      this.setGeometry(props.geometry);
+      gpuGeometry = this.setGeometry(props.geometry);
     }
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
 
-    // Create the pipeline 
+    // Create the pipeline
     // @note order is important
     this.pipeline = this._updatePipeline();
 
+    // TODO - vertex array needs to be updated if we update buffer layout,
+    // but not if we update parameters
+    this.vertexArray = device.createVertexArray({
+      renderPipeline: this.pipeline
+    });
+
     // Now we can apply geometry attributes
+    if (gpuGeometry) {
+      this._setGeometryAttributes(gpuGeometry);
+    }
 
     // Apply any dynamic settings that will not trigger pipeline change
     if (props.vertexCount) {
@@ -152,11 +193,18 @@ export class Model {
     if (props.instanceCount) {
       this.setInstanceCount(props.instanceCount);
     }
+    // @ts-expect-error
     if (props.indices) {
-      this.setIndexBuffer(props.indices);
+      throw new Error('Model.props.indices removed. Use props.indexBuffer')
+    }
+    if (props.indexBuffer) {
+      this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
       this.setAttributes(props.attributes);
+    }
+    if (props.constantAttributes) {
+      this.setConstantAttributes(props.constantAttributes);
     }
     if (props.bindings) {
       this.setBindings(props.bindings);
@@ -187,14 +235,12 @@ export class Model {
 
     // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
     // Any caching needs to be done inside the pipeline functions
-    this.pipeline.setIndexBuffer(this.indices);
-    this.pipeline.setAttributes(this.bufferAttributes);
-    this.pipeline.setConstantAttributes(this.constantAttributes);
     this.pipeline.setBindings(this.bindings);
     this.pipeline.setUniforms(this.uniforms);
 
     this.pipeline.draw({
       renderPass,
+      vertexArray: this.vertexArray,
       vertexCount: this.vertexCount,
       instanceCount: this.instanceCount
     });
@@ -202,24 +248,35 @@ export class Model {
 
   // Update fixed fields (can trigger pipeline rebuild)
 
-  /** 
+  /**
    * Updates the optional geometry
-  * Geometry, sets several attributes, indices, and also vertex count and topology
+   * Geometry, set topology and bufferLayout
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
-  setGeometry(geometry: GPUGeometry | Geometry): void {
+  setGeometry(geometry: GPUGeometry | Geometry): GPUGeometry {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     this.setTopology(gpuGeometry.topology || 'triangle-list');
     this.bufferLayout = mergeBufferLayouts(this.bufferLayout, gpuGeometry.bufferLayout);
+    if (this.vertexArray) {
+      this._setGeometryAttributes(gpuGeometry);
+    }
+    return gpuGeometry;
+  }
 
+  /**
+   * Updates the optional geometry attributes
+   * Geometry, sets several attributes, indexBuffer, and also vertex count
+   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
+   */
+  _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
     this.setAttributes(gpuGeometry.attributes);
     this.setIndexBuffer(gpuGeometry.indices);
   }
 
-  /** 
-   * Updates the primitive topology ('triangle-list', 'triangle-strip' etc). 
+  /**
+   * Updates the primitive topology ('triangle-list', 'triangle-strip' etc).
    * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   setTopology(topology: PrimitiveTopology): void {
@@ -229,8 +286,8 @@ export class Model {
     }
   }
 
-  /** 
-   * Updates the buffer layout. 
+  /**
+   * Updates the buffer layout.
    * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
@@ -251,7 +308,7 @@ export class Model {
       this._setPipelineNeedsUpdate('parameters');
     }
   }
-    
+
   // Update dynamic fields
 
   /**
@@ -286,36 +343,6 @@ export class Model {
   }
 
   /**
-   * Sets the index buffer
-   * @todo - how to unset it if we change geometry?
-   */
-  setIndexBuffer(indices: Buffer | null): void {
-    this.indices = indices;
-  }
-
-  /**
-   * Sets attributes (buffers)
-   * @note Overrides any attributes previously set with the same name
-   */
-  setAttributes(bufferAttributes: Record<string, Buffer>): void {
-    if (bufferAttributes.indices) {
-      log.warn(`Model:${this.id} setAttributes() - indices should be set using setIndexBuffer()`);
-    }
-
-    Object.assign(this.bufferAttributes, bufferAttributes);
-  }
-
-  /**
-   * Sets constant attributes
-   * @note Overrides any attributes previously set with the same name
-   * @param constantAttributes
-   */
-  setConstantAttributes(constantAttributes: Record<string, TypedArray>): void {
-    // TODO - this doesn't work under WebGPU, we'll need to create buffers or inject uniforms
-    Object.assign(this.constantAttributes, constantAttributes);
-  }
-
-  /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
   setBindings(bindings: Record<string, Binding>): void {
@@ -333,13 +360,78 @@ export class Model {
     Object.assign(this.uniforms, uniforms);
   }
 
+  /**
+   * Sets the index buffer
+   * @todo - how to unset it if we change geometry?
+   */
+  setIndexBuffer(indexBuffer: Buffer | null): void {
+    this.vertexArray.setIndexBuffer(indexBuffer);
+  }
+
+  /**
+   * Sets attributes (buffers)
+   * @note Overrides any attributes previously set with the same name
+   */
+  setAttributes(buffers: Record<string, Buffer>): void {
+    if (buffers.indices) {
+      log.warn(
+        `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
+      );
+    }
+    for (const [bufferName, buffer] of Object.entries(buffers)) {
+      const bufferLayout = this.bufferLayout.find(layout => layout.name === bufferName);
+      if (!bufferLayout) {
+        continue; // eslint-disable-line no-continue
+      }
+
+      // For an interleaved attribute we may need to set multiple attributes
+      const attributeNames = bufferLayout.attributes
+        ? bufferLayout.attributes?.map(layout => layout.attribute)
+        : [bufferLayout.name];
+      let set = false;
+      for (const attributeName of attributeNames) {
+        const attributeInfo = this._attributeInfos[attributeName];
+        if (attributeInfo) {
+          this.vertexArray.setBuffer(attributeInfo.location, buffer);
+          set = true;
+        }
+      }
+      if (!set) {
+        log.warn(
+          `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
+        )();
+      }
+    }
+  }
+
+  /**
+   * Sets constant attributes
+   * @note Overrides any attributes previously set with the same name
+   * Constant attributes are only supported in WebGL, not in WebGPU
+   * Any attribute that is disabled in the current vertex array object
+   * is read from the context's global constant value for that attribute location.
+   * @param constantAttributes
+   */
+  setConstantAttributes(attributes: Record<string, TypedArray>): void {
+    for (const [attributeName, value] of Object.entries(attributes)) {
+      const attributeInfo = this._attributeInfos[attributeName];
+      if (attributeInfo) {
+        this.vertexArray.setConstant(attributeInfo.location, value);
+      } else {
+        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${name}"`)();
+      }
+    }
+  }
+
   _setPipelineNeedsUpdate(reason: string): void {
     this._pipelineNeedsUpdate = this._pipelineNeedsUpdate || reason;
   }
 
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
-      log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+      if (!this.pipeline) {
+        log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+      }
       this._pipelineNeedsUpdate = false;
       this.pipeline = this.device.createRenderPipeline({
         ...this.props,
@@ -349,6 +441,10 @@ export class Model {
         vs: this.device.createShader({stage: 'vertex', source: this.vs}),
         fs: this.fs ? this.device.createShader({stage: 'fragment', source: this.fs}) : null
       });
+      this._attributeInfos = getAttributeInfosFromLayouts(
+        this.pipeline.shaderLayout,
+        this.bufferLayout
+      );
     }
     return this.pipeline;
   }
@@ -358,9 +454,7 @@ export class Model {
 function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
   const layouts = [...layouts1];
   for (const attribute of layouts2) {
-    const index = layouts.findIndex(
-      (attribute2) => attribute2.name === attribute.name
-    );
+    const index = layouts.findIndex(attribute2 => attribute2.name === attribute.name);
     if (index < 0) {
       layouts.push(attribute);
     } else {

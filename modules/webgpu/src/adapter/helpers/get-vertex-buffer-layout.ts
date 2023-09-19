@@ -1,3 +1,4 @@
+// luma.gl, MIT license
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts, decodeVertexFormat} from '@luma.gl/core';
 

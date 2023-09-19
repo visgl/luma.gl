@@ -19,7 +19,8 @@ import type {
   ComputePipelineProps,
   RenderPassProps,
   ComputePassProps,
-  // CommandEncoderProps
+  // CommandEncoderProps,
+  VertexArrayProps
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -33,6 +34,7 @@ import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPURenderPass} from './resources/webgpu-render-pass';
 import {WebGPUComputePass} from './resources/webgpu-compute-pass';
 // import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
+import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
 // import {loadGlslangModule} from '../glsl/glslang';
@@ -197,6 +199,10 @@ export class WebGPUDevice extends Device {
 
   createComputePipeline(props: ComputePipelineProps): WebGPUComputePipeline {
     return new WebGPUComputePipeline(this, props);
+  }
+
+  createVertexArray(props: VertexArrayProps): WebGPUVertexArray {
+    return new WebGPUVertexArray(this, props);
   }
 
   // WebGPU specifics

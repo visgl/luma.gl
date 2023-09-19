@@ -53,6 +53,9 @@ export {CommandEncoder} from './adapter/resources/command-encoder';
 export type {CommandBufferProps} from './adapter/resources/command-buffer';
 export {CommandBuffer} from './adapter/resources/command-buffer';
 
+export type {VertexArrayProps} from './adapter/resources/vertex-array';
+export {VertexArray} from './adapter/resources/vertex-array';
+
 // API TYPES
 export type {AccessorObject} from './adapter/types/accessor';
 export type {
