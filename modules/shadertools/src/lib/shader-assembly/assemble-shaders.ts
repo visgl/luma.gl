@@ -113,7 +113,7 @@ function assembleWGSLShader(
   const {
     // id,
     source,
-    type,
+    stage,
     modules,
     defines = {},
     hookFunctions = [],
@@ -150,12 +150,12 @@ function assembleWGSLShader(
   // `
   // `;
 
-  const hookFunctionMap = normalizeHookFunctions(hookFunctions);
+  const hookFunctionMap = normalizeShaderHooks(hookFunctions);
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, Injection[]> = {};
-  const declInjections: Record<string, Injection[]> = {};
-  const mainInjections: Record<string, Injection[]> = {};
+  const hookInjections: Record<string, ShaderInjection[]> = {};
+  const declInjections: Record<string, ShaderInjection[]> = {};
+  const mainInjections: Record<string, ShaderInjection[]> = {};
 
   for (const key in inject) {
     const injection =
@@ -183,11 +183,11 @@ function assembleWGSLShader(
     if (log) {
       module.checkDeprecations(coreSource, log);
     }
-    const moduleSource = module.getModuleSource(type, 'wgsl');
+    const moduleSource = module.getModuleSource(stage, 'wgsl');
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
-    const injections = module.injections[type];
+    const injections = module.injections[stage];
     for (const key in injections) {
       const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {
@@ -205,15 +205,15 @@ function assembleWGSLShader(
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
-  assembledSource = injectShader(assembledSource, type, declInjections);
+  assembledSource = injectShader(assembledSource, stage, declInjections);
 
-  assembledSource += getHookFunctions(hookFunctionMap[type], hookInjections);
+  assembledSource += getShaderHooks(hookFunctionMap[stage], hookInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, type, mainInjections);
+  assembledSource = injectShader(assembledSource, stage, mainInjections);
 
   // assembledSource = transpileShader(
   //   assembledSource,
@@ -411,6 +411,7 @@ function getShaderNameDefine(options: {
     : '';
 }
 
+
 /** Generates application defines from an object of key value pairs */
 function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {
   let count = 0;
@@ -432,6 +433,7 @@ function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): stri
   return sourceText;
 }
 
+/*
 function getHookFunctions(
   hookFunctions: Record<string, HookFunction>,
   hookInjections: Record<string, Injection[]>
@@ -489,3 +491,4 @@ function normalizeHookFunctions(hookFunctions: (string | HookFunction)[]): {
 
   return result;
 }
+*/
