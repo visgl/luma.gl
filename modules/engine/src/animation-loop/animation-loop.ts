@@ -190,7 +190,7 @@ export class AnimationLoop {
       return this;
     }
 
-    this._beginTimers();
+    this._beginFrameTimers();
 
     this._setupFrame();
     this._updateAnimationProps();
@@ -206,7 +206,7 @@ export class AnimationLoop {
       this._resolveNextFrame = null;
     }
 
-    this._endTimers();
+    this._endFrameTimers();
 
     return this;
   }
@@ -358,7 +358,6 @@ export class AnimationLoop {
 
       device: this.device,
       canvas: this.device?.canvasContext?.canvas,
-      renderPass: this.device.getDefaultRenderPass(),
       timeline: this.timeline,
 
       // Initial values
@@ -395,8 +394,7 @@ export class AnimationLoop {
       return;
     }
 
-    this.animationProps.renderPass = this.device.getDefaultRenderPass();
-
+    // Can this be replaced with canvas context?
     const {width, height, aspect} = this._getSizeAndAspect();
     if (width !== this.animationProps.width || height !== this.animationProps.height) {
       this.setNeedsRedraw('drawing buffer resized');
@@ -500,7 +498,7 @@ export class AnimationLoop {
     }
   }
 
-  _beginTimers() {
+  _beginFrameTimers() {
     this.frameRate.timeEnd();
     this.frameRate.timeStart();
 
@@ -520,10 +518,10 @@ export class AnimationLoop {
     //   this._gpuTimeQuery.beginTimeElapsedQuery();
     // }
 
-    // this.cpuTime.timeStart();
+    this.cpuTime.timeStart();
   }
 
-  _endTimers() {
+  _endFrameTimers() {
     this.cpuTime.timeEnd();
 
     // if (this._gpuTimeQuery) {

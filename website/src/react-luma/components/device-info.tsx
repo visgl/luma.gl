@@ -1,5 +1,5 @@
 import React from 'react';
-import {Device, DeviceFeature, DeviceLimits, TextureFormat} from '@luma.gl/api';
+import {Device, DeviceFeature, DeviceLimits, TextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 

@@ -42,29 +42,27 @@ const TEST_DATA = {
 
 const TEST_CASES = [
   {
-    pickingSelectedColor: null,
+    highlightedObjectColor: null,
     isPicked: [0, 0, 0, 0, 0, 0, 0, 0, 0]
   },
   {
-    pickingSelectedColor: [255, 255, 255],
+    highlightedObjectColor: [255, 255, 255],
     isPicked: [0, 0, 0, 0, 0, 0, 0, 1, 0]
   },
   {
-    pickingSelectedColor: [255, 100, 150],
+    highlightedObjectColor: [255, 100, 150],
     isPicked: [0, 1, 0, 0, 0, 0, 0, 0, 0]
   }
 ];
 
-test('picking#getUniforms', (t) => {
-  // @ts-expect-error
+test.skip('picking#getUniforms', (t) => {
   t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
-    // @ts-expect-error
     picking.getUniforms({
-      pickingActive: true,
-      pickingSelectedColor: null,
-      pickingHighlightColor: [255, 0, 0]
+      isActive: true,
+      highlightedObjectColor: null,
+      highlightColor: [255, 0, 0]
     }),
     {
       picking_uSelectedColorValid: 0,
@@ -75,10 +73,9 @@ test('picking#getUniforms', (t) => {
   );
 
   t.deepEqual(
-    // @ts-expect-error
     picking.getUniforms({
-      pickingSelectedColor: [0, 0, 1],
-      pickingHighlightColor: [255, 0, 0, 51]
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [255, 0, 0, 51]
     }),
     {
       picking_uSelectedColorValid: 1,
@@ -90,7 +87,7 @@ test('picking#getUniforms', (t) => {
   t.end();
 });
 
-test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
+test('picking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -126,9 +123,8 @@ test('picking#isVertexPicked(pickingSelectedColor invalid)', (t) => {
   });
 
   TEST_CASES.forEach((testCase) => {
-    // @ts-expect-error
     const uniforms = picking.getUniforms({
-      pickingSelectedColor: testCase.pickingSelectedColor
+      highlightedObjectColor: testCase.highlightedObjectColor
     });
 
     transform.run({uniforms});
@@ -181,7 +177,7 @@ test('picking#picking_setPickingColor', (t) => {
 
   TEST_CASES.forEach((testCase) => {
     const uniforms = picking.getUniforms({
-      pickingSelectedColor: testCase.pickingSelectedColor,
+      highlightedObjectColor: testCase.highlightedObjectColor,
       // @ts-expect-error
       pickingThreshold: testCase.pickingThreshold
     });

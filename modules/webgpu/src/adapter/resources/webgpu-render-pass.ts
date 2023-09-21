@@ -1,5 +1,5 @@
 import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/core';
-import {Buffer, RenderPass, RenderPipeline, cast} from '@luma.gl/core';
+import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';
@@ -18,6 +18,9 @@ export class WebGPURenderPass extends RenderPass {
     this.device = device;
     const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer() ;
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
+    log.groupCollapsed(1, `new WebGPURenderPass(${this.id})`)();
+    log.probe(1, JSON.stringify(renderPassDescriptor, null, 2))();
+    log.groupEnd(1)();
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
     this.handle.label = this.props.id;
   }
@@ -75,7 +78,7 @@ export class WebGPURenderPass extends RenderPass {
     } else {
       this.handle.draw(
         options.vertexCount || 0,
-        options.instanceCount,
+        options.instanceCount || 1,
         options.firstIndex,
         options.firstInstance
       );
@@ -142,7 +145,7 @@ export class WebGPURenderPass extends RenderPass {
 
     renderPassDescriptor.colorAttachments = framebuffer.colorAttachments.map(colorAttachment => ({
       // clear values
-      loadOp: 'clear',
+      loadOp: this.props.clearColor !== false ? 'clear' : 'load',
       colorClearValue: this.props.clearColor || [0, 0, 0, 0],
       storeOp: this.props.discard? 'discard': 'store',
       // ...colorAttachment,
@@ -151,9 +154,29 @@ export class WebGPURenderPass extends RenderPass {
 
     if (framebuffer.depthStencilAttachment) {
       renderPassDescriptor.depthStencilAttachment = {
-        ...this.props,
         view: (framebuffer.depthStencilAttachment as WebGPUTexture).handle.createView()
       };
+      const {depthStencilAttachment} = renderPassDescriptor;
+
+      // DEPTH
+      if (this.props.depthReadOnly) {
+        depthStencilAttachment.depthReadOnly = true;
+      }
+      depthStencilAttachment.depthClearValue = this.props.clearDepth || 0;
+
+      // WebGPU only wants us to set these parameters if the texture format actually has a depth aspect
+      const hasDepthAspect = true;
+      if (hasDepthAspect) {
+        depthStencilAttachment.depthLoadOp = this.props.clearDepth !== false ? 'clear' : 'load';
+        depthStencilAttachment.depthStoreOp = 'store'; // TODO - support 'discard'?
+      }
+
+      // WebGPU only wants us to set these parameters if the texture format actually has a stencil aspect
+      const hasStencilAspect = false;
+      if (hasStencilAspect) {
+        depthStencilAttachment.stencilLoadOp = this.props.clearStencil !== false ? 'clear' : 'load';
+        depthStencilAttachment.stencilStoreOp = 'store'; // TODO - support 'discard'?
+      }
     }
 
     return renderPassDescriptor;

@@ -15,6 +15,8 @@ import './adapter/type-utils/decode-texture-format.spec';
 // adapter
 import './adapter/canvas-context.spec';
 
+// uniforms
+import './lib/uniforms/uniform-buffer-layout.spec';
+
 // lib
-import './lib/uniform-buffer-layout.spec';
 import './lib/format-compiler-log.spec';

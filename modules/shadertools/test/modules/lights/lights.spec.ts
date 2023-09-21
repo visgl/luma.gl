@@ -1,22 +1,22 @@
 import test from 'tape-promise/tape';
 import {checkType} from '@luma.gl/test-utils';
 
-import {lights, ShaderModule} from '@luma.gl/shadertools';
+import {lighting, ShaderModule} from '@luma.gl/shadertools';
 
-checkType<ShaderModule>(lights);
+checkType<ShaderModule>(lighting);
 
-test('shadertools#lights', (t) => {
-  let uniforms = lights.getUniforms();
+test('shadertools#lighting', (t) => {
+  let uniforms = lighting.getUniforms({});
   t.ok(uniforms, 'Generated default uniforms');
 
-  uniforms = lights.getUniforms({
-  // @ts-expect-error
+  uniforms = lighting.getUniforms({
+    // @ts-ignore
     lights: [{type: 'ambient'}, {type: 'directional'}, {type: 'point'}]
   });
-  t.ok(uniforms, 'Generated uniforms for empty lights');
+  t.ok(uniforms, 'Generated uniforms for empty lighting');
 
-  uniforms = lights.getUniforms({
-  // @ts-expect-error
+  uniforms = lighting.getUniforms({
+    // @ts-ignore
     lights: [{type: 'non-existing'}]
   });
   t.ok(uniforms, 'Generated uniforms for non-supported light object');

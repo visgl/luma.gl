@@ -81,3 +81,26 @@ export {
 } from './context/state-tracker/track-context-state';
 // Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
 export {polyfillContext} from './context/polyfill/polyfill-context';
+
+// HELPERS - EXPERIMENTAL
+// export {getShaderLayout, getProgramBindings} from './adapter/helpers/get-shader-layout';
+// export {convertGLToTextureFormat, _checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
+// export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
+
+// // WebGL Types - Experimental exports
+// export type {
+//   GLDrawMode,
+//   GLPrimitive,
+//   GLDataType,
+//   GLPixelType,
+//   GLUniformType,
+//   GLSamplerType,
+//   GLCompositeType,
+//   GLFunction,
+//   GLBlendEquation,
+//   GLBlendFunction,
+//   GLStencilOp,
+//   GLSamplerParameters,
+//   GLValueParameters,
+//   GLFunctionParameters
+// } from '@luma.gl/constants';

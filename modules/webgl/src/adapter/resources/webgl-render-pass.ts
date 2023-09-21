@@ -1,4 +1,4 @@
-import {RenderPass, RenderPassProps, NumericArray, RenderPassParameters} from '@luma.gl/core';
+import {RenderPass, RenderPassProps, NumberArray, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
@@ -132,7 +132,7 @@ export class WEBGLRenderPass extends RenderPass {
   /** 
    * WebGL2 - clear a specific color buffer 
    */
-  protected clearColorBuffer(drawBuffer: number = 0, value: NumericArray = [0, 0, 0, 0]) {
+  protected clearColorBuffer(drawBuffer: number = 0, value: NumberArray = [0, 0, 0, 0]) {
     withGLParameters(this.device.gl2, {framebuffer: this.props.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {

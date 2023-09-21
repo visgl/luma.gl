@@ -167,7 +167,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     this.uniformBuffer2.write(new Float32Array(modelViewProjectionMatrix));
 
-    const renderPass = device.beginRenderPass({});
+    const renderPass = device.beginRenderPass();
     this.cubeModel.setBindings({uniforms: this.uniformBuffer1});
     this.cubeModel.draw(renderPass);
     this.cubeModel.setBindings({uniforms: this.uniformBuffer2});

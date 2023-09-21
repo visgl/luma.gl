@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
 import {decodeShaderAttributeType, ShaderAttributeType} from '@luma.gl/core';
-import {ShaderAttributeTypeInfo} from '@luma.gl/core/adapter/type-utils/decode-attribute-type';
+import {ShaderAttributeTypeInfo} from '../../../src/adapter/type-utils/decode-attribute-type';
 
 // prettier-ignore
 const TEST_CASES: {format: ShaderAttributeType, result: ShaderAttributeTypeInfo}[] = [

@@ -1,18 +1,23 @@
+// / <reference types="@webgpu/types" />
 import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
+import {WebGPUTexture} from './resources/webgpu-texture';
 
-/**
- * Holds a WebGPU Canvas Context which handles resizing etc
+/** 
+ * Holds a WebGPU Canvas Context
+ * The primary job of the CanvasContext is to generate textures for rendering into the current canvas
+ * It also manages canvas sizing calculations and resizing.
  */
 export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly gpuCanvasContext: GPUCanvasContext;
-  readonly format: TextureFormat;
+  /** Format of returned textures: "bgra8unorm", "rgba8unorm", "rgba16float". */
+  readonly format: TextureFormat = navigator.gpu.getPreferredCanvasFormat();
+  /** Default stencil format for depth textures */
   depthStencilFormat: TextureFormat = 'depth24plus';
-  sampleCount: number = 1;
 
   private depthStencilAttachment: Texture | null = null;
 
@@ -31,8 +36,17 @@ export class WebGPUCanvasContext extends CanvasContext {
     this.format = 'bgra8unorm';
   }
 
+  /** Destroy any textures produced while configured and remove the context configuration. */
   destroy(): void {
     this.gpuCanvasContext.unconfigure();
+  }
+
+  getCurrentTexture(): WebGPUTexture {
+    // Wrap the current canvas context texture in a luma.gl texture 
+    return this.device._createTexture({
+      id: 'default-render-target',
+      handle: this.gpuCanvasContext.getCurrentTexture()
+    });
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
@@ -41,13 +55,18 @@ export class WebGPUCanvasContext extends CanvasContext {
     this.update();
 
     // Wrap the current canvas context texture in a luma.gl texture
-    const currentColorAttachment = this.device.createTexture({
-      id: 'default-render-target',
-      handle: this.gpuCanvasContext.getCurrentTexture(),
-      format: this.format,
-      width: this.width,
-      height: this.height
-    });
+    // const currentColorAttachment = this.device.createTexture({
+    //   id: 'default-render-target',
+    //   handle: this.gpuCanvasContext.getCurrentTexture(),
+    //   format: this.format,
+    //   width: this.width,
+    //   height: this.height
+    // });
+
+    // Wrap the current canvas context texture in a luma.gl texture 
+    const currentColorAttachment = this.getCurrentTexture();
+    this.width = currentColorAttachment.width;
+    this.height = currentColorAttachment.height;
 
     // Resize the depth stencil attachment
     this._createDepthStencilAttachment();
@@ -78,7 +97,8 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.gpuCanvasContext.configure({
         device: this.device.handle,
         format: getWebGPUTextureFormat(this.format),
-        // size: [this.width, this.height],
+        // Can be used to define e.g. -srgb views
+        // viewFormats: [...]
         colorSpace: this.props.colorSpace,
         alphaMode: this.props.alphaMode
       });

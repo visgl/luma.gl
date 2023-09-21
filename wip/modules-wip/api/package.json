@@ -39,6 +39,7 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "dependencies": {
+    "@math.gl/types": "^3.5.0",
     "@babel/runtime": "^7.0.0",
     "@luma.gl/constants": "9.0.0-alpha.29",
     "@luma.gl/engine": "9.0.0-alpha.29",

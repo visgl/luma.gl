@@ -529,7 +529,8 @@ test('assembleShaders#injection order', (t) => {
   t.end();
 });
 
-test('assembleShaders#transpilation', (t) => {
+// TODO - restore if we ever support transpilation of uniform blocks
+test.skip('assembleShaders#transpilation', (t) => {
   let assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,

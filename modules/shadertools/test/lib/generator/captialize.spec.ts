@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import { capitalize } from '@luma.gl/shadertools';
+import {capitalize} from '@luma.gl/shadertools';
 
 test('shadertools#capitalize', t => {
   t.equal(capitalize('hello world'), 'Hello world', 'should capitalize string');

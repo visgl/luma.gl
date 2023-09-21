@@ -1,4 +1,4 @@
-import {Device, Framebuffer, getRandom, glsl} from '@luma.gl/core';
+import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, NumberArray, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';
@@ -13,39 +13,58 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
-const random = getRandom();
+const random = makeRandomNumberGenerator();
 
 const vs = glsl`\
+#version 300 es
+
 attribute vec3 positions;
 attribute vec3 normals;
+
 attribute vec2 instanceOffsets;
 attribute vec3 instanceColors;
 attribute vec2 instancePickingColors;
 
-uniform mat4 uModel;
-uniform mat4 uView;
-uniform mat4 uProjection;
-uniform float uTime;
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  float time;
+} app;
 
 varying vec3 color;
 
 void main(void) {
-  vec3 normal = vec3(uModel * vec4(normals, 1.0));
+  // vec3 normal = vec3(uModel * vec4(normals, 1.0));
 
+  // // Set up data for modules
+  // color = instanceColors;
+  // project_setNormal(normal);
+  // // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  // picking_setPickingColor(vec3(0., instancePickingColors));
+
+  // // Vertex position (z coordinate undulates with time), and model rotates around center
+  // float delta = length(instanceOffsets);
+  // vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
+  // gl_Position = uProjection * uView * (uModel * vec4(positions * 1., 1.0) + offset);
   // Set up data for modules
   color = instanceColors;
-  project_setNormal(normal);
-  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  picking_setPickingColor(vec3(0., instancePickingColors));
+
+  vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
+  dirlight_setNormal(normal);
+
+  vec4 pickColor = vec4(0., instancePickingColors / 255., 1.0);
+  picking_setPickingColor(pickColor.rgb);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
-  vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
-  gl_Position = uProjection * uView * (uModel * vec4(positions * 1., 1.0) + offset);
+  vec4 offset = vec4(instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  gl_Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * vec4(positions * 1., 1.0) + offset);
 }
 `;
 
 const fs = glsl`\
+#version 300 es
 precision highp float;
 
 varying vec3 color;
@@ -61,7 +80,10 @@ const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
-  constructor(device: Device, props?: ModelProps) {
+
+  // uniformBuffer: Buffer;
+
+  constructor(device: Device, props?: Partial<ModelProps>) {
     const offsets = [];
     for (let i = 0; i < SIDE; i++) {
       const x = ((-SIDE + 1) * 3) / 2 + i * 3;
@@ -78,7 +100,7 @@ class InstancedCube extends Model {
       colors[i + 3] = 255;
     }
 
-    const pickingColors = new Float32Array(SIDE * SIDE * 2);
+    const pickingColors = new Uint8Array(SIDE * SIDE * 2);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
         pickingColors[(i * SIDE + j) * 2 + 0] = i;
@@ -138,6 +160,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timelineChannels: Record<string, number>;
   pickingFramebuffer: Framebuffer;
 
+  uniformStore = new UniformStore<{
+    app: {
+      modelMatrix: NumberArray;
+      viewMatrix: NumberArray;
+      projectionMatrix: NumberArray;
+      time: number;
+    },
+    dirlight: typeof dirlight['defaultUniforms']
+    picking: typeof picking['defaultUniforms']
+  }>({
+    app: {
+      uniformTypes: {
+        modelMatrix: 'mat4x4<f32>',
+        viewMatrix: 'mat4x4<f32>',
+        projectionMatrix: 'mat4x4<f32>',
+        time: 'f32'
+      }
+    },
+    dirlight,
+    picking
+  });
+
   constructor({device, animationLoop}: AnimationProps) {
     super();
 
@@ -152,15 +196,32 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       eyeZChannel: this.timeline.addChannel({rate: 0.0002})
     };
 
-    this.cube = new InstancedCube(device);
-    this.cube.updateModuleSettings({
-      pickingSelectedColor: null
-    });
-
-
     this.pickingFramebuffer = device.createFramebuffer({
       colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth24plus'
+    });
+  
+    // this.cube = new InstancedCube(device);
+    // this.cube.updateModuleSettings({
+    //   pickingSelectedColor: null
+    // });
+
+
+    this.cube = new InstancedCube(device, {
+      bindings: {
+        appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        dirlightUniforms: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
+        pickingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
+      }
+    });
+
+    this.pickingFramebuffer = device.createFramebuffer(device.canvasContext.getCurrentFramebuffer().props);
+
+    this.uniformStore.setUniforms({
+      dirlight: dirlight.defaultUniforms
+    });
+    this.uniformStore.setUniforms({
+      picking: picking.defaultUniforms
     });
   }
 
@@ -168,6 +229,46 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const {device, aspect, tick} = animationProps;
     const {_mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
+
+    this.uniformStore.setUniforms({
+      app: {
+        time: this.timeline.getTime(timeChannel),
+        // Basic projection matrix
+        projectionMatrix: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
+        // Move the eye around the plane
+        viewMatrix: new Matrix4().lookAt({
+          center: [0, 0, 0],
+          eye: [
+            (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
+            (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
+            ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
+          ]
+        }),
+        // Rotate all the individual cubes
+        modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+      }
+    });
+
+    this.uniformStore.updateUniformBuffers();
+
+    // this.cube.setUniforms({
+    //   uTime: this.timeline.getTime(timeChannel),
+    //   // Basic projection matrix
+    //   uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
+    //   // Move the eye around the plane
+    //   uView: new Matrix4().lookAt({
+    //     center: [0, 0, 0],
+    //     eye: [
+    //       (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
+    //       (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
+    //       ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
+    //     ]
+    //   }),
+    //   // Rotate all the individual cubes
+    //   uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    // });
+
+
 
     if (_mousePosition) {
       pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
@@ -179,23 +280,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearDepth: 1,
       clearStencil: 0
     });
-    this.cube.setUniforms({
-      uTime: this.timeline.getTime(timeChannel),
-      // Basic projection matrix
-      uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
-      // Move the eye around the plane
-      uView: new Matrix4().lookAt({
-        center: [0, 0, 0],
-        eye: [
-          (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
-          (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
-          ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
-        ]
-      }),
-      // Rotate all the individual cubes
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-    });
     // this.cube.updateModuleSettings({pickingActive: 0});
+
     this.cube.draw(renderPass);
     renderPass.end();
   }
@@ -243,4 +329,35 @@ export function pickInstance(
       pickingSelectedColor: null
     });
   }
+  // const size = device.canvasContext?.getPixelSize();
+  // framebuffer.resize({width: size[0], height: size[0]});
+  
+  // // Render picking colors
+  // const pickingPass = device.beginRenderPass({framebuffer});
+  // this.uniformStore.setUniforms({picking: {isActive: true}});
+  // this.uniformStore.updateUniformBuffers();
+  // model.draw(pickingPass);
+  // this.uniformStore.setUniforms({picking: {isActive: false}});
+  // pickingPass.end();
+
+  // const commandEncoder = new CommandEncoder();
+  // const color = readPixelsToArray(framebuffer, {
+  //   sourceX: pickX,
+  //   sourceY: pickY,
+  //   sourceWidth: 1,
+  //   sourceHeight: 1,
+  //   sourceFormat: GL.RGBA,
+  //   sourceType: GL.UNSIGNED_BYTE
+  // });
+  
+  // if (color[0] + color[1] + color[2] > 0) {
+  //   model.updateModuleSettings({
+  //     pickingSelectedColor: color
+  //   });
+  // } else {
+  //   model.updateModuleSettings({
+  //     pickingSelectedColor: null
+  //   });
+  // }
 }
+

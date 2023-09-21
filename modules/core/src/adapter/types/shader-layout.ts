@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type {TextureFormat} from '../types/texture-formats';
-import type {ShaderUniformType, ShaderAttributeType} from './shader-formats';
+import type {ShaderUniformType, ShaderAttributeType} from './shader-types';
 import {AccessorObject} from '../types/accessor';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';

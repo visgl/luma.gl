@@ -1,10 +1,14 @@
 
+<<<<<<< HEAD:wip/examples-wip/api-v8/program-management/app.ts
 import {getRandom, glsl} from '@luma.gl/core';
+=======
+import {getRandomNumberGenerator, glsl} from '@luma.gl/api';
+>>>>>>> 29be19a97 (chore(shadertools): interface block generation):examples-wip/api-v8/program-management/app.ts
 import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {AnimationLoopTemplate, AnimationProps, Model, PipelineFactory, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 
-const random = getRandom();
+const random = getRandomNumberGenerator();
 
 const INFO_HTML = `
 Using a PipelineFactory to cache and share programs between models.

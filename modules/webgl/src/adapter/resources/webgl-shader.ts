@@ -60,7 +60,7 @@ export class WEBGLShader extends Shader {
       const shaderLog = gl.getShaderInfoLog(this.handle);
       const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
       const messages = parsedLog.filter(message => message.type === 'error');
-      const formattedLog = formatCompilerLog(messages, source);
+      const formattedLog = formatCompilerLog(messages, source, {showSourceCode: true});
       const shaderName: string = getShaderInfo(source).name;
       const shaderDescription = `${this.stage} shader ${shaderName}`;
       log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();

@@ -13,7 +13,7 @@ export function generateGLSLForModule(module: ShaderModule, options: GLSLGenerat
   return generateGLSLUniformDeclarations(module, options);
 }
 
-function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGenerationOptions) {
+function generateGLSLUniformDeclarations<UniformsT extends Record<string, unknown>>(module: ShaderModule<UniformsT>, options: GLSLGenerationOptions) {
   const glsl: string[] = [];
 
   // => uniform UniformBlockName {
@@ -26,8 +26,8 @@ function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGene
       // ignore
   }
 
-  for (const [uniformName, uniformFormat] of Object.entries(module.uniformFormats || module.uniforms || {})) {
-    const glslUniformType = getGLSLUniformType(uniformFormat.format);
+  for (const [uniformName, uniformFormat] of Object.entries(module.uniformTypes || {})) {
+    const glslUniformType = getGLSLUniformType(uniformFormat);
     switch (options.uniforms) {
       case 'scoped-interface-blocks':
       // => uniform UniformBlockName {

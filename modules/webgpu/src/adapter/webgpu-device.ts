@@ -233,24 +233,26 @@ export class WebGPUDevice extends Device {
    * Gets default renderpass encoder.
    * Creates a new encoder against default canvasContext if not already created
    * @note Called internally by Model.
+   * @deprecated Create explicit pass with device.beginRenderPass
    */
   getDefaultRenderPass(): WebGPURenderPass {
-    this.renderPass =
-      this.renderPass ||
-      this.beginRenderPass({
-        framebuffer: this.canvasContext?.getCurrentFramebuffer()
-      });
-    return this.renderPass;
+    // this.renderPass =
+    //   this.renderPass ||
+    //   this.beginRenderPass({
+    //     framebuffer: this.canvasContext?.getCurrentFramebuffer()
+    //   });
+    // return this.renderPass;
+    throw new Error('a');
   }
 
   submit(): void {
-    this.renderPass?.end();
+    // this.renderPass?.end();
     const commandBuffer = this.commandEncoder?.finish();
     if (commandBuffer) {
       this.handle.queue.submit([commandBuffer]);
     }
     this.commandEncoder = null;
-    this.renderPass = null;
+    // this.renderPass = null;
   }
 
   _getFeatures() {

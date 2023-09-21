@@ -1,4 +1,4 @@
-import { ShaderAttributeType } from '../types/shader-formats';
+import { ShaderAttributeType } from '../types/shader-types';
 
 /**  Predeclared aliases @see https://www.w3.org/TR/WGSL/#vector-types */
 export const WGSL_TYPE_ALIAS_MAP: Record<string, ShaderAttributeType> = {

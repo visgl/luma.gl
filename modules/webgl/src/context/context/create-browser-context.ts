@@ -69,6 +69,8 @@ export function createBrowserContext(
     props = {...props, webgl2: false};
   }
 
+  // props.failIfMajorPerformanceCaveat = true;
+
   // Prefer webgl2 over webgl1 if both are acceptable
   if (!gl && props.webgl2) {
     gl = canvas.getContext('webgl2', props) as WebGL2RenderingContext;
@@ -76,6 +78,16 @@ export function createBrowserContext(
   if (!gl && props.webgl1) {
     gl = canvas.getContext('webgl', props) as WebGLRenderingContext;
   }
+
+  // Software GPU
+
+  // props.failIfMajorPerformanceCaveat = false;
+  // if (!gl && props.webgl2) {
+  //   gl = canvas.getContext('webgl2', props);
+  // }
+  // if (!gl && props.webgl1) {
+  //   gl = canvas.getContext('webgl', props);
+  // }
 
   // TODO are we removing this listener before giving it a chance to fire?
   canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);

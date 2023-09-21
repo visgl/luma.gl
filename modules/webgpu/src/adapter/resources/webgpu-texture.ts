@@ -45,6 +45,13 @@ export class WebGPUTexture extends Texture {
 
     this.width = this.handle.width;
     this.height = this.handle.height;
+    // Why not just read all properties directly from the texture
+    // this.depthOrArrayLayers = this.handle.depthOrArrayLayers;
+    // this.mipLevelCount = this.handle.mipLevelCount;
+    // this.sampleCount = this.handle.sampleCount;
+    // this.dimension = this.handle.dimension;
+    // this.format = this.handle.format;
+    // this.usage = this.handle.usage;
 
     // Create a default sampler. This mimics the WebGL1 API where sampler props are stored on the texture
     // this.setSampler(props.sampler);

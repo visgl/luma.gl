@@ -90,7 +90,7 @@ Reinitializes a `VertexArray`.
 Sets a constant value for a vertex attribute. When this `VertexArray` is used in a `Program.draw()` call, all Vertex Shader invocations will get the same value.
 
 ```typescript
-vertexArray.setConstant(location: number, constant: NumericArray) : VertexArray
+vertexArray.setConstant(location: number, constant: NumberArray) : VertexArray
 ```
 
 - `location` - index of the attribute

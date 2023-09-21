@@ -1,0 +1,167 @@
+// luma.gl, MIT license
+import type {UniformFormat} from '../../adapter/types/uniform-formats';
+import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../../adapter/types/shader-layout';
+import {isNumberArray} from '../utils/is-array';
+
+type UniformValue = unknown;
+
+/** 
+ * A uniform store holds a number of uniform values and does some book keeping on what has changes 
+ */
+export class UniformStore<TUniforms extends Record<string, Record<string, UniformValue>>> {
+  name: string;
+
+  uniforms: Record<keyof TUniforms, UniformValue>;
+  modifiedUniforms: Record<keyof TUniforms, boolean>;
+  modified: boolean = true;
+
+  // modifiedUniforms: Record<keyof TUniforms, UniformValue> = {} as Record<keyof TUniforms, UniformValue>;
+
+  // Block definition
+  // readonly layout: UniformBufferLayout;
+  readonly bindingLayout: Record<string, UniformInfo> = {};
+  needsRedraw: string | false = 'initialized';
+
+  constructor(props?: {
+    name?: string;
+    shaderLayout?: ShaderLayout; 
+    uniformTypes?: Record<keyof TUniforms, Record<string, UniformFormat>>
+  }) {
+    this.name = props?.name;
+
+    // Extract uniform layout from the shaderLayout object
+    if (props?.name && props?.shaderLayout) {
+      const binding = props?.shaderLayout.bindings
+        ?.find(binding => binding.type === 'uniform' && binding.name === props?.name);
+      if (!binding) {
+        throw new Error(props?.name);
+      }
+
+      const uniformBlock = binding as UniformBufferBindingLayout;
+      for (const uniform of uniformBlock.uniforms || []) {
+        this.bindingLayout[uniform.name] = uniform;
+      }
+    }
+  }
+
+  /** Set a map of uniforms */
+  setUniforms(uniforms: Partial<TUniforms>): void {
+    for (const [key, value] of Object.entries(uniforms)) {
+      this._setUniform(key, value);
+      this.setNeedsRedraw(key);
+    }
+  }
+
+  setNeedsRedraw(reason: string): void {
+    this.needsRedraw = this.needsRedraw || reason;
+  }
+
+  /** Returns all uniforms */
+  getAllUniforms(groupName: keyof TUniforms): Record<string, UniformValue> {
+    // @ts-expect-error
+    this.modifiedUniforms = {};
+    this.needsRedraw = false;
+    return (this.uniforms[groupName] || {}) as Record<string, UniformValue>;
+  }
+
+  getModifiedUniforms() {
+    const modifiedUniforms = this.modifiedUniforms;
+    // @ts-expect-error
+    this.modifiedUniforms = {};
+    this.needsRedraw = false;
+    return modifiedUniforms;
+  }
+
+  /** Set a single uniform */
+  private _setUniform(key: string, value: UniformValue) {
+    // if (this.layout[key] !== undefined) {
+    //   this.uniforms[key] = value;
+    //   this.modifiedUniforms[key] = true;
+    //   this.modified = true;
+    // } else {
+    //   log.warn(`Unknown uniform ${key}`)
+    // }
+    if (arrayEqual(this.uniforms[key], value)) {
+      return;
+    }
+    this.uniforms[key] = value;
+    this.modifiedUniforms[key] = true;
+    this.modified = true;
+  }
+}
+
+function arrayEqual(a: unknown, b: unknown, limit: number = 16) {
+  if (a !== b) {
+    return false;
+  }
+  const arrayA = isNumberArray(a);
+  if (!arrayA) {
+    return false;
+  }
+  const arrayB = isNumberArray(b);
+  if (arrayB && arrayA.length == arrayB.length) {
+    for (let i = 0; i < arrayA.length; ++i) {
+      if (arrayB[i] !== arrayA[i]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
+// export function makeUniformStore<I extends Record<string, Record<string, unknown>>>(name: string, uniforms: I): UniformStore<{ [P in keyof I]: I[P] }> {
+//   return new UniformStore<{ [P in keyof I]: I[P] }>({name, uniforms});
+// }
+
+// type ShaderModule<Uniforms extends Record<string, unknown> = {}> = {
+//   uniformTypes: Record<keyof Uniforms, string>;
+// };
+
+type Module1Uniforms = {
+  uniform1?: number;
+  uniform2?: [number, number];
+}
+
+// type Module2Uniforms = {
+//   uniform3: number;
+//   uniform4: [number, number];
+// }
+
+// const shaderModule: ShaderModule<Module1Uniforms> = {
+//   uniformTypes: {
+//     uniform1: 'aaa',
+//     uniform2: 'aaa'
+//   }
+// }
+
+
+const uniformStore = new UniformStore<{uniformStore1: Module1Uniforms}>({name: 'block1'});
+
+uniformStore.setUniforms({
+  uniformStore1: {
+    uniform1: 1,
+    uniform2: [1, 1]
+  }
+});
+
+
+
+// setUniformStore(pipeline, blockIndex, block);
+
+// GLSL utilities
+
+
+// TYPE TESTS
+
+/*
+new UniformStore<ModuleUniforms>().setUniforms({
+  uniform1: 1,
+  uniform2: 1,
+});
+
+new UniformStore<ModuleUniforms>().setUniforms({
+  three: 1,
+  uniform1: 1,
+});
+*/

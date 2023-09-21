@@ -21,7 +21,8 @@ const project = {
 
 const project64 = {
   name: 'project64-test',
-  dependencies: [project, fp64]
+  dependencies: [project, fp64],
+  uniformTypes: {}
 };
 
 test('ShaderModules#import', t => {

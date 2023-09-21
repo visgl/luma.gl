@@ -38,9 +38,13 @@ export abstract class Buffer extends Resource<BufferProps> {
   static MAP_WRITE = 0x02;
   static COPY_SRC = 0x0004;
   static COPY_DST = 0x0008;
+  /** Index buffer */
   static INDEX = 0x0010;
+  /** Vertex buffer */
   static VERTEX = 0x0020;
+  /** Uniform buffer */
   static UNIFORM = 0x0040;
+  /** Storage buffer */
   static STORAGE = 0x0080;
   static INDIRECT = 0x0100;
   static QUERY_RESOLVE = 0x0200;

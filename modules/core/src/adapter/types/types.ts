@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {NumericArray} from '../../types';
+import {NumberArray} from '../../types';
 import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from './texture-formats';
 import type {Buffer} from '../resources/buffer';
 import type {Texture} from '../resources/texture'; // TextureView...
@@ -7,7 +7,7 @@ import type {Texture} from '../resources/texture'; // TextureView...
 // UNIFORMS
 
 /** Valid values for uniforms. @note boolean values get converted to 0 or 1 before setting */
-export type UniformValue = number | boolean | Float32Array | Int32Array | Uint32Array | NumericArray;
+export type UniformValue = number | boolean | Float32Array | Int32Array | Uint32Array | NumberArray;
 
 // BINDINGS
 

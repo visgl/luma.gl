@@ -10,10 +10,10 @@ export type {
   TypedArray,
   TypedArrayConstructor,
   NumberArray,
-  NumericArray,
-  BigIntOrNumberArray,
-  BigIntOrNumericArray
+  BigIntOrNumberArray
 } from './types';
+
+export {isTypedArray, isNumberArray} from './lib/utils/is-array';
 
 // MAIN API ACCESS POINTS
 export {luma} from './lib/luma';
@@ -87,7 +87,7 @@ export type {
   ShaderDataType,
   ShaderAttributeType,
   ShaderUniformType
-} from './adapter/types/shader-formats';
+} from './adapter/types/shader-types';
 
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
@@ -107,13 +107,16 @@ export type {
 } from './adapter/types/shader-layout';
 
 export type {UniformValue} from './adapter/types/types';
-export {UniformBufferLayout} from './lib/uniform-buffer-layout';
-export {UniformBlock} from './lib/uniform-block';
+export {UniformBufferLayout} from './lib/uniforms/uniform-buffer-layout';
+export {UniformBlock} from './lib/uniforms/uniform-block';
+export {UniformStore} from './lib/uniforms/uniform-store';
 
 // TYPE UTILS
 export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
-export {decodeShaderUniformType} from './adapter/type-utils/decode-uniform-type';
+
+// SHADER TYPE UTILS
+export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
 export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
 
 // COMPILER LOG
@@ -145,7 +148,7 @@ export {
   loadScript
 } from './lib/utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
-export {getRandom, random} from './lib/utils/random';
+export {makeRandomNumberGenerator, random} from './lib/utils/random';
 export {deepEqual} from './lib/utils/deep-equal';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?

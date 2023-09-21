@@ -1,5 +1,5 @@
 /** Creates a deterministic pseudorandom number generator */
-export function getRandom(): () => number {
+export function makeRandomNumberGenerator(): () => number {
   let s = 1;
   let c = 1;
   return () => {
@@ -14,4 +14,4 @@ function fract(n: number): number {
 }
 
 /** Generates a deterministic pseudorandom number */
-export const random = getRandom();
+export const random = makeRandomNumberGenerator();

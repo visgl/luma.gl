@@ -1,4 +1,4 @@
-# @luma.gl/api
+# @luma.gl/core
 
 <h1 align="center">luma.gl | <a href="https://luma.gl">Docs</a></h1>
 

@@ -60,64 +60,54 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 export function getVersionDefines(platformInfo: PlatformInfo): string {
   let versionDefines = glsl`\
 #if (__VERSION__ > 120)
-
 # define FEATURE_GLSL_DERIVATIVES
 # define FEATURE_GLSL_DRAW_BUFFERS
 # define FEATURE_GLSL_FRAG_DEPTH
 # define FEATURE_GLSL_TEXTURE_LOD
-
-// DEPRECATED FLAGS, remove in v9
-# define FRAG_DEPTH
-# define DERIVATIVES
-# define DRAW_BUFFERS
-# define TEXTURE_LOD
-
 #endif // __VERSION
 `;
 
-  if (platformInfo.features.has('glsl-frag-depth')) {
+  if (!platformInfo.features.has('webgl2') && platformInfo.features.has('glsl-frag-depth')) {
     versionDefines += glsl`\
 
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
-#extension GL_EXT_frag_depth : enable
+# extension GL_EXT_frag_depth : enable
 # define FEATURE_GLSL_FRAG_DEPTH
 # define FRAG_DEPTH
 # define gl_FragDepth gl_FragDepthEXT
 #endif
 `;
   }
-  if (platformInfo?.features.has('glsl-derivatives')) {
+  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-derivatives')) {
     versionDefines += glsl`\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #if defined(GL_OES_standard_derivatives) || defined(FEATURE_GLSL_DERIVATIVES)
-#extension GL_OES_standard_derivatives : enable
+# extension GL_OES_standard_derivatives : enable
 # define FEATURE_GLSL_DERIVATIVES
 # define DERIVATIVES
 #endif
 `;
   }
-  if (platformInfo?.features.has('glsl-frag-data')) {
+  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-frag-data')) {
     versionDefines += glsl`\
 
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
-#extension GL_EXT_draw_buffers : require
-#define FEATURE_GLSL_DRAW_BUFFERS
-#define DRAW_BUFFERS
+# extension GL_EXT_draw_buffers : require
+# define FEATURE_GLSL_DRAW_BUFFERS
+# define DRAW_BUFFERS
 #endif
 `;
   }
-  if (platformInfo?.features.has('glsl-texture-lod')) {
+  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-texture-lod')) {
     versionDefines += glsl`\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
-#extension GL_EXT_shader_texture_lod : enable
-
+# extension GL_EXT_shader_texture_lod : enable
 # define FEATURE_GLSL_TEXTURE_LOD
 # define TEXTURE_LOD
-
 #endif
 `;
   }

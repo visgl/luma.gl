@@ -18,12 +18,12 @@ export {ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
 // ShaderAssembler
 export {ShaderAssembler} from './lib/shader-assembler';
 
-export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
-
 // SHADER HELPERS
 
 // Shader source introspection
 export {getShaderInfo} from './lib/glsl-utils/get-shader-info';
+
+// Transform support
 export {
   getQualifierDetails,
   getPassthroughFS,
@@ -37,60 +37,69 @@ export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shad
 export {generateShaderForModule} from './lib/shader-generator/generate-shader';
 export {capitalize} from './lib/shader-generator/utils/capitalize';
 
-// TEST EXPORTS - Do not use in production applications
-export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
+// EXPERIMENTAL / TEST EXPORTS
 export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
-export {combineInjects} from './lib/shader-assembly/shader-injections';
 export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
 
+// TEST EXPORTS - Do not use in production applications
+export {assembleShaders} from './lib/shader-assembly/assemble-shaders';
+export {combineInjects} from './lib/shader-assembly/shader-injections';
+export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
+
 // SHADER MODULES
 
-// utils
-export {random} from './modules/utils/random';
-
 // math libraries
-export {fp32} from './modules/fp32/fp32';
-export {fp64, fp64arithmetic} from './modules/fp64/fp64';
+export {fp32} from './modules/math/fp32/fp32';
+export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
+export {random} from './modules/math/random/random';
 
-// projection and lighting
-export {project} from './modules/project/project';
-export {lights} from './modules/lights/lights';
-export {dirlight} from './modules/dirlight/dirlight';
-export {picking} from './modules/picking/picking';
-export {gouraudLighting, phongLighting} from './modules/phong-lighting/phong-lighting';
-export {pbr} from './modules/pbr/pbr';
+// projection
+export type {ProjectionUniforms} from './modules/engine/project/project';
+export {projection} from './modules/engine/project/project';
+export {picking} from './modules/engine/picking/picking';
+
+// lighting
+export type {LightingModuleProps, LightingModuleProps as Lighting} from './modules/lighting/lights/lighting-uniforms';
+export {lighting} from './modules/lighting/lights/lighting-uniforms';
+export {dirlight} from './modules/lighting/no-material//dirlight';
+export type {PhongMaterialUniforms} from './modules/lighting/phong-material/phong-gouraud';
+export {phongLighting} from './modules/lighting/phong-material/phong-gouraud';
+export {gouraudLighting} from './modules/lighting/phong-material/phong-gouraud';
+
+export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
+export {pbr} from './modules/lighting/pbr-material/pbr';
 
 // glfx BLUR shader modules
-export {tiltShift} from './modules/image-blur-filters/tiltshift';
-export {triangleBlur} from './modules/image-blur-filters/triangleblur';
-export {zoomBlur} from './modules/image-blur-filters/zoomblur';
+export {tiltShift} from './modules/postprocessing/image-blur-filters/tiltshift';
+export {triangleBlur} from './modules/postprocessing/image-blur-filters/triangleblur';
+export {zoomBlur} from './modules/postprocessing/image-blur-filters/zoomblur';
 
 // glfx image adjustment shader modules
-export type {BrightnessContrastProps} from './modules/image-adjust-filters/brightnesscontrast';
-export {brightnessContrast} from './modules/image-adjust-filters/brightnesscontrast';
-export {denoise} from './modules/image-adjust-filters/denoise';
-export {hueSaturation} from './modules/image-adjust-filters/huesaturation';
-export {noise} from './modules/image-adjust-filters/noise';
-export {sepia} from './modules/image-adjust-filters/sepia';
-export {vibrance} from './modules/image-adjust-filters/vibrance';
-export {vignette} from './modules/image-adjust-filters/vignette';
+export type {BrightnessContrastProps} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
+export {brightnessContrast} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
+export {denoise} from './modules/postprocessing/image-adjust-filters/denoise';
+export {hueSaturation} from './modules/postprocessing/image-adjust-filters/huesaturation';
+export {noise} from './modules/postprocessing/image-adjust-filters/noise';
+export {sepia} from './modules/postprocessing/image-adjust-filters/sepia';
+export {vibrance} from './modules/postprocessing/image-adjust-filters/vibrance';
+export {vignette} from './modules/postprocessing/image-adjust-filters/vignette';
 
 // glfx FUN shader modules
-export {colorHalftone} from './modules/image-fun-filters/colorhalftone';
-export {dotScreen} from './modules/image-fun-filters/dotscreen';
-export {edgeWork} from './modules/image-fun-filters/edgework';
-export {hexagonalPixelate} from './modules/image-fun-filters/hexagonalpixelate';
-export {ink} from './modules/image-fun-filters/ink';
-export {magnify} from './modules/image-fun-filters/magnify';
+export {colorHalftone} from './modules/postprocessing/image-fun-filters/colorhalftone';
+export {dotScreen} from './modules/postprocessing/image-fun-filters/dotscreen';
+export {edgeWork} from './modules/postprocessing/image-fun-filters/edgework';
+export {hexagonalPixelate} from './modules/postprocessing/image-fun-filters/hexagonalpixelate';
+export {ink} from './modules/postprocessing/image-fun-filters/ink';
+export {magnify} from './modules/postprocessing/image-fun-filters/magnify';
 
 // glfx WARP shader modules
-export {bulgePinch} from './modules/image-warp-filters/bulgepinch';
-export {swirl} from './modules/image-warp-filters/swirl';
+export {bulgePinch} from './modules/postprocessing/image-warp-filters/bulgepinch';
+export {swirl} from './modules/postprocessing/image-warp-filters/swirl';
 
 // Postprocessing
-export {fxaa} from './modules/fxaa/fxaa';
+export {fxaa} from './modules/postprocessing/fxaa/fxaa';
 
 // experimental
-export {warp as _warp} from './modules/image-warp-filters/warp';
-export {transform as _transform} from './modules/transform/transform';
+export {warp as _warp} from './modules/postprocessing/image-warp-filters/warp';
+// export {transform as _transform} from './modules/postprocessing/transform/transform';

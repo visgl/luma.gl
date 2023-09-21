@@ -1,6 +1,12 @@
+<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/classic/vertex-array-object.ts
 import type {NumberArray} from '@luma.gl/core';
 import {assert, getScratchArray, fillArray, ResourceProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
+=======
+import type {NumericArray} from '@luma.gl/api';
+import {assert, getScratchArray, fillArray, ResourceProps} from '@luma.gl/api';
+import GL from '@luma.gl/constants';
+>>>>>>> 29be19a97 (chore(shadertools): interface block generation):modules-wip/webgl-legacy/src/classic/vertex-array-object.ts
 import {getBrowser} from '@probe.gl/env';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {assertWebGL2Context, isWebGL2} from '@luma.gl/webgl';
@@ -166,14 +172,14 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
 
   // TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
   // TODO - handle single values for size 1 attributes?
-  _normalizeConstantArrayValue(arrayValue: NumberArray) {
+  _normalizeConstantArrayValue(arrayValue: NumericArray) {
     if (Array.isArray(arrayValue)) {
       return new Float32Array(arrayValue);
     }
     return arrayValue;
   }
 
-  _compareConstantArrayValues(v1: NumberArray, v2: NumberArray): boolean {
+  _compareConstantArrayValues(v1: NumericArray, v2: NumericArray): boolean {
     if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
       return false;
     }
@@ -185,7 +191,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     return true;
   }
 
-  static _setConstantFloatArray(gl: WebGLRenderingContext, location: number, array: NumberArray): void {
+  static _setConstantFloatArray(gl: WebGLRenderingContext, location: number, array: NumericArray): void {
     switch (array.length) {
       case 1:
         gl.vertexAttrib1fv(location, array);
@@ -204,7 +210,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     }
   }
 
-  static _setConstantIntArray(gl: WebGL2RenderingContext, location: number, array: NumberArray): void {
+  static _setConstantIntArray(gl: WebGL2RenderingContext, location: number, array: NumericArray): void {
     assert(isWebGL2(gl));
     gl.vertexAttribI4iv(location, array);
     // switch (array.length) {
@@ -224,7 +230,7 @@ export default class VertexArrayObject extends WEBGLVertexArrayObject {
     // }
   }
 
-  static _setConstantUintArray(gl: WebGL2RenderingContext, location: number, array: NumberArray) {
+  static _setConstantUintArray(gl: WebGL2RenderingContext, location: number, array: NumericArray) {
     assert(isWebGL2(gl));
     gl.vertexAttribI4uiv(location, array);
     // switch (array.length) {

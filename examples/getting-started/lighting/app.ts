@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/core';
+import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -9,48 +9,79 @@ Drawing a phong-shaded cube
 </p>
 `;
 
+type AppUniforms = {
+  uModel: NumberArray;
+  uMVP: NumberArray;
+  uEyePosition: NumberArray;
+};
+
+const appUniforms: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
+  uniformTypes: {
+    uMVP: 'mat4x4<f32>',
+    uModel: 'mat4x4<f32>',
+    uEyePosition: 'vec3<f32>'
+  }
+};
+
+
 const vs = glsl`\
+#version 300 es
   attribute vec3 positions;
   attribute vec3 normals;
   attribute vec2 texCoords;
 
-  uniform mat4 uModel;
-  uniform mat4 uMVP;
-
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec2 vUV;
 
+  uniform AppUniforms {
+    mat4 uModel;
+    mat4 uMVP;
+    vec3 uEyePosition;
+  } app;
+
   void main(void) {
-    vPosition = (uModel * vec4(positions, 1.0)).xyz;
-    vNormal = mat3(uModel) * normals;
+    vPosition = (app.uModel * vec4(positions, 1.0)).xyz;
+    vNormal = mat3(app.uModel) * normals;
     vUV = texCoords;
-    gl_Position = uMVP * vec4(positions, 1.0);
+    gl_Position = app.uMVP * vec4(positions, 1.0);
   }
 `;
 
 const fs = glsl`\
+#version 300 es
   precision highp float;
-
-  uniform sampler2D uTexture;
-  uniform vec3 uEyePosition;
 
   varying vec3 vPosition;
   varying vec3 vNormal;
   varying vec2 vUV;
 
+  uniform sampler2D uTexture;
+
+  uniform AppUniforms {
+    mat4 uModel;
+    mat4 uMVP;
+    vec3 uEyePosition;
+  } app;
+
   void main(void) {
     vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-    vec3 surfaceColor = lighting_getLightColor(materialColor, uEyePosition, vPosition, normalize(vNormal));
+    vec3 surfaceColor = lighting_getLightColor(materialColor, app.uEyePosition, vPosition, normalize(vNormal));
 
     gl_FragColor = vec4(surfaceColor, 1.0);
   }
 `;
 
+// APPLICATION
+
 const eyePosition = [0, 0, 5];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
+
+  uniformStore = new UniformStore<{app: AppUniforms}>({
+    app: appUniforms
+  });
 
   model: Model;
   modelMatrix = new Matrix4();
@@ -85,6 +116,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       bindings: {
         uTexture: texture,
+        appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app')
       },
       uniforms: {
         uEyePosition: eyePosition
@@ -96,15 +128,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize() {
+  onFinalize() {
     this.model.destroy();
   }
 
-  override onRender({device, aspect, tick}) {
-    const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1], 
-      clearDepth: true
-    });
+  onRender({device, aspect, tick}) {
     this.modelMatrix
       .identity()
       .rotateX(tick * 0.01)
@@ -115,10 +143,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
 
-    this.model.setUniforms({uMVP: this.mvpMatrix, uModel: this.modelMatrix});
+    this.uniformStore.setUniforms({
+      app: {uMVP: this.mvpMatrix, uModel: this.modelMatrix}
+    });
+    this.uniformStore.updateUniformBuffers();
 
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1], 
+      clearDepth: true
+    });
     this.model.draw(renderPass);
-
     renderPass.end();
   }
 }

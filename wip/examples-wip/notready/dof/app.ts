@@ -244,6 +244,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   projMat = new Matrix4();
   viewMat = new Matrix4().lookAt({eye: [0, 0, 8]});
 
+  // projectUniformLayout = new UniformBufferLayout({
+  //   uMVP: 'mat4x4<f32>'
+  // });
+
+  // projectUniformBuffer: Buffer;
+
+  // uniformStore = new UniformStore<{project: ProjectUniforms}>({name: 'aaa'});
+
   instancedCubeTransforms = [];
   instancedCubes: InstancedCube;
   sceneFramebuffer: Framebuffer;

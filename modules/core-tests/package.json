@@ -1,0 +1,46 @@
+{
+  "name": "@luma.gl/core-tests",
+  "version": "9.0.0-alpha.35",
+  "description": "luma.gl API",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build-bundle": "ocular-bundle ./src/index.ts",
+    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+  },
+  "devDependencies": {
+    "@luma.gl/core": "9.0.0-alpha.35",
+    "@luma.gl/test-utils": "9.0.0-alpha.35",
+    "@luma.gl/webgl": "9.0.0-alpha.35",
+    "@luma.gl/webgpu": "9.0.0-alpha.35"
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+}

@@ -236,26 +236,30 @@ function assembleGLSLShader(
   options: {
     id?: string;
     source: string;
+    language?: 'glsl' | 'wgsl',
     stage: 'vertex' | 'fragment';
     modules: ShaderModuleInstance[];
     defines?: Record<string, ShaderDefine>;
     hookFunctions?: any[];
-    inject?: Record<string, any>;
+    inject?: Record<string, string | ShaderInjection>;
     transpileToGLSL100?: boolean;
     prologue?: boolean;
     log?: any;
   }
 ) {
+
+  const isWGSL = options.source.includes('->');
   const {
     id,
     source,
     stage,
+    language = isWGSL ? 'wgsl' : 'glsl',
     modules,
     defines = {},
     hookFunctions = [],
     inject = {},
     transpileToGLSL100 = false,
-    prologue = true,
+    prologue = !isWGSL,
     log
   } = options;
 
@@ -287,8 +291,13 @@ function assembleGLSLShader(
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
   // Add precision declaration for fragment shaders
-  let assembledSource = prologue
-    ? `\
+  let assembledSource = '';
+  switch (language) {
+    case 'wgsl':
+      break;
+    case 'glsl':
+      assembledSource = prologue
+        ? `\
 ${versionLine}
 ${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
@@ -297,8 +306,10 @@ ${getVersionDefines(platformInfo)}
 ${getApplicationDefines(allDefines)}
 ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 `
-    : `${versionLine}
+        : `${versionLine}
 `;
+      break;
+  }
 
   const hookFunctionMap = normalizeShaderHooks(hookFunctions);
 
@@ -308,7 +319,8 @@ ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
   const mainInjections: Record<string, ShaderInjection[]> = {};
 
   for (const key in inject) {
-    const injection =
+    // @ts-expect-error
+    const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
@@ -367,7 +379,7 @@ ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 
   assembledSource = transpileGLSLShader(assembledSource, targetVersion, stage);
 
-  return assembledSource;
+  return assembledSource.trim();
 }
 
 /**

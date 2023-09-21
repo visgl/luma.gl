@@ -20,6 +20,9 @@ export {Transform} from './transform/transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 
+// shadertools
+export {ShaderModuleUniforms} from './shadertools/shader-module-uniforms';
+
 // Utils
 export {ClipSpace} from './lib/clip-space';
 
