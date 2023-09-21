@@ -10,11 +10,11 @@ const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 import './disable-example-startup';
 
 // getting started
-import helloTriangle from '../../examples/getting-started/hello-triangle/app';
-import helloInstancing from '../../examples/getting-started/hello-instancing/app';
-import shaderModules from '../../examples/getting-started/shader-modules/app';
-import shaderHooks from '../../examples/getting-started/shader-hooks/app';
-// import transformFeedback from '../../examples/getting-started/transform-feedback/app';
+import helloTriangle from '../../examples/tutorials/hello-triangle/app';
+import helloInstancing from '../../examples/tutorials/hello-instancing/app';
+import shaderModules from '../../examples/tutorials/shader-modules/app';
+import shaderHooks from '../../examples/tutorials/shader-hooks/app';
+// import transformFeedback from '../../examples/tutorials/transform-feedback/app';
 
 // API
 // import animation from '../../examples/api/animation/app';
