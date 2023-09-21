@@ -10,6 +10,8 @@ surface
 </p>
 `;
 
+// ROOM CUBE
+
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = glsl`\
@@ -144,12 +146,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  override onFinalize(): void {
+  onFinalize(): void {
     this.prism.destroy();
     this.cube.destroy();  
   }
 
-  override onRender({device, aspect, tick}: AnimationProps): void {
+  onRender({device, aspect, tick}: AnimationProps): void {
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({fovy: radians(75), aspect});

@@ -32,7 +32,7 @@ export function ExamplesIndex({getThumbnail, sidebar}) {
 
   return (
     <div>
-      <div style={{height: 100}} key="index">
+      <div style={{height: 20}} key="index">
         {' '}
       </div>
       <MainExamples>

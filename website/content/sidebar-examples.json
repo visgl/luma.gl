@@ -16,12 +16,12 @@
     "type": "category",
     "label": "Tutorials",
     "items": [
-      "getting-started/hello-triangle",
-      "getting-started/hello-instancing",
-      "getting-started/hello-cube",
-      "getting-started/lighting",
-      "getting-started/shader-modules",
-      "getting-started/shader-hooks"
+      "tutorials/hello-triangle",
+      "tutorials/hello-instancing",
+      "tutorials/hello-cube",
+      "tutorials/lighting",
+      "tutorials/shader-modules",
+      "tutorials/shader-hooks"
     ]
   },
   {

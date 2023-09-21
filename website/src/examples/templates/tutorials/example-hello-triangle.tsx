@@ -1,6 +1,6 @@
 import React from 'react';
 import {LumaExample} from '../../../react-luma';
-import AnimationLoopTemplate from '../../../../../examples/getting-started/hello-triangle/app';
+import AnimationLoopTemplate from '../../../../../examples/tutorials/hello-triangle/app';
 
 export class HelloTriangleExample extends React.Component {
   render() {

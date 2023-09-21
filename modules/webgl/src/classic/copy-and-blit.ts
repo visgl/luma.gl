@@ -51,15 +51,15 @@ export function readPixelsToArray(
   sourceHeight = sourceHeight || framebuffer.height;
 
   // TODO - Set and unset gl.readBuffer
-  if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
-    sourceAttachment = GL.FRONT;
-  }
+  // if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
+  //   sourceAttachment = GL.FRONT;
+  // }
 
   const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
   // assert(attachments[sourceAttachment]);
 
   // Deduce the type from color attachment if not provided.
-  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as WEBGLTexture).type;
+  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as WEBGLTexture)?.type || GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);

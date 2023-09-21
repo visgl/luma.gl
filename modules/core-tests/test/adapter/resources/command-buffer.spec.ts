@@ -126,7 +126,7 @@ const FB_READPIXELS_TEST_CASES: {
   // }
 ];
 
-test.only('CommandBuffer#copyTextureToTexture', t => {
+test('CommandBuffer#copyTextureToTexture', t => {
   for (const device of getWebGLTestDevices()) {
     testCopyTextureToBuffer(t, device, {bufferCreation: false, sourceIsFramebuffer: false});
     testCopyTextureToBuffer(t, device, {bufferCreation: false, sourceIsFramebuffer: true});
