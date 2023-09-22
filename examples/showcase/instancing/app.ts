@@ -2,7 +2,7 @@ import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, NumberArra
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';
-import {picking, dirlight} from '@luma.gl/shadertools';
+import {colorPicking, dirlightMaterial} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {ShaderUniformType} from 'modules/core/src';
 
@@ -120,7 +120,7 @@ class InstancedCube extends Model {
       ...props,
       vs,
       fs,
-      modules: [dirlight, picking],
+      modules: [dirlightMaterial, colorPicking],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry(),
       shaderLayout: {
@@ -137,7 +137,7 @@ class InstancedCube extends Model {
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
         {name: 'instancePickingColors', format: 'unorm8x2'},
-        // TODO - normalizing picking colors breaks picking 
+        // TODO - normalizing colorPicking colors breaks picking 
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
       attributes: {
@@ -181,12 +181,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   uniformStore = new UniformStore<{
     app: AppUniforms,
-    dirlight: typeof dirlight['defaultUniforms']
-    picking: typeof picking['defaultUniforms']
+    dirlightMaterial: typeof dirlightMaterial['defaultUniforms']
+    colorPicking: typeof colorPicking['defaultUniforms']
   }>({
     app: appUniforms,
-    dirlight,
-    picking
+    dirlightMaterial,
+    colorPicking
   });
 
   constructor({device, animationLoop}: AnimationProps) {
@@ -211,8 +211,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube = new InstancedCube(device, {
       bindings: {
         appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        dirlightUniforms: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
-        pickingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
+        dirlightUniforms: this.uniformStore.getManagedUniformBuffer(device, 'dirlightMaterial'),
+        pickingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'colorPicking'),
       }
     });
   }
@@ -274,7 +274,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Render picking colors
     framebuffer.resize(device.canvasContext.getPixelSize());
 
-    this.uniformStore.setUniforms({picking: {isActive: true}});
+    this.uniformStore.setUniforms({colorPicking: {isActive: true}});
 
     const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
     model.draw(pickingPass);
@@ -287,12 +287,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       sourceWidth: 1,
       sourceHeight: 1
     });
-    console.log(color255);
+    // console.log(color255);
 
     const highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
     const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
     
-    this.uniformStore.setUniforms({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
+    this.uniformStore.setUniforms({colorPicking: {isActive: false, isHighlightActive, highlightedObjectColor}});
   }  
 }
 

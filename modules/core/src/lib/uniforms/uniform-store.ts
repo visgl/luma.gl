@@ -28,7 +28,7 @@ export class UniformStore<TUniformGroups extends Record<string, Record<string, U
    */
   constructor(
     blocks: Record<keyof TUniformGroups, {
-      uniformTypes: Record<string, ShaderUniformType>;
+      uniformTypes?: Record<string, ShaderUniformType>;
       defaultUniforms?: Record<string, UniformValue>;
     }>
   ) {
