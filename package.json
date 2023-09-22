@@ -15,7 +15,7 @@
     "3d"
   ],
   "workspaces": [
-    "examples/**",
+    "examples/*/*",
     "dev-modules/*",
     "modules/*"
   ],

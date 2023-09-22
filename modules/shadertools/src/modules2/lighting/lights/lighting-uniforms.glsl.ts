@@ -2,9 +2,8 @@
 
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
+// #if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
 export const lightingUniforms = glsl`\
-#if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
-
 struct AmbientLight {
   vec3 color;
 };
@@ -38,5 +37,5 @@ float getPointLightAttenuation(PointLight pointLight, float distance) {
        + pointLight.attenuation.z * distance * distance;
 }
 
-#endif
 `;
+// #endif

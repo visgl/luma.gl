@@ -1,4 +1,4 @@
-import type {NumberArray} from '../../types';
+import type {NumberArray} from '../../../types';
 import {lightingShader} from './lights.glsl';
 
 /* eslint-disable camelcase */
