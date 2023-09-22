@@ -1,6 +1,6 @@
 import React from 'react';
 import {LumaExample} from '../../../react-luma';
-// import AnimationLoopTemplate from '../../../../../examples/getting-started/transform/app';
+// import AnimationLoopTemplate from '../../../../../examples/tutorials/transform/app';
 
 export class TransformExample extends React.Component {
   render() {

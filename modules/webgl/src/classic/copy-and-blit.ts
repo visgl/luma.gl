@@ -3,7 +3,7 @@ import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {BufferWithAccessor as Buffer} from './buffer-with-accessor';
-import {WEBGLTexture}  from  '../adapter/resources/webgl-texture';
+import {WEBGLTexture} from '../adapter/resources/webgl-texture';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
@@ -34,9 +34,13 @@ export function readPixelsToArray(
     sourceType?: number;
   }
 ): Uint8Array | Uint16Array | Float32Array {
-  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA} = options || {};
+  const {
+    sourceX = 0,
+    sourceY = 0,
+    sourceFormat = GL.RGBA,
+    sourceAttachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
+  } = options || {};
   let {
-    sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
     target = null,
     // following parameters are auto deduced if not provided
     sourceWidth,
@@ -51,15 +55,18 @@ export function readPixelsToArray(
   sourceHeight = sourceHeight || framebuffer.height;
 
   // TODO - Set and unset gl.readBuffer
-  if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
-    sourceAttachment = GL.FRONT;
-  }
+  // if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
+  //   sourceAttachment = GL.FRONT;
+  // }
 
   const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
   // assert(attachments[sourceAttachment]);
 
   // Deduce the type from color attachment if not provided.
-  sourceType = sourceType || (framebuffer.colorAttachments[attachment] as WEBGLTexture).type;
+  sourceType =
+    sourceType ||
+    (framebuffer.colorAttachments[attachment] as WEBGLTexture)?.type ||
+    GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
@@ -281,11 +288,8 @@ export function toFramebuffer(texture: Texture, props?: FramebufferProps): Frame
     id: `framebuffer-for-${id}`,
     width,
     height,
-    colorAttachments: [
-      texture
-    ]
-  }
-  );
+    colorAttachments: [texture]
+  });
   return framebuffer;
 }
 

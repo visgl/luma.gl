@@ -76,11 +76,11 @@ const config = {
       '@docusaurus/plugin-client-redirects',
       {
         createRedirects(existingPath) {
-          // docs/getting-started/*/api-reference <= /docs/tutorials
-          if (existingPath.includes('/docs/getting-started/')) {
+          // docs/examples/tutorials/*/api-reference <= /docs/tutorials
+          if (existingPath.includes('/docs/examples/tutorials/')) {
             return [
               existingPath
-                .replace('/docs/getting-started/', '/docs/tutorials/')
+                .replace('/docs/examples/tutorials/', '/docs/tutorials/')
             ];
           }
             
@@ -120,7 +120,7 @@ const config = {
             label: 'Docs',
           },
           {
-            to: '/docs/getting-started',
+            to: '/docs/examples/tutorials',
             position: 'left',
             label: 'Tutorial',
           },

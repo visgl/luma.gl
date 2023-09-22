@@ -4,6 +4,7 @@ import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/eng
 import {readPixelsToArray} from '@luma.gl/webgl';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import {ShaderUniformType} from 'modules/core/src';
 
 const INFO_HTML = `
 <p>
@@ -12,6 +13,8 @@ Cube drawn with <b>instanced rendering</b>.
 A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
+
+// INSTANCE CUBE
 
 const random = makeRandomNumberGenerator();
 
@@ -122,8 +125,8 @@ class InstancedCube extends Model {
       geometry: new CubeGeometry(),
       shaderLayout: {
         attributes: [
-          {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
-          {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
+          // {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
+          // {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
           {name: 'instanceOffsets', location: 2, type: 'vec2<f32>', stepMode: 'instance'},
           {name: 'instanceColors', location: 3, type: 'vec3<f32>', stepMode: 'instance'},
           {name: 'instancePickingColors', location: 4, type: 'vec2<f32>', stepMode: 'instance'}
@@ -133,7 +136,7 @@ class InstancedCube extends Model {
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x4'},
+        {name: 'instancePickingColors', format: 'unorm8x2'},
         // TODO - normalizing picking colors breaks picking 
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
@@ -151,6 +154,22 @@ class InstancedCube extends Model {
   }
 }
 
+type AppUniforms = {
+  modelMatrix: NumberArray;
+  viewMatrix: NumberArray;
+  projectionMatrix: NumberArray;
+  time: number;
+};
+
+const appUniforms: {uniformTypes: Record<string, ShaderUniformType>} = {
+  uniformTypes: {
+    modelMatrix: 'mat4x4<f32>',
+    viewMatrix: 'mat4x4<f32>',
+    projectionMatrix: 'mat4x4<f32>',
+    time: 'f32'
+  }
+};
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
   static props = {createFramebuffer: true, debug: true};
@@ -161,23 +180,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   pickingFramebuffer: Framebuffer;
 
   uniformStore = new UniformStore<{
-    app: {
-      modelMatrix: NumberArray;
-      viewMatrix: NumberArray;
-      projectionMatrix: NumberArray;
-      time: number;
-    },
+    app: AppUniforms,
     dirlight: typeof dirlight['defaultUniforms']
     picking: typeof picking['defaultUniforms']
   }>({
-    app: {
-      uniformTypes: {
-        modelMatrix: 'mat4x4<f32>',
-        viewMatrix: 'mat4x4<f32>',
-        projectionMatrix: 'mat4x4<f32>',
-        time: 'f32'
-      }
-    },
+    app: appUniforms,
     dirlight,
     picking
   });
@@ -201,12 +208,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       depthStencilAttachment: 'depth24plus'
     });
   
-    // this.cube = new InstancedCube(device);
-    // this.cube.updateModuleSettings({
-    //   pickingSelectedColor: null
-    // });
-
-
     this.cube = new InstancedCube(device, {
       bindings: {
         appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app'),
@@ -218,9 +219,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.pickingFramebuffer = device.createFramebuffer(device.canvasContext.getCurrentFramebuffer().props);
 
     this.uniformStore.setUniforms({
-      dirlight: dirlight.defaultUniforms
-    });
-    this.uniformStore.setUniforms({
+      dirlight: dirlight.defaultUniforms,
       picking: picking.defaultUniforms
     });
   }
@@ -251,27 +250,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.uniformStore.updateUniformBuffers();
 
-    // this.cube.setUniforms({
-    //   uTime: this.timeline.getTime(timeChannel),
-    //   // Basic projection matrix
-    //   uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
-    //   // Move the eye around the plane
-    //   uView: new Matrix4().lookAt({
-    //     center: [0, 0, 0],
-    //     eye: [
-    //       (Math.cos(this.timeline.getTime(eyeXChannel)) * SIDE) / 2,
-    //       (Math.sin(this.timeline.getTime(eyeYChannel)) * SIDE) / 2,
-    //       ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * SIDE) / 4 + 32
-    //     ]
-    //   }),
-    //   // Rotate all the individual cubes
-    //   uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
-    // });
-
-
-
     if (_mousePosition) {
+      this.uniformStore.setUniforms({picking: {isActive: true}});
+      this.uniformStore.updateUniformBuffers();
       pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
+      this.uniformStore.setUniforms({picking: {isActive: false}});
     }
 
     // Draw the cubes
@@ -307,7 +290,7 @@ export function pickInstance(
   const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
   model.updateModuleSettings({pickingActive: 1});
   model.draw(pickingPass);
-  model.updateModuleSettings({pickingActive: 0});
+  // model.updateModuleSettings({pickingActive: 0});
 
   pickingPass.end();
 
@@ -320,7 +303,7 @@ export function pickInstance(
   });
 
   if (color[0] + color[1] + color[2] > 0) {
-    // console.log('setting picking color', color);
+    console.log('setting picking color', color);
     model.updateModuleSettings({
       pickingSelectedColor: color
     });

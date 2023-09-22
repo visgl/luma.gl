@@ -438,8 +438,8 @@ export class Model {
         bufferLayout: this.bufferLayout,
         topology: this.topology,
         parameters: this.parameters,
-        vs: this.device.createShader({stage: 'vertex', source: this.vs}),
-        fs: this.fs ? this.device.createShader({stage: 'fragment', source: this.fs}) : null
+        vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
+        fs: this.fs ? this.device.createShader({id: '{$this.id}-fragment', stage: 'fragment', source: this.fs}) : null
       });
       this._attributeInfos = getAttributeInfosFromLayouts(
         this.pipeline.shaderLayout,

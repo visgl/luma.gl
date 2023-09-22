@@ -88,10 +88,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         setAnimationLoop(animationLoop);
 
         // Ensure the example can find its images
-        // TODO - this only works for getting-started
+        // TODO - this only works for examples/tutorials
         const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
         if (props.name) {
-          setPathPrefix(`${RAW_GITHUB}/examples/getting-started/${props.name}/`);
+          setPathPrefix(`${RAW_GITHUB}/examples/tutorials/${props.name}/`);
         } else {
           setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
         }
