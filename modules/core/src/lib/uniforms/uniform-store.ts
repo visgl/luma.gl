@@ -5,6 +5,7 @@ import type {Device} from '../../adapter/device';
 import {Buffer} from '../../adapter/resources/buffer';
 import {UniformBlock} from './uniform-block';
 import {UniformBufferLayout} from './uniform-buffer-layout';
+import {log} from '../utils/log';
 
 /** 
  * A uniform store holds a uniform values for one or more uniform blocks,
@@ -27,23 +28,25 @@ export class UniformStore<TUniformGroups extends Record<string, Record<string, U
    */
   constructor(
     blocks: Record<keyof TUniformGroups, {
-      uniformTypes?: Record<string, ShaderUniformType>;
-      defaultValues?: Record<string, UniformValue>;
+      uniformTypes: Record<string, ShaderUniformType>;
+      defaultUniforms?: Record<string, UniformValue>;
     }>
   ) {
     this.uniformBlocks = {} as Record<keyof TUniformGroups, UniformBlock<Record<string, UniformValue>>>;
     this.uniformBufferLayouts = {} as Record<keyof TUniformGroups, UniformBufferLayout>;
     this.uniformBuffers = {} as Record<keyof TUniformGroups, Buffer>;
 
-    for (const [bufferName, uniformBlock] of Object.entries(blocks)) {
+    for (const [bufferName, block] of Object.entries(blocks)) {
       const uniformBufferName = bufferName as keyof TUniformGroups;
 
-      // Create a Uniform block to store the uniforms for each buffer.
-      this.uniformBlocks[uniformBufferName] = new UniformBlock({name: bufferName})
-
       // Create a layout object to help us generate correctly formatted binary uniform buffers 
-      const uniformBufferLayout = new UniformBufferLayout(uniformBlock.uniformTypes || {});
+      const uniformBufferLayout = new UniformBufferLayout(block.uniformTypes || {});
       this.uniformBufferLayouts[uniformBufferName] = uniformBufferLayout;
+
+      // Create a Uniform block to store the uniforms for each buffer.
+      const uniformBlock = new UniformBlock({name: bufferName});
+      uniformBlock.setUniforms(block.defaultUniforms || {});
+      this.uniformBlocks[uniformBufferName] = uniformBlock;
     }
   }
 
@@ -61,7 +64,11 @@ export class UniformStore<TUniformGroups extends Record<string, Record<string, U
   setUniforms(uniforms: Partial<{[group in keyof TUniformGroups]: Partial<TUniformGroups[group]>}>): void {
     for (const [blockName, uniformValues] of Object.entries(uniforms)) {
       this.uniformBlocks[blockName].setUniforms(uniformValues);
+      // We leverage logging in updateUniformBuffers(), even though slightly less efficient
+      // this.updateUniformBuffer(blockName);
     }
+
+    this.updateUniformBuffers();
   }
 
   /** Get the required minimum length of the uniform buffer */
@@ -79,28 +86,43 @@ export class UniformStore<TUniformGroups extends Record<string, Record<string, U
   getManagedUniformBuffer(device: Device, uniformBufferName: keyof TUniformGroups): Buffer {
     if (!this.uniformBuffers[uniformBufferName]) {
       const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-      this.uniformBuffers[uniformBufferName] = 
-        this.uniformBuffers[uniformBufferName] || 
-        device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+      const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+      this.uniformBuffers[uniformBufferName] = uniformBuffer;
     }
+    this.updateUniformBuffers();
     return this.uniformBuffers[uniformBufferName];
   }
 
   /** Update one uniform buffer. Only updates if values have changed */
-  updateUniformBuffer(uniformBufferName: keyof TUniformGroups): void {
+  updateUniformBuffer(uniformBufferName: keyof TUniformGroups): false | string {
     const uniformBlock = this.uniformBlocks[uniformBufferName];
     const uniformBuffer = this.uniformBuffers[uniformBufferName];
+
+    let reason: false | string = false;
     if (uniformBuffer && uniformBlock.needsRedraw) {
+      reason ||= uniformBlock.needsRedraw;
+      // This clears the needs redraw flag
       const uniformBufferData = this.getUniformBufferData(uniformBufferName);
+      
       const uniformBuffer = this.uniformBuffers[uniformBufferName];
       uniformBuffer.write(uniformBufferData);
+
+      // logging - TODO - don't query the values unnecessarily
+      const uniformValues = this.uniformBlocks[uniformBufferName].getAllUniforms();
+      log.log(4, `Writing to uniform buffer ${String(uniformBufferName)}`, uniformBufferData, uniformValues)();
     }
+    return reason;
   }
 
   /** Updates all uniform buffers where values have changed */
-  updateUniformBuffers(): void {
+  updateUniformBuffers(): false | string {
+    let reason: false | string = false;
     for (const uniformBufferName of Object.keys(this.uniformBlocks)) {
-      this.updateUniformBuffer(uniformBufferName)
+      reason ||= this.updateUniformBuffer(uniformBufferName);
     }
+    if (reason) {
+      log.log(3, `UniformStore.updateUniformBuffers(): ${reason}`)();
+    }
+    return reason;
   }
 }

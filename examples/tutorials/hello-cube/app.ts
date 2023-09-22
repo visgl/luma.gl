@@ -104,7 +104,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.setUniforms({
       app: {uMVP: this.mvpMatrix}
     });
-    this.uniformStore.updateUniformBuffers();
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.draw(renderPass);

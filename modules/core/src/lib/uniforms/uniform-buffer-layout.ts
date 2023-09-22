@@ -60,6 +60,8 @@ export class UniformBufferLayout {
       // TODO not implemented
       f16: new Uint16Array(arrayBuffer)
     };
+    // TODO is this needed?
+    // typedArrays.i32.fill(0);
     
     for (const [name, value] of Object.entries(uniformValues)) {
       const uniformLayout = this.layout[name];

@@ -80,7 +80,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   uniformStore = new UniformStore<{app: AppUniforms}>({
-    app: appUniforms
+    app: appUniforms,
+    phongLighting
   });
 
   model: Model;
@@ -146,7 +147,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.setUniforms({
       app: {uMVP: this.mvpMatrix, uModel: this.modelMatrix}
     });
-    this.uniformStore.updateUniformBuffers();
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1], 

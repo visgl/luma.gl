@@ -56,7 +56,7 @@ void main(void) {
   vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
   dirlight_setNormal(normal);
 
-  vec4 pickColor = vec4(0., instancePickingColors / 255., 1.0);
+  vec4 pickColor = vec4(0., instancePickingColors, 1.0);
   picking_setPickingColor(pickColor.rgb);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
@@ -215,13 +215,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         pickingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
       }
     });
-
-    this.pickingFramebuffer = device.createFramebuffer(device.canvasContext.getCurrentFramebuffer().props);
-
-    this.uniformStore.setUniforms({
-      dirlight: dirlight.defaultUniforms,
-      picking: picking.defaultUniforms
-    });
   }
 
   onRender(animationProps: AnimationProps) {
@@ -248,13 +241,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    this.uniformStore.updateUniformBuffers();
-
     if (_mousePosition) {
-      this.uniformStore.setUniforms({picking: {isActive: true}});
-      this.uniformStore.updateUniformBuffers();
-      pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
-      this.uniformStore.setUniforms({picking: {isActive: false}});
+      this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
     }
 
     // Draw the cubes
@@ -263,7 +251,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearDepth: 1,
       clearStencil: 0
     });
-    // this.cube.updateModuleSettings({pickingActive: 0});
 
     this.cube.draw(renderPass);
     renderPass.end();
@@ -272,75 +259,40 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize(animationProps: AnimationProps): void {
     this.cube.destroy();
   }
-}
 
-export function pickInstance(
-  device: Device,
-  mousePosition: number[],
-  model: Model,
-  framebuffer: Framebuffer
-) {
-  // use the center pixel location in device pixel range
-  const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
-  const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
-  const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
+  pickInstance(
+    device: Device,
+    mousePosition: number[],
+    model: Model,
+    framebuffer: Framebuffer
+  ) {
+    // use the center pixel location in device pixel range
+    const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
+    const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
+    const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
-  // Render picking colors
-  framebuffer.resize(device.canvasContext.getPixelSize());
-  const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
-  model.updateModuleSettings({pickingActive: 1});
-  model.draw(pickingPass);
-  // model.updateModuleSettings({pickingActive: 0});
+    // Render picking colors
+    framebuffer.resize(device.canvasContext.getPixelSize());
 
-  pickingPass.end();
+    this.uniformStore.setUniforms({picking: {isActive: true}});
 
-  // Read back 
-  const color = readPixelsToArray(framebuffer, {
-    sourceX: pickX,
-    sourceY: pickY,
-    sourceWidth: 1,
-    sourceHeight: 1
-  });
+    const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+    model.draw(pickingPass);
+    pickingPass.end();
 
-  if (color[0] + color[1] + color[2] > 0) {
-    console.log('setting picking color', color);
-    model.updateModuleSettings({
-      pickingSelectedColor: color
+    // Read back 
+    const color255 = readPixelsToArray(framebuffer, {
+      sourceX: pickX,
+      sourceY: pickY,
+      sourceWidth: 1,
+      sourceHeight: 1
     });
-  } else {
-    model.updateModuleSettings({
-      pickingSelectedColor: null
-    });
-  }
-  // const size = device.canvasContext?.getPixelSize();
-  // framebuffer.resize({width: size[0], height: size[0]});
-  
-  // // Render picking colors
-  // const pickingPass = device.beginRenderPass({framebuffer});
-  // this.uniformStore.setUniforms({picking: {isActive: true}});
-  // this.uniformStore.updateUniformBuffers();
-  // model.draw(pickingPass);
-  // this.uniformStore.setUniforms({picking: {isActive: false}});
-  // pickingPass.end();
+    console.log(color255);
 
-  // const commandEncoder = new CommandEncoder();
-  // const color = readPixelsToArray(framebuffer, {
-  //   sourceX: pickX,
-  //   sourceY: pickY,
-  //   sourceWidth: 1,
-  //   sourceHeight: 1,
-  //   sourceFormat: GL.RGBA,
-  //   sourceType: GL.UNSIGNED_BYTE
-  // });
-  
-  // if (color[0] + color[1] + color[2] > 0) {
-  //   model.updateModuleSettings({
-  //     pickingSelectedColor: color
-  //   });
-  // } else {
-  //   model.updateModuleSettings({
-  //     pickingSelectedColor: null
-  //   });
-  // }
+    const highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
+    const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
+    
+    this.uniformStore.setUniforms({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
+  }  
 }
 

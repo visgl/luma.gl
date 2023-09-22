@@ -3,7 +3,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 // cyan color
-const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
+const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
 
 /** 
  * Uniforms for the picking module, which renders picking colors and highlighted item. 
@@ -16,42 +16,61 @@ export type PickingUniforms = {
    * When false, renders normal colors, with the exception of selected object which is rendered with highlight 
    */
   isActive?: boolean;
+  /** Set to true when picking an attribute value instead of object index */
+  isAttribute: boolean;
+  /** Color range 0-1 or 0-255 */
+  useNormalizedColors?: boolean;
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
   /** Set to a picking color to visually highlight that item */
   highlightedObjectColor?: NumberArray; 
   /** Color of visual highlight of "selected" item */
   highlightColor?: NumberArray;
-  /** Set to true when picking an attribute value instead of object index */
-  isAttribute: boolean;
-}
+};
 
 const vs = glsl`\
 uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
+  float useNormalizedColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
 
 out vec4 picking_vRGBcolor_Avalid;
 
+// Normalize unsigned byte color to 0-1 range
+vec3 picking_normalizeColor(vec3 color) {
+  return color;
+  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+}
+
+// Normalize unsigned byte color to 0-1 range
+vec4 picking_normalizeColor(vec4 color) {
+  return color;
+  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+}
+
 bool picking_isColorZero(vec3 color) {
-  return dot(color, vec3(1.0)) < 0.001;
+  return dot(color, vec3(1.0)) < 0.00001;
 }
 
 bool picking_isColorValid(vec3 color) {
-  return dot(color, vec3(1.0)) > 0.001;
+  return dot(color, vec3(1.0)) > 0.00001;
 }
 
-bool isVertexPicked(vec3 vertexColor) {
+// Check if this vertex is highlighted 
+bool isVertexHighlighted(vec3 vertexColor) {
+  vec3 highlightedObjectColor = picking_normalizeColor(picking.highlightedObjectColor);
   return
-    bool(picking.isHighlightActive) &&
-    picking_isColorZero(abs(vertexColor - picking.highlightedObjectColor));
+    bool(picking.isHighlightActive) && picking_isColorZero(abs(vertexColor - highlightedObjectColor));
 }
 
+// Set the current picking color
 void picking_setPickingColor(vec3 pickingColor) {
+  pickingColor = picking_normalizeColor(pickingColor);
+
   if (bool(picking.isActive)) {
     // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
     picking_vRGBcolor_Avalid.a = float(picking_isColorValid(pickingColor));
@@ -62,7 +81,7 @@ void picking_setPickingColor(vec3 pickingColor) {
     // }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
-    picking_vRGBcolor_Avalid.a = float(isVertexPicked(pickingColor));
+    picking_vRGBcolor_Avalid.a = float(isVertexHighlighted(pickingColor));
   }
 }
 
@@ -90,6 +109,7 @@ uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
+  float useNormalizedColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
@@ -157,6 +177,7 @@ export const picking: ShaderModule<PickingUniforms> = {
   uniformTypes: {
     isActive: 'f32',
     isAttribute: 'f32',
+    useNormalizedColors: 'f32',
     isHighlightActive: 'f32',
     highlightedObjectColor: 'vec3<f32>',
     highlightColor: 'vec4<f32>'
@@ -164,8 +185,9 @@ export const picking: ShaderModule<PickingUniforms> = {
   defaultUniforms: {
     isActive: false,
     isAttribute: false,
+    useNormalizedColors: true,
     isHighlightActive: false,
-    highlightedObjectColor: [0, 0, 0],
+    highlightedObjectColor: new Float32Array([0, 0, 0]),
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
   getUniforms
@@ -176,11 +198,9 @@ function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: Picking
 
   if (opts.highlightedObjectColor !== undefined) {
     if (!opts.highlightedObjectColor) {
-      // @ts-expect-error
-      uniforms.isHighlightActive = 0;
+      uniforms.isHighlightActive = false;
     } else {
-      // @ts-expect-error
-      uniforms.isHighlightActive = 1;
+      uniforms.isHighlightActive = true;
       const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
       uniforms.highlightedObjectColor = highlightedObjectColor;
     }
