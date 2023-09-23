@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../modules/module-injectors';
+import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../module-injectors';
 import {assert} from '../utils/assert';
 
 // TODO - experimental

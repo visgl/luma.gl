@@ -10,7 +10,7 @@ import { log } from '../utils/log';
  * Smallest buffer size that can be used for uniform buffers.
  * TODO - does this depend on device?
  */
-const minBufferSize: number = 256;
+const minBufferSize: number = 1024;
 
 /**
  * Std140 layout for uniform buffers
@@ -48,7 +48,6 @@ export class UniformBufferLayout {
 
   /** Get the data for the complete buffer */
   getData(uniformValues: Record<string, UniformValue>): Uint8Array {
-    const minBufferSize: number = 256;
     const bufferSize = Math.max(this.byteLength, minBufferSize);
 
     // Allocate three typed arrays pointing at same memory
@@ -60,6 +59,8 @@ export class UniformBufferLayout {
       // TODO not implemented
       f16: new Uint16Array(arrayBuffer)
     };
+    // TODO is this needed?
+    // typedArrays.i32.fill(0);
     
     for (const [name, value] of Object.entries(uniformValues)) {
       const uniformLayout = this.layout[name];

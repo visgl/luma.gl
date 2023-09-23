@@ -1,6 +1,6 @@
 import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {phongLighting} from '@luma.gl/shadertools';
+import {phongMaterial, lighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -23,7 +23,6 @@ const appUniforms: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} 
   }
 };
 
-
 const vs = glsl`\
 #version 300 es
   attribute vec3 positions;
@@ -34,7 +33,7 @@ const vs = glsl`\
   varying vec3 vNormal;
   varying vec2 vUV;
 
-  uniform AppUniforms {
+  uniform appUniforms {
     mat4 uModel;
     mat4 uMVP;
     vec3 uEyePosition;
@@ -58,7 +57,7 @@ const fs = glsl`\
 
   uniform sampler2D uTexture;
 
-  uniform AppUniforms {
+  uniform appUniforms {
     mat4 uModel;
     mat4 uMVP;
     vec3 uEyePosition;
@@ -79,8 +78,14 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  uniformStore = new UniformStore<{app: AppUniforms}>({
-    app: appUniforms
+  uniformStore = new UniformStore<{
+    app: AppUniforms, 
+    lighting: typeof lighting['defaultUniforms'],
+    phongMaterial: typeof phongMaterial['defaultUniforms']
+  }>({
+    app: appUniforms,
+    lighting, 
+    phongMaterial
   });
 
   model: Model;
@@ -97,7 +102,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       geometry: new CubeGeometry(),
-      modules: [phongLighting],
+      modules: [phongMaterial],
       moduleSettings: {
         material: {
           specularColor: [255, 255, 255]
@@ -116,7 +121,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       bindings: {
         uTexture: texture,
-        appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app')
+        appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        lightingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'lighting'),
+        phongMaterialUniforms: this.uniformStore.getManagedUniformBuffer(device, 'phongMaterial')
       },
       uniforms: {
         uEyePosition: eyePosition
@@ -146,7 +153,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.setUniforms({
       app: {uMVP: this.mvpMatrix, uModel: this.modelMatrix}
     });
-    this.uniformStore.updateUniformBuffers();
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1], 

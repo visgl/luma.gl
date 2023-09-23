@@ -45,7 +45,9 @@ export class UniformBlock<TUniforms extends Record<string, UniformValue>> {
   setUniforms(uniforms: Partial<TUniforms>): void {
     for (const [key, value] of Object.entries(uniforms)) {
       this._setUniform(key, value);
-      this.setNeedsRedraw(key);
+      if (!this.needsRedraw) {
+        this.setNeedsRedraw(`${this.name}.${key}=${value}`);
+      }
     }
   }
 

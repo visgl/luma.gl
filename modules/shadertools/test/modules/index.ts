@@ -9,10 +9,10 @@ import './fp64/fp64-utils.spec';
 import './utils/random.spec';
 
 // Light and picking
-import './dirlight/dirlight.spec';
+// import './dirlight/dirlight.spec';
 import './lights/lights.spec';
-import './phong-lighting/phong-lighting.spec';
-import './picking/picking.spec';
+// import './phong-lighting/phong-lighting.spec';
+// import './picking/picking.spec';
 
 
 // Blur Filters

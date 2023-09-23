@@ -7,7 +7,7 @@ import {
   Timeline,
   KeyFrames
 } from '@luma.gl/engine';
-import {dirlight} from '@luma.gl/shadertools';
+import {dirlightMaterial} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 import {makeRandomNumberGenerator} from '@luma.gl/core';
@@ -193,7 +193,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         model: new Model(device, {
           vs,
           fs,
-          modules: [dirlight],
+          modules: [dirlightMaterial],
           geometry: new CubeGeometry(),
           parameters: {
             depthWriteEnabled: true,

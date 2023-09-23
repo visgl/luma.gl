@@ -21,3 +21,4 @@ import './lib/shader-assembler.spec';
 
 // Tests for shader modules
 import './modules';
+import './modules-ubo';

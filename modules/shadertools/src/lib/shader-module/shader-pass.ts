@@ -1,10 +1,10 @@
-import type {ShaderModule} from './shader-module';
+import type {ShaderModule, UniformValue} from './shader-module';
 
 /**
  * A shaderpass is a shader module with additional information
  * on how to run 
  */
-export type ShaderPass<Uniforms extends Record<string, unknown>> = ShaderModule<Uniforms> & {
+export type ShaderPass<UniformsT extends Record<string, UniformValue>> = ShaderModule<UniformsT> & {
   passes?: ShaderPassData[];
 };
 

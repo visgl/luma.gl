@@ -7,7 +7,7 @@ import type {Texture} from '../resources/texture'; // TextureView...
 // UNIFORMS
 
 /** Valid values for uniforms. @note boolean values get converted to 0 or 1 before setting */
-export type UniformValue = number | boolean | Float32Array | Int32Array | Uint32Array | NumberArray;
+export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 // BINDINGS
 
