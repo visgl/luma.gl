@@ -46,7 +46,7 @@ const vs = glsl`\
 attribute vec3 positions;
 attribute vec3 normals;
 
-uniform AppUniforms {
+uniform appUniforms {
   vec3 uColor;
   mat4 uModel;
   mat4 uView;
@@ -120,6 +120,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     [3000, 2 * Math.PI],
     [4000, 0]
   ];
+
+  globalUniformStore = new UniformStore<{dirlightMaterial: typeof dirlightMaterial['defaultUniforms']}>({
+    dirlightMaterial
+  });
 
   constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
@@ -200,7 +204,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             depthCompare: 'less-equal'
           },
           bindings: {
-            AppUniforms: uniformStore.getManagedUniformBuffer(device, 'app')
+            appUniforms: uniformStore.getManagedUniformBuffer(device, 'app'),
+            dirlightUniforms: this.globalUniformStore.getManagedUniformBuffer(
+              device,
+              'dirlightMaterial'
+            )
           }
         })
       };
@@ -244,7 +252,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      // clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 1],
       // clearDepth: true
     });
     for (const cube of this.cubes) {

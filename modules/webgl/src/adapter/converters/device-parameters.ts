@@ -21,6 +21,38 @@ import {WebGLDevice} from '../webgl-device';
  * - Executes supplied function
  * - Restores parameters
  * - Returns the return value of the supplied function
+ */
+export function withDeviceAndGLParameters<T = unknown>(
+  device: Device, 
+  parameters: Parameters,
+  glParameters: GLParameters,
+  func: (device?: Device) => T
+): T {
+  if (isObjectEmpty(parameters)) {
+    // Avoid setting state if no parameters provided. Just call and return
+    return func(device);
+  }
+
+  // Wrap in a try-catch to ensure that parameters are restored on exceptions
+  // @ts-expect-error
+  pushContextState(device.gl);
+  try {
+    setDeviceParameters(device, parameters);
+    setGLParameters(device, glParameters);
+    return func(device);
+  } finally {
+    // @ts-expect-error
+    popContextState(device.gl);
+  }
+}
+
+/**
+ * Execute a function with a set of temporary WebGL parameter overrides
+ * - Saves current "global" WebGL context settings
+ * - Sets the supplies WebGL context parameters,
+ * - Executes supplied function
+ * - Restores parameters
+ * - Returns the return value of the supplied function
  * @deprecated use withDeviceParameters instead
  */
 export function withGLParameters<T = unknown>(
