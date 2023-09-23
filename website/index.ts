@@ -12,4 +12,8 @@ export {TransformFeedbackExample} from './src/examples/templates/tutorials/examp
 export {InstancingExample} from './src/examples/templates/showcase/example-instancing';
 export {PersistenceExample} from './src/examples/templates/showcase/example-persistence';
 
+export {AnimationExample} from './src/examples/templates/api/example-animation';
+export {CubemapExample} from './src/examples/templates/api/example-cubemap';
+export {Texture3DExample} from './src/examples/templates/api/example-texture-3d';
+
 // export {GeospatialExample} from './templates/showcase/example-geospatial';

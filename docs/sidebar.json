@@ -7,9 +7,9 @@
     "items": [
       "tutorials/README",
       "tutorials/hello-triangle",
-      "tutorials/hello-instancing",
       "tutorials/hello-cube",
       "tutorials/lighting",
+      "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/transform",
