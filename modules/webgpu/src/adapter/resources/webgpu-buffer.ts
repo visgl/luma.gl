@@ -18,8 +18,11 @@ export class WebGPUBuffer extends Buffer {
     this.byteLength = getByteLength(props);
     const mapBuffer = Boolean(props.data);
 
+    // WebGPU buffers must be aligned to 4 bytes
+    const size = Math.ceil(this.byteLength / 4) * 4;
+
     this.handle = this.props.handle || this.device.handle.createBuffer({
-      size: this.byteLength,
+      size,
       // usage defaults to vertex
       usage: this.props.usage || (GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST),
       mappedAtCreation: this.props.mappedAtCreation || mapBuffer,

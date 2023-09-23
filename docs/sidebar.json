@@ -26,7 +26,11 @@
       {
         "type": "category",
         "label": "Background",
-        "items": ["api-guide/background/api-design", "api-guide/background/webgpu-vs-webgl"]
+        "items": [
+          "api-guide/background/api-design",
+          "api-guide/background/about-webgpu",
+          "api-guide/background/webgpu-vs-webgl"
+        ]
       },
       "public-review",
       "api-guide/README",
@@ -175,6 +179,7 @@
     "type": "category",
     "label": "Developer Guide",
     "items": [
+      "developer-guide/README",
       "developer-guide/installing",
       "developer-guide/debugging",
       "developer-guide/testing",
