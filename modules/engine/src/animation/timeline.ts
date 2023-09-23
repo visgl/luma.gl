@@ -49,7 +49,7 @@ export class Timeline {
   addChannel(props: ChannelOptions): number {
     const {delay = 0, duration = Number.POSITIVE_INFINITY, rate = 1, repeat = 1} = props;
 
-    const handle = channelHandles++;
+    const channelId = channelHandles++;
     const channel: Channel = {
       time: 0,
       delay,
@@ -58,23 +58,23 @@ export class Timeline {
       repeat
     };
     this._setChannelTime(channel, this.time);
-    this.channels.set(handle, channel);
+    this.channels.set(channelId, channel);
 
-    return handle;
+    return channelId;
   }
 
-  removeChannel(handle: number): void {
-    this.channels.delete(handle);
+  removeChannel(channelId: number): void {
+    this.channels.delete(channelId);
 
     for (const [animationHandle, animation] of this.animations) {
-      if (animation.channel === handle) {
+      if (animation.channel === channelId) {
         this.detachAnimation(animationHandle);
       }
     }
   }
 
-  isFinished(handle: number): boolean {
-    const channel = this.channels.get(handle);
+  isFinished(channelId: number): boolean {
+    const channel = this.channels.get(channelId);
     if (channel === undefined) {
       return false;
     }
@@ -82,12 +82,12 @@ export class Timeline {
     return this.time >= channel.delay + channel.duration * channel.repeat;
   }
 
-  getTime(handle?: number): number {
-    if (handle === undefined) {
+  getTime(channelId?: number): number {
+    if (channelId === undefined) {
       return this.time;
     }
 
-    const channel = this.channels.get(handle);
+    const channel = this.channels.get(channelId);
 
     if (channel === undefined) {
       return -1;
@@ -137,8 +137,8 @@ export class Timeline {
     return animationHandle;
   }
 
-  detachAnimation(handle: number): void {
-    this.animations.delete(handle);
+  detachAnimation(channelId: number): void {
+    this.animations.delete(channelId);
   }
 
   update(engineTime: number): void {

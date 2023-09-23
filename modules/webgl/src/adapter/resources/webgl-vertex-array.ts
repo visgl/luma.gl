@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 
 import type {Device, Buffer, VertexArrayProps, TypedArray, NumberArray} from '@luma.gl/core';
-import {VertexArray, getScratchArray, fillArray, log} from '@luma.gl/core';
+import {VertexArray, getScratchArray, fillArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 
@@ -118,7 +118,8 @@ export class WEBGLVertexArray extends VertexArray {
     // TODO - the initial bind does not seem to take effect. 
     if (!this.init) {
       // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
-      this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.indexBuffer?.handle || null);
+      const webglBuffer = this.indexBuffer as WEBGLBuffer;
+      this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
       this.init = true;
     }
     this._applyConstantAttributes();
