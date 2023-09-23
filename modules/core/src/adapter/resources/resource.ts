@@ -6,7 +6,7 @@ export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
   id?: string;
   /** Handle for the underlying resources (WebGL object or WebGPU handle) */
-  handle?: unknown;
+  handle?: any;
   /** User provided data stored on this resource  */
   userData?: {[key: string]: any};
 }
