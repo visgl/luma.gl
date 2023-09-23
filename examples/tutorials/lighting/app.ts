@@ -1,6 +1,6 @@
 import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {phongMaterial, PhongMaterialUniforms, lighting} from '@luma.gl/shadertools';
+import {phongMaterial, lighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -80,8 +80,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   uniformStore = new UniformStore<{
     app: AppUniforms, 
-    lighting: typeof lighting['uniformTypes'],
-    phongMaterial: PhongMaterialUniforms
+    lighting: typeof lighting['defaultUniforms'],
+    phongMaterial: typeof phongMaterial['defaultUniforms']
   }>({
     app: appUniforms,
     lighting, 

@@ -68,7 +68,7 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
       if (i >= lighting.pointLightCount) {
         break;
       }
-      PointLight pointLight = lighting.pointLight[i];
+      PointLight pointLight = lighting_getPointLight(i);
       vec3 light_position_worldspace = pointLight.position;
       vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
       lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
@@ -78,7 +78,7 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
       if (i >= lighting.directionalLightCount) {
         break;
       }
-      DirectionalLight directionalLight = lighting.directionalLight[i];
+      PointLight pointLight = lighting_getDirectionalLight(i);
       lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
     }
   }

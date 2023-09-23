@@ -7,8 +7,8 @@ import {ShaderModule} from '../..';
 const DEFAULT_HIGHLIGHT_COLOR = new Uint8Array([0, 255, 255, 255]);
 
 export type PickingOptions = {
-  pickingSelectedColor?: NumberArray | null, //  Set to a picking color to visually highlight that item
-  pickingHighlightColor?: NumberArray, // Color of visual highlight of "selected" item
+  pickingSelectedColor?: Readonly<NumberArray> | null, //  Set to a picking color to visually highlight that item
+  pickingHighlightColor?: Readonly<NumberArray>, // Color of visual highlight of "selected" item
   pickingActive?: boolean, // Set to true when rendering to off-screen "picking" buffer
   pickingAttribute: boolean // Set to true when picking an attribute value instead of object index
   pickingColorRange?: 1 | 255;
@@ -18,8 +18,8 @@ export type PickingUniforms = {
   picking_uActive?: boolean;
   picking_uAttribute?: boolean;
   picking_uSelectedColorValid?: number;
-  picking_uSelectedColor?: NumberArray;
-  picking_uHighlightColor?: NumberArray;
+  picking_uSelectedColor?: Readonly<NumberArray>;
+  picking_uHighlightColor?: Readonly<NumberArray>;
   picking_uColorScale?: number;
 }
 

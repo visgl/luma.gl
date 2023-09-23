@@ -1,6 +1,9 @@
 // luma.gl, MIT license
+import {NumberArray} from '@math.gl/types';
 import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
+
+export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 export type UniformInfo = {
   format: UniformFormat; 
@@ -10,7 +13,7 @@ export type UniformInfo = {
  * A shader module definition object
  * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
  */
-export type ShaderModule<UniformsT extends Record<string, unknown> = Record<string, unknown>, SettingsT extends Record<string, unknown> = UniformsT> = {
+export type ShaderModule<UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>, SettingsT extends Record<string, unknown> = UniformsT> = {
   name: string;
   fs?: string;
   vs?: string;

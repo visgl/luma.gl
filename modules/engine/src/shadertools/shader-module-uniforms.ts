@@ -4,7 +4,7 @@ import {Device, Buffer, UniformBufferLayout, ShaderUniformType} from '@luma.gl/c
 import {ShaderModule} from '@luma.gl/shadertools';
 
 /** Duplicates definition in core module to avoid cross dependencies */
-export type UniformValue = number | boolean | Float32Array | Int32Array | Uint32Array | NumberArray;
+export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 /** A uniform store holds a number of uniform values and does some book keeping on what has changes */
 export class ShaderModuleUniforms<TUniforms extends Record<string, UniformValue>> {

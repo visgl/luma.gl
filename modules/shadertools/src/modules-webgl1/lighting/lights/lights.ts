@@ -3,21 +3,19 @@ import {lightingShader} from './lights.glsl';
 
 /* eslint-disable camelcase */
 
-type Color = NumberArray;
-
 type LightSources = {
   ambientLight?: {
-    color: Color;
+    color: Readonly<NumberArray>;
     intensity: number;
   };
   pointLights?: {
-    color: Color;
+    color: Readonly<NumberArray>;
     intensity: number;
     position: NumberArray;
     attenuation: number;
   }[];
   directionalLights?: {
-    color: Color;
+    color: Readonly<NumberArray>;
     intensity: number;
     position: NumberArray;
     direction: NumberArray;
@@ -33,7 +31,7 @@ const INITIAL_MODULE_OPTIONS: Required<LightsOptions> = {
 };
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
-function convertColor(colorDef: {color?: NumberArray, intensity?: number} = {}): NumberArray {
+function convertColor(colorDef: {color?: Readonly<NumberArray>, intensity?: number} = {}): NumberArray {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
   return color.map((component) => (component * intensity) / 255.0);
 }

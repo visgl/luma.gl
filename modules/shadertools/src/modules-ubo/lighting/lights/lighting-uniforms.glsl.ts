@@ -26,10 +26,26 @@ uniform lightingUniforms {
   int pointLightCount;
   int directionalLightCount;
 
-  AmbientLight ambientLight;
-  PointLight pointLight[MAX_LIGHTS];
-  DirectionalLight directionalLight[MAX_LIGHTS];
+  vec3 ambientColor;
+
+  int lightType;
+  vec3 lightColor;
+  vec3 lightDirection;
+  vec3 lightPosition;
+  vec3 lightAttenuation;
+
+  // AmbientLight ambientLight;
+  // PointLight pointLight[MAX_LIGHTS];
+  // DirectionalLight directionalLight[MAX_LIGHTS];
 } lighting;
+
+PointLight lighting_getPointLight(int index) {
+  return PointLight(lightColor, lightPosition, lightAttenuation);
+}
+
+DirectionalLight lighting_getDirectionalLight(int index) {
+  return DirectionalLight(lightColor, lightDirection);
+} 
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {
   return pointLight.attenuation.x
