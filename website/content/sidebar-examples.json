@@ -9,7 +9,10 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/persistence"
+      "showcase/persistence",
+      "api/animation",
+      "api/cubemap",
+      "api/texture-3d"
     ]
   },
   {
@@ -17,9 +20,9 @@
     "label": "Tutorials",
     "items": [
       "tutorials/hello-triangle",
-      "tutorials/hello-instancing",
       "tutorials/hello-cube",
       "tutorials/lighting",
+      "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks"
     ]

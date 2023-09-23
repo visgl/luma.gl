@@ -1,11 +1,18 @@
 import React from 'react';
 import {LumaExample} from '../../../react-luma';
-import AnimationLoop from '../../../examples/api/animation/app';
+import AnimationLoopTemplate from '../../../../../examples/api/animation/app';
 
-export default class Example extends React.Component {
+export class AnimationExample extends React.Component {
   render() {
+    const {pageContext} = this.props;
+    const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
     return (
-      <LumaExample AnimationLoop={AnimationLoop} exampleConfig={this.props.pageContext.exampleConfig} />
+      <LumaExample
+        id="hello-cube"
+        name="hello-cube"
+        AnimationLoopTemplate={AnimationLoopTemplate}
+        exampleConfig={exampleConfig}
+      />
     );
   }
 }

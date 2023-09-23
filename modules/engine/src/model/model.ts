@@ -429,7 +429,7 @@ export class Model {
 
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
-      if (!this.pipeline) {
+      if (this.pipeline) {
         log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
       }
       this._pipelineNeedsUpdate = false;

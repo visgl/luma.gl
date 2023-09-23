@@ -44,7 +44,7 @@ export class WebGPUVertexArray extends VertexArray {
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
   setBuffer(location: number, buffer: Buffer): void {
     // Sanity check target
-    // if (buffer.usage === GL.ELEMENT_ARRAY_BUFFER) {
+    // if (buffer.glUsage === GL.ELEMENT_ARRAY_BUFFER) {
     //   throw new Error('Use setIndexBuffer');
     // }
 

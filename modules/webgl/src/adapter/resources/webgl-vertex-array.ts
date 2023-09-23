@@ -66,7 +66,10 @@ export class WEBGLVertexArray extends VertexArray {
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
     this.device.gl2.bindVertexArray(this.handle);
-    this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
+    // TODO - this initial binding does not seem to take effect? see bindBeforeRender()
+    this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
+    // log.log(1, 'VertexArray.setIndexBuffer', indexBuffer)();
+    // log.log(1, `Binding vertex array ${this.id}`, buffer?.id)();
 
     this.indexBuffer = buffer;
   }
@@ -108,15 +111,26 @@ export class WEBGLVertexArray extends VertexArray {
     this.attributes[location] = value;
   }
 
+  init = false;
+
   override bindBeforeRender(): void {
     this.device.gl2.bindVertexArray(this.handle);
+    // TODO - the initial bind does not seem to take effect. 
+    if (!this.init) {
+      // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
+      const webglBuffer = this.indexBuffer as WEBGLBuffer;
+      this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
+      this.init = true;
+    }
     this._applyConstantAttributes();
   }
 
   override unbindAfterRender(): void {
+    // log.log(1, `Unbinding vertex array ${this.id}`)();
     // TODO technically this is not necessary, but we might be interfacing 
     // with code that does not use vertex array objects
     this.device.gl2.bindVertexArray(null);
+    // this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
   }
 
   // Internal methods
