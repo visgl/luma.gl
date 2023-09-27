@@ -314,6 +314,7 @@ export class Model {
             this.vertexArray.setBuffer(location, value);
           }
         }
+        oldVertexArray.destroy();
       }
     }
   }
