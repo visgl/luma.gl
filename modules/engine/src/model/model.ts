@@ -175,8 +175,6 @@ export class Model {
     // @note order is important
     this.pipeline = this._updatePipeline();
 
-    // TODO - vertex array needs to be updated if we update buffer layout,
-    // but not if we update parameters
     this.vertexArray = device.createVertexArray({
       renderPipeline: this.pipeline
     });
@@ -294,6 +292,29 @@ export class Model {
     if (bufferLayout !== this.bufferLayout) {
       this.bufferLayout = bufferLayout;
       this._setPipelineNeedsUpdate('bufferLayout');
+
+      // Recreate the pipeline
+      this.pipeline = this._updatePipeline();
+
+      const oldVertexArray = this.vertexArray;
+      // vertex array needs to be updated if we update buffer layout,
+      // but not if we update parameters
+      this.vertexArray = this.device.createVertexArray({
+        renderPipeline: this.pipeline
+      });
+
+      // Transfer previously set attributes
+      if (oldVertexArray) {
+        this.vertexArray.setIndexBuffer(oldVertexArray.indexBuffer);
+        for (let location = 0; location < oldVertexArray.attributes.length; location++) {
+          const value = oldVertexArray.attributes[location];
+          if (ArrayBuffer.isView(value)) {
+            this.vertexArray.setConstant(location, value);
+          } else if (value) {
+            this.vertexArray.setBuffer(location, value);
+          }
+        }
+      }
     }
   }
 
@@ -418,7 +439,7 @@ export class Model {
       if (attributeInfo) {
         this.vertexArray.setConstant(attributeInfo.location, value);
       } else {
-        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${name}"`)();
+        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`)();
       }
     }
   }
