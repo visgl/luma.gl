@@ -296,26 +296,16 @@ export class Model {
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
-
-    const oldVertexArray = this.vertexArray;
+    
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
     this.vertexArray = this.device.createVertexArray({
       renderPipeline: this.pipeline
     });
 
-    // Transfer previously set attributes
-    if (oldVertexArray) {
-      this.vertexArray.setIndexBuffer(oldVertexArray.indexBuffer);
-      for (let location = 0; location < oldVertexArray.attributes.length; location++) {
-        const value = oldVertexArray.attributes[location];
-        if (ArrayBuffer.isView(value)) {
-          this.vertexArray.setConstant(location, value);
-        } else if (value) {
-          this.vertexArray.setBuffer(location, value);
-        }
-      }
-      oldVertexArray.destroy();
+    // Reapply geometry attributes to the new vertex array
+    if (this._gpuGeometry) {
+      this._setGeometryAttributes(this._gpuGeometry);
     }
   }
 
