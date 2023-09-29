@@ -128,6 +128,7 @@ export class Model {
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
+  _gpuGeometry: GPUGeometry | null = null;
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
@@ -162,10 +163,9 @@ export class Model {
     this.bufferLayout = this.props.bufferLayout;
     this.parameters = this.props.parameters;
 
-    let gpuGeometry: GPUGeometry;
     // Geometry, if provided, sets topology and vertex cound
     if (props.geometry) {
-      gpuGeometry = this.setGeometry(props.geometry);
+      this._gpuGeometry = this.setGeometry(props.geometry);
     }
 
     this.pipelineFactory =
@@ -175,15 +175,13 @@ export class Model {
     // @note order is important
     this.pipeline = this._updatePipeline();
 
-    // TODO - vertex array needs to be updated if we update buffer layout,
-    // but not if we update parameters
     this.vertexArray = device.createVertexArray({
       renderPipeline: this.pipeline
     });
 
     // Now we can apply geometry attributes
-    if (gpuGeometry) {
-      this._setGeometryAttributes(gpuGeometry);
+    if (this._gpuGeometry) {
+      this._setGeometryAttributes(this._gpuGeometry);
     }
 
     // Apply any dynamic settings that will not trigger pipeline change
@@ -291,9 +289,23 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    if (bufferLayout !== this.bufferLayout) {
-      this.bufferLayout = bufferLayout;
-      this._setPipelineNeedsUpdate('bufferLayout');
+    this.bufferLayout = this._gpuGeometry
+      ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
+      : bufferLayout;
+    this._setPipelineNeedsUpdate('bufferLayout');
+
+    // Recreate the pipeline
+    this.pipeline = this._updatePipeline();
+    
+    // vertex array needs to be updated if we update buffer layout,
+    // but not if we update parameters
+    this.vertexArray = this.device.createVertexArray({
+      renderPipeline: this.pipeline
+    });
+
+    // Reapply geometry attributes to the new vertex array
+    if (this._gpuGeometry) {
+      this._setGeometryAttributes(this._gpuGeometry);
     }
   }
 
@@ -418,7 +430,7 @@ export class Model {
       if (attributeInfo) {
         this.vertexArray.setConstant(attributeInfo.location, value);
       } else {
-        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${name}"`)();
+        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`)();
       }
     }
   }
