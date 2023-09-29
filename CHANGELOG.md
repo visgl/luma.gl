@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.37
+
+- Fix model.setBufferLayout (#1816)
+
 ### v9.0.0-alpha.36
 
 - fix: Fix picking in instancing showcase example (#1814)
