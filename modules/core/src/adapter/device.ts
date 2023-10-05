@@ -267,6 +267,14 @@ export abstract class Device {
   /** Default / primary canvas context. Can be null as WebGPU devices can be created without a CanvasContext */
   abstract canvasContext: CanvasContext | null;
 
+  /** Returns the default / primary canvas context. Throws an error if no canvas context is available (a WebGPU compute device) */
+  getCanvasContext(): CanvasContext {
+    if (!this.canvasContext) {
+      throw new Error('Device has no CanvasContext');
+    }
+    return this.canvasContext
+  }
+
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 

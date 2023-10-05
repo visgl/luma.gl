@@ -275,6 +275,19 @@ WebGPU only. (WebGL devices can only render into the canvas they were created wi
 
 Creates a new [`CanvasContext`](./canvas-context).
 
+### getCanvasContext()
+
+```typescript
+getCanvasContext(): CanvasContext
+```
+
+Returns the primary canvas context of a device.
+In TypeScript applications this helps applications avoid having to repeatedly check if `device.canvasContext` is null,
+otherwise the two are equivalent.
+
+Throws an error if no canvas context is available (a WebGPU compute device).
+
+
 ### submit
 
 ```typescript
