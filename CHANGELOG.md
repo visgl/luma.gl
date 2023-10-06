@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.38
+
+- feat(core): Add Device.getCanvasContext() (#1817)
+
 ### v9.0.0-alpha.37
 
 - Fix model.setBufferLayout (#1816)
