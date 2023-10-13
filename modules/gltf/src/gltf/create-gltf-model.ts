@@ -1,4 +1,4 @@
-import {Device, PrimitiveTopology, log} from '@luma.gl/api';
+import {Device, PrimitiveTopology, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
 import {Model, ModelNode, ModelNodeProps} from '@luma.gl/engine';
 import {parseGLTFMaterial, ParseGLTFMaterialOptions} from './gltf-material-parser';

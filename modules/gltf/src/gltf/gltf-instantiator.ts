@@ -1,4 +1,4 @@
-import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/api';
+import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
 import {Model, GroupNode, ModelNode} from '@luma.gl/engine';
 import {WebGLDevice, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';

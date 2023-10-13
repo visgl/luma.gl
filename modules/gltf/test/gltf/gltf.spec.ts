@@ -4,7 +4,7 @@ import {webgl1Device} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {Texture} from '@luma.gl/api';
+import {Texture} from '@luma.gl/core';
 import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/gltf';
 
 test.only('gltf#loading', async (t) => {
