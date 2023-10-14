@@ -18,7 +18,7 @@
 - feat(core): Device API exposes a new VertexArray resource type. (#1806)
 - feat(webgl): Rename parameter setters to emphasize they take WebGL paramaters (#1804)
 
-### v9.0.0-alpha.35
+### v9.0.0-alpha.38
 
 - fix(shadertools): picking shader compile error (#1803)
 - fix(webgl): constant attributes (#1802)
