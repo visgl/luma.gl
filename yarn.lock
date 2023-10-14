@@ -2304,14 +2304,6 @@
   resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-8.5.20.tgz#91de116f68110fb28a000b59747d34d54bc06ab2"
   integrity sha512-5yG+ybkUZ4j6kLPWMZjN4Hun2yLB0MyEpNCRKAUN9/yS9UIWA7unyVxjSf2vnE7k/7dywtxlbXegASNFgNVGxw==
 
-"@math.gl/core@4.0.0-alpha.4":
-  version "4.0.0-alpha.4"
-  resolved "https://registry.yarnpkg.com/@math.gl/core/-/core-4.0.0-alpha.4.tgz#6d8b4ecb084be6800800fe8748fc173dc5e64f72"
-  integrity sha512-lP8Sb1t2b4nmNTAwk6U0BG1Sl1/oj2PTUQTrFLUq0itEk5ppcc6Z6VqYovgxoOng44e5cLx7rfdaDT9l3EjTqQ==
-  dependencies:
-    "@babel/runtime" "^7.12.0"
-    "@math.gl/types" "4.0.0-alpha.4"
-
 "@math.gl/core@^3.5.1":
   version "3.6.3"
   resolved "https://registry.yarnpkg.com/@math.gl/core/-/core-3.6.3.tgz#a6bf796ed421093099749d609de8d99a3ac20a53"
@@ -2321,15 +2313,23 @@
     "@math.gl/types" "3.6.3"
     gl-matrix "^3.4.0"
 
+"@math.gl/core@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@math.gl/core/-/core-4.0.0.tgz#db64af16743ee4def7c1e294b3d1247621d2dabc"
+  integrity sha512-qGbP4R8G0dsh5OUO+eWKX5NJwZitkV8CdVEolRFSoPteE0lrWxsg01FwAjegKv4jCm975VJ4HxDcb4L6KAiGGw==
+  dependencies:
+    "@babel/runtime" "^7.12.0"
+    "@math.gl/types" "4.0.0"
+
 "@math.gl/types@3.6.3":
   version "3.6.3"
   resolved "https://registry.yarnpkg.com/@math.gl/types/-/types-3.6.3.tgz#9fa9866feabcbb76de107d78ff3a89c0243ac374"
   integrity sha512-3uWLVXHY3jQxsXCr/UCNPSc2BG0hNUljhmOBt9l+lNFDp7zHgm0cK2Tw4kj2XfkJy4TgwZTBGwRDQgWEbLbdTA==
 
-"@math.gl/types@4.0.0-alpha.4":
-  version "4.0.0-alpha.4"
-  resolved "https://registry.yarnpkg.com/@math.gl/types/-/types-4.0.0-alpha.4.tgz#eb2875f2e20dd03ddcd3033153bec413dc430935"
-  integrity sha512-+sA2EJKFbB57xDgkiTSTelnnrvmTG0ZxoYZOEEgwr6y4AKfzzBsuESTVjUfv0o5LnuDv8ctJ1vHXm4Khg9bjsg==
+"@math.gl/types@4.0.0", "@math.gl/types@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@math.gl/types/-/types-4.0.0.tgz#20c649dcef8459d9dd1f83a708d7410fe06a3309"
+  integrity sha512-ZqU7o0LFaWQK/0wYobCwQKrKhRHaihps8oE74CLnWAdTTjXkM2vA8dU7vdx238QfXkNkz4Mv+KYklHpXMQJ8Hw==
 
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
@@ -5118,7 +5118,7 @@ eslint-plugin-jsx-a11y@^6.1.2:
     semver "^6.3.0"
 
 "eslint-plugin-luma-gl-custom-rules@file:./dev-modules/eslint-plugin-luma-gl-custom-rules":
-  version "9.0.0-alpha.35"
+  version "9.0.0-alpha.38"
 
 eslint-plugin-markdown@^2.2.0:
   version "2.2.1"

@@ -43,7 +43,7 @@
     "@luma.gl/constants": "9.0.0-alpha.38",
     "@luma.gl/core": "9.0.0-alpha.38",
     "@luma.gl/shadertools": "9.0.0-alpha.38",
-    "@math.gl/core": "4.0.0-alpha.4",
+    "@math.gl/core": "^4.0.0",
     "@probe.gl/log": "^4.0.2",
     "@probe.gl/stats": "^4.0.2"
   },
