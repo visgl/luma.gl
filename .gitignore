@@ -5,9 +5,8 @@ dist-min/*
 dist-buble/*
 **/dist/*
 website*/public/*
-website-docusaurus
+dist.min.js
 
-tsconfig.tsbuildinfo
 _docs/
 .nyc_output/
 coverage/
@@ -17,12 +16,24 @@ stats.json
 .reify-cache
 .cache
 
+tsconfig.tsbuildinfo
+
 test/data/test.png
 
 package-lock.json
+lerna-debug.log
+
 */**/yarn.lock
 yarn-error.log
-lerna-debug.log
+
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
 
 .project
 .DS_Store
@@ -30,5 +41,8 @@ lerna-debug.log
 *.rar
 TODO
 
+.docusaurus
+
 # editor files
 .idea
+

@@ -12,7 +12,7 @@
     "@luma.gl/engine": "8.5.21",
     "@luma.gl/gltools": "8.5.21",
     "@luma.gl/shadertools": "8.5.21",
-    "@math.gl/core": "^3.5.0"
+    "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

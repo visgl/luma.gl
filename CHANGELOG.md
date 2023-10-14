@@ -1,5 +1,7 @@
 # luma.gl CHANGELOG
 
+## 8.6.0-dev.0
+
 ## v8.5.21
 
 - Fix GLTF model defines (#1807)

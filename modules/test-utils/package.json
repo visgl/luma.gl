@@ -28,15 +28,15 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
-    "@probe.gl/stats": "^3.5.0"
+    "@probe.gl/stats": "^4.0.0"
   },
   "peerDependencies": {
     "@luma.gl/core": "^8.4.0",
     "@luma.gl/debug": "^8.4.0",
     "@luma.gl/gltools": "^8.4.0",
     "@luma.gl/webgl": "^8.4.0",
-    "@probe.gl/env": "^3.5.0",
-    "@probe.gl/test-utils": "^3.5.0"
+    "@probe.gl/env": "^4.0.0",
+    "@probe.gl/test-utils": "^4.0.0"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }

@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@math.gl/core": "^3.5.0"
+    "@math.gl/core": "^4.0.0"
   },
   "gitHead": "3f8566893e360112486ccf306d3aaa264e072672"
 }

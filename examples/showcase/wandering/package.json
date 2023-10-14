@@ -11,7 +11,7 @@
     "@luma.gl/gltools": "8.5.21",
     "@luma.gl/shadertools": "8.5.21",
     "@luma.gl/webgl": "8.5.21",
-    "probe.gl": "^3.4.0"
+    "@probe.gl/log": "^4.0.0"
   },
   "devDependencies": {
     "html-webpack-plugin": "^3.2.0",

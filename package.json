@@ -41,9 +41,9 @@
     "@loaders.gl/core": "^3.0.6",
     "@loaders.gl/gltf": "^3.0.6",
     "@loaders.gl/polyfills": "^3.0.6",
-    "@probe.gl/bench": "^3.5.0",
-    "@probe.gl/stats-widget": "^3.5.0",
-    "@probe.gl/test-utils": "^3.5.0",
+    "@probe.gl/bench": "^4.0.0",
+    "@probe.gl/stats-widget": "^4.0.0",
+    "@probe.gl/test-utils": "^4.0.0",
     "@turf/boolean-within": "^6.0.1",
     "@turf/helpers": "^6.1.4",
     "@typescript-eslint/eslint-plugin": "^4.13.0",
@@ -72,5 +72,9 @@
   "pre-commit": [
     "test-fast"
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "volta": {
+    "node": "16.19.1",
+    "yarn": "1.22.19"
+  }  
 }
