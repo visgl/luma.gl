@@ -12,7 +12,7 @@
     "@luma.gl/core": "9.0.0-alpha.38",
     "@luma.gl/engine": "9.0.0-alpha.38",
     "@luma.gl/webgl": "9.0.0-alpha.38",
-    "@math.gl/core": "4.0.0-alpha.4"
+    "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
