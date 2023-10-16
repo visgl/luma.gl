@@ -1,12 +1,12 @@
 import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
-import {Model, GroupNode, ModelNode} from '@luma.gl/engine';
+import {GroupNode, ModelNode} from '@luma.gl/engine';
 import {WebGLDevice, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
-import type {ParseGLTFMaterialOptions} from './gltf-material-parser';
 import {GLTFAnimator} from './gltf-animator';
+import {createGLTFModel} from './create-gltf-model';
 
-export type GLTFInstantiatorOptions = Omit<ParseGLTFMaterialOptions, 'attributes'> & {
+export type GLTFInstantiatorOptions = {
   modelOptions?: Record<string, any>,
   pbrDebug?: boolean,
   imageBasedLightingEnvironment?: any,
@@ -133,18 +133,14 @@ export class GLTFInstantiator {
       ? gltfPrimitive.indices.count
       : this.getVertexCount(gltfPrimitive.attributes);
 
-    const model = new Model(
-      this.device,
-      {
-        id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-        topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
-        vertexCount,
-        attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-        ...this.options
-      }
-    );
+    const modelNode = createGLTFModel(this.device, {
+      id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
+      topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
+      vertexCount,
+      attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+      ...this.options
+    });
 
-    const modelNode = new ModelNode({model});
     modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
     // TODO this holds on to all the CPU side texture and attribute data
     // modelNode.material =  gltfPrimitive.material;
