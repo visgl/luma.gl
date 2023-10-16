@@ -240,10 +240,10 @@ export function convertGLDrawModeToTopology(
     case GL.POINTS: return 'point-list';
     case GL.LINES: return 'line-list';
     case GL.LINE_STRIP: return 'line-strip';
-    case GL.LINE_LOOP: return 'line-loop';
+    case GL.LINE_LOOP: return 'line-loop-webgl';
     case GL.TRIANGLES: return 'triangle-list';
     case GL.TRIANGLE_STRIP: return 'triangle-strip';
-    case GL.TRIANGLE_FAN: return 'triangle-fan';
+    case GL.TRIANGLE_FAN: return 'triangle-fan-webgl';
     default: throw new Error(drawMode);
   }
 }

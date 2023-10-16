@@ -1,8 +1,8 @@
 import {Device} from '@luma.gl/core';
-import {ScenegraphNode} from '../scenegraph/scenegraph-node';
+import {ScenegraphNode} from '@luma.gl/engine';
 import {GLTFInstantiator} from './gltf-instantiator';
 import {GLTFAnimator} from './gltf-animator';
-import {PBREnvironment} from './pbr-environment';
+import type {PBREnvironment} from '../pbr/pbr-environment';
 import {GLTFMaterialParserProps} from './gltf-material-parser';
 
 export type GLTFInstantiatorOptions = Omit<GLTFMaterialParserProps, 'attributes'> & {

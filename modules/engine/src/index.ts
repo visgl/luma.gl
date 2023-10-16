@@ -29,6 +29,7 @@ export {ClipSpace} from './lib/clip-space';
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
 export {GroupNode} from './scenegraph/group-node';
+export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
 
 // Geometries
