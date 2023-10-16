@@ -1,17 +1,7 @@
 import {Device} from '@luma.gl/core';
 import {ScenegraphNode} from '@luma.gl/engine';
-import {GLTFInstantiator} from './gltf-instantiator';
+import {GLTFInstantiator, GLTFInstantiatorOptions} from './gltf-instantiator';
 import {GLTFAnimator} from './gltf-animator';
-import type {PBREnvironment} from '../pbr/pbr-environment';
-import {GLTFMaterialParserProps} from './gltf-material-parser';
-
-export type GLTFInstantiatorOptions = Omit<GLTFMaterialParserProps, 'attributes'> & {
-  modelOptions?: Record<string, any>,
-  pbrDebug?: boolean,
-  imageBasedLightingEnvironment?: PBREnvironment,
-  lights?: boolean,
-  useTangents?: boolean
-}
 
 export function createScenegraphsFromGLTF(
   device: Device,

@@ -5,11 +5,12 @@ import {Matrix4} from '@math.gl/core';
 
 import {GLTFAnimator} from './gltf-animator';
 import {createGLTFModel} from './create-gltf-model';
+import type {PBREnvironment} from '../pbr/pbr-environment';
 
 export type GLTFInstantiatorOptions = {
   modelOptions?: Record<string, any>,
   pbrDebug?: boolean,
-  imageBasedLightingEnvironment?: any,
+  imageBasedLightingEnvironment?: PBREnvironment,
   lights?: boolean,
   useTangents?: boolean
 }

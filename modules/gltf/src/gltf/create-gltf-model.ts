@@ -1,7 +1,7 @@
 import {Device, PrimitiveTopology, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
 import {Model, ModelNode, ModelNodeProps} from '@luma.gl/engine';
-import {parseGLTFMaterial, ParseGLTFMaterialOptions} from './gltf-material-parser';
+// import {parseGLTFMaterial} from './gltf-material-parser';
 
 const vs = `
 #pragma vscode_glsllint_stage: vert
@@ -60,7 +60,7 @@ const fs = `
   }
 `;
 
-export type CreateGLTFModelOptions = ParseGLTFMaterialOptions & {
+export type CreateGLTFModelOptions = {
   id?: string;
   topology?: PrimitiveTopology;
   vertexCount?: number;
@@ -70,7 +70,10 @@ export type CreateGLTFModelOptions = ParseGLTFMaterialOptions & {
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
   const {id, attributes, topology, vertexCount, modelOptions} = options;
-  const parsedMaterial = parseGLTFMaterial(device, attributes, options);
+
+  // TODO actually parse material!
+  // const parsedMaterial = parseGLTFMaterial(device, attributes, options);
+  const parsedMaterial = {} as any;
 
   log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();
 
@@ -78,8 +81,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // TODO: Implement resource management logic that will
   // not deallocate resources/textures/buffers that are shared
   const managedResources = [];
-  managedResources.push(...parsedMaterial.generatedTextures);
-  // @ts-expect-error
+  // managedResources.push(...parsedMaterial.generatedTextures);
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   const model = new ModelNode({
