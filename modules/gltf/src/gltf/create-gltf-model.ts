@@ -65,7 +65,7 @@ export type CreateGLTFModelOptions = {
   topology?: PrimitiveTopology;
   vertexCount?: number;
   attributes?: Record<string, any>;
-  modelOptions?: ModelNodeProps;
+  modelOptions?: Record<string, any>;
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
