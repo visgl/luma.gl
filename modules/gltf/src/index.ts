@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 
-export {PBREnvironment} from './pbr/pbr-environment';
+export type {PBREnvironment} from './pbr/pbr-environment';
 export type {ParsePBRMaterialOptions, ParsedPBRMaterial} from './pbr/parse-pbr-material';
 export {parsePBRMaterial} from './pbr/parse-pbr-material';
 
