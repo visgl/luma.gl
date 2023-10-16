@@ -5,13 +5,13 @@ import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture} from '@luma.gl/core';
-import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/gltf';
+import {createGLTFObjects} from '@luma.gl/gltf';
+import {loadPBREnvironment} from '../../dist/pbr/pbr-environment';
 
 test.only('gltf#loading', async (t) => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
-  debugger
   const result = createGLTFObjects(webgl1Device, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
@@ -21,19 +21,19 @@ test.only('gltf#loading', async (t) => {
 });
 
 test('gltf#environment', (t) => {
-  const environment = new GLTFEnvironment(webgl1Device, {
+  const environment = loadPBREnvironment(webgl1Device, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
 
-  t.ok(environment.getBrdfTexture() instanceof Texture, 'BRDF lookup texture created');
+  t.ok(environment.brdfLutTexture instanceof Texture, 'BRDF lookup texture created');
   t.ok(
-    environment.getDiffuseEnvSampler() instanceof Texture,
+    environment.diffuseEnvSampler instanceof Texture,
     'Diffuse environment map created'
   );
   t.ok(
-    environment.getSpecularEnvSampler() instanceof Texture,
+    environment.specularEnvSampler instanceof Texture,
     'Specular environment map created'
   );
 
