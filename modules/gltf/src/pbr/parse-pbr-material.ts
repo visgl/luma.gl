@@ -68,18 +68,18 @@ export function parsePBRMaterial(
   }
 
   if (options?.pbrDebug) {
-    parsedMaterial.defines['PBR_DEBUG'] = 1;
+    parsedMaterial.defines.PBR_DEBUG = 1;
     // Override final color for reference app visualization of various parameters in the lighting equation.
     parsedMaterial.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
     parsedMaterial.uniforms.u_ScaleFGDSpec = [0, 0, 0, 0];
   }
 
-  if (attributes.NORMAL) parsedMaterial.defines['HAS_NORMALS'] = 1;
-  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = 1;
-  if (attributes.TEXCOORD_0) parsedMaterial.defines['HAS_UV'] = 1;
+  if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = 1;
+  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines.HAS_TANGENTS = 1;
+  if (attributes.TEXCOORD_0) parsedMaterial.defines.HAS_UV = 1;
 
-  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = 1;
-  if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = 1;
+  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines.USE_IBL = 1;
+  if (options?.lights) parsedMaterial.defines.USE_LIGHTS = 1;
 
   if (material) {
     parseMaterial(device, material, parsedMaterial);

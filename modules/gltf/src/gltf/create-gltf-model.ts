@@ -1,6 +1,7 @@
 import {Device, PrimitiveTopology, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
-import {Model, ModelNode, ModelNodeProps} from '@luma.gl/engine';
+import {Model, ModelNode} from '@luma.gl/engine';
+import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 // import {parseGLTFMaterial} from './gltf-material-parser';
 
 const vs = `
@@ -65,15 +66,15 @@ export type CreateGLTFModelOptions = {
   topology?: PrimitiveTopology;
   vertexCount?: number;
   attributes?: Record<string, any>;
+  material: any;
+  materialOptions: ParsePBRMaterialOptions;
   modelOptions?: Record<string, any>;
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, attributes, topology, vertexCount, modelOptions} = options;
+  const {id, attributes, material, topology, vertexCount, materialOptions, modelOptions} = options;
 
-  // TODO actually parse material!
-  // const parsedMaterial = parseGLTFMaterial(device, attributes, options);
-  const parsedMaterial = {} as any;
+  const parsedMaterial = parsePBRMaterial(device, material, attributes, materialOptions);
 
   log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();
 
