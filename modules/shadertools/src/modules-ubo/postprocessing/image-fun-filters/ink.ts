@@ -2,7 +2,9 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float strength;
+uniform Ink {
+  float strength;
+} ink;
 
 vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 dx = vec2(1.0 / texSize.x, 0.0);
@@ -24,7 +26,7 @@ vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
     }
   }
   vec3 edge = max(vec3(0.0), bigAverage / bigTotal - smallAverage / smallTotal);
-  float power = strength * strength * strength * strength * strength;
+  float power = ink.strength * ink.strength * ink.strength * ink.strength * ink.strength;
   return vec4(color.rgb - dot(edge, edge) * power * 100000.0, color.a);
 }
 `;

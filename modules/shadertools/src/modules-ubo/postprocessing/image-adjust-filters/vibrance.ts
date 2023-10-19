@@ -2,12 +2,14 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float amount;
+uniform Vibrance {
+  float amount;
+} vibrance;
 
 vec4 vibrance_filterColor(vec4 color) {
   float average = (color.r + color.g + color.b) / 3.0;
   float mx = max(color.r, max(color.g, color.b));
-  float amt = (mx - average) * (-amount * 3.0);
+  float amt = (mx - average) * (-vibrance.amount * 3.0);
   color.rgb = mix(color.rgb, vec3(mx), amt);
   return color;
 }

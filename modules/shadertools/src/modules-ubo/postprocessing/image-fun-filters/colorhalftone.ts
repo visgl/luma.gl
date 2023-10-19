@@ -3,15 +3,17 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // TODO pass texCoord to angle
 const fs = glsl`\
-uniform vec2 center;
-uniform float angle;
-uniform float size;
+uniform ColorHalftone {
+  vec2 center;
+  float angle;
+  float size;
+} colorHalftone;
 
-float scale = 3.1514 / size;
+float scale = 3.1514 / colorHalftone.size;
 
 float pattern(float angle, vec2 texSize, vec2 texCoord) {
-  float s = sin(angle), c = cos(angle);
-  vec2 tex = texCoord * texSize - center * texSize;
+  float s = sin(colorHalftone.angle), c = cos(colorHalftone.angle);
+  vec2 tex = texCoord * texSize - colorHalftone.center * texSize;
   vec2 point = vec2(
 	c * tex.x - s * tex.y,
 	s * tex.x + c * tex.y

@@ -2,21 +2,23 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform vec2 screenXY;
-uniform float radiusPixels;
-uniform float zoom;
-uniform float borderWidthPixels;
-uniform vec4 borderColor;
+uniform Magnify {
+  vec2 screenXY;
+  float radiusPixels;
+  float zoom;
+  float borderWidthPixels;
+  vec4 borderColor;
+} magnify;
 
 vec4 magnify_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
-  vec2 pos = vec2(screenXY.x, 1.0 - screenXY.y);
+  vec2 pos = vec2(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
   float dist = distance(texCoord * texSize, pos * texSize);
-  if (dist < radiusPixels) {
-    return texture2D(texture, (texCoord - pos) / zoom + pos);
+  if (dist < magnify.radiusPixels) {
+    return texture2D(texture, (texCoord - pos) / magnify.zoom + pos);
   }
 
-  if (dist <= radiusPixels + borderWidthPixels) {
-    return borderColor;
+  if (dist <= magnify.radiusPixels + magnify.borderWidthPixels) {
+    return magnify.borderColor;
   }
   return texture2D(texture, texCoord);
 }

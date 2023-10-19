@@ -2,15 +2,17 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform vec2 center;
-uniform float angle;
-uniform float size;
+uniform DotScreen {
+  vec2 center;
+  float angle;
+  float size;
+} dotScreen;
 
 float pattern(vec2 texSize, vec2 texCoord) {
-  float scale = 3.1415 / size;
+  float scale = 3.1415 / dotScreen.size;
 
-  float s = sin(angle), c = cos(angle);
-  vec2 tex = texCoord * texSize - center * texSize;
+  float s = sin(dotScreen.angle), c = cos(dotScreen.angle);
+  vec2 tex = texCoord * texSize - dotScreen.center * texSize;
   vec2 point = vec2(
     c * tex.x - s * tex.y,
     s * tex.x + c * tex.y

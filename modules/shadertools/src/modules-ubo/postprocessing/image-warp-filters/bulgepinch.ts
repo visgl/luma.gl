@@ -3,19 +3,21 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
 const fs = glsl`\
-uniform float radius;
-uniform float strength;
-uniform vec2 center;
+uniform BulgePinch {
+  float radius;
+  float strength;
+  vec2 center;
+} bulgePinch;
 
 vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
   coord -= texCenter;
   float distance = length(coord);
-  if (distance < radius) {
-    float percent = distance / radius;
+  if (distance < bulgePinch.radius) {
+    float percent = distance / bulgePinch.radius;
     if (strength > 0.0) {
-      coord *= mix(1.0, smoothstep(0.0, radius / distance, percent), strength * 0.75);
+      coord *= mix(1.0, smoothstep(0.0, bulgePinch.radius / distance, percent), bulgePinch.strength * 0.75);
     } else {
-      coord *= mix(1.0, pow(percent, 1.0 + strength * 0.75) * radius / distance, 1.0 - percent);
+      coord *= mix(1.0, pow(percent, 1.0 + bulgePinch.strength * 0.75) * bulgePinch.radius / distance, 1.0 - percent);
     }
   }
   coord += texCenter;
@@ -24,7 +26,7 @@ vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
 
 vec4 bulgePinch_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
-  coord = bulgePinch_warp(coord, center * texSize);
+  coord = bulgePinch_warp(coord, bulgePinch.center * texSize);
 
   return warp_sampleColor(texture, texSize, coord);
 }

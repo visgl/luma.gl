@@ -2,7 +2,9 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float amount;
+uniform Sepia {
+  float amount;
+} sepia;
 
 vec4 sepia_filterColor(vec4 color) {
   float r = color.r;
@@ -10,9 +12,9 @@ vec4 sepia_filterColor(vec4 color) {
   float b = color.b;
 
   color.r =
-    min(1.0, (r * (1.0 - (0.607 * amount))) + (g * (0.769 * amount)) + (b * (0.189 * amount)));
-  color.g = min(1.0, (r * 0.349 * amount) + (g * (1.0 - (0.314 * amount))) + (b * 0.168 * amount));
-  color.b = min(1.0, (r * 0.272 * amount) + (g * 0.534 * amount) + (b * (1.0 - (0.869 * amount))));
+    min(1.0, (r * (1.0 - (0.607 * sepia.amount))) + (g * (0.769 * sepia.amount)) + (b * (0.189 * sepia.amount)));
+  color.g = min(1.0, (r * 0.349 * sepia.amount) + (g * (1.0 - (0.314 * sepia.amount))) + (b * 0.168 * sepia.amount));
+  color.b = min(1.0, (r * 0.272 * sepia.amount) + (g * 0.534 * sepia.amount) + (b * (1.0 - (0.869 * sepia.amount))));
 
   return color;
 }

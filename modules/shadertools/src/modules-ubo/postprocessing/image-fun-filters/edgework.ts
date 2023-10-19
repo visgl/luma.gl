@@ -3,11 +3,13 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
 
 const fs = glsl`\
-uniform float radius;
-uniform vec2 delta;
+uniform EdgeWork {
+  float radius;
+  vec2 delta;
+} edgeWork;
 
 vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = radius * delta / texSize;
+  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
@@ -32,7 +34,7 @@ vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
 }
 
 vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = radius * delta / texSize;
+  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
