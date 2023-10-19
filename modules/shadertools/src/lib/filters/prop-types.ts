@@ -7,9 +7,14 @@ import {assert} from '../utils/assert';
  */
 export type PropType = {
   type?: string;
+  value?: unknown;
   max?: number;
   min?: number;
-  value?: unknown;
+  softMax?: number;
+  softMin?: number;
+  hint?: string;
+  /** @deprecated internal uniform */
+  private?: boolean;
 } | number;
 
 /**
