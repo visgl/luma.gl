@@ -3,16 +3,18 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
 const fs = glsl`\
-uniform float radius;
-uniform float angle;
-uniform vec2 center;
+uniform Swirl {
+  float radius;
+  float angle;
+  vec2 center;
+} swirl;
 
 vec2 swirl_warp(vec2 coord, vec2 texCenter) {
   coord -= texCenter;
   float distance = length(coord);
-  if (distance < radius) {
-    float percent = (radius - distance) / radius;
-    float theta = percent * percent * angle;
+  if (distance < swirl.radius) {
+    float percent = (swirl.radius - distance) / swirl.radius;
+    float theta = percent * percent * swirl.angle;
     float s = sin(theta);
     float c = cos(theta);
     coord = vec2(
@@ -26,7 +28,7 @@ vec2 swirl_warp(vec2 coord, vec2 texCenter) {
 
 vec4 swirl_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
-  coord = swirl_warp(coord, center * texSize);
+  coord = swirl_warp(coord, swirl.center * texSize);
 
   return warp_sampleColor(texture, texSize, coord);
 }

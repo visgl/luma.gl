@@ -3,15 +3,17 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
 
 const fs = glsl`\
-uniform float blurRadius;
-uniform float gradientRadius;
-uniform vec2 start;
-uniform vec2 end;
-uniform bool invert;
+uniform TiltShift {
+  float blurRadius;
+  float gradientRadius;
+  vec2 start;
+  vec2 end;
+  bool invert;
+} tiltShift;
 
 vec2 tiltShift_getDelta(vec2 texSize) {
-  vec2 vector = normalize((end - start) * texSize);
-  return invert ? vec2(-vector.y, vector.x) : vector;
+  vec2 vector = normalize((tiltShift.end - tiltShift.start) * texSize);
+  return tiltShift.invert ? vec2(-vector.y, vector.x) : vector;
 }
 
 vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
@@ -23,7 +25,7 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 
   vec2 normal = normalize(vec2((start.y - end.y) * texSize.y, (end.x - start.x) * texSize.x));
   float radius = smoothstep(0.0, 1.0,
-    abs(dot(texCoord * texSize - start * texSize, normal)) / gradientRadius) * blurRadius;
+    abs(dot(texCoord * texSize - start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
 
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;

@@ -2,14 +2,16 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float amount;
+uniform Noise {
+  float amount;
+} noise;
 
 float rand(vec2 co) {
   return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 
 vec4 noise_filterColor(vec4 color, vec2 texCoord) {
-  float diff = (rand(texCoord) - 0.5) * amount;
+  float diff = (rand(texCoord) - 0.5) * noise.amount;
   color.r += diff;
   color.g += diff;
   color.b += diff;

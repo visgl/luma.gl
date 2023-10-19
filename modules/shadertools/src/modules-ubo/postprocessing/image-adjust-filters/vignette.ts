@@ -2,12 +2,14 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float radius;
-uniform float amount;
+uniform Vignette {
+  float radius;
+  float amount;
+} vignette;
 
 vec4 vignette_filterColor(vec4 color, vec2 texCoord) {
   float dist = distance(texCoord, vec2(0.5, 0.5));
-  float ratio = smoothstep(0.8, radius * 0.799, dist * (amount + radius));
+  float ratio = smoothstep(0.8, vignette.radius * 0.799, dist * (vignette.amount + vignette.radius));
   return color.rgba * ratio + (1.0 - ratio)*vec4(0.0, 0.0, 0.0, 1.0);
 }
 
