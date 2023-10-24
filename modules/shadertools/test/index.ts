@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 // utils
 import './lib/glsl-utils/get-shader-info.spec';

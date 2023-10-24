@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {Stats, Stat} from '@probe.gl/stats';
 import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';

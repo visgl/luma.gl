@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 // Note: This was the only dependency that made @luma.gl/webgl depend on @luma.gl/shadertools
 // This file was coped from shadertools to avoid the dependency

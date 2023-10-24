@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../module-injectors';
 import {assert} from '../utils/assert';

@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';

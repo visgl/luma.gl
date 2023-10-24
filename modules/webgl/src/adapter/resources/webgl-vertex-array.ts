@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import type {Device, Buffer, VertexArrayProps, TypedArray, NumberArray} from '@luma.gl/core';
 import {VertexArray, getScratchArray, fillArray} from '@luma.gl/core';

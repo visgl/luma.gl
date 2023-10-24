@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
 import test from 'tape-promise/tape';

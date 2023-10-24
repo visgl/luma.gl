@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {assert} from '../utils/assert';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';

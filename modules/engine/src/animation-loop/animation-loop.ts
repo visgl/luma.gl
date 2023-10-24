@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {luma, Device} from '@luma.gl/core';
 import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/core';

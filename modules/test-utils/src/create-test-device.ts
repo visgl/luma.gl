@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import type {Device, DeviceProps} from '@luma.gl/core';
 import {luma} from '@luma.gl/core';

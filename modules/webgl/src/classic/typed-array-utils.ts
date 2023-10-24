@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
 import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';

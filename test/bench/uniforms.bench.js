@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) 2020 OpenJS Foundation
+// Copyright (c) vis.gl contributors
 
 import {Program} from '@luma.gl/webgl-legacy';
 import {createTestContext} from '@luma.gl/test-utils';
