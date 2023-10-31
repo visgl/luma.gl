@@ -1,4 +1,4 @@
-import {Buffer, Device} from '@luma.gl/core';
+import {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
@@ -26,6 +26,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onRender({device}: AnimationProps): void {
     if (!this.model) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+
+
+    const uProjection = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
     this.model.draw(renderPass);
     renderPass.end();
   }
