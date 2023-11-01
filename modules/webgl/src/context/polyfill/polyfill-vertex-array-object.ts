@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /*
  ** Copyright (c) 2015 The Khronos Group Inc.
  **

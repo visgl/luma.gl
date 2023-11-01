@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {ShaderLayout, PrimitiveTopology} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';

@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // opts allows user agent to be overridden for testing
 export function isOldIE(opts = {}) {
   const navigator = typeof window !== 'undefined' ? window.navigator || {} : {};

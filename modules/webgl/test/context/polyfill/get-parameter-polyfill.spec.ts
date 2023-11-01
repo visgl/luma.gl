@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {getParameterPolyfill} from '@luma.gl/webgl/context/polyfill/get-parameter-polyfill';
 import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';

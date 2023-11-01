@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable no-inline-comments, max-len, camelcase */
 import {GL} from '@luma.gl/constants';
 import {isWebGL2} from '../context/webgl-checks';

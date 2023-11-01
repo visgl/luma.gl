@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {createTestDevice} from '@luma.gl/test-utils'
 import {WebGLCanvasContext} from '@luma.gl/webgl';

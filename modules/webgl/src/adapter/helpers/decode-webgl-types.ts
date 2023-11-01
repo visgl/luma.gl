@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderUniformType, ShaderAttributeType, VertexFormat} from '@luma.gl/core';
 import {GL, GLUniformType, GLSamplerType, GLCompositeType, GLDataType} from '@luma.gl/constants';
 

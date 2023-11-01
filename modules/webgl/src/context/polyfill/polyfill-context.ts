@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // WebGL1/WebGL2 extension polyfill support
 //
 // Provides a function that creates polyfills for WebGL2 functions based

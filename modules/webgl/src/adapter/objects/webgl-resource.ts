@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/core';
 import type {Device, ResourceProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';

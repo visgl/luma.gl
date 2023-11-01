@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {log, uid, Shader, ShaderProps, CompilerMessage, formatCompilerLog} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getShaderInfo} from '../helpers/get-shader-info';

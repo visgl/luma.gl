@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // SAMPLER FILTERS
 import {SamplerParameters} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';

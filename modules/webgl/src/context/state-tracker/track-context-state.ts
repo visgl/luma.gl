@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Support for listening to context state changes and intercepting state queries
 // NOTE: this system does not handle buffer bindings
 import {assert} from '@luma.gl/core';

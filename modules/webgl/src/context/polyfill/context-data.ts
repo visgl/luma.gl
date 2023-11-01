@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /**
  * Stores luma.gl specific state associated with a context
  */

@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {GL} from '@luma.gl/constants';
 import {getTestDevices, getWebGLTestDevices} from '@luma.gl/test-utils';
