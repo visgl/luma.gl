@@ -37,6 +37,15 @@ module.exports = getESLintConfig({
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
+          // typescript-eslint 6.0
+          '@typescript-eslint/no-unsafe-argument': 0,
+          '@typescript-eslint/no-redundant-type-constituents': 0,
+          '@typescript-eslint/no-unsafe-enum-comparison': 1,
+          '@typescript-eslint/no-duplicate-type-constituents': 1,
+          '@typescript-eslint/no-base-to-string': 1,
+          '@typescript-eslint/no-loss-of-precision': 1,
+          '@typescript-eslint/no-duplicate-enum-values': 0,
+
           'consistent-return': 0, // We use typescript noImplicitReturn
           'default-case': 0, // We rely on typescript
           'import/no-unresolved': 0,

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {Device, DeviceProps} from '../adapter/device';
 import {DEFAULT_DEVICE_PROPS} from '../adapter/device';

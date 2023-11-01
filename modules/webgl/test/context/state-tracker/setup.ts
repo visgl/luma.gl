@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // TEST SETUP
 
 import {createTestContext} from '@luma.gl/test-utils';

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {NumberArray} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';

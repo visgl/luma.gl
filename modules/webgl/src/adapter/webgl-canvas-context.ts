@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';

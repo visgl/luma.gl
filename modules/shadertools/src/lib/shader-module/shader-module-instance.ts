@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {assert} from '../utils/assert';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';

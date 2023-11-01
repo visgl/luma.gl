@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {Device, Buffer, VertexArrayProps, RenderPass, TypedArray} from '@luma.gl/core';
 import {VertexArray, log} from '@luma.gl/core';

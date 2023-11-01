@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {DeviceLimits} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getWebGL2Context} from '../../context/context/webgl-checks';

@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Avoid generating a lot of big context divs
 import {createTestContext} from '@luma.gl/test-utils';
 

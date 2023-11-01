@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 // utils
 import './lib/glsl-utils/get-shader-info.spec';

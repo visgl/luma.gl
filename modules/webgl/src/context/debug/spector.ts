@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {log, loadScript} from '@luma.gl/core';
 
 /** Spector debug initialization options */

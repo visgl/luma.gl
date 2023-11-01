@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {assert} from '@luma.gl/core';
 
 const ERR_CONTEXT = 'Invalid WebGLRenderingContext';

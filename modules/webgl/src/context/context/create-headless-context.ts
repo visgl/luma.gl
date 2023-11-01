@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 const ERR_HEADLESSGL_FAILED =
   'Failed to create WebGL context in Node.js, headless gl returned null';
 

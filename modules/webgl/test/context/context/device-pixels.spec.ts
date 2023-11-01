@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /** These tests were copied to webgl-canvas-context
  * 
 import {cssToDevicePixels, cssToDeviceRatio} from '@luma.gl/webgl';

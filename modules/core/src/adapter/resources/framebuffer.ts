@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from '../types/texture-formats';
 import type {Device} from '../device';

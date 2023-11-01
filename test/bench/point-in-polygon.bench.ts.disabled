@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {GPUPointInPolygon} from '@luma.gl/experimental';
 import {Buffer} from '@luma.gl/webgl';

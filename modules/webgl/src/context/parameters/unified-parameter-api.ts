@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.

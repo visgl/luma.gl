@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 /** deeply compare two arrays */
 export function deepArrayEqual(x: any, y: any): boolean {

@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /*
 import test from 'tape-promise/tape';
 import {RenderPipeline, Buffer, VertexArray} from '@luma.gl/webgl-legacy';

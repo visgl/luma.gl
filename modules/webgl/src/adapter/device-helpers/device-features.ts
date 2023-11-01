@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Feature detection for WebGL
 // Provides a function that enables simple checking of which WebGL features are
 // available in an WebGL1 or WebGL2 environment.

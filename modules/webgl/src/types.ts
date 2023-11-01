@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 export type AccessorObject = {
   size?: number;
   index?: number;
