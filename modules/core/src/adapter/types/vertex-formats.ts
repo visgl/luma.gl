@@ -1,5 +1,4 @@
 // luma.gl, MIT license
-// Copyright (c) 2020 OpenJS Foundation
 // Copyright (c) vis.gl contributors
 
 /** Basic data types signed and unsigned integers, and floats, of varying sizes */

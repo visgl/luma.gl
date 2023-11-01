@@ -1,5 +1,4 @@
 // luma.gl, MIT license
-// Copyright (c) 2020 OpenJS Foundation
 // Copyright (c) vis.gl contributors
 
 import {NumericArray as NumberArray, Matrix4, Vector3} from '@math.gl/core';

@@ -61,7 +61,7 @@ test('getParameterPolyfill#WebGL1', (t) => {
   const originalGetParameterFunc = gl.getParameter.bind(gl);
   for (const pname of WEBGL_PARAMETER_KEYS) {
     const value = getParameterPolyfill(gl, originalGetParameterFunc, pname);
-    t.ok(typeof value !== undefined, 'Returns valid value');
+    t.ok(typeof value !== 'undefined', 'Returns valid value');
   }
   t.end();
 });
@@ -76,7 +76,7 @@ test('getParameterPolyfill#WebGL2', (t) => {
   const originalGetParameterFunc = gl2.getParameter.bind(gl2);
   for (const pname of WEBGL_PARAMETER_KEYS) {
     const value = getParameterPolyfill(gl2, originalGetParameterFunc, pname);
-    t.ok(typeof value !== undefined, 'Returns valid value');
+    t.ok(typeof value !== 'undefined', 'Returns valid value');
   }
   t.end();
 });

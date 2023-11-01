@@ -1,5 +1,4 @@
 // luma.gl, MIT license
-// Copyright (c) 2020 OpenJS Foundation
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer, VertexArrayProps, RenderPass, TypedArray} from '@luma.gl/core';
