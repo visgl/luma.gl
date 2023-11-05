@@ -328,7 +328,7 @@ Apply magnify effect to the surrounding area of a given position.
 - `screenXY`: x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`.
 - `radiusPixels`: effect radius in pixels. Default value is `100`.
 - `zoom`: magnify level. Default value is `2`.
-- `borderWidthPixels`: border width of the effect circle, will not show border if value <= 0.0. Default value is `0`.
+- `borderWidthPixels`: border width of the effect circle, will not show border if value \<\= 0.0. Default value is `0`.
 - `borderColor`: border color of the effect circle. Default value is `[255, 255, 255, 255]`.
 
 <table style="border: 0;" align="center">

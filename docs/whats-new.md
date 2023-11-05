@@ -679,7 +679,7 @@ A smaller release mainly intended to align the luma.gl code base with the big de
 ## New `gl-matrix` based math library
 
 - Optional library: All math operations directly accept JavaScript arrays
-- Math classes are subclasses of JavaScript arrays (i.e. not {x,y,z} objects)
+- Math classes are subclasses of JavaScript arrays (i.e. not x,y,z objects)
   and can thus be used interchangeably with arrays.
 - Relies on `gl-matrix` for computations.
 - Adds optional error checking.

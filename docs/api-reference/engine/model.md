@@ -195,7 +195,7 @@ Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-
 
 ### setUniforms(uniforms: object): void
 
-Stores named uniforms {key, value}
+Stores named uniforms key, value
 
 
 ### updateModuleSettings(moduleSettings: object): void

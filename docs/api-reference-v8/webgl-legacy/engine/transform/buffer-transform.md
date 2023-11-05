@@ -28,7 +28,7 @@ Returns resources required when performing `Model.draw()` options.
 
 - `opts` (`Object`) - Any existing `opts.attributes` will be merged with new attributes.
 
-Returns an Object : {attributes, transformFeedback}.
+Returns an Object with fields attributes, transformFeedback.
 
 ### updateModelProps(props: Object) : Object
 

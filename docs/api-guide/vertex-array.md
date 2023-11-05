@@ -97,7 +97,7 @@ vertexArray.setConstant(location: number, constant: NumberArray) : VertexArray
 - `array` - the constant value
 
 Remarks:
-- WebGL APIs: [vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
+- WebGL APIs: [`vertexAttrib4[u]{f,i}v`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 ### setBuffer(location: number, buffer : Buffer [, accessor : Object]) : VertexArray
 
