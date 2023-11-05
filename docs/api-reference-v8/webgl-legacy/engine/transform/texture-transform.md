@@ -24,7 +24,7 @@ Returns options required when performing `Model.draw()` options.
 
 - `opts` (`Object`) - Any existing `opts.attributes` , `opts.parameters`, and `opts.uniforms` will be merged with new values.
 
-Returns an Object : {attributes, framebuffer, uniforms, discard, parameters}.
+Returns an Object : attributes, framebuffer, uniforms, discard, parameters.
 
 ### updateModelProps(props: Object) : Object
 

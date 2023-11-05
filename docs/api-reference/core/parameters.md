@@ -251,10 +251,10 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 | `'never'`        | Never pass                               |
 | `'less'`         | Pass if (ref & mask) < (stencil & mask)  |
 | `'equal'`        | Pass if (ref & mask) = (stencil & mask)  |
-| `'lequal'`       | Pass if (ref & mask) <= (stencil & mask) |
+| `'lequal'`       | Pass if (ref & mask) \<\= (stencil & mask) |
 | `'greater'`      | Pass if (ref & mask) > (stencil & mask)  |
 | `'notequal'`     | Pass if (ref & mask) != (stencil & mask) |
-| `'gequal'`       | Pass if (ref & mask) >= (stencil & mask) |
+| `'gequal'`       | Pass if (ref & mask) \>\= (stencil & mask) |
 
 `StencilOperation` values describe action when the stencil test fails
 

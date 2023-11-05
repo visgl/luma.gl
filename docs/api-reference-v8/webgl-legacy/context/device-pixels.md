@@ -30,4 +30,4 @@ Returns an Object, `{x, y, width, height}` that represents entire range of devic
 - `y` (Number): lower y-coordinate
 - `width` (Number): width in pixels
 - `height` (Number): height in pixels
-  When `devicePixelRatio` is <=1, `width` and `height` are equal to `one`, otherwise `width` and `height` are greater than one.
+  When `devicePixelRatio` is \<\=1, `width` and `height` are equal to `one`, otherwise `width` and `height` are greater than one.

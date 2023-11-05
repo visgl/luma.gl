@@ -234,7 +234,7 @@ Reads and returns data from current destination buffer corresponding to the give
 
 When rendering to a texture, i.e. `_targetTexture` is set, `Transform` class internally setups a `Framebuffer` object. `getFramebuffer()` returns this `Framebuffer` object.
 
-### run({uniforms : Object, unbindModels : Object}) : Transform
+### `run({uniforms : Object, unbindModels : Object}) : Transform`
 
 Performs one transform feedback iteration.
 

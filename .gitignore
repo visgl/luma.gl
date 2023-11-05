@@ -25,7 +25,7 @@ lerna-debug.log
 
 */**/yarn.lock
 yarn-error.log
-
+!website/yarn.lock
 .yarn/*
 !.yarn/cache
 !.yarn/patches

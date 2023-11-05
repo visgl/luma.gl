@@ -59,8 +59,8 @@ Returns true if Query is supported by the WebGL implementation
 (depends on the EXT_disjoint_timer_query extension)/
 Can also check whether timestamp queries are available.
 
-- options.queries=false {Object} - If true, checks if Query objects (occlusion/transform feedback) are supported
-- options.timers=false {Object} - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
+- options.queries=false Object - If true, checks if Query objects (occlusion/transform feedback) are supported
+- options.timers=false Object - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
 
 Returns: {Boolean} - Query API is supported with specified configuration
 
@@ -77,13 +77,13 @@ Options
 
 Destroys the WebGL object. Rejects any pending query.
 
-- return {Query} - returns itself, to enable chaining of calls.
+- return Query - returns itself, to enable chaining of calls.
 
 ### beginTimeElapsedQuery()
 
 Shortcut for timer query (dependent on extension in both WebGL 1 and 2)
 
-### Query.beginOcclusionQuery({conservative = false})
+### `Query.beginOcclusionQuery({conservative = false})`
 
 Shortcut for occlusion query (dependent on WebGL 2)
 
@@ -105,15 +105,15 @@ Remarks:
 - Triggering a new query when a Query is already tracking an
   unresolved query causes that query to be cancelled.
 
-- target {GLenum} - target to query
-- return {Query} - returns itself, to enable chaining of calls.
+- target GLenum - target to query
+- return Query - returns itself, to enable chaining of calls.
 
 ### end
 
 Inserts a query end marker into the GPU instruction stream.
 Note: Can be called multiple times.
 
-return {Query} - returns itself, to enable chaining of calls.
+return Query - returns itself, to enable chaining of calls.
 
 ### isResultAvailable
 

@@ -17,36 +17,39 @@
   },
   "dependencies": {
     "@algolia/autocomplete-js": "^1.8.3",
-    "@luma.gl/core": "9.0.0-alpha.39",
+    "@docusaurus/core": "^3.0.0",
+    "@docusaurus/preset-classic": "^3.0.0",
     "@luma.gl/core": "9.0.0-alpha.39",
     "@luma.gl/engine": "9.0.0-alpha.39",
     "@luma.gl/webgl": "9.0.0-alpha.39",
     "@luma.gl/webgpu": "9.0.0-alpha.39",
+    "@mdx-js/react": "^3.0.0",
     "clsx": "^1.1.1",
-    "d3-request": "^1.0.6",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "docusaurus-mdx-checker": "^3.0.0",
+    "docusaurus-node-polyfills": "^1.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "styled-components": "^5.3.3",
     "zustand": "^4.1.5"
   },
   "devDependencies": {
     "@cmfcmf/docusaurus-search-local": "^1.0.0",
-    "@docusaurus/core": "^2.4.0",
-    "@docusaurus/module-type-aliases": "^2.4.1",
-    "@docusaurus/plugin-client-redirects": "^2.4.0",
-    "@docusaurus/plugin-content-docs": "^2.4.0",
-    "@docusaurus/preset-classic": "^2.4.0",
-    "@mdx-js/react": "^1.6.22",
-    "@tsconfig/docusaurus": "^2.0.0",
+    "@docusaurus/module-type-aliases": "3.0.0-beta.0",
+    "@docusaurus/plugin-client-redirects": "^3.0.0",
+    "@docusaurus/plugin-content-docs": "^3.0.0",
+    "@docusaurus/tsconfig": "^3.0.0-beta.0",
     "babel-plugin-styled-components": "^2.0.0",
-    "prism-react-renderer": "^1.2.1",
     "ts-node": "~10.9.1",
     "typescript": "^5.1.6"
   },
   "browserslist": {},
   "resolutions": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "styled-components": "^4.4.1"
+  },
+  "engines": {
+    "node": ">=18.0"
+  },
+  "volta": {
+    "node": "18.18.2",
+    "yarn": "1.22.19"
   }
 }
