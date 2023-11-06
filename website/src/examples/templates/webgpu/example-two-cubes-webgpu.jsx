@@ -1,8 +1,8 @@
 import React from 'react';
 import {LumaExample} from '../../../react-luma';
-import AnimationLoop from '../../../examples/webgpu/two-cubes/app';
+import AnimationLoop from '../../../../../examples/webgpu/two-cubes/app';
 
-export default class Example extends React.Component {
+export class TwoCubesWebGPUExample extends React.Component {
   render() {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};

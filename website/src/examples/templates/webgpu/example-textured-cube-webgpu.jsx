@@ -1,8 +1,8 @@
 import React from 'react';
 import {LumaExample} from '../../../react-luma';
-import AnimationLoop from '../../../examples/webgpu/textured-cube/app';
+import AnimationLoop from '../../../../../examples/webgpu/textured-cube/app';
 
-export default class Example extends React.Component {
+export class TexturedCubeWebGPUExample extends React.Component {
   render() {
     const { pageContext } = this.props;
     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};

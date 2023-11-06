@@ -16,4 +16,6 @@ export {AnimationExample} from './src/examples/templates/api/example-animation';
 export {CubemapExample} from './src/examples/templates/api/example-cubemap';
 export {Texture3DExample} from './src/examples/templates/api/example-texture-3d';
 
+export {InstancedCubesExample} from './src/examples/templates/webgpu/example-instanced-cubes-webgpu';
+
 // export {GeospatialExample} from './templates/showcase/example-geospatial';
