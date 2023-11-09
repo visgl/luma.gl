@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from './shader-module/shader-module';
 import type {PlatformInfo} from './shader-assembly/platform-info';

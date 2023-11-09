@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // luma.gl Base WebGL wrapper library
 // Provides simple class/function wrappers around the low level webgl objects
 // These classes are intentionally close to the WebGL API

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
 import {Framebuffer, Texture, assert} from '@luma.gl/core';

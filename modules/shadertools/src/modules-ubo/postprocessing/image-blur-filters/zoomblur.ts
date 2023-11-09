@@ -1,4 +1,4 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../../../modules-ubo/math/random/random';
 
 const fs = `
@@ -34,22 +34,30 @@ vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-const uniforms = {
-  center: [0.5, 0.5],
-  strength: {value: 0.3, min: 0, softMax: 1}
+/**
+ * Zoom Blur - Blurs the image away from a certain point, which looks like radial motion blur.
+ */
+export type ZoomBlurProps = {
+  /** - The x, y coordinate of the blur origin. */
+  center: number[],
+  /** - The strength of the blur. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 creates a highly blurred image. */
+  strength: number
 };
 
 /**
  * Zoom Blur
  * Blurs the image away from a certain point, which looks like radial motion blur.
- * @param centerX  The x coordinate of the blur origin.
- * @param centerY  The y coordinate of the blur origin.
- * @param strength The strength of the blur. Values in the range 0 to 1 are usually sufficient,
- *                 where 0 doesn't change the image and 1 creates a highly blurred image.
  */
-export const zoomBlur = {
+export const zoomBlur: ShaderPass<ZoomBlurProps> = {
   name: 'zoomBlur',
-  uniforms,
+  uniformTypes: {
+    center: 'vec2<f32>',
+    strength: 'f32'
+  },
+  uniforms: {
+    center: {value: [0.5, 0.5]},
+    strength: {value: 0.3, min: 0, softMax: 1}
+  },
   fs,
   dependencies: [random],
   passes: [{sampler: true}]

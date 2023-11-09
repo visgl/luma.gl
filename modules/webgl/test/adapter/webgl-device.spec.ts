@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {createTestDevice, webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 import {WebGLDevice, isWebGL, isWebGL2} from '@luma.gl/webgl';

@@ -130,10 +130,10 @@ Parameter: `compare`
 
 | `Value                 | Computed result                    |
 | ---------------------- | ---------------------------------- |
-| `less-equal` (default) | result = 1.0 0.0, r <= D t r > D t |
-| `greater-equal`        | result = 1.0 0.0, r >= D t r < D t |
-| `less`                 | result = 1.0 0.0, r < D t r >= D t |
-| `greater`              | result = 1.0 0.0, r > D t r <= D t |
+| `less-equal` (default) | result = 1.0 0.0, r \<\= D t r > D t |
+| `greater-equal`        | result = 1.0 0.0, r \>\= D t r < D t |
+| `less`                 | result = 1.0 0.0, r < D t r \>\= D t |
+| `greater`              | result = 1.0 0.0, r > D t r \<\= D t |
 | `equal`                | result = 1.0 0.0, r = D t r ≠ D t  |
 | `not-equal`            | result = 1.0 0.0, r ≠ D t r = D t  |
 | `always`               | result = 1.0                       |

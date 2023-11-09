@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
 import {WEBGLBuffer} from '@luma.gl/webgl';

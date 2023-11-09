@@ -192,7 +192,7 @@ Returns map of currently stored uniforms
 
 ### setUniforms(uniforms: object); this
 
-Stores named uniforms {key, value}
+Stores named uniforms key-value pairs
 
 ### updateModuleSettings(moduleSettings: object); this
 

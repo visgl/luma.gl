@@ -1,14 +1,15 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
-
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
 
 const fs = glsl`\
-uniform float radius;
-uniform vec2 delta;
+uniform EdgeWork {
+  float radius;
+  vec2 delta;
+} edgeWork;
 
 vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = radius * delta / texSize;
+  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
@@ -33,7 +34,7 @@ vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
 }
 
 vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = radius * delta / texSize;
+  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
@@ -58,28 +59,39 @@ vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-const uniforms = {
-  radius: {value: 2, min: 1, softMax: 50},
-  delta: {value: [1, 0], private: true}
+/**
+ * Edge Work -
+ * Picks out different frequencies in the image by subtracting two
+ * copies of the image blurred with different radii.
+ */
+export type EdgeWorkProps = {
+  /** radius The radius of the effect in pixels. */
+  radius: number;
+  /** @deprecated internal */
+  delta: number;
 };
 
 /**
  * Edge Work -
  * Picks out different frequencies in the image by subtracting two
  * copies of the image blurred with different radii.
- * @param radius The radius of the effect in pixels.
  */
-export const edgeWork = {
+export const edgeWork: ShaderPass<EdgeWorkProps> = {
   name: 'edgeWork',
-  uniforms,
+  uniforms: {
+    radius: {value: 2, min: 1, softMax: 50},
+    delta: {value: [1, 0], private: true}
+  },
   fs,
   dependencies: [random],
   passes: [
     {
+      // @ts-expect-error
       sampler: 'edgeWork_sampleColor1',
       uniforms: {delta: [1, 0]}
     },
     {
+      // @ts-expect-error
       sampler: 'edgeWork_sampleColor2',
       uniforms: {delta: [0, 1]}
     }

@@ -1,17 +1,19 @@
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
-// import type {ShaderPass} from '../../lib/shaderpass';
 import {random} from '../../../modules-ubo/math/random/random';
 
 const fs = glsl`\
-uniform float blurRadius;
-uniform float gradientRadius;
-uniform vec2 start;
-uniform vec2 end;
-uniform bool invert;
+uniform TiltShift {
+  float blurRadius;
+  float gradientRadius;
+  vec2 start;
+  vec2 end;
+  bool invert;
+} tiltShift;
 
 vec2 tiltShift_getDelta(vec2 texSize) {
-  vec2 vector = normalize((end - start) * texSize);
-  return invert ? vec2(-vector.y, vector.x) : vector;
+  vec2 vector = normalize((tiltShift.end - tiltShift.start) * texSize);
+  return tiltShift.invert ? vec2(-vector.y, vector.x) : vector;
 }
 
 vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
@@ -23,7 +25,7 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 
   vec2 normal = normalize(vec2((start.y - end.y) * texSize.y, (end.x - start.x) * texSize.x));
   float radius = smoothstep(0.0, 1.0,
-    abs(dot(texCoord * texSize - start * texSize, normal)) / gradientRadius) * blurRadius;
+    abs(dot(texCoord * texSize - start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
 
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
@@ -46,12 +48,21 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-const uniforms = {
-  blurRadius: {value: 15, min: 0, max: 50},
-  gradientRadius: {value: 200, min: 0, max: 400},
-  start: [0, 0],
-  end: [1, 1],
-  invert: {value: false, private: true}
+/**
+ * Tilt Shift
+ * Simulates the shallow depth of field normally encountered in close-up photography
+ */
+export type TiltShiftProps = {
+  /** The x,y coordinate of the start of the line segment. */
+  start: number[];
+  /** The xm y coordinate of the end of the line segment. */
+  end: number[];
+  /** The maximum radius of the pyramid blur. */
+  blurRadius: number[];
+  /** The distance from the line at which the maximum blur radius is reached. */
+  gradientRadius: number[];
+  /** @deprecated internal shaderpass use */
+  invert: number;
 };
 
 /**
@@ -64,22 +75,29 @@ const uniforms = {
  * of a planar scene might be looking at a road from above at a downward
  * angle. The image is then blurred with a blur radius that starts at zero
  * on the line and increases further from the line.
- * @param startX         The x coordinate of the start of the line segment.
- * @param startY         The y coordinate of the start of the line segment.
- * @param endX           The x coordinate of the end of the line segment.
- * @param endY           The y coordinate of the end of the line segment.
- * @param blurRadius     The maximum radius of the pyramid blur.
- * @param gradientRadius The distance from the line at which the maximum blur radius is reached.
  */
-export const tiltShift = {
+export const tiltShift: ShaderPass<TiltShiftProps> = {
   name: 'tiltShift',
-  uniforms,
-  fs,
-  dependencies: [random],
+  uniformTypes: {
+    blurRadius: 'f32',
+    gradientRadius: 'f32',
+    start: 'vec2<f32>',
+    end: 'vec2<f32>',
+    invert: 'i32'
+  },
+  uniforms: {
+    blurRadius: {value: 15, min: 0, max: 50},
+    gradientRadius: {value: 200, min: 0, max: 400},
+    start: {value: [0, 0]},
+    end: {value: [1, 1]},
+    invert: {value: false, private: true}
+  },
   passes: [
     {sampler: true, uniforms: {invert: false}},
     {sampler: true, uniforms: {invert: true}}
-  ]
+  ],
+  dependencies: [random],
+  fs
 };
 
 /*

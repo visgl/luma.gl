@@ -104,7 +104,7 @@ Polyfill a WebGL context integrating available extensions.
 polyfillContext(gl);
 ```
 
-- `gl` {WebGLRenderingContext} - A WebGL context
+- `gl`: `WebGLRenderingContext`` - A WebGL context
 
 ### resizeGLContext
 

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {ShaderProps, CompilerMessage} from '@luma.gl/core';
 import {Shader, log} from '@luma.gl/core';

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 /** Information extracted from shader source code */
 export type ShaderInfo = {

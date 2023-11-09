@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {Device, Framebuffer, assert} from '@luma.gl/core';
 import {WebGLDevice} from '../adapter/webgl-device';
 import {withGLParameters} from '../context/state-tracker/with-parameters';

@@ -90,7 +90,7 @@ Sets a constant value for a vertex attribute. When this `VertexArrayObject` is u
 - `location` (_GLuint_) - index of the attribute
 
 WebGL APIs:
-[vertexAttrib4[u]{f,i}v](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
+[`vertexAttrib4[u]{f,i}v`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/vertexAttrib)
 
 ### setBuffer(nameOrLocation, buffer : Buffer [, accessor : Object]) : VertexArray
 

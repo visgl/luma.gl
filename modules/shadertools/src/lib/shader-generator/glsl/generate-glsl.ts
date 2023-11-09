@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {UniformFormat} from '../../../types';
 import {ShaderModule, UniformValue} from '../../../lib/shader-module/shader-module';

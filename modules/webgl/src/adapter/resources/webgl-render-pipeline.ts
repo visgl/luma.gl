@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {ShaderLayout, PrimitiveTopology} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
@@ -15,6 +17,7 @@ import {setUniform} from '../helpers/set-uniform';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLShader} from './webgl-shader';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLTexture} from './webgl-texture';
 // import {WEBGLVertexArray} from './webgl-vertex-array';
 import {WEBGLRenderPass} from './webgl-render-pass';
@@ -144,7 +147,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           }
           break;
         case 'texture':
-          if (!(value instanceof WEBGLTexture)) {
+          if (!(value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
             throw new Error('texture value');
           }
           break;
@@ -405,10 +408,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           break;
 
         case 'texture':
-          if (!(value instanceof WEBGLTexture)) {
+          if (!(value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
             throw new Error('texture');
           }
-          const texture: WEBGLTexture = value;
+          let texture: WEBGLTexture;
+          if (value instanceof WEBGLTexture) {
+            texture = value;
+          } else if (value instanceof WEBGLFramebuffer && value.colorAttachments[0] instanceof WEBGLTexture) {
+            log.warn(`Passing framebuffer in texture binding may be deprecated. Use fbo.colorAttachments[0] instead`)();
+            texture = value.colorAttachments[0];
+          } else {
+            throw new Error('No texture');
+          }
+
           gl2.activeTexture(GL.TEXTURE0 + textureUnit);
           gl2.bindTexture(texture.target, texture.handle);
           // gl2.bindSampler(textureUnit, sampler.handle);

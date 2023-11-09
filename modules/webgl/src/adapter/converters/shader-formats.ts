@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {GL} from '@luma.gl/constants';
 import {ShaderAttributeType, ShaderDataType} from '@luma.gl/core';
 

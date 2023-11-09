@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
 import {fillArray} from '@luma.gl/core';

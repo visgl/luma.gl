@@ -2,10 +2,18 @@ import React from 'react';
 import Layout from '@theme/Layout';
 import styled from 'styled-components';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import {joinPath} from '../utils/data-utils';
+// import {joinPath} from '../utils/data-utils';
 
 import items from '../../content/showcase.json';
 // copied from deck.gl/website/pages/showcase with small fixes 
+
+function joinPath(base, path) {
+  if (path.match(/^\w+:\/\//)) {
+    // has protocol
+    return path;
+  }
+  return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+}
 
 const ShowcaseContainer = styled.div`
   padding: 60px 12px;

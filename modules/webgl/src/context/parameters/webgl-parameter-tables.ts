@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Tables describing WebGL parameters
 import {GL, GLParameters} from '@luma.gl/constants';
 import {isWebGL2} from '../context/webgl-checks';

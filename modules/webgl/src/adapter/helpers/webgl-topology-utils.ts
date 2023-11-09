@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/constants';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode

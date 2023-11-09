@@ -1,13 +1,14 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
+import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // Do a 9x9 bilateral box filter
 const fs = glsl`\
-uniform float strength;
+uniform Noise {
+  float strength;
+} noise;
 
 vec4 denoise_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
-  float adjustedExponent = 3. + 200. * pow(1. - strength, 4.);
+  float adjustedExponent = 3. + 200. * pow(1. - noise.strength, 4.);
 
   vec4 center = texture2D(texture, texCoord);
   vec4 color = vec4(0.0);
@@ -26,8 +27,17 @@ vec4 denoise_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-type DenoiseProps = {
-  /** The exponent of the color intensity difference */
+/**
+ * Denoise -
+ * Smooths over grainy noise in dark images using an 9x9 box filter
+ * weighted by color intensity, similar to a bilateral filter.
+ */
+export type DenoiseProps = {
+  /** 
+   * The exponent of the color intensity difference, should be greater
+   * than zero. A value of zero just gives an 9x9 box blur and high values
+   * give the original image, but ideal values are usually around 10-20. 
+   */
   strength: number;
 };
 
@@ -35,9 +45,6 @@ type DenoiseProps = {
  * Denoise -
  * Smooths over grainy noise in dark images using an 9x9 box filter
  * weighted by color intensity, similar to a bilateral filter.
- * @param strength The exponent of the color intensity difference, should be greater
- *                 than zero. A value of zero just gives an 9x9 box blur and high values
- *                 give the original image, but ideal values are usually around 10-20.
  */
 export const denoise: ShaderPass<DenoiseProps> = {
   name: 'denoise',

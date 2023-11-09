@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable max-len */
 import {isOldIE} from '@luma.gl/webgl/adapter/device-helpers/is-old-ie';
 import test from 'tape-promise/tape';

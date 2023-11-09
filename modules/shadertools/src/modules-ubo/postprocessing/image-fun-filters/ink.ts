@@ -1,8 +1,10 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float strength;
+uniform Ink {
+  float strength;
+} ink;
 
 vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   vec2 dx = vec2(1.0 / texSize.x, 0.0);
@@ -24,13 +26,23 @@ vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
     }
   }
   vec3 edge = max(vec3(0.0), bigAverage / bigTotal - smallAverage / smallTotal);
-  float power = strength * strength * strength * strength * strength;
+  float power = ink.strength * ink.strength * ink.strength * ink.strength * ink.strength;
   return vec4(color.rgb - dot(edge, edge) * power * 100000.0, color.a);
 }
 `;
 
-const uniforms = {
-  strength: {value: 0.25, min: 0, softMax: 1}
+/**
+ * Ink -
+ * Simulates outlining the image in ink by darkening edges stronger than a
+ * certain threshold. The edge detection value is the difference of two
+ * copies of the image, each blurred using a blur of a different radius.
+ */
+export type InkProps = {
+  /** The multiplicative scale of the ink edges. 
+   * Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges. 
+   * Negative strength values will create white ink edges instead of black ones.
+   */
+   strength: number;
 };
 
 /**
@@ -38,14 +50,15 @@ const uniforms = {
  * Simulates outlining the image in ink by darkening edges stronger than a
  * certain threshold. The edge detection value is the difference of two
  * copies of the image, each blurred using a blur of a different radius.
- * @param strength The multiplicative scale of the ink edges. Values in the range 0 to 1
- *                 are usually sufficient, where 0 doesn't change the image and 1 adds lots
- *                 of black edges. Negative strength values will create white ink edges
- *                 instead of black ones.
  */
-export const ink = {
+export const ink: ShaderPass<InkProps> = {
   name: 'ink',
-  uniforms,
+  uniformTypes: {
+    strength: 'f32'
+  },
+  uniforms: {
+    strength: {value: 0.25, min: 0, softMax: 1}
+  },
   fs,
   passes: [{sampler: true}]
 };

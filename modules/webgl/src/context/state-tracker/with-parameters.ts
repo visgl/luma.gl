@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {Device} from '@luma.gl/core';
 import {WebGLDevice} from '../../adapter/webgl-device';
 import {GLParameters, setGLParameters} from '../parameters/unified-parameter-api';

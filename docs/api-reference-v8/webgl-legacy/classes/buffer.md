@@ -100,7 +100,7 @@ Holds the underlying WebGL object reference.
 
 Number of bytes of allocated memory.
 
-#### `bytesUsed` : number
+#### ``bytesUsed` : number`
 
 Same as `byteLength` unless the `Buffer.reallocate` has been called with a value smaller than the actual length of the buffer.
 
@@ -110,7 +110,7 @@ Holds an `Accessor` instance. By default it contains type information that is au
 
 ## Constructor
 
-### Buffer(gl : WebGLRenderingContext, props : Object | TypedArray | Number)
+### `Buffer(gl : WebGLRenderingContext, props : Object | TypedArray | Number)`
 
 Creates a new `Buffer`. Multiple signatures are supported:
 
@@ -145,7 +145,7 @@ The newly constructed buffer will either be a an "element" buffer used for stori
 
 ## Methods
 
-### initialize(props : Object) : Buffer
+### `initialize(props : Object) : Buffer`
 
 Allocates and optionally initializes buffer memory/data store (releasing any previously allocated memory).
 
@@ -163,7 +163,7 @@ Buffer(gl, byteLength);
 - `accessor` (Object) - object with accessor props to be stored as accessor.
 - `...accessorOptions` (DEPRECATED) - parameters passed to `setAccessor`
 
-### reallocate(byteLength : number) : Buffer
+### `reallocate(byteLength : number) : Buffer`
 
 If necessary, increases buffer size to `byteLength`. Does not decrease the buffer's size if already long enough.
 
@@ -174,7 +174,7 @@ Returns:
 - `true` - if reallocation happened (in which case any stored data was invalidated).
 - `false` - if the `Buffer` was already big enough in which case any uploaded data remains intact.
 
-### subData({data , offset=, srcOffset=, length=}) : Buffer
+### `subData({data , offset?, srcOffset=, length?}) : Buffer`
 
 Updates part or all of a buffer's allocated memory.
 
@@ -185,7 +185,7 @@ Updates part or all of a buffer's allocated memory.
 - `srcOffset`=`0` - WebGL 2: Offset into srcData
 - `length` - WebGL 2: number of bytes to be copied
 
-### copyData(options : Object) : Buffer (WebGL 2)
+### `copyData(options : Object) : Buffer (WebGL 2)`
 
 Copies part of the data of another buffer into this buffer. The copy happens on the GPU and is expected to be efficient.
 
@@ -203,7 +203,7 @@ Note:
 - `writeOffset + sizewriteOffset + size` must not exceeed the size of the buffer bound to writeTarget.
 - If the source and destination are the same buffer object, then the source and destination ranges must not overlap.
 
-### getData() : TypedArray (WebGL 2)
+### `getData() : TypedArray (WebGL 2)`
 
 Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 
@@ -216,11 +216,11 @@ Reads data from buffer into an `ArrayBufferView` or `SharedArrayBuffer`.
 
 Returns a typed array containing the data from the buffer (if `dstData` was supplied it will be returned, otherwise this will be a freshly allocated array).
 
-### getElementCount([accessor : Accessor]) : number
+### `getElementCount([accessor : Accessor]) : number`
 
 Returns number of elements in the buffer. In a buffer created with Float32Array typed array, each float is an element and takes 4 bytes (or 32 bits).
 
-### setAccessor(accessor : Accessor | Object) : Buffer
+### `setAccessor(accessor : Accessor | Object) : Buffer`
 
 Allows you to optionally describe the accessor properties of the data in the buffer. This does not affect the buffer itself, but if supplied can avoid having to supply this data again when you use this buffer as an attribute later (see `VertexArray.setAttributes`).
 
@@ -228,7 +228,7 @@ For details on accessor props, see the documentation for the `Accessor` class.
 
 ## Types
 
-### Usage
+### `Usage`
 
 | Usage             | WebGL 2 | WebGL 1 | Description                                                                                         |
 | ----------------- | ------- | ------- | --------------------------------------------------------------------------------------------------- |
@@ -242,14 +242,14 @@ For details on accessor props, see the documentation for the `Accessor` class.
 | `GL.DYNAMIC_COPY` | Yes     | No      | Buffer will be used often and change often. Contents are neither written or read by the user.       |
 | `GL.STREAM_COPY`  | Yes     | No      | Buffer will be used often and not change often. Contents are neither written or read by the user.   |
 
-### Parameters
+### `Parameters`
 
 | Parameter         | Type   | Value                             |
 | ----------------- | ------ | --------------------------------- |
 | `GL.BUFFER_SIZE`  | GLint  | The size of the buffer in bytes   |
 | `GL.BUFFER_USAGE` | GLenum | The `usage` pattern of the buffer |
 
-### "Manually" Binding Buffers
+### `"Manually" Binding Buffers`
 
 If you are an experienced WebGL or OpenGL programmer you are probably used to constantly binding buffers. Buffer binding and unbinding is handled internal by luma.gl methods and applications typically do not need to bind buffers.
 

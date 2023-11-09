@@ -1,4 +1,4 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
 
@@ -36,9 +36,17 @@ vec4 triangleBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-const uniforms = {
-  radius: {value: 20, min: 0, softMax: 100},
-  delta: {value: [1, 0], private: true}
+/**
+ * @filter       Triangle Blur
+ * @description  This is the most basic blur filter, which convolves the image with a
+ *               pyramid filter. The pyramid filter is separable and is applied as two
+ *               perpendicular triangle filters.
+ */
+export type TriangleBlurProps = {
+  /** The radius of the pyramid convolved with the image. */
+  radius: number;
+  /** @deprecated internal property */
+  delta: number[];
 };
 
 /**
@@ -46,11 +54,17 @@ const uniforms = {
  * @description  This is the most basic blur filter, which convolves the image with a
  *               pyramid filter. The pyramid filter is separable and is applied as two
  *               perpendicular triangle filters.
- * @param radius The radius of the pyramid convolved with the image.
  */
-export const triangleBlur = {
+export const triangleBlur: ShaderPass<TriangleBlurProps> = {
   name: 'triangleBlur',
-  uniforms,
+  uniformTypes: {
+    radius: 'f32',
+    delta: 'vec2<f32>'
+  },
+  uniforms: {
+    radius: {value: 20, min: 0, softMax: 100},
+    delta: {value: [1, 0], private: true}
+  },
   fs,
   dependencies: [random],
   passes: [

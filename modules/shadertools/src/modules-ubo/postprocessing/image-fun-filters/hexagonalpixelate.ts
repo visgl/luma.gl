@@ -1,12 +1,14 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform vec2 center;
-uniform float scale;
+uniform HexagonalPixelate {
+  vec2 center;
+  float scale;
+} hexagonalPixelate;
 
 vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
-  vec2 tex = (texCoord * texSize - center * texSize) / scale;
+  vec2 tex = (texCoord * texSize - hexagonalPixelate.center * texSize) / hexagonalPixelate.scale;
   tex.y /= 0.866025404;
   tex.x -= tex.y * 0.5;
 
@@ -38,27 +40,39 @@ vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoor
 
   choice.x += choice.y * 0.5;
   choice.y *= 0.866025404;
-  choice *= scale / texSize;
+  choice *= hexagonalPixelate.scale / texSize;
 
-  return texture2D(texture, choice + center);
+  return texture2D(texture, choice + hexagonalPixelate.center);
 }
 `;
 
-const uniforms = {
-  center: {value: [0.5, 0.5], hint: 'screenspace'},
-  scale: {value: 10, min: 1, softMin: 5, softMax: 50}
+/**
+ * Hexagonal Pixelate
+ * Renders the image using a pattern of hexagonal tiles. 
+ * Tile colors are nearest-neighbor sampled from the centers of the tiles.
+ */
+export type HexagonalPixelateProps = {
+  /** The [x, y] coordinates of the pattern center. */
+  center: number[];
+  /** The width of an individual tile, in pixels. */
+  scale: number;
 };
 
 /**
  * Hexagonal Pixelate
  * Renders the image using a pattern of hexagonal tiles. Tile colors
  * are nearest-neighbor sampled from the centers of the tiles.
- * @param center The [x, y] coordinates of the pattern center.
- * @param scale  The width of an individual tile, in pixels.
  */
-export const hexagonalPixelate = {
+export const hexagonalPixelate: ShaderPass<HexagonalPixelateProps> = {
   name: 'hexagonalPixelate',
-  uniforms,
+  uniformTypes: {
+    center: 'vec2<f32>',
+    scale: 'f32'
+  },
+  uniforms: {
+    center: {value: [0.5, 0.5], hint: 'screenspace'},
+    scale: {value: 10, min: 1, softMin: 5, softMax: 50}
+  },
   fs,
   passes: [{sampler: true}]
 };

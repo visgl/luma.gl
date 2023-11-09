@@ -1,3 +1,4 @@
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
@@ -13,7 +14,9 @@ vec4 warp_sampleColor(sampler2D texture, vec2 texSize, vec2 coord) {
 }
 `;
 
-export const warp = {
+export type WarpProps = {};
+
+export const warp: ShaderPass<WarpProps> = {
   name: 'warp',
   fs
 };

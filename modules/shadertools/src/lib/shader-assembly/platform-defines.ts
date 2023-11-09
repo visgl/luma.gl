@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {glsl} from '../glsl-utils/highlight';
 import { PlatformInfo } from './platform-info';

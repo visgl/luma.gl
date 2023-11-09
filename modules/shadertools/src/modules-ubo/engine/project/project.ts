@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {NumericArray as NumberArray, Matrix4, Vector3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';

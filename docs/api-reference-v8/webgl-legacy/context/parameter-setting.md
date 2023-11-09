@@ -69,9 +69,9 @@ Gets the values of a gl context parameter.
 getParameters(gl, values);
 ```
 
-- `gl` {WebGLRenderingContext} - context
-- `values`= {Object | GLenum[] | null} - parameters, either as keys in object or elements of array. Defaults to all parameters.
-  Returns {Object} - object with keys and values corresponding to supplied parameter names and the current values of those parameters.
+- `gl` WebGLRenderingContext - context
+- `values`= Object | GLenum[] | null - parameters, either as keys in object or elements of array. Defaults to all parameters.
+  Returns Object - object with keys and values corresponding to supplied parameter names and the current values of those parameters.
 
 ### setParameters
 
@@ -81,10 +81,10 @@ Sets a number of parameters.
 setParameters(gl, {key: value, ...})
 ```
 
-- `gl` {WebGLRenderingContext} - context
+- `gl` WebGLRenderingContext - context
 - `key` {String} - parameter names, (, either )luma.gl setting name or a GL parameter constants
-- `value` {_} - parameter value
-  Returns {_} - "normalized" parameter value after assignment
+- `value` _ - parameter value
+  Returns _ - "normalized" parameter value after assignment
 
 Note:
 
@@ -99,7 +99,7 @@ resetParameters(gl);
 
 Resets all gl context parameters to default values.
 
-- `gl` {WebGLRenderingContext} - context
+- `gl` WebGLRenderingContext - context
   Returns no value.
 
 Note that technically, resetting context parameters does not fully reset the context, as buffer binding, z buffer values etc are not reset.
@@ -112,8 +112,8 @@ Executes a function after temporarily setting the parameters. Will restore the p
 withParameters(gl, {...params}, func);
 ```
 
-- `gl` {WebGLRenderingContext} - context
-- `params` {Object} - any parameter names accepted by `setParameters`
+- `gl` WebGLRenderingContext - context
+- `params` Object - any parameter names accepted by `setParameters`
 
 Returns: the value returned by `func`, if any.
 
@@ -368,7 +368,7 @@ Values for `GL.STENCIL_TEST`
 | `GL.NEVER`    | Never pass                               |
 | `GL.LESS`     | Pass if (ref & mask) < (stencil & mask)  |
 | `GL.EQUAL`    | Pass if (ref & mask) = (stencil & mask)  |
-| `GL.LEQUAL`   | Pass if (ref & mask) <= (stencil & mask) |
+| `GL.LEQUAL`   | Pass if (ref & mask) \<\= (stencil & mask) |
 | `GL.GREATER`  | Pass if (ref & mask) > (stencil & mask)  |
 | `GL.NOTEQUAL` | Pass if (ref & mask) != (stencil & mask) |
 | `GL.GEQUAL`   | Pass if (ref & mask) >= (stencil & mask) |

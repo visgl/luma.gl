@@ -1,4 +1,4 @@
-// import {ShaderPass} from '../../lib/shaderpass';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
 /**
  * ORIGINAL LICENCE
@@ -675,10 +675,12 @@ vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
+export type FXAAUniforms = {};
+
 /**
  * FXAA - Fast Approximate Anti-aliasing.
  */
-export const fxaa = {
+export const fxaa: ShaderPass<FXAAUniforms> = {
   name: 'fxaa',
   uniforms: {},
   fs,

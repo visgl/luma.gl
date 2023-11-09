@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 // MATH TYPES
 export {TypedArray, NumberArray, NumericArray} from '@math.gl/types';

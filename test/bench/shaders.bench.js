@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 // eslint-disable-next-line
 import {Program, VertexShader, FragmentShader} from '@luma.gl/webgl-legacy';

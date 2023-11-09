@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 /** Texture formats */
 export type TextureFormat = ColorTextureFormat | DepthStencilTextureFormat;

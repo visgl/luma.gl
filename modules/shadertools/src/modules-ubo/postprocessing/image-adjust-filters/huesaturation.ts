@@ -1,9 +1,11 @@
-// import type {ShaderPass} from '../../lib/shader-pass-descriptor';
+import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform float hue;
-uniform float saturation;
+uniform HueSaturation {
+  float hue;
+  float saturation;
+} hueSaturation;
 
 vec4 hueSaturation_filterColor(vec4 color) {
   // hue adjustment, wolfram alpha: RotationTransform[angle, {1, 1, 1}][{x, y, z}]
@@ -35,18 +37,30 @@ vec4 hueSaturation_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 
 /**
  * Hue / Saturation
+ */
+export type HueSaturationProps = {
+  /** -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
+   * and 1 is 180 degree rotation in the positive direction) */
+   hue: number;
+   /** @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast) */
+   saturation: number;
+};
+
+/**
+ * Hue / Saturation
  * Provides rotational hue and multiplicative saturation control. RGB color space
  * can be imagined as a cube where the axes are the red, green, and blue color
  * values. Hue changing works by rotating the color vector around the grayscale
  * line, which is the straight line from black (0, 0, 0) to white (1, 1, 1).
  * Saturation is implemented by scaling all color channel values either toward
  * or away from the average color channel value.
- * @param hue        -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
- *                   and 1 is 180 degree rotation in the positive direction)
- * @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
-export const hueSaturation = {
+export const hueSaturation: ShaderPass<HueSaturationProps> = {
   name: 'hueSaturation',
+  uniformTypes: {
+    hue: 'f32',
+    saturation: 'f32'
+  },
   uniforms: {
     hue: {value: 0, min: -1, max: 1},
     saturation: {value: 0, min: -1, max: 1}

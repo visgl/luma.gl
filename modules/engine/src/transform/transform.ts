@@ -1,5 +1,6 @@
 
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {Device, Buffer, Texture, Framebuffer} from '@luma.gl/core';
 import {GLParameters} from '@luma.gl/constants';

@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {luma} from '@luma.gl/core';
 import {WebGLDevice, registerHeadlessGL} from '@luma.gl/webgl';

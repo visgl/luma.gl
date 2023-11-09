@@ -203,7 +203,7 @@ Updates Framebuffers attachments using provided Texture and Renderbuffer objects
 - `clearAttachments` - When set to true, will first unattach all binding points, default value is `false`.
 - `resizeAttachments` - When set to true, all attachments will be re-sized to Framebuffers size, default value is `true`.
 
-### resize({width: number, height: number}) : Framebuffer
+### `resize({width: number, height: number}) : Framebuffer`
 
 `Framebuffer.resize({width, height})`
 

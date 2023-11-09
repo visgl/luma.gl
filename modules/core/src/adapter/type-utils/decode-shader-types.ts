@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import {assert} from '../../lib/utils/assert';
 import {ShaderUniformType, ShaderDataType} from '../types/shader-types';

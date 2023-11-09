@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 import type {
   TypedArray,
@@ -344,7 +345,18 @@ export class Model {
    */
   setShaderModuleProps(props: Record<string, any>): void {
     const uniforms = this._getModuleUniforms(props);
+
+    // Extract textures & framebuffers set by the modules
+    // TODO better way to extract bindings
+    const keys = Object.keys(uniforms).filter(k => uniforms[k].constructor.name.includes('WEBGL'));
+    const bindings: Record<string, Binding> = {};
+    for (const k of keys) {
+      bindings[k] = uniforms[k];
+      delete uniforms[k];
+    }
+
     Object.assign(this.uniforms, uniforms);
+    Object.assign(this.bindings, bindings);
   }
 
   /**

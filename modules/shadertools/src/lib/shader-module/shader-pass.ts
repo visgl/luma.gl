@@ -11,4 +11,5 @@ export type ShaderPass<UniformsT extends Record<string, UniformValue>> = ShaderM
 type ShaderPassData = {
   sampler?: boolean;
   filter?: boolean;
+  uniforms?: Record<string, UniformValue>;
 }
