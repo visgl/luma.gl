@@ -549,7 +549,7 @@ Improvements in particular to the `Buffer`, `TransformFeedback` and `Framebuffer
 #### Shader Modules
 
 - `fp64` - fp64 module works under more platforms/GPUs/drivers
-- [`picking`](/docs/api-reference/shadertools/core-shader-modules) shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
+- `picking` shader module is moved from deck.gl to luma.gl and has been enhanced to also support object highlighting.
 
 ## Version 4.0
 

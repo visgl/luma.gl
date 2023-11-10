@@ -5,7 +5,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import styles from './index.module.css';
 import HomepageFeatures from '../components/HomepageFeatures';
-import {InstancingExample} from '../examples/templates/showcase/example-instancing';
+import {InstancingExample} from '../examples/templates';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();

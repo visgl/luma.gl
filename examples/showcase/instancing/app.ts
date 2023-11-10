@@ -1,10 +1,11 @@
-import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, NumberArray, glsl} from '@luma.gl/core';
+// 
+import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
+import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';
 import {colorPicking, dirlightMaterial} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-import {ShaderUniformType} from 'modules/core/src';
 
 const INFO_HTML = `
 <p>

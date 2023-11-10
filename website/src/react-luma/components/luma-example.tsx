@@ -1,7 +1,7 @@
 import React, {FC, useEffect, useRef, useState, useCallback, forwardRef} from 'react'; // eslint-disable-line
 import {isBrowser} from '@probe.gl/env';
 import {Device, log, luma, setPathPrefix} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationLoop, AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
@@ -42,9 +42,10 @@ const STAT_STYLES = {
 const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
 
 type LumaExampleProps = {
-  AnimationLoopTemplate: typeof AnimationLoopTemplate;
-  exampleConfig: unknown;
-  name: string;
+  id?: string;
+  template: Function;
+  config: unknown;
+  directory?: string;
   style?: CSSStyleDeclaration;
   container?: string;
 };
@@ -77,7 +78,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         const device = luma.createDevice({type: deviceType, canvas, container: containerName});
   
         let animationLoop: AnimationLoop | null = null;
-        animationLoop = makeAnimationLoop(props.AnimationLoopTemplate, {
+        animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
           device,
           autoResizeViewport: true,
           autoResizeDrawingBuffer: true
@@ -90,8 +91,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         // Ensure the example can find its images
         // TODO - this only works for examples/tutorials
         const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
-        if (props.name) {
-          setPathPrefix(`${RAW_GITHUB}/examples/tutorials/${props.name}/`);
+        if (props.directory) {
+          setPathPrefix(`${RAW_GITHUB}/examples/${props.directory}/${props.id}/`);
         } else {
           setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
         }
@@ -100,7 +101,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     } else {
 
       if (animationLoop) {
-        console.error(`unmounting example ${props.name}`); // , ref.current);
+        console.error(`unmounting example ${props.id}`); // , ref.current);
         animationLoop?.stop();
         animationLoop?.destroy();
         setAnimationLoop(null);
