@@ -1,6 +1,6 @@
 # About Devices
 
-The [`Device`](../api-reference/api/device) class provides luma.gl applications with access to the GPU. 
+The [`Device`](/docs/api-reference/core/device) class provides luma.gl applications with access to the GPU. 
 A luma.gl application first creates a `Device` instance which in turn provides the 
 application with facilities for creating GPU resources (such as `Buffer` and `Texture` objects), 
 querying GPU capabilities, compiling and linking shaders into pipelines, setting parameters, 
@@ -76,7 +76,7 @@ const webgpuDevice = luma.createDevice({type: 'webgl2', canvas: ...});
 
 ## CanvasContext
 
-A [`CanvasContext`](../api-reference/api/canvas-context) holds a connection between 
+A [`CanvasContext`](/docs/api-reference/core/canvas-context) holds a connection between 
 the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
 A `CanvasContext` takes care of:
 - providing a fresh framebuffer every render frame, set up to render into the canvas' swap chain.

@@ -6,7 +6,7 @@ This upgrade guide calls out any breaking changes in the luma.gl API. It covers 
 luma.gl largely follows [**semantic versioning**](https://semver.org) conventions: breaking changes are done in major versions only, minor version bumps  bring new functionality but no breaking changes, and patch releases contain only low-risk fixes. However luma.gl is a big framework and there are cases where maintainers decide that it is reasonable to make a small breaking change in a minor releases for some infrequently used part of the API. 
 :::
 
-:::caution
+:::info
 Upgrade instructions assume that you are upgrading from the immediately previous release.
 If you are upgrading across multiple releases you will want to consider the release notes for all
 intermediary releases.
@@ -15,7 +15,7 @@ intermediary releases.
 ## Upgrading to v9.0
 
 luma.gl v9 represents a major, "once in a generation" API change and separate documentation is provided:
-- [v9 upgrade guide](./upgrade-to-v9).
+- [v9 upgrade guide](/docs/upgrade-guide/upgrade-v9).
 - [v9 GPU parameter upgrade guide](./upgrade-v9-parameters.md)
 - [v9 API philosophy](./api-philosophy).
 
@@ -29,7 +29,7 @@ luma.gl v9 represents a major, "once in a generation" API change and separate do
 
 The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new)) for details).
 
-### Module Restructure
+#### Module Restructure
 
 The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
 
@@ -45,7 +45,7 @@ The module structure has been significantly changed for v8.0 with the intention 
 | test-utils   | Test tooling for the other modules                                          | Same as before                                                                                             |
 | experimental | Experimental, unsupported APIs                                              | core/scenegraph, gpgpu, addons/gltf, addons/webvr                                                          |
 
-### Breaking changes
+#### Breaking changes
 
 - `Texture2D`'s `unpackFlipY` option is removed. This change ensures that all data sources (Image, ImageBitmap, typed array) are treated consistently. As a result, textures created from Image objects and URL strings are now y-flipped from the v7.3 default. To get the old behavior, specify the `pixelStore` option:
 
@@ -71,7 +71,7 @@ new Texture2D({
 | resizeGLContext                                                                                                                                                                                  | @luma.gl/gltools     |
 | combineInjects, lights, getQualifierDetails, getPassthroughFS, typeToChannelSuffix, typeToChannelCount, convertToVec4                                                                            | @luma.gl/shadertools |
 
-### Smaller changes
+#### Smaller changes
 
 - Functions are no longer accepted as uniform values to the `Model` class. The same effect can be achieved by updating the uniform values each frame prior to drawing.
 - `BaseModel` and `Model` have been consolidated in `Model`. `Model` can be used as a substitute for `BaseModel` where necessary.
@@ -91,9 +91,7 @@ new Texture2D({
 
 luma.gl v7.0 represents a major overhaul of the API. The majority of changes are in areas that are only infrequently used by applications, and the intention is that most applications should only require very light porting.
 
-## Core API Removals
-
-### Loading Functions Removed
+#### Loading Functions Removed
 
 Extensive loading functionality is now provided by a new companion framework [loaders.gl](https://loaders.gl/) and because of this, most of the limited legacy luma.gl loading functions have been removed.
 
@@ -109,25 +107,23 @@ For the most common case (loading of images for use with textures), loading func
 | `loadModel`                    | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
 | `parseModel`                   | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
 
-### Attribute Class Removed
+#### Attribute Class Removed
 
 This experimental class has been moved to deck.gl and is now an internal class. Attribute accessor API improvements in luma.gl v7 should cover any issue.
 
-## WebGL API Removals
-
-### Sampler Class Removed
+#### Sampler Class Removed
 
 The `Sampler` class has been removed as its utility was limited and it added complexity to the library. It may be added back in the future if a clear use case arises.
 
-### Texture2DArray Class Removed
+#### Texture2DArray Class Removed
 
 The `Texture2DArray` class has been removed as its utility was limited and the status of support was unclear due to limited testing. It may be added back in the future if a clear use case arises.
 
-### FenceSync Class Removed
+#### FenceSync Class Removed
 
 The `FenceSync` class has been removed as its utility was limited. It may be added back in the future if a clear use case arises. If required, syncing can be done directly through the `WebGLFenceSync` object.
 
-## Framebuffer and Texture: Copy and Blit methods
+#### Framebuffer and Texture: Copy and Blit methods
 
 Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use the corresponding new global methods:
 
@@ -143,9 +139,7 @@ Following member function of `Framebuffer` and `Texture` classes are no longer s
 
 Parameters have also changed in some cases, see separate section.
 
-## Module Structure Changes
-
-### Debug functionality moved to separate npm module
+#### Debug functionality moved to separate npm module
 
 To reduce bundle size and increase separation of concerns, debug functionality is now more cleanly separated from the core library and needs to be imported from a separate npm module:
 
@@ -167,7 +161,7 @@ with
 import '@luma.gl/debug';
 ```
 
-### Model
+#### Model
 
 Changes:
 
@@ -181,7 +175,7 @@ Additions:
 
 - A new `Model.isAnimated()` method is provided, indicating that redraws are required every frame.
 
-## Geometry
+#### Geometry
 
 The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metatadata describing attributes for a geometry.
 
@@ -191,13 +185,13 @@ The `Geometry` class has been simplified and is now a conceptually "immutable" c
 | `Geometry.setNeedsRedraw()`                           | N/A                       | Not needed for immutable geometry |
 | `Geometry.getNeedsRedraw()`                           | N/A                       | Not needed for immutable geometry |
 
-## Buffer
+#### Buffer
 
 | Removed Method               | Replacement                                             | Reason for Change                  |
 | ---------------------------- | ------------------------------------------------------- | ---------------------------------- |
 | `Buffer.updateAccessor(...)` | `Buffer.setAccessor(new Accessor(buffer.accessor, ...)` | Decoupling accessors from `Buffer` |
 
-### Framebuffer
+#### Framebuffer
 
 To maximize rendering performance, the default framebuffer is no longer preserved between frames.
 
@@ -222,13 +216,13 @@ new AnimationLoop({
 
 Note that setting `preserveDrawingBuffers` may result in a performance drop on some platforms.
 
-### Query
+#### Query
 
 Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
 
 To improve performance and simplify the library, support for tracking `Query` instances with promises has changed: The `Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. Instead `Query.createPoll` now provides a simple, optional promise-based API.
 
-### Copy And Blit Parameter Unification
+#### Copy And Blit Parameter Unification
 
 Names of certain parameters to these methods have been unified in an effort to reduce confusion and use the same conventions across all functions implementing image read-back, copy or blit.
 
@@ -315,7 +309,7 @@ This table lists parameter mapping between old and new function.
 | `opts.mask`           | `opts.mask`             |
 | `opts.filter`         | `opts.filter`           |
 
-### Geometry Scenegraph Models
+#### Geometry Scenegraph Models
 
 Geometry scenegraph models have been deprecated. Simply create a `Model` or `ModelNode` and explicitly pass a `Geometry` instance as
 an argument, e.g.:
@@ -337,11 +331,11 @@ luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-le
 - Most removed functions were in practice rarely used by applications, and the impact on typical luma.gl applications should be limited.
 - A number of API changes are related to moving attribute management from `Program` to `VertexArray`, however for higher level applications that work with the `Model` class rather than `Program` directly, there should not be much impact.
 
-### GL Constants Import Path
+#### GL Constants Import Path
 
 The biggest change for many apps will probably be that the static `GL` symbol (that contains all WebGL 2 constants) must now be separately imported GL from 'luma.gl/constants'.
 
-### Experimental Exports: New Naming Convention
+#### Experimental Exports: New Naming Convention
 
 Experimental exports are now prefixed with underscore (\_). The `experimental` "name space" export has been removed.
 
@@ -356,7 +350,7 @@ const {Attribute} = experimental;
 
 This change will enable tree-shaking bundlers to remove unused experimental exports, resulting in smaller final application bundles.
 
-### Removed symbols
+#### Removed symbols
 
 Math functions were moved from luma.gl to the separate math.gl module in v4.1. As of v6.0, they are no longer forwarded by luma.gl and now need to be imported directly from math.gl:
 
@@ -366,7 +360,7 @@ import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from '@math.gl/cor
 
 luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
 
-### Constants
+#### Constants
 
 | Removed symbol     | Replacement                          | Reason for change                                       |
 | ------------------ | ------------------------------------ | ------------------------------------------------------- |
@@ -375,7 +369,7 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 | `glKey(value)`     | `glKey(gl, value)`                   | Bundle size reduction (Was deprecated in v5.3)          |
 | `glKeyType(value)` | `glKeyType(gl, value)`               | Bundle size reduction (Was deprecated in v5.3)          |
 
-### Context
+#### Context
 
 | Removed symbol         | Replacement        | Reason for change                     |
 | ---------------------- | ------------------ | ------------------------------------- |
@@ -383,20 +377,20 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 | `pollContext`          | `pollGLContext`    | Naming audit (Was deprecated in v5.3) |
 | `trackContextCreation` | N/A                | Rarely used, overly specialized       |
 
-### Global Functions
+#### Global Functions
 
 | Removed symbol      | Replacement              | Reason for change                     |
 | ------------------- | ------------------------ | ------------------------------------- |
 | `readPixels`        | `Framebuffer.readPixels` | Naming audit (was deprecated in v3.0) |
 | `FrameBufferObject` | `FrameBuffer`            | Naming audit (was deprecated in v3.0) |
 
-### AnimationLoop
+#### AnimationLoop
 
 | Removed symbol                  | Replacement                | Reason for change |
 | ------------------------------- | -------------------------- | ----------------- |
 | `AnimationLoop.setViewParams()` | `AnimationLoop.setProps()` | Naming audit      |
 
-### Program
+#### Program
 
 | Removed symbol             | Replacement                        | Reason for change                                                 |
 | -------------------------- | ---------------------------------- | ----------------------------------------------------------------- |
@@ -417,14 +411,14 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 | 'getAttributeLocation()'   |                                    | Rarely needed by apps, can use raw WebGL API                      |
 | 'getAttributeInfo()'       |                                    | Rarely needed by apps, can use raw WebGL API                      |
 
-### TransformFeedback
+#### TransformFeedback
 
 | Removed symbol               | Replacement                  | Reason for change                            |
 | ---------------------------- | ---------------------------- | -------------------------------------------- |
 | `TransformFeedback.pause()`  | `gl.pauseTransformFeedback`  | Rarely needed by apps, can use raw WebGL API |
 | `TransformFeedback.resume()` | `gl.resumeTransformFeedback` | Rarely needed by apps, can use raw WebGL API |
 
-### VertexArray
+#### VertexArray
 
 | Removed symbol                   | Replacement                          | Reason for change                                 |
 | -------------------------------- | ------------------------------------ | ------------------------------------------------- |
@@ -450,11 +444,11 @@ v5.3 deprecates a number of symbols. It is recommended that you replace their us
 
 ## Upgrading to v5.2
 
-### Running under Node.js
+#### Running under Node.js
 
 [Using with Node](/docs/tutorials/): `"import luma.gl/headless"` is no longer required for luma.gl to load headless gl and the usage has been deprecated. You can now simply remove any such import statements from your code.
 
-### Using Debug Contexts
+#### Using Debug Contexts
 
 [Debugging](/docs/developer-guide/debugging): The Khronos group's `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
 
@@ -465,13 +459,13 @@ import 'luma.gl/debug';
 const gl = getDebugContext(gl);
 ```
 
-## Upgrading  v5
+## Upgrading to v5.0
 
 Please read this documentation before upgrading your luma.gl dependency from v4 to v5. In v5 a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time.
 
 Before upgrading to v5, it is highly recommended to run your application using latest v4 release, and check the console for any deprecated warnings, if there are any replace deprecated API with newer API as listed below.
 
-### Model Class
+#### Model Class
 
 The `Model` constructor expects a gl context as the first argument.
 
@@ -491,11 +485,11 @@ Model({gl, ...opts});
 Model({program});
 ```
 
-### useDevicePixelRatio
+#### useDevicePixelRatio
 
 `useDevicePixelRatio` is used as a an argument in `AnimationLoop` class constructor and `pickModels` method. It is now deprecated in v5, but still supported with a warning message and will be removed in next major version update. It is recommended to use `useDevicePixels` instead.
 
-### Geometry
+#### Geometry
 
 `Geometry` class construction with inline attributes was deprecated in v4 and now removed in v5.
 
@@ -525,7 +519,7 @@ new Geometry({
 });
 ```
 
-### Removed Features
+#### Removed Features
 
 Following features were deprecated in v3 and v4 are now removed in v5.
 
@@ -552,12 +546,12 @@ Following features were deprecated in v3 and v4 are now removed in v5.
 | `wrapS`                | `parameters[GL.TEXTURE_WRAP_S]`     |
 | `wrapT`                | `parameters[GL.TEXTURE_WRAP_T]`     |
 
-## Upgrading  v4
+## Upgrading to v4.0
 
 luma.gl v4 is a major release with API changes. Please read this documentation before upgrading your luma.gl's dependency from v3 to v4.
 In addition, a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time in this version.
 
-## Removed Features
+#### Removed Features
 
 Some previously deprecated classes and functions have been removed in luma.gl v4 and applications must be updated with the new classes and functions if they are still using these.
 
@@ -567,7 +561,7 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 | `Mat4` | `Matrix4`    | [New math library](https://github.com/uber-web/math.gl) |
 | `Quat` | `Quaternion` | [New math library](https://github.com/uber-web/math.gl) |
 
-## Deprecated Features
+#### Deprecated Features
 
 Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but a warning in the console will be generated. These functions are expected to be removed in a future major versions of luma.gl.
 
@@ -576,9 +570,7 @@ Some classes and functions have been deprecated in luma.gl v4. They will continu
 | `withState`          | `withParameters` | [New WebGL state management](/docs/api-reference-v8/webgl-legacy/context/parameter-setting) |
 | `glContextWithState` | `withParameters` | [New WebGL state management](/docs/api-reference-v8/webgl-legacy/context/parameter-setting) |
 
-## API Change
-
-### Model Class
+#### Model Class
 
 The `Model` constructor now expects a gl context as the first argument.
 
@@ -596,11 +588,11 @@ Model(gl, {program});
 
 the gl context used to be extracted from the supplied program or provided along side with other options, but in luma.gl v4, it is expected as a separate argument to the constructor. This change is because luma.gl v4 emphasizes sharing shaders rather than programs (often indirectly via shader caching / shader assembly), it is less common that a gl context is available.
 
-## Upgrading  V3
+## Upgrading to v3.0
 
 V3 was a fairly minor release, a number of deprecations were made.
 
-### Deprecations
+#### Deprecations
 
 | Symbol | Replacement  | Comment                                                 |
 | ------ | ------------ | ------------------------------------------------------- |

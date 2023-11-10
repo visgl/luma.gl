@@ -122,9 +122,9 @@ const config = {
             label: 'Docs',
           },
           {
-            to: '/docs/examples/tutorials',
+            to: '/docs/tutorials',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Tutorials',
           },
           {to: 'https://medium.com/vis-gl', label: 'Blog', position: 'left'},
           {
