@@ -15,7 +15,7 @@ The `@luma.gl/core` module is not usable on its own. A device adapter module mus
 be imported.
 
 ```bash
-yarn add @luma.gl/api
+yarn add @luma.gl/core
 yarn add @luma.gl/webgl
 yarn add @luma.gl/webgpu
 ```
@@ -47,7 +47,7 @@ const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 
 
 ```bash
-yarn add @luma.gl/api
+yarn add @luma.gl/core
 yarn add @luma.gl/webgl
 yarn add @luma.gl/engine
 yarn add @luma.gl/shadertools

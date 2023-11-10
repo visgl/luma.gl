@@ -147,6 +147,20 @@
         "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
+          {
+            "type": "category",
+            "label": "Shader Modules",
+            "items": [
+              "api-reference/shadertools/shader-modules",
+              "api-reference/shadertools/modules/fp32",
+              "api-reference/shadertools/modules/fp64",
+              "api-reference/shadertools/modules/image-processing",
+              "api-reference/shadertools/modules/pbr",
+              "api-reference/shadertools/modules/picking",
+              "api-reference/shadertools/modules/project"
+            ]
+          },
+  
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-assembler",
           "api-reference/shadertools/shader-info",

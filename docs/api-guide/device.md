@@ -51,7 +51,8 @@ One or more GPU backend modules must be also be imported from a corresponding GP
 To create a WebGPU device:
 
 ```sh
-yarn add @luma.gl/api
+yarn add @luma.gl/core
+yarn add @luma.gl/webgl
 yarn add @luma.gl/webgpu
 ```
 
@@ -68,7 +69,7 @@ that can work in both WebGL and WebGPU environments. To create a `Device` using
 the best available adapter (luma.gl favors WebGPU, WebGL 2 and WebGL 1 devices, in that order).
 
 ```sh
-yarn add @luma.gl/api
+yarn add @luma.gl/core
 yarn add @luma.gl/webgl
 yarn add @luma.gl/webgpu
 ```

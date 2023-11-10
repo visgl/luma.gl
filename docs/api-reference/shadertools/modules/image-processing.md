@@ -1,15 +1,10 @@
 # Image Processing
 
-Screen space effects packaged as reusable shader modules in `@luma.gl/shadertools` based on the [glfx library](http://evanw.github.io/glfx.js/).
-
-:::caution
-> luma.gl shader modules can be used directly with [deck.gl](https://deck.gl)'s post processing system.
-> the `Pass` classes that were removed from luma.gl v7. Until they are restored, these shader passes would require manual code to use. 
-:::
+Screen space effects packaged as reusable shader modules.
 
 ## Attribution
 
-Most of these image post processing effects (and this documentation page) are forked from Evan Wallace's [glfx](https://github.com/evanw/glfx.js) library and have just been repackaged as luma.gl shader modules / shader passes.
+Most of these image post processing effects (and this documentation page) are inspired by or forked from Evan Wallace's [glfx](https://github.com/evanw/glfx.js) library. They have been repackaged as luma.gl shader modules / shader passes.
 
 ## Usage
 
@@ -21,7 +16,7 @@ import {brightnessContrast} from '@luma.gl/shadertools';
 
 ## Shader Modules
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -39,7 +34,7 @@ Provides additive brightness and multiplicative contrast control.
 - `brightness` -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white). Default value is `0`.
 - `contrast` -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast). Default value is `0`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -61,7 +56,7 @@ Saturation is implemented by scaling all color channel values either toward or a
 - `hue` -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change, and 1 is 180 degree rotation in the positive direction). Default value is `0`.
 - `saturation` -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast). Default value is `0`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -78,7 +73,7 @@ Adds black and white noise to the image.
 
 - `amount` 0 to 1 (0 for no effect, 1 for maximum noise). Default value is `0.5`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -95,7 +90,7 @@ Gives the image a reddish-brown monochrome tint that imitates an old photograph.
 
 - `amount` 0 to 1 (0 for no effect, 1 for full sepia coloring). Default value is `0.5`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -112,7 +107,7 @@ Modifies the saturation of desaturated colors, leaving saturated colors unmodifi
 
 - `amount` -1 to 1 (-1 is minimum vibrance, 0 is no change, and 1 is maximum vibrance). Default value is `0`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -130,7 +125,7 @@ Adds a simulated lens edge darkening effect.
 - `size` 0 to 1 (0 for center of frame, 1 for edge of frame). Default value is `0.5`.
 - `amount` 0 to 1 (0 for no effect, 1 for maximum lens darkening). Default value is `0.5`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -150,7 +145,7 @@ Simulates the shallow depth of field normally encountered in close-up photograph
 - `blurRadius` The maximum radius of the pyramid blur in pixels. Default value is `15`.
 - `gradientRadius` The distance in pixels from the line at which the maximum blur radius is reached. Default value is `200`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -167,7 +162,7 @@ This is the most basic blur filter, which convolves the image with a pyramid fil
 
 - `radius` The radius of the pyramid in pixels convolved with the image. Default value is `20`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -185,7 +180,7 @@ Blurs the image away from a certain point, which looks like radial motion blur.
 - `center` [x, y] coordinate of the blur origin. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 - `strength` The strength of the blur. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 creates a highly blurred image. Default value is `0.3`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -204,7 +199,7 @@ Simulates a CMYK halftone rendering of the image by multiplying pixel values wit
 - `angle` The rotation of the pattern in radians. Default value is `1.1`.
 - `size` The diameter of a dot in pixels. Default value is `4`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -223,7 +218,7 @@ Simulates a black and white halftone rendering of the image by multiplying pixel
 - `angle` The rotation of the pattern in radians. Default value is `1.1`.
 - `size` The diameter of a dot in pixels. Default value is `3`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -240,7 +235,7 @@ Picks out different frequencies in the image by subtracting two copies of the im
 
 - `radius` The radius of the effect in pixels. Default value is `2`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -258,7 +253,7 @@ Renders the image using a pattern of hexagonal tiles. Tile colors are nearest-ne
 - `center` [x, y] coordinate of the pattern center. `[0, 0]` is the bottom left corner, `[1, 1]` is the up right corner. Default value is `[0.5, 0.5]`.
 - `scale` The width of an individual tile in pixels. Default value is `10`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -275,7 +270,7 @@ Simulates outlining the image in ink by darkening edges stronger than a certain 
 
 - `strength` The multiplicative scale of the ink edges. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges. Negative strength values will create white ink edges instead of black ones. Default value is `0.25`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -294,7 +289,7 @@ Bulges or pinches the image in a circle.
 - `radius` The radius of the circle of effect in pixels. Default value is `200`.
 - `strength` -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge). Default value is `0.5`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -313,7 +308,7 @@ Warps a circular region of the image in a swirl.
 - `radius` The radius of the circular region in pixels. Default value is `200`.
 - `angle` The angle in radians that the pixels in the center of the circular region will be rotated by. Default value is `3`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
@@ -331,10 +326,10 @@ Apply magnify effect to the surrounding area of a given position.
 - `screenXY`: x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`.
 - `radiusPixels`: effect radius in pixels. Default value is `100`.
 - `zoom`: magnify level. Default value is `2`.
-- `borderWidthPixels`: border width of the effect circle, will not show border if value \<\= 0.0. Default value is `0`.
+- `borderWidthPixels`: border width of the effect circle, will not show border if value <= 0.0. Default value is `0`.
 - `borderColor`: border color of the effect circle. Default value is `[255, 255, 255, 255]`.
 
-<table style={{border: 0}} align="center">
+<table style="border: 0;" align="center">
   <tbody>
     <tr>
       <td align="center">
