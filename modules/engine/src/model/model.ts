@@ -348,7 +348,10 @@ export class Model {
 
     // Extract textures & framebuffers set by the modules
     // TODO better way to extract bindings
-    const keys = Object.keys(uniforms).filter(k => uniforms[k].constructor.name.includes('WEBGL'));
+    const keys = Object.keys(uniforms).filter(k => {
+      const uniform = uniforms[k];
+      return !Array.isArray(uniform) && (typeof uniform !== 'number') && (typeof uniform !== 'boolean');
+    });
     const bindings: Record<string, Binding> = {};
     for (const k of keys) {
       bindings[k] = uniforms[k];
