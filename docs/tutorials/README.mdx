@@ -2,7 +2,67 @@
 
 This tutorial will walk you through setting up a basic development project for luma.gl applications using [Vite](https://vitejs.dev/) tooling. Later tutorials will build on this one, so we recommend going through it first.
 
-**Note:** It is assumed for these tutorials that you have some knowledge of GPU APIs. If you are unfamiliar with how to draw with WebGL, we recommend the excellent [WebGL 2 Fundamentals](https://webgl2fundamentals.org/).
+**Note:** It is assumed for these tutorials that you have some basic knowledge of GPU APIs and JavaScript programming.
+
+## A Minimal Application
+
+Create a new folder on your file system to store your new project. 
+Then let's create a file `app.ts` in the project root folder and add the following to it:
+
+```typescript
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoop} from '@luma.gl/engine';
+
+const loop = new AnimationLoop({
+  override onInitialize({device}: AnimationProps) {
+    // Setup logic goes here
+  },
+
+  override onFinalize({device}: AnimationProps) {
+    // Teardown logic goes here
+  },
+
+  override onRender({device}: AnimationProps) {
+    // Drawing logic goes here
+  }
+});
+
+loop.start();
+```
+
+This will be the basic structure of most luma.gl applications. 
+To make sure everything works, let's add a draw command:
+
+```typescript
+import {AnimationLoop} from '@luma.gl/engine';
+import {clear} from '@luma.gl/webgl';
+
+const loop = new AnimationLoop({
+  override onRender({device}) {
+    // Drawing logic goes here
+    clear(device, {color: [0, 0, 0, 1]});
+  }
+});
+
+loop.start();
+```
+
+Since this is a web application, you will also want to create a minimal `index.html` web page to start the app:
+
+```html
+<!doctype html>
+<script type="module">
+  import './app.ts';
+</script>
+<body style="margin: 0;">
+  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+</body>
+```
+
+
+## Build Tooling
+
+We will need the following files in the project folder:
 
 ```
 - package.json
@@ -84,59 +144,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   server: {open: true}
 })
-```
-
-Create a minimal `index.html` web page to start the app:
-
-```html
-<!doctype html>
-<script type="module">
-  import './app.ts';
-</script>
-<body style="margin: 0;">
-  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
-</body>
-```
-
-
-Now create a file `app.ts` in the project root and add the following to it:
-
-```typescript
-import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoop} from '@luma.gl/engine';
-
-const loop = new AnimationLoop({
-  override onInitialize({device}: AnimationProps) {
-    // Setup logic goes here
-  },
-
-  override onFinalize({device}: AnimationProps) {
-    // Teardown logic goes here
-  },
-
-  override onRender({device}: AnimationProps) {
-    // Drawing logic goes here
-  }
-});
-
-loop.start();
-```
-
-This will be the basic structure of most luma.gl applications. 
-To make sure everything works, let's add a draw command:
-
-```typescript
-import {AnimationLoop} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-
-const loop = new AnimationLoop({
-  override onRender({device}) {
-    // Drawing logic goes here
-    clear(device, {color: [0, 0, 0, 1]});
-  }
-});
-
-loop.start();
 ```
 
 and run

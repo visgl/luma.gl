@@ -1,93 +1,102 @@
 # Overview
 
-<p/>
-<p>
-<i>This is the documentation for luma.gl v9. Looking for an older version?</i>
-&nbsp; 
-<a href="https://github.com/visgl/luma.gl/blob/8.5-release/docs">
-  <img src="https://img.shields.io/badge/v-8.5-lightgrey.svg?style=flat-square" />
-</a>
-&nbsp; &nbsp;
-<a href="https://github.com/visgl/luma.gl/blob/7.3-release/docs">
-  <img src="https://img.shields.io/badge/v-7.3-lightgrey.svg?style=flat-square" />
-</a>
-&nbsp; &nbsp;
-<a href="https://github.com/visgl/luma.gl/blob/6.4-release/docs">
-  <img src="https://img.shields.io/badge/v-6.4-lightgrey.svg?style=flat-square" />
-</a>
-</p>
-<br />
+luma.gl is a modern GPU toolkit for the Web, focused on processing and visualization of big data.
 
 <center>
   <a href="https://www.w3.org/TR/webgpu/">
-    <img style={{height: 80}} src="https://raw.githubusercontent.com/gpuweb/gpuweb/3b3a1632ff1ad6a573330a58710e341bb9d65576/logo/webgpu-horizontal.svg" />
+    <img
+      style={{height: 80, marginRight: 30}}
+      src="https://raw.githubusercontent.com/gpuweb/gpuweb/3b3a1632ff1ad6a573330a58710e341bb9d65576/logo/webgpu-horizontal.svg"
+    />
   </a>
-  &nbsp; &nbsp;
   <a href="https://registry.khronos.org/webgl/specs/latest/2.0/">
-    <img style={{height: 80}} src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />
+    <img
+      style={{height: 80, marginRight: 40}}
+      src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg"
+    />
   </a>
-  &nbsp; &nbsp;
   <a href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html">
-    <img style={{height: 80}} src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png" />
+    <img
+      style={{height: 80}}
+      src="https://raw.github.com/visgl/deck.gl-data/master/images/gltf.png"
+    />
   </a>
 </center>
-<center><i>luma.gl supports the latest GPU web standards from W3C and Khronos.</i></center>
+<center>
+  <i>luma.gl supports the latest web GPU standards from W3C and Khronos.</i>
+</center>
 
-<p />
 &nbsp;
 
 <center>
   <a href="https://openvisualization.org">
-    <img style={{height: 80}} src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/openjsf-color-textg.png" />
+    <img
+      style={{height: 80}}
+      src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/openjsf-color-textg.png"
+    />
   </a>
 </center>
-<center><i>luma.gl is an OpenJS Foundation / Linux Foundation project.</i></center>
+<center>
+  <i>luma.gl is an OpenJS Foundation / Linux Foundation project.</i>
+</center>
+
+&nbsp;
+
+This documentation describes luma.gl **v9.0**. See our [**release notes**](/docs/whats-new) to learn what is new.
+Docs for older versions are available on github:
+**[v8.5](https://github.com/visgl/luma.gl/blob/8.5-release/docs/README.md)**,
+**[v7.3](https://github.com/visgl/luma.gl/blob/7.3-release/docs/README.md)**,
+**[v6.4](https://github.com/visgl/luma.gl/blob/6.4-release/docs/README.md)**.
 
 ## Highlights
 
-luma.gl is a modern GPU toolkit for the Web, created to facilitate processing and visualization of big data on GPUs, that offers:
+luma.gl is a modern GPU toolkit for the Web, created to facilitate processing and visualization of big data.
 
-- A "close-to-the-metal" API for working with GPUs in TypeScript and JavaScript.
-- Offers WebGPU, WebGL2 and WebGL backends.
-- A minimal set of engine-level classes such as `Model`, `Transform` and `AnimationLoop` and basic scenegraph support.
-- glTF support.
-- A shader management system supporting shader modules, dependencies, injection, transpilation etc.
-- Pre-optimized shader modules for compute, visual effects and post processing.
+- **Portable GPU API** - for working with GPUs in JavaScript.
+- **TypeScript** - All APIs are rigorously typed.
+- **Pluggable backends** - for WebGPU and WebGL .
+- **Engine-level classes** - `Model`, `Transform` and `AnimationLoop`, as well as scenegraph support.
+- **glTF** support.
+- **Shader management system** - supports shader modules, dependencies, injection, transpilation etc.
+- **Shader module library** - Pre-optimized moduls for compute, visual effects and post processing.
 
-Unlike some other GPU frameworks, luma.gl does not include support for prerequisites such math and data loading. Instead luma.gl integrates seamlessly with dedicated companion framworks such as:
+For 3D math and data loading, luma.gl uses companion framworks:
 
-- [loaders.gl](https://loaders.gl) - wide range of 3D and geospatial data format standards.
-- [math.gl](https://uber-web.github.io/math.gl/docs) - a variety of high precision geospatial and 3D math logic.
+- [**loaders.gl**](https://loaders.gl) - wide range of 3D and geospatial data format standards.
+- [**math.gl**](https://uber-web.github.io/math.gl/docs) - a variety of high precision geospatial and 3D math logic.
 
 luma.gl is intended to be a foundation on top of which to build higher-level GPU frameworks. The primary example is
 
-- [deck.gl](https://deck.gl) - geospatial GPU visualization and compute via a high-performance functional programming API.
+- [**deck.gl**](https://deck.gl) - geospatial GPU visualization and compute via a high-performance functional programming API.
 
-## Philosophy
+## API Philosophy
 
-Rather than providing common higher level 3D engine type abstractions 
-that shield the user from the details of how the GPU works, 
-luma.gl is designed to let developers focus on GPU programming and
-work directly with shaders and GPU data structures, offering APIs that are 
-closely aligned with the WebGPU and WebGL APIs. 
+Many 3D / GPU libraries provide portable, higher level "3D engine" type abstractions
+that shield the user from the details of how the GPU works. This is great for
+many use cases but not always ideal.
+
+In contrast, luma.gl is designed to give developers full access to GPU programming and
+allow you to work directly with shaders and GPU data structures.
+luma.gl offers APIs that are similar to the underlying WebGPU and WebGL APIs.
+This maximizes knowledge reuse, as well as your understanding of what is actually happening under the hood.
 
 For more information, refer to [luma.gl API philosophy](/docs/api-guide/background/api-design).
 
-## Support
+## Supported Environments
 
 luma.gl supports recent versions of the most commonly used evergreen browsers (i.e. Chrome, Firefox, Safari, Edge).
 
-- Mobile browsers should be supported (assuming the mobile browser is an updated evergreen browser).
-- Pre-chrome Edge is not officially supported, and IE11 is absolutely not supported.
-- Running on top of software emulated GPUs is possible but known to have issues.
-- Running in virtual machines etc may or may not be possible but is not officially supported.
-- Running under Node.js may be possible if your Node.js environment can create WebGPU or WebGL contexts. Note that additional work may be required to load images into textures etc.
+- **Mobile browsers** should be supported (assuming the mobile browser is an updated evergreen browser), though CPU and GPU memory limits will be lower.
+- Pre-chrome **Edge** is not supported, and IE11 is absolutely not supported.
+- Running on top of **software emulated GPUs** is possible but known to have occasional issues. Check your Chrome settings to make sure you are not using the SwiftShader.
+- Running in **virtual machines** is not officially supported. It may or may not work. 
+- Running under **Node.js** may be possible if your Node.js environment can create WebGPU or WebGL contexts. Note that additional work may be required to load images into textures etc.
 
 Most luma.gl development is done on desktop Chrome on MacBooks.
 In case you think you have found an issue and want to check if it is specific to your environment,
 it could be worth testing if you can reproduce your issue on Chrome before you report the bug.
 
-If you have a confirmed bug that affects a supported environment, feel free to [open an issue](https://github.com/visgl/luma.gl/issues). 
+If you have a confirmed bug that affects a supported environment, feel free to [open an issue](https://github.com/visgl/luma.gl/issues).
 However, if you are not yet sure, please help us keep issue noise down and start in the [discussions](https://github.com/visgl/luma.gl/discussions).
 If you can provide a fix, you are welcome to open a pull request. It often makes sense to discuss before surprising maintainers with a big PR.
 
@@ -95,56 +104,67 @@ If you can provide a fix, you are welcome to open a pull request. It often makes
 
 Some examples of applications built on top of luma.gl:
 
-|  <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/kepler-gl.jpg" /> | <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/avs.jpg" /> | <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/viv.jpg" />
-| :---: | :---: | :---: |
-| <center><b>kepler.gl</b><p><i>open source geospatial analysis tool for large-scale data sets</i></p></center> | <center><b>AVS / streetscape.gl</b><p><i>A visualization toolkit for autonomy and robotics data</i></p></center> | <center><b>VIV</b><p><i>Visualization of cellular biological samples</i></p></center> |
+|         <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/kepler-gl.jpg" />         |             <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/avs.jpg" />              | <img style={{width: 250, height: 250}} src="https://deck.gl/images/showcase/viv.jpg" /> |
+| :-----------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------: |
+| <center><b>kepler.gl</b><p><i>open source geospatial analysis tool for large-scale data sets</i></p></center> | <center><b>AVS / streetscape.gl</b><p><i>A visualization toolkit for autonomy and robotics data</i></p></center> |  <center><b>VIV</b><p><i>Visualization of cellular biological samples</i></p></center>  |
 
-- [kepler.gl](https://kepler.gl/) ([GitHub](https://github.com/keplergl/kepler.gl)) 
+- [kepler.gl](https://kepler.gl/) ([GitHub](https://github.com/keplergl/kepler.gl))
 - [deck.gl](http://deck.gl/#/) ([GitHub](https://github.com/visgl/deck.gl)) a WebGL-powered framework for visual exploratory data analysis of large data sets
-- [avs.auto](https://avs.auto/#/) and [streetscape.gl](https://github.com/uber/streetscape.gl) 
+- [avs.auto](https://avs.auto/#/) and [streetscape.gl](https://github.com/uber/streetscape.gl)
 
 ## Open Governance
 
 luma.gl is provided under MIT license and is under open governance as a part of:
 
-- The [OpenJS foundation](https://openvisualization.org)
-- The <a href="https://vis.gl"><b>vis.gl framework suite</b></a>
+- The [OpenJS foundation](https://openvisualization.org).
+- The [vis.gl framework suite](https://vis.gl).
 
-To learn more
-- check out the [vis.gl Medium blog](https://medium.com/vis-gl), 
-- join the community in the [deck.gl Slack workspace](https://join.slack.com/t/deckgl/shared_invite/zt-7oeoqie8-NQqzSp5SLTFMDeNSPxi7eg) 
-for learning and discussions.
+## Learning Resources
 
-If you wish to contribute in a structured way, beyond isolated PRs, or join the open governance activities,
-start by joining the forums above and introduce yourself.
+To learn more for learning and discussions.
 
-## Contributors
+- check out the [vis.gl Medium blog](https://medium.com/vis-gl).
+- join the community in the [OpenJS Slack workspace](https://www.openvisualization.org/#get-involved)
+  If you wish to contribute in a structured way, beyond isolated PRs, or join the open governance activities,
+  start by joining the forums above and introduce yourself.
 
-Current main contributors to the development and maintenance of luma.gl:
+## Primary Contributors
+
+luma.gl is developed and maintained by the vis.gl community but has benefitted from the support of various companies:
+ 
+- From 2021 onwards, luma.gl has been developed and maintained by [**Foursquare**](https://location.foursquare.com/products/studio/).
+- From 2019-2021, luma.gl was developed and maintained by [**Unfolded**](https://unfolded.ai).
+- From 2015-2019, luma.gl was created and developed by [**Uber**](https://uber.com).
 
 <p style={{marginTop: -60, marginBottom: -20, marginLeft: 30}}>
   <a href="https://location.foursquare.com/products/studio/">
-    <img style={{height: 160}} src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/foursquare.png" />
-  </a>
+    <img
+      style={{height: 160}}
+      src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/foursquare.png"
+    />
+  </a> 
 </p>
 
-Previous main contributors to the development luma.gl:
+<a href="https://unfolded.ai">
+  <img
+    style={{height: 50, marginLeft: 20}}
+    src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/unfolded.png"
+  />
+</a> 
 
-<p style={{marginTop: -20, marginBottom: -20}}>
-  <a href="https://uber.com">
-    <img style={{height: 100}} src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/uber-black.jpg" />
-  </a>
-</p>
+&nbsp;
 
-<p style={{marginTop: -20, marginBottom: -20, marginLeft: 30}}>
-  <a href="https://unfolded.ai">
-    <img style={{height: 50}} src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/unfolded.png" />
-  </a>
-</p>
+<a href="https://uber.com">
+  <img
+    style={{height: 100}}
+    src="https://raw.github.com/visgl/deck.gl-data/master/images/logos/uber-black.jpg"
+  />
+</a> 
+
 
 ## History
 
-luma.gl was originally created at Uber in 2015 as an open source project to support deck.gl. 
+luma.gl was originally created at Uber in 2015 as an open source project to support deck.gl.
 
 - 2022: luma.gl was accepted into the OpenJS foundation together with the vis.gl framework stack.
 - 2019: Uber put luma.gl under open governance in the Linux Foundation.
@@ -155,7 +175,6 @@ luma.gl was originally created at Uber in 2015 as an open source project to supp
 luma.gl keeps evolving based on the needs of vis.gl frameworks and applications.
 We share information about the direction of luma.gl in the following ways:
 
-- **[RFCs](https://github.com/visgl/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
-- **[Roadmap Document](https://luma.gl/#/documentation/overview/roadmap)** - (this document) A high-level summary of our current direction for future releases.
 - **[Blog](https://medium.com/@vis.gl)** - We use the vis.gl blog to share information about what we are doing.
 - **[Github Issues](https://github.com/visgl/luma.gl/issues)** - The traditional way to start or join a discussion.
+- **[RFCs](https://github.com/visgl/luma.gl/tree/master/dev-docs/RFCs)** - RFCs are technical writeups that describe proposed features in upcoming releases.
