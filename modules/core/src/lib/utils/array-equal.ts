@@ -22,3 +22,12 @@ export function arrayEqual(a: unknown, b: unknown, limit: number = 16) {
   }
   return true;
 }
+
+/** Copy a value */
+export function arrayCopy<T>(a: T): T {
+  const numberArray = isNumberArray(a);
+  if (numberArray) {
+    return numberArray.slice() as T;
+  }
+  return a;
+}
