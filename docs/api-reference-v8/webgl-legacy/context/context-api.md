@@ -73,7 +73,7 @@ const gl = createGLContext(options);
 | `throwOnError`                 | `true`      | Normally the context will throw an error on failure. If `false`, it will log to console instead.                                                                              |
 | `break`                        | `[]`        | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                                                                |
 | `manageState`                  | `true`      | Instrument the context to enable state caching and `withParameter` calls. Leave on unless you have special reasons not to.                                                    |
-| `debug`                        | `false`     | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
+| `debug`                        | `false`     | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
 | `onContextLost`                | `undefined` | A handler for webglcontextlost event that is fired if the user agent detects that the drawing buffer associated with a WebGLRenderingContext object has been lost.            |
 | `onContextRestored`            | `undefined` | A handler for webglcontextrestored event that is fired if the user agent restores the drawing buffer for a WebGLRenderingContext object.                                      |
 | `canvas`                       | `null`      | A _string_ containing the `id` of an existing HTML element or a _DOMElement_ instance. If `null` or not provided, a new canvas will be created.                               |

@@ -74,20 +74,20 @@ console.error(message);
 
 ### `DeviceProps`
 
-| Parameter                       | Default            | Description                                                                                                                                                                   |
-| ------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                          | `'best-available'` | `'webgpu`', `'webgl'`, `'webgl1'`, `'webgl2'`                                                                                                                                 |
-| `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.                                                                 |
+| Parameter                       | Default            | Description                                                                                                                 |
+| ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `type`                          | `'best-available'` | `'webgpu`', `'webgl'`, `'webgl1'`, `'webgl2'`                                                                               |
+| `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.               |
 | priority.                       |
-| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. **NOTE:** requires importing [@luma.gl/debug](/docs/api-reference/debug). |
-| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                                                                |
-| `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                                                                    |
-| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                                                                               |
-| `stencil?`                      | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                                                                              |
-| `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                                                                               |
-| `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.                                                     |
-| `preserveDrawingBuffer?`        | `false`            | Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten                                                   |
-| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                                                                               |
+| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                         |
+| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                              |
+| `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                  |
+| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                             |
+| `stencil?`                      | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                            |
+| `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                             |
+| `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.   |
+| `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture. |
+| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                             |
 
 ## Static Methods
 

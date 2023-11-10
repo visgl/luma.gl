@@ -131,7 +131,7 @@ Note: `uniforms` is ignored if `getUniforms` is provided.
 
 ## inject
 
-A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders) documentation for more information on shader hooks.
+A map of hook function signatures to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [assembleShaders]( /docs/api-reference/shadertools/shader-assembler) documentation for more information on shader hooks.
 
 For example:
 
@@ -150,4 +150,4 @@ For example:
 
 ## GLSL Versions
 
-Shader modules will undergo some basic text transformations in order to match the GLSL version of the shaders they are injected into. These transformations are generally limited to the naming of input variables, output variables and texture sampling functions. See [assembleShaders](/docs/api-reference/shadertools/assemble-shaders) documentation for more information.
+Shader modules will undergo some basic text transformations in order to match the GLSL version of the shaders they are injected into. These transformations are generally limited to the naming of input variables, output variables and texture sampling functions. See [assembleShaders]( /docs/api-reference/shadertools/shader-assembler) documentation for more information.

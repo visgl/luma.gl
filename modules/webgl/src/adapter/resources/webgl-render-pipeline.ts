@@ -415,7 +415,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           if (value instanceof WEBGLTexture) {
             texture = value;
           } else if (value instanceof WEBGLFramebuffer && value.colorAttachments[0] instanceof WEBGLTexture) {
-            log.warn(`Passing framebuffer in texture binding may be deprecated. Use fbo.colorAttachments[0] instead`)();
+            log.warn('Passing framebuffer in texture binding may be deprecated. Use fbo.colorAttachments[0] instead')();
             texture = value.colorAttachments[0];
           } else {
             throw new Error('No texture');
