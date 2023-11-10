@@ -1,4 +1,4 @@
-# About Devices
+# Devices and CanvasContexts
 
 The [`Device`](/docs/api-reference/core/device) class provides luma.gl applications with access to the GPU. 
 A luma.gl application first creates a `Device` instance which in turn provides the 
@@ -10,14 +10,45 @@ While a `Device` can be used on its own to perform computations on the GPU,
 at least one `CanvasContext` is required for rendering to the screen.
 Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvasElement` (or `OffscreenCanvas`).
 
-## Registering Device Types
+## CanvasContexts
+
+The [`CanvasContext`](/docs/api-reference/core/canvas-context) is an important companion to the `Device`. A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
+
+A `CanvasContext` takes care of:
+
+- providing a fresh `Framebuffer` every render frame, set up to render into the canvas' swap chain.
+- canvas resizing
+- device pixel ratio calculations
+
+## Usage
+
+Create a WebGL2 or WebGL context, auto creating a canvas
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {WebGLDevice} from '@luma.gl/webgl';
+
+luma.registerDevices([WebGLDevice]);
+const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
+```
+
+Create a WebGL 2 context (throws if WebGL2 not supported)
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {WebGLDevice} from '@luma.gl/webgl';
+
+luma.registerDevices([WebGLDevice]);
+const webgpuDevice = luma.createDevice({type: 'webgl2', canvas: ...});
+```
+
+## Registering Device Backends
 
 The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
 
-One or more device types must be also be imported from a corresponding GPU API backend module
-(`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+One or more GPU backend modules must be also be imported from a corresponding GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
 
-Create a WebGPU device:
+To create a WebGPU device:
 
 ```sh
 yarn add @luma.gl/api
@@ -51,34 +82,3 @@ luma.registerDevices([WebGLDevice, WebGPUDevice]);
 
 const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 ```
-
-## Usage
-
-Create a WebGL2 or WebGL context, auto creating a canvas
-
-```typescript
-import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-
-luma.registerDevices([WebGLDevice]);
-const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
-```
-
-Create a WebGL 2 context (throws if WebGL2 not supported)
-
-```typescript
-import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-
-luma.registerDevices([WebGLDevice]);
-const webgpuDevice = luma.createDevice({type: 'webgl2', canvas: ...});
-```
-
-## CanvasContext
-
-A [`CanvasContext`](/docs/api-reference/core/canvas-context) holds a connection between 
-the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
-A `CanvasContext` takes care of:
-- providing a fresh framebuffer every render frame, set up to render into the canvas' swap chain.
-- canvas resizing
-- device pixel ratio considerations

@@ -28,7 +28,7 @@
         "label": "Background",
         "items": [
           "api-guide/background/api-design",
-          "api-guide/background/about-webgpu",
+          "api-guide/background/learning-resources",
           "api-guide/background/webgpu-vs-webgl"
         ]
       },
