@@ -40,10 +40,9 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
-      "@luma.gl/core/*": ["modules/api/src/*"],
-      "@luma.gl/core/test/*": ["modules/api/test/*"],
-      "@luma.gl/core-tests/*": ["modules/api/src/*"],
-      "@luma.gl/core-tests/test/*": ["modules/api-tests/test/*"],
+      "@luma.gl/core/*": ["modules/core/src/*"],
+      "@luma.gl/core/test/*": ["modules/core/test/*"],
+      "@luma.gl/core-tests/test/*": ["modules/core-tests/test/*"],
       "@luma.gl/constants/*": ["modules/constants/src/*"],
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],
       "@luma.gl/engine/*": ["modules/engine/src/*"],
