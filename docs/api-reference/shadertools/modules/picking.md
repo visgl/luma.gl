@@ -2,13 +2,11 @@
 
 Provides support for color-based picking. 
 
-Color based picking lets the application draw each primitive with a picking color that can later be used to retrieve the index of this specific primitive.
-
-In particular, supports picking a specific instance in an instanced draw call.
-
----
-
-Provides support for color-coding-based picking and highlighting. In particular, supports picking a specific instance in an instanced draw call and highlighting an instance based on its picking color, and correspondingly, supports picking and highlighting groups of primitives with the same picking color in non-instanced draw-calls
+The `picking` modules supports picking and highlighting for both instanced and non-instanced data:
+- pick a specific *instance* in an instanced draw call
+- highlight all fragments of an *instance* based on its picking color
+- pick "group of primitives" with the same picking color in non-instanced draw-calls
+- highlight "group of primitives" with the same picking color in non-instanced draw-calls
 
 Color based picking lets the application draw a primitive with a color that can later be used to index this specific primitive.
 
@@ -19,11 +17,20 @@ Highlighting allows application to specify a picking color corresponding to an o
 
 In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
 
-```glsl
+```ts
 attribute vec3 aPickingColor;
 main() {
   picking_setPickingColor(aPickingColor);
   ...
+}
+```
+
+In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+
+```ts
+main() {
+  gl_FragColor = ...
+  gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 ```
 
@@ -36,50 +43,18 @@ main() {
 }
 ```
 
-If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`. You can also apply other filters on the non-picking color (vertex or highlight color) by placing those instruction between these two function calls.
-
-```glsl
-main() {
-  gl_FragColor = picking_filterHighlightColor(color);
-  //  ... apply any filters on gl_FragColor ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
-}
-```
-
----
-
-
-In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
-
-```
-attribute vec3 aPickingColor;
-main() {
-  picking_setColor(aPickingColor);
-  ...
-}
-```
-
-In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
-
-```
-main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterColor(color);
-}
-```
-
 If highlighting is not needed, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color or the picking color, as appropriate.
 
-```
+```ts
 main() {
   gl_FragColor = ...
   gl_FragColor = picking_filterPickingColor(gl_FragColor);
 }
 ```
 
-If additional filters need to be applied on the non-picking color (vertex or highlight color) you can use above functions in following order.
+If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`. You can also apply other filters on the non-picking color (vertex or highlight color) by placing those instruction between these two function calls.
 
-```
+```ts
 main() {
   gl_FragColor = ...
   gl_FragColor = picking_filterHighlightColor(gl_FragColor);
@@ -90,24 +65,31 @@ main() {
 
 ## JavaScript Functions
 
-### getUniforms
+### getUniforms()
 
-`getUniforms` returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
+`getUniforms()` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
 
-`getUniforms({pickingActive, ...})`
+Uniforms for the picking module, which renders picking colors and highlighted item. 
+When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
+When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
 
+| Setting                                | Description                                                         |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `isActive`?: boolean                   | Whether in picking or normal rendering (+highlighting) mode         |
+| `isAttribute`: boolean                 | Set to true when picking an attribute value instead of object index |
+| `useNormalizedColors`?: boolean        | Color range 0-1 or 0-255                                            |
+| `isHighlightActive`?: boolean          | Do we have a highlighted item?                                      |
+| `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item              |
+| `highlightColor`?: NumberArray         | Color of visual highlight of "selected" item                        |
+
+- `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight 
+
+<!---
 - `pickingActive`=`false` (_boolean_) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
 - `pickingSelectedColor`=`null` (_array|null_) - The picking color of the selected (highlighted) object.
 - `pickingHighlightColor`= `[0, 255, 255, 255]` (_array_) - Color used to highlight the currently selected object.
 - `pickingAttribute`=`false` (_boolean_) - Renders a color that encodes an attribute value. Normally only used with an off-screen framebuffer during picking.
 
----
-
-### getUniforms
-
-`getUniforms` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
-
-`getUniforms(opts)`
 opts can contain following keys:
 
 - `pickingSelectedColorValid` (_boolean_) - When true current instance picking color is ignored, hence no instance is highlighted.
@@ -116,6 +98,7 @@ opts can contain following keys:
 - `pickingActive`=`false` (_boolean_) - When true, renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking. Default value is `false`.
 
 Note that the selected item will be rendered using `pickingHighlightColor`, if blending is enabled for the draw, alpha channel can be used to control the blending result.
+-->
 
 ## Vertex Shader Functions
 
