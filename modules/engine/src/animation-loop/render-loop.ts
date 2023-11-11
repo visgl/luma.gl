@@ -16,7 +16,7 @@ import type {AnimationProps} from './animation-props';
  * as an argument to create an AnimationLoop.
  */
 export abstract class AnimationLoopTemplate {
-  constructor(animationProps: AnimationProps) {}
+  constructor(animationProps?: AnimationProps) {}
   async onInitialize(animationProps: AnimationProps): Promise<unknown> { return null; }
   abstract onRender(animationProps: AnimationProps): unknown;
   abstract onFinalize(animationProps: AnimationProps): void;
