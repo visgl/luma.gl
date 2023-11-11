@@ -154,18 +154,21 @@
               "api-reference/shadertools/shader-modules",
               "api-reference/shadertools/modules/fp32",
               "api-reference/shadertools/modules/fp64",
-              "api-reference/shadertools/modules/image-processing",
               "api-reference/shadertools/modules/pbr",
               "api-reference/shadertools/modules/picking",
               "api-reference/shadertools/modules/project"
             ]
           },
-  
+          {
+            "type": "category",
+            "label": "Shader Passes",
+            "items": [
+              "api-reference/shadertools/passes/image-processing"
+            ]
+          },
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-assembler",
-          "api-reference/shadertools/shader-info",
-          "api-reference/shadertools/core-shader-modules",
-          "api-reference/shadertools/effects-shader-modules"
+          "api-reference/shadertools/shader-info"
         ]
       },
       {
