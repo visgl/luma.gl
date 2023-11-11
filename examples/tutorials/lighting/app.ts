@@ -173,6 +173,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
 
+    // This updates the "app" uniform buffer, which is already bound
     this.uniformStore.setUniforms({
       app: {
         mvpMatrix: this.mvpMatrix, 
@@ -184,6 +185,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1],
       clearDepth: true
     });
+    // Draw the cube using the bindings that were set during initialization
     this.model.draw(renderPass);
     renderPass.end();
   }
