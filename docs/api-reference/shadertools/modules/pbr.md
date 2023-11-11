@@ -1,4 +1,4 @@
-# PBR (Shader Module)
+# pbrMaterial (Shader Module)
 
 Implements Physically Based Shading of a microfacet surface defined by a glTF material.
 
