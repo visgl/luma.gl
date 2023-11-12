@@ -34,7 +34,7 @@ import './modules/utils/random.spec';
 import './modules/lighting/dirlight.spec';
 // import './modules/lights/lights.spec';
 import './modules/lighting/phong-material.spec';
-import './modules/lighting/goraud-material.spec';
+import './modules/lighting/gouraud-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';

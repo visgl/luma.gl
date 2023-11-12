@@ -90,24 +90,27 @@ export class UniformStore<TUniformGroups extends Record<string, Record<string, U
     return this.uniformBufferLayouts[uniformBufferName].getData(uniformValues);
   }
 
-  /** Create an unmanaged uniform buffer, initialized with current / supplied values */
+  /** 
+   * Creates an unmanaged uniform buffer (umnanaged means that application is responsible for destroying it) 
+   * The new buffer is initialized with current / supplied values 
+   */
   createUniformBuffer(
     device: Device,
     uniformBufferName: keyof TUniformGroups,
     uniforms?: Partial<{[group in keyof TUniformGroups]: Partial<TUniformGroups[group]>}>
   ): Buffer {
-    const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-    const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
     if (uniforms) {
       this.setUniforms(uniforms);
     }
-    // This clears the needs redraw flag
+    const byteLength = this.getUniformBufferByteLength(uniformBufferName);
+    const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+    // Note that this clears the needs redraw flag
     const uniformBufferData = this.getUniformBufferData(uniformBufferName);
     uniformBuffer.write(uniformBufferData);
     return uniformBuffer;
   }
 
-  /** Get the managed uniform buffer */
+  /** Get the managed uniform buffer. "managed" resources are destroyed when the uniformStore is destroyed. */
   getManagedUniformBuffer(device: Device, uniformBufferName: keyof TUniformGroups): Buffer {
     if (!this.uniformBuffers[uniformBufferName]) {
       const byteLength = this.getUniformBufferByteLength(uniformBufferName);
