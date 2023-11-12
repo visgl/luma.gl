@@ -1,10 +1,14 @@
 // luma.gl, MIT license
 import type {ShaderUniformType} from '../../adapter/types/shader-types';
 import type {UniformValue} from '../../adapter/types/types';
-import {ShaderLayout, UniformBufferBindingLayout, UniformInfo} from '../../adapter/types/shader-layout';
-import { arrayEqual } from '../utils/array-equal';
+import {
+  ShaderLayout,
+  UniformInfo,
+  UniformBufferBindingLayout
+} from '../../adapter/types/shader-layout';
+import {arrayEqual, arrayCopy} from '../utils/array-equal';
 
-/** 
+/**
  * A uniform block holds values of the of uniform values for one uniform block / buffer.
  * It also does some book keeping on what has changed, to minimize unnecessary writes to uniform buffers.
  * @todo - Track changes to individual uniforms (for WebGL1)
@@ -21,15 +25,16 @@ export class UniformBlock<TUniforms extends Record<string, UniformValue>> {
 
   constructor(props?: {
     name?: string;
-    shaderLayout?: ShaderLayout; 
-    uniformTypes?: Record<keyof TUniforms, Record<string, ShaderUniformType>>
+    shaderLayout?: ShaderLayout;
+    uniformTypes?: Record<keyof TUniforms, Record<string, ShaderUniformType>>;
   }) {
     this.name = props?.name;
 
     // TODO - Extract uniform layout from the shaderLayout object
     if (props?.name && props?.shaderLayout) {
-      const binding = props?.shaderLayout.bindings
-        ?.find(binding => binding.type === 'uniform' && binding.name === props?.name);
+      const binding = props?.shaderLayout.bindings?.find(
+        binding => binding.type === 'uniform' && binding.name === props?.name
+      );
       if (!binding) {
         throw new Error(props?.name);
       }
@@ -68,7 +73,7 @@ export class UniformBlock<TUniforms extends Record<string, UniformValue>> {
     if (arrayEqual(this.uniforms[key], value)) {
       return;
     }
-    this.uniforms[key] = value;
+    this.uniforms[key] = arrayCopy(value);
     this.modifiedUniforms[key] = true;
     this.modified = true;
   }

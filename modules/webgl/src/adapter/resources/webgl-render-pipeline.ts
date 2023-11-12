@@ -133,11 +133,16 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     for (const [name, value] of Object.entries(bindings)) {
       const binding = this.shaderLayout.bindings.find(binding => binding.name === name);
       if (!binding) {
-        log.warn(`Unknown binding ${name} in render pipeline ${this.id}`)();
+        const validBindings = this.shaderLayout.bindings
+          .map(binding => `"${binding.name}"`)
+          .join(', ');
+        log.warn(
+          `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
+        )();
         continue; // eslint-disable-line no-continue
       }
       if (!value) {
-        log.warn(`Unsetting binding ${name} in render pipeline ${this.id}`)();
+        log.warn(`Unsetting binding "${name}" in render pipeline "${this.id}"`)();
       }
       switch (binding.type) {
         case 'uniform':
@@ -251,35 +256,40 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     //     }
     //   });
 
-    withDeviceAndGLParameters(this.device, this.props.parameters, webglRenderPass.glParameters, () => {
-      if (isIndexed && isInstanced) {
-        // ANGLE_instanced_arrays extension
-        this.device.gl2?.drawElementsInstanced(
-          glDrawMode,
-          vertexCount || 0, // indexCount?
-          glIndexType,
-          firstVertex,
-          instanceCount || 0
-        );
-        // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-        //   this.device.gl2.drawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
-      } else if (isIndexed) {
-        this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
-      } else if (isInstanced) {
-        this.device.gl2?.drawArraysInstanced(
-          glDrawMode,
-          firstVertex,
-          vertexCount || 0,
-          instanceCount || 0
-        );
-      } else {
-        this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
-      }
+    withDeviceAndGLParameters(
+      this.device,
+      this.props.parameters,
+      webglRenderPass.glParameters,
+      () => {
+        if (isIndexed && isInstanced) {
+          // ANGLE_instanced_arrays extension
+          this.device.gl2?.drawElementsInstanced(
+            glDrawMode,
+            vertexCount || 0, // indexCount?
+            glIndexType,
+            firstVertex,
+            instanceCount || 0
+          );
+          // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
+          //   this.device.gl2.drawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
+        } else if (isIndexed) {
+          this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
+        } else if (isInstanced) {
+          this.device.gl2?.drawArraysInstanced(
+            glDrawMode,
+            firstVertex,
+            vertexCount || 0,
+            instanceCount || 0
+          );
+        } else {
+          this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
+        }
 
-      if (transformFeedback) {
-        transformFeedback.end();
+        if (transformFeedback) {
+          transformFeedback.end();
+        }
       }
-    });
+    );
 
     vertexArray.unbindAfterRender(renderPass);
 
@@ -414,8 +424,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           let texture: WEBGLTexture;
           if (value instanceof WEBGLTexture) {
             texture = value;
-          } else if (value instanceof WEBGLFramebuffer && value.colorAttachments[0] instanceof WEBGLTexture) {
-            log.warn('Passing framebuffer in texture binding may be deprecated. Use fbo.colorAttachments[0] instead')();
+          } else if (
+            value instanceof WEBGLFramebuffer &&
+            value.colorAttachments[0] instanceof WEBGLTexture
+          ) {
+            log.warn(
+              'Passing framebuffer in texture binding may be deprecated. Use fbo.colorAttachments[0] instead'
+            )();
             texture = value.colorAttachments[0];
           } else {
             throw new Error('No texture');

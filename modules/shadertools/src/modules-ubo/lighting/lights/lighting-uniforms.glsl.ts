@@ -41,11 +41,11 @@ uniform lightingUniforms {
 } lighting;
 
 PointLight lighting_getPointLight(int index) {
-  return PointLight(lightColor, lightPosition, lightAttenuation);
+  return PointLight(lighting.lightColor, lighting.lightPosition, lighting.lightAttenuation);
 }
 
 DirectionalLight lighting_getDirectionalLight(int index) {
-  return DirectionalLight(lightColor, lightDirection);
+  return DirectionalLight(lighting.lightColor, lighting.lightDirection);
 } 
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {
