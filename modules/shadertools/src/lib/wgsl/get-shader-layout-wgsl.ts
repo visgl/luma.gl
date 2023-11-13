@@ -4,6 +4,11 @@
 import {ShaderAttributeType, ShaderLayout} from '@luma.gl/core';
 import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
 
+/**
+ * Parse a ShaderLayout from WGSL shader source code.
+ * @param source WGSL source code (can contain both @vertex and @fragment entry points)
+ * @returns 
+ */
 export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   const reflect = new WgslReflect(source);
 
@@ -31,7 +36,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   const vertex = reflect.entry.vertex[0]; // "main"
 
   // Vertex shader inputs
-  const attributeCount = vertex.inputs.length; // 4, inputs to "main"
+  const attributeCount = vertex.inputs.length; // inputs to "main"
   for (let i = 0; i < attributeCount; i++) {
     const wgslAttribute = vertex.inputs[i];
 
@@ -49,6 +54,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   return shaderLayout;
 }
 
+/** Get a valid shader attribute type string from a wgsl-reflect type */
 function getType(type: any): ShaderAttributeType {
   return type.format ? `${type.name}<${type.format.name}>` : type.name;
 }

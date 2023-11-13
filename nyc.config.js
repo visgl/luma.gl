@@ -7,7 +7,7 @@ module.exports = {
   extensions: ['.js', '.ts'],
   include: ['dev-modules', 'modules/**/src'],
   exclude: [
-    '**/libs/**',
+    '**/libs',
     '**/deprecated',
     '**/bundle.ts',
     // render tests pull in examples
