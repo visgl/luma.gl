@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderAttributeType, ShaderLayout} from '@luma.gl/core';
-import {WgslReflect} from '../../wgsl-reflect/wgsl_reflect.module.js';
+import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
 
 export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   const reflect = new WgslReflect(source);
