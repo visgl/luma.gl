@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.42
+
+- fix(engine): Handle TypedArrays when extracting bindings (#1836)
+
 ### v9.0.0-alpha.41
 
 - fix(engine): Better filter for texture bindings (#1831)
