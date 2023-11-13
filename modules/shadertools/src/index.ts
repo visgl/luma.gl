@@ -44,6 +44,9 @@ export {combineInjects} from './lib/shader-assembly/shader-injections';
 export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
 
+// EXPERIMENTAL WGSL
+export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
+
 // SHADER MODULES - WEBGL1 VERSION
 
 // utils
