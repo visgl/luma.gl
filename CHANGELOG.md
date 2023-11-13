@@ -1,5 +1,15 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.41
+
+- fix(engine): Better filter for texture bindings (#1831)
+
+### v9.0.0-alpha.40
+
+- Bind framebuffer color attachment in render pipeline (#1828)
+- feat(engine): Extract bindings from module props (#1826)
+- chore(shadermodules): Move ShaderPasses to unform buffers (#1824)
+
 ### v9.0.0-alpha.38
 
 - feat(core): Add Device.getCanvasContext() (#1817)
@@ -105,7 +115,9 @@ N/A Failed publish.
 - chore: Remove default exports (#1750)
 
 ## v9.0.0-alpha.20
+
 ## v9.0.0-alpha.19
+
 ## v9.0.0-alpha.18
 
 - fix(webgl-legacy): unbreak deck.gl build (#1748)
@@ -182,7 +194,7 @@ N/A Failed publish.
 - chore(gltools): Add missing fields to Transform types (#1693)
 - chore(webgl): handle added topologies (#1692)
 - fix(api): Support more topologies for WebGL (#1691)
-- chore(webgl): Avoid storing WebGL extensions on the Device object  (#1690)
+- chore(webgl): Avoid storing WebGL extensions on the Device object (#1690)
 - feat(webgl): Implement WebGPU style `lost` promise for WebGLDevice. (#1689)
 - chore(webgpu): strict typescript (part 1) (#1688)
 
@@ -206,7 +218,7 @@ N/A Failed publish.
 
 - chore: bump to loaders.gl@3.2.12 (#1675)
 - chore: bump to math.gl@v3.6 (#1674)
-- chore(shadertools): Fully eliminate implicit typings (#1619)    chore: revert gl to v5, pin probe to >3.5 (#1671
+- chore(shadertools): Fully eliminate implicit typings (#1619) chore: revert gl to v5, pin probe to >3.5 (#1671
 - chore: bump headless-gl to v6 (#1666)
 - build(deps): bump minimatch from 3.0.4 to 3.1.2 (#1668)
 - chore: drop Node 12 from CI. Use current node version for Node setup (#1667)
@@ -232,7 +244,7 @@ N/A Failed publish.
 - Context cleanup (#1611)
 - chore(webgl): Clean up webgl utilities (#1610)
 - chore(gltools): Move legacy code from `@luma.gl/engine` to gltools (#1609)
-- chore(gltools): Collect deprecated WebGL classes in  gltools (#1608)
+- chore(gltools): Collect deprecated WebGL classes in gltools (#1608)
 - chore: Split WEBGLBuffer from Buffer (#1607)
 - build(deps): bump trim-off-newlines from 1.0.1 to 1.0.3 (#1605)
 - chore: Move to v9.0.0-alpha releases (#1606)
@@ -361,6 +373,7 @@ N/A Failed publish.
 
 - chore: bump loaders.gl and probe.gl (#1478)
 - bump: math.gl@3.5.0 (#1477)
+
 ## v8.5.0
 
 - Bump dependencies to beta (#1476)
