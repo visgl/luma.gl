@@ -10,7 +10,7 @@ import type {
   AttributeInfo
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, isNumberArray} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
@@ -350,7 +350,7 @@ export class Model {
     // TODO better way to extract bindings
     const keys = Object.keys(uniforms).filter(k => {
       const uniform = uniforms[k];
-      return !Array.isArray(uniform) && (typeof uniform !== 'number') && (typeof uniform !== 'boolean');
+      return !isNumberArray(uniform) && (typeof uniform !== 'number') && (typeof uniform !== 'boolean');
     });
     const bindings: Record<string, Binding> = {};
     for (const k of keys) {
