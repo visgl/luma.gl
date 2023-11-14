@@ -51,7 +51,7 @@ export const denoise: ShaderPass<DenoiseProps> = {
   uniformTypes: {
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     strength: {format: 'f32', value: 0.5, min: 0, max: 0.1}
     // strength: {..., adjust: (strength: number): number => 0.53 + 200 * Math.pow(1 - strength, 4) // TODO - JS preprocessing
   },

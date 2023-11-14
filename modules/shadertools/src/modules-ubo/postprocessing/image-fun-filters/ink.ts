@@ -56,7 +56,7 @@ export const ink: ShaderPass<InkProps> = {
   uniformTypes: {
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     strength: {value: 0.25, min: 0, softMax: 1}
   },
   fs,

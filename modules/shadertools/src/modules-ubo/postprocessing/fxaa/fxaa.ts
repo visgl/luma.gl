@@ -682,7 +682,7 @@ export type FXAAUniforms = {};
  */
 export const fxaa: ShaderPass<FXAAUniforms> = {
   name: 'fxaa',
-  uniforms: {},
+  uniformPropTypes: {},
   fs,
   passes: [{sampler: true}]
 };

@@ -54,7 +54,7 @@ export const bulgePinch: ShaderPass<BulgePinchProps> = {
     radius: 'f32',
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5]},
     radius: {value: 200, min: 1, softMax: 600},
     strength: {value: 0.5, min: -1, max: 1}

@@ -51,7 +51,7 @@ export class ShaderModuleInstance {
       vs,
       fs,
       dependencies = [],
-      uniforms = {},
+      uniformPropTypes = {},
       getUniforms,
       deprecations = [],
       defines = {},
@@ -68,8 +68,8 @@ export class ShaderModuleInstance {
     this.defines = defines;
     this.injections = normalizeInjections(inject);
 
-    if (uniforms) {
-      this.uniforms = makePropValidators(uniforms);
+    if (uniformPropTypes) {
+      this.uniforms = makePropValidators(uniformPropTypes);
     }
   }
 

@@ -61,7 +61,7 @@ export const hueSaturation: ShaderPass<HueSaturationProps> = {
     hue: 'f32',
     saturation: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     hue: {value: 0, min: -1, max: 1},
     saturation: {value: 0, min: -1, max: 1}
   },

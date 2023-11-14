@@ -54,7 +54,7 @@ export const zoomBlur: ShaderPass<ZoomBlurProps> = {
     center: 'vec2<f32>',
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5]},
     strength: {value: 0.3, min: 0, softMax: 1}
   },

@@ -52,7 +52,7 @@ export const magnify: ShaderPass<MagnifyProps> = {
     borderWidthPixels: 'f32',
     borderColor: 'vec4<f32>',
   },
-  uniforms: {
+  uniformPropTypes: {
     // range 0 to 1
     screenXY: {value: [0, 0]},
     radiusPixels: 200,

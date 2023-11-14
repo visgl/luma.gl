@@ -84,18 +84,6 @@ export const lighting: ShaderModule<LightingModuleUniforms, LightingModuleProps>
     lightDirection: 'vec3<f32>', // , array: MAX_LIGHTS,
     lightAttenuation: 'vec3<f32>' // , array: MAX_LIGHTS},
   },
-  // TODO - should we keep these?
-  uniforms: {
-    enabled: {format: 'i32'},
-    ambientLightColor: {format: 'vec3<f32>'},
-    numberOfLights: {format: 'i32'}, // , array: MAX_LIGHTS},
-    lightType: {format: 'i32'}, // , array: MAX_LIGHTS},
-    lightColor: {format: 'vec3<f32>'}, // , array: MAX_LIGHTS},
-    lightPosition: {format: 'vec3<f32>'}, // , array: MAX_LIGHTS},
-    // TODO - could combine direction and attenuation
-    lightDirection: {format: 'vec3<f32>'}, // , array: MAX_LIGHTS},
-    lightAttenuation: {format: 'vec3<f32>'}, // , array: MAX_LIGHTS},
-  },
 
   defaultUniforms: { 
     enabled: true,

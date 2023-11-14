@@ -40,7 +40,7 @@ export const noise: ShaderPass<NoiseProps> = {
   uniformTypes: {
     amount: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     amount: {value: 0.5, min: 0, max: 1}
   },
   fs,
