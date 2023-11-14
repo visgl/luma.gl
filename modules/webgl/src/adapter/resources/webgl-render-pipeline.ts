@@ -131,7 +131,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // }
 
     for (const [name, value] of Object.entries(bindings)) {
-      const binding = this.shaderLayout.bindings.find(binding => binding.name === name);
+      const binding = 
+        this.shaderLayout.bindings.find(binding => binding.name === name) ||
+        // By convention we name uniform blocks with `Uniforms` suffix
+        this.shaderLayout.bindings.find(binding => binding.name === `${name}Uniforms`);
+
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
           .map(binding => `"${binding.name}"`)
@@ -386,7 +390,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let textureUnit = 0;
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
-      const value = this.bindings[binding.name];
+      const value = this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
