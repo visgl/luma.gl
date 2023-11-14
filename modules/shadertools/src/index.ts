@@ -70,12 +70,12 @@ export type {
 } from './modules-ubo/lighting/lights/lighting-uniforms';
 export {lighting} from './modules-ubo/lighting/lights/lighting-uniforms';
 export {dirlight} from './modules-ubo/lighting/no-material/dirlight';
-export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export {gouraudMaterial} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export type {PhongMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-gouraud';
+export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
+export {gouraudMaterial} from './modules-ubo/lighting/gouraud-material/gouraud-material';
+export type {PhongMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
+export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-material';
 // export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
-// export {pbr} from './modules/lighting/pbr-material/pbr';
+export {pbrMaterial} from './modules-ubo/lighting/pbr-material/pbr-material';
 
 // POST PROCESSING / SHADER PASS MODULES
 

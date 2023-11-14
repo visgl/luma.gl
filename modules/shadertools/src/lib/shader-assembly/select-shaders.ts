@@ -1,4 +1,6 @@
-// loaders.gl, MIT license
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 
 import type {PlatformInfo} from './platform-info';
 import type {AssembleShaderOptions} from './assemble-shaders';

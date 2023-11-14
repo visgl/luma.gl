@@ -1,7 +1,10 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
-export const PHONG_GOURAUD_UNIFORMS = glsl`\
-uniform phongMaterialUniforms {
+export const GOURAUD_VS = glsl`\
+uniform materialUniforms {
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -9,8 +12,8 @@ uniform phongMaterialUniforms {
 } material;
 `;
 
-export const PHONG_GOURAUD_SHADER = glsl`\
-uniform phongMaterialUniforms {
+export const GOURAUD_FS = glsl`\
+uniform materialUniforms {
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;

@@ -271,7 +271,7 @@ new Texture2D(gl, loadImage('path/to/my/image.png')); // loadImage returns a pro
 
 #### Lighting
 
-A standardized set of light classes are now supported by multiple material models (Phong, Goraud and PBR) enabling various models to be mixed and properly lit in the same scene.
+A standardized set of light classes are now supported by multiple material models (Phong, Gouraud and PBR) enabling various models to be mixed and properly lit in the same scene.
 
 #### Modularization Improvements
 

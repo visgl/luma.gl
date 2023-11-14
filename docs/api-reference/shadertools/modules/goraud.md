@@ -1,3 +1,3 @@
-# goraudMaterial (Shader Module)
+# gouraudMaterial (Shader Module)
 
-The `goraudMaterial` shader module provides functions to apply gouraud (per vertex) lighting to your geometry.
+The `gouraudMaterial` shader module provides functions to apply gouraud (per vertex) lighting to your geometry.

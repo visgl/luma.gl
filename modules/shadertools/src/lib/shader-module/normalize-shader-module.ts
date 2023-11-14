@@ -1,4 +1,7 @@
-import { ShaderModuleInstance } from './shader-module-instance';
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
+import {ShaderModuleInstance} from './shader-module-instance';
 
 export function normalizeShaderModule(module: any): any {
   if (!module.normalized) {

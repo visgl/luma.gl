@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {fp64} from '@luma.gl/shadertools';
 import {_Pose as Pose} from '@math.gl/core';

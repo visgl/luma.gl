@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // import {ShaderModule} from '../../types';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
