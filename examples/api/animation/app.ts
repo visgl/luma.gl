@@ -7,7 +7,7 @@ import {
   Timeline,
   KeyFrames
 } from '@luma.gl/engine';
-import {dirlightMaterial} from '@luma.gl/shadertools';
+import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 import {makeRandomNumberGenerator} from '@luma.gl/core';
@@ -31,7 +31,7 @@ type AppUniforms = {
   uProjection: number[];
 };
 
-const appUniforms: {uniformTypes: Record<string, ShaderUniformType>} = {
+const app: {uniformTypes: Record<string, ShaderUniformType>} = {
   uniformTypes: {
     uColor: 'vec3<f32>',
     uModel: 'mat4x4<f32>',
@@ -81,17 +81,6 @@ void main(void) {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  timeline: Timeline;
-  timeSlider;
-
-  cubes: {
-    translation: number[];
-    rotation: number[];
-    keyFrames: KeyFrames<number>;
-    model: Model;
-    uniformStore: UniformStore<{app: AppUniforms}>;
-  }[];
-
   readonly translations = [
     [2, -2, 0],
     [2, 2, 0],
@@ -121,8 +110,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     [4000, 0]
   ];
 
-  globalUniformStore = new UniformStore<{dirlightMaterial: typeof dirlightMaterial['defaultUniforms']}>({
-    dirlightMaterial
+  timeline: Timeline;
+  timeSlider;
+
+  cubes: {
+    translation: number[];
+    rotation: number[];
+    keyFrames: KeyFrames<number>;
+    model: Model;
+    uniformStore: UniformStore<{app: AppUniforms}>;
+  }[];
+
+  globalUniformStore = new UniformStore<{dirlight: typeof dirlight.uniforms}>({
+    dirlight
   });
 
   constructor({device, aspect, animationLoop}: AnimationProps) {
@@ -174,11 +174,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     for (let i = 0; i < 4; ++i) {
       this.timeline.attachAnimation(keyFrames[i], channels[i]);
 
-      const uniformStore = new UniformStore<{app: AppUniforms}>({
-        app: appUniforms
-      });
+      const cubeUniformStore = new UniformStore<{app: AppUniforms}>({app});
 
-      uniformStore.setUniforms({
+      cubeUniformStore.setUniforms({
         app: {
           uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
           uView: new Matrix4().lookAt({
@@ -190,24 +188,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
 
       this.cubes[i] = {
-        uniformStore,
+        uniformStore: cubeUniformStore,
         translation: this.translations[i],
         rotation: this.rotations[i],
         keyFrames: keyFrames[i],
         model: new Model(device, {
+          id: `cube-${i}`,
           vs,
           fs,
-          modules: [dirlightMaterial],
+          modules: [dirlight],
           geometry: new CubeGeometry(),
           parameters: {
             depthWriteEnabled: true,
             depthCompare: 'less-equal'
           },
           bindings: {
-            appUniforms: uniformStore.getManagedUniformBuffer(device, 'app'),
-            dirlightUniforms: this.globalUniformStore.getManagedUniformBuffer(
+            app: cubeUniformStore.getManagedUniformBuffer(device, 'app'),
+            dirlight: this.globalUniformStore.getManagedUniformBuffer(
               device,
-              'dirlightMaterial'
+              'dirlight'
             )
           }
         })

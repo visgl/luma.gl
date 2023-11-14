@@ -92,9 +92,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    const byteLength = this.uniformStore.getUniformBufferByteLength('color');
-    this.uniformBuffer1 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
-    this.uniformBuffer2 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'color', {color: {hsv: [0.7, 1.0, 1.0]}});
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'color', {color: {hsv: [1.0, 1.0, 1.0]}});
 
     this.model1 = new Model(device, {
       vs: vs1,
@@ -123,20 +122,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         position: this.positionBuffer
       },
       bindings: {
-        colorUniforms: this.uniformBuffer2
+        color: this.uniformBuffer2
       },
       vertexCount: 3
     });
-
-    // We can fill the uniform buffers after they are registered with the model,
-    // as long we do so before rendering starts.
-    this.uniformStore.setUniforms({color: {hsv: [0.7, 1.0, 1.0]}});
-    let uniformBufferData = this.uniformStore.getUniformBufferData('color');
-    this.uniformBuffer1.write(uniformBufferData);
-
-    this.uniformStore.setUniforms({color: {hsv: [1.0, 1.0, 1.0]}});
-    uniformBufferData = this.uniformStore.getUniformBufferData('color');
-    this.uniformBuffer2.write(uniformBufferData);
   }
 
   onFinalize() {
