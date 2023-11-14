@@ -13,7 +13,7 @@ type AppUniforms = {
   uMVP: NumberArray;
 };
 
-const appUniforms: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
+const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
   uniformTypes: {
     uMVP: 'mat4x4<f32>'
   }
@@ -24,7 +24,7 @@ const vs = glsl`\
   attribute vec3 positions;
   attribute vec2 texCoords;
 
-  uniform AppUniforms {
+  uniform appUniforms {
     uniform mat4 uMVP;
   } app;
 
@@ -53,13 +53,11 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  uniformStore = new UniformStore<{app: AppUniforms}>({
-    app: appUniforms
-  });
-
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   model: Model;
+
+  uniformStore = new UniformStore<{app: AppUniforms}>({app});
 
   constructor({device}: AnimationProps) {
     super();

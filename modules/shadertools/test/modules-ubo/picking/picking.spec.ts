@@ -5,7 +5,7 @@ import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 
 import {Transform} from '@luma.gl/engine';
-import {colorPicking} from '@luma.gl/shadertools';
+import {picking} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
 
@@ -56,11 +56,11 @@ const TEST_CASES = [
   }
 ];
 
-test.skip('colorPicking#getUniforms', (t) => {
-  t.deepEqual(colorPicking.getUniforms({}), {}, 'Empty input');
+test.skip('picking#getUniforms', (t) => {
+  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
-    colorPicking.getUniforms({
+    picking.getUniforms({
       isActive: true,
       highlightedObjectColor: null,
       highlightColor: [255, 0, 0]
@@ -74,7 +74,7 @@ test.skip('colorPicking#getUniforms', (t) => {
   );
 
   t.deepEqual(
-    colorPicking.getUniforms({
+    picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [255, 0, 0, 51]
     }),
@@ -88,7 +88,7 @@ test.skip('colorPicking#getUniforms', (t) => {
   t.end();
 });
 
-test('colorPicking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
+test('picking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -119,12 +119,12 @@ test('colorPicking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
     },
     vs: VS,
     varyings: ['isPicked'],
-    modules: [colorPicking],
+    modules: [picking],
     elementCount
   });
 
   TEST_CASES.forEach((testCase) => {
-    const uniforms = colorPicking.getUniforms({
+    const uniforms = picking.getUniforms({
       highlightedObjectColor: testCase.highlightedObjectColor
     });
 
@@ -140,7 +140,7 @@ test('colorPicking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
 });
 
 /* eslint-disable max-nested-callbacks */
-test('colorPicking#picking_setPickingColor', (t) => {
+test('picking#picking_setPickingColor', (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -172,12 +172,12 @@ test('colorPicking#picking_setPickingColor', (t) => {
     },
     vs: VS,
     varyings: ['rgbColorASelected'],
-    modules: [colorPicking],
+    modules: [picking],
     elementCount
   });
 
   TEST_CASES.forEach((testCase) => {
-    const uniforms = colorPicking.getUniforms({
+    const uniforms = picking.getUniforms({
       highlightedObjectColor: testCase.highlightedObjectColor,
       // @ts-expect-error
       pickingThreshold: testCase.pickingThreshold
