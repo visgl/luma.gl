@@ -20,6 +20,9 @@ import './lib/shader-assembly/assemble-shaders.spec';
 
 import './lib/shader-assembler.spec';
 
+// WGSL parsing
+import './lib/wgsl/get-shader-layout-wgsl.spec';
+
 // Tests for shader modules
 import './modules';
 import './modules-ubo';

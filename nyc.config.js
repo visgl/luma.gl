@@ -15,6 +15,8 @@ module.exports = {
     'modules/constants',
     // core is just re-exporting things at the moment
     'modules/core',
+    // Exclude external code
+    'modules/shadertools/src/libs',
     // we don't have a test setup for WebGPU yet
     'modules/webgpu',
     // these are test utilities
