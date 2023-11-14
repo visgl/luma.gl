@@ -39,7 +39,7 @@ export const vignette: ShaderPass<VignetteProps> = {
     radius: 'f32',
     amount: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     radius: {value: 0.5, min: 0, max: 1},
     amount: {value: 0.5, min: 0, max: 1}
   },

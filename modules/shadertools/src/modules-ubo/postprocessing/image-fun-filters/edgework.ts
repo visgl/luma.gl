@@ -78,7 +78,7 @@ export type EdgeWorkProps = {
  */
 export const edgeWork: ShaderPass<EdgeWorkProps> = {
   name: 'edgeWork',
-  uniforms: {
+  uniformPropTypes: {
     radius: {value: 2, min: 1, softMax: 50},
     delta: {value: [1, 0], private: true}
   },
@@ -88,12 +88,12 @@ export const edgeWork: ShaderPass<EdgeWorkProps> = {
     {
       // @ts-expect-error
       sampler: 'edgeWork_sampleColor1',
-      uniforms: {delta: [1, 0]}
+      uniformPropTypes: {delta: [1, 0]}
     },
     {
       // @ts-expect-error
       sampler: 'edgeWork_sampleColor2',
-      uniforms: {delta: [0, 1]}
+      uniformPropTypes: {delta: [0, 1]}
     }
   ]
 };

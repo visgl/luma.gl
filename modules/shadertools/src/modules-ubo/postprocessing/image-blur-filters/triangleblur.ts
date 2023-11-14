@@ -61,7 +61,7 @@ export const triangleBlur: ShaderPass<TriangleBlurProps> = {
     radius: 'f32',
     delta: 'vec2<f32>'
   },
-  uniforms: {
+  uniformPropTypes: {
     radius: {value: 20, min: 0, softMax: 100},
     delta: {value: [1, 0], private: true}
   },

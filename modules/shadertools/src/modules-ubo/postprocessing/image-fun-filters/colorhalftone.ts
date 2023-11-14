@@ -67,7 +67,7 @@ export const colorHalftone: ShaderPass<ColorHalftoneProps> = {
     angle: 'f32',
     size: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5]},
     angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
     size: {value: 4, min: 1, softMin: 3, softMax: 20}

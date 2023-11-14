@@ -31,7 +31,7 @@ export class ShaderModuleUniforms<TUniforms extends Record<string, UniformValue>
 
     // extract uniform formats and create a uniform buffer layout
     const uniformTypes: Record<string, ShaderUniformType> = {};
-    for (const [name, {format}] of Object.entries(props.shaderModule.uniforms)) {
+    for (const [name, {format}] of Object.entries(props.shaderModule.uniformPropTypes || {})) {
       uniformTypes[name] = format;
     }
     this.uniformBufferLayout = new UniformBufferLayout(uniformTypes);

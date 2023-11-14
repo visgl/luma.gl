@@ -40,7 +40,7 @@ export const brightnessContrast: ShaderPass<BrightnessContrastProps> = {
     brightness: 'f32',
     contrast: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     brightness: {format: 'f32', value: 0, min: -1, max: 1},
     contrast: {format: 'f32', value: 0, min: -1, max: 1}
   },

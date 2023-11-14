@@ -30,7 +30,7 @@ export type VibranceProps = {
 /** Vibrance - Modifies the saturation of desaturated colors, leaving saturated colors unmodified. */
 export const vibrance: ShaderPass<VibranceProps> = {
   name: 'vibrance',
-  uniforms: {
+  uniformPropTypes: {
     amount: {value: 0, min: -1, max: 1}
   },
   fs,

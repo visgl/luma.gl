@@ -76,7 +76,7 @@ void main() {
 test('normalizeShaderModule', (t) => {
   const module = {
     name: 'test-shader-module',
-    uniforms: {
+    uniformPropTypes: {
       center: [0.5, 0.5],
       strength: {type: 'number', value: 0.3, min: 0, max: 1},
       enabled: false,
