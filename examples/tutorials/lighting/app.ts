@@ -37,13 +37,13 @@ const vs = glsl`\
     mat4 modelMatrix;
     mat4 mvpMatrix;
     vec3 eyePosition;
-  } uApp;
+  } app;
 
   void main(void) {
-    vPosition = (uApp.modelMatrix * vec4(positions, 1.0)).xyz;
-    vNormal = mat3(uApp.modelMatrix) * normals;
+    vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
+    vNormal = mat3(app.modelMatrix) * normals;
     vUV = texCoords;
-    gl_Position = uApp.mvpMatrix * vec4(positions, 1.0);
+    gl_Position = app.mvpMatrix * vec4(positions, 1.0);
   }
 `;
 
@@ -80,8 +80,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   uniformStore = new UniformStore<{
     app: AppUniforms;
-    lighting: (typeof lighting)['defaultUniforms'];
-    phongMaterial: (typeof phongMaterial)['defaultUniforms'];
+    lighting: typeof lighting.uniforms;
+    phongMaterial: typeof phongMaterial.uniforms;
   }>({
     app,
     lighting,
@@ -146,9 +146,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       bindings: {
         uTexture: texture,
-        appUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        lightingUniforms: this.uniformStore.getManagedUniformBuffer(device, 'lighting'),
-        phongMaterialUniforms: this.uniformStore.getManagedUniformBuffer(device, 'phongMaterial')
+        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        lighting: this.uniformStore.getManagedUniformBuffer(device, 'lighting'),
+        phongMaterial: this.uniformStore.getManagedUniformBuffer(device, 'phongMaterial')
       },
       parameters: {
         depthWriteEnabled: true,

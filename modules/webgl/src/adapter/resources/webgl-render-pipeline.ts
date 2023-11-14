@@ -131,7 +131,14 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // }
 
     for (const [name, value] of Object.entries(bindings)) {
-      const binding = this.shaderLayout.bindings.find(binding => binding.name === name);
+      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
+      // This convention allows shaders to name uniform blocks as `uniform appUniforms {} app;`
+      // and reference them as `app` from both GLSL and JS.
+      // TODO - this is rather hacky - we could also remap the name directly in the shader layout.
+      const binding = 
+        this.shaderLayout.bindings.find(binding => binding.name === name) ||
+        this.shaderLayout.bindings.find(binding => binding.name === `${name}Uniforms`);
+
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
           .map(binding => `"${binding.name}"`)
@@ -386,7 +393,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let textureUnit = 0;
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
-      const value = this.bindings[binding.name];
+      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
+      const value = this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
