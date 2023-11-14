@@ -1,3 +1,5 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
 /**
  * Capitalize first letter of a string

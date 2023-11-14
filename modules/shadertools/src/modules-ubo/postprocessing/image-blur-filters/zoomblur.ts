@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../../../modules-ubo/math/random/random';
 

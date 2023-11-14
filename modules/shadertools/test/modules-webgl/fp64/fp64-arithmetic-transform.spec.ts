@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';

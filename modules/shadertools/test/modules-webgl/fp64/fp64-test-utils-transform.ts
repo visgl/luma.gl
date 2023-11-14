@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 // Special utility functions for df64 tests
 
 /* eslint-disable camelcase, prefer-template, max-len */

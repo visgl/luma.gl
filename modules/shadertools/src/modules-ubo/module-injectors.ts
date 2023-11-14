@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {glsl} from '../lib/glsl-utils/highlight';
 
 export const MODULE_INJECTORS_VS = glsl`\
