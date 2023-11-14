@@ -15,20 +15,19 @@ const INFO_HTML = `
 // SPHERE SHADER
 
 type SphereUniforms = {
-  // vertex
-  uModelView: NumberArray;
-  uProjection: NumberArray;
-  // fragment
-  uColor: NumberArray;
-  uLighting: NumberArray;
+  color: NumberArray;
+  lighting: NumberArray;
+  modelViewMatrix: NumberArray;
+  projectionMatrix: NumberArray;
 };
 
-const sphereUniforms: {uniformTypes: Record<keyof SphereUniforms, ShaderUniformType>} = {
+const sphere: {uniformTypes: Record<keyof SphereUniforms, ShaderUniformType>} = {
   uniformTypes: {
-    uModelView: 'mat4x4<f32>',
-    uProjection: 'mat4x3<f32>',
-    uColor: 'vec3<f32>',
-    uLighting: 'f32'
+    // TODO make sure order doesn't matter
+    color: 'vec3<f32>',
+    lighting: 'f32',
+    modelViewMatrix: 'mat4x4<f32>',
+    projectionMatrix: 'mat4x3<f32>'
   }
 };
 
@@ -39,19 +38,19 @@ attribute vec3 positions;
 attribute vec3 normals;
 
 uniform sphereUniforms {
-  // vertex
-  mat4 uModelView;
-  mat4 uProjection;
-  // fragment
-  vec3 uColor;
-  bool uLighting;
+  // fragment shader
+  vec3 color;
+  bool lighting;
+  // vertex shader
+  mat4 modelViewMatrix;
+  mat4 projectionMatrix;
 } sphere;
 
 varying vec3 normal;
 
 void main(void) {
-  gl_Position = sphere.uProjection * sphere.uModelView * vec4(positions, 1.0);
-  normal = vec3((sphere.uModelView * vec4(normals, 0.0)));
+  gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(positions, 1.0);
+  normal = vec3((sphere.modelViewMatrix * vec4(normals, 0.0)));
 }
 `;
 
@@ -61,35 +60,35 @@ const SPHERE_FS = glsl`\
 precision highp float;
 
 uniform sphereUniforms {
-  // vertex
-  mat4 uModelView;
-  mat4 uProjection;
   // fragment
-  vec3 uColor;
-  bool uLighting;
+  vec3 color;
+  bool lighting;
+  // vertex
+  mat4 modelViewMatrix;
+  mat4 projectionMatrix;
 } sphere;
 
 varying vec3 normal;
 
 void main(void) {
   float attenuation = 1.0;
-  if (sphere.uLighting) {
+  if (sphere.lighting) {
     vec3 light = normalize(vec3(1,1,2));
     attenuation = dot(normal, light);
   }
-  gl_FragColor = vec4(sphere.uColor * attenuation, 1);
+  gl_FragColor = vec4(sphere.color * attenuation, 1);
 }
 `;
 
 // SCREEN QUAD SHADERS
 
 type ScreenQuadUniforms = {
-  uRes: NumberArray;
+  resolution: NumberArray;
 };
 
-const screenQuadUniforms: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformType>} = {
+const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformType>} = {
   uniformTypes: {
-    uRes: 'vec2<f32>'
+    resolution: 'vec2<f32>'
   }
 };
 
@@ -111,11 +110,11 @@ precision highp float;
 uniform sampler2D uTexture;
 
 uniform screenQuadUniforms {
-  vec2 uRes;
+  vec2 resolution;
 } screenQuad;
 
 void main(void) {
-  vec2 p = gl_FragCoord.xy/screenQuad.uRes.xy;
+  vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
   gl_FragColor = texture2D(uTexture, p);
 }
 `;
@@ -123,15 +122,14 @@ void main(void) {
 // PERSISTENCE SHADERS
 
 type PersistenceQuadUniforms = {
-  uRes: NumberArray;
+  resolution: NumberArray;
 };
 
-const persistenceQuadUniforms: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformType>} =
-  {
-    uniformTypes: {
-      uRes: 'vec2<f32>'
-    }
-  };
+const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformType>} = {
+  uniformTypes: {
+    resolution: 'vec2<f32>'
+  }
+};
 
 const PERSISTENCE_FS = glsl`\
 #version 300 es
@@ -142,24 +140,24 @@ uniform sampler2D uScene;
 uniform sampler2D uPersistence;
 
 uniform persistenceQuadUniforms {
-  vec2 uRes;
+  vec2 resolution;
 } persistence;
 
 void main(void) {
-  vec2 p = gl_FragCoord.xy / persistence.uRes.xy;
+  vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
   vec4 cS = texture2D(uScene, p);
   vec4 cP = texture2D(uPersistence, p);
   gl_FragColor = mix(cS*4.0, cP, 0.9);
 }
 `;
 
-
 const random = makeRandomNumberGenerator();
 
+const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;
-const ePos = [];
-const eRot = [];
-const nPos = [];
+const electronPosition = [];
+const electronRotation = [];
+const nucleonPosition = [];
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -171,9 +169,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     screenQuad: ScreenQuadUniforms;
     persistenceQuad: PersistenceQuadUniforms;
   }>({
-    sphere: sphereUniforms,
-    screenQuad: screenQuadUniforms,
-    persistenceQuad: persistenceQuadUniforms
+    sphere,
+    screenQuad,
+    persistenceQuad
   });
 
   /** Electron model */
@@ -195,16 +193,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: SPHERE_FS,
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
       bindings: {
-        sphereUniforms: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
+        sphere: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
       },
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less',
         cullMode: 'back'
-      },
-      uniforms: {
-        uColor: [0.0, 0.5, 1],
-        uLighting: 0
       }
     });
 
@@ -219,11 +213,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         cullMode: 'back'
       },
       bindings: {
-        sphereUniforms: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
-      },
-      uniforms: {
-        uColor: [1, 0.25, 0.25],
-        uLighting: 1
+        sphere: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
       }
     });
 
@@ -283,7 +273,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: PERSISTENCE_FS,
       geometry: quadGeometry,
       bindings: {
-        persistenceQuadUniforms: this.uniformStore.getManagedUniformBuffer(device, 'persistenceQuad')
+        persistenceQuadUniforms: this.uniformStore.getManagedUniformBuffer(
+          device,
+          'persistenceQuad'
+        )
       },
       parameters: {
         depthWriteEnabled: true,
@@ -303,21 +296,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       pos.normalize().scale(distanceFromCenter);
       const s = 1.25;
       pos.scale(s);
-      ePos.push(pos);
+      electronPosition.push(pos);
 
-      // Get a random vector and cross
+      // Get a random vector andcross
       const q = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
       const axis = pos.clone().cross(q).normalize();
 
       const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
-      eRot.push(rot);
+      electronRotation.push(rot);
     }
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       let pos = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
       pos = pos.normalize().scale(0.5);
-      nPos.push(pos);
+      nucleonPosition.push(pos);
     }
   }
 
@@ -337,8 +330,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});
 
-    const projection = new Matrix4().perspective({fovy: radians(75), aspect});
-    const view = new Matrix4().lookAt({eye: [0, 0, 4]});
+    const projectionMatrix = new Matrix4().perspective({fovy: radians(75), aspect});
+    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 4]});
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
@@ -347,33 +340,46 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     // Render electrons to framebuffer
-    for (let i = 0; i < ELECTRON_COUNT; i++) {
-      ePos[i] = eRot[i].transformVector(ePos[i]);
-      const modelMatrix = new Matrix4().translate(ePos[i]).scale([0.06125, 0.06125, 0.06125]);
 
-      this.electron.setUniforms({
-        uModelView: view.clone().multiplyRight(modelMatrix),
-        uView: view,
-        uProjection: projection
+    this.uniformStore.setUniforms({sphere: {color: [0.0, 0.5, 1], lighting: 0}});
+
+    for (let i = 0; i < ELECTRON_COUNT; i++) {
+      electronPosition[i] = electronRotation[i].transformVector(electronPosition[i]);
+      const modelMatrix = new Matrix4()
+        .translate(electronPosition[i])
+        .scale([0.06125, 0.06125, 0.06125]);
+
+      this.uniformStore.setUniforms({
+        sphere: {
+          modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
+          projectionMatrix: projectionMatrix
+        }
       });
+      this.uniformStore.updateUniformBuffers();
       this.electron.draw(mainRenderPass);
     }
 
     // Render core to framebuffer
-    for (let i = 0; i < ELECTRON_COUNT; i++) {
+    this.uniformStore.setUniforms({
+      sphere: {
+        color: [1, 0.25, 0.25],
+        lighting: 1
+      }
+    });
+
+    for (let i = 0; i < CORE_COUNT; i++) {
       const modelMatrix = new Matrix4()
         .rotateXYZ([tick * 0.013, 0, 0])
         .rotateXYZ([0, tick * 0.021, 0])
-        .translate(nPos[i]);
+        .translate(nucleonPosition[i]);
 
       const translation = [modelMatrix[12], modelMatrix[13], modelMatrix[14]];
       modelMatrix.identity().translate(translation).scale([0.25, 0.25, 0.25]);
 
       this.uniformStore.setUniforms({
         sphere: {
-          uModelView: view.clone().multiplyRight(modelMatrix),
-          // uView: view,
-          uProjection: projection
+          modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
+          projectionMatrix: projectionMatrix
         }
       });
       this.uniformStore.updateUniformBuffers();
@@ -386,6 +392,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const currentFramebuffer = this.pingpongFramebuffers[ppi];
     const nextFramebuffer = this.pingpongFramebuffers[1 - ppi];
 
+    
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
@@ -395,26 +402,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       uScene: this.mainFramebuffer.colorAttachments[0],
       uPersistence: nextFramebuffer.colorAttachments[0]
     });
-    this.uniformStore.setUniforms({
-      persistenceQuad: {
-        uRes: [width, height]
-      }
-    });
+    this.uniformStore.setUniforms({persistenceQuad: {resolution: [width, height]}});
     this.uniformStore.updateUniformBuffers();
 
     this.persistenceQuad.draw(persistenceRenderPass);
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
-    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    const screenRenderPass = device.beginRenderPass({clearColor: [1, 0, 0, 1]});
     this.screenQuad.setBindings({
       uTexture: currentFramebuffer.colorAttachments[0]
     });
-    this.uniformStore.setUniforms({
-      screenQuad: {
-        uRes: [width, height]
-      }
-    });
+    this.uniformStore.setUniforms({screenQuad: {resolution: [width, height]}});
     this.uniformStore.updateUniformBuffers();
 
     this.screenQuad.draw(screenRenderPass);
