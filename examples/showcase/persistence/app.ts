@@ -16,7 +16,7 @@ const INFO_HTML = `
 
 type SphereUniforms = {
   color: NumberArray;
-  lighting: NumberArray;
+  lighting: boolean;
   modelViewMatrix: NumberArray;
   projectionMatrix: NumberArray;
 };
@@ -258,7 +258,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: SCREEN_QUAD_FS,
       geometry: quadGeometry,
       bindings: {
-        screenQuadUniforms: this.uniformStore.getManagedUniformBuffer(device, 'screenQuad')
+        screenQuad: this.uniformStore.getManagedUniformBuffer(device, 'screenQuad')
       },
       parameters: {
         depthWriteEnabled: true,
@@ -273,7 +273,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: PERSISTENCE_FS,
       geometry: quadGeometry,
       bindings: {
-        persistenceQuadUniforms: this.uniformStore.getManagedUniformBuffer(
+        persistenceQuad: this.uniformStore.getManagedUniformBuffer(
           device,
           'persistenceQuad'
         )
@@ -341,7 +341,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Render electrons to framebuffer
 
-    this.uniformStore.setUniforms({sphere: {color: [0.0, 0.5, 1], lighting: 0}});
+    this.uniformStore.setUniforms({sphere: {color: [0.0, 0.5, 1], lighting: false}});
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       electronPosition[i] = electronRotation[i].transformVector(electronPosition[i]);
@@ -363,7 +363,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.setUniforms({
       sphere: {
         color: [1, 0.25, 0.25],
-        lighting: 1
+        lighting: true
       }
     });
 

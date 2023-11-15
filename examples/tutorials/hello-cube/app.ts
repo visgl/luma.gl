@@ -78,7 +78,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       geometry: new CubeGeometry(),
       bindings: {
         uTexture: texture,
-        AppUniforms: this.uniformStore.getManagedUniformBuffer(device, 'app')
+        app: this.uniformStore.getManagedUniformBuffer(device, 'app')
       },
       parameters: {
         depthWriteEnabled: true,
