@@ -3,7 +3,7 @@
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
-import {random} from '../../../modules-ubo/math/random/random';
+import {random} from '../../math/random/random';
 
 const fs = glsl`\
 uniform EdgeWork {

@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {random} from '../../../modules-ubo/math/random/random';
+import {random} from '../../math/random/random';
 
 const fs = `
 uniform vec2 center;

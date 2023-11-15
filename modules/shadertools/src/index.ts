@@ -52,84 +52,84 @@ export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
 // utils
 
 // math libraries
-export {random} from './modules-ubo/math/random/random';
-export {fp32} from './modules-ubo/math/fp32/fp32';
-// export {fp64, fp64arithmetic} from './modules-ubo/math/fp64/fp64';
+export {random} from './modules/math/random/random';
+export {fp32} from './modules/math/fp32/fp32';
+// export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
 // engine shader modules
 
 // // projection
 // export type {ProjectionUniforms} from './modules/engine/project/project';
 // export {projection} from './modules/engine/project/project';
-export {picking} from './modules-ubo/engine/picking/picking';
+export {picking} from './modules/engine/picking/picking';
 
 // // lighting
 export type {
   LightingModuleProps,
   LightingModuleProps as Lighting
-} from './modules-ubo/lighting/lights/lighting-uniforms';
-export {lighting} from './modules-ubo/lighting/lights/lighting-uniforms';
-export {dirlight} from './modules-ubo/lighting/no-material/dirlight';
-export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
-export {gouraudMaterial} from './modules-ubo/lighting/gouraud-material/gouraud-material';
-export type {PhongMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
-export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-material';
+} from './modules/lighting/lights/lighting-uniforms';
+export {lighting} from './modules/lighting/lights/lighting-uniforms';
+export {dirlight} from './modules/lighting/no-material/dirlight';
+export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules/lighting/phong-material/phong-material';
+export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
+export type {PhongMaterialUniforms} from './modules/lighting/phong-material/phong-material';
+export {phongMaterial} from './modules/lighting/phong-material/phong-material';
 // export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
-export {pbrMaterial} from './modules-ubo/lighting/pbr-material/pbr-material';
+export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 
 // POST PROCESSING / SHADER PASS MODULES
 
 // glfx image adjustment shader modules
-export type {BrightnessContrastProps} from './modules-ubo/postprocessing/image-adjust-filters/brightnesscontrast';
-export {brightnessContrast} from './modules-ubo/postprocessing/image-adjust-filters/brightnesscontrast';
-export type {DenoiseProps} from './modules-ubo/postprocessing/image-adjust-filters/denoise';
-export {denoise} from './modules-ubo/postprocessing/image-adjust-filters/denoise';
-export type {HueSaturationProps} from './modules-ubo/postprocessing/image-adjust-filters/huesaturation';
-export {hueSaturation} from './modules-ubo/postprocessing/image-adjust-filters/huesaturation';
-export type {NoiseProps} from './modules-ubo/postprocessing/image-adjust-filters/noise';
-export {noise} from './modules-ubo/postprocessing/image-adjust-filters/noise';
-export type {SepiaProps} from './modules-ubo/postprocessing/image-adjust-filters/sepia';
-export {sepia} from './modules-ubo/postprocessing/image-adjust-filters/sepia';
-export type {VibranceProps} from './modules-ubo/postprocessing/image-adjust-filters/vibrance';
-export {vibrance} from './modules-ubo/postprocessing/image-adjust-filters/vibrance';
-export type {VignetteProps} from './modules-ubo/postprocessing/image-adjust-filters/vignette';
-export {vignette} from './modules-ubo/postprocessing/image-adjust-filters/vignette';
+export type {BrightnessContrastProps} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
+export {brightnessContrast} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
+export type {DenoiseProps} from './modules/postprocessing/image-adjust-filters/denoise';
+export {denoise} from './modules/postprocessing/image-adjust-filters/denoise';
+export type {HueSaturationProps} from './modules/postprocessing/image-adjust-filters/huesaturation';
+export {hueSaturation} from './modules/postprocessing/image-adjust-filters/huesaturation';
+export type {NoiseProps} from './modules/postprocessing/image-adjust-filters/noise';
+export {noise} from './modules/postprocessing/image-adjust-filters/noise';
+export type {SepiaProps} from './modules/postprocessing/image-adjust-filters/sepia';
+export {sepia} from './modules/postprocessing/image-adjust-filters/sepia';
+export type {VibranceProps} from './modules/postprocessing/image-adjust-filters/vibrance';
+export {vibrance} from './modules/postprocessing/image-adjust-filters/vibrance';
+export type {VignetteProps} from './modules/postprocessing/image-adjust-filters/vignette';
+export {vignette} from './modules/postprocessing/image-adjust-filters/vignette';
 
 // glfx  BLUR shader modules
-export type {TiltShiftProps} from './modules-ubo/postprocessing/image-blur-filters/tiltshift';
-export {tiltShift} from './modules-ubo/postprocessing/image-blur-filters/tiltshift';
-export type {TriangleBlurProps} from './modules-ubo/postprocessing/image-blur-filters/triangleblur';
-export {triangleBlur} from './modules-ubo/postprocessing/image-blur-filters/triangleblur';
-export type {ZoomBlurProps} from './modules-ubo/postprocessing/image-blur-filters/zoomblur';
-export {zoomBlur} from './modules-ubo/postprocessing/image-blur-filters/zoomblur';
+export type {TiltShiftProps} from './modules/postprocessing/image-blur-filters/tiltshift';
+export {tiltShift} from './modules/postprocessing/image-blur-filters/tiltshift';
+export type {TriangleBlurProps} from './modules/postprocessing/image-blur-filters/triangleblur';
+export {triangleBlur} from './modules/postprocessing/image-blur-filters/triangleblur';
+export type {ZoomBlurProps} from './modules/postprocessing/image-blur-filters/zoomblur';
+export {zoomBlur} from './modules/postprocessing/image-blur-filters/zoomblur';
 
 // glfx FUN shader modules
-export type {ColorHalftoneProps} from './modules-ubo/postprocessing/image-fun-filters/colorhalftone';
-export {colorHalftone} from './modules-ubo/postprocessing/image-fun-filters/colorhalftone';
-export type {DotScreenProps} from './modules-ubo/postprocessing/image-fun-filters/dotscreen';
-export {dotScreen} from './modules-ubo/postprocessing/image-fun-filters/dotscreen';
-export type {EdgeWorkProps} from './modules-ubo/postprocessing/image-fun-filters/edgework';
-export {edgeWork} from './modules-ubo/postprocessing/image-fun-filters/edgework';
-export type {HexagonalPixelateProps} from './modules-ubo/postprocessing/image-fun-filters/hexagonalpixelate';
-export {hexagonalPixelate} from './modules-ubo/postprocessing/image-fun-filters/hexagonalpixelate';
-export type {InkProps} from './modules-ubo/postprocessing/image-fun-filters/ink';
-export {ink} from './modules-ubo/postprocessing/image-fun-filters/ink';
-export type {MagnifyProps} from './modules-ubo/postprocessing/image-fun-filters/magnify';
-export {magnify} from './modules-ubo/postprocessing/image-fun-filters/magnify';
+export type {ColorHalftoneProps} from './modules/postprocessing/image-fun-filters/colorhalftone';
+export {colorHalftone} from './modules/postprocessing/image-fun-filters/colorhalftone';
+export type {DotScreenProps} from './modules/postprocessing/image-fun-filters/dotscreen';
+export {dotScreen} from './modules/postprocessing/image-fun-filters/dotscreen';
+export type {EdgeWorkProps} from './modules/postprocessing/image-fun-filters/edgework';
+export {edgeWork} from './modules/postprocessing/image-fun-filters/edgework';
+export type {HexagonalPixelateProps} from './modules/postprocessing/image-fun-filters/hexagonalpixelate';
+export {hexagonalPixelate} from './modules/postprocessing/image-fun-filters/hexagonalpixelate';
+export type {InkProps} from './modules/postprocessing/image-fun-filters/ink';
+export {ink} from './modules/postprocessing/image-fun-filters/ink';
+export type {MagnifyProps} from './modules/postprocessing/image-fun-filters/magnify';
+export {magnify} from './modules/postprocessing/image-fun-filters/magnify';
 
 // glfx  WARP shader modules
-export type {BulgePinchProps} from './modules-ubo/postprocessing/image-warp-filters/bulgepinch';
-export {bulgePinch} from './modules-ubo/postprocessing/image-warp-filters/bulgepinch';
-export type {SwirlProps} from './modules-ubo/postprocessing/image-warp-filters/swirl';
-export {swirl} from './modules-ubo/postprocessing/image-warp-filters/swirl';
+export type {BulgePinchProps} from './modules/postprocessing/image-warp-filters/bulgepinch';
+export {bulgePinch} from './modules/postprocessing/image-warp-filters/bulgepinch';
+export type {SwirlProps} from './modules/postprocessing/image-warp-filters/swirl';
+export {swirl} from './modules/postprocessing/image-warp-filters/swirl';
 
 // Postprocessing modules
-// export type {FXAAProps} from './modules-ubo/postprocessing/fxaa/fxaa';
-export {fxaa} from './modules-ubo/postprocessing/fxaa/fxaa';
+// export type {FXAAProps} from './modules/postprocessing/fxaa/fxaa';
+export {fxaa} from './modules/postprocessing/fxaa/fxaa';
 
 // experimental modules
-export type {WarpProps} from './modules-ubo/postprocessing/image-warp-filters/warp';
-export {warp as _warp} from './modules-ubo/postprocessing/image-warp-filters/warp';
+export type {WarpProps} from './modules/postprocessing/image-warp-filters/warp';
+export {warp as _warp} from './modules/postprocessing/image-warp-filters/warp';
 
 // // glfx BLUR shader modules
 // export {tiltShift} from './modules/postprocessing/image-blur-filters/tiltshift';
