@@ -26,7 +26,11 @@
       {
         "type": "category",
         "label": "Background",
-        "items": ["api-guide/background/api-design", "api-guide/background/webgpu-vs-webgl"]
+        "items": [
+          "api-guide/background/api-design",
+          "api-guide/background/learning-resources",
+          "api-guide/background/webgpu-vs-webgl"
+        ]
       },
       "public-review",
       "api-guide/README",
@@ -143,11 +147,28 @@
         "type": "category",
         "label": "@luma.gl/shadertools",
         "items": [
+          {
+            "type": "category",
+            "label": "Shader Modules",
+            "items": [
+              "api-reference/shadertools/shader-modules",
+              "api-reference/shadertools/modules/fp32",
+              "api-reference/shadertools/modules/fp64",
+              "api-reference/shadertools/modules/pbr",
+              "api-reference/shadertools/modules/picking",
+              "api-reference/shadertools/modules/project"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Shader Passes",
+            "items": [
+              "api-reference/shadertools/passes/image-processing"
+            ]
+          },
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-assembler",
-          "api-reference/shadertools/shader-info",
-          "api-reference/shadertools/core-shader-modules",
-          "api-reference/shadertools/effects-shader-modules"
+          "api-reference/shadertools/shader-info"
         ]
       },
       {
@@ -175,6 +196,7 @@
     "type": "category",
     "label": "Developer Guide",
     "items": [
+      "developer-guide/README",
       "developer-guide/installing",
       "developer-guide/debugging",
       "developer-guide/testing",

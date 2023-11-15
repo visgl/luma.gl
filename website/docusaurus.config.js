@@ -56,7 +56,6 @@ const config = {
     [
       './src/ocular-docusaurus/ocular-docusaurus-plugin',
       {alias: {
-          '@luma.gl/core': `${__dirname}/../modules/api/src`,
           '@luma.gl/core': `${__dirname}/../modules/core/src`,
           '@luma.gl/engine': `${__dirname}/../modules/engine/src`,
           '@luma.gl/experimental': `${__dirname}/../modules/experimental/src`,
@@ -122,9 +121,9 @@ const config = {
             label: 'Docs',
           },
           {
-            to: '/docs/examples/tutorials',
+            to: '/docs/tutorials',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Tutorials',
           },
           {to: 'https://medium.com/vis-gl', label: 'Blog', position: 'left'},
           {

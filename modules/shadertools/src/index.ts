@@ -44,25 +44,40 @@ export {combineInjects} from './lib/shader-assembly/shader-injections';
 export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
 
+// EXPERIMENTAL WGSL
+export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
+
 // SHADER MODULES - WEBGL1 VERSION
 
 // utils
 
 // math libraries
-export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
+export {random} from './modules-ubo/math/random/random';
+export {fp32} from './modules-ubo/math/fp32/fp32';
+// export {fp64, fp64arithmetic} from './modules-ubo/math/fp64/fp64';
 
-// projection and lighting
-export {geometry} from './modules-webgl1/geometry/geometry';
-export {project} from './modules-webgl1/project/project';
-export {picking} from './modules-webgl1/picking/picking';
+// engine shader modules
 
-export {lights} from './modules-webgl1/lighting/lights/lights';
-export {dirlight} from './modules-webgl1/lighting/dirlight/dirlight';
-export {
-  gouraudLighting,
-  phongLighting
-} from './modules-webgl1/lighting/phong-lighting/phong-lighting';
-export {pbr} from './modules-webgl1/lighting/pbr/pbr';
+// // projection
+// export type {ProjectionUniforms} from './modules/engine/project/project';
+// export {projection} from './modules/engine/project/project';
+export {picking} from './modules-ubo/engine/picking/picking';
+
+// // lighting
+export type {
+  LightingModuleProps,
+  LightingModuleProps as Lighting
+} from './modules-ubo/lighting/lights/lighting-uniforms';
+export {lighting} from './modules-ubo/lighting/lights/lighting-uniforms';
+export {dirlight} from './modules-ubo/lighting/no-material/dirlight';
+export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
+export {gouraudMaterial} from './modules-ubo/lighting/gouraud-material/gouraud-material';
+export type {PhongMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-material';
+export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-material';
+// export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
+export {pbrMaterial} from './modules-ubo/lighting/pbr-material/pbr-material';
+
+// POST PROCESSING / SHADER PASS MODULES
 
 // glfx image adjustment shader modules
 export type {BrightnessContrastProps} from './modules-ubo/postprocessing/image-adjust-filters/brightnesscontrast';
@@ -116,32 +131,6 @@ export {fxaa} from './modules-ubo/postprocessing/fxaa/fxaa';
 export type {WarpProps} from './modules-ubo/postprocessing/image-warp-filters/warp';
 export {warp as _warp} from './modules-ubo/postprocessing/image-warp-filters/warp';
 
-// type  COMMONProps
-
-// math libraries
-export {random} from './modules-ubo/math/random/random';
-export {fp32} from './modules-ubo/math/fp32/fp32';
-// export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
-
-// // projection
-// export type {ProjectionUniforms} from './modules/engine/project/project';
-// export {projection} from './modules/engine/project/project';
-export {colorPicking} from './modules-ubo/engine/picking/picking';
-
-// // lighting
-export type {
-  LightingModuleProps,
-  LightingModuleProps as Lighting
-} from './modules-ubo/lighting/lights/lighting-uniforms';
-export {lighting} from './modules-ubo/lighting/lights/lighting-uniforms';
-export {dirlightMaterial} from './modules-ubo/lighting/no-material/dirlight';
-export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export {gouraudMaterial} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export type {PhongMaterialUniforms} from './modules-ubo/lighting/phong-material/phong-gouraud';
-export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-gouraud';
-// export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
-// export {pbr} from './modules/lighting/pbr-material/pbr';
-
 // // glfx BLUR shader modules
 // export {tiltShift} from './modules/postprocessing/image-blur-filters/tiltshift';
 // export {triangleBlur} from './modules/postprocessing/image-blur-filters/triangleblur';
@@ -175,3 +164,22 @@ export {phongMaterial} from './modules-ubo/lighting/phong-material/phong-gouraud
 // // experimental
 // export {warp as _warp} from './modules/postprocessing/image-warp-filters/warp';
 // // export {transform as _transform} from './modules/postprocessing/transform/transform';
+
+// DEPRECATED - v8 legacy shader modules (non-uniform buffer)
+
+// math libraries
+export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
+
+// projection and lighting
+export {geometry as geometry1} from './modules-webgl1/geometry/geometry';
+export {project as project1} from './modules-webgl1/project/project';
+export {picking as picking1} from './modules-webgl1/picking/picking';
+
+export {lights as lights1} from './modules-webgl1/lighting/lights/lights';
+export {dirlight as dirlight1} from './modules-webgl1/lighting/dirlight/dirlight';
+export {
+  gouraudLighting,
+  phongLighting
+} from './modules-webgl1/lighting/phong-lighting/phong-lighting';
+export {pbr} from './modules-webgl1/lighting/pbr/pbr';
+

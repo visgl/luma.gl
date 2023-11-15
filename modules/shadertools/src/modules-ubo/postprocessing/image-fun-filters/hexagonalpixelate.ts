@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -69,7 +72,7 @@ export const hexagonalPixelate: ShaderPass<HexagonalPixelateProps> = {
     center: 'vec2<f32>',
     scale: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5], hint: 'screenspace'},
     scale: {value: 10, min: 1, softMin: 5, softMax: 50}
   },

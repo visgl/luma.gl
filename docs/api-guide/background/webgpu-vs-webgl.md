@@ -6,6 +6,10 @@ This is not intended to be a complete list but is included because they may be u
 
 These notes also indirectly explain why some of the breaking changes in the luma.gl v9 API were made.
 
+**References**
+
+- [Efficiently rendering glTF models](https://toji.dev/webgpu-gltf-case-study/) - this superb case study by Brandon Jones contains a substantial amount of information about how WebGPU differs from WebGL.
+
 ## Background
 
 WebGPU is the next generation GPU API for the browser, standardized by W3C. 

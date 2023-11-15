@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
@@ -85,7 +88,7 @@ export const tiltShift: ShaderPass<TiltShiftProps> = {
     end: 'vec2<f32>',
     invert: 'i32'
   },
-  uniforms: {
+  uniformPropTypes: {
     blurRadius: {value: 15, min: 0, max: 50},
     gradientRadius: {value: 200, min: 0, max: 400},
     start: {value: [0, 0]},

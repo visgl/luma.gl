@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -56,7 +59,7 @@ export const ink: ShaderPass<InkProps> = {
   uniformTypes: {
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     strength: {value: 0.25, min: 0, softMax: 1}
   },
   fs,

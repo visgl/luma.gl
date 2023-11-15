@@ -18,19 +18,19 @@ GPU resources correspond to data on the GPU and/or a state object in the GPU dri
 
 ## Creating GPU Resources
 
-The [`Device`](/docs//api-reference/api/device) class provides methods for creating GPU resources
+The [`Device`](/docs//api-reference/core/device) class provides methods for creating GPU resources
 
 luma.gl provides a consistent API
 
 | Resource creation method                                                               | Description                                                                                                                           |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `device.createBuffer(props: BufferProps)`<br/>`device.createBuffer(props: ArrayBuffer)`<br/>`device.createBuffer(props:  ArrayBufferView)`    | Create a [`Buffer`](/docs/api-reference/api/resources/buffer).                                                                                        |
-| `device.createTexture(props: TextureProps)`<br/> `device.createTexture(Promise<TextureData>)`| Create a [`Texture`](/docs/api-reference/api/resources/texture).                                                                                            |
-| `device.createSampler(props: SamplerProps)`                                   | Create a [`Sampler`](/docs/api-reference/api/resources/sampler).                                                                                            |
-| `device.createFramebuffer(props: FramebufferProps)`                       | Create a [`Framebuffer`](/docs/api-reference/api/resources/framebuffer).                                                                                    |
-| `device.createShader(props: ShaderProps)`                                      | Create a [`Shader`](/docs/api-reference/api/resources/shader).                                                                                              |
-| `device.createRenderPipeline(props: RenderPipelineProps)`              | Create a [`RenderPipeline`](/docs/api-reference/api/resources/render-pipeline) (aka program)                                                                |
-| `device.createComputePipeline(props: ComputePipelineProps)`           | Create a [`ComputePipeline`](/docs/api-reference/api/resources/compute-pipeline) (aka program)                                                              |
-| `beginRenderPass(props: RenderPassProps)`                                  | Create a [`RenderPass`](/docs/api-reference/api/resources/render-pass).                                                                                     |
-| `beginComputePass(props?: ComputePassProps)`                              | Create a [`ComputePass`](/docs/api-reference/api/resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. |
+| `device.createBuffer(props: BufferProps)`<br/>`device.createBuffer(props: ArrayBuffer)`<br/>`device.createBuffer(props:  ArrayBufferView)`    | Create a [`Buffer`](/docs/api-reference/core/resources/buffer).                                                                                        |
+| `device.createTexture(props: TextureProps)`<br/> `device.createTexture(Promise<TextureData>)`| Create a [`Texture`](/docs/api-reference/core/resources/texture).                                                                                            |
+| `device.createSampler(props: SamplerProps)`                                   | Create a [`Sampler`](/docs/api-reference/core/resources/sampler).                                                                                            |
+| `device.createFramebuffer(props: FramebufferProps)`                       | Create a [`Framebuffer`](/docs/api-reference/core/resources/framebuffer).                                                                                    |
+| `device.createShader(props: ShaderProps)`                                      | Create a [`Shader`](/docs/api-reference/core/resources/shader).                                                                                              |
+| `device.createRenderPipeline(props: RenderPipelineProps)`              | Create a [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) (aka program)                                                                |
+| `device.createComputePipeline(props: ComputePipelineProps)`           | Create a [`ComputePipeline`](/docs/api-reference/core/resources/compute-pipeline) (aka program)                                                              |
+| `beginRenderPass(props: RenderPassProps)`                                  | Create a [`RenderPass`](/docs/api-reference/core/resources/render-pass).                                                                                     |
+| `beginComputePass(props?: ComputePassProps)`                              | Create a [`ComputePass`](/docs/api-reference/core/resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. |
 | `getDefaultRenderPass()`                                                   | A default `RenderPass` is provided for applications that don't need to create multiple or specially configured render passes.         |

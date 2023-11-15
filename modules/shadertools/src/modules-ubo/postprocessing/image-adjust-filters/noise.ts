@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -40,7 +43,7 @@ export const noise: ShaderPass<NoiseProps> = {
   uniformTypes: {
     amount: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     amount: {value: 0.5, min: 0, max: 1}
   },
   fs,

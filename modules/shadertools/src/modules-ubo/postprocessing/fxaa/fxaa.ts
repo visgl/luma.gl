@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
 /**
@@ -682,7 +685,7 @@ export type FXAAUniforms = {};
  */
 export const fxaa: ShaderPass<FXAAUniforms> = {
   name: 'fxaa',
-  uniforms: {},
+  uniformPropTypes: {},
   fs,
   passes: [{sampler: true}]
 };

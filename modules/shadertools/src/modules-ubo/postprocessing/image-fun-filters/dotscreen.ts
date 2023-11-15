@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -52,7 +55,7 @@ export const dotScreen: ShaderPass<DotScreenProps> = {
     angle: 'f32',
     size: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5]},
     angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
     size: {value: 3, min: 1, softMin: 3, softMax: 20}

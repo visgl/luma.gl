@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../../../modules-ubo/math/random/random';
 
@@ -54,7 +57,7 @@ export const zoomBlur: ShaderPass<ZoomBlurProps> = {
     center: 'vec2<f32>',
     strength: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     center: {value: [0.5, 0.5]},
     strength: {value: 0.3, min: 0, softMax: 1}
   },

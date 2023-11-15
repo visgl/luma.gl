@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {NumberArray} from '../../../types';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
@@ -170,8 +173,8 @@ vec4 picking_filterColor(vec4 color) {
  * and correspondingly, supports picking and highlighting groups of
  * primitives with the same picking color in non-instanced draw-calls
  */
-export const colorPicking: ShaderModule<PickingUniforms> = {
-  name: 'colorPicking',
+export const picking: ShaderModule<PickingUniforms> = {
+  name: 'picking',
   vs,
   fs,
   uniformTypes: {
@@ -194,7 +197,7 @@ export const colorPicking: ShaderModule<PickingUniforms> = {
 };
 
 function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
-  const uniforms = {...colorPicking.defaultUniforms};
+  const uniforms = {...picking.defaultUniforms};
 
   if (opts.highlightedObjectColor !== undefined) {
     if (!opts.highlightedObjectColor) {

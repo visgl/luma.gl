@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -30,7 +33,7 @@ export type VibranceProps = {
 /** Vibrance - Modifies the saturation of desaturated colors, leaving saturated colors unmodified. */
 export const vibrance: ShaderPass<VibranceProps> = {
   name: 'vibrance',
-  uniforms: {
+  uniformPropTypes: {
     amount: {value: 0, min: -1, max: 1}
   },
   fs,

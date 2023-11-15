@@ -24,7 +24,7 @@ const vs = `\
 const fs = `\
 #version 300 es
 
-  uniform AppUniforms {  
+  uniform appUniforms {  
     vec3 color;
   } app;
 
@@ -76,12 +76,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    const byteLength = this.uniformStore.getUniformBufferByteLength('app');
-    this.uniformBuffer1 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
-    this.uniformBuffer2 = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
 
-    // Now we can fill the uniform buffers after they are registered with the model
-    this.uniformStore.setUniforms({
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'app', {
       app: {
         color: [1, 0, 0]
       }
@@ -90,13 +86,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     let uniformBufferData = this.uniformStore.getUniformBufferData('app');
     this.uniformBuffer1.write(uniformBufferData);
 
-    this.uniformStore.setUniforms({
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'app', {
       app: {
         color: [0, 0, 1]
       }
     });
-    uniformBufferData = this.uniformStore.getUniformBufferData('app');
-    this.uniformBuffer2.write(uniformBufferData);
 
     this.model1 = new Model(device, {
       vs,
@@ -111,7 +105,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       vertexCount: 3,
       bindings: {
-        AppUniforms: this.uniformBuffer1
+        app: this.uniformBuffer1
       }
     });
 
@@ -128,7 +122,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         position: this.positionBuffer
       },
       bindings: {
-        AppUniforms: this.uniformBuffer2
+        app: this.uniformBuffer2
       }
     });
   }

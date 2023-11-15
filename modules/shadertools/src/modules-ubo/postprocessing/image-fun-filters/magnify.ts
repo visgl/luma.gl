@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -52,7 +55,7 @@ export const magnify: ShaderPass<MagnifyProps> = {
     borderWidthPixels: 'f32',
     borderColor: 'vec4<f32>',
   },
-  uniforms: {
+  uniformPropTypes: {
     // range 0 to 1
     screenXY: {value: [0, 0]},
     radiusPixels: 200,

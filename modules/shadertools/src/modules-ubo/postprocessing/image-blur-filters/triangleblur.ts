@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../../modules-ubo/math/random/random';
@@ -61,7 +64,7 @@ export const triangleBlur: ShaderPass<TriangleBlurProps> = {
     radius: 'f32',
     delta: 'vec2<f32>'
   },
-  uniforms: {
+  uniformPropTypes: {
     radius: {value: 20, min: 0, softMax: 100},
     delta: {value: [1, 0], private: true}
   },

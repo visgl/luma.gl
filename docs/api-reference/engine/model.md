@@ -15,7 +15,7 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **debugging** - Detailed debug logging of draw calls
 
 
-The `Model` class integrates with the `@luma.gl/shadertools` shader module system: [see `Shader Assembly`](/docs/api-reference/shadertools/assemble-shaders).
+The `Model` class integrates with the `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
 
 
  (Accepts a [`Mesh`] or a [`Geometry`](/docs/- - api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)

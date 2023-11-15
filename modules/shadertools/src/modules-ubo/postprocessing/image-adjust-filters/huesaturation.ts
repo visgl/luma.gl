@@ -1,3 +1,6 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
@@ -61,7 +64,7 @@ export const hueSaturation: ShaderPass<HueSaturationProps> = {
     hue: 'f32',
     saturation: 'f32'
   },
-  uniforms: {
+  uniformPropTypes: {
     hue: {value: 0, min: -1, max: 1},
     saturation: {value: 0, min: -1, max: 1}
   },

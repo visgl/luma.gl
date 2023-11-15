@@ -57,6 +57,16 @@ Detailed notes
     - It also contains the classic luma.gl WebGL 2 classes (`Program`, `Texture2D`) etc that used to be improved from `@luma.gl/webgl`. However these classes are now just exposed for backwards compatibility and should gradually be relaced.
     - To simplify gradual introduction of the new v9 API, all APIs in `@luma.gl/Webgl-legacy` have been updated to optionally accept a `Device` parameter instead of a `WebGLRenderingContext`
 
+#### `@luma.gl/debug` (removed - see upgrade guide)
+
+- `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
+- Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
+- Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured". Also information about luma.gl objects associated with WebGL handles will be displayed in the Spector UI.
+
+#### `@luma.gl/gltools` (removed)
+
+- The `@luma.gl/gltools` module is removed. Its exports are available in the `@luma.gl/webgl-legacy` module.
+
 ### Feature-level changes
 
 

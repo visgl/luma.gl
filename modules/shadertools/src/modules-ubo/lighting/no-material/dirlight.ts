@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import type {NumberArray} from '@math.gl/types';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
@@ -32,7 +34,7 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
-export const dirlightMaterial: ShaderModule<DirlightProps> = {
+export const dirlight: ShaderModule<DirlightProps> = {
   name: 'dirlight',
   dependencies: [],
   vs,
@@ -46,7 +48,7 @@ export const dirlightMaterial: ShaderModule<DirlightProps> = {
   getUniforms
 };
 
-function getUniforms(opts: DirlightProps = dirlightMaterial.defaultUniforms): Record<string, unknown> {
+function getUniforms(opts: DirlightProps = dirlight.defaultUniforms): Record<string, unknown> {
   const uniforms: Record<string, unknown> = {};
   if (opts.lightDirection) {
     // eslint-disable-next-line camelcase

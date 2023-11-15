@@ -1,4 +1,6 @@
 // luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+
 import {glsl} from './highlight';
 
 const FS100 = glsl`void main() {gl_FragColor = vec4(0);}`;
