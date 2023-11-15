@@ -10,42 +10,48 @@ Drawing a textured cube
 `;
 
 type AppUniforms = {
-  uMVP: NumberArray;
+  mvpMatrix: NumberArray;
 };
 
 const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
   uniformTypes: {
-    uMVP: 'mat4x4<f32>'
+    mvpMatrix: 'mat4x4<f32>'
   }
 };
 
 const vs = glsl`\
 #version 300 es
-in vec3 positions;
-in vec2 texCoords;
+#define SHADER_NAME cube-vs
 
 uniform appUniforms {
-  uniform mat4 uMVP;
+  mat4 uMVP;
 } app;
 
-out vec2 vUV;
+// CUBE GEOMETRY 
+layout(location=0) in vec3 positions;
+layout(location=1) in vec2 texCoords;
+
+out vec2 fragUV;
 
 void main(void) {
   gl_Position = app.uMVP * vec4(positions, 1.0);
-  vUV = texCoords;
+  fragUV = texCoords;
 }
 `;
 
 const fs = glsl`\
 #version 300 es
+#define SHADER_NAME cube-fs
 precision highp float;
 
 uniform sampler2D uTexture;
-in vec2 vUV;
-out vec4 fragColor;
+
+in vec2 fragUV;
+
+layout (location=0) out vec4 fragColor;
 
 void main(void) {
-  fragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+  fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));
 }
 `;
 
@@ -76,7 +82,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model = new Model(device, {
       vs,
       fs,
-      geometry: new CubeGeometry(),
+      geometry: new CubeGeometry({indices: false}),
       bindings: {
         uTexture: texture,
         app: this.uniformStore.getManagedUniformBuffer(device, 'app')
@@ -101,7 +107,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .rotateY(tick * 0.013);
 
     this.uniformStore.setUniforms({
-      app: {uMVP: this.mvpMatrix}
+      app: {mvpMatrix: this.mvpMatrix}
     });
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});

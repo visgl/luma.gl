@@ -60,15 +60,24 @@ export class WebGPUVertexArray extends VertexArray {
   override bindBeforeRender(renderPass: RenderPass, firstIndex?: number, indexCount?: number): void {
     const webgpuRenderPass = renderPass as WebGPURenderPass;
     const webgpuIndexBuffer = this.indexBuffer as WebGPUBuffer;
-    webgpuRenderPass.handle.setIndexBuffer(webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType);
+    if (webgpuIndexBuffer?.handle) {
+      // Note we can't unset an index buffer
+      log.warn('setting index buffer', webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType)();
+      webgpuRenderPass.handle.setIndexBuffer(webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType);
+    }
     for (let location = 0; location < this.maxVertexAttributes; location++) {
       const webgpuBuffer = this.attributes[location] as WebGPUBuffer;
-      webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer.handle);
+      if (webgpuBuffer?.handle) {
+        log.warn('setting vertex buffer', location, webgpuBuffer?.handle)();
+        webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer?.handle);
+      }
     }
     // TODO - emit warnings/errors/throw if constants have been set on this vertex array
   }
 
   override unbindAfterRender(renderPass: RenderPass): void {
-    // On WebGPU we don't unbind
+    // On WebGPU we don't need to unbind. 
+    // In fact we can't easily do it. setIndexBuffer/setVertexBuffer don't accept null.
+    // Unbinding presumably happens automatically when the render pass is ended.
   }
 }

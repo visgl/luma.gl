@@ -10,11 +10,12 @@ import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
  * @returns 
  */
 export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
-  const reflect = new WgslReflect(source);
 
   const shaderLayout: ShaderLayout = {attributes: [], bindings: []};
 
-  for (const uniform of reflect.uniforms) {
+  const parsedWGSL = parseWGSL(source);
+
+  for (const uniform of parsedWGSL.uniforms) {
     const members = [];
     for (const member of uniform.type.members) {
       members.push({
@@ -33,7 +34,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
     });
   }
 
-  const vertex = reflect.entry.vertex[0]; // "main"
+  const vertex = parsedWGSL.entry.vertex[0]; // "main"
 
   // Vertex shader inputs
   const attributeCount = vertex.inputs.length; // inputs to "main"
@@ -57,4 +58,22 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
 /** Get a valid shader attribute type string from a wgsl-reflect type */
 function getType(type: any): ShaderAttributeType {
   return type.format ? `${type.name}<${type.format.name}>` : type.name;
+}
+
+function parseWGSL(source: string): WgslReflect {
+  try {
+    return new WgslReflect(source);
+  } catch (error: any) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    let message = 'WGSL parse error';
+    if (typeof error === 'object' && error?.message) {
+      message += `: ${error.message} `;
+    }
+    if (typeof error === 'object' && error?.token) {
+      message += error.token.line || '';
+    }
+    throw new Error(message, {cause: error});
+  }
 }

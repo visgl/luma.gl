@@ -85,7 +85,7 @@ function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
   } else if (binding instanceof Texture) {
     return {
       binding: index,
-      resource: cast<WebGPUTexture>(binding).handle.createView()
+      resource: cast<WebGPUTexture>(binding).handle.createView({label: 'bind-group-auto-created'})
     };
   }
   throw new Error('invalid binding');

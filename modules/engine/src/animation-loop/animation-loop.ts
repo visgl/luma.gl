@@ -338,6 +338,9 @@ export class AnimationLoop {
     // call callback
     this.props.onRender(this._getAnimationProps());
     // end callback
+
+    // Submit commands (necessary on WebGPU)
+    this.device.submit();
   }
 
   _clearNeedsRedraw(): void {
