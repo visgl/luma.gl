@@ -36,7 +36,7 @@ type ShaderLayout = {
   ],
 
   bindings: {
-    projectionUniforms: {location: 0, type: 'uniforms'},
+    projection: {location: 0, type: 'uniforms'},
     textureSampler: {location: 1, type: 'sampler'},
     texture: {location: 2, type: 'texture'}
   }
@@ -96,7 +96,7 @@ and type are the key pieces of information that need to be provided.
 
 ```typescript
   bindings?: {
-    projectionUniforms: {location: 0, type: 'uniforms'},
+    projection: {location: 0, type: 'uniforms'},
     textureSampler: {location: 1, type: 'sampler'},
     texture: {location: 2, type: 'texture'}
   }
