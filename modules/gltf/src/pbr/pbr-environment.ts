@@ -1,5 +1,5 @@
 import {Device, SamplerProps, Texture} from '@luma.gl/core';
-import {loadImage} from '@loaders.gl/images';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 type TextureCube = Texture;
 
@@ -28,12 +28,12 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       maxFilter: 'linear'
     } as SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
-    data: loadImage(props.brdfLutUrl)
+    data: loadImageTexture(props.brdfLutUrl)
   });
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: (dir) => loadImage(props.getTexUrl('diffuse', dir, 0)),
+    getTextureForFace: (dir) => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
     sampler: {
       wrapS: 'clamp-to-edge',
       wrapT: 'clamp-to-edge',
@@ -47,7 +47,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
     getTextureForFace: (dir: number) => {
       const imageArray = [];
       for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
-        imageArray.push(loadImage(props.getTexUrl('specular', dir, lod)));
+        imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
       }
       return imageArray;
     },

@@ -28,7 +28,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
 
-    const uProjection = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
+    // const uProjection = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
     this.model.draw(renderPass);
     renderPass.end();
   }
