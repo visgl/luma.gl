@@ -1,5 +1,6 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
+import {isNumberArray} from "./is-array";
 
 const uidCounters: Record<string, number> = {};
 
@@ -33,4 +34,9 @@ export function isObjectEmpty(obj: object): boolean {
     break;
   }
   return isEmpty;
+}
+
+
+export function isUniform(value: unknown): boolean {
+  return isNumberArray(value) !== null || (typeof value === 'number') || (typeof value === 'boolean');
 }

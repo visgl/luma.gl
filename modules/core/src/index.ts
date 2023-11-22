@@ -137,7 +137,7 @@ export {StatsManager} from './lib/utils/stats-manager';
 export {assert} from './lib/utils/assert';
 export {cast} from './lib/utils/cast';
 export {log} from './lib/utils/log';
-export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
+export {uid, isPowerOfTwo, isObjectEmpty, isUniform} from './lib/utils/utils';
 export {formatValue} from './lib/utils/format-value';
 export {stubRemovedMethods} from './lib/utils/stub-methods';
 export {checkProps} from './lib/utils/check-props';
