@@ -34,6 +34,8 @@ export {ModelNode} from './scenegraph/model-node';
 // Geometries
 export type {GeometryProps} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
+export type {GPUGeometryProps} from './geometry/gpu-geometry';
+export {GPUGeometry} from './geometry/gpu-geometry';
 
 // Primitives
 export type {ConeGeometryProps} from './geometries/cone-geometry';
