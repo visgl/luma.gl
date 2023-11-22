@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
-import {isNumberArray} from "./is-array";
+import {isNumberArray} from './is-array';
 
 const uidCounters: Record<string, number> = {};
 
