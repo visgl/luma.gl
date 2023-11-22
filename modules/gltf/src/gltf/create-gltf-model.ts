@@ -71,6 +71,34 @@ export type CreateGLTFModelOptions = {
   modelOptions?: Record<string, any>;
 };
 
+// function normalizeGeometryAttributes(attributes) {
+// 	const positionAttribute = attributes.positions || attributes.POSITION;
+// 	log.assert(positionAttribute, 'no "postions" or "POSITION" attribute in mesh');
+// 
+// 	// const vertexCount = positionAttribute.value.length / positionAttribute.size;
+// 	const vertexCount = positionAttribute.buffer.byteLength / positionAttribute.BYTES_PER_VERTEX;
+// 	let colorAttribute = attributes.COLOR_0 || attributes.colors;
+// 	if (!colorAttribute) {
+// 		colorAttribute = {size: 3, value: new Float32Array(vertexCount * 3).fill(1)};
+// 	}
+// 	let normalAttribute = attributes.NORMAL || attributes.normals;
+// 	if (!normalAttribute) {
+// 		normalAttribute = {size: 3, value: new Float32Array(vertexCount * 3).fill(0)};
+// 	}
+// 	let texCoordAttribute = attributes.TEXCOORD_0 || attributes.texCoords;
+// 	if (!texCoordAttribute) {
+// 		texCoordAttribute = {size: 2, value: new Float32Array(vertexCount * 2).fill(0)};
+// 	}
+// 
+// 	return {
+// 		positions: positionAttribute,
+// 		colors: colorAttribute,
+// 		normals: normalAttribute,
+// 		texCoords: texCoordAttribute
+// 	};
+// }
+
+
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
   const {id, attributes, material, topology, vertexCount, materialOptions, modelOptions} = options;
 
@@ -85,6 +113,25 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // managedResources.push(...parsedMaterial.generatedTextures);
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
+  // @ts-ignore
+  const bufferLayout = window.bufferLayout;
+  // const shaderLayout = {
+  //   attributes: [{
+  //     name: 'instancePositions', location: 2, stepMode: 'instance' as const, type: 'vec3<f32>' as ShaderAttributeType
+  //   }],
+  //   bindings: []
+  // }
+  //
+
+  // const cube = new CubeGeometry();
+  //
+  const _attributes = {
+    POSITION: attributes.POSITION.buffer
+  }
+
+  const indexBuffer = attributes.indices.buffer;
+  indexBuffer.glTarget = 34963;
+
   const model = new ModelNode({
     managedResources,
     model: new Model(device, {
@@ -96,9 +143,13 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       parameters: parsedMaterial.parameters,
       vs: addVersionToShader(device, vs),
       fs: addVersionToShader(device, fs),
-      attributes,
+      attributes: _attributes,
+      indexBuffer,
+      // geometry: cube,
       bindings: parsedMaterial.bindings,
       uniforms: parsedMaterial.uniforms,
+      // bufferLayout,
+      // shaderLayout,
       ...modelOptions
     })
   });

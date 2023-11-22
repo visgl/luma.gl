@@ -140,7 +140,8 @@ export class GLTFInstantiator {
       vertexCount,
       attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
       material: gltfPrimitive.material,
-      materialOptions: this.options
+      materialOptions: this.options,
+      modelOptions: this.options.modelOptions
     });
 
     modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
