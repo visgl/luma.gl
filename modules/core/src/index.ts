@@ -138,6 +138,7 @@ export {assert} from './lib/utils/assert';
 export {cast} from './lib/utils/cast';
 export {log} from './lib/utils/log';
 export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
+export {isUniformValue, splitUniformsAndBindings} from './lib/utils/uniform';
 export {formatValue} from './lib/utils/format-value';
 export {stubRemovedMethods} from './lib/utils/stub-methods';
 export {checkProps} from './lib/utils/check-props';

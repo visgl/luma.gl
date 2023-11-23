@@ -4,7 +4,7 @@
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {ShaderLayout, PrimitiveTopology} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, cast, log} from '@luma.gl/core';
+import {RenderPipeline, cast, splitUniformsAndBindings, log} from '@luma.gl/core';
 import {mergeShaderLayout} from '@luma.gl/core';
 // import {mergeShaderLayout, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
@@ -175,6 +175,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   setUniforms(uniforms: Record<string, UniformValue>) {
+    const {bindings} = splitUniformsAndBindings(uniforms);
+    Object.keys(bindings).forEach(name => {
+      log.warn(
+        `Unsupported value "${bindings[name]}" used in setUniforms() for key ${name}. Use setBindings() instead?`
+      )();
+    });
     // TODO - check against layout
     Object.assign(this.uniforms, uniforms);
   }

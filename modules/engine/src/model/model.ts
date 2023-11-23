@@ -10,7 +10,7 @@ import type {
   AttributeInfo
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, isNumberArray} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
@@ -341,25 +341,12 @@ export class Model {
   }
 
   /**
-   * Updates shader module settings (which results in uniforms being set)
+   * Updates shader module settings (which results in bindings & uniforms being set)
    */
   setShaderModuleProps(props: Record<string, any>): void {
-    const uniforms = this._getModuleUniforms(props);
-
-    // Extract textures & framebuffers set by the modules
-    // TODO better way to extract bindings
-    const keys = Object.keys(uniforms).filter(k => {
-      const uniform = uniforms[k];
-      return !isNumberArray(uniform) && (typeof uniform !== 'number') && (typeof uniform !== 'boolean');
-    });
-    const bindings: Record<string, Binding> = {};
-    for (const k of keys) {
-      bindings[k] = uniforms[k];
-      delete uniforms[k];
-    }
-
-    Object.assign(this.uniforms, uniforms);
+    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
+    Object.assign(this.uniforms, uniforms);
   }
 
   /**
