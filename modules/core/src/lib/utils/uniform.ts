@@ -1,3 +1,4 @@
+import {Binding} from '../..';
 import type {UniformValue} from '../../adapter/types/types';
 import {isNumberArray} from './is-array';
 
@@ -6,17 +7,17 @@ export function isUniformValue(value: unknown): boolean {
 }
 
 type UniformsAndBindings = {
-  bindings: Record<string, UniformValue>,
+  bindings: Record<string, Binding>,
   uniforms: Record<string, UniformValue>
 };
-export function splitUniformsAndBindings(uniforms: Record<string, UniformValue>): UniformsAndBindings {
+export function splitUniformsAndBindings(uniforms: Record<string, Binding | UniformValue>): UniformsAndBindings {
   const result: UniformsAndBindings = { bindings: {}, uniforms: {} } 
   Object.keys(uniforms).forEach(name => {
     const uniform = uniforms[name];
     if(isUniformValue(uniform)) {
-      result.uniforms[name] = uniform;
+      result.uniforms[name] = uniform as UniformValue;
     } else {
-      result.bindings[name] = uniform;
+      result.bindings[name] = uniform as Binding;
     }
   });
 
