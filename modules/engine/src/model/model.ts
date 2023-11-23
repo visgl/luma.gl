@@ -10,7 +10,7 @@ import type {
   AttributeInfo
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, isUniform} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, isUniformValue} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
@@ -348,7 +348,7 @@ export class Model {
 
     // Extract textures & framebuffers set by the modules
     // TODO better way to extract bindings
-    const keys = Object.keys(uniforms).filter(k => !isUniform(uniforms[k]));
+    const keys = Object.keys(uniforms).filter(k => !isUniformValue(uniforms[k]));
     const bindings: Record<string, Binding> = {};
     for (const k of keys) {
       bindings[k] = uniforms[k];
