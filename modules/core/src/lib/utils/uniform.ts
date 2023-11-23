@@ -1,4 +1,5 @@
-import type {Binding, UniformValue} from '../../adapter/types/types';
+import type {UniformValue} from '../../adapter/types/types';
+import type {Binding} from '../../adapter/types/shader-layout';
 import {isNumberArray} from './is-array';
 
 export function isUniformValue(value: unknown): boolean {
