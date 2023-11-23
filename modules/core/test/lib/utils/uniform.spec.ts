@@ -1,4 +1,4 @@
-import {Binding, UniformValue, isUniformValue, splitUniformsAndBindings} from '@luma.gl/core';
+import {isUniformValue, splitUniformsAndBindings} from '@luma.gl/core';
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
@@ -20,7 +20,7 @@ test('isUniformValue', (t) => {
 
 test('splitUniformsAndBindings', (t) => {
   const device = getWebGLTestDevices()[0];
-  const mixed: Record<string, Binding | UniformValue> = {
+  const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
     'array': [1,2,3,4],
     'boolean': true,
     'float32array': new Float32Array([1,2,3,4]),
