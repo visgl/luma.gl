@@ -106,7 +106,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         position: this.positionBuffer
       },
       bindings: {
-        colorUniforms: this.uniformBuffer1
+        color: this.uniformBuffer1
       },
       vertexCount: 3
     });

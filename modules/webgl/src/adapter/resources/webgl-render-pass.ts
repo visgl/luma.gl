@@ -6,6 +6,7 @@ import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
+import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
@@ -25,6 +26,7 @@ export class WEBGLRenderPass extends RenderPass {
     this.device = device;
 
     // TODO - do parameters (scissorRect) affect the clear operation?
+    pushContextState(this.device.gl);
     this.setParameters(this.props.parameters);
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
@@ -32,6 +34,10 @@ export class WEBGLRenderPass extends RenderPass {
   }
 
   end(): void {
+    popContextState(this.device.gl);
+    if (this.props.framebuffer) {
+      setGLParameters(this.device, {framebuffer: null});
+    }
     // should add commands to CommandEncoder.
   }
 
