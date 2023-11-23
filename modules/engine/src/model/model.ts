@@ -344,7 +344,9 @@ export class Model {
    * Updates shader module settings (which results in bindings & uniforms being set)
    */
   setShaderModuleProps(props: Record<string, any>): void {
-    Object.assign(this, splitUniformsAndBindings(this._getModuleUniforms(props)));
+    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
+    Object.assign(this.bindings, bindings);
+    Object.assign(this.uniforms, uniforms);
   }
 
   /**
