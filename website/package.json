@@ -19,10 +19,10 @@
     "@algolia/autocomplete-js": "^1.8.3",
     "@docusaurus/core": "^3.0.0",
     "@docusaurus/preset-classic": "^3.0.0",
-    "@luma.gl/core": "9.0.0-alpha.39",
-    "@luma.gl/engine": "9.0.0-alpha.39",
-    "@luma.gl/webgl": "9.0.0-alpha.39",
-    "@luma.gl/webgpu": "9.0.0-alpha.39",
+    "@luma.gl/core": "9.0.0-alpha.42",
+    "@luma.gl/engine": "9.0.0-alpha.42",
+    "@luma.gl/webgl": "9.0.0-alpha.42",
+    "@luma.gl/webgpu": "9.0.0-alpha.42",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^1.1.1",
     "docusaurus-mdx-checker": "^3.0.0",
@@ -44,8 +44,7 @@
     "typescript": "^5.1.6"
   },
   "browserslist": {},
-  "resolutions": {
-  },
+  "resolutions": {},
   "engines": {
     "node": ">=18.0"
   },

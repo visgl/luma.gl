@@ -48,9 +48,9 @@
     "gl": "^6.0.1"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.0.0-alpha.39",
-    "@luma.gl/webgl": "9.0.0-alpha.39",
-    "@luma.gl/webgpu": "9.0.0-alpha.39",
+    "@luma.gl/core": "9.0.0-alpha.42",
+    "@luma.gl/webgl": "9.0.0-alpha.42",
+    "@luma.gl/webgpu": "9.0.0-alpha.42",
     "@probe.gl/test-utils": "^4.0.2"
   },
   "engines_comment": [
