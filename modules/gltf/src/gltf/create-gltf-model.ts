@@ -1,6 +1,6 @@
-import {Device, PrimitiveTopology, log} from '@luma.gl/core';
+import {BufferLayout, Device, PrimitiveTopology, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
-import {Model, ModelNode} from '@luma.gl/engine';
+import {CubeGeometry, Model, ModelNode} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 // import {parseGLTFMaterial} from './gltf-material-parser';
 
@@ -12,10 +12,12 @@ const vs = `
   #define _attr in
 #endif
 
-  _attr vec4 POSITION;
+  _attr vec4 positions;
+  // _attr vec4 POSITION;
 
   #ifdef HAS_NORMALS
-    _attr vec4 NORMAL;
+    _attr vec4 normals;
+    // _attr vec4 NORMAL;
   #endif
 
   #ifdef HAS_TANGENTS
@@ -32,7 +34,8 @@ const vs = `
     vec2 _TEXCOORD_0 = vec2(0.);
 
     #ifdef HAS_NORMALS
-      _NORMAL = NORMAL;
+      _NORMAL = normals;
+      // _NORMAL = NORMAL;
     #endif
 
     #ifdef HAS_TANGENTS
@@ -43,8 +46,10 @@ const vs = `
       _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
-    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * POSITION;
+    // pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+    // gl_Position = u_MVPMatrix * POSITION;
+    gl_Position = positions;
+    gl_Position.xy *= 0.25;
   }
 `;
 
@@ -57,7 +62,8 @@ const fs = `
 #endif
 
   void main(void) {
-    fragmentColor = pbr_filterColor(vec4(0));
+    // fragmentColor = pbr_filterColor(vec4(0));
+    fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
   }
 `;
 
@@ -114,7 +120,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   // @ts-ignore
-  const bufferLayout = window.bufferLayout;
+  // const bufferLayout = window.bufferLayout;
   // const shaderLayout = {
   //   attributes: [{
   //     name: 'instancePositions', location: 2, stepMode: 'instance' as const, type: 'vec3<f32>' as ShaderAttributeType
@@ -123,7 +129,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // }
   //
 
-  // const cube = new CubeGeometry();
+  const cube = new CubeGeometry();
   //
   const _attributes = {
     POSITION: attributes.POSITION.buffer
@@ -143,9 +149,10 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       parameters: parsedMaterial.parameters,
       vs: addVersionToShader(device, vs),
       fs: addVersionToShader(device, fs),
-      attributes: _attributes,
-      indexBuffer,
-      // geometry: cube,
+      // attributes: _attributes,
+      // attributes: {POSITION: attributes.POSITION, NORMAL: attributes.NORMAL},
+      // indexBuffer,
+      geometry: cube,
       bindings: parsedMaterial.bindings,
       uniforms: parsedMaterial.uniforms,
       // bufferLayout,
