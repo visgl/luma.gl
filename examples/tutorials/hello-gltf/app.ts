@@ -1,7 +1,7 @@
-import {Device} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {Device} from '@luma.gl/core/index';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine/index';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createGLTFObjects} from '@luma.gl/gltf/index';
 
 const INFO_HTML = `
@@ -35,8 +35,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   async loadGLTF(device: Device) {
     const gltf = await load('box.glb', GLTFLoader);
+    const processedGLTF = postProcessGLTF(gltf);
+
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
-    const {scenes} = createGLTFObjects(device, gltf, options);
+    const {scenes} = createGLTFObjects(device, processedGLTF, options);
 
     // TODO actually traverse scenegraph, it's no wonder nothing is displayed
     // @ts-ignore
