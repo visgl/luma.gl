@@ -13,6 +13,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model: Model;
+  time: number = 0;
 
   constructor({device}: AnimationProps) {
     super();
@@ -28,9 +29,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!this.model) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-
-    const eyePosition = [2, 5, 3];
-    const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
+    this.time += 0.001;
+    const eye = [3 * Math.sin(this.time), 2, 3 * Math.cos(this.time)];
+    const viewMatrix = new Matrix4().lookAt({eye});
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
 
     const u_MVPMatrix = projectionMatrix.multiplyRight(viewMatrix);
