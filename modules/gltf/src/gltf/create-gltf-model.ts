@@ -47,9 +47,8 @@ const vs = `
     #endif
 
     // pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
-    // gl_Position = u_MVPMatrix * POSITION;
-    gl_Position = positions;
-    gl_Position.xy *= 0.25;
+     gl_Position = u_MVPMatrix * positions;
+    // gl_Position = positions;
   }
 `;
 

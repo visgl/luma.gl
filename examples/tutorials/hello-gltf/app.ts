@@ -3,6 +3,7 @@ import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine/inde
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createGLTFObjects} from '@luma.gl/gltf/index';
+import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
 Have to start somewhere...
@@ -28,7 +29,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
 
-    // const uProjection = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
+    const eyePosition = [2, 5, 3];
+    const viewMatrix = new Matrix4().lookAt({eye: eyePosition});
+    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 2, aspect: 1, near: 0.1, far: 9000});
+
+    const u_MVPMatrix = projectionMatrix.multiplyRight(viewMatrix);
+
+    this.model.setUniforms({u_MVPMatrix: projectionMatrix})
     this.model.draw(renderPass);
     renderPass.end();
   }
