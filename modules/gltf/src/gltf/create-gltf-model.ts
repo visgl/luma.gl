@@ -46,7 +46,7 @@ const vs = `
       _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
-    // pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
      gl_Position = u_MVPMatrix * positions;
     // gl_Position = positions;
   }
@@ -61,8 +61,10 @@ const fs = `
 #endif
 
   void main(void) {
-    // fragmentColor = pbr_filterColor(vec4(0));
-    fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
+    vec3 pos = pbr_vPosition;
+    fragmentColor = pbr_filterColor(vec4(1.0));
+    // fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
+    fragmentColor = vec4(pos, 1.0);
   }
 `;
 
