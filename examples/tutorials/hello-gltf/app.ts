@@ -37,8 +37,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const u_MVPMatrix = projectionMatrix.multiplyRight(viewMatrix);
     const u_ModelMatrix = new Matrix4();
     const u_NormalMatrix = new Matrix4();
+    const u_Camera = eye;
 
-    this.model.setUniforms({u_MVPMatrix, u_ModelMatrix, u_NormalMatrix})
+    this.model.setUniforms({
+      u_Camera, 
+      u_MVPMatrix, u_ModelMatrix, u_NormalMatrix,
+      u_ScaleDiffBaseMR: [0, 0, 0, 0],
+      u_ScaleFGDSpec: [0, 0, 0, 0]
+    })
     this.model.draw(renderPass);
     renderPass.end();
   }
@@ -50,9 +56,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
     const {scenes} = createGLTFObjects(device, processedGLTF, options);
 
-    // TODO actually traverse scenegraph, it's no wonder nothing is displayed
     // @ts-ignore
     const {model} = scenes[0].children[0].children[0].children[0].children[0];
     this.model = model;
+
+    // Apply lighting
+    this.model.updateModuleSettings({
+      lightSources: {directionalLights: [
+        {
+          color: [255, 255, 255],
+          direction: [0.0, 0.5, 0.5],
+          intensity: 10.0
+        }
+      ]
+      }
+    });
   }
 }

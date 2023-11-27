@@ -64,7 +64,7 @@ const fs = `
     vec3 pos = pbr_vPosition;
     fragmentColor = pbr_filterColor(vec4(1.0));
     // fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
-    fragmentColor = vec4(pos, 1.0);
+    // fragmentColor = vec4(pos, 1.0);
   }
 `;
 
