@@ -29,7 +29,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-    const eye = [2 * Math.sin(0.001 * time), 1, 2 * Math.cos(0.001 * time)];
+    const eye = [0.1 * Math.sin(0.001 * time), 0.1, 0.1 * Math.cos(0.001 * time)];
     const viewMatrix = new Matrix4().lookAt({eye});
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
 
@@ -65,7 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(device: Device) {
-    const gltf = await load('box.glb', GLTFLoader);
+    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };

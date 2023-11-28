@@ -21,11 +21,13 @@ const vs = `
   #endif
 
   #ifdef HAS_TANGENTS
-    _attr vec4 TANGENT;
+    _attr vec4 tangents;
+    // _attr vec4 TANGENT;
   #endif
 
   #ifdef HAS_UV
-    _attr vec2 TEXCOORD_0;
+    _attr vec2 texCoords;
+    // _attr vec2 TEXCOORD_0;
   #endif
 
   void main(void) {
@@ -39,11 +41,13 @@ const vs = `
     #endif
 
     #ifdef HAS_TANGENTS
-      _TANGENT = TANGENT;
+      _TANGENT = tangents;
+      // _TANGENT = TANGENT;
     #endif
 
     #ifdef HAS_UV
-      _TEXCOORD_0 = TEXCOORD_0;
+      _TEXCOORD_0 = texCoords;
+      // _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
