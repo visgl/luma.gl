@@ -1,6 +1,6 @@
-import {BufferLayout, Device, PrimitiveTopology, log} from '@luma.gl/core';
+import {BufferLayout, CullMode, Device, PrimitiveTopology, RenderPipelineParameters, TypedArray, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
-import {CubeGeometry, Model, ModelNode} from '@luma.gl/engine';
+import {CubeGeometry, Geometry, Model, ModelNode} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 // import {parseGLTFMaterial} from './gltf-material-parser';
 
@@ -73,6 +73,7 @@ export type CreateGLTFModelOptions = {
   topology?: PrimitiveTopology;
   vertexCount?: number;
   attributes?: Record<string, any>;
+  indices?: TypedArray;
   material: any;
   materialOptions: ParsePBRMaterialOptions;
   modelOptions?: Record<string, any>;
@@ -107,7 +108,7 @@ export type CreateGLTFModelOptions = {
 
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, attributes, material, topology, vertexCount, materialOptions, modelOptions} = options;
+  const {id, indices, attributes, material, topology, vertexCount, materialOptions, modelOptions} = options;
 
   const parsedMaterial = parsePBRMaterial(device, material, attributes, materialOptions);
 
@@ -118,7 +119,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // not deallocate resources/textures/buffers that are shared
   const managedResources = [];
   // managedResources.push(...parsedMaterial.generatedTextures);
-  managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
+  // managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
   // @ts-ignore
   // const bufferLayout = window.bufferLayout;
@@ -130,39 +131,67 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // }
   //
 
-  const cube = new CubeGeometry();
-  //
-  const _attributes = {
-    POSITION: attributes.POSITION.buffer
+  const cube = new CubeGeometry(); // HACK in for now
+
+  const parameters: RenderPipelineParameters = {
+    // Enable depth testing so that the fragment closest to the camera
+    // is rendered in front.
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+    depthFormat: 'depth24plus',
+
+    // Backface culling since the cube is solid piece of geometry.
+    // Faces pointing away from the camera will be occluded by faces
+    // pointing toward the camera.
+    cullMode: 'back'
   }
 
-  const indexBuffer = attributes.indices.buffer;
-  indexBuffer.glTarget = 34963;
-
-  const model = new ModelNode({
-    managedResources,
-    model: new Model(device, {
-      id,
-      topology,
-      vertexCount,
-      modules: [pbr],
-      defines: parsedMaterial.defines,
-      parameters: parsedMaterial.parameters,
-      vs: addVersionToShader(device, vs),
-      fs: addVersionToShader(device, fs),
-      // attributes: _attributes,
-      // attributes: {POSITION: attributes.POSITION, NORMAL: attributes.NORMAL},
-      // indexBuffer,
-      geometry: cube,
-      bindings: parsedMaterial.bindings,
-      uniforms: parsedMaterial.uniforms,
-      // bufferLayout,
-      // shaderLayout,
-      ...modelOptions
-    })
+  const modelProps = {
+    id,
+    topology,
+    vertexCount,
+    modules: [pbr],
+    defines: parsedMaterial.defines,
+    // parameters: parsedMaterial.parameters,
+    parameters, // TODO use/merge parsedMaterial
+    vs: addVersionToShader(device, vs),
+    fs: addVersionToShader(device, fs),
+    // attributes: {POSITION: attributes.POSITION, NORMAL: attributes.NORMAL},
+    // indexBuffer,
+    bindings: parsedMaterial.bindings,
+    uniforms: parsedMaterial.uniforms,
+    ...modelOptions
+  }
+  const model = new Model(device, {
+    ...modelProps,
+    geometry: cube,
   });
 
-  return model;
+  const _attributes = {}
+  Object.keys(attributes).forEach(attributeName => {
+    const {components: size, value} = attributes[attributeName];
+    _attributes[attributeName] = {size, value};
+  });
+
+  const geometry = new Geometry({
+    id: 'test',
+    topology,
+    indices,
+    attributes: _attributes
+  });
+
+  const model2 = new Model(device, {
+    ...modelProps,
+    geometry
+    // attributes,
+    // bufferLayout: [
+    //   {name: 'positions', format: 'float32x3'},
+    //   {name: 'normals', format: 'float32x3'},
+    //   {name: 'texCoords', format: 'float32x3'}
+    // ]
+  });
+
+  return new ModelNode({ managedResources, model: model2 });
 }
 
 function addVersionToShader(device: Device, source: string): string {

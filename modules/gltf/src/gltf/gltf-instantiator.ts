@@ -138,7 +138,9 @@ export class GLTFInstantiator {
       id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
       topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
       vertexCount,
-      attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+      // attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
+      attributes: gltfPrimitive.attributes,
+      indices: gltfPrimitive.indices.value,
       material: gltfPrimitive.material,
       materialOptions: this.options,
       modelOptions: this.options.modelOptions
