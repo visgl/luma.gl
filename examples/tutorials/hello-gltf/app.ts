@@ -9,6 +9,12 @@ const INFO_HTML = `
 Have to start somewhere...
 `;
 
+const lightSources = {
+  ambientLight: { color: [255, 133, 133], intensity: 1 },
+  directionalLights: [ { color: [222, 244, 255], direction: [1, -0.5, 0.5], intensity: 10 } ],
+  pointLights: [ { color: [255, 222, 222], position: [3, 10, 0], attenuation: [0, 0, 0.01], intensity: 5 } ]
+}
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
@@ -30,11 +36,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
-
     let vantage = [0.05, 0.05, 0.05];
-    const eye = [
-      vantage[0] * Math.sin(0.001 * time), vantage[1], vantage[2] * Math.cos(0.001 * time)
-    ];
+    const eye = [vantage[0] * Math.sin(0.001 * time), vantage[1], vantage[2] * Math.cos(0.001 * time)];
     const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0.7 * vantage[1], 0]});
 
     this.scenes[0].traverse((node, {worldMatrix}) => {
@@ -44,22 +47,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         u_Camera: eye,
         u_MVPMatrix,
         u_ModelMatrix: worldMatrix,
-        u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
-        u_ScaleDiffBaseMR: [0, 0, 0, 0], // set y, z or w to 1 for PBR debug views (requires pbrDebug=true)
+        u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
       })
 
-      // Apply lighting
-      model.updateModuleSettings({
-        lightSources: {
-          ambientLight: { color: [255, 255, 255], intensity: 1.0 },
-          directionalLights: [
-            { color: [255, 255, 255], direction: [0.0, 0.5, 0.5], intensity: 10.0 }
-          ],
-          pointLights: [
-            { color: [255, 255, 255], position: [3.0, 10.0, 0.0], attenuation: [0, 0, 0.01], intensity: 10.0 }
-          ],
-        }
-      });
+      model.updateModuleSettings({lightSources});
 
       model.draw(renderPass);
     });
