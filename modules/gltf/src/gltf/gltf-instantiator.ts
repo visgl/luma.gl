@@ -1,5 +1,5 @@
 import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
-import {GroupNode, ModelNode} from '@luma.gl/engine';
+import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
 import {WebGLDevice, Accessor} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
@@ -130,20 +130,19 @@ export class GLTFInstantiator {
   }
 
   createPrimitive(gltfPrimitive: any, i: number, gltfMesh): ModelNode {
+    const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
+    const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
     const vertexCount = gltfPrimitive.indices
       ? gltfPrimitive.indices.count
       : this.getVertexCount(gltfPrimitive.attributes);
 
     const modelNode = createGLTFModel(this.device, {
-      id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-      topology: convertGLDrawModeToTopology(gltfPrimitive.mode || 4),
-      vertexCount,
-      // attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-      attributes: gltfPrimitive.attributes,
-      indices: gltfPrimitive.indices.value,
+      id,
+      geometry: this.createGeometry(id, gltfPrimitive, topology), 
       material: gltfPrimitive.material,
       materialOptions: this.options,
-      modelOptions: this.options.modelOptions
+      modelOptions: this.options.modelOptions,
+      vertexCount
     });
 
     modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
@@ -157,23 +156,19 @@ export class GLTFInstantiator {
     throw new Error('getVertexCount not implemented');
   }
 
-  createAttributes(attributes, indices) {
-    const loadedAttributes = {};
+  createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
+    const attributes = {}
+    Object.keys(gltfPrimitive.attributes).forEach(attributeName => {
+      const {components: size, value} = gltfPrimitive.attributes[attributeName];
+      attributes[attributeName] = {size, value};
+    });
 
-    for (const [attrName, attribute] of Object.entries(attributes)) {
-      const buffer = this.createBuffer(attribute, Buffer.VERTEX);
-      loadedAttributes[attrName] = this.createAccessor(attribute, buffer);
-    }
-
-    if (indices) {
-      const buffer = this.createBuffer(indices, Buffer.INDEX)
-      // @ts-expect-error
-      loadedAttributes.indices = this.createAccessor(indices, buffer);
-    }
-
-    log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
-
-    return loadedAttributes;
+    return new Geometry({
+      id,
+      topology,
+      indices: gltfPrimitive.indices.value,
+      attributes
+    });
   }
 
   createBuffer(attribute, usage: number): Buffer {
@@ -196,16 +191,6 @@ export class GLTFInstantiator {
     }
 
     return bufferView.lumaBuffers[usage];
-  }
-
-  createAccessor(accessor, buffer) {
-    return new Accessor({
-      buffer,
-      offset: accessor.byteOffset || 0,
-      stride: accessor.bufferView.byteStride || 0,
-      type: accessor.componentType,
-      size: ATTRIBUTE_TYPE_TO_COMPONENTS[accessor.type]
-    });
   }
 
   // TODO - create sampler in WebGL2

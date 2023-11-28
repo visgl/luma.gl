@@ -70,48 +70,17 @@ const fs = `
 
 export type CreateGLTFModelOptions = {
   id?: string;
-  topology?: PrimitiveTopology;
   vertexCount?: number;
-  attributes?: Record<string, any>;
-  indices?: TypedArray;
+  geometry: Geometry;
   material: any;
   materialOptions: ParsePBRMaterialOptions;
   modelOptions?: Record<string, any>;
 };
 
-// function normalizeGeometryAttributes(attributes) {
-// 	const positionAttribute = attributes.positions || attributes.POSITION;
-// 	log.assert(positionAttribute, 'no "postions" or "POSITION" attribute in mesh');
-// 
-// 	// const vertexCount = positionAttribute.value.length / positionAttribute.size;
-// 	const vertexCount = positionAttribute.buffer.byteLength / positionAttribute.BYTES_PER_VERTEX;
-// 	let colorAttribute = attributes.COLOR_0 || attributes.colors;
-// 	if (!colorAttribute) {
-// 		colorAttribute = {size: 3, value: new Float32Array(vertexCount * 3).fill(1)};
-// 	}
-// 	let normalAttribute = attributes.NORMAL || attributes.normals;
-// 	if (!normalAttribute) {
-// 		normalAttribute = {size: 3, value: new Float32Array(vertexCount * 3).fill(0)};
-// 	}
-// 	let texCoordAttribute = attributes.TEXCOORD_0 || attributes.texCoords;
-// 	if (!texCoordAttribute) {
-// 		texCoordAttribute = {size: 2, value: new Float32Array(vertexCount * 2).fill(0)};
-// 	}
-// 
-// 	return {
-// 		positions: positionAttribute,
-// 		colors: colorAttribute,
-// 		normals: normalAttribute,
-// 		texCoords: texCoordAttribute
-// 	};
-// }
-
-
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, indices, attributes, material, topology, vertexCount, materialOptions, modelOptions} = options;
+  const {id, geometry, material, vertexCount, materialOptions, modelOptions} = options;
 
-  const parsedMaterial = parsePBRMaterial(device, material, attributes, materialOptions);
-
+  const parsedMaterial = parsePBRMaterial(device, material, geometry.attributes, materialOptions);
   log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();
 
   // Calculate managedResources
@@ -121,34 +90,17 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // managedResources.push(...parsedMaterial.generatedTextures);
   // managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
-  // @ts-ignore
-  // const bufferLayout = window.bufferLayout;
-  // const shaderLayout = {
-  //   attributes: [{
-  //     name: 'instancePositions', location: 2, stepMode: 'instance' as const, type: 'vec3<f32>' as ShaderAttributeType
-  //   }],
-  //   bindings: []
-  // }
-  //
-
-  const cube = new CubeGeometry(); // HACK in for now
-
   const parameters: RenderPipelineParameters = {
-    // Enable depth testing so that the fragment closest to the camera
-    // is rendered in front.
     depthWriteEnabled: true,
     depthCompare: 'less',
     depthFormat: 'depth24plus',
-
-    // Backface culling since the cube is solid piece of geometry.
-    // Faces pointing away from the camera will be occluded by faces
-    // pointing toward the camera.
     cullMode: 'back'
   }
 
   const modelProps = {
     id,
-    topology,
+    geometry,
+    topology: geometry.topology,
     vertexCount,
     modules: [pbr],
     defines: parsedMaterial.defines,
@@ -156,42 +108,13 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     parameters, // TODO use/merge parsedMaterial
     vs: addVersionToShader(device, vs),
     fs: addVersionToShader(device, fs),
-    // attributes: {POSITION: attributes.POSITION, NORMAL: attributes.NORMAL},
-    // indexBuffer,
     bindings: parsedMaterial.bindings,
     uniforms: parsedMaterial.uniforms,
     ...modelOptions
   }
-  const model = new Model(device, {
-    ...modelProps,
-    geometry: cube,
-  });
 
-  const _attributes = {}
-  Object.keys(attributes).forEach(attributeName => {
-    const {components: size, value} = attributes[attributeName];
-    _attributes[attributeName] = {size, value};
-  });
-
-  const geometry = new Geometry({
-    id: 'test',
-    topology,
-    indices,
-    attributes: _attributes
-  });
-
-  const model2 = new Model(device, {
-    ...modelProps,
-    geometry
-    // attributes,
-    // bufferLayout: [
-    //   {name: 'positions', format: 'float32x3'},
-    //   {name: 'normals', format: 'float32x3'},
-    //   {name: 'texCoords', format: 'float32x3'}
-    // ]
-  });
-
-  return new ModelNode({ managedResources, model: model2 });
+  const model = new Model(device, modelProps);
+  return new ModelNode({ managedResources, model});
 }
 
 function addVersionToShader(device: Device, source: string): string {
