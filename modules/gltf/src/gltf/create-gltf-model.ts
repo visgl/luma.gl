@@ -1,8 +1,7 @@
-import {BufferLayout, CullMode, Device, PrimitiveTopology, RenderPipelineParameters, TypedArray, log} from '@luma.gl/core';
+import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
-import {CubeGeometry, Geometry, Model, ModelNode} from '@luma.gl/engine';
+import {Geometry, Model, ModelNode} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
-// import {parseGLTFMaterial} from './gltf-material-parser';
 
 const vs = `
 #pragma vscode_glsllint_stage: vert
@@ -44,8 +43,7 @@ const vs = `
     #endif
 
     pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
-     gl_Position = u_MVPMatrix * POSITION;
-    // gl_Position = POSITION;
+    gl_Position = u_MVPMatrix * POSITION;
   }
 `;
 
@@ -60,8 +58,6 @@ const fs = `
   void main(void) {
     vec3 pos = pbr_vPosition;
     fragmentColor = pbr_filterColor(vec4(1.0));
-    // fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
-    // fragmentColor = vec4(pos, 1.0);
   }
 `;
 
@@ -110,7 +106,6 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     ...modelOptions
   }
 
-  // debugger;
   const model = new Model(device, modelProps);
   return new ModelNode({ managedResources, model});
 }
