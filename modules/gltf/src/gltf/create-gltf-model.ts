@@ -12,22 +12,18 @@ const vs = `
   #define _attr in
 #endif
 
-  _attr vec4 positions;
-  // _attr vec4 POSITION;
+  _attr vec4 POSITION;
 
   #ifdef HAS_NORMALS
-    _attr vec4 normals;
-    // _attr vec4 NORMAL;
+    _attr vec4 NORMAL;
   #endif
 
   #ifdef HAS_TANGENTS
-    _attr vec4 tangents;
-    // _attr vec4 TANGENT;
+    _attr vec4 TANGENT;
   #endif
 
   #ifdef HAS_UV
-    _attr vec2 texCoords;
-    // _attr vec2 TEXCOORD_0;
+    _attr vec2 TEXCOORD_0;
   #endif
 
   void main(void) {
@@ -36,23 +32,20 @@ const vs = `
     vec2 _TEXCOORD_0 = vec2(0.);
 
     #ifdef HAS_NORMALS
-      _NORMAL = normals;
-      // _NORMAL = NORMAL;
+      _NORMAL = NORMAL;
     #endif
 
     #ifdef HAS_TANGENTS
-      _TANGENT = tangents;
-      // _TANGENT = TANGENT;
+      _TANGENT = TANGENT;
     #endif
 
     #ifdef HAS_UV
-      _TEXCOORD_0 = texCoords;
-      // _TEXCOORD_0 = TEXCOORD_0;
+      _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
-    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-     gl_Position = u_MVPMatrix * positions;
-    // gl_Position = positions;
+    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+     gl_Position = u_MVPMatrix * POSITION;
+    // gl_Position = POSITION;
   }
 `;
 
@@ -117,6 +110,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     ...modelOptions
   }
 
+  // debugger;
   const model = new Model(device, modelProps);
   return new ModelNode({ managedResources, model});
 }
