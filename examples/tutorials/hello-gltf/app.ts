@@ -19,6 +19,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   scenes = [];
+  center = [0, 0, 0];
+  vantage = [0, 0, 0];
   time: number = 0;
 
   constructor({device}: AnimationProps) {
@@ -36,9 +38,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
-    let vantage = [0.05, 0.05, 0.05];
-    const eye = [vantage[0] * Math.sin(0.001 * time), vantage[1], vantage[2] * Math.cos(0.001 * time)];
-    const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0.7 * vantage[1], 0]});
+
+    const eye = [this.vantage[0] * Math.sin(0.001 * time), this.vantage[1], this.vantage[2] * Math.cos(0.001 * time)];
+    const viewMatrix = new Matrix4().lookAt({eye, center: this.center});
 
     this.scenes[0].traverse((node, {worldMatrix}) => {
       const {model} = node;
@@ -58,14 +60,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(device: Device) {
-    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
-    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf', GLTFLoader);
-    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Corset/glTF/Corset.gltf', GLTFLoader);
+    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
+    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/BoomBox/glTF/BoomBox.gltf', GLTFLoader);
+    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Corset/glTF/Corset.gltf', GLTFLoader);
     // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/FlightHelmet/glTF/FlightHelmet.gltf', GLTFLoader);
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
     const {scenes} = createGLTFObjects(device, processedGLTF, options);
     this.scenes = scenes;
+
+    // Calculate nice camera view
+    let min = [Infinity, Infinity, Infinity];
+    let max = [0, 0, 0];
+    scenes[0].traverse(({bounds}) => {
+      min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
+      max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
+    });
+    this.vantage = [3 * max[0], max[1], 3 * max[2]];
+    this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
   }
 }
