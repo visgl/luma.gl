@@ -25,24 +25,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.scenes[0].traverse(({model}) => model.destroy());
   }
 
-  onRender({device}: AnimationProps): void {
+  onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-    this.time += 0.01;
-    const eye = [3 * Math.sin(this.time), 2, 3 * Math.cos(this.time)];
+    const eye = [2 * Math.sin(0.001 * time), 1, 2 * Math.cos(0.001 * time)];
     const viewMatrix = new Matrix4().lookAt({eye});
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect: 1, near: 0.1, far: 9000});
+    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
 
-    const u_MVPMatrix = projectionMatrix.multiplyRight(viewMatrix);
-    const u_ModelMatrix = new Matrix4();
-    const u_NormalMatrix = new Matrix4();
     const u_Camera = eye;
 
     this.scenes[0].traverse(({model}, {worldMatrix}) => {
+      const u_MVPMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix).multiplyRight(worldMatrix);
       model.setUniforms({
         u_Camera,
-        u_MVPMatrix, u_ModelMatrix, u_NormalMatrix,
+        u_MVPMatrix,
+        u_ModelMatrix: worldMatrix,
+        u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
         u_ScaleDiffBaseMR: [0, 0, 0, 0],
         u_ScaleFGDSpec: [0, 0, 0, 0]
       })
@@ -71,10 +70,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
     const {scenes} = createGLTFObjects(device, processedGLTF, options);
-
-    // @ts-ignore
-    const {model} = scenes[0].children[0].children[0].children[0].children[0];
     this.scenes = scenes;
-
   }
 }
