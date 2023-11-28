@@ -2,12 +2,20 @@
 <head>
   <style>
     body {
+      background: black;
       margin: 0;
     }
 
     canvas {
       height: 100% !important;
       width: 100% !important;
+      transition: opacity 1s ease-in-out;
+    }
+
+    #model-select {
+      position: absolute;
+      left: 10px;
+      top: 10px;
     }
   </style>
 </head>
@@ -26,5 +34,14 @@
   makeAnimationLoop(AnimationLoopTemplate, {device}).start();
 </script>
 <body>
-
+  <!-- Some test models from https://github.khronos.org/glTF-Sample-Viewer-Release -->
+  <select id="model-select">
+    <option value="Avocado">Avocado</option>
+    <option value="BoomBox">BoomBox</option>
+    <option value="Corset">Corset</option>
+    <option value="FlightHelmet">FlightHelmet</option>
+    <option value="GlassBrokenWindow">GlassBrokenWindow</option>
+    <option value="StainedGlassLamp">StainedGlassLamp</option>
+    <option value="WaterBottle">WaterBottle</option>
+  </select>
 </body>

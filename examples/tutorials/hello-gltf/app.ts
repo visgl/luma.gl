@@ -1,6 +1,5 @@
-import {Device} from '@luma.gl/core/index';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine/index';
-import {load} from '@loaders.gl/core';
+import {Device, load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createGLTFObjects} from '@luma.gl/gltf/index';
 import {Matrix4} from '@math.gl/core';
@@ -18,6 +17,7 @@ const lightSources = {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
+  device: Device;
   scenes = [];
   center = [0, 0, 0];
   vantage = [0, 0, 0];
@@ -25,8 +25,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device}: AnimationProps) {
     super();
-
-    this.loadGLTF(device);
+    this.device = device;
+    this.loadGLTF('Avocado');
+    const modelSelector = document.getElementById('model-select')
+    
+    modelSelector.addEventListener('change', e => {
+      this.loadGLTF((e.target as HTMLSelectElement).value);
+    });
   }
 
   onFinalize() {
@@ -38,7 +43,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
-
     const eye = [this.vantage[0] * Math.sin(0.001 * time), this.vantage[1], this.vantage[2] * Math.cos(0.001 * time)];
     const viewMatrix = new Matrix4().lookAt({eye, center: this.center});
 
@@ -53,21 +57,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
 
       model.updateModuleSettings({lightSources});
-
       model.draw(renderPass);
     });
     renderPass.end();
   }
 
-  async loadGLTF(device: Device) {
-    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
-    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/BoomBox/glTF/BoomBox.gltf', GLTFLoader);
-    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Corset/glTF/Corset.gltf', GLTFLoader);
-    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/FlightHelmet/glTF/FlightHelmet.gltf', GLTFLoader);
+  async loadGLTF(modelName: string) {
+    const {canvas} = this.device.canvasContext;
+    canvas.style.opacity = 0.1;
+
+    const gltf = await load(`https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/${modelName}/glTF/${modelName}.gltf`, GLTFLoader);
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
-    const {scenes} = createGLTFObjects(device, processedGLTF, options);
+    const {scenes} = createGLTFObjects(this.device, processedGLTF, options);
     this.scenes = scenes;
 
     // Calculate nice camera view
@@ -77,7 +80,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
       max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
     });
-    this.vantage = [3 * max[0], max[1], 3 * max[2]];
+    this.vantage = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
     this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+
+    canvas.style.opacity = 1;
   }
 }
