@@ -29,21 +29,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-    const eye = [0.1 * Math.sin(0.001 * time), 0.1, 0.1 * Math.cos(0.001 * time)];
-    const viewMatrix = new Matrix4().lookAt({eye});
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
 
-    const u_Camera = eye;
+    let vantage = [0.05, 0.05, 0.05];
+    const eye = [
+      vantage[0] * Math.sin(0.001 * time), vantage[1], vantage[2] * Math.cos(0.001 * time)
+    ];
+    const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0.7 * vantage[1], 0]});
 
-    this.scenes[0].traverse(({model}, {worldMatrix}) => {
+    this.scenes[0].traverse((node, {worldMatrix}) => {
+      const {model} = node;
       const u_MVPMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix).multiplyRight(worldMatrix);
       model.setUniforms({
-        u_Camera,
+        u_Camera: eye,
         u_MVPMatrix,
         u_ModelMatrix: worldMatrix,
         u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose(),
-        u_ScaleDiffBaseMR: [0, 0, 0, 0],
-        u_ScaleFGDSpec: [0, 0, 0, 0]
+        u_ScaleDiffBaseMR: [0, 0, 0, 0], // set y, z or w to 1 for PBR debug views (requires pbrDebug=true)
       })
 
       // Apply lighting
@@ -65,7 +67,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(device: Device) {
-    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
+    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Avocado/glTF/Avocado.gltf', GLTFLoader);
+    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf', GLTFLoader);
+    const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/Corset/glTF/Corset.gltf', GLTFLoader);
+    // const gltf = await load('https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/FlightHelmet/glTF/FlightHelmet.gltf', GLTFLoader);
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
