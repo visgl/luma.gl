@@ -13,7 +13,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   scenes = [];
-  model: Model;
   time: number = 0;
 
   constructor({device}: AnimationProps) {
@@ -23,11 +22,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
-    this.model.destroy();
+    this.scenes[0].traverse(({model}) => model.destroy());
   }
 
   onRender({device}: AnimationProps): void {
-    if (!this.model) return;
+    if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
     this.time += 0.01;
@@ -47,6 +46,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         u_ScaleDiffBaseMR: [0, 0, 0, 0],
         u_ScaleFGDSpec: [0, 0, 0, 0]
       })
+
+      // Apply lighting
+      model.updateModuleSettings({
+        lightSources: {
+          ambientLight: { color: [255, 255, 255], intensity: 1.0 },
+          directionalLights: [
+            { color: [255, 255, 255], direction: [0.0, 0.5, 0.5], intensity: 10.0 }
+          ],
+          pointLights: [
+            { color: [255, 255, 255], position: [3.0, 10.0, 0.0], attenuation: [0, 0, 0.01], intensity: 10.0 }
+          ],
+        }
+      });
+
       model.draw(renderPass);
     });
     renderPass.end();
@@ -61,20 +74,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // @ts-ignore
     const {model} = scenes[0].children[0].children[0].children[0].children[0];
-    this.model = model;
     this.scenes = scenes;
 
-    // Apply lighting
-    this.model.updateModuleSettings({
-      lightSources: {
-        ambientLight: { color: [255, 255, 255], intensity: 1.0 },
-        directionalLights: [ 
-          { color: [255, 255, 255], direction: [0.0, 0.5, 0.5], intensity: 10.0 }
-        ],
-        pointLights: [
-          { color: [255, 255, 255], position: [3.0, 10.0, 0.0], attenuation: [0, 0, 0.01], intensity: 10.0 }
-        ],
-      }
-    });
   }
 }
