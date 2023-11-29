@@ -44,8 +44,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   /** WebGL varyings */
   varyings: string[] | null = null;
 
-  _textureUniforms: Record<string, any> = {};
-  _textureIndexCounter: number = 0;
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function> = {}; // TODO are these used?
 
@@ -348,13 +346,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   _areTexturesRenderable() {
     let texturesRenderable = true;
 
-    for (const [, texture] of Object.entries(this._textureUniforms)) {
-      texture.update();
-      texturesRenderable = texturesRenderable && texture.loaded;
-    }
-
     for (const [, texture] of Object.entries(this.bindings)) {
-      // texture.update();
+      if (texture instanceof WEBGLTexture) {
+        texture.update();
+      }
       // @ts-expect-error
       if (texture.loaded !== undefined) {
         // @ts-expect-error
