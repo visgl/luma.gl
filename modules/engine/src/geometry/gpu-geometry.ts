@@ -107,6 +107,12 @@ export function getAttributeBuffersFromGeometry(
   const attributes: Record<string, Buffer> = {};
   for (const [attributeName, attribute] of Object.entries(geometry.attributes)) {
     let name: string = attributeName;
+    // TODO Map some GLTF attribute names (is this still needed?)
+    switch (attributeName) {
+      case 'POSITION': name = 'positions'; break;
+      case 'NORMAL': name = 'normals'; break;
+      case 'TEXCOORD_0': name = 'texCoords'; break;
+    }
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
     bufferLayout.push({name, format: `float32x${attribute.size as 2 | 3 | 4}`});
   }

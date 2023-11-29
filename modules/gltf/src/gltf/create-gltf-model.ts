@@ -3,6 +3,8 @@ import {pbr} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 
+// TODO rename attributes to POSITION/NORMAL etc
+// See gpu-geometry.ts: getAttributeBuffersFromGeometry()
 const vs = `
 #pragma vscode_glsllint_stage: vert
 #if (__VERSION__ < 300)
@@ -11,10 +13,12 @@ const vs = `
   #define _attr in
 #endif
 
-  _attr vec4 POSITION;
+  // _attr vec4 POSITION;
+  _attr vec4 positions;
 
   #ifdef HAS_NORMALS
-    _attr vec4 NORMAL;
+    // _attr vec4 NORMAL;
+    _attr vec4 normals;
   #endif
 
   #ifdef HAS_TANGENTS
@@ -22,7 +26,8 @@ const vs = `
   #endif
 
   #ifdef HAS_UV
-    _attr vec2 TEXCOORD_0;
+    // _attr vec2 TEXCOORD_0;
+    _attr vec2 texCoords;
   #endif
 
   void main(void) {
@@ -31,7 +36,7 @@ const vs = `
     vec2 _TEXCOORD_0 = vec2(0.);
 
     #ifdef HAS_NORMALS
-      _NORMAL = NORMAL;
+      _NORMAL = normals;
     #endif
 
     #ifdef HAS_TANGENTS
@@ -39,11 +44,11 @@ const vs = `
     #endif
 
     #ifdef HAS_UV
-      _TEXCOORD_0 = TEXCOORD_0;
+      _TEXCOORD_0 = texCoords;
     #endif
 
-    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * POSITION;
+    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = u_MVPMatrix * positions;
   }
 `;
 
