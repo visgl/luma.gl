@@ -1,5 +1,6 @@
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine/index';
-import {Device, load} from '@loaders.gl/core';
+import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine/index';
+import {Device} from '@luma.gl/core';
+import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf/index';
 import {Matrix4} from '@math.gl/core';
@@ -58,8 +59,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelName: string) {
-    const {canvas} = this.device.canvasContext;
-    canvas.style.opacity = 0.1;
+    const canvas = this.device.canvasContext.canvas as HTMLCanvasElement;
+    canvas.style.opacity = '0.1';
 
     const gltf = await load(`https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/${modelName}/glTF/${modelName}.gltf`, GLTFLoader);
     const processedGLTF = postProcessGLTF(gltf);
@@ -79,7 +80,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.vantage = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
     this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
 
-    canvas.style.opacity = 1;
+    canvas.style.opacity = '1';
   }
 }
 
