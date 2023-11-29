@@ -1,5 +1,17 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.43
+
+- feat(gltf): New module for glTF support (#1819)
+- Warning when passing unsupported value to setUniforms (#1845)
+- Export GPUGeometry (#1846)
+- fix(examples): Fix persistence example (uniform buffers) (#1842)
+- chore(shadertools): Reorganize shader modules (#1841)
+- chore: Standardize uniform buffer naming in examples (#1840)
+- feat(webgl): Unify shader block naming in JS (#1838)
+- chore(shadertools): Rename uniformPropTypes field (#1839)
+- feat(shadertools): WGSL ShaderLayout parser (#1837)
+
 ### v9.0.0-alpha.42
 
 - fix(engine): Handle TypedArrays when extracting bindings (#1836)
