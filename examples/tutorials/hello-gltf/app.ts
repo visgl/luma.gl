@@ -1,10 +1,11 @@
-import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine/index';
+import {AnimationLoopTemplate, AnimationProps, GroupNode} from '@luma.gl/engine/index';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf/index';
 import {Matrix4} from '@math.gl/core';
 import {LightingModuleProps} from 'modules/shadertools/dist';
+import {ModelNode} from 'modules/engine/dist';
 
 const INFO_HTML = `
 Have to start somewhere...
@@ -14,7 +15,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
-  scenes = [];
+  scenes: GroupNode[] = [];
   center = [0, 0, 0];
   vantage = [0, 0, 0];
   time: number = 0;
@@ -31,7 +32,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
-    this.scenes[0].traverse(({model}) => model.destroy());
+    this.scenes[0].traverse(node => (node as ModelNode).model.destroy());
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
@@ -43,7 +44,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const viewMatrix = new Matrix4().lookAt({eye, center: this.center});
 
     this.scenes[0].traverse((node, {worldMatrix}) => {
-      const {model} = node;
+      const {model} = (node as ModelNode);
       const u_MVPMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix).multiplyRight(worldMatrix);
       model.setUniforms({
         u_Camera: eye,
@@ -67,13 +68,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
     const {scenes} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
-    this.scenes = scenes;
+    this.scenes = scenes as GroupNode[];
 
     // Calculate nice camera view
     // TODO move to utility in gltf module
     let min = [Infinity, Infinity, Infinity];
     let max = [0, 0, 0];
-    scenes[0].traverse(({bounds}) => {
+    this.scenes[0].traverse(node => {
+      const {bounds} = (node as ModelNode);
       min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
       max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
     });
