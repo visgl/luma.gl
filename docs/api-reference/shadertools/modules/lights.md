@@ -8,7 +8,7 @@ No view dependent uniforms are includes so the resulting uniform block should be
 Actual lighting computations are done by the various material shader modules, such as:
 
 - `phongMaterial`
-- `goraudmaterial`
+- `gouraudmaterial`
 - `pbrMaterial`
 
 Different draw calls can use different material uniform buffers and/or different material modules.

@@ -5,10 +5,10 @@ import test from 'tape-promise/tape';
 import {gouraudMaterial} from '@luma.gl/shadertools';
 
 test('shadertools#gouraudMaterial', (t) => {
-  let uniforms = gouraudMaterial.getUniforms({});
+  let uniforms = gouraudMaterial.getUniforms?.({});
   t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
-  uniforms = gouraudMaterial.getUniforms({ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]});
+  uniforms = gouraudMaterial.getUniforms?.({ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]})!;
   // t.equal(
   //   uniforms.enabled,
   //   undefined,
@@ -25,7 +25,7 @@ test('shadertools#gouraudMaterial', (t) => {
 
   // t.equal(uniforms.enabled, false, 'Disable lighting without material');
 
-  uniforms = gouraudMaterial.getUniforms({});
+  uniforms = gouraudMaterial.getUniforms?.({})!;
   t.equal(uniforms.ambient, 0.35, 'ambient');
   t.equal(uniforms.diffuse, 0.6, 'diffuse');
   t.equal(uniforms.shininess, 32, 'shininess');
