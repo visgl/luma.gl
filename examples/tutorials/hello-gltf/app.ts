@@ -3,16 +3,11 @@ import {Device, load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createGLTFObjects} from '@luma.gl/gltf/index';
 import {Matrix4} from '@math.gl/core';
+import {LightingModuleProps} from 'modules/shadertools/dist';
 
 const INFO_HTML = `
 Have to start somewhere...
 `;
-
-const lightSources = {
-  ambientLight: { color: [255, 133, 133], intensity: 1 },
-  directionalLights: [ { color: [222, 244, 255], direction: [1, -0.5, 0.5], intensity: 10 } ],
-  pointLights: [ { color: [255, 222, 222], position: [3, 10, 0], attenuation: [0, 0, 0.01], intensity: 5 } ]
-}
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
@@ -74,6 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.scenes = scenes;
 
     // Calculate nice camera view
+    // TODO move to utility in gltf module
     let min = [Infinity, Infinity, Infinity];
     let max = [0, 0, 0];
     scenes[0].traverse(({bounds}) => {
@@ -85,4 +81,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     canvas.style.opacity = 1;
   }
+}
+
+const lightSources: LightingModuleProps = {
+  ambientLight: {
+    color: [255, 133, 133],
+    intensity: 1,
+    type: 'ambient'
+  },
+  directionalLights: [
+    {
+      color: [222, 244, 255],
+      direction: [1, -0.5, 0.5],
+      intensity: 10,
+      position: [0, 0, 0],
+      type: 'directional'
+    }
+  ],
+  pointLights: [
+    {
+      attenuation: 0,
+      color: [255, 222, 222],
+      position: [3, 10, 0],
+      intensity: 5,
+      type: 'point'
+    }
+  ]
 }
