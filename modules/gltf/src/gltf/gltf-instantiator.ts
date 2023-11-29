@@ -1,5 +1,6 @@
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
+import {GeometryAttribute} from '@luma.gl/engine/geometry/geometry';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
@@ -147,10 +148,10 @@ export class GLTFInstantiator {
 
   createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
     const attributes = {}
-    Object.keys(gltfPrimitive.attributes).forEach(attributeName => {
-      const {components: size, value} = gltfPrimitive.attributes[attributeName];
+    for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
+      const {components: size, value} = attribute as GeometryAttribute;
       attributes[attributeName] = {size, value};
-    });
+    };
 
     return new Geometry({
       id,
