@@ -349,9 +349,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     for (const [, texture] of Object.entries(this.bindings)) {
       if (texture instanceof WEBGLTexture) {
         texture.update();
-        if (texture.loaded !== undefined) {
-          texturesRenderable = texturesRenderable && texture.loaded;
-        }
+        texturesRenderable = texturesRenderable && texture.loaded;
       }
     }
 
