@@ -8,6 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@loaders.gl/gltf": "^4.0.4",
     "@luma.gl/engine": "9.0.0-alpha.42",
     "@luma.gl/webgl": "9.0.0-alpha.42",
     "@luma.gl/webgpu": "9.0.0-alpha.42"
