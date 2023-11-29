@@ -5,14 +5,14 @@
 // import {load} from '@loaders.gl/core';
 // import {GLTFLoader} from '@loaders.gl/gltf';
 // import {Texture} from '@luma.gl/core';
-// import {createGLTFObjects} from '@luma.gl/gltf';
+// import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 // import {loadPBREnvironment} from '../../dist/pbr/pbr-environment';
 // 
 // test.only('gltf#loading', async (t) => {
 //   // TODO - is gl argument used?
 //   const gltf = await load('test/data/box.glb', GLTFLoader);
 // 
-//   const result = createGLTFObjects(webgl1Device, gltf);
+//   const result = createScenegraphsFromGLTF(webgl1Device, gltf);
 // 
 //   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
 //   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');

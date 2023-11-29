@@ -1,7 +1,7 @@
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine/index';
 import {Device, load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createGLTFObjects} from '@luma.gl/gltf/index';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf/index';
 import {Matrix4} from '@math.gl/core';
 import {LightingModuleProps} from 'modules/shadertools/dist';
 
@@ -65,7 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = { pbrDebug: false, imageBasedLightingEnvironment: null, lights: true };
-    const {scenes} = createGLTFObjects(this.device, processedGLTF, options);
+    const {scenes} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
     this.scenes = scenes;
 
     // Calculate nice camera view

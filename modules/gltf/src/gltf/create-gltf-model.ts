@@ -1,6 +1,6 @@
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
-import {Geometry, Model, ModelNode} from '@luma.gl/engine';
+import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 
 const vs = `
@@ -90,7 +90,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     cullMode: 'back'
   }
 
-  const modelProps = {
+  const modelProps: ModelProps = {
     id,
     geometry,
     topology: geometry.topology,
