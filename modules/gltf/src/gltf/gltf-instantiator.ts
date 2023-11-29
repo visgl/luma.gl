@@ -1,6 +1,6 @@
-import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
-import {WebGLDevice, Accessor} from '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
 
 import {GLTFAnimator} from './gltf-animator';
@@ -21,17 +21,6 @@ const DEFAULT_OPTIONS = {
   imageBasedLightingEnvironment: null,
   lights: true,
   useTangents: false
-};
-
-// TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
-const ATTRIBUTE_TYPE_TO_COMPONENTS = {
-  SCALAR: 1,
-  VEC2: 2,
-  VEC3: 3,
-  VEC4: 4,
-  MAT2: 4,
-  MAT3: 9,
-  MAT4: 16
 };
 
 /**
