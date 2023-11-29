@@ -24,14 +24,54 @@ import './lib/shader-assembler.spec';
 
 // SHADER MODULE LIBRARY
 
+// General modules tests
+import './modules/modules.spec';
+
+// Math modules
+import './modules/utils/random.spec';
+
 // Lighting
-import './modules-ubo/lighting/dirlight.spec';
-// import './modules-ubo/lights/lights.spec';
-import './modules-ubo/lighting/phong-material.spec';
-import './modules-ubo/lighting/goraud-material.spec';
+import './modules/lighting/dirlight.spec';
+// import './modules/lights/lights.spec';
+import './modules/lighting/phong-material.spec';
+import './modules/lighting/goraud-material.spec';
 
 // Engine
-import './modules-ubo/engine/picking.spec';
+import './modules/engine/picking.spec';
+
+// Post-processing Modules (Shader passes)
+// Blur Filters
+import './modules/postprocessing/image-blur-filters/tiltshift.spec';
+import './modules/postprocessing/image-blur-filters/triangleblur.spec';
+import './modules/postprocessing/image-blur-filters/zoomblur.spec';
+
+import './modules/postprocessing/image-adjust-filters/brightnesscontrast.spec';
+import './modules/postprocessing/image-adjust-filters/denoise.spec';
+import './modules/postprocessing/image-adjust-filters/huesaturation.spec';
+import './modules/postprocessing/image-adjust-filters/noise.spec';
+import './modules/postprocessing/image-adjust-filters/sepia.spec';
+import './modules/postprocessing/image-adjust-filters/vibrance.spec';
+import './modules/postprocessing/image-adjust-filters/vignette.spec';
+
+import './modules/postprocessing/image-fun-filters/colorhalftone.spec';
+import './modules/postprocessing/image-fun-filters/dotscreen.spec';
+import './modules/postprocessing/image-fun-filters/edgework.spec';
+import './modules/postprocessing/image-fun-filters/hexagonalpixelate.spec';
+import './modules/postprocessing/image-fun-filters/ink.spec';
+
+import './modules/postprocessing/image-warp-filters/bulgepinch.spec';
+import './modules/postprocessing/image-warp-filters/swirl.spec';
+import './modules/postprocessing/image-warp-filters/warp.spec';
 
 // Tests for V8 shader modules
-import './modules-webgl';
+
+// Math modules
+// TODO - these are breaking in test-browser but not in test-headless??
+import './modules-webgl1/fp64/fp64-arithmetic-transform.spec';
+import './modules-webgl1/fp64/fp64-utils.spec';
+
+// Light and picking
+// import './modules-webgl1/dirlight/dirlight.spec';
+import './modules-webgl1/lights/lights.spec';
+// import './modules-webgl1/phong-lighting/phong-lighting.spec';
+// import './modules-webgl1/picking/picking.spec';
