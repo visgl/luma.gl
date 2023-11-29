@@ -1,0 +1,20 @@
+{
+  "name": "luma.gl-examples-hello-gltf",
+  "version": "9.0.0-alpha.42",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@loaders.gl/gltf": "^4.0.4",
+    "@luma.gl/engine": "9.0.0-alpha.42",
+    "@luma.gl/webgl": "9.0.0-alpha.42",
+    "@luma.gl/webgpu": "9.0.0-alpha.42"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "vite": "^4.4.9"
+  }
+}

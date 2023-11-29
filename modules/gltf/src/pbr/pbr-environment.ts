@@ -1,5 +1,5 @@
 import {Device, SamplerProps, Texture} from '@luma.gl/core';
-import {loadImage} from '@loaders.gl/images';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 type TextureCube = Texture;
 
@@ -28,12 +28,12 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       maxFilter: 'linear'
     } as SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
-    data: loadImage(props.brdfLutUrl)
+    data: loadImageTexture(props.brdfLutUrl)
   });
 
-  const diffuseEnvSampler = makeCube({
+  const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: (dir) => loadImage(props.getTexUrl('diffuse', dir, 0)),
+    getTextureForFace: (dir) => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
     sampler: {
       wrapS: 'clamp-to-edge',
       wrapT: 'clamp-to-edge',
@@ -42,12 +42,12 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
     } as SamplerProps,
   });
 
-  const specularEnvSampler = makeCube({
+  const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
     getTextureForFace: (dir: number) => {
       const imageArray = [];
       for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
-        imageArray.push(loadImage(props.getTexUrl('specular', dir, lod)));
+        imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
       }
       return imageArray;
     },
@@ -66,19 +66,23 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
   }
 }
 
-function makeCube({id, getTextureForFace, sampler}: {
+// TODO put somewhere common
+const FACES = [0, 1, 2, 3, 4, 5];
+
+function makeCube(device: Device, {id, getTextureForFace, sampler}: {
   id: string, 
   getTextureForFace: (dir: number) => Promise<any> | Promise<any>[], 
   sampler: SamplerProps
 }): TextureCube {
-  const pixels = {};
-  TextureCube.FACES.forEach((face) => {
-    pixels[face] = getTextureForFace(face);
+  const data = {};
+  FACES.forEach((face) => {
+    data[String(face)] = getTextureForFace(face);
   });
-  return new TextureCube(this.device, {
+  return device.createTexture({
     id,
+    dimension: 'cube',
     mipmaps: false,
     sampler,
-    pixels
+    data
   });
 }

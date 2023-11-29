@@ -4,14 +4,15 @@ import {webgl1Device} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {Texture2D, TextureCube} from '@luma.gl/webgl-legacy';
-import {createGLTFObjects, GLTFEnvironment} from '@luma.gl/experimental';
+import {Texture} from '@luma.gl/core';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {loadPBREnvironment} from '../../dist/pbr/pbr-environment';
 
-test.only('gltf#loading', async (t) => {
+test('gltf#loading', async (t) => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
-  const result = createGLTFObjects(webgl1Device, gltf);
+  const result = createScenegraphsFromGLTF(webgl1Device, gltf);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
@@ -19,20 +20,20 @@ test.only('gltf#loading', async (t) => {
   t.end();
 });
 
-test('gltf#environment', (t) => {
-  const environment = new GLTFEnvironment(webgl1Device, {
+test.skip('gltf#environment', (t) => {
+  const environment = loadPBREnvironment(webgl1Device, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
 
-  t.ok(environment.getBrdfTexture() instanceof Texture2D, 'BRDF lookup texture created');
+  t.ok(environment.brdfLutTexture instanceof Texture, 'BRDF lookup texture created');
   t.ok(
-    environment.getDiffuseEnvSampler() instanceof TextureCube,
+    environment.diffuseEnvSampler instanceof Texture,
     'Diffuse environment map created'
   );
   t.ok(
-    environment.getSpecularEnvSampler() instanceof TextureCube,
+    environment.specularEnvSampler instanceof Texture,
     'Specular environment map created'
   );
 

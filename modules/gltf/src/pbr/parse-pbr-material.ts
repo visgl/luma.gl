@@ -5,7 +5,7 @@ import {PBREnvironment} from './pbr-environment';
 
 /* eslint-disable camelcase */
 
-export type ParseGLTFMaterialOptions = {
+export type ParsePBRMaterialOptions = {
   /** Debug PBR shader */
   pbrDebug?: boolean;
   /** Enable lights */
@@ -16,7 +16,7 @@ export type ParseGLTFMaterialOptions = {
   imageBasedLightingEnvironment?: PBREnvironment;
 };
 
-export type ParsedGTLFMaterial = {
+export type ParsedPBRMaterial = {
   readonly defines: Record<string, number | boolean>;
   readonly bindings: Record<string, Binding>;
   readonly uniforms: Record<string, any>;
@@ -29,13 +29,13 @@ export type ParsedGTLFMaterial = {
 /**
  * Parses a GLTF material definition into uniforms and parameters for the PBR shader module
  */
-export function parseGLTFMaterial(
+export function parsePBRMaterial(
   device: Device,
   material,
   attributes: Record<string, any>,
-  options: ParseGLTFMaterialOptions
-): ParsedGTLFMaterial {
-  const parsedMaterial: ParsedGTLFMaterial = {
+  options: ParsePBRMaterialOptions
+): ParsedPBRMaterial {
+  const parsedMaterial: ParsedPBRMaterial = {
     defines: {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
       MANUAL_SRGB: 1,
@@ -68,18 +68,18 @@ export function parseGLTFMaterial(
   }
 
   if (options?.pbrDebug) {
-    parsedMaterial.defines['PBR_DEBUG'] = 1;
+    parsedMaterial.defines.PBR_DEBUG = 1;
     // Override final color for reference app visualization of various parameters in the lighting equation.
     parsedMaterial.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
     parsedMaterial.uniforms.u_ScaleFGDSpec = [0, 0, 0, 0];
   }
 
-  if (attributes.NORMAL) parsedMaterial.defines['HAS_NORMALS'] = 1;
-  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = 1;
-  if (attributes.TEXCOORD_0) parsedMaterial.defines['HAS_UV'] = 1;
+  if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = 1;
+  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines.HAS_TANGENTS = 1;
+  if (attributes.TEXCOORD_0) parsedMaterial.defines.HAS_UV = 1;
 
-  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = 1;
-  if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = 1;
+  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines.USE_IBL = 1;
+  if (options?.lights) parsedMaterial.defines.USE_LIGHTS = 1;
 
   if (material) {
     parseMaterial(device, material, parsedMaterial);
@@ -89,7 +89,7 @@ export function parseGLTFMaterial(
 }
 
 /** Parse GLTF material record */
-function parseMaterial(device: Device, material, parsedMaterial: ParsedGTLFMaterial): void {
+function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMaterial): void {
   parsedMaterial.uniforms.pbr_uUnlit = Boolean(material.unlit);
 
   if (material.pbrMetallicRoughness) {
@@ -155,7 +155,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedGTLFMater
 function parsePbrMetallicRoughness(
   device: Device,
   pbrMetallicRoughness,
-  parsedMaterial: ParsedGTLFMaterial
+  parsedMaterial: ParsedPBRMaterial
 ): void {
   if (pbrMetallicRoughness.baseColorTexture) {
     addTexture(
@@ -187,7 +187,7 @@ function addTexture(
   gltfTexture,
   uniformName: string,
   define = null,
-  parsedMaterial: ParsedGTLFMaterial
+  parsedMaterial: ParsedPBRMaterial
 ): void {
   const parameters = gltfTexture?.texture?.sampler?.parameters || {};
 
@@ -224,7 +224,7 @@ function addTexture(
 /**
  * Parses a GLTF material definition into uniforms and parameters for the PBR shader module
  *
-export class GLTFMaterialParser {
+export class PBRMaterialParser {
   readonly device: Device;
 
   readonly defines: Record<string, number | boolean>;
@@ -235,7 +235,7 @@ export class GLTFMaterialParser {
   /** Hold on to generated textures, we destroy them in the destroy method *
   readonly generatedTextures: Texture[];
 
-  constructor(device: Device, props: GLTFMaterialParserProps) {
+  constructor(device: Device, props: PBRMaterialParserProps) {
     const {attributes, material, pbrDebug, imageBasedLightingEnvironment, lights, useTangents} =
       props;
     this.device = device;

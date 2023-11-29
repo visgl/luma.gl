@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // https://www.npmjs.com/package/@webgpu/types
-    "typeRoots": [ "./node_modules/@webgpu/types", "./node_modules/@types"],
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
 
     "target": "es2020",
     "module": "es2020",
@@ -25,7 +25,7 @@
     "noImplicitThis": true, // covered by strict
     "strictBindCallApply": true, // covered by strict
     "strictFunctionTypes": true, // covered by strict
-    "useUnknownInCatchVariables": true,  // covered by strict
+    "useUnknownInCatchVariables": true, // covered by strict
     "strictNullChecks": false, // covered by strict
     // "strictPropertyInitialization": true, // covered by strict, requires strict null checks
 
@@ -49,6 +49,8 @@
       "@luma.gl/engine/test/*": ["modules/engine/test/*"],
       // "@luma.gl/experimental/*": ["modules/experimental/src/*"],
       // "@luma.gl/experimental/test/*": ["modules/experimental/test/*"],
+      "@luma.gl/gltf/*": ["modules/gltf/src/*"],
+      "@luma.gl/gltf/test/*": ["modules/gltools/test/*"],
       "@luma.gl/shadertools/*": ["modules/shadertools/src/*"],
       "@luma.gl/shadertools/test/*": ["modules/shadertools/test/*"],
       "@luma.gl/test-utils/*": ["modules/test-utils/src/*"],

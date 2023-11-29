@@ -1,18 +1,17 @@
-import {Device, Buffer, log, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
+import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
+import {GeometryAttribute} from '@luma.gl/engine/geometry/geometry';
 import {WebGLDevice} from '@luma.gl/webgl';
-import {Accessor} from '@luma.gl/webglx';
-import {Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
-import {GroupNode} from '../scenegraph/group-node';
-import {ModelNode} from '../scenegraph/model-node';
 
-import type {ParseGLTFMaterialOptions} from './gltf-material-parser';
 import {GLTFAnimator} from './gltf-animator';
+import {createGLTFModel} from './create-gltf-model';
+import type {PBREnvironment} from '../pbr/pbr-environment';
 
-export type GLTFInstantiatorOptions = Omit<ParseGLTFMaterialOptions, 'attributes'> & {
+export type GLTFInstantiatorOptions = {
   modelOptions?: Record<string, any>,
   pbrDebug?: boolean,
-  imageBasedLightingEnvironment?: any,
+  imageBasedLightingEnvironment?: PBREnvironment,
   lights?: boolean,
   useTangents?: boolean
 }
@@ -23,17 +22,6 @@ const DEFAULT_OPTIONS = {
   imageBasedLightingEnvironment: null,
   lights: true,
   useTangents: false
-};
-
-// TODO: import {ATTRIBUTE_TYPE_TO_COMPONENTS} from '@loaders.gl/gltf';
-const ATTRIBUTE_TYPE_TO_COMPONENTS = {
-  SCALAR: 1,
-  VEC2: 2,
-  VEC3: 3,
-  VEC4: 4,
-  MAT2: 4,
-  MAT3: 9,
-  MAT4: 16
 };
 
 /**
@@ -132,22 +120,21 @@ export class GLTFInstantiator {
   }
 
   createPrimitive(gltfPrimitive: any, i: number, gltfMesh): ModelNode {
+    const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
+    const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
     const vertexCount = gltfPrimitive.indices
       ? gltfPrimitive.indices.count
       : this.getVertexCount(gltfPrimitive.attributes);
 
-    const model = new Model(
-      this.device,
-      {
-        id: gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`,
-        topology: convertGLPrimitiveTopologyToTopology(gltfPrimitive.mode || 4),
-        vertexCount,
-        attributes: this.createAttributes(gltfPrimitive.attributes, gltfPrimitive.indices),
-        ...this.options
-      }
-    );
+    const modelNode = createGLTFModel(this.device, {
+      id,
+      geometry: this.createGeometry(id, gltfPrimitive, topology), 
+      material: gltfPrimitive.material,
+      materialOptions: this.options,
+      modelOptions: this.options.modelOptions,
+      vertexCount
+    });
 
-    const modelNode = new ModelNode({model});
     modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
     // TODO this holds on to all the CPU side texture and attribute data
     // modelNode.material =  gltfPrimitive.material;
@@ -159,23 +146,19 @@ export class GLTFInstantiator {
     throw new Error('getVertexCount not implemented');
   }
 
-  createAttributes(attributes, indices) {
-    const loadedAttributes = {};
+  createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
+    const attributes = {}
+    for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
+      const {components: size, value} = attribute as GeometryAttribute;
+      attributes[attributeName] = {size, value};
+    };
 
-    for (const [attrName, attribute] of Object.entries(attributes)) {
-      const buffer = this.createBuffer(attribute, Buffer.VERTEX);
-      loadedAttributes[attrName] = this.createAccessor(attribute, buffer);
-    }
-
-    if (indices) {
-      const buffer = this.createBuffer(indices, Buffer.INDEX)
-      // @ts-expect-error
-      loadedAttributes.indices = this.createAccessor(indices, buffer);
-    }
-
-    log.info(4, 'glTF Attributes', {attributes, indices, generated: loadedAttributes})();
-
-    return loadedAttributes;
+    return new Geometry({
+      id,
+      topology,
+      indices: gltfPrimitive.indices.value,
+      attributes
+    });
   }
 
   createBuffer(attribute, usage: number): Buffer {
@@ -198,16 +181,6 @@ export class GLTFInstantiator {
     }
 
     return bufferView.lumaBuffers[usage];
-  }
-
-  createAccessor(accessor, buffer) {
-    return new Accessor({
-      buffer,
-      offset: accessor.byteOffset || 0,
-      stride: accessor.bufferView.byteStride || 0,
-      type: accessor.componentType,
-      size: ATTRIBUTE_TYPE_TO_COMPONENTS[accessor.type]
-    });
   }
 
   // TODO - create sampler in WebGL2
@@ -236,7 +209,7 @@ enum GL {
   TRIANGLE_FAN = 0x6
 }
 
-export function convertGLPrimitiveTopologyToTopology(
+export function convertGLDrawModeToTopology(
   drawMode: GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN,
 ): PrimitiveTopology  {
   switch (drawMode) {

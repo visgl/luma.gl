@@ -113,7 +113,6 @@ export function getAttributeBuffersFromGeometry(
       case 'NORMAL': name = 'normals'; break;
       case 'TEXCOORD_0': name = 'texCoords'; break;
     }
-
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
     bufferLayout.push({name, format: `float32x${attribute.size as 2 | 3 | 4}`});
   }

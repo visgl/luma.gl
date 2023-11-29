@@ -40,11 +40,7 @@ void main() {
     wgsl: /* WGSL */`\
 @fragment
 fn main() -> @location(0) vec4<f32> {
-<<<<<<< HEAD:examples/webgpu/triangle/app.ts
   return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-=======
-  return vec4(1.0, 0.0, 0.0, 1.0);
->>>>>>> e843da0b9 (feat(core): UniformStore):examples/webgpu/hello-triangle/app.ts
 }
 `
   }
