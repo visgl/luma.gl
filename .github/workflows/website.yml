@@ -12,12 +12,12 @@ jobs:
     if: github.repository_owner == 'visgl'
 
     steps:
-      - uses: actions/checkout@v2.1.1
+      - uses: actions/checkout@v4.1.1
         with:
           token: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: '18.x'
 
