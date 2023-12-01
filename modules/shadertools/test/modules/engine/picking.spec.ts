@@ -56,7 +56,7 @@ const TEST_CASES = [
   }
 ];
 
-test.only('picking#getUniforms', (t) => {
+test('picking#getUniforms', (t) => {
   t.deepEqual(picking.getUniforms({}), {
     isActive: false,
     isAttribute: false,
