@@ -38,6 +38,13 @@
   "peerDependencies": {
     "@luma.gl/core": "^9.0.0-beta.4",
     "@luma.gl/engine": "^9.0.0-beta.4",
+    "@luma.gl/shadertools": "^9.0.0-beta.4",
+    "@luma.gl/webgl": "^9.0.0-beta.4",
+    "@luma.gl/webgpu": "^9.0.0-beta.4"
+  },
+  "devDependencies": {
+    "@luma.gl/core": "^9.0.0-beta.4",
+    "@luma.gl/engine": "^9.0.0-beta.4",
     "@luma.gl/webgl": "^9.0.0-beta.4",
     "@luma.gl/webgpu": "^9.0.0-beta.4"
   },
