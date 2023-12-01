@@ -5,15 +5,22 @@ const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 const COLOR_RED = '\x1b[31m';
 
+// When building `@luma.gl/constants`, skip MemberExpressions with
+// these types so declarations are not overwritten.
+const EXCLUDED_TYPES = ['AssignmentExpression', 'StringLiteral'];
+
 export default function _(opts) {
   return {
     visitor: {
       ImportDeclaration(path, state) {
         // specifiers: [ ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier ];
         // source: Literal;
-        const specifiers = path.get('specifiers');
+
+        let modified = false;
+        let specifiers = path.get('specifiers');
+
         specifiers.forEach((specifier) => {
-          if (specifier.type === 'ImportDefaultSpecifier') {
+          if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportSpecifier') {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {
               if (state.opts.debug) {
@@ -23,10 +30,18 @@ export default function _(opts) {
                   `${COLOR_YELLOW}${filename}:${line} Dropping GL import${COLOR_RESET}`
                 );
               }
-              path.remove();
+              specifier.remove();
+              modified = true;
             }
           }
         });
+
+        specifiers = path.get('specifiers');
+
+        // If the last imported specifier was removed, remove the entire import.
+        if (modified && specifiers.length === 0) {
+          path.remove();
+        }
       },
 
       MemberExpression(path, state) {
@@ -37,7 +52,7 @@ export default function _(opts) {
         const isGLIdentifier =
           object.isIdentifier({name: 'GL'}) || object.isIdentifier({name: 'gl'});
 
-        if (isGLIdentifier) {
+        if (isGLIdentifier && !EXCLUDED_TYPES.includes(property.node.type)) {
           const filename = getFilename(state);
           const constant = `${object.node.name}.${property.node.name}`;
 
