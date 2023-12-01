@@ -56,32 +56,60 @@ const TEST_CASES = [
   }
 ];
 
-test.skip('picking#getUniforms', (t) => {
-  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
+test.only('picking#getUniforms', (t) => {
+  t.deepEqual(picking.getUniforms({}), {
+    isActive: false,
+    isAttribute: false,
+    useNormalizedColors: true,
+    isHighlightActive: false,
+    highlightedObjectColor: [0, 0, 0],
+    highlightColor: [0, 1, 1, 1]
+  }, 'Empty input');
 
   t.deepEqual(
     picking.getUniforms({
       isActive: true,
-      highlightedObjectColor: null,
+      highlightedObjectColor: undefined,
       highlightColor: [255, 0, 0]
     }),
     {
-      picking_uSelectedColorValid: 0,
-      picking_uHighlightColor: [1, 0, 0, 1],
-      picking_uActive: true,
-      picking_uAttribute: false
+      isActive: true,
+      isAttribute: false,
+      useNormalizedColors: true,
+      isHighlightActive: false,
+      highlightedObjectColor: [0, 0, 0],
+      highlightColor: [1, 0, 0, 1]
     }
   );
 
   t.deepEqual(
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
-      highlightColor: [255, 0, 0, 51]
+      highlightColor: [102, 0, 0, 51]
     }),
     {
-      picking_uSelectedColorValid: 1,
-      picking_uSelectedColor: [0, 0, 1],
-      picking_uHighlightColor: [1, 0, 0, 0.2]
+      isActive: false,
+      isAttribute: false,
+      useNormalizedColors: true,
+      isHighlightActive: true,
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [0.4, 0, 0, 0.2]
+    }
+  );
+
+  t.deepEqual(
+    picking.getUniforms({
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [102, 0, 0, 51],
+      useNormalizedColors: false
+    }),
+    {
+      isActive: false,
+      isAttribute: false,
+      useNormalizedColors: false,
+      isHighlightActive: true,
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [0.4, 0, 0, 0.2]
     }
   );
 

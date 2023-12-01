@@ -45,14 +45,12 @@ out vec4 picking_vRGBcolor_Avalid;
 
 // Normalize unsigned byte color to 0-1 range
 vec3 picking_normalizeColor(vec3 color) {
-  return color;
-  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+  return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
 }
 
 // Normalize unsigned byte color to 0-1 range
 vec4 picking_normalizeColor(vec4 color) {
-  return color;
-  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+  return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
 }
 
 bool picking_isColorZero(vec3 color) {
@@ -220,6 +218,10 @@ function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: Picking
   if (opts.isActive !== undefined) {
     uniforms.isActive = Boolean(opts.isActive);
     uniforms.isAttribute = Boolean(opts.isAttribute);
+  }
+
+  if (opts.useNormalizedColors !== undefined) {
+    uniforms.useNormalizedColors = Boolean(opts.useNormalizedColors);
   }
 
   return uniforms;
