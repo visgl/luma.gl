@@ -38,8 +38,7 @@
     "perf": "ocular-test perf-browser",
     "bench": "ocular-test bench",
     "bench-browser": "ocular-test bench-browser",
-    "metrics": "./scripts/metrics.sh && ocular-metrics",
-    "postinstall": "./scripts/postinstall.sh"
+    "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
@@ -47,6 +46,7 @@
     "@loaders.gl/gltf": "4.0.0-beta.7",
     "@loaders.gl/polyfills": "4.0.0-beta.7",
     "@probe.gl/bench": "^4.0.2",
+    "@probe.gl/stats": "^4.0.2",
     "@probe.gl/stats-widget": "^4.0.2",
     "@probe.gl/test-utils": "^4.0.2",
     "@turf/boolean-within": "^6.0.1",
@@ -56,16 +56,18 @@
     "babel-plugin-remove-glsl-comments": "^1.0.0",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.9.2",
+    "math.gl": "^3.0.0",
     "ocular-dev-tools": "2.0.0-alpha.14",
     "pre-commit": "^1.2.2",
-    "pre-push": "^0.1.1"
+    "pre-push": "^0.1.1",
+    "typescript": "^5.3.0"
   },
   "resolutions_notes": {
     "escaper": "v2 has an invalid main field in package.json, breaks esbuild during browser test"
   },
   "resolutions": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser" : "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "escaper": "3.0.6",
     "eslint": "^8.52.0",
     "prettier": "3.0.3",
@@ -79,6 +81,6 @@
   },
   "volta": {
     "node": "18.18.2",
-    "yarn": "1.22.19"
+    "yarn": "4.0.2"
   }
 }
