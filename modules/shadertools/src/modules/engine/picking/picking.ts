@@ -194,8 +194,18 @@ export const picking: ShaderModule<PickingUniforms> = {
   getUniforms
 };
 
+let lastObjectColor: NumberArray;
+
 function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {...picking.defaultUniforms};
+
+  // HACK to get deck picking working
+  // undefined means do not update stored color, null means remove it
+  if (opts.highlightedObjectColor === undefined) {
+    opts.highlightedObjectColor = lastObjectColor;
+  } else {
+    lastObjectColor = opts.highlightedObjectColor;
+  }
 
   if (opts.highlightedObjectColor !== undefined) {
     if (!opts.highlightedObjectColor) {
