@@ -15,7 +15,3 @@ import './animation/key-frames.spec';
 import './scenegraph/group-node.spec';
 import './scenegraph/scenegraph-node.spec';
 import './scenegraph/model-node.spec';
-
-import './transform/transform.spec';
-import './transform/transform-shader-utils.spec';
-import './transform/buffer-transform.spec';

@@ -17,13 +17,11 @@ export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 
 export {Transform} from './transform/transform';
-// export {BufferTransform as _BufferTransform} from './transform/buffer-transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 
 // shadertools
 export {ShaderModuleUniforms} from './shadertools/shader-module-uniforms';
-export type {TransformProps} from './transform/transform';
 
 // Utils
 export {ClipSpace} from './lib/clip-space';
@@ -55,5 +53,4 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
-
 

@@ -1,51 +1,38 @@
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/classic/transform-feedback.ts
 import {Device, ResourceProps, log, isObjectEmpty} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice, WebGLResource} from '@luma.gl/webgl';
 import {isWebGL2} from '@luma.gl/webgl';
 import Buffer from './buffer';
-========
-// luma.gl, MIT license
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):wip/modules-wip/webgl-legacy/src/classic/transform-feedback.ts.disabled
 
-import {Device, TransformFeedbackProps} from '@luma.gl/api';
-import {WebGLDevice, WEBGLTransformFeedback} from '@luma.gl/webgl';
+export type TransformFeedbackProps = ResourceProps & {
+  [key: string]: any;
+};
 
-export {TransformFeedbackProps};
-
-export default class TransformFeedback extends WEBGLTransformFeedback {
-// export default class TransformFeedback extends WebGLResource<TransformFeedbackProps> {
-
-  // buffers = {};
-  // unused = {};
-  // configuration = null;
-  // // NOTE: The `bindOnUse` flag is a major workaround:
-  // // See https://github.com/KhronosGroup/WebGL/issues/2346
-  // bindOnUse = true;
-
-  static isSupported(device: Device | WebGLRenderingContext): boolean {
-    return WebGLDevice.attach(device).isWebGL2;
-  }
-
+export default class TransformFeedback extends WebGLResource<TransformFeedbackProps> {
   override get [Symbol.toStringTag](): string { return 'TransformFeedback'; }
 
-  constructor(device: Device | WebGLRenderingContext, props: TransformFeedbackProps) {
-    super(WebGLDevice.attach(device), props);
+  buffers = {};
+  unused = {};
+  configuration = null;
+  // NOTE: The `bindOnUse` flag is a major workaround:
+  // See https://github.com/KhronosGroup/WebGL/issues/2346
+  bindOnUse = true;
+
+  static isSupported(device: Device | WebGLRenderingContext): boolean {
+    const webglDevice = WebGLDevice.attach(device);
+    return isWebGL2(webglDevice.gl);
   }
 
-  // constructor(device: Device | WebGLRenderingContext, props: TransformFeedbackProps = {}) {
-  //   super(WebGLDevice.attach(device), props, {} as any);
-  //   this.device.assertWebGL2();
+  constructor(device: Device | WebGLRenderingContext, props: TransformFeedbackProps = {}) {
+    super(WebGLDevice.attach(device), props, {} as any);
+    this.device.assertWebGL2();
 
-  //   this.initialize(props);
-  //   this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);
-  //   Object.seal(this);
-  // }
+    this.initialize(props);
+    this.stubRemovedMethods('TransformFeedback', 'v6.0', ['pause', 'resume']);
+    Object.seal(this);
+  }
 
-
-  /*
-  initialize(props?: TransformFeedbackProps): this {
->>>>>>>> d767317d8 (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/webgl-legacy/src/classic/transform-feedback copy.ts
+  override initialize(props?: TransformFeedbackProps): this {
     this.buffers = {};
     this.unused = {};
     this.configuration = null;
@@ -203,5 +190,4 @@ export default class TransformFeedback extends WEBGLTransformFeedback {
     // @ts-expect-error
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
   }
-  */
 }

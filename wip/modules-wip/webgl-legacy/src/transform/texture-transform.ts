@@ -4,22 +4,16 @@ import {GL} from '@luma.gl/constants';
 import {Device, Framebuffer} from '@luma.gl/core';
 
 import {
+  _transform as transformModule,
   getShaderInfo,
   getPassthroughFS,
   typeToChannelCount,
-  combineInjects,
-  _transform as transformModule
+  combineInjects
 } from '@luma.gl/shadertools';
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
 import Buffer from '../classic/buffer';
 import Texture2D from '../classic/texture-2d';
 import {readPixelsToArray} from '../classic/copy-and-blit';
-========
-import {Device, Texture, Framebuffer} from '@luma.gl/api';
-import {ClassicBuffer as Buffer} from '@luma.gl/webgl';
-import {readPixelsToArray} from '@luma.gl/webgl-legacy';
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
 import {cloneTextureFrom} from '../webgl-utils/texture-utils';
 
 import type {TransformProps, TransformDrawOptions} from './transform';
@@ -28,29 +22,23 @@ import {updateForTextures, getSizeUniforms} from './transform-shader-utils';
 // TODO: move these constants to transform-shader-utils
 // Texture parameters needed so sample can precisely pick pixel for given element id.
 const SRC_TEX_PARAMETER_OVERRIDES = {
-  magFilter: 'nearest',
-  minFilter: 'nearest',
-  wrapS: 'clamp_to_edge',
-  wrapT: 'clamp_to_edge'
+  [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+  [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+  [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+  [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
 };
-
 const FS_OUTPUT_VARIABLE = 'transform_output';
 
 type TextureBinding = {
   sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture>;
-  targetTexture: Texture;
+  sourceTextures: Record<string, Texture2D>;
+  targetTexture: Texture2D;
   framebuffer?: Framebuffer;
 };
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
 export default class TextureTransform {
   device: Device;
   gl: WebGL2RenderingContext;
-========
-export class TextureTransform {
-  device: Device,
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
   id = 0;
   currentIndex = 0;
   _swapTexture: string | null = null;
@@ -62,17 +50,14 @@ export class TextureTransform {
 
   hasTargetTexture: boolean = false;
   hasSourceTextures: boolean = false;
-  ownTexture: Texture | null = null;
+  ownTexture: Texture2D | null = null;
   elementIDBuffer: Buffer | null = null;
   _targetRefTexName: string;
   elementCount: number;
 
   constructor(device: Device, props: TransformProps = {}) {
     this.device = device;
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
     this.gl = (device as any).gl2 as WebGL2RenderingContext;
-========
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
     this._initialize(props);
     Object.seal(this);
   }
@@ -190,11 +175,11 @@ export class TextureTransform {
 
   // auto create target texture if requested
   _createTargetTexture(props: {
-    sourceTextures: Record<string, Texture>;
-    textureOrReference: string | Texture;
-  }): Texture {
+    sourceTextures: Record<string, Texture2D>;
+    textureOrReference: string | Texture2D;
+  }): Texture2D {
     const {sourceTextures, textureOrReference} = props;
-    if (textureOrReference instanceof Texture) {
+    if (textureOrReference instanceof Texture2D) {
       return textureOrReference;
     }
     // 'targetTexture' is a reference souce texture.
@@ -234,7 +219,7 @@ export class TextureTransform {
       array[index] = index;
     });
     if (!this.elementIDBuffer) {
-      this.elementIDBuffer = this.device.createBuffer({
+      this.elementIDBuffer = new Buffer(this.gl, {
         data: elementIds,
         accessor: {size: 1}
       });
@@ -246,8 +231,8 @@ export class TextureTransform {
 
   _updateBindings(opts: {
     sourceBuffers: Record<string, Buffer>;
-    sourceTextures: Record<string, Texture>;
-    targetTexture: Texture;
+    sourceTextures: Record<string, Texture2D>;
+    targetTexture: Texture2D;
   }) {
     this.bindings[this.currentIndex] = this._updateBinding(this.bindings[this.currentIndex], opts);
     if (this._swapTexture) {
@@ -264,8 +249,8 @@ export class TextureTransform {
     binding: TextureBinding,
     opts: {
       sourceBuffers?: Record<string, Buffer>;
-      sourceTextures: Record<string, Texture>;
-      targetTexture: Texture;
+      sourceTextures: Record<string, Texture2D>;
+      targetTexture: Texture2D;
     }
   ): TextureBinding {
     const {sourceBuffers, sourceTextures, targetTexture} = opts;
@@ -282,29 +267,8 @@ export class TextureTransform {
       binding.targetTexture = targetTexture;
 
       const {width, height} = targetTexture;
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
       if (binding.framebuffer) {
         binding.framebuffer.destroy();
-========
-      const {framebuffer} = binding;
-      if (framebuffer) {
-        // First update texture without re-sizing attachments
-        framebuffer.update({
-          attachments: {[GL.COLOR_ATTACHMENT0]: targetTexture},
-          resizeAttachments: false
-        });
-        // Resize to new taget texture size
-        framebuffer.resize({width, height});
-      } else {
-        binding.framebuffer = this.device.createFramebuffer({
-          id: 'transform-framebuffer',
-          width,
-          height,
-          attachments: {
-            [GL.COLOR_ATTACHMENT0]: targetTexture
-          }
-        });
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
       }
       binding.framebuffer = this.device.createFramebuffer({
         id: 'transform-framebuffer',
@@ -326,16 +290,10 @@ export class TextureTransform {
     }
   }
 
-<<<<<<<< HEAD:wip/modules-wip/webgl-legacy/src/transform/texture-transform.ts
   _swapTextures(opts: {
     sourceTextures: Record<string, Texture2D>;
     targetTexture: Texture2D;
   }): {sourceTextures: Record<string, Texture2D>; targetTexture: Texture2D} | null {
-========
-  _swapTextures(
-    opts: {sourceTextures: Record<string, Texture>; targetTexture: Texture}
-  ): {sourceTextures: Record<string, Texture>; targetTexture: Texture} | null {
->>>>>>>> 83ca9c03d (feat(webgl): Add VertexArray and TransformFeedback as first class objects):modules/engine/src/transform/texture-transform.ts
     if (!this._swapTexture) {
       return null;
     }
@@ -348,12 +306,17 @@ export class TextureTransform {
   }
 
   // Create a buffer and add to list of buffers to be deleted.
-  _createNewTexture(refTexture: Texture) {
+  _createNewTexture(refTexture: Texture2D) {
     const texture = cloneTextureFrom(refTexture, {
-      sampler: SRC_TEX_PARAMETER_OVERRIDES
-      // pixelStore: {
-      //   [GL.UNPACK_FLIP_Y_WEBGL]: false
-      // }
+      parameters: {
+        [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+        [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+        [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+        [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+      },
+      pixelStore: {
+        [GL.UNPACK_FLIP_Y_WEBGL]: false
+      }
     });
 
     // thre can only be one target texture

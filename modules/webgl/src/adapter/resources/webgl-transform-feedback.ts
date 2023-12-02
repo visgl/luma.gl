@@ -1,8 +1,8 @@
-import type {ShaderLayout, TransformFeedbackProps} from '@luma.gl/api';
-import {log, isObjectEmpty, TransformFeedback} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
+import type {ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
+import {log, isObjectEmpty, TransformFeedback} from '@luma.gl/core';
+import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
-import {ClassicBuffer as Buffer, ClassicBuffer} from '../../classic/buffer';
+import {BufferWithAccessor as Buffer, BufferWithAccessorProps as ClassicBuffer} from '../../classic/buffer-with-accessor';
 
   /** For bindRange */
 export type BufferRange = {
@@ -42,6 +42,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
       for (const [locationOrName, bufferOrRange] of Object.entries(this.props.buffers as Record<string, ClassicBuffer | BufferRange>)) {
         const location = this._getVaryingIndex(locationOrName);
+        // @ts-expect-error
         const {buffer, byteOffset, byteLength} = this._getBufferRange(bufferOrRange);
         if (location < 0) {
           this.unusedBuffers[locationOrName] = buffer;

@@ -1,12 +1,14 @@
-import {glsl} from '@luma.gl/api';
-import GL from '@luma.gl/constants';
-import {TransformFeedback, Buffer} from '@luma.gl/webgl-legacy';
-import {WEBGLTransformFeedback, Buffer} from '@luma.gl/webgl';
-// TODO - tests shouldn't depend on higher level module?
-import {Model} from '@luma.gl/webgl-legacy';
-import test from 'tape-promise/tape';
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
 
-import {fixture} from 'test/setup';
+import test from 'tape-promise/tape';
+import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
+
+import {glsl, TransformFeedback, Buffer} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
+
+import {WEBGLTransformFeedback, WebGLBuffer} from '@luma.gl/webgl';
+import {GL} from '@luma.gl/constants';
 
 const VS = glsl`\
 attribute float inValue;
@@ -26,15 +28,14 @@ void main()
 `;
 
 test('WebGL#TransformFeedback isSupported', (t) => {
-  const {gl, gl2} = fixture;
   t.equal(
-    TransformFeedback.isSupported(gl),
+    TransformFeedback.isSupported(webgl1Device),
     false,
     'isSupported returns correct result for WebGL1'
   );
-  if (gl2) {
+  if (webgl2Device) {
     t.equal(
-      TransformFeedback.isSupported(gl2),
+      TransformFeedback.isSupported(webgl2Device),
       true,
       'isSupported returns correct result for WebGL2'
     );
@@ -43,21 +44,18 @@ test('WebGL#TransformFeedback isSupported', (t) => {
 });
 
 test('WebGL#TransformFeedback constructor/delete', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   t.throws(
-    // @ts-expect-error
     () => new TransformFeedback(),
     'TransformFeedback throws on missing gl context'
   );
 
-  const tf = new TransformFeedback(gl2);
+  const tf = webgl2Device.createTransformFeedback();
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback construction successful');
 
   tf.delete();
@@ -70,17 +68,15 @@ test('WebGL#TransformFeedback constructor/delete', (t) => {
 });
 
 test('WebGL#TransformFeedback bindBuffers', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  const tf = new TransformFeedback(gl2);
-  const buffer1 = new Buffer(gl2);
-  const buffer2 = new Buffer(gl2);
+  const tf = webgl2Device.createTransformFeedback();
+  const buffer1 = new Buffer(webgl2Device);
+  const buffer2 = new Buffer(webgl2Device);
 
   tf.setBuffers({
     0: buffer1,
@@ -110,12 +106,12 @@ test('WebGL#TransformFeedback bindBuffers', (t) => {
   t.end();
 });
 
-function testDataCapture({t, gl2, byteOffset = 0}) {
+function testDataCapture({t, webgl2Device, byteOffset = 0}) {
   const inData = new Float32Array([10, 20, 31, 0, -57]);
   const vertexCount = inData.length;
-  const inBuffer = new Buffer(gl2, {data: inData});
-  const outBuffer = new Buffer(gl2, 10 * 4); // allocate memory for 10 floats
-  const model = new Model(gl2, {
+  const inBuffer = new Buffer(webgl2Device, {data: inData});
+  const outBuffer = new Buffer(webgl2Device, 10 * 4); // allocate memory for 10 floats
+  const model = new Model(webgl2Device, {
     vs: VS,
     fs: FS,
     attributes: {inValue: inBuffer},
@@ -124,7 +120,7 @@ function testDataCapture({t, gl2, byteOffset = 0}) {
     vertexCount: 5
   });
   const offset = byteOffset / 4;
-  const tf = new TransformFeedback(gl2, {
+  const tf = new TransformFeedback(webgl2Device, {
     buffers: {outValue: {buffer: outBuffer, byteOffset}},
     configuration: model.program.configuration
   });
@@ -141,19 +137,17 @@ function testDataCapture({t, gl2, byteOffset = 0}) {
   );
 }
 test('WebGL#TransformFeedback capture', (t) => {
-  const {gl2} = fixture;
-
-  if (!gl2) {
+  if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
   // no offset
-  testDataCapture({t, gl2});
+  testDataCapture({t, webgl2Device});
 
   // with offset
-  testDataCapture({t, gl2, byteOffset: 2 * 4});
+  testDataCapture({t, webgl2Device, byteOffset: 2 * 4});
 
   t.end();
 });
