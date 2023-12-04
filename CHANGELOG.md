@@ -1,5 +1,14 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.44
+
+- Implement picking.useNormalizedColors (#1856)
+- fix(webgl): Update video texture bindings before draw (#1853)
+- fix: shader module example (#1852)
+- chore(shadertools): Additional shader module organization (#1851)
+- chore: vite 5 (#1849)
+- chore: typescript 5.3 (#1848)
+
 ### v9.0.0-alpha.43
 
 - feat(gltf): New module for glTF support (#1819)
