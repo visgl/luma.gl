@@ -62,7 +62,6 @@ test('picking#getUniforms', (t) => {
     isAttribute: false,
     useFloatColors: true,
     isHighlightActive: false,
-    highlightedObjectColor: [0, 0, 0],
     highlightColor: [0, 1, 1, 1]
   }, 'Empty input');
 
@@ -77,10 +76,23 @@ test('picking#getUniforms', (t) => {
       isAttribute: false,
       useFloatColors: true,
       isHighlightActive: false,
+      highlightColor: [1, 0, 0, 1]
+    }, 'Undefined input');
+
+  t.deepEqual(
+    picking.getUniforms({
+      isActive: true,
+      highlightedObjectColor: null,
+      highlightColor: [255, 0, 0]
+    }),
+    {
+      isActive: true,
+      isAttribute: false,
+      useFloatColors: true,
+      isHighlightActive: false,
       highlightedObjectColor: [0, 0, 0],
       highlightColor: [1, 0, 0, 1]
-    }
-  );
+    }, 'Null input');
 
   t.deepEqual(
     picking.getUniforms({

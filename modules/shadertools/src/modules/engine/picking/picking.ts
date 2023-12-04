@@ -25,8 +25,12 @@ export type PickingUniforms = {
   useFloatColors?: boolean;
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
-  /** Set to a picking color to visually highlight that item */
-  highlightedObjectColor?: NumberArray; 
+  /**
+   * Set to a picking color to visually highlight that item.
+   * The picking module will persist the last highlighted object, unless
+   * `null` is passed to explicitly clear
+   **/
+  highlightedObjectColor?: NumberArray | null;
   /** Color of visual highlight of "selected" item */
   highlightColor?: NumberArray;
 };
@@ -205,6 +209,8 @@ function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: Picking
       const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
       uniforms.highlightedObjectColor = highlightedObjectColor;
     }
+  } else {
+    delete uniforms.highlightedObjectColor;
   }
 
   if (opts.highlightColor) {
