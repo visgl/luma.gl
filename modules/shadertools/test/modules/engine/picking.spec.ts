@@ -60,7 +60,7 @@ test('picking#getUniforms', (t) => {
   t.deepEqual(picking.getUniforms({}), {
     isActive: false,
     isAttribute: false,
-    useNormalizedColors: true,
+    useFloatColors: true,
     isHighlightActive: false,
     highlightedObjectColor: [0, 0, 0],
     highlightColor: [0, 1, 1, 1]
@@ -75,7 +75,7 @@ test('picking#getUniforms', (t) => {
     {
       isActive: true,
       isAttribute: false,
-      useNormalizedColors: true,
+      useFloatColors: true,
       isHighlightActive: false,
       highlightedObjectColor: [0, 0, 0],
       highlightColor: [1, 0, 0, 1]
@@ -90,7 +90,7 @@ test('picking#getUniforms', (t) => {
     {
       isActive: false,
       isAttribute: false,
-      useNormalizedColors: true,
+      useFloatColors: true,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [0.4, 0, 0, 0.2]
@@ -101,12 +101,12 @@ test('picking#getUniforms', (t) => {
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51],
-      useNormalizedColors: false
+      useFloatColors: false
     }),
     {
       isActive: false,
       isAttribute: false,
-      useNormalizedColors: false,
+      useFloatColors: false,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [0.4, 0, 0, 0.2]
