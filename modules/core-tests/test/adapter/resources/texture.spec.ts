@@ -8,13 +8,14 @@ import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
 import {Device, Texture, TextureFormat, cast} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
+// TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
 import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
-test('WebGL#Texture construct/delete', async (t) => {
+test('WebGL#Texture construct/delete', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({});
     t.ok(texture instanceof Texture, 'Texture construction successful');
@@ -26,16 +27,16 @@ test('WebGL#Texture construct/delete', async (t) => {
   t.end();
 });
 
-test('WebGLDevice#isTextureFormatSupported()', async (t) => {
+test('WebGLDevice#isTextureFormatSupported()', async t => {
   const FORMATS: Record<string, TextureFormat[]> = {
-    'webgl': ['rgba8unorm'],
-    'webgl2': ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
-    'webgpu': []
-  }
+    webgl: ['rgba8unorm'],
+    webgl2: ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgpu: []
+  };
 
   for (const device of await getTestDevices()) {
     const unSupportedFormats = [];
-    FORMATS[device.info.type].forEach((format) => {
+    FORMATS[device.info.type].forEach(format => {
       if (!device.isTextureFormatSupported(format)) {
         unSupportedFormats.push(format);
       }
@@ -73,17 +74,20 @@ const TEXTURE_DATA = {
 function testFormatCreation(t, device: Device, withData: boolean = false) {
   for (const [textureFormat, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
     const format = textureFormat as TextureFormat;
-    if (device.isTextureFormatSupported(format )) {
+    if (device.isTextureFormatSupported(format)) {
       try {
         const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format
-        const mipmaps = device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format); 
-        const sampler = mipmaps ? {
-          magFilter: 'linear',
-          minFilter: 'linear',
-          addressModeU: 'clamp-to-edge',
-          addressModeW: 'clamp-to-edge'
-        } : {};
+        const mipmaps =
+          device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+        const sampler = mipmaps
+          ? {
+              magFilter: 'linear',
+              minFilter: 'linear',
+              addressModeU: 'clamp-to-edge',
+              addressModeW: 'clamp-to-edge'
+            }
+          : {};
 
         const texture = device.createTexture({
           data,
@@ -93,13 +97,17 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
           mipmaps,
           sampler
         });
-        t.equals(texture.props.format, format, `Texture(${format}) created with mipmaps=${mipmaps}`);
+        t.equals(
+          texture.props.format,
+          format,
+          `Texture(${format}) created with mipmaps=${mipmaps}`
+        );
         texture.destroy();
       } catch (error) {
         t.comment(`Texture(${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${format}) not supported in ${device.info.type}`)
+      t.comment(`Texture(${format}) not supported in ${device.info.type}`);
     }
   }
 }
@@ -124,7 +132,7 @@ function testFormatDeduction(t, device: Device) {
   }
 }
 
-test.skip('WebGL#Texture format deduction', (t) => {
+test.skip('WebGL#Texture format deduction', t => {
   if (webgl2Device) {
     testFormatDeduction(t, webgl2Device);
   }
@@ -132,7 +140,7 @@ test.skip('WebGL#Texture format deduction', (t) => {
   t.end();
 });
 
-test.skip('WebGL#Texture format creation', (t) => {
+test.skip('WebGL#Texture format creation', t => {
   if (webgl2Device) {
     testFormatCreation(t, webgl2Device);
   }
@@ -140,10 +148,11 @@ test.skip('WebGL#Texture format creation', (t) => {
   t.end();
 });
 
-test.skip('WebGL#Texture format creation with data', (t) => {
+test.skip('WebGL#Texture format creation with data', t => {
   if (webgl2Device) {
     testFormatCreation(t, webgl2Device, true);
-  }  testFormatCreation(t, webgl1Device, true);
+  }
+  testFormatCreation(t, webgl1Device, true);
   t.end();
 });
 
@@ -178,7 +187,7 @@ test.skip('WebGL#Texture WebGL2 format creation', t => {
 });
 */
 
-test.skip('WebGL#Texture setParameters', (t) => {
+test.skip('WebGL#Texture setParameters', t => {
   const texture = webgl1Device.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
@@ -202,7 +211,7 @@ test.skip('WebGL#Texture setParameters', (t) => {
   t.end();
 });
 
-test.skip('WebGL2#Texture setParameters', (t) => {
+test.skip('WebGL2#Texture setParameters', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -220,8 +229,7 @@ test.skip('WebGL2#Texture setParameters', (t) => {
   t.end();
 });
 
-test.skip('WebGL#Texture NPOT Workaround: texture creation', (t) => {
-
+test.skip('WebGL#Texture NPOT Workaround: texture creation', t => {
   // Create NPOT texture with no parameters
   let texture = webgl1Device.createTexture({data: null, width: 500, height: 512});
   t.ok(texture instanceof Texture, 'Texture construction successful');
@@ -260,8 +268,7 @@ test.skip('WebGL#Texture NPOT Workaround: texture creation', (t) => {
   t.end();
 });
 
-test.skip('WebGL#Texture NPOT Workaround: setParameters', (t) => {
-
+test.skip('WebGL#Texture NPOT Workaround: setParameters', t => {
   // Create NPOT texture
   const texture = webgl1Device.createTexture({data: null, width: 100, height: 100});
   t.ok(texture instanceof Texture, 'Texture construction successful');
@@ -276,7 +283,7 @@ test.skip('WebGL#Texture NPOT Workaround: setParameters', (t) => {
 
   // Above parameters should be changed to supported NPOT parameters.
   const minFilter = getParameter(texture, 'minFilter');
-  t.equals(minFilter,'linear', 'NPOT texture min filter is set to LINEAR');
+  t.equals(minFilter, 'linear', 'NPOT texture min filter is set to LINEAR');
   const wrapS = getParameter(texture, 'addressModeU');
   t.equals(wrapS, 'clamp-to-edge', 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
   const wrapT = getParameter(texture, 'addressModeV');
@@ -285,7 +292,7 @@ test.skip('WebGL#Texture NPOT Workaround: setParameters', (t) => {
   t.end();
 });
 
-test.skip('WebGL2#Texture NPOT Workaround: texture creation', (t) => {
+test.skip('WebGL2#Texture NPOT Workaround: texture creation', t => {
   // WebGL2 supports NPOT texture hence, texture parameters should not be changed.
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
@@ -299,11 +306,7 @@ test.skip('WebGL2#Texture NPOT Workaround: texture creation', (t) => {
 
   // Default values are un-changed.
   let minFilter = getParameter(texture, 'minFilter');
-  t.equals(
-    minFilter,
-    'nearest',
-    'NPOT texture min filter is set to NEAREST_MIPMAP_LINEAR'
-  );
+  t.equals(minFilter, 'nearest', 'NPOT texture min filter is set to NEAREST_MIPMAP_LINEAR');
 
   // mipmapFilter, 'LINEAR',
 
@@ -337,7 +340,7 @@ test.skip('WebGL2#Texture NPOT Workaround: texture creation', (t) => {
   t.end();
 });
 
-test.skip('WebGL2#Texture NPOT Workaround: setParameters', (t) => {
+test.skip('WebGL2#Texture NPOT Workaround: setParameters', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -371,7 +374,7 @@ test.skip('WebGL2#Texture NPOT Workaround: setParameters', (t) => {
   t.end();
 });
 
-test.skip('WebGL1#Texture setImageData', (t) => {
+test.skip('WebGL1#Texture setImageData', t => {
   // data: null
   const texture = webgl1Device.createTexture({data: null, width: 2, height: 1, mipmaps: false});
   t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
@@ -403,7 +406,7 @@ test.skip('WebGL1#Texture setImageData', (t) => {
   t.end();
 });
 
-test.skip('WebGL2#Texture setImageData', (t) => {
+test.skip('WebGL2#Texture setImageData', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -452,8 +455,7 @@ test.skip('WebGL2#Texture setImageData', (t) => {
   t.end();
 });
 
-test.skip('WebGL1#Texture setSubImageData', (t) => {
-
+test.skip('WebGL1#Texture setSubImageData', t => {
   // data: null
   const texture = webgl1Device.createTexture({data: null, width: 2, height: 1, mipmaps: false});
   t.deepEquals(readPixelsToArray(texture), new Uint8Array(8), 'Pixels are empty');
@@ -485,7 +487,7 @@ test.skip('WebGL1#Texture setSubImageData', (t) => {
   t.end();
 });
 
-test.skip('WebGL2#Texture setSubImageData', (t) => {
+test.skip('WebGL2#Texture setSubImageData', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -585,7 +587,7 @@ test.skip('WebGL2#Texture resize', (t) => {
 });
 */
 
-test.skip('WebGL2#Texture generateMipmap', (t) => {
+test.skip('WebGL2#Texture generateMipmap', t => {
   let texture = webgl1Device.createTexture({
     data: null,
     width: 3,
@@ -624,7 +626,9 @@ export function testSamplerParameters({t, texture, parameters}) {
       t.equals(
         newValue,
         value,
-        `${name}.setParameters({[${device.getGLKey(parameter)}]: ${device.getGLKey(value)}}) read back OK`
+        `${name}.setParameters({[${device.getGLKey(parameter)}]: ${device.getGLKey(
+          value
+        )}}) read back OK`
       );
     }
   }
@@ -632,7 +636,7 @@ export function testSamplerParameters({t, texture, parameters}) {
 
 // 2D TEXTURES
 
-test.skip('WebGL#Texture construct/delete', (t) => {
+test.skip('WebGL#Texture construct/delete', t => {
   t.throws(
     // @ts-expect-error
     () => new Texture(),
@@ -654,14 +658,14 @@ test.skip('WebGL#Texture construct/delete', (t) => {
   t.end();
 });
 
-test.skip('WebGL#Texture async constructor', (t) => {
+test.skip('WebGL#Texture async constructor', t => {
   let texture = webgl1Device.createTexture();
   t.ok(texture instanceof Texture, 'Synchronous Texture construction successful');
   t.equal(texture.loaded, true, 'Sync Texture marked as loaded');
   texture.destroy();
 
   let loadCompleted;
-  const loadPromise = new Promise((resolve) => {
+  const loadPromise = new Promise(resolve => {
     loadCompleted = resolve; // eslint-disable-line
   });
   texture = new Texture(gl, loadPromise);
@@ -677,7 +681,7 @@ test.skip('WebGL#Texture async constructor', (t) => {
   loadCompleted(null);
 });
 
-test.skip('WebGL#Texture buffer update', (t) => {
+test.skip('WebGL#Texture buffer update', t => {
   let texture = webgl1Device.createTexture();
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
@@ -687,11 +691,9 @@ test.skip('WebGL#Texture buffer update', (t) => {
   t.end();
 });
 
-
 // CUBE TEXTURES
 
-
-test.skip('WebGL#TextureCube construct/delete', (t) => {
+test.skip('WebGL#TextureCube construct/delete', t => {
   t.throws(
     // @ts-expect-error
     () => new TextureCube(),
@@ -713,7 +715,7 @@ test.skip('WebGL#TextureCube construct/delete', (t) => {
   t.end();
 });
 
-test.skip('WebGL#TextureCube buffer update', (t) => {
+test.skip('WebGL#TextureCube buffer update', t => {
   const texture = webgl1Device.createTexture({dimension: 'cube'});
   t.ok(texture instanceof Texture, 'TextureCube construction successful');
 
@@ -723,33 +725,38 @@ test.skip('WebGL#TextureCube buffer update', (t) => {
   t.end();
 });
 
-test.skip('WebGL#TextureCube multiple LODs', (t) => {
-  const texture = webgl1Device.createTexture({dimension: 'cube'}, {
-    pixels: {
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: [],
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: [],
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: [],
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: [],
-      [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: [],
-      [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: []
+test.skip('WebGL#TextureCube multiple LODs', t => {
+  const texture = webgl1Device.createTexture(
+    {dimension: 'cube'},
+    {
+      pixels: {
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: [],
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: [],
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: [],
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: [],
+        [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: [],
+        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: []
+      }
     }
-  });
+  );
   t.ok(texture instanceof Texture, 'TextureCube construction successful');
 
   t.end();
 });
 
-
 // 3D TEXTURES
 
-test.skip('WebGL#Texture3D construct/delete', (t) => {
+test.skip('WebGL#Texture3D construct/delete', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  t.throws(() => webgl2Device.createTexture({dimension: '3d'}), 'Texture3D throws on missing gl context');
+  t.throws(
+    () => webgl2Device.createTexture({dimension: '3d'}),
+    'Texture3D throws on missing gl context'
+  );
 
   // TODO(Tarek): generating mipmaps on an empty 3D texture seems to trigger an INVALID_OPERATION
   //    error. See if this is expected behaviour.

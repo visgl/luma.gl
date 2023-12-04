@@ -38,3 +38,4 @@ import './adapter/objects/webgl-renderbuffer.spec';
 
 // Resources, WebGL-specific APIs
 import './adapter/resources/webgl-buffer.spec';
+import './adapter/resources/webgl-vertex-array.spec';

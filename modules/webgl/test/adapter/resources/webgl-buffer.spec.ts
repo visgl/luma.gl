@@ -7,47 +7,75 @@ import test from 'tape-promise/tape';
 
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-test('Buffer#initialize/subData', t => {
+test('WEBGLBuffer#bind/unbind with index', t => {
   for (const device of getWebGLTestDevices()) {
-  let buffer;
+    if (!device.isWebGL2) {
+      t.comment('WebGL2 not available, skipping tests');
+      t.end();
+      return;
+    }
 
-  buffer = device.createBuffer({usage: Buffer.VERTEX}) as BufferWithAccessor;
-  buffer
-    .initialize({data: new Float32Array([1, 2, 3])})
-    .bind()
-    .unbind();
-  t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
-  buffer.destroy();
+    const buffer = device.createBuffer({usage: Buffer.UNIFORM});
+    device.gl2.bindBufferBase(buffer.glTarget, 0, buffer.handle);
+    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
+    device.gl2.bindBufferBase(buffer.glTarget, 0, null);
 
-  buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])}) as BufferWithAccessor;
-  buffer
-    .initialize({data: new Float32Array([1, 2, 3])})
-    .bind()
-    .unbind();
-  t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
-  buffer.destroy();
+    buffer.destroy();
+  }
 
-  buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor
-  buffer
-    .initialize({data: new Float32Array([1, 2, 3])})
-    .bind()
-    .unbind();
-  t.ok(buffer instanceof Buffer, `${device.info.type} buffer.initialize(ELEMENT_ARRAY_BUFFER) successful`);
-  buffer.destroy();
+  t.end();
+});
 
-  buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor
-  buffer
-    .initialize({data: new Float32Array([1, 2, 3])})
-    .subData({data: new Float32Array([1, 1, 1])})
-    .bind()
-    .unbind();
-  t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_ELEMENT_BUFFER) successful`);
-  buffer.destroy();
+test('WEBGLBuffer#initialize/subData', t => {
+  for (const device of getWebGLTestDevices()) {
+    let buffer;
+
+    buffer = device.createBuffer({usage: Buffer.VERTEX}) as BufferWithAccessor;
+    buffer
+      .initialize({data: new Float32Array([1, 2, 3])})
+      .bind()
+      .unbind();
+    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
+    buffer.destroy();
+
+    buffer = device.createBuffer({
+      usage: Buffer.VERTEX,
+      data: new Float32Array([1, 2, 3])
+    }) as BufferWithAccessor;
+    buffer
+      .initialize({data: new Float32Array([1, 2, 3])})
+      .bind()
+      .unbind();
+    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
+    buffer.destroy();
+
+    buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor;
+    buffer
+      .initialize({data: new Float32Array([1, 2, 3])})
+      .bind()
+      .unbind();
+    t.ok(
+      buffer instanceof Buffer,
+      `${device.info.type} buffer.initialize(ELEMENT_ARRAY_BUFFER) successful`
+    );
+    buffer.destroy();
+
+    buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor;
+    buffer
+      .initialize({data: new Float32Array([1, 2, 3])})
+      .subData({data: new Float32Array([1, 1, 1])})
+      .bind()
+      .unbind();
+    t.ok(
+      buffer instanceof Buffer,
+      `${device.info.type} Buffer.subData(ARRAY_ELEMENT_BUFFER) successful`
+    );
+    buffer.destroy();
   }
   t.end();
 });
 
-test('Buffer#copyData', t => {
+test('WEBGLBuffer#copyData', t => {
   for (const device of getWebGLTestDevices()) {
     if (!device.isWebGL2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -82,7 +110,7 @@ test('Buffer#copyData', t => {
   t.end();
 });
 
-test('Buffer#getElementCount', t => {
+test('WEBGLBuffer#getElementCount', t => {
   for (const device of getWebGLTestDevices()) {
     let vertexCount;
 
@@ -104,7 +132,7 @@ test('Buffer#getElementCount', t => {
   t.end();
 });
 
-test('Buffer#reallocate', t => {
+test('WEBGLBuffer#reallocate', t => {
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({byteLength: 100}) as BufferWithAccessor;
     t.equal(buffer.byteLength, 100, 'byteLength should match');
