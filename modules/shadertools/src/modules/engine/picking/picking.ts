@@ -22,11 +22,15 @@ export type PickingUniforms = {
   /** Set to true when picking an attribute value instead of object index */
   isAttribute: boolean;
   /** Color range 0-1 or 0-255 */
-  useNormalizedColors?: boolean;
+  useFloatColors?: boolean;
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
-  /** Set to a picking color to visually highlight that item */
-  highlightedObjectColor?: NumberArray; 
+  /**
+   * Set to a picking color to visually highlight that item.
+   * The picking module will persist the last highlighted object, unless
+   * `null` is passed to explicitly clear
+   **/
+  highlightedObjectColor?: NumberArray | null;
   /** Color of visual highlight of "selected" item */
   highlightColor?: NumberArray;
 };
@@ -36,7 +40,7 @@ uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
-  float useNormalizedColors;
+  float useFloatColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
@@ -45,14 +49,12 @@ out vec4 picking_vRGBcolor_Avalid;
 
 // Normalize unsigned byte color to 0-1 range
 vec3 picking_normalizeColor(vec3 color) {
-  return color;
-  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+  return picking.useFloatColors > 0.5 ? color : color / 255.0;
 }
 
 // Normalize unsigned byte color to 0-1 range
 vec4 picking_normalizeColor(vec4 color) {
-  return color;
-  // return picking.useNormalizedColors > 0.5 ? color : color / 255.0;
+  return picking.useFloatColors > 0.5 ? color : color / 255.0;
 }
 
 bool picking_isColorZero(vec3 color) {
@@ -112,7 +114,7 @@ uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
-  float useNormalizedColors;
+  float useFloatColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
@@ -180,7 +182,7 @@ export const picking: ShaderModule<PickingUniforms> = {
   uniformTypes: {
     isActive: 'f32',
     isAttribute: 'f32',
-    useNormalizedColors: 'f32',
+    useFloatColors: 'f32',
     isHighlightActive: 'f32',
     highlightedObjectColor: 'vec3<f32>',
     highlightColor: 'vec4<f32>'
@@ -188,7 +190,7 @@ export const picking: ShaderModule<PickingUniforms> = {
   defaultUniforms: {
     isActive: false,
     isAttribute: false,
-    useNormalizedColors: true,
+    useFloatColors: true,
     isHighlightActive: false,
     highlightedObjectColor: new Float32Array([0, 0, 0]),
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
@@ -207,6 +209,8 @@ function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: Picking
       const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
       uniforms.highlightedObjectColor = highlightedObjectColor;
     }
+  } else {
+    delete uniforms.highlightedObjectColor;
   }
 
   if (opts.highlightColor) {
@@ -220,6 +224,10 @@ function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: Picking
   if (opts.isActive !== undefined) {
     uniforms.isActive = Boolean(opts.isActive);
     uniforms.isAttribute = Boolean(opts.isAttribute);
+  }
+
+  if (opts.useFloatColors !== undefined) {
+    uniforms.useFloatColors = Boolean(opts.useFloatColors);
   }
 
   return uniforms;

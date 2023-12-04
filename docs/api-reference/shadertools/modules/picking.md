@@ -77,7 +77,7 @@ When inactive, renders normal colors, with the exception of selected object whic
 | -------------------------------------- | ------------------------------------------------------------------- |
 | `isActive`?: boolean                   | Whether in picking or normal rendering (+highlighting) mode         |
 | `isAttribute`: boolean                 | Set to true when picking an attribute value instead of object index |
-| `useNormalizedColors`?: boolean        | Color range 0-1 or 0-255                                            |
+| `useFloatColors`?: boolean             | Color range 0-1 or 0-255                                            |
 | `isHighlightActive`?: boolean          | Do we have a highlighted item?                                      |
 | `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item              |
 | `highlightColor`?: NumberArray         | Color of visual highlight of "selected" item                        |
