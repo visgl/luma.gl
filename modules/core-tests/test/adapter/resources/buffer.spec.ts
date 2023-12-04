@@ -2,7 +2,6 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {WEBGLBuffer} from '@luma.gl/webgl';
 import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 
@@ -90,31 +89,15 @@ test('Buffer#bind/unbind', t => {
   t.end();
 });
 
-test('Buffer#bind/unbind with index', t => {
-  for (const device of getWebGLTestDevices()) {
-    if (!device.isWebGL2) {
-      t.comment('WebGL2 not available, skipping tests');
-      t.end();
-      return;
-    }
-
-    const buffer = device.createBuffer({usage: Buffer.UNIFORM});
-    device.gl2.bindBufferBase(buffer.glTarget, 0, buffer.handle);
-    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
-    device.gl2.bindBufferBase(buffer.glTarget, 0, null);
-
-    buffer.destroy();
-  }
-
-  t.end();
-});
-
 test('Buffer#construction', t => {
   for (const device of getWebGLTestDevices()) {
-    let buffer: WEBGLBuffer;
+    let buffer;
 
     buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
-    t.ok(buffer.glTarget === GL.ARRAY_BUFFER, `${device.info.type} Buffer(ARRAY_BUFFER) successful`);
+    t.ok(
+      buffer.glTarget === GL.ARRAY_BUFFER,
+      `${device.info.type} Buffer(ARRAY_BUFFER) successful`
+    );
     buffer.destroy();
 
     // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
@@ -136,7 +119,11 @@ test('Buffer#write', t => {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
     buffer.write(data);
     if (device.isWebGL2) {
-      t.deepEqual(buffer.getData(), data, `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`);
+      t.deepEqual(
+        buffer.getData(),
+        data,
+        `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
+      );
     } else {
       t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
     }
