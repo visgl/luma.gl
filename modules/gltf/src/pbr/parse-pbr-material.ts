@@ -1,6 +1,5 @@
 import type {Device, Texture, Binding, Parameters} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
 import {PBREnvironment} from './pbr-environment';
 
 /* eslint-disable camelcase */
@@ -25,6 +24,20 @@ export type ParsedPBRMaterial = {
   /** List of all generated textures, makes it easy to destroy them later */
   readonly generatedTextures: Texture[];
 };
+
+// NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
+// `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
+// conflicts with the `babel-plugin-inline-webgl-constants` plugin.
+enum GLEnum {
+  FUNC_ADD = 0x8006,
+  ONE = 1,
+  SRC_ALPHA = 0x0302,
+  ONE_MINUS_SRC_ALPHA = 0x0303,
+  TEXTURE_MIN_FILTER = 0x2801,
+  LINEAR = 0x2601,
+  LINEAR_MIPMAP_NEAREST = 0x2701,
+  UNPACK_FLIP_Y_WEBGL = 0x9240,
+}
 
 /**
  * Parses a GLTF material definition into uniforms and parameters for the PBR shader module
@@ -144,8 +157,8 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
 
       // GL parameters
       parsedMaterial.glParameters.blend = true;
-      parsedMaterial.glParameters.blendEquation = GL.FUNC_ADD;
-      parsedMaterial.glParameters.blendFunc = [GL.SRC_ALPHA, GL.ONE_MINUS_SRC_ALPHA, GL.ONE, GL.ONE_MINUS_SRC_ALPHA];
+      parsedMaterial.glParameters.blendEquation = GLEnum.FUNC_ADD;
+      parsedMaterial.glParameters.blendFunc = [GLEnum.SRC_ALPHA, GLEnum.ONE_MINUS_SRC_ALPHA, GLEnum.ONE, GLEnum.ONE_MINUS_SRC_ALPHA];
 
       break;
   }
@@ -197,7 +210,7 @@ function addTexture(
   if (image.compressed) {
     textureOptions = image;
     specialTextureParameters = {
-      [GL.TEXTURE_MIN_FILTER]: image.data.length > 1 ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR
+      [GLEnum.TEXTURE_MIN_FILTER]: image.data.length > 1 ? GLEnum.LINEAR_MIPMAP_NEAREST : GLEnum.LINEAR
     };
   } else {
     // Texture2D accepts a promise that returns an image as data (Async Textures)
@@ -211,7 +224,7 @@ function addTexture(
       ...specialTextureParameters
     },
     pixelStore: {
-      [GL.UNPACK_FLIP_Y_WEBGL]: false
+      [GLEnum.UNPACK_FLIP_Y_WEBGL]: false
     },
     ...textureOptions
   });
