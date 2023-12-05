@@ -36,7 +36,7 @@ export type ShaderLayout = {
   /** WebGL only (WebGPU use bindings and uniform buffers) */
   uniforms?: any[];
   /** WebGL2 only (WebGPU use compute shaders) */
-  varyings?: any[];
+  varyings?: VaryingBinding[];
 };
 
 /**

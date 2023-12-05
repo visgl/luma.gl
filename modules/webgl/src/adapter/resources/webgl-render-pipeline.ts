@@ -21,6 +21,7 @@ import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLTexture} from './webgl-texture';
 // import {WEBGLVertexArray} from './webgl-vertex-array';
 import {WEBGLRenderPass} from './webgl-render-pass';
+import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -198,6 +199,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     firstIndex?: number;
     firstInstance?: number;
     baseVertex?: number;
+    transformFeedback?: WEBGLTransformFeedback;
   }): boolean {
     const {
       renderPass,
@@ -205,10 +207,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       vertexCount,
       // indexCount,
       instanceCount,
-      firstVertex = 0
+      firstVertex = 0,
       // firstIndex,
       // firstInstance,
-      // baseVertex
+      // baseVertex,
+      transformFeedback
     } = options;
 
     const glDrawMode = getGLDrawMode(this.props.topology);
@@ -231,7 +234,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     vertexArray.bindBeforeRender(renderPass);
 
     const primitiveMode = getGLPrimitive(this.props.topology);
-    const transformFeedback: any = null;
+
     if (transformFeedback) {
       transformFeedback.begin(primitiveMode);
     }

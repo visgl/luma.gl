@@ -1,14 +1,14 @@
-import type {ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
-import {log, isObjectEmpty, TransformFeedback} from '@luma.gl/core';
+import type {Device, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
+import {log, isObjectEmpty, TransformFeedback, Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
-import {BufferWithAccessor as Buffer, BufferWithAccessorProps as ClassicBuffer} from '../../classic/buffer-with-accessor';
+import {WEBGLBuffer, isWebGL2} from '../..';
 
-  /** For bindRange */
-export type BufferRange = {
-  buffer: Buffer; 
+/** For bindRange */
+type BufferRange = {
+  buffer: WEBGLBuffer;
   byteOffset?: number;
-  byteLength?: number
+  byteLength?: number;
 };
 
 export class WEBGLTransformFeedback extends TransformFeedback {
@@ -19,14 +19,18 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   readonly device: WebGLDevice;
   readonly gl2: WebGL2RenderingContext;
   readonly handle: WebGLTransformFeedback;
+
+  /**
+   * NOTE: The Model already has this information while drawing, but
+   * TransformFeedback currently needs it internally, to look up
+   * varying information outside of a draw() call.
+   */
   readonly layout: ShaderLayout;
   buffers: Record<string, BufferRange> = {};
   unusedBuffers: Record<string, Buffer> = {};
   // NOTE: The `bindOnUse` flag is a major workaround:
   // See https://github.com/KhronosGroup/WebGL/issues/2346
   bindOnUse = true;
-  configuration;
-  // export class ClassicTransformFeedback extends WEBGLTransformFeedback {
   private _bound: boolean = false;
 
   constructor(device: WebGLDevice, props: TransformFeedbackProps) {
@@ -38,18 +42,18 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     this.handle = this.props.handle || this.gl2.createTransformFeedback();
     this.layout = this.props.layout;
 
+    // TODO(v9): Should this logic exist in the constructor?
     try {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
-      for (const [locationOrName, bufferOrRange] of Object.entries(this.props.buffers as Record<string, ClassicBuffer | BufferRange>)) {
+      for (const [locationOrName, bufferOrRange] of Object.entries(this.props.buffers)) {
         const location = this._getVaryingIndex(locationOrName);
-        // @ts-expect-error
-        const {buffer, byteOffset, byteLength} = this._getBufferRange(bufferOrRange);
+        const range = this._getBufferRange(bufferOrRange as WEBGLBuffer | BufferRange);
         if (location < 0) {
-          this.unusedBuffers[locationOrName] = buffer;
+          this.unusedBuffers[locationOrName] = range.buffer;
           log.warn(`${this.id} unused varying buffer ${locationOrName}`)();
           return this;
         }
-        this.buffers[location] = {buffer, byteOffset, byteLength};
+        this.buffers[location] = range;
       }
     } finally {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
@@ -64,8 +68,14 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     Object.seal(this);
   }
 
+  static override isSupported(device: Device | WebGLRenderingContext): boolean {
+    const webglDevice = WebGLDevice.attach(device);
+    return isWebGL2(webglDevice.gl);
+  }
+
   override destroy(): void {
     this.gl2.deleteTransformFeedback(this.handle);
+    super.destroy();
   }
 
   begin(primitiveMode = GL.POINTS): this {
@@ -97,7 +107,13 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       if (!handle || byteLength === undefined) {
         this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), handle);
       } else {
-        this.gl2.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), handle, byteOffset, byteLength);
+        this.gl2.bindBufferRange(
+          GL.TRANSFORM_FEEDBACK_BUFFER,
+          Number(bufferIndex),
+          handle,
+          byteOffset,
+          byteLength
+        );
       }
     }
   }
@@ -108,26 +124,12 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     }
   }
 
-  // // Need to avoid chrome bug where buffer that is already bound to a different target
-  // // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
-  // _bindBuffers() {
-  //   if (this.bindOnUse) {
-  //     for (const bufferIndex in this.buffers) {
-  //       const {buffer, byteLength, byteOffset} = this._getBufferRange(this.buffers[bufferIndex]);
-  //       this._bindBuffer(bufferIndex, buffer, byteOffset, byteLength);
-  //     }
-  //   }
-  // }
-
-  // _unbindBuffers() {
-  //   if (this.bindOnUse) {
-  //     for (const bufferIndex in this.buffers) {
-  //       this._bindBuffer(bufferIndex, null);
-  //     }
-  //   }
-  // }
-
-  _bindBuffer(index: number, buffer: Buffer, byteOffset: number = 0, byteLength?: number): this {
+  _bindBuffer(
+    index: number,
+    buffer: WEBGLBuffer,
+    byteOffset: number = 0,
+    byteLength?: number
+  ): this {
     const handle = buffer && buffer.handle;
     if (!handle || byteLength === undefined) {
       // @ts-expect-error
@@ -144,7 +146,6 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   initialize(props?: TransformFeedbackProps): this {
     this.buffers = {};
     this.unusedBuffers = {};
-    this.configuration = null;
     this.bindOnUse = true;
 
     // Unbind any currently bound buffers
@@ -157,15 +158,6 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   }
 
   setProps(props: TransformFeedbackProps) {
-    // if ('program' in props) {
-    //   this.configuration = props.program && props.program.configuration;
-    // }
-    // if ('configuration' in props) {
-    //   this.configuration = props.configuration;
-    // }
-    // if ('bindOnUse' in props) {
-    //   props = props.bindOnUse;
-    // }
     if ('buffers' in props) {
       this.setBuffers(props.buffers);
     }
@@ -180,7 +172,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     return this;
   }
 
-  setBuffer(locationOrName, bufferOrRange) {
+  setBuffer(locationOrName: string | number, bufferOrRange: WEBGLBuffer) {
     const location = this._getVaryingIndex(locationOrName);
     const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferOrRange);
 
@@ -190,7 +182,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       return this;
     }
 
-    this.buffers[location] = bufferOrRange;
+    this.buffers[location] = {buffer, byteLength, byteOffset};
 
     // Need to avoid chrome bug where buffer that is already bound to a different target
     // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
@@ -205,37 +197,33 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   /** Extract offsets for bindBufferRange */
   _getBufferRange(
-    bufferOrRange: Buffer | {buffer: Buffer; byteOffset?: number; byteSize?: number}
-  ): BufferRange {
-    let byteOffset;
-    let byteLength;
-    let buffer;
-    if (!(bufferOrRange instanceof Buffer)) {
-      buffer = bufferOrRange.buffer;
-      byteLength = bufferOrRange.byteSize;
-      byteOffset = bufferOrRange.byteOffset;
-    } else {
-      buffer = bufferOrRange;
+    bufferOrRange: WEBGLBuffer | {buffer: WEBGLBuffer; byteOffset?: number; byteLength?: number}
+  ): Required<BufferRange> {
+    if (bufferOrRange instanceof WEBGLBuffer) {
+      return {buffer: bufferOrRange, byteOffset: 0, byteLength: bufferOrRange.byteLength};
     }
 
-    // to use bindBufferRange, either offset or size must be specified, use default value for the other.
-    if (byteOffset !== undefined || byteLength !== undefined) {
-      byteOffset = byteOffset || 0;
-      byteLength = byteLength || buffer.byteLength - byteOffset;
-    }
+    // To use bindBufferRange either offset or size must be specified.
+    const {buffer, byteOffset = 0, byteLength = bufferOrRange.buffer.byteLength} = bufferOrRange;
     return {buffer, byteOffset, byteLength};
   }
 
-  _getVaryingInfo(locationOrName) {
-    return this.configuration && this.configuration.getVaryingInfo(locationOrName);
+  _getVaryingInfo(locationOrName: string | number) {
+    throw new Error(`${this.id} getVaryingInfo not implemented`);
   }
 
-  _getVaryingIndex(locationOrName) {
-    if (this.configuration) {
-      return this.configuration.getVaryingInfo(locationOrName).location;
+  _getVaryingIndex(locationOrName: string | number) {
+    if (typeof locationOrName === 'number') {
+      return locationOrName;
     }
-    const location = Number(locationOrName);
-    return Number.isFinite(location) ? location : -1;
+
+    for (const varying of this.layout.varyings) {
+      if (locationOrName === varying.name) {
+        return varying.location;
+      }
+    }
+
+    return -1;
   }
 
   bind(funcOrHandle = this.handle) {
@@ -244,7 +232,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       return this;
     }
 
-    let value;
+    let value: unknown;
 
     if (!this._bound) {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
@@ -262,5 +250,4 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   unbind() {
     this.bind(null);
   }
-
 }

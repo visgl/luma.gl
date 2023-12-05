@@ -9,6 +9,7 @@ import {Resource, ResourceProps} from './resource';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
 import {VertexArray} from './vertex-array';
+import {TransformFeedback} from './transform-feedback';
 
 export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout
@@ -124,5 +125,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     /** First instance to draw from */
     firstInstance?: number;
     baseVertex?: number;
+    /** Transform feedback. WebGL 2.0 only. */
+    transformFeedback?: TransformFeedback;
   }): void;
 }

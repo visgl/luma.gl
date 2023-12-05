@@ -2,13 +2,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webgl1Device, webgl2Device, getTestDevices} from '@luma.gl/test-utils';
+import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {glsl, TransformFeedback, Buffer} from '@luma.gl/core';
+import {glsl, Buffer, TransformFeedback} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
-import {WEBGLTransformFeedback, WebGLBuffer} from '@luma.gl/webgl';
-import {GL} from '@luma.gl/constants';
+import {WEBGLTransformFeedback} from '@luma.gl/webgl';
 
 const VS = glsl`\
 attribute float inValue;
@@ -27,23 +26,33 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback isSupported', (t) => {
-  t.equal(
-    TransformFeedback.isSupported(webgl1Device),
-    false,
-    'isSupported returns correct result for WebGL1'
+test('WebGL#TransformFeedback isSupported', t => {
+  // WebGL 1.0
+  t.throws(
+    () => TransformFeedback.isSupported(webgl1Device),
+    'TransformFeedback#isSupported (WebGL1)'
   );
+  t.false(
+    WEBGLTransformFeedback.isSupported(webgl1Device),
+    'WEBGLTransformFeedback#isSupported (WebGL1)'
+  );
+
+  // WebGL 2.0
   if (webgl2Device) {
-    t.equal(
-      TransformFeedback.isSupported(webgl2Device),
-      true,
-      'isSupported returns correct result for WebGL2'
+    t.throws(
+      () => TransformFeedback.isSupported(webgl2Device),
+      'TransformFeedback#isSupported (WebGL2)'
+    );
+    t.true(
+      WEBGLTransformFeedback.isSupported(webgl2Device),
+      'WEBGLTransformFeedback#isSupported (WebGL2)'
     );
   }
+
   t.end();
 });
 
-test('WebGL#TransformFeedback constructor/delete', (t) => {
+test('WebGL#TransformFeedback constructor/destroy', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
@@ -51,44 +60,51 @@ test('WebGL#TransformFeedback constructor/delete', (t) => {
   }
 
   t.throws(
-    () => new TransformFeedback(),
+    () => new (WEBGLTransformFeedback as any)(),
     'TransformFeedback throws on missing gl context'
   );
 
-  const tf = webgl2Device.createTransformFeedback();
+  const buffer1 = webgl2Device.createBuffer({byteLength: 16})
+  const buffer2 = webgl2Device.createBuffer({byteLength: 16})
+  const model = createModel(buffer1, 4);
+
+  const tf = webgl2Device.createTransformFeedback({
+    layout: model.pipeline.shaderLayout,
+    buffers: {outValue: buffer2},
+  });
+
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback construction successful');
 
-  tf.delete();
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback delete successful');
+  tf.destroy();
+  t.ok(tf instanceof TransformFeedback, 'TransformFeedback destroy successful');
 
-  tf.delete();
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback repeated delete successful');
+  tf.destroy();
+  t.ok(tf instanceof TransformFeedback, 'TransformFeedback repeated destroy successful');
 
   t.end();
 });
 
-test('WebGL#TransformFeedback bindBuffers', (t) => {
+test('WebGL#TransformFeedback setBuffers', t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  const tf = webgl2Device.createTransformFeedback();
-  const buffer1 = new Buffer(webgl2Device);
-  const buffer2 = new Buffer(webgl2Device);
+  const buffer1 = webgl2Device.createBuffer({byteLength: 16})
+  const buffer2 = webgl2Device.createBuffer({byteLength: 16})
+  const model = createModel(buffer1, 4);
 
-  tf.setBuffers({
-    0: buffer1,
-    1: buffer2
+  const tf = webgl2Device.createTransformFeedback({
+    layout: model.pipeline.shaderLayout,
+    buffers: {outValue: buffer2},
   });
+  
+
+  tf.setBuffers({ 0: buffer1, 1: buffer2 });
   t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers successful');
 
-  tf.setBuffers({
-    0: buffer1,
-    1: buffer2
-  });
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
+  // TODO(v9): Use ProgramConfiguration or model.pipeline.shaderLayout?
 
   /* TODO - this has been changed to use ProgramConfiguration
   const varyingMap = {
@@ -106,48 +122,64 @@ test('WebGL#TransformFeedback bindBuffers', (t) => {
   t.end();
 });
 
-function testDataCapture({t, webgl2Device, byteOffset = 0}) {
-  const inData = new Float32Array([10, 20, 31, 0, -57]);
-  const vertexCount = inData.length;
-  const inBuffer = new Buffer(webgl2Device, {data: inData});
-  const outBuffer = new Buffer(webgl2Device, 10 * 4); // allocate memory for 10 floats
-  const model = new Model(webgl2Device, {
-    vs: VS,
-    fs: FS,
-    attributes: {inValue: inBuffer},
-    varyings: ['outValue'],
-    drawMode: GL.POINTS,
-    vertexCount: 5
-  });
-  const offset = byteOffset / 4;
-  const tf = new TransformFeedback(webgl2Device, {
-    buffers: {outValue: {buffer: outBuffer, byteOffset}},
-    configuration: model.program.configuration
-  });
-
-  model.draw({
-    transformFeedback: tf
-  });
-
-  const outData = outBuffer.getData().slice(offset, offset + vertexCount);
-  t.deepEqual(
-    outData,
-    inData.map((x) => x * 2),
-    `Data should be captured in buffer when offset is ${offset}`
-  );
-}
-test('WebGL#TransformFeedback capture', (t) => {
+test('WebGL#TransformFeedback capture', async t => {
   if (!webgl2Device) {
     t.comment('WebGL2 not available, skipping tests');
     t.end();
     return;
   }
 
-  // no offset
-  testDataCapture({t, webgl2Device});
+  // TODO(v9) Test writing with offset into output buffer.
 
-  // with offset
-  testDataCapture({t, webgl2Device, byteOffset: 2 * 4});
+  const inArray = new Float32Array([10, 20, 31, 0, -57]);
+  const vertexCount = inArray.length;
+
+  const byteOffset = 0;
+  const byteLength = vertexCount * Float32Array.BYTES_PER_ELEMENT;
+
+  const inBuffer = webgl2Device.createBuffer({data: inArray});
+  const outBuffer = webgl2Device.createBuffer({byteLength: byteLength * 2}); // pad output for write with offset
+  const model = createModel(inBuffer, vertexCount);
+
+  const transformFeedback = webgl2Device.createTransformFeedback({
+    layout: model.pipeline.shaderLayout,
+    buffers: {outValue: outBuffer},
+  });
+
+  const renderPass = webgl2Device.beginRenderPass({discard: true});
+  model.draw(renderPass, {transformFeedback});
+  renderPass.end();
+
+  const outBytes = await outBuffer.readAsync(byteOffset, byteLength);
+  const outArray = new Float32Array(outBytes.buffer, outBytes.byteOffset, vertexCount);
+
+  t.deepEqual(
+    Array.from(outArray),
+    Array.from(inArray).map(x => x * 2),
+    'transform feedback output'
+  );
 
   t.end();
 });
+
+/**
+ * Creates a model for TransformFeedback testing with input attribute 'inValue'
+ * and output varying 'outValue', both of type float32.
+ */
+function createModel(buffer: Buffer, vertexCount: number): Model {
+  return new Model(webgl2Device, {
+    vs: VS,
+    fs: FS,
+    attributes: {inValue: buffer},
+    bufferLayout: [{
+      name: 'inValue',
+      attributes: [
+        {attribute: 'inValue', byteOffset: 0, format: 'float32'}
+      ]
+    }],
+    // @ts-ignore
+    varyings: ['outValue'],
+    topology: 'point-list',
+    vertexCount,
+  });
+}

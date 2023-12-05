@@ -316,7 +316,7 @@ export abstract class Device {
   /** Create a render pipeline (aka program) */
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
-  /** Create a compute pipeline (aka program) @note WebGPU only */
+  /** Create a compute pipeline (aka program). WebGPU only. */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
@@ -335,9 +335,7 @@ export abstract class Device {
   /** Get a renderpass that is set up to render to the primary CanvasContext */
   abstract getDefaultRenderPass(): RenderPass;
 
-  // Resource creation helpers - WebGL only
-
-  /** Create a transform feedback (immutable set of output buffer bindings) - WebGL only */
+  /** Create a transform feedback (immutable set of output buffer bindings). WebGL 2.0 only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   // Implementation

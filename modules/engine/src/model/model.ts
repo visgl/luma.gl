@@ -7,7 +7,8 @@ import type {
   RenderPipelineParameters,
   BufferLayout,
   VertexArray,
-  AttributeInfo
+  AttributeInfo,
+  TransformFeedback
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {
@@ -236,7 +237,8 @@ export class Model {
 
   // Draw call
 
-  draw(renderPass: RenderPass): void {
+  // TODO(v9): Should draw() take 'transformFeedback' in options?
+  draw(renderPass: RenderPass, options?: {transformFeedback?: TransformFeedback}): void {
     // Check if the pipeline is invalidated
     // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
     this.pipeline = this._updatePipeline();
@@ -250,7 +252,8 @@ export class Model {
       renderPass,
       vertexArray: this.vertexArray,
       vertexCount: this.vertexCount,
-      instanceCount: this.instanceCount
+      instanceCount: this.instanceCount,
+      transformFeedback: options?.transformFeedback
     });
   }
 
@@ -404,6 +407,7 @@ export class Model {
     for (const [bufferName, buffer] of Object.entries(buffers)) {
       const bufferLayout = this.bufferLayout.find(layout => layout.name === bufferName);
       if (!bufferLayout) {
+        log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
         continue; // eslint-disable-line no-continue
       }
 

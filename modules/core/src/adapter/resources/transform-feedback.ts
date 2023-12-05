@@ -1,20 +1,19 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
-import type {ShaderLayout} from '../types/shader-layout';
+import {ShaderLayout} from '../types/shader-layout';
 import type {Buffer} from './buffer';
 import {Resource, ResourceProps} from './resource';
 
 /** For bindRange */
-export type BufferRange = {
+type BufferRange = {
   buffer: Buffer;
   byteOffset?: number;
-  byteSize?: number;
+  byteLength?: number;
 };
-
 
 /** Configures a set of output buffers for pipeline (WebGL only) */
 export type TransformFeedbackProps = ResourceProps & {
-  /** Layout of shader (vor varyings) */
+  /** Layout of shader (for varyings) */
   layout: ShaderLayout;
   /** Buffer bindings (for varyings) */
   buffers: Record<string, Buffer | BufferRange>;
@@ -34,5 +33,9 @@ export abstract class TransformFeedback extends Resource<TransformFeedbackProps>
 
   constructor(device: Device, props?: TransformFeedbackProps) {
     super(device, props, TransformFeedback.defaultProps);
+  }
+
+  static isSupported(device: Device | WebGLRenderingContext): boolean {
+    throw new Error('TransformFeedback#isSupported not implemented');
   }
 }
