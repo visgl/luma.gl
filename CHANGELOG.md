@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.45
+
+- Differentiate between settings/uniforms in picking (#1862)
+
 ### v9.0.0-alpha.44
 
 - Implement picking.useNormalizedColors (#1856)
