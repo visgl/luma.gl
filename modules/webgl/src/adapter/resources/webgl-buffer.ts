@@ -58,8 +58,33 @@ export class WEBGLBuffer extends Buffer {
     }
   }
 
-  // DEPRECATED METHODS
-  // TODO(donmccurdy): Remove them.
+  /**
+   * Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
+   * @note WEBGL2 ONLY
+   */
+  override getData<T extends TypedArray = Uint8Array>(options?: {
+    dstData?: T;
+    srcByteOffset?: number;
+    dstOffset?: number;
+    length?: number;
+  }): T {
+    const {
+      length = this.byteLength,
+      dstData = new Uint8Array(length),
+      srcByteOffset = 0,
+      dstOffset = 0
+    } = options || {};
+
+    assertWebGL2Context(this.gl);
+
+    // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
+    this.gl2?.getBufferSubData(GL.COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
+    this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
+
+    // TODO - update local `data` if offsets are 0
+    return dstData as T;
+  }
 
   // Updates a subset of a buffer object's data store.
   // Data (Typed Array or ArrayBuffer), length is inferred unless provided

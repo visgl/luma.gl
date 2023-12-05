@@ -36,7 +36,7 @@ test('Buffer#constructor offset and size', t => {
     if (device.isWebGL2) {
       const receivedData = buffer.getData();
       t.deepEqual(
-        receivedData,
+        new Float32Array(receivedData.buffer),
         expectedData,
         `${device.info.type} Buffer constructor offsets data`
       );
@@ -52,7 +52,7 @@ test('Buffer#constructor offset and size', t => {
     if (device.isWebGL2) {
       const receivedData = buffer.getData();
       t.deepEqual(
-        receivedData,
+        new Float32Array(receivedData.buffer),
         expectedData,
         `${device.info.type} Buffer constructor sets buffer data`
       );
@@ -69,7 +69,7 @@ test('Buffer#constructor offset and size', t => {
     if (device.isWebGL2) {
       const receivedData = buffer.getData();
       t.deepEqual(
-        receivedData,
+        new Float32Array(receivedData.buffer),
         expectedData,
         `${device.info.type} Buffer constructor sets buffer byteLength and offsets data`
       );
@@ -114,14 +114,15 @@ test('Buffer#construction', t => {
 });
 
 test('Buffer#write', t => {
-  const data = new Float32Array([1, 2, 3]);
+  const expectedData = new Float32Array([1, 2, 3]);
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
-    buffer.write(data);
+    buffer.write(expectedData);
     if (device.isWebGL2) {
+      const receivedData = buffer.getData();
       t.deepEqual(
-        buffer.getData(),
-        data,
+        new Float32Array(receivedData.buffer),
+        expectedData,
         `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
       );
     } else {
