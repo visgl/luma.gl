@@ -108,40 +108,6 @@ export class WEBGLBuffer extends Buffer {
     return this;
   }
 
-  /**
-   * Copies part of the data of another buffer into this buffer
-   * @note WEBGL2 ONLY
-   * @deprecated
-   */
-  copyData(options: {
-    sourceBuffer: any;
-    readOffset?: number;
-    writeOffset?: number;
-    size: any;
-  }): this {
-    const {sourceBuffer, readOffset = 0, writeOffset = 0, size} = options;
-    const {gl, gl2} = this;
-    assertWebGL2Context(gl);
-
-    // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
-    gl.bindBuffer(GL.COPY_READ_BUFFER, sourceBuffer.handle);
-    gl.bindBuffer(GL.COPY_WRITE_BUFFER, this.handle);
-    gl2?.copyBufferSubData(
-      GL.COPY_READ_BUFFER,
-      GL.COPY_WRITE_BUFFER,
-      readOffset,
-      writeOffset,
-      size
-    );
-    gl.bindBuffer(GL.COPY_READ_BUFFER, null);
-    gl.bindBuffer(GL.COPY_WRITE_BUFFER, null);
-
-    // TODO - update local `data` if offsets are 0
-    this.debugData = null;
-
-    return this;
-  }
-
   // PRIVATE METHODS
 
   /** Allocate a new buffer and initialize to contents of typed array */

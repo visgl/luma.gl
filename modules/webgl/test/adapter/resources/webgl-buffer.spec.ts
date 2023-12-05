@@ -59,38 +59,3 @@ test('WEBGLBuffer#subData', t => {
   }
   t.end();
 });
-
-test('WEBGLBuffer#copyData', t => {
-  for (const device of getWebGLTestDevices()) {
-    if (!device.isWebGL2) {
-      t.comment('WebGL2 not available, skipping tests');
-      t.end();
-      return;
-    }
-
-    const sourceData = new Float32Array([1, 2, 3]);
-    const sourceBuffer = device.createBuffer({data: sourceData});
-    const destinationData = new Float32Array([4, 5, 6]);
-    const destinationBuffer = device.createBuffer({data: destinationData});
-
-    let receivedData = destinationBuffer.getData();
-    let expectedData = new Float32Array([4, 5, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.getData: default parameters successful');
-
-    destinationBuffer.copyData({sourceBuffer, size: 2 * Float32Array.BYTES_PER_ELEMENT});
-    receivedData = destinationBuffer.getData();
-    expectedData = new Float32Array([1, 2, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size successful');
-
-    destinationBuffer.copyData({
-      sourceBuffer,
-      readOffset: Float32Array.BYTES_PER_ELEMENT,
-      writeOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
-      size: Float32Array.BYTES_PER_ELEMENT
-    });
-    receivedData = destinationBuffer.getData();
-    expectedData = new Float32Array([1, 2, 2]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size and offsets successful');
-  }
-  t.end();
-});

@@ -19,7 +19,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
 
     let receivedData = destination.getData();
     let expectedData = new Float32Array([4, 5, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.getData: default parameters successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
     let commandEncoder = device.createCommandEncoder({});
     commandEncoder.copyBufferToBuffer({source, destination, size: 2 * Float32Array.BYTES_PER_ELEMENT});
@@ -28,7 +28,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
 
     receivedData = destination.getData();
     expectedData = new Float32Array([1, 2, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
 
     commandEncoder = device.createCommandEncoder({});
     commandEncoder.copyBufferToBuffer({
@@ -43,7 +43,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
 
     receivedData = destination.getData();
     expectedData = new Float32Array([1, 2, 2]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size and offsets successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
   }
   t.end();
 });
