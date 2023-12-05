@@ -109,52 +109,6 @@ export class WEBGLBuffer extends Buffer {
   }
 
   /**
-   * Binds a buffer to a given binding point (target).
-   *   GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER take an index, and optionally a range.
-   *   - GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER need an index to affect state
-   *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
-   *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
-   * @deprecated
-   */
-  bind(options?: {glTarget?: number; index: any; offset?: number; size?: any}): this {
-    const {
-      glTarget = this.glTarget, // target for the bind operation
-      index, // index = index of target (indexed bind point)
-      offset = 0,
-      size
-    } = options || {};
-    // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
-    // be used as direct binding points, they will not affect transform feedback or
-    // uniform buffer state. Instead indexed bindings need to be made.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-    if (glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER) {
-      if (size !== undefined) {
-        this.gl2?.bindBufferRange(glTarget, index, this.handle, offset, size);
-      } else {
-        assert(offset === 0); // Make sure offset wasn't supplied
-        this.gl2?.bindBufferBase(glTarget, index, this.handle);
-      }
-    } else {
-      this.gl.bindBuffer(glTarget, this.handle);
-    }
-
-    return this;
-  }
-
-  /** @deprecated */
-  unbind(options?: {glTarget?: any; index: any}): this {
-    const {glTarget = this.glTarget, index} = options || {};
-    const isIndexedBuffer =
-      glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER;
-    if (isIndexedBuffer) {
-      this.gl2?.bindBufferBase(glTarget, index, null);
-    } else {
-      this.gl.bindBuffer(glTarget, null);
-    }
-    return this;
-  }
-
-  /**
    * Copies part of the data of another buffer into this buffer
    * @note WEBGL2 ONLY
    * @deprecated

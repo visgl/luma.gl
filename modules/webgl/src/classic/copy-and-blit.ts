@@ -6,7 +6,6 @@ import {GL} from '@luma.gl/constants';
 
 import {WEBGLTexture} from '../adapter/resources/webgl-texture';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
-import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../adapter/resources/webgl-buffer';
@@ -117,7 +116,6 @@ export function readPixelsToBuffer(
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
   const webglFramebuffer = framebuffer as WEBGLFramebuffer;
-  const gl2 = webglFramebuffer.device.assertWebGL2();
 
   // deduce type if not available.
   sourceType = sourceType || GL.UNSIGNED_BYTE;
@@ -127,22 +125,20 @@ export function readPixelsToBuffer(
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    target = new WEBGLBuffer(webglFramebuffer.device, {byteLength});
+    target = webglFramebuffer.device.createBuffer({byteLength});
   }
 
-  target.bind({glTarget: GL.PIXEL_PACK_BUFFER, index: 0}); // TODO(donmccurdy): Correct index?
-  withGLParameters(gl2, {framebuffer}, () => {
-    gl2.readPixels(
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      sourceFormat,
-      sourceType,
-      targetByteOffset
-    );
+  // TODO(donmccurdy): Do we have tests to confirm this is working?
+  const commandEncoder = source.device.createCommandEncoder();
+  commandEncoder.copyTextureToBuffer({
+    source: source as Texture,
+    width: sourceWidth,
+    height: sourceHeight,
+    origin: [sourceX, sourceY],
+    destination: target,
+    byteOffset: targetByteOffset
   });
-  target.unbind({glTarget: GL.PIXEL_PACK_BUFFER, index: 0}); // TODO(donmccurdy): Correct index?
+  commandEncoder.destroy();
 
   if (deleteFramebuffer) {
     framebuffer.destroy();
