@@ -59,7 +59,6 @@ import type {
   CommandEncoderProps
 } from '@luma.gl/core';
 
-import {BufferWithAccessor} from '../classic/buffer-with-accessor';
 import {WEBGLBuffer} from './resources/webgl-buffer';
 import {WEBGLShader} from './resources/webgl-shader';
 import {WEBGLSampler} from './resources/webgl-sampler';
@@ -298,7 +297,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
     const newProps = this._getBufferProps(props);
-    return new BufferWithAccessor(this, newProps);
+    return new WEBGLBuffer(this, newProps);
   }
 
   _createTexture(props: TextureProps): WEBGLTexture {

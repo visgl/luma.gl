@@ -1,10 +1,11 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {BufferProps} from '@luma.gl/core';
+import type {BufferProps, TypedArray} from '@luma.gl/core';
 import {Buffer, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
+import {assertWebGL2Context} from '../..';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -55,6 +56,167 @@ export class WEBGLBuffer extends Buffer {
     } else {
       this._initWithByteLength(props.byteLength || 0);
     }
+  }
+
+  // "CLASSIC" METHODS
+
+  /**
+   * Allocate a bigger GPU buffer, if the current buffer is not big enough.
+   * When reallocation is triggered, buffer contents is cleared.
+   *
+   * @returns Whether buffer was reallocated and cleared.
+   * @deprecated
+   */
+  reallocate(byteLength: number): boolean {
+    if (byteLength > this.byteLength) {
+      this._initWithByteLength(byteLength);
+      return true;
+    }
+    this.bytesUsed = byteLength;
+    return false;
+  }
+
+  /**
+   * Creates and initializes the buffer object's data store.
+   * @deprecated
+   */
+  initialize(props: BufferProps) {
+    return this._initWithData(props.data);
+  }
+
+  /**
+   * Update with new data. Reinitializes the buffer.
+   * @deprecated
+   */
+  setData(props: BufferProps) {
+    return this._initWithData(props.data);
+  }
+
+  // Updates a subset of a buffer object's data store.
+  // Data (Typed Array or ArrayBuffer), length is inferred unless provided
+  // Offset into buffer
+  // WebGL2 only: Offset into srcData
+  // WebGL2 only: Number of bytes to be copied
+  subData(
+    options:
+      | TypedArray
+      | {
+          data: TypedArray;
+          offset?: number;
+          srcOffset?: number;
+          byteLength?: number;
+          length?: number;
+        }
+  ) {
+    // Signature: buffer.subData(new Float32Array([...]))
+    if (ArrayBuffer.isView(options)) {
+      options = {data: options};
+    }
+
+    const {data, offset = 0, srcOffset = 0} = options;
+    const byteLength = options.byteLength || options.length;
+
+    assert(data);
+
+    // Create the buffer - binding it here for the first time locks the type
+    // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
+    // @ts-expect-error
+    const glTarget = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    this.gl.bindBuffer(glTarget, this.handle);
+    // WebGL2: subData supports additional srcOffset and length parameters
+    if (srcOffset !== 0 || byteLength !== undefined) {
+      assertWebGL2Context(this.gl);
+      // @ts-expect-error
+      this.gl.bufferSubData(this.glTarget, offset, data, srcOffset, byteLength);
+    } else {
+      this.gl.bufferSubData(glTarget, offset, data);
+    }
+    this.gl.bindBuffer(glTarget, null);
+
+    // TODO - update local `data` if offsets are right
+    this.debugData = null;
+
+    return this;
+  }
+
+  /**
+   * Binds a buffer to a given binding point (target).
+   *   GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER take an index, and optionally a range.
+   *   - GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER need an index to affect state
+   *   - GL.UNIFORM_BUFFER: `offset` must be aligned to GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT.
+   *   - GL.UNIFORM_BUFFER: `size` must be a minimum of GL.UNIFORM_BLOCK_SIZE_DATA.
+   * @deprecated
+   */
+  bind(options?: {glTarget?: number; index: any; offset?: number; size?: any}): this {
+    const {
+      glTarget = this.glTarget, // target for the bind operation
+      index, // index = index of target (indexed bind point)
+      offset = 0,
+      size
+    } = options || {};
+    // NOTE: While GL.TRANSFORM_FEEDBACK_BUFFER and GL.UNIFORM_BUFFER could
+    // be used as direct binding points, they will not affect transform feedback or
+    // uniform buffer state. Instead indexed bindings need to be made.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    if (glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER) {
+      if (size !== undefined) {
+        this.gl2?.bindBufferRange(glTarget, index, this.handle, offset, size);
+      } else {
+        assert(offset === 0); // Make sure offset wasn't supplied
+        this.gl2?.bindBufferBase(glTarget, index, this.handle);
+      }
+    } else {
+      this.gl.bindBuffer(glTarget, this.handle);
+    }
+
+    return this;
+  }
+
+  /** @deprecated */
+  unbind(options?: {glTarget?: any; index: any}): this {
+    const {glTarget = this.glTarget, index} = options || {};
+    const isIndexedBuffer =
+      glTarget === GL.UNIFORM_BUFFER || glTarget === GL.TRANSFORM_FEEDBACK_BUFFER;
+    if (isIndexedBuffer) {
+      this.gl2?.bindBufferBase(glTarget, index, null);
+    } else {
+      this.gl.bindBuffer(glTarget, null);
+    }
+    return this;
+  }
+
+  /**
+   * Copies part of the data of another buffer into this buffer
+   * @note WEBGL2 ONLY
+   * @deprecated
+   */
+  copyData(options: {
+    sourceBuffer: any;
+    readOffset?: number;
+    writeOffset?: number;
+    size: any;
+  }): this {
+    const {sourceBuffer, readOffset = 0, writeOffset = 0, size} = options;
+    const {gl, gl2} = this;
+    assertWebGL2Context(gl);
+
+    // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
+    gl.bindBuffer(GL.COPY_READ_BUFFER, sourceBuffer.handle);
+    gl.bindBuffer(GL.COPY_WRITE_BUFFER, this.handle);
+    gl2?.copyBufferSubData(
+      GL.COPY_READ_BUFFER,
+      GL.COPY_WRITE_BUFFER,
+      readOffset,
+      writeOffset,
+      size
+    );
+    gl.bindBuffer(GL.COPY_READ_BUFFER, null);
+    gl.bindBuffer(GL.COPY_WRITE_BUFFER, null);
+
+    // TODO - update local `data` if offsets are 0
+    this.debugData = null;
+
+    return this;
   }
 
   // PRIVATE METHODS

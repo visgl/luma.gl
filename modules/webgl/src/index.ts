@@ -39,8 +39,6 @@ export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 // WebGL adapter classes (Legacy will likely be removed)
 export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
-export type {BufferWithAccessorProps} from './classic/buffer-with-accessor';
-export {BufferWithAccessor} from './classic/buffer-with-accessor';
 
 export {
   isWebGL,

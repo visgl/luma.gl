@@ -5,7 +5,7 @@ import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
-import {BufferWithAccessor, WEBGLVertexArray} from '@luma.gl/webgl';
+import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
 // TODO(v9): Fix and re-enable test.
 test.skip('WEBGLVertexArray#divisors', t => {
@@ -85,12 +85,12 @@ test.skip('WEBGLVertexArray#getConstantBuffer', t => {
   for (const device of getWebGLTestDevices()) {
     const vertexArray = new WEBGLVertexArray(device);
 
-    let buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as BufferWithAccessor;
+    let buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as WEBGLBuffer;
 
     t.equal(buffer.byteLength, 1200, 'byteLength should match');
     t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
 
-    buffer = vertexArray.getConstantBuffer(5, new Float32Array([5, 3, 2])) as BufferWithAccessor;
+    buffer = vertexArray.getConstantBuffer(5, new Float32Array([5, 3, 2])) as WEBGLBuffer;
     t.equal(buffer.byteLength, 1200, 'byteLength should be unchanged');
     t.equal(buffer.bytesUsed, 60, 'bytesUsed should have changed');
 

@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {BufferWithAccessor} from '@luma.gl/webgl';
+import {WEBGLBuffer} from '@luma.gl/webgl'
 import test from 'tape-promise/tape';
 
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
@@ -28,29 +28,28 @@ test('WEBGLBuffer#bind/unbind with index', t => {
 
 test('WEBGLBuffer#initialize/subData', t => {
   for (const device of getWebGLTestDevices()) {
-    let buffer;
+    let buffer: WEBGLBuffer;
 
-    buffer = device.createBuffer({usage: Buffer.VERTEX}) as BufferWithAccessor;
-    buffer
+    // TODO(donmccurdy): If these methods are important in v9, test that they work correctly.
+
+    buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])})
       .initialize({data: new Float32Array([1, 2, 3])})
       .bind()
       .unbind();
-    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
+    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.initialize(ARRAY_BUFFER) successful`);
     buffer.destroy();
 
     buffer = device.createBuffer({
       usage: Buffer.VERTEX,
       data: new Float32Array([1, 2, 3])
-    }) as BufferWithAccessor;
-    buffer
-      .initialize({data: new Float32Array([1, 2, 3])})
+    })
+      .subData({data: new Float32Array([1, 2, 3])})
       .bind()
       .unbind();
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
     buffer.destroy();
 
-    buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor;
-    buffer
+    buffer = device.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])})
       .initialize({data: new Float32Array([1, 2, 3])})
       .bind()
       .unbind();
@@ -60,9 +59,7 @@ test('WEBGLBuffer#initialize/subData', t => {
     );
     buffer.destroy();
 
-    buffer = device.createBuffer({usage: Buffer.INDEX}) as BufferWithAccessor;
-    buffer
-      .initialize({data: new Float32Array([1, 2, 3])})
+    buffer = device.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])})
       .subData({data: new Float32Array([1, 1, 1])})
       .bind()
       .unbind();
@@ -84,9 +81,9 @@ test('WEBGLBuffer#copyData', t => {
     }
 
     const sourceData = new Float32Array([1, 2, 3]);
-    const sourceBuffer = device.createBuffer({data: sourceData}) as BufferWithAccessor;
+    const sourceBuffer = device.createBuffer({data: sourceData});
     const destinationData = new Float32Array([4, 5, 6]);
-    const destinationBuffer = device.createBuffer({data: destinationData}) as BufferWithAccessor;
+    const destinationBuffer = device.createBuffer({data: destinationData});
 
     let receivedData = destinationBuffer.getData();
     let expectedData = new Float32Array([4, 5, 6]);
@@ -110,31 +107,9 @@ test('WEBGLBuffer#copyData', t => {
   t.end();
 });
 
-test('WEBGLBuffer#getElementCount', t => {
-  for (const device of getWebGLTestDevices()) {
-    let vertexCount;
-
-    const buffer1 = device.createBuffer({data: new Float32Array([1, 2, 3])}) as BufferWithAccessor;
-    vertexCount = buffer1.getElementCount();
-    t.equal(vertexCount, 3, 'Vertex count should match');
-
-    let buffer2 = device.createBuffer({data: new Int32Array([1, 2, 3, 4])}) as BufferWithAccessor;
-    buffer2.setAccessor({divisor: 1});
-    vertexCount = buffer2.getElementCount();
-    t.equal(vertexCount, 4, 'Vertex count should match');
-
-    const {byteLength, usage, accessor} = buffer1;
-    buffer2 = device.createBuffer({byteLength, usage}) as BufferWithAccessor;
-    buffer2.setAccessor(accessor);
-    vertexCount = buffer2.getElementCount();
-    t.equal(vertexCount, 3, 'Vertex count should match');
-  }
-  t.end();
-});
-
 test('WEBGLBuffer#reallocate', t => {
   for (const device of getWebGLTestDevices()) {
-    const buffer = device.createBuffer({byteLength: 100}) as BufferWithAccessor;
+    const buffer = device.createBuffer({byteLength: 100});
     t.equal(buffer.byteLength, 100, 'byteLength should match');
     t.equal(buffer.bytesUsed, 100, 'bytesUsed should match');
 

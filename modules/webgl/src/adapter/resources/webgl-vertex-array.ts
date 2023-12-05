@@ -9,7 +9,6 @@ import {getBrowser} from '@probe.gl/env';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
-import {BufferWithAccessor} from '../../classic/buffer-with-accessor';
 import {getGLFromVertexType} from '../converters/vertex-formats';
 // import {AccessorObject} from '../..';
 // import {getGLFromVertexType} from '../converters/vertex-formats';
@@ -24,7 +23,7 @@ export class WEBGLVertexArray extends VertexArray {
   readonly handle: WebGLVertexArrayObject;
 
   /** Attribute 0 buffer constant */
-  private buffer: BufferWithAccessor | null = null;
+  private buffer: WEBGLBuffer | null = null;
   private bufferValue = null;
 
   /** * Attribute 0 can not be disable on most desktop OpenGL based browsers */
@@ -62,7 +61,7 @@ export class WEBGLVertexArray extends VertexArray {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
-    if (buffer && (buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER)) {
+    if (buffer && buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setBuffer()');
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
@@ -116,7 +115,7 @@ export class WEBGLVertexArray extends VertexArray {
 
   override bindBeforeRender(): void {
     this.device.gl2.bindVertexArray(this.handle);
-    // TODO - the initial bind does not seem to take effect. 
+    // TODO - the initial bind does not seem to take effect.
     if (!this.init) {
       // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
       const webglBuffer = this.indexBuffer as WEBGLBuffer;
@@ -128,7 +127,7 @@ export class WEBGLVertexArray extends VertexArray {
 
   override unbindAfterRender(): void {
     // log.log(1, `Unbinding vertex array ${this.id}`)();
-    // TODO technically this is not necessary, but we might be interfacing 
+    // TODO technically this is not necessary, but we might be interfacing
     // with code that does not use vertex array objects
     this.device.gl2.bindVertexArray(null);
     // this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
@@ -232,7 +231,7 @@ export class WEBGLVertexArray extends VertexArray {
 
     let updateNeeded = !this.buffer;
 
-    this.buffer = this.buffer || (this.device.createBuffer({byteLength}) as BufferWithAccessor);
+    this.buffer = this.buffer || this.device.createBuffer({byteLength});
     updateNeeded = updateNeeded || this.buffer.reallocate(byteLength);
 
     // Reallocate and update contents if needed
