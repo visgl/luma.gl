@@ -5,10 +5,6 @@ const COLOR_RESET = '\x1b[0m';
 const COLOR_YELLOW = '\x1b[33m';
 const COLOR_RED = '\x1b[31m';
 
-// When building `@luma.gl/constants`, skip MemberExpressions with
-// these types so declarations are not overwritten.
-const EXCLUDED_TYPES = ['AssignmentExpression', 'StringLiteral'];
-
 export default function _(opts) {
   return {
     visitor: {
@@ -52,7 +48,7 @@ export default function _(opts) {
         const isGLIdentifier =
           object.isIdentifier({name: 'GL'}) || object.isIdentifier({name: 'gl'});
 
-        if (isGLIdentifier && !EXCLUDED_TYPES.includes(property.node.type)) {
+        if (isGLIdentifier) {
           const filename = getFilename(state);
           const constant = `${object.node.name}.${property.node.name}`;
 

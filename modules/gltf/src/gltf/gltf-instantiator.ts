@@ -3,6 +3,7 @@ import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
 import {GeometryAttribute} from '@luma.gl/engine/geometry/geometry';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
+import {GL} from '@luma.gl/constants'
 
 import {GLTFAnimator} from './gltf-animator';
 import {createGLTFModel} from './create-gltf-model';
@@ -197,16 +198,6 @@ export class GLTFInstantiator {
     // LINEAR_MIPMAP_NEAREST, or LINEAR_MIPMAP_LINEAR).
     return false;
   }
-}
-
-enum GL {
-  POINTS = 0x0,
-  LINES = 0x1,
-  LINE_LOOP = 0x2,
-  LINE_STRIP = 0x3,
-  TRIANGLES = 0x4,
-  TRIANGLE_STRIP = 0x5,
-  TRIANGLE_FAN = 0x6
 }
 
 export function convertGLDrawModeToTopology(
