@@ -229,10 +229,12 @@ export class WEBGLVertexArray extends VertexArray {
     const byteLength = constantValue.byteLength * elementCount;
     const length = constantValue.length * elementCount;
 
+    if (this.buffer && byteLength !== this.buffer.byteLength) {
+      throw new Error(`Buffer size is immutable, byte length ${byteLength} !== ${this.buffer.byteLength}.`);
+    }
     let updateNeeded = !this.buffer;
 
     this.buffer = this.buffer || this.device.createBuffer({byteLength});
-    updateNeeded = updateNeeded || this.buffer.reallocate(byteLength);
 
     // Reallocate and update contents if needed
     updateNeeded = updateNeeded || !compareConstantArrayValues(constantValue, this.bufferValue);

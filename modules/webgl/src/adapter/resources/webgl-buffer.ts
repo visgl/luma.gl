@@ -58,39 +58,8 @@ export class WEBGLBuffer extends Buffer {
     }
   }
 
-  // "CLASSIC" METHODS
-
-  /**
-   * Allocate a bigger GPU buffer, if the current buffer is not big enough.
-   * When reallocation is triggered, buffer contents is cleared.
-   *
-   * @returns Whether buffer was reallocated and cleared.
-   * @deprecated
-   */
-  reallocate(byteLength: number): boolean {
-    if (byteLength > this.byteLength) {
-      this._initWithByteLength(byteLength);
-      return true;
-    }
-    this.bytesUsed = byteLength;
-    return false;
-  }
-
-  /**
-   * Creates and initializes the buffer object's data store.
-   * @deprecated
-   */
-  initialize(props: BufferProps) {
-    return this._initWithData(props.data);
-  }
-
-  /**
-   * Update with new data. Reinitializes the buffer.
-   * @deprecated
-   */
-  setData(props: BufferProps) {
-    return this._initWithData(props.data);
-  }
+  // DEPRECATED METHODS
+  // TODO(donmccurdy): Remove them.
 
   // Updates a subset of a buffer object's data store.
   // Data (Typed Array or ArrayBuffer), length is inferred unless provided
