@@ -25,14 +25,19 @@ export type PickingUniforms = {
   useFloatColors?: boolean;
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
+  /** Set to a picking color to visually highlight that item */
+  highlightedObjectColor?: NumberArray;
+  /** Color of visual highlight of "selected" item */
+  highlightColor?: NumberArray;
+};
+
+export type PickingSettings = Omit<PickingUniforms, 'isHighlightActive' | 'highlightedObjectColor'> & {
   /**
    * Set to a picking color to visually highlight that item.
    * The picking module will persist the last highlighted object, unless
    * `null` is passed to explicitly clear
    **/
   highlightedObjectColor?: NumberArray | null;
-  /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
 };
 
 const vs = glsl`\
@@ -175,7 +180,7 @@ vec4 picking_filterColor(vec4 color) {
  * and correspondingly, supports picking and highlighting groups of
  * primitives with the same picking color in non-instanced draw-calls
  */
-export const picking: ShaderModule<PickingUniforms> = {
+export const picking: ShaderModule<PickingUniforms, PickingSettings> = {
   name: 'picking',
   vs,
   fs,
@@ -198,19 +203,17 @@ export const picking: ShaderModule<PickingUniforms> = {
   getUniforms
 };
 
-function getUniforms(opts: Partial<PickingUniforms> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
+function getUniforms(opts: Partial<PickingSettings> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {...picking.defaultUniforms};
 
-  if (opts.highlightedObjectColor !== undefined) {
-    if (!opts.highlightedObjectColor) {
-      uniforms.isHighlightActive = false;
-    } else {
-      uniforms.isHighlightActive = true;
-      const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
-      uniforms.highlightedObjectColor = highlightedObjectColor;
-    }
-  } else {
+  if (opts.highlightedObjectColor === undefined) {
     delete uniforms.highlightedObjectColor;
+  } else if (opts.highlightedObjectColor === null) {
+    uniforms.isHighlightActive = false;
+  } else {
+    uniforms.isHighlightActive = true;
+    const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
+    uniforms.highlightedObjectColor = highlightedObjectColor;
   }
 
   if (opts.highlightColor) {

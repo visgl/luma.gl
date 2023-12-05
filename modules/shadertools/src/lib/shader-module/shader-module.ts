@@ -21,7 +21,7 @@ export type ShaderModule<UniformsT extends Record<string, UniformValue> = Record
   vs?: string;
   
   /** Used for type inference, not currently used for values */
-  uniforms?: Required<UniformsT>;
+  uniforms?: UniformsT;
 
   /** Uniform shader types */
   uniformTypes?: Record<keyof UniformsT, UniformFormat>;
