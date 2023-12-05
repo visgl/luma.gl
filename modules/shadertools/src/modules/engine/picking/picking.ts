@@ -206,9 +206,9 @@ export const picking: ShaderModule<PickingUniforms, PickingSettings> = {
 function getUniforms(opts: Partial<PickingSettings> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {...picking.defaultUniforms};
 
-  if (opts.highlightedObjectColor === null) {
+  if (opts.highlightedObjectColor === undefined) {
     delete uniforms.highlightedObjectColor;
-  } else if (opts.highlightedObjectColor === undefined) {
+  } else if (opts.highlightedObjectColor === null) {
     uniforms.isHighlightActive = false;
   } else {
     uniforms.isHighlightActive = true;
