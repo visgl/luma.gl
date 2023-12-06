@@ -9,17 +9,14 @@ module.exports = getBabelConfig({
     plugins: [
       // inject __VERSION__ from package.json
       // 'version-inline',
-      // TODO(v9): Publish `babel-plugin-inline-webgl-constants` and re-enable.
-      // 'babel-plugin-inline-webgl-constants',
+
+      // './dev-modules/babel-plugin-remove-glsl-comments/index.js'
+      'babel-plugin-inline-webgl-constants'
+
       // [
+      //   // './dev-modules/babel-plugin-remove-glsl-comments/index.js'
       //   'babel-plugin-remove-glsl-comments',
-      //   {
-      //     patterns: ['**/shadertools/src/modules/**/*.js']
-      //   }
-      // ]
-      // ['./dev-modules/babel-plugin-remove-glsl-comments', {
-      //     patterns: ['**/shadertools/src/modules/**/*.js']
-      //   }
+      //   {patterns: ['**/shadertools/src/modules/**/*.js']}
       // ]
     ],
     ignore: [
