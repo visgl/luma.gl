@@ -1,14 +1,15 @@
 const {getBabelConfig} = require('ocular-dev-tools/configuration');
 
+/**
+ * NOTE: To debug our babel plugins, reference the local modules using
+ * `./dev-modules/<plugin>/index.js`, instead of the npm package names.
+ */
 module.exports = getBabelConfig({
   overrides: {
     plugins: [
       // inject __VERSION__ from package.json
       // 'version-inline',
-      // NOTE: To debug our babel plugins, just reference the local modules
-      // './dev-modules/babel-plugin-inline-gl-constants',
-      // 'babel-plugin-inline-webgl-constants',
-      // TODO - Restore. Some import issue....
+      // TODO(v9): Publish `babel-plugin-inline-webgl-constants` and re-enable.
       // 'babel-plugin-inline-webgl-constants',
       // [
       //   'babel-plugin-remove-glsl-comments',
@@ -16,8 +17,6 @@ module.exports = getBabelConfig({
       //     patterns: ['**/shadertools/src/modules/**/*.js']
       //   }
       // ]
-      // NOTE: To debug our babel plugins, just reference the local modules
-      // './dev-modules/babel-plugin-inline-gl-constants',
       // ['./dev-modules/babel-plugin-remove-glsl-comments', {
       //     patterns: ['**/shadertools/src/modules/**/*.js']
       //   }

@@ -11,9 +11,12 @@ export default function _(opts) {
       ImportDeclaration(path, state) {
         // specifiers: [ ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier ];
         // source: Literal;
-        const specifiers = path.get('specifiers');
+
+        let modified = false;
+        let specifiers = path.get('specifiers');
+
         specifiers.forEach((specifier) => {
-          if (specifier.type === 'ImportDefaultSpecifier') {
+          if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportSpecifier') {
             const local = specifier.node.local;
             if (local.type === 'Identifier' && local.name === 'GL') {
               if (state.opts.debug) {
@@ -23,10 +26,18 @@ export default function _(opts) {
                   `${COLOR_YELLOW}${filename}:${line} Dropping GL import${COLOR_RESET}`
                 );
               }
-              path.remove();
+              specifier.remove();
+              modified = true;
             }
           }
         });
+
+        specifiers = path.get('specifiers');
+
+        // If the last imported specifier was removed, remove the entire import.
+        if (modified && specifiers.length === 0) {
+          path.remove();
+        }
       },
 
       MemberExpression(path, state) {

@@ -43,6 +43,17 @@ const TEST_CASES = [
       const x = GL.FLOAT;
     `,
     output: 'const x = 5126;'
+  },
+  {
+    title: 'remove import specifier',
+    input: `
+      import {GL, UnknownItem} from '@luma.gl/constants';
+      const x = GL.FLOAT;
+    `,
+    output: `
+      import { UnknownItem } from '@luma.gl/constants';
+      const x = 5126;
+    `
   }
 ];
 
@@ -51,9 +62,7 @@ function clean(code) {
   return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
 }
 
-// TODO - restore
-/* eslint-disable */
-test.skip('InlineGLSLConstants Babel Plugin', (t) => {
+test('InlineGLSLConstants Babel Plugin', (t) => {
   TEST_CASES.forEach((testCase) => {
     const transform = () =>
       babel.transform(testCase.input, {

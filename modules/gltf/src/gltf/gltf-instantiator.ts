@@ -199,7 +199,10 @@ export class GLTFInstantiator {
   }
 }
 
-enum GL {
+// NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
+// `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
+// conflicts with the `babel-plugin-inline-webgl-constants` plugin.
+enum GLEnum {
   POINTS = 0x0,
   LINES = 0x1,
   LINE_LOOP = 0x2,
@@ -210,16 +213,16 @@ enum GL {
 }
 
 export function convertGLDrawModeToTopology(
-  drawMode: GL.POINTS | GL.LINES | GL.LINE_STRIP | GL.LINE_LOOP | GL.TRIANGLES | GL.TRIANGLE_STRIP | GL.TRIANGLE_FAN,
+  drawMode: GLEnum.POINTS | GLEnum.LINES | GLEnum.LINE_STRIP | GLEnum.LINE_LOOP | GLEnum.TRIANGLES | GLEnum.TRIANGLE_STRIP | GLEnum.TRIANGLE_FAN,
 ): PrimitiveTopology  {
   switch (drawMode) {
-    case GL.POINTS: return 'point-list';
-    case GL.LINES: return 'line-list';
-    case GL.LINE_STRIP: return 'line-strip';
-    case GL.LINE_LOOP: return 'line-loop-webgl';
-    case GL.TRIANGLES: return 'triangle-list';
-    case GL.TRIANGLE_STRIP: return 'triangle-strip';
-    case GL.TRIANGLE_FAN: return 'triangle-fan-webgl';
+    case GLEnum.POINTS: return 'point-list';
+    case GLEnum.LINES: return 'line-list';
+    case GLEnum.LINE_STRIP: return 'line-strip';
+    case GLEnum.LINE_LOOP: return 'line-loop-webgl';
+    case GLEnum.TRIANGLES: return 'triangle-list';
+    case GLEnum.TRIANGLE_STRIP: return 'triangle-strip';
+    case GLEnum.TRIANGLE_FAN: return 'triangle-fan-webgl';
     default: throw new Error(drawMode);
   }
 }

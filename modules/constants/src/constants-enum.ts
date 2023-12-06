@@ -4,8 +4,10 @@
  * Standard WebGL, WebGL2 and extension constants (OpenGL constants)
  * @note (Most) of these constants are also defined on the WebGLRenderingContext interface.
  * @see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
+ * @privateRemarks Locally called `GLEnum` instead of `GL`, because `babel-plugin-inline-webl-constants`
+ *  both depends on and processes this module, but shouldn't replace these declarations.
  */
-export enum GL {
+enum GLEnum {
   // Clearing buffers
   // Constants passed to clear() to clear buffer masks.
 
@@ -1052,3 +1054,5 @@ export enum GL {
   /** A Boolean indicating whether or not the GPU performed any disjoint operation. */
   GPU_DISJOINT_EXT = 0x8fbb // A Boolean indicating whether or not the GPU performed any disjoint operation.
 }
+
+export {GLEnum as GL};
