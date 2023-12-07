@@ -230,7 +230,9 @@ export class WEBGLVertexArray extends VertexArray {
     const length = constantValue.length * elementCount;
 
     if (this.buffer && byteLength !== this.buffer.byteLength) {
-      throw new Error(`Buffer size is immutable, byte length ${byteLength} !== ${this.buffer.byteLength}.`);
+      throw new Error(
+        `Buffer size is immutable, byte length ${byteLength} !== ${this.buffer.byteLength}.`
+      );
     }
     let updateNeeded = !this.buffer;
 
@@ -243,7 +245,7 @@ export class WEBGLVertexArray extends VertexArray {
       // Create a typed array that is big enough, and fill it with the required data
       const typedArray = getScratchArray(value.constructor, length);
       fillArray({target: typedArray, source: constantValue, start: 0, count: length});
-      this.buffer.subData(typedArray);
+      this.buffer.write(typedArray);
       this.bufferValue = value;
     }
 

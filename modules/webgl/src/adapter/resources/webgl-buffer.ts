@@ -5,7 +5,6 @@ import type {BufferProps, TypedArray} from '@luma.gl/core';
 import {Buffer, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
-import {assertWebGL2Context} from '../..';
 
 const DEBUG_DATA_LENGTH = 10;
 
@@ -75,7 +74,7 @@ export class WEBGLBuffer extends Buffer {
       dstOffset = 0
     } = options || {};
 
-    assertWebGL2Context(this.gl);
+    this.device.assertWebGL2();
 
     // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
@@ -84,53 +83,6 @@ export class WEBGLBuffer extends Buffer {
 
     // TODO - update local `data` if offsets are 0
     return dstData as T;
-  }
-
-  // Updates a subset of a buffer object's data store.
-  // Data (Typed Array or ArrayBuffer), length is inferred unless provided
-  // Offset into buffer
-  // WebGL2 only: Offset into srcData
-  // WebGL2 only: Number of bytes to be copied
-  subData(
-    options:
-      | TypedArray
-      | {
-          data: TypedArray;
-          offset?: number;
-          srcOffset?: number;
-          byteLength?: number;
-          length?: number;
-        }
-  ) {
-    // Signature: buffer.subData(new Float32Array([...]))
-    if (ArrayBuffer.isView(options)) {
-      options = {data: options};
-    }
-
-    const {data, offset = 0, srcOffset = 0} = options;
-    const byteLength = options.byteLength || options.length;
-
-    assert(data);
-
-    // Create the buffer - binding it here for the first time locks the type
-    // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
-    // @ts-expect-error
-    const glTarget = this.gl.webgl2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
-    this.gl.bindBuffer(glTarget, this.handle);
-    // WebGL2: subData supports additional srcOffset and length parameters
-    if (srcOffset !== 0 || byteLength !== undefined) {
-      assertWebGL2Context(this.gl);
-      // @ts-expect-error
-      this.gl.bufferSubData(this.glTarget, offset, data, srcOffset, byteLength);
-    } else {
-      this.gl.bufferSubData(glTarget, offset, data);
-    }
-    this.gl.bindBuffer(glTarget, null);
-
-    // TODO - update local `data` if offsets are right
-    this.debugData = null;
-
-    return this;
   }
 
   // PRIVATE METHODS

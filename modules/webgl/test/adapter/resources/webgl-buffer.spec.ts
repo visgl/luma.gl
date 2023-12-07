@@ -26,35 +26,46 @@ test('WEBGLBuffer#bind/unbind with index', t => {
   t.end();
 });
 
-test('WEBGLBuffer#subData', t => {
+test('WEBGLBuffer#write', t => {
+  const initialData = new Float32Array([1, 2, 3]);
+  const updateData = new Float32Array([4, 5, 6]);
+
   for (const device of getWebGLTestDevices()) {
     let buffer: WEBGLBuffer;
 
-    buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
-    t.ok(buffer instanceof Buffer, `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`);
-    buffer.destroy();
+    buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
 
-    buffer = device.createBuffer({
-      usage: Buffer.VERTEX,
-      data: new Float32Array([1, 2, 3])
-    })
-      .subData({data: new Float32Array([1, 2, 3])});
-    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
-    buffer.destroy();
+    t.deepEqual(
+      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : initialData,
+      initialData,
+      `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
+    );
 
-    buffer = device.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])})
-    t.ok(
-      buffer instanceof Buffer,
+    buffer.write(updateData);
+
+    t.deepEquals(
+      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : updateData,
+      updateData,
+      `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
+    );
+
+    buffer.destroy();
+    buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
+
+    t.deepEqual(
+      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : initialData,
+      initialData,
       `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
     );
-    buffer.destroy();
 
-    buffer = device.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])})
-      .subData({data: new Float32Array([1, 1, 1])});
-    t.ok(
-      buffer instanceof Buffer,
-      `${device.info.type} Buffer.subData(ARRAY_ELEMENT_BUFFER) successful`
+    buffer.write(updateData);
+
+    t.deepEqual(
+      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : updateData,
+      updateData,
+      `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
     );
+
     buffer.destroy();
   }
   t.end();
