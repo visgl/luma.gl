@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-test('CommandBuffer#copyBufferToBuffer', t => {
+test('CommandBuffer#copyBufferToBuffer', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (!device.isWebGL2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -17,7 +17,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
     const destinationData = new Float32Array([4, 5, 6]);
     const destination = device.createBuffer({data: destinationData});
 
-    let receivedData = destination.getData();
+    let receivedData = await destination.readAsync();
     let expectedData = new Float32Array([4, 5, 6]);
     t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
@@ -26,7 +26,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
     commandEncoder.finish();
     commandEncoder.destroy();
 
-    receivedData = destination.getData();
+    receivedData = await destination.readAsync();
     expectedData = new Float32Array([1, 2, 6]);
     t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
 
@@ -41,7 +41,7 @@ test('CommandBuffer#copyBufferToBuffer', t => {
     commandEncoder.finish();
     commandEncoder.destroy();
 
-    receivedData = destination.getData();
+    receivedData = await destination.readAsync();
     expectedData = new Float32Array([1, 2, 2]);
     t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
   }

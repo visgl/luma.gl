@@ -21,7 +21,7 @@ test('Buffer#constructor/delete', t => {
   t.end();
 });
 
-test('Buffer#constructor offset and size', t => {
+test('Buffer#constructor offset and size', async (t) => {
   const data = new Float32Array([1, 2, 3]);
 
   for (const device of getWebGLTestDevices()) {
@@ -34,7 +34,7 @@ test('Buffer#constructor offset and size', t => {
     );
 
     if (device.isWebGL2) {
-      const receivedData = buffer.getData();
+      const receivedData = await buffer.readAsync();
       t.deepEqual(
         new Float32Array(receivedData.buffer),
         expectedData,
@@ -50,7 +50,7 @@ test('Buffer#constructor offset and size', t => {
       `${device.info.type} Buffer byteLength set properly`
     );
     if (device.isWebGL2) {
-      const receivedData = buffer.getData();
+      const receivedData = await buffer.readAsync();
       t.deepEqual(
         new Float32Array(receivedData.buffer),
         expectedData,
@@ -67,7 +67,7 @@ test('Buffer#constructor offset and size', t => {
     );
 
     if (device.isWebGL2) {
-      const receivedData = buffer.getData();
+      const receivedData = await buffer.readAsync();
       t.deepEqual(
         new Float32Array(receivedData.buffer),
         expectedData,
@@ -113,13 +113,13 @@ test('Buffer#construction', t => {
   t.end();
 });
 
-test('Buffer#write', t => {
+test('Buffer#write', async (t) => {
   const expectedData = new Float32Array([1, 2, 3]);
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
     buffer.write(expectedData);
     if (device.isWebGL2) {
-      const receivedData = buffer.getData();
+      const receivedData = await buffer.readAsync();
       t.deepEqual(
         new Float32Array(receivedData.buffer),
         expectedData,
@@ -147,7 +147,7 @@ test('Buffer#write', t => {
 });
 
 /*
-test('Buffer#getData', t => {
+test('Buffer#getData', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (!gl2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -158,7 +158,7 @@ test('Buffer#getData', t => {
     let data = new Float32Array([1, 2, 3]);
     let buffer = device.createBuffer({data});
 
-    let receivedData = buffer.getData();
+    let receivedData = await buffer.readAsync();
     let expectedData = new Float32Array([1, 2, 3]);
     t.deepEqual(data, receivedData, 'Buffer.getData: default parameters successful');
 
@@ -194,7 +194,7 @@ test('Buffer#getData', t => {
     data = new Uint8Array([128, 255, 1]);
     buffer = device.createBuffer({data});
 
-    receivedData = buffer.getData();
+    receivedData = await buffer.readAsync();
     t.deepEqual(data, receivedData, 'Buffer.getData: Uint8Array + default parameters successful');
   }
   t.end();

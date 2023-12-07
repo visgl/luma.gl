@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {BufferProps, TypedArray} from '@luma.gl/core';
+import type {BufferProps} from '@luma.gl/core';
 import {Buffer, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
@@ -55,34 +55,6 @@ export class WEBGLBuffer extends Buffer {
     } else {
       this._initWithByteLength(props.byteLength || 0);
     }
-  }
-
-  /**
-   * Reads data from buffer into an ArrayBufferView or SharedArrayBuffer.
-   * @note WEBGL2 ONLY
-   */
-  override getData<T extends TypedArray = Uint8Array>(options?: {
-    dstData?: T;
-    srcByteOffset?: number;
-    dstOffset?: number;
-    length?: number;
-  }): T {
-    const {
-      length = this.byteLength,
-      dstData = new Uint8Array(length),
-      srcByteOffset = 0,
-      dstOffset = 0
-    } = options || {};
-
-    this.device.assertWebGL2();
-
-    // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
-    this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
-    this.gl2?.getBufferSubData(GL.COPY_READ_BUFFER, srcByteOffset, dstData, dstOffset, length);
-    this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
-
-    // TODO - update local `data` if offsets are 0
-    return dstData as T;
   }
 
   // PRIVATE METHODS
@@ -167,9 +139,10 @@ export class WEBGLBuffer extends Buffer {
   }
 
   /** Read data from the buffer */
-  override async readAsync(byteOffset: number = 0, byteLength?: number): Promise<ArrayBuffer> {
+  override async readAsync(byteOffset: number = 0, byteLength?: number): Promise<Uint8Array> {
     this.device.assertWebGL2();
 
+    byteLength = byteLength ?? this.byteLength;
     const data = new Uint8Array(byteLength);
     const dstOffset = 0;
 

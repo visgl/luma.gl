@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {WEBGLBuffer} from '@luma.gl/webgl'
+import {WEBGLBuffer} from '@luma.gl/webgl';
 import test from 'tape-promise/tape';
 
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
@@ -26,7 +26,7 @@ test('WEBGLBuffer#bind/unbind with index', t => {
   t.end();
 });
 
-test('WEBGLBuffer#write', t => {
+test('WEBGLBuffer#write', async t => {
   const initialData = new Float32Array([1, 2, 3]);
   const updateData = new Float32Array([4, 5, 6]);
 
@@ -36,7 +36,7 @@ test('WEBGLBuffer#write', t => {
     buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
 
     t.deepEqual(
-      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : initialData,
+      device.isWebGL2 ? await readAsyncF32(buffer) : initialData,
       initialData,
       `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
     );
@@ -44,7 +44,7 @@ test('WEBGLBuffer#write', t => {
     buffer.write(updateData);
 
     t.deepEquals(
-      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : updateData,
+      device.isWebGL2 ? await readAsyncF32(buffer) : updateData,
       updateData,
       `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
     );
@@ -53,7 +53,7 @@ test('WEBGLBuffer#write', t => {
     buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
 
     t.deepEqual(
-      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : initialData,
+      device.isWebGL2 ? await readAsyncF32(buffer) : initialData,
       initialData,
       `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
     );
@@ -61,7 +61,7 @@ test('WEBGLBuffer#write', t => {
     buffer.write(updateData);
 
     t.deepEqual(
-      device.isWebGL2 ? new Float32Array(buffer.getData().buffer) : updateData,
+      device.isWebGL2 ? await readAsyncF32(buffer) : updateData,
       updateData,
       `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
     );
@@ -70,3 +70,12 @@ test('WEBGLBuffer#write', t => {
   }
   t.end();
 });
+
+async function readAsyncF32(buffer: Buffer): Promise<Float32Array> {
+  const bytes = await buffer.readAsync();
+  return new Float32Array(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+}

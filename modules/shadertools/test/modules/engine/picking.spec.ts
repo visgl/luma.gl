@@ -128,7 +128,7 @@ test('picking#getUniforms', (t) => {
   t.end();
 });
 
-test('picking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
+test('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -163,7 +163,7 @@ test('picking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
     elementCount
   });
 
-  TEST_CASES.forEach((testCase) => {
+  await Promise.all(TEST_CASES.map(async (testCase) => {
     const uniforms = picking.getUniforms({
       highlightedObjectColor: testCase.highlightedObjectColor
     });
@@ -171,16 +171,16 @@ test('picking#isVertexPicked(highlightedObjectColor invalid)', (t) => {
     transform.run({uniforms});
 
     const expectedData = testCase.isPicked;
-    const outData = transform.getBuffer('isPicked').getData();
+    const outData = await transform.getBuffer('isPicked')!.readAsync();
 
     t.deepEqual(outData, expectedData, 'Vertex should correctly get picked');
-  });
+  }));
 
   t.end();
 });
 
 /* eslint-disable max-nested-callbacks */
-test('picking#picking_setPickingColor', (t) => {
+test('picking#picking_setPickingColor', async (t) => {
   if (!Transform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -216,7 +216,7 @@ test('picking#picking_setPickingColor', (t) => {
     elementCount
   });
 
-  TEST_CASES.forEach((testCase) => {
+  await Promise.all(TEST_CASES.map(async (testCase) => {
     const uniforms = picking.getUniforms({
       highlightedObjectColor: testCase.highlightedObjectColor,
       // @ts-expect-error
@@ -225,10 +225,10 @@ test('picking#picking_setPickingColor', (t) => {
 
     transform.run({uniforms});
 
-    const outData = transform.getBuffer('rgbColorASelected').getData();
+    const outData = await transform.getBuffer('rgbColorASelected')!.readAsync();
 
     t.deepEqual(outData, testCase.isPicked, 'Vertex should correctly get picked');
-  });
+  }));
   t.ok(true, 'picking_setPickingColor successful');
 
   t.end();
