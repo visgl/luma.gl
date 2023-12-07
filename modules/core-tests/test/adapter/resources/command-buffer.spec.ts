@@ -1,11 +1,14 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
-import {Buffer} from '@luma.gl/core';
+import test, {Test} from 'tape-promise/tape';
+import {Buffer, Device, TextureFormat} from '@luma.gl/core';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-test('CommandBuffer#copyBufferToBuffer', async (t) => {
+const EPSILON = 1e-6;
+const {abs} = Math;
+
+test('CommandBuffer#copyBufferToBuffer', async t => {
   for (const device of getWebGLTestDevices()) {
     if (!device.isWebGL2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -23,7 +26,11 @@ test('CommandBuffer#copyBufferToBuffer', async (t) => {
     t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
     let commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer({source, destination, size: 2 * Float32Array.BYTES_PER_ELEMENT});
+    commandEncoder.copyBufferToBuffer({
+      source,
+      destination,
+      size: 2 * Float32Array.BYTES_PER_ELEMENT
+    });
     commandEncoder.finish();
     commandEncoder.destroy();
 
@@ -49,22 +56,156 @@ test('CommandBuffer#copyBufferToBuffer', async (t) => {
   t.end();
 });
 
+type CopyTextureToBufferFixture = {
+  title: string;
+  format: TextureFormat;
+  srcPixel: Uint8Array | Float32Array;
+  dstPixel: Uint8Array | Float32Array;
+  dstOffset?: number;
+};
+
+const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
+  {
+    title: 'rgba8',
+    format: 'rgba8unorm',
+    srcPixel: new Uint8Array([255, 128, 64, 32]),
+    dstPixel: new Uint8Array([255, 128, 64, 32])
+  },
+  {
+    title: 'rgba8 + offset',
+    format: 'rgba8unorm',
+    srcPixel: new Uint8Array([255, 128, 64, 32]),
+    dstPixel: new Uint8Array([255, 128, 64, 32]),
+    dstOffset: 4,
+  },
+  // {
+  //   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
+  //   format: 'rgb8unorm-webgl',
+  //   srcPixel: new Uint8Array([255, 64, 32]),
+  //   dstPixel: new Uint8Array([255, 64, 32]),
+  // },
+  {
+    title: 'rgba32',
+    format: 'rgba32float',
+    srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+  },
+  {
+    title: 'rgba32 + offset',
+    format: 'rgba32float',
+    srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+    dstOffset: 8
+  },
+  // {
+  //   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
+  //   title: 'rgb32',
+  //   format: 'rgb32float-webgl',
+  //   srcPixel: new Float32Array([-0.214, 32.23, 1242]),
+  //   dstPixel: new Float32Array([-0.214, 32.23, 1242]),
+  // },
+  {
+    title: 'rg32',
+    format: 'rg32float',
+    srcPixel: new Float32Array([-0.214, 32.23]),
+    dstPixel: new Float32Array([-0.214, 32.23, 0, 0]),
+  },
+  {
+    title: 'r32',
+    format: 'r32float',
+    srcPixel: new Float32Array([0.124]),
+    dstPixel: new Float32Array([0.124, 0, 0, 0]),
+  },
+];
+
+test('CommandBuffer#copyTextureToBuffer', async t => {
+  for (const device of getWebGLTestDevices()) {
+    for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
+      await testCopyTextureToBuffer(t, device, {...fixture});
+      // TODO(v9): Fix implementation and tests for framebuffer and buffer creation.
+      // await testCopyTextureToBuffer(t, device, {...fixture, useFramebuffer: true});
+      // await testCopyTextureToBuffer(t, device, {...fixture, bufferCreation: true});
+      // await testCopyTextureToBuffer(t, device, {...fixture, bufferCreation: true, useFramebuffer: true});
+    }
+  }
+  t.end();
+});
+
+async function testCopyTextureToBuffer(
+  t: Test,
+  device: Device,
+  options: CopyTextureToBufferFixture & {bufferCreation?: boolean; useFramebuffer?: boolean}
+) {
+  // TODO - should we have a specific feature string?
+  if (device.info.type !== 'webgl2') {
+    t.comment('WebGL2 not available, skipping tests');
+    return;
+  }
+
+  const {title, srcPixel, dstPixel, dstOffset = 0} = options;
+
+  const elementCount = 6;
+  const bytesPerElement = srcPixel.BYTES_PER_ELEMENT;
+  const dstByteOffset = dstOffset * bytesPerElement;
+  const byteLength = elementCount * bytesPerElement + dstByteOffset;
+
+  let source;
+
+  const colorTexture = device.createTexture({
+    data: options.useFramebuffer ? null : srcPixel,
+    width: 1,
+    height: 1,
+    format: options.format,
+    mipmaps: false
+  });
+
+  const destination = device.createBuffer({byteLength});
+
+  if (options.useFramebuffer) {
+    const framebuffer = device.createFramebuffer({
+      colorAttachments: [colorTexture]
+    });
+    // framebuffer.checkStatus();
+    // framebuffer.clear({color: clearColor});
+    source = framebuffer;
+  } else {
+    source = colorTexture;
+  }
+
+  const commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyTextureToBuffer({
+    source,
+    width: 1,
+    height: 1,
+    destination,
+    byteOffset: dstByteOffset
+  });
+  commandEncoder.finish();
+  commandEncoder.destroy();
+
+  const color = srcPixel instanceof Uint8Array
+    ? await readAsyncU8(destination)
+    : await readAsyncF32(destination);
+
+  t.ok(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON, `reads "R" channel (${title})`);
+  t.ok(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON, `reads "G" channel (${title})`);
+  t.ok(abs(dstPixel[2] - color[2 + dstOffset]) < EPSILON, `reads "B" channel (${title})`);
+  t.ok(abs(dstPixel[3] - color[3 + dstOffset]) < EPSILON, `reads "A" channel (${title})`);
+}
+
+async function readAsyncU8(source: Buffer): Promise<Uint8Array> {
+  return source.readAsync();
+}
+
 async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   const {buffer, byteOffset, byteLength} = await source.readAsync();
-  return new Float32Array(
-    buffer,
-    byteOffset,
-    byteLength / Float32Array.BYTES_PER_ELEMENT
-  );
+  return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }
 
 /*
 
 import type {TextureFormat} from '@luma.gl/core';
 import {Device, CommandEncoder, Framebuffer, Renderbuffer, Texture, Buffer} from '@luma.gl/core';
-
-const EPSILON = 1e-6;
-const {abs} = Math;
 
 type WebGLTextureInfo = {
   dataFormat: number;
@@ -93,142 +234,6 @@ const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLTextureInfo> = {
   // 'rgb32float': {dataFormat: GL.RGB, types: [GL.FLOAT], gl2: true},
   rbga32float: {dataFormat: GL.RGBA, types: [GL.FLOAT], gl2: true}
 };
-
-const FB_READPIXELS_TEST_CASES: {
-  format: TextureFormat;
-  clearColor: any;
-  textureColor: any;
-  expectedColor?: any;
-}[] = [
-  {
-    format: 'rgba8unorm',
-    clearColor: [1, 0.5, 0.25, 0.125],
-    textureColor: new Uint8Array([255, 128, 64, 32]),
-    expectedColor: [255, 128, 64, 32]
-  },
-
-  // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
-  // {
-  //   format: GL.RGB, clearColor: [1, 0.25, 0.125, 0], expectedColor: [255, 64, 32]
-  // },
-
-  {
-    format: 'rgba32float',
-    clearColor: [0.214, -32.23, 1242, -123.847],
-    textureColor: new Float32Array([0.214, -32.23, 1242, -123.847])
-  },
-  {
-    format: 'rg32float',
-    clearColor: [-0.214, 32.23, 0, 0],
-    textureColor: new Float32Array([-0.214, 32.23]),
-    expectedColor: [-0.214, 32.23, 0, 1] // ReadPixels returns default values for un-used channels (B and A)
-  },
-  {
-    format: 'r32float',
-    clearColor: [0.124, 0, 0, 0],
-    textureColor: new Float32Array([0.124]),
-    expectedColor: [0.124, 0, 0, 1] //  // ReadPixels returns default values for un-used channels (G,B and A)
-  }
-
-  // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
-  // {
-  //   format: GL.RGB32F, clearColor: [-0.214, 32.23, 1242, 0], expectedColor: [-0.214, 32.23, 1242]
-  // }
-];
-
-test('CommandBuffer#copyTextureToTexture', t => {
-  for (const device of getWebGLTestDevices()) {
-    testCopyTextureToBuffer(t, device, {bufferCreation: false, sourceIsFramebuffer: false});
-    testCopyTextureToBuffer(t, device, {bufferCreation: false, sourceIsFramebuffer: true});
-  }
-});
-
-test('CommandBuffer#copyTextureToTexture (buffer creation)', t => {
-  for (const device of getWebGLTestDevices()) {
-    testCopyTextureToBuffer(t, device, {bufferCreation: true, sourceIsFramebuffer: false});
-    testCopyTextureToBuffer(t, device, {bufferCreation: true, sourceIsFramebuffer: true});
-  }
-});
-
-function testCopyTextureToBuffer(
-  t: Test,
-  device: Device,
-  options: {bufferCreation: boolean; sourceIsFramebuffer: boolean}
-) {
-  // TODO - should we have a specific feature string?
-  if (device.info.type !== 'webgl2') {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
-  const byteLength = 6 * 4; // 6 floats
-  const clearColor = [0.25, -0.35, 12340.25, 0.005];
-  let source;
-
-  const colorTexture = device.createTexture({
-    data: options.sourceIsFramebuffer ? null : new Float32Array(clearColor),
-    width: 1,
-    height: 1,
-    format: 'rgba32float',
-    // type: GL.FLOAT,
-    // dataFormat: GL.RGBA,
-    mipmaps: false
-  });
-  const buffer = device.createBuffer({byteLength});
-  if (options.sourceIsFramebuffer) {
-    const framebuffer = device.createFramebuffer({
-      colorAttachments: [colorTexture]
-    });
-    // framebuffer.checkStatus();
-    // framebuffer.clear({color: clearColor});
-    source = framebuffer;
-  } else {
-    source = colorTexture;
-  }
-
-  const commandEncoder = device.createCommandEncoder({});
-
-  commandEncoder.copyTextureToBuffer({
-    source,
-    width: 1,
-    height: 1,
-    // sourceType: GL.FLOAT,
-    destination: buffer,
-    byteOffset: 2 * 4 // start from 3rd element
-  });
-
-  // const color = new Float32Array(6);
-  // buffer.getData({dstData: color});
-  const color = buffer.getData();
-
-  t.ok(
-    abs(clearColor[0] - color[2]) < EPSILON,
-    `Red channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source`
-  );
-  t.ok(
-    abs(clearColor[1] - color[3]) < EPSILON,
-    `Green channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source`
-  );
-  t.ok(
-    abs(clearColor[2] - color[4]) < EPSILON,
-    `Blue channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source`
-  );
-  t.ok(
-    abs(clearColor[3] - color[5]) < EPSILON,
-    `Alpha channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source`
-  );
-
-  t.end();
-}
 
 // COPY TEXTURE TO TEXTURE
 
