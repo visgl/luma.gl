@@ -52,7 +52,7 @@
     "@turf/boolean-within": "^6.0.1",
     "@turf/helpers": "^6.1.4",
     "@types/tape-promise": "^4.0.1",
-    "babel-plugin-inline-webgl-constants": "1.0.3",
+    "babel-plugin-inline-webgl-constants": "^2.0.0-alpha.1",
     "babel-plugin-remove-glsl-comments": "^1.0.0",
     "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.9.2",
@@ -65,7 +65,7 @@
   },
   "resolutions": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser" : "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "escaper": "3.0.6",
     "eslint": "^8.52.0",
     "prettier": "3.0.3",
