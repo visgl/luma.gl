@@ -351,7 +351,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     return this.renderPass;
   }
 
-  override createCommandEncoder(props: CommandEncoderProps = {}): WEBGLCommandEncoder {
+  override createCommandEncoder(props?: CommandEncoderProps): WEBGLCommandEncoder {
     return new WEBGLCommandEncoder(this, props);
   }
 
