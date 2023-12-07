@@ -1,4 +1,5 @@
 // luma.gl, MIT license
+import { Device } from '../device';
 import {Resource, ResourceProps} from './resource';
 
 // interface Queue {
@@ -31,8 +32,7 @@ export abstract class CommandBuffer extends Resource<CommandBufferProps> {
     return 'CommandBuffer';
   }
 
-  constructor(props: CommandBufferProps) {
-    // @ts-expect-error
-    super(props, CommandBuffer.defaultProps);
+  constructor(device: Device, props: CommandBufferProps) {
+    super(device, props, CommandBuffer.defaultProps);
   }
 }
