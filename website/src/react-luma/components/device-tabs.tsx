@@ -13,16 +13,15 @@ export const DeviceTabs = props => {
         {/* <img height="80" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" />*/}
         {deviceError}
       </Tab>
-      { /*
+
       <Tab key="WebGL" title="WebGL" tag='webgl1'>
-        {/* <img height="80" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" /> }
+        {/* <img height="80" src="https://raw.github.com/visgl/deck.gl-data/master/images/whats-new/webgl2.jpg" /> */}
         {deviceError}
       </Tab>
       <Tab key="WebGPU" title="WebGPU" tag='webgpu'>
-        {/* <img height="80" src="https://raw.githubusercontent.com/gpuweb/gpuweb/3b3a1632ff1ad6a573330a58710e341bb9d65576/logo/webgpu-horizontal.svg" />}
+        {/* <img height="80" src="https://raw.githubusercontent.com/gpuweb/gpuweb/3b3a1632ff1ad6a573330a58710e341bb9d65576/logo/webgpu-horizontal.svg" /> */}
         {deviceError}
       </Tab>
-      */ }
     </Tabs>
   );
 };

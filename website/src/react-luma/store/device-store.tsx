@@ -15,10 +15,14 @@ export type Store = {
 
 let cachedDevice: Record<string, Promise<Device>> = {};
 
+const container = document.createElement('div');
+container.style.display = 'none';
+document.body.appendChild(container);
+
 export async function createDevice(deviceType: string): Promise<Device> {
   const type = deviceType.toLowerCase();
   // @ts-expect-error
-  cachedDevice[type] = cachedDevice[type] || luma.createDevice({type, height: 0});
+  cachedDevice[type] = cachedDevice[type] || luma.createDevice({type, height: 0, container});
   return await cachedDevice[type];
 }
 
