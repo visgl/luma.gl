@@ -7,19 +7,14 @@ import type {
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
 } from '@luma.gl/core';
-import {
-  CommandBuffer,
-  Texture,
-  // Buffer,
-  Framebuffer
-} from '@luma.gl/core';
+import {CommandBuffer, Texture, Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-// import {getTypedArrayFromGLType, getGLTypeFromTypedArray} from '../../classic/typed-array-utils';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
+import {getWebGLTextureParameters} from '../converters/texture-formats';
 
 function cast<T>(value: unknown): T {
   return value as T;
@@ -158,7 +153,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
   }
 
   // TODO - mipLevels are set when attaching texture to framebuffer
-  if (mipLevel !== 0 || depthOrArrayLayers !== undefined || bytesPerRow || rowsPerImage) {
+  if (mipLevel !== 0 || depthOrArrayLayers !== 0 || bytesPerRow || rowsPerImage) {
     throw new Error('not implemented');
   }
 
@@ -170,10 +165,9 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     const webglBuffer = destination as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
-
-    // TODO - hack - should be deduced
-    const sourceFormat = GL.RGBA;
-    const sourceType = GL.UNSIGNED_BYTE;
+    const sourceParams = getWebGLTextureParameters(framebuffer.texture.format, true);
+    const sourceFormat = sourceParams.dataFormat;
+    const sourceType = sourceParams.type;
 
     // if (!target) {
     //   // Create new buffer with enough size
