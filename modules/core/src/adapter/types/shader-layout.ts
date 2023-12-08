@@ -39,8 +39,8 @@ export type ShaderLayout = {
   varyings?: any[];
 };
 
-/** 
- * Declares one for attributes 
+/**
+ * Declares one for attributes
  */
 export type AttributeDeclaration = {
   /** The name of this attribute in the shader */
@@ -83,7 +83,7 @@ type Binding = {
 
 /** ShaderLayout for bindings */
 export type BindingDeclaration =
-  | UniformBufferBindingLayout 
+  | UniformBufferBindingLayout
   | BufferBindingLayout
   | TextureBindingLayout
   | SamplerBindingLayout
@@ -152,8 +152,8 @@ export type Binding = Texture | Sampler | Buffer | {buffer: Buffer; offset?: num
 
 // SHADER LAYOUTS
 
-/** 
- * Describes a varying binding for a program 
+/**
+ * Describes a varying binding for a program
  * @deprecated Varyings are WebGL-only
  */
 export type VaryingBinding = {

@@ -133,7 +133,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // This convention allows shaders to name uniform blocks as `uniform appUniforms {} app;`
       // and reference them as `app` from both GLSL and JS.
       // TODO - this is rather hacky - we could also remap the name directly in the shader layout.
-      const binding = 
+      const binding =
         this.shaderLayout.bindings.find(binding => binding.name === name) ||
         this.shaderLayout.bindings.find(binding => binding.name === `${name}Uniforms`);
 
@@ -391,7 +391,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
       // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      const value = this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
+      const value =
+        this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
