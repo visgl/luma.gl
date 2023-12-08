@@ -20,7 +20,7 @@
 
 // Resources
 import './adapter/resources/buffer.spec';
-// import './adapter/resources/command-buffer.spec';
+import './adapter/resources/command-buffer.spec';
 import './adapter/resources/framebuffer.spec';
 import './adapter/resources/render-pipeline.spec';
 import './adapter/resources/sampler.spec';

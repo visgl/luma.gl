@@ -4,12 +4,11 @@
 import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {BufferWithAccessor as Buffer} from './buffer-with-accessor';
 import {WEBGLTexture} from '../adapter/resources/webgl-texture';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
-import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
+import {WEBGLBuffer} from '../adapter/resources/webgl-buffer';
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.
@@ -99,14 +98,14 @@ export function readPixelsToBuffer(
     sourceX?: number;
     sourceY?: number;
     sourceFormat?: number;
-    target?: Buffer; // A new Buffer object is created when not provided.
+    target?: WEBGLBuffer; // A new Buffer object is created when not provided.
     targetByteOffset?: number; // byte offset in buffer object
     // following parameters are auto deduced if not provided
     sourceWidth?: number;
     sourceHeight?: number;
     sourceType?: number;
   }
-): Buffer {
+): WEBGLBuffer {
   const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, targetByteOffset = 0} = options || {};
   // following parameters are auto deduced if not provided
   let {target, sourceWidth, sourceHeight, sourceType} = options || {};
@@ -117,32 +116,30 @@ export function readPixelsToBuffer(
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
   const webglFramebuffer = framebuffer as WEBGLFramebuffer;
-  const gl2 = webglFramebuffer.device.assertWebGL2();
 
   // deduce type if not available.
-  sourceType = sourceType || (target ? target.type : GL.UNSIGNED_BYTE);
+  sourceType = sourceType || GL.UNSIGNED_BYTE;
 
   if (!target) {
     // Create new buffer with enough size
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    target = new Buffer(gl2, {byteLength, accessor: {type: sourceType, size: components}});
+    target = webglFramebuffer.device.createBuffer({byteLength});
   }
 
-  target.bind({glTarget: GL.PIXEL_PACK_BUFFER});
-  withGLParameters(gl2, {framebuffer}, () => {
-    gl2.readPixels(
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      sourceFormat,
-      sourceType,
-      targetByteOffset
-    );
+  // TODO(donmccurdy): Do we have tests to confirm this is working?
+  const commandEncoder = source.device.createCommandEncoder();
+  commandEncoder.copyTextureToBuffer({
+    source: source as Texture,
+    width: sourceWidth,
+    height: sourceHeight,
+    origin: [sourceX, sourceY],
+    destination: target,
+    byteOffset: targetByteOffset
   });
-  target.unbind({glTarget: GL.PIXEL_PACK_BUFFER});
+  commandEncoder.destroy();
+
   if (deleteFramebuffer) {
     framebuffer.destroy();
   }

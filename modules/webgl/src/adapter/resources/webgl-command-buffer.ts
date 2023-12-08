@@ -56,7 +56,7 @@ export class WEBGLCommandBuffer extends CommandBuffer {
   commands: Command[] = [];
 
   constructor(device: WebGLDevice) {
-    super({});
+    super(device, {});
     this.device = device;
   }
 

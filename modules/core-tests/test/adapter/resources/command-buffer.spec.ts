@@ -2,9 +2,10 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
+import {Buffer} from '@luma.gl/core';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
-test('CommandBuffer#copyBufferToBuffer', t => {
+test('CommandBuffer#copyBufferToBuffer', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (!device.isWebGL2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -17,20 +18,20 @@ test('CommandBuffer#copyBufferToBuffer', t => {
     const destinationData = new Float32Array([4, 5, 6]);
     const destination = device.createBuffer({data: destinationData});
 
-    let receivedData = destination.getData();
+    let receivedData = await readAsyncF32(destination);
     let expectedData = new Float32Array([4, 5, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.getData: default parameters successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
-    let commandEncoder = device.createCommandEncoder({});
+    let commandEncoder = device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer({source, destination, size: 2 * Float32Array.BYTES_PER_ELEMENT});
     commandEncoder.finish();
     commandEncoder.destroy();
 
-    receivedData = destination.getData();
+    receivedData = await readAsyncF32(destination);
     expectedData = new Float32Array([1, 2, 6]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
 
-    commandEncoder = device.createCommandEncoder({});
+    commandEncoder = device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer({
       source,
       sourceOffset: Float32Array.BYTES_PER_ELEMENT,
@@ -41,13 +42,21 @@ test('CommandBuffer#copyBufferToBuffer', t => {
     commandEncoder.finish();
     commandEncoder.destroy();
 
-    receivedData = destination.getData();
+    receivedData = await readAsyncF32(destination);
     expectedData = new Float32Array([1, 2, 2]);
-    t.deepEqual(receivedData, expectedData, 'Buffer.copyData: with size and offsets successful');
+    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
   }
   t.end();
 });
 
+async function readAsyncF32(source: Buffer): Promise<Float32Array> {
+  const {buffer, byteOffset, byteLength} = await source.readAsync();
+  return new Float32Array(
+    buffer,
+    byteOffset,
+    byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+}
 
 /*
 

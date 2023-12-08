@@ -77,7 +77,7 @@ export abstract class Buffer extends Resource<BufferProps> {
   }
 
   write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }
-  readAsync(byteOffset?: number, byteLength?: number): Promise<ArrayBuffer>  { throw new Error('not implemented'); }
+  readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>  { throw new Error('not implemented'); }
   // TODO - can sync read be supported in WebGPU?
   getData(): TypedArray { throw new Error('not implemented'); }
 
