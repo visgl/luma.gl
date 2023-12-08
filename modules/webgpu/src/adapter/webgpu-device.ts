@@ -117,7 +117,7 @@ export class WebGPUDevice extends Device {
     };
 
     // "Context" loss handling
-    this.lost = new Promise<{reason: 'destroyed'; message: string}>(async (resolve) => {
+    this.lost = new Promise<{reason: 'destroyed'; message: string}>(async resolve => {
       const lostInfo = await this.handle.lost;
       this._isLost = true;
       resolve({reason: 'destroyed', message: lostInfo.message});
@@ -317,7 +317,7 @@ export class WebGPUDevice extends Device {
     colorSpace?: 'display-p3' | 'srgb';
     premultipliedAlpha?: boolean;
 
-    source:  ImageBitmap | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas;
+    source: ImageBitmap | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas;
     sourceX?: number;
     sourceY?: number;
 
@@ -362,11 +362,7 @@ export class WebGPUDevice extends Device {
         premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [
-        width,
-        height,
-        depth
-      ]
-    )
+      [width, height, depth]
+    );
   }
 }

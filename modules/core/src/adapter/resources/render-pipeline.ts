@@ -32,7 +32,7 @@ export type RenderPipelineProps = ResourceProps & {
    * Describes the buffers accepted by this pipeline and how they are mapped to shader attributes.
    * A default mapping of one buffer per attribute is always created.
    */
-  bufferLayout?: BufferLayout[], // Record<string, Omit<BufferLayout, 'name'>
+  bufferLayout?: BufferLayout[]; // Record<string, Omit<BufferLayout, 'name'>
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: PrimitiveTopology;
@@ -40,7 +40,7 @@ export type RenderPipelineProps = ResourceProps & {
   parameters?: RenderPipelineParameters;
 
   // Can be changed after creation
-  // TODO make pipeline immutable? these could be supplied to draw as parameters, in WebGPU they are set on the render pass 
+  // TODO make pipeline immutable? these could be supplied to draw as parameters, in WebGPU they are set on the render pass
 
   /** Number of vertices */
   vertexCount?: number;
@@ -59,28 +59,30 @@ export type RenderPipelineProps = ResourceProps & {
 export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   static override defaultProps: Required<RenderPipelineProps> = {
     ...Resource.defaultProps,
-  
+
     vs: null,
     vsEntryPoint: '', // main
     vsConstants: {},
-  
+
     fs: null,
     fsEntryPoint: '', // main
     fsConstants: {},
-  
+
     shaderLayout: null,
     bufferLayout: [],
     topology: 'triangle-list',
     parameters: {},
-  
+
     vertexCount: 0,
     instanceCount: 0,
-  
+
     bindings: {},
     uniforms: {}
-  }; 
+  };
 
-  override get [Symbol.toStringTag](): string { return 'RenderPipeline'; }
+  override get [Symbol.toStringTag](): string {
+    return 'RenderPipeline';
+  }
 
   hash: string = '';
   abstract readonly vs: Shader;
@@ -98,14 +100,14 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
 
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
-  /** Uniforms 
+  /** Uniforms
    * @deprecated Only supported on WebGL devices.
    * @note textures, samplers and uniform buffers should be set via `setBindings()`, these are not considered uniforms.
-   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing. 
+   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing.
    */
   abstract setUniforms(bindings: Record<string, UniformValue>): void;
 
-  /** Draw call */ 
+  /** Draw call */
   abstract draw(options: {
     /** Render pass to draw into (targeting screen or framebuffer) */
     renderPass?: RenderPass;

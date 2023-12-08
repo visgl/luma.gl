@@ -253,10 +253,10 @@ export abstract class Device {
   /** Promise that resolves when device is lost */
   abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
-  /** 
-   * Trigger device loss. 
-   * @returns `true` if context loss could actually be triggered. 
-   * @note primarily intended for testing how application reacts to device loss 
+  /**
+   * Trigger device loss.
+   * @returns `true` if context loss could actually be triggered.
+   * @note primarily intended for testing how application reacts to device loss
    */
   loseDevice(): boolean {
     return false;
@@ -272,7 +272,7 @@ export abstract class Device {
     if (!this.canvasContext) {
       throw new Error('Device has no CanvasContext');
     }
-    return this.canvasContext
+    return this.canvasContext;
   }
 
   /** Creates a new CanvasContext (WebGPU only) */
@@ -336,7 +336,6 @@ export abstract class Device {
   // Resource creation helpers
 
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
-
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
       props = {data: props};
     }
@@ -355,6 +354,6 @@ export abstract class Device {
         log.warn('indices buffer content must be of integer type')();
       }
     }
-    return newProps;    
+    return newProps;
   }
 }

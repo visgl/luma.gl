@@ -7,12 +7,7 @@ export {VERSION} from './init';
 export type {ConstructorOf, PartialBy} from './types';
 
 // NUMERIC TYPES - TODO: could be imported from @math.gl/types
-export type {
-  TypedArray,
-  TypedArrayConstructor,
-  NumberArray,
-  BigIntOrNumberArray
-} from './types';
+export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray} from './types';
 
 export {isTypedArray, isNumberArray} from './lib/utils/is-array';
 

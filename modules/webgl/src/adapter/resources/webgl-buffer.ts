@@ -36,7 +36,7 @@ export class WEBGLBuffer extends Buffer {
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
 
-    const handle = typeof props === 'object' ? (props ).handle : undefined;
+    const handle = typeof props === 'object' ? props.handle : undefined;
     this.handle = handle || this.gl.createBuffer();
     device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data});
 
@@ -45,7 +45,7 @@ export class WEBGLBuffer extends Buffer {
     // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.glTarget = getWebGLTarget(this.props.usage);
     this.glUsage = getWebGLUsage(this.props.usage);
-    this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT :  GL.UNSIGNED_SHORT;
+    this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
 
     this.debugData = null;
 
@@ -60,7 +60,11 @@ export class WEBGLBuffer extends Buffer {
   // PRIVATE METHODS
 
   /** Allocate a new buffer and initialize to contents of typed array */
-  _initWithData(data, byteOffset: number = 0, byteLength: number = data.byteLength + byteOffset): this {
+  _initWithData(
+    data,
+    byteOffset: number = 0,
+    byteLength: number = data.byteLength + byteOffset
+  ): this {
     assert(ArrayBuffer.isView(data));
 
     const glTarget = this._getWriteTarget();
@@ -135,10 +139,7 @@ export class WEBGLBuffer extends Buffer {
   }
 
   /** Read data from the buffer */
-  override async readAsync(
-    byteOffset: number = 0,
-    byteLength?: number
-  ): Promise<ArrayBuffer> {
+  override async readAsync(byteOffset: number = 0, byteLength?: number): Promise<ArrayBuffer> {
     this.device.assertWebGL2();
 
     const data = new Uint8Array(byteLength);
@@ -183,7 +184,9 @@ export class WEBGLBuffer extends Buffer {
 // static INDIRECT = 0x0100;
 // static QUERY_RESOLVE = 0x0200;
 
-function getWebGLTarget(usage: number): GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER {
+function getWebGLTarget(
+  usage: number
+): GL.ARRAY_BUFFER | GL.ELEMENT_ARRAY_BUFFER | GL.UNIFORM_BUFFER {
   if (usage & Buffer.INDEX) {
     return GL.ELEMENT_ARRAY_BUFFER;
   }

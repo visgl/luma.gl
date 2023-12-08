@@ -10,7 +10,16 @@ import type {
   AttributeInfo
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
+import {
+  Device,
+  Buffer,
+  RenderPipeline,
+  RenderPass,
+  log,
+  uid,
+  deepEqual,
+  splitUniformsAndBindings
+} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
@@ -194,7 +203,7 @@ export class Model {
     }
     // @ts-expect-error
     if (props.indices) {
-      throw new Error('Model.props.indices removed. Use props.indexBuffer')
+      throw new Error('Model.props.indices removed. Use props.indexBuffer');
     }
     if (props.indexBuffer) {
       this.setIndexBuffer(props.indexBuffer);
@@ -297,7 +306,7 @@ export class Model {
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
-    
+
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
     this.vertexArray = this.device.createVertexArray({
@@ -432,7 +441,9 @@ export class Model {
       if (attributeInfo) {
         this.vertexArray.setConstant(attributeInfo.location, value);
       } else {
-        log.warn(`Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`)();
+        log.warn(
+          `Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`
+        )();
       }
     }
   }
@@ -444,7 +455,10 @@ export class Model {
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
       if (this.pipeline) {
-        log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+        log.log(
+          1,
+          `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
+        )();
       }
       this._pipelineNeedsUpdate = false;
       this.pipeline = this.device.createRenderPipeline({
@@ -453,7 +467,13 @@ export class Model {
         topology: this.topology,
         parameters: this.parameters,
         vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
-        fs: this.fs ? this.device.createShader({id: '{$this.id}-fragment', stage: 'fragment', source: this.fs}) : null
+        fs: this.fs
+          ? this.device.createShader({
+              id: '{$this.id}-fragment',
+              stage: 'fragment',
+              source: this.fs
+            })
+          : null
       });
       this._attributeInfos = getAttributeInfosFromLayouts(
         this.pipeline.shaderLayout,
