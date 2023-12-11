@@ -7,7 +7,7 @@ import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 /** For bindRange */
 type BufferRange = {
-  buffer: WEBGLBuffer;
+  buffer: Buffer;
   byteOffset?: number;
   byteLength?: number;
 };
@@ -72,7 +72,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   // SUBCLASS
 
-  setBuffers(buffers = {}) {
+  setBuffers(buffers: Record<string, Buffer | BufferRange>) {
     this.buffers = {};
     this.unusedBuffers = {};
 
@@ -84,7 +84,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     return this;
   }
 
-  setBuffer(locationOrName: string | number, bufferOrRange: WEBGLBuffer) {
+  setBuffer(locationOrName: string | number, bufferOrRange: Buffer | BufferRange) {
     const location = this._getVaryingIndex(locationOrName);
     const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferOrRange);
 
@@ -134,13 +134,14 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   /** Extract offsets for bindBufferRange */
   protected _getBufferRange(
-    bufferOrRange: WEBGLBuffer | {buffer: WEBGLBuffer; byteOffset?: number; byteLength?: number}
+    bufferOrRange: Buffer | {buffer: Buffer; byteOffset?: number; byteLength?: number}
   ): Required<BufferRange> {
     if (bufferOrRange instanceof WEBGLBuffer) {
       return {buffer: bufferOrRange, byteOffset: 0, byteLength: bufferOrRange.byteLength};
     }
 
     // To use bindBufferRange either offset or size must be specified.
+    // @ts-expect-error Must be a BufferRange.
     const {buffer, byteOffset = 0, byteLength = bufferOrRange.buffer.byteLength} = bufferOrRange;
     return {buffer, byteOffset, byteLength};
   }
@@ -178,11 +179,11 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   protected _bindBuffer(
     index: number,
-    buffer: WEBGLBuffer,
+    buffer: Buffer,
     byteOffset = 0,
     byteLength?: number
   ): this {
-    const handle = buffer && buffer.handle;
+    const handle = buffer && (buffer as WEBGLBuffer).handle;
     if (!handle || byteLength === undefined) {
       this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
