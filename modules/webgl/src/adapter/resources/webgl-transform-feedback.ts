@@ -73,6 +73,9 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   // SUBCLASS
 
   setBuffers(buffers = {}) {
+    this.buffers = {};
+    this.unusedBuffers = {};
+
     this.bind(() => {
       for (const bufferName in buffers) {
         this.setBuffer(bufferName, buffers[bufferName]);
@@ -143,8 +146,8 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   }
 
   protected _getVaryingIndex(locationOrName: string | number) {
-    if (typeof locationOrName === 'number') {
-      return locationOrName;
+    if (isIndex(locationOrName)) {
+      return Number(locationOrName);
     }
 
     for (const varying of this.layout.varyings) {
@@ -187,4 +190,15 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     }
     return this;
   }
+}
+
+/**
+ * Returns true if the given value is an integer, or a string that
+ * trivially converts to an integer (only numeric characters).
+ */
+function isIndex(value: string | number): boolean {
+  if (typeof value === 'number') {
+    return Number.isInteger(value);
+  }
+  return /^\d+$/.test(value);
 }

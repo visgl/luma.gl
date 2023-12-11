@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {glsl, Buffer, TransformFeedback} from '@luma.gl/core';
+import {glsl, Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
 import {WEBGLTransformFeedback} from '@luma.gl/webgl';
@@ -46,22 +46,22 @@ test('WebGL#TransformFeedback constructor/destroy', t => {
     'TransformFeedback throws on missing gl context'
   );
 
-  const buffer1 = webgl2Device.createBuffer({byteLength: 16})
-  const buffer2 = webgl2Device.createBuffer({byteLength: 16})
+  const buffer1 = webgl2Device.createBuffer({byteLength: 16});
+  const buffer2 = webgl2Device.createBuffer({byteLength: 16});
   const model = createModel(buffer1, 4);
 
   const tf = webgl2Device.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
-    buffers: {outValue: buffer2},
+    buffers: {outValue: buffer2}
   });
 
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback construction successful');
+  t.pass('TransformFeedback construction successful');
 
   tf.destroy();
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback destroy successful');
+  t.pass('TransformFeedback destroy successful');
 
   tf.destroy();
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback repeated destroy successful');
+  t.pass('TransformFeedback repeated destroy successful');
 
   t.end();
 });
@@ -73,33 +73,51 @@ test('WebGL#TransformFeedback setBuffers', t => {
     return;
   }
 
-  const buffer1 = webgl2Device.createBuffer({byteLength: 16})
-  const buffer2 = webgl2Device.createBuffer({byteLength: 16})
+  const buffer1 = webgl2Device.createBuffer({byteLength: 100});
+  const buffer2 = webgl2Device.createBuffer({byteLength: 200});
+  const buffer3 = webgl2Device.createBuffer({byteLength: 300});
   const model = createModel(buffer1, 4);
 
-  const tf = webgl2Device.createTransformFeedback({
+  const transformFeedback = webgl2Device.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
-    buffers: {outValue: buffer2},
+    buffers: {outValue: buffer2}
   });
-  
 
-  tf.setBuffers({ 0: buffer1, 1: buffer2 });
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers successful');
+  transformFeedback.setBuffers({0: buffer1, 1: buffer2});
+  t.deepEqual(
+    transformFeedback.buffers,
+    {
+      0: {buffer: buffer1, byteOffset: 0, byteLength: 100},
+      1: {buffer: buffer2, byteOffset: 0, byteLength: 200}
+    },
+    'set by index, 2 buffers'
+  );
 
-  // TODO(v9): Use ProgramConfiguration or model.pipeline.shaderLayout?
+  transformFeedback.setBuffers({0: buffer3, 1: buffer2, 2: buffer1});
+  t.deepEqual(
+    transformFeedback.buffers,
+    {
+      0: {buffer: buffer3, byteOffset: 0, byteLength: 300},
+      1: {buffer: buffer2, byteOffset: 0, byteLength: 200},
+      2: {buffer: buffer1, byteOffset: 0, byteLength: 100}
+    },
+    'set by index, 3 buffers'
+  );
 
-  /* TODO - this has been changed to use ProgramConfiguration
-  const varyingMap = {
-    varying1: 0,
-    varying2: 1
-  };
-  tf.setBuffers({
-    varying2: buffer2,
-    varying1: buffer1
-  }, {clear: true, varyingMap});
-
-  t.ok(tf instanceof TransformFeedback, 'TransformFeedback bindBuffers with clear is successful');
-  */
+  transformFeedback.setBuffers({inValue: buffer1, outValue: buffer2, otherValue: buffer3});
+  t.deepEqual(
+    transformFeedback.buffers,
+    {0: {buffer: buffer2, byteOffset: 0, byteLength: 200}},
+    'set by name, 1 buffer'
+  );
+  t.deepEqual(
+    transformFeedback.unusedBuffers,
+    {
+      inValue: buffer1,
+      otherValue: buffer3
+    },
+    'set by name, 2 buffers unused'
+  );
 
   t.end();
 });
@@ -125,7 +143,7 @@ test('WebGL#TransformFeedback capture', async t => {
 
   const transformFeedback = webgl2Device.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
-    buffers: {outValue: outBuffer},
+    buffers: {outValue: outBuffer}
   });
   model.setTransformFeedback(transformFeedback);
 
@@ -154,15 +172,15 @@ function createModel(buffer: Buffer, vertexCount: number): Model {
     vs: VS,
     fs: FS,
     attributes: {inValue: buffer},
-    bufferLayout: [{
-      name: 'inValue',
-      attributes: [
-        {attribute: 'inValue', byteOffset: 0, format: 'float32'}
-      ]
-    }],
+    bufferLayout: [
+      {
+        name: 'inValue',
+        attributes: [{attribute: 'inValue', byteOffset: 0, format: 'float32'}]
+      }
+    ],
     // @ts-ignore
     varyings: ['outValue'],
     topology: 'point-list',
-    vertexCount,
+    vertexCount
   });
 }
