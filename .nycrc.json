@@ -1,3 +1,18 @@
 {
-  "exclude": ["**/*.spec.ts"]
+  "extends": "@istanbuljs/nyc-config-typescript",
+  "all": true,
+  "sourceMap": false,
+  "instrument": true,
+  "extensions": [".js", ".ts"],
+  "include": ["dev-modules", "modules/**/src"],
+  "exclude": [
+    "**/deprecated",
+    "**/bundle.ts",
+    "**/*.spec.ts",
+    "examples",
+    "modules/constants",
+    "modules/shadertools/src/libs",
+    "modules/webgpu",
+    "modules/test-utils"
+  ]
 }
