@@ -339,7 +339,7 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
   }
 
   beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('Compute shaders not supported in WebGL');
+    throw new Error('ComputePass not supported in WebGL');
   }
 
   createTransformFeedback(props: TransformFeedbackProps): WEBGLTransformFeedback {

@@ -308,7 +308,7 @@ export abstract class Device {
   /** Create a sampler */
   abstract createSampler(props: SamplerProps): Sampler;
 
-  /** Create a Framebuffer. Must have at least one attachment */
+  /** Create a Framebuffer. Must have at least one attachment. */
   abstract createFramebuffer(props: FramebufferProps): Framebuffer;
 
   /** Create a shader */
@@ -336,7 +336,7 @@ export abstract class Device {
   /** Get a renderpass that is set up to render to the primary CanvasContext */
   abstract getDefaultRenderPass(): RenderPass;
 
-  /** Create a transform feedback (immutable set of output buffer bindings). WebGL 2.0 only. */
+  /** Create a transform feedback (immutable set of output buffer bindings). WebGL 2 only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   // Implementation

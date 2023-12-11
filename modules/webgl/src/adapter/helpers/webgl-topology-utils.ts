@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/constants';
-import { PrimitiveTopology } from '@luma.gl/core';
+import {PrimitiveTopology} from '@luma.gl/core';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
 export function getPrimitiveDrawMode(drawMode: GLPrimitiveTopology): GLPrimitive {

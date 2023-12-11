@@ -3,7 +3,7 @@ import {log, TransformFeedback, Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../..';
-import { getGLPrimitive } from '../helpers/webgl-topology-utils';
+import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 /** For bindRange */
 type BufferRange = {
@@ -26,8 +26,9 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   buffers: Record<string, BufferRange> = {};
   unusedBuffers: Record<string, Buffer> = {};
   /**
-   * NOTE: The `bindOnUse` flag is a major workaround:
-   * See https://github.com/KhronosGroup/WebGL/issues/2346
+   * Allows us to avoid a Chrome bug where a buffer that is already bound to a
+   * different target cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
+   * This a major workaround, see: https://github.com/KhronosGroup/WebGL/issues/2346
    */
   bindOnUse = true;
   private _bound: boolean = false;
@@ -41,27 +42,8 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     this.handle = this.props.handle || this.gl2.createTransformFeedback();
     this.layout = this.props.layout;
 
-    // TODO(v9): Should this logic exist in the constructor?
-    try {
-      this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
-      for (const [locationOrName, bufferOrRange] of Object.entries(this.props.buffers)) {
-        const location = this._getVaryingIndex(locationOrName);
-        const range = this._getBufferRange(bufferOrRange as WEBGLBuffer | BufferRange);
-        if (location < 0) {
-          this.unusedBuffers[locationOrName] = range.buffer;
-          log.warn(`${this.id} unused varying buffer ${locationOrName}`)();
-          return this;
-        }
-        this.buffers[location] = range;
-      }
-    } finally {
-      this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
-    }
-
-    // Need to avoid chrome bug where buffer that is already bound to a different target
-    // cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
-    if (!this.bindOnUse) {
-      this._bindBuffers();
+    if (props.buffers) {
+      this.setBuffers(props.buffers);
     }
 
     Object.seal(this);
@@ -88,58 +70,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
   }
 
-  /**
-   * Need to avoid chrome bug where buffer that is already bound to a different target
-   * cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
-   */
-  _bindBuffers(): void {
-    for (const bufferIndex in this.buffers) {
-      const {buffer, byteLength, byteOffset} = this._getBufferRange(this.buffers[bufferIndex]);
-      const handle = buffer && buffer.handle;
-      if (!handle || byteLength === undefined) {
-        this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), handle);
-      } else {
-        this.gl2.bindBufferRange(
-          GL.TRANSFORM_FEEDBACK_BUFFER,
-          Number(bufferIndex),
-          handle,
-          byteOffset,
-          byteLength
-        );
-      }
-    }
-  }
-
-  _unbindBuffers(): void {
-    for (const bufferIndex in this.buffers) {
-      this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
-    }
-  }
-
-  _bindBuffer(
-    index: number,
-    buffer: WEBGLBuffer,
-    byteOffset: number = 0,
-    byteLength?: number
-  ): this {
-    const handle = buffer && buffer.handle;
-    if (!handle || byteLength === undefined) {
-      // @ts-expect-error
-      this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
-    } else {
-      // @ts-expect-error
-      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteLength);
-    }
-    return this;
-  }
-
   // SUBCLASS
-
-  setProps(props: TransformFeedbackProps) {
-    if ('buffers' in props) {
-      this.setBuffers(props.buffers);
-    }
-  }
 
   setBuffers(buffers = {}) {
     this.bind(() => {
@@ -171,39 +102,6 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     return this;
   }
 
-  // PRIVATE METHODS
-
-  /** Extract offsets for bindBufferRange */
-  _getBufferRange(
-    bufferOrRange: WEBGLBuffer | {buffer: WEBGLBuffer; byteOffset?: number; byteLength?: number}
-  ): Required<BufferRange> {
-    if (bufferOrRange instanceof WEBGLBuffer) {
-      return {buffer: bufferOrRange, byteOffset: 0, byteLength: bufferOrRange.byteLength};
-    }
-
-    // To use bindBufferRange either offset or size must be specified.
-    const {buffer, byteOffset = 0, byteLength = bufferOrRange.buffer.byteLength} = bufferOrRange;
-    return {buffer, byteOffset, byteLength};
-  }
-
-  _getVaryingInfo(locationOrName: string | number) {
-    throw new Error(`${this.id} getVaryingInfo not implemented`);
-  }
-
-  _getVaryingIndex(locationOrName: string | number) {
-    if (typeof locationOrName === 'number') {
-      return locationOrName;
-    }
-
-    for (const varying of this.layout.varyings) {
-      if (locationOrName === varying.name) {
-        return varying.location;
-      }
-    }
-
-    return -1;
-  }
-
   bind(funcOrHandle = this.handle) {
     if (typeof funcOrHandle !== 'function') {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, funcOrHandle);
@@ -227,5 +125,66 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   unbind() {
     this.bind(null);
+  }
+
+  // PRIVATE METHODS
+
+  /** Extract offsets for bindBufferRange */
+  protected _getBufferRange(
+    bufferOrRange: WEBGLBuffer | {buffer: WEBGLBuffer; byteOffset?: number; byteLength?: number}
+  ): Required<BufferRange> {
+    if (bufferOrRange instanceof WEBGLBuffer) {
+      return {buffer: bufferOrRange, byteOffset: 0, byteLength: bufferOrRange.byteLength};
+    }
+
+    // To use bindBufferRange either offset or size must be specified.
+    const {buffer, byteOffset = 0, byteLength = bufferOrRange.buffer.byteLength} = bufferOrRange;
+    return {buffer, byteOffset, byteLength};
+  }
+
+  protected _getVaryingIndex(locationOrName: string | number) {
+    if (typeof locationOrName === 'number') {
+      return locationOrName;
+    }
+
+    for (const varying of this.layout.varyings) {
+      if (locationOrName === varying.name) {
+        return varying.location;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
+   * Need to avoid chrome bug where buffer that is already bound to a different target
+   * cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
+   */
+  protected _bindBuffers(): void {
+    for (const bufferIndex in this.buffers) {
+      const {buffer, byteLength, byteOffset} = this._getBufferRange(this.buffers[bufferIndex]);
+      this._bindBuffer(Number(bufferIndex), buffer, byteOffset, byteLength);
+    }
+  }
+
+  protected _unbindBuffers(): void {
+    for (const bufferIndex in this.buffers) {
+      this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
+    }
+  }
+
+  protected _bindBuffer(
+    index: number,
+    buffer: WEBGLBuffer,
+    byteOffset = 0,
+    byteLength?: number
+  ): this {
+    const handle = buffer && buffer.handle;
+    if (!handle || byteLength === undefined) {
+      this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
+    } else {
+      this.gl2.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteLength);
+    }
+    return this;
   }
 }

@@ -125,7 +125,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     /** First instance to draw from */
     firstInstance?: number;
     baseVertex?: number;
-    /** Transform feedback. WebGL 2.0 only. */
+    /** Transform feedback. WebGL 2 only. */
     transformFeedback?: TransformFeedback;
   }): void;
 }
