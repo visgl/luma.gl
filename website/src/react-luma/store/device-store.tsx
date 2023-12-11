@@ -15,10 +15,21 @@ export type Store = {
 
 let cachedDevice: Record<string, Promise<Device>> = {};
 
+let cachedContainer: HTMLDivElement | undefined;
+function getCanvasContainer() {
+  if (!cachedContainer) {
+    cachedContainer = document.createElement('div');
+    cachedContainer.style.display = 'none';
+    document.body.appendChild(cachedContainer);
+  }
+  return cachedContainer;
+}
+
 export async function createDevice(deviceType: string): Promise<Device> {
   const type = deviceType.toLowerCase();
   // @ts-expect-error
-  cachedDevice[type] = cachedDevice[type] || luma.createDevice({type, height: 0});
+  cachedDevice[type] =
+    cachedDevice[type] || luma.createDevice({type, height: 0, container: getCanvasContainer()});
   return await cachedDevice[type];
 }
 
