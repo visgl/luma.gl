@@ -26,29 +26,11 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback isSupported', t => {
-  // WebGL 1.0
-  t.throws(
-    () => TransformFeedback.isSupported(webgl1Device),
-    'TransformFeedback#isSupported (WebGL1)'
-  );
-  t.false(
-    WEBGLTransformFeedback.isSupported(webgl1Device),
-    'WEBGLTransformFeedback#isSupported (WebGL1)'
-  );
-
-  // WebGL 2.0
+test('WebGL#TransformFeedback feature flag', t => {
+  t.false(webgl1Device.features.has('transform-feedback-webgl2'), 'webgl1');
   if (webgl2Device) {
-    t.throws(
-      () => TransformFeedback.isSupported(webgl2Device),
-      'TransformFeedback#isSupported (WebGL2)'
-    );
-    t.true(
-      WEBGLTransformFeedback.isSupported(webgl2Device),
-      'WEBGLTransformFeedback#isSupported (WebGL2)'
-    );
+    t.true(webgl2Device.features.has('transform-feedback-webgl2'), 'webgl2');
   }
-
   t.end();
 });
 
@@ -145,9 +127,10 @@ test('WebGL#TransformFeedback capture', async t => {
     layout: model.pipeline.shaderLayout,
     buffers: {outValue: outBuffer},
   });
+  model.setTransformFeedback(transformFeedback);
 
   const renderPass = webgl2Device.beginRenderPass({discard: true});
-  model.draw(renderPass, {transformFeedback});
+  model.draw(renderPass);
   renderPass.end();
 
   const outBytes = await outBuffer.readAsync(byteOffset, byteLength);

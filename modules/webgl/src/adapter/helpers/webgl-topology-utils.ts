@@ -2,6 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/constants';
+import { PrimitiveTopology } from '@luma.gl/core';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode
 export function getPrimitiveDrawMode(drawMode: GLPrimitiveTopology): GLPrimitive {
@@ -59,5 +60,44 @@ export function getVertexCount(options: {drawMode: GLPrimitiveTopology, vertexCo
       return primitiveCount * 3;
     default:
       throw new Error('drawMode');
+  }
+}
+
+/** Get the primitive type for draw */
+export function getGLDrawMode(
+  topology: PrimitiveTopology
+):
+  | GL.POINTS
+  | GL.LINES
+  | GL.LINE_STRIP
+  | GL.LINE_LOOP
+  | GL.TRIANGLES
+  | GL.TRIANGLE_STRIP
+  | GL.TRIANGLE_FAN {
+  // prettier-ignore
+  switch (topology) {
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINE_STRIP;
+    case 'line-loop-webgl': return GL.LINE_LOOP;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLE_STRIP;
+    case 'triangle-fan-webgl': return GL.TRIANGLE_FAN;
+    default: throw new Error(topology);
+  }
+}
+
+/** Get the primitive type for transform feedback */
+export function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
+  // prettier-ignore
+  switch (topology) {
+    case 'point-list': return GL.POINTS;
+    case 'line-list': return GL.LINES;
+    case 'line-strip': return GL.LINES;
+    case 'line-loop-webgl': return GL.LINES;
+    case 'triangle-list': return GL.TRIANGLES;
+    case 'triangle-strip': return GL.TRIANGLES;
+    case 'triangle-fan-webgl': return GL.TRIANGLES;
+    default: throw new Error(topology);
   }
 }

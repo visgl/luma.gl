@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
-import type {ShaderLayout, PrimitiveTopology} from '@luma.gl/core';
+import type {ShaderLayout} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, cast, splitUniformsAndBindings, log} from '@luma.gl/core';
 import {mergeShaderLayout} from '@luma.gl/core';
@@ -22,6 +22,7 @@ import {WEBGLTexture} from './webgl-texture';
 // import {WEBGLVertexArray} from './webgl-vertex-array';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
+import { getGLDrawMode } from '../helpers/webgl-topology-utils';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -233,10 +234,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: Rebinds constant attributes before each draw call
     vertexArray.bindBeforeRender(renderPass);
 
-    const primitiveMode = getGLPrimitive(this.props.topology);
-
     if (transformFeedback) {
-      transformFeedback.begin(primitiveMode);
+      transformFeedback.begin(this.props.topology);
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite
@@ -474,44 +473,5 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         setUniform(this.device.gl, location, type, value);
       }
     }
-  }
-}
-
-/** Get the primitive type for draw */
-function getGLDrawMode(
-  topology: PrimitiveTopology
-):
-  | GL.POINTS
-  | GL.LINES
-  | GL.LINE_STRIP
-  | GL.LINE_LOOP
-  | GL.TRIANGLES
-  | GL.TRIANGLE_STRIP
-  | GL.TRIANGLE_FAN {
-  // prettier-ignore
-  switch (topology) {
-    case 'point-list': return GL.POINTS;
-    case 'line-list': return GL.LINES;
-    case 'line-strip': return GL.LINE_STRIP;
-    case 'line-loop-webgl': return GL.LINE_LOOP;
-    case 'triangle-list': return GL.TRIANGLES;
-    case 'triangle-strip': return GL.TRIANGLE_STRIP;
-    case 'triangle-fan-webgl': return GL.TRIANGLE_FAN;
-    default: throw new Error(topology);
-  }
-}
-
-/** Get the primitive type for transform feedback */
-function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
-  // prettier-ignore
-  switch (topology) {
-    case 'point-list': return GL.POINTS;
-    case 'line-list': return GL.LINES;
-    case 'line-strip': return GL.LINES;
-    case 'line-loop-webgl': return GL.LINES;
-    case 'triangle-list': return GL.TRIANGLES;
-    case 'triangle-strip': return GL.TRIANGLES;
-    case 'triangle-fan-webgl': return GL.TRIANGLES;
-    default: throw new Error(topology);
   }
 }

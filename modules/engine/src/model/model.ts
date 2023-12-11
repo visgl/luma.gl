@@ -60,6 +60,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   /**   */
   constantAttributes?: Record<string, TypedArray>;
 
+  transformFeedback?: TransformFeedback;
+
   /** Mapped uniforms for shadertool modules */
   moduleSettings?: Record<string, Record<string, any>>;
 };
@@ -89,6 +91,7 @@ export class Model {
     constantAttributes: {},
 
     pipelineFactory: undefined!,
+    transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
   };
 
@@ -136,6 +139,9 @@ export class Model {
    * @todo - allow application to define multiple vertex arrays?
    * */
   vertexArray: VertexArray;
+
+  /** TransformFeedback, WebGL 2 only. */
+  transformFeedback: TransformFeedback | null = null;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
@@ -224,6 +230,9 @@ export class Model {
     if (props.moduleSettings) {
       this.updateModuleSettings(props.moduleSettings);
     }
+    if (props.transformFeedback) {
+      this.transformFeedback = props.transformFeedback;
+    }
 
     this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
 
@@ -237,8 +246,7 @@ export class Model {
 
   // Draw call
 
-  // TODO(v9): Should draw() take 'transformFeedback' in options?
-  draw(renderPass: RenderPass, options?: {transformFeedback?: TransformFeedback}): void {
+  draw(renderPass: RenderPass): void {
     // Check if the pipeline is invalidated
     // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
     this.pipeline = this._updatePipeline();
@@ -253,7 +261,7 @@ export class Model {
       vertexArray: this.vertexArray,
       vertexCount: this.vertexCount,
       instanceCount: this.instanceCount,
-      transformFeedback: options?.transformFeedback
+      transformFeedback: this.transformFeedback
     });
   }
 
@@ -359,6 +367,13 @@ export class Model {
     const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
     Object.assign(this.uniforms, uniforms);
+  }
+
+  /**
+   * Updates optional transform feedback. WebGL 2 only.
+   */
+  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
+    this.transformFeedback = transformFeedback;
   }
 
   /**

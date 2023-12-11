@@ -34,8 +34,4 @@ export abstract class TransformFeedback extends Resource<TransformFeedbackProps>
   constructor(device: Device, props?: TransformFeedbackProps) {
     super(device, props, TransformFeedback.defaultProps);
   }
-
-  static isSupported(device: Device | WebGLRenderingContext): boolean {
-    throw new Error('TransformFeedback#isSupported not implemented');
-  }
 }

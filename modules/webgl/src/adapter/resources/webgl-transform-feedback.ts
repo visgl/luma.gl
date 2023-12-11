@@ -1,8 +1,9 @@
-import type {Device, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
-import {log, isObjectEmpty, TransformFeedback, Buffer} from '@luma.gl/core';
+import type {PrimitiveTopology, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
+import {log, TransformFeedback, Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
-import {WEBGLBuffer, isWebGL2} from '../..';
+import {WEBGLBuffer} from '../..';
+import { getGLPrimitive } from '../helpers/webgl-topology-utils';
 
 /** For bindRange */
 type BufferRange = {
@@ -12,10 +13,6 @@ type BufferRange = {
 };
 
 export class WEBGLTransformFeedback extends TransformFeedback {
-  get [Symbol.toStringTag](): string {
-    return 'TransformFeedback';
-  }
-
   readonly device: WebGLDevice;
   readonly gl2: WebGL2RenderingContext;
   readonly handle: WebGLTransformFeedback;
@@ -28,8 +25,10 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   readonly layout: ShaderLayout;
   buffers: Record<string, BufferRange> = {};
   unusedBuffers: Record<string, Buffer> = {};
-  // NOTE: The `bindOnUse` flag is a major workaround:
-  // See https://github.com/KhronosGroup/WebGL/issues/2346
+  /**
+   * NOTE: The `bindOnUse` flag is a major workaround:
+   * See https://github.com/KhronosGroup/WebGL/issues/2346
+   */
   bindOnUse = true;
   private _bound: boolean = false;
 
@@ -68,32 +67,25 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     Object.seal(this);
   }
 
-  static override isSupported(device: Device | WebGLRenderingContext): boolean {
-    const webglDevice = WebGLDevice.attach(device);
-    return isWebGL2(webglDevice.gl);
-  }
-
   override destroy(): void {
     this.gl2.deleteTransformFeedback(this.handle);
     super.destroy();
   }
 
-  begin(primitiveMode = GL.POINTS): this {
+  begin(topology: PrimitiveTopology = 'point-list'): void {
     this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     if (this.bindOnUse) {
       this._bindBuffers();
     }
-    this.gl2.beginTransformFeedback(primitiveMode);
-    return this;
+    this.gl2.beginTransformFeedback(getGLPrimitive(topology));
   }
 
-  end(): this {
+  end(): void {
     this.gl2.endTransformFeedback();
     if (!this.bindOnUse) {
       this._unbindBuffers();
     }
     this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
-    return this;
   }
 
   /**
@@ -142,20 +134,6 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   }
 
   // SUBCLASS
-
-  initialize(props?: TransformFeedbackProps): this {
-    this.buffers = {};
-    this.unusedBuffers = {};
-    this.bindOnUse = true;
-
-    // Unbind any currently bound buffers
-    if (!isObjectEmpty(this.buffers)) {
-      this.bind(() => this._unbindBuffers());
-    }
-
-    this.setProps(props);
-    return this;
-  }
 
   setProps(props: TransformFeedbackProps) {
     if ('buffers' in props) {

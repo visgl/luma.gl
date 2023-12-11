@@ -181,6 +181,7 @@ export type WebGLDeviceFeature =
   | 'multiple-render-targets-webgl1'
   | 'index-uint32-webgl1'
   | 'blend-minmax-webgl1'
+  | 'transform-feedback-webgl2'
 
   // glsl extensions
   | 'glsl-frag-data'
