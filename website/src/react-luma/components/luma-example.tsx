@@ -73,10 +73,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     if (canvas) {
       if (!animationLoop) {
         log.info(0, `creating luma device ${canvas.id}`); // , ref.current);
-        canvas.style.width = '100vw';
-        canvas.style.height = '50vh';
+        canvas.style.width = '100%';
+        canvas.style.height = '50%';
         const device = luma.createDevice({type: deviceType, canvas, container: containerName});
-  
+
         let animationLoop: AnimationLoop | null = null;
         animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
           device,

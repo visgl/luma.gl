@@ -11,7 +11,7 @@ function renderItem(item, getThumbnail) {
   const {label} = typeof item === 'string' ? {label: item} : item;
   const {href} = typeof item === 'string' ? {href: item} : item;;
   return (
-    <ExampleCard key={label} href={`examples/${href}`}>
+    <ExampleCard key={label} href={href}>
       <img width="100%" src={imageUrl} alt={label} />
       <ExampleTitle>
         <span>{label}</span>
@@ -27,22 +27,16 @@ function renderCategory({label, items}, getThumbnail) {
   ];
 }
 
-export function ExamplesIndex({getThumbnail, sidebar}) {
-  sidebar = sidebar || useDocsSidebar();
-
+export function ExamplesIndex({getThumbnail}) {
+  const sidebar = useDocsSidebar();
   return (
-    <div>
-      <div style={{height: 20}} key="index">
-        {' '}
-      </div>
       <MainExamples>
-        {sidebar.map(item => {
+        {sidebar.items.map(item => {
           if (item.type === 'category') {
             return renderCategory(item, getThumbnail);
           }
           return null;
         })}
       </MainExamples>
-    </div>
   );
 }

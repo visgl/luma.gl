@@ -5,7 +5,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 // import {joinPath} from '../utils/data-utils';
 
 import items from '../../content/showcase.json';
-// copied from deck.gl/website/pages/showcase with small fixes 
+// copied from deck.gl/website/pages/showcase with small fixes
 
 function joinPath(base, path) {
   if (path.match(/^\w+:\/\//)) {

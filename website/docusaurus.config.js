@@ -84,7 +84,7 @@ const config = {
                 .replace('/docs/examples/tutorials/', '/docs/tutorials/')
             ];
           }
-            
+
             // docs/modules/*/api-reference <= modules/*/docs/api-reference
           if (existingPath.includes('/docs/modules/')) {
             return [

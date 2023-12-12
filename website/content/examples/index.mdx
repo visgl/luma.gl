@@ -1,12 +1,10 @@
 # Examples
 
 import {ExamplesIndex} from '@site/src/examples/components';
-import examplesSidebar from '@site/content/sidebar-examples.json';
 
-<ExamplesIndex 
-  sidebar={examplesSidebar}
+<ExamplesIndex
   getThumbnail={item => {
     const exampleName = typeof item === 'string' ? item : item.docId || item.label.toLowerCase();
     return `/images/examples/${exampleName}.jpg`
-  }} 
+  }}
 />
