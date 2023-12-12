@@ -72,7 +72,7 @@ export type CreateGLTFModelOptions = {
   geometry: Geometry;
   material: any;
   materialOptions: ParsePBRMaterialOptions;
-  modelOptions?: Record<string, any>;
+  modelOptions?: Partial<ModelProps>;
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
@@ -101,14 +101,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     topology: geometry.topology,
     vertexCount,
     modules: [pbr],
-    defines: parsedMaterial.defines,
-    // parameters: parsedMaterial.parameters,
-    parameters, // TODO use/merge parsedMaterial
     vs: addVersionToShader(device, vs),
     fs: addVersionToShader(device, fs),
-    bindings: parsedMaterial.bindings,
-    uniforms: parsedMaterial.uniforms,
-    ...modelOptions
+    ...modelOptions,
+
+    bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
+    defines: {...parsedMaterial.defines, ...modelOptions.defines},
+    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
+    uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
   }
 
   const model = new Model(device, modelProps);

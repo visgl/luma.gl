@@ -1,5 +1,5 @@
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
-import {Geometry, GroupNode, ModelNode} from '@luma.gl/engine';
+import {Geometry, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {GeometryAttribute} from '@luma.gl/engine/geometry/geometry';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {Matrix4} from '@math.gl/core';
@@ -9,14 +9,14 @@ import {createGLTFModel} from './create-gltf-model';
 import type {PBREnvironment} from '../pbr/pbr-environment';
 
 export type GLTFInstantiatorOptions = {
-  modelOptions?: Record<string, any>,
+  modelOptions?: Partial<ModelProps>,
   pbrDebug?: boolean,
   imageBasedLightingEnvironment?: PBREnvironment,
   lights?: boolean,
   useTangents?: boolean
 }
 
-const DEFAULT_OPTIONS = {
+const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
   modelOptions: {},
   pbrDebug: false,
   imageBasedLightingEnvironment: null,
