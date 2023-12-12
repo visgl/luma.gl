@@ -126,6 +126,7 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, [boolean | string, boolean |
   'webgl2': [false, true],
 
   'timer-query-webgl': ['EXT_disjoint_timer_query', 'EXT_disjoint_timer_query_webgl2'],
+  'transform-feedback-webgl2': [false, true],
 
   // WEBGL1 SUPPORT
   'vertex-array-object-webgl1': ['OES_vertex_array_object', true],

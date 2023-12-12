@@ -20,7 +20,9 @@ import type {
   RenderPassProps,
   ComputePassProps,
   // CommandEncoderProps,
-  VertexArrayProps
+  VertexArrayProps,
+  TransformFeedback,
+  TransformFeedbackProps
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -229,6 +231,10 @@ export class WebGPUDevice extends Device {
   // createCommandEncoder(props: CommandEncoderProps): WebGPUCommandEncoder {
   //   return new WebGPUCommandEncoder(this, props);
   // }
+
+  createTransformFeedback(props: TransformFeedbackProps): TransformFeedback {
+    throw new Error('Transform feedback not supported in WebGPU');
+  }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);

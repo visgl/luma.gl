@@ -32,11 +32,14 @@ export {WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
 // export {WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 
-// non-api resources
+// Internal WebGL classes
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 
-// WebGL adapter classes (Legacy will likely be removed)
+// WebGL adapter classes 
+export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedback';
+
+// WebGL adapter classes
 export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
 

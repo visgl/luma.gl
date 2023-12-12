@@ -7,7 +7,8 @@ import type {
   RenderPipelineParameters,
   BufferLayout,
   VertexArray,
-  AttributeInfo
+  AttributeInfo,
+  TransformFeedback
 } from '@luma.gl/core';
 import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {
@@ -59,6 +60,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   /**   */
   constantAttributes?: Record<string, TypedArray>;
 
+  transformFeedback?: TransformFeedback;
+
   /** Mapped uniforms for shadertool modules */
   moduleSettings?: Record<string, Record<string, any>>;
 };
@@ -88,6 +91,7 @@ export class Model {
     constantAttributes: {},
 
     pipelineFactory: undefined!,
+    transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
   };
 
@@ -135,6 +139,9 @@ export class Model {
    * @todo - allow application to define multiple vertex arrays?
    * */
   vertexArray: VertexArray;
+
+  /** TransformFeedback, WebGL 2 only. */
+  transformFeedback: TransformFeedback | null = null;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
@@ -223,6 +230,9 @@ export class Model {
     if (props.moduleSettings) {
       this.updateModuleSettings(props.moduleSettings);
     }
+    if (props.transformFeedback) {
+      this.transformFeedback = props.transformFeedback;
+    }
 
     this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
 
@@ -250,7 +260,8 @@ export class Model {
       renderPass,
       vertexArray: this.vertexArray,
       vertexCount: this.vertexCount,
-      instanceCount: this.instanceCount
+      instanceCount: this.instanceCount,
+      transformFeedback: this.transformFeedback
     });
   }
 
@@ -359,6 +370,13 @@ export class Model {
   }
 
   /**
+   * Updates optional transform feedback. WebGL 2 only.
+   */
+  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
+    this.transformFeedback = transformFeedback;
+  }
+
+  /**
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
@@ -404,6 +422,7 @@ export class Model {
     for (const [bufferName, buffer] of Object.entries(buffers)) {
       const bufferLayout = this.bufferLayout.find(layout => layout.name === bufferName);
       if (!bufferLayout) {
+        log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
         continue; // eslint-disable-line no-continue
       }
 
