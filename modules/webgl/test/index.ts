@@ -8,6 +8,7 @@ import './adapter/device-helpers/is-old-ie.spec';
 
 import './adapter/helpers/parse-shader-compiler-log.spec';
 import './adapter/helpers/get-shader-layout.spec';
+import './adapter/helpers/webgl-topology-utils.spec';
 
 // Device pixels
 // import './context/device-pixels.spec';
