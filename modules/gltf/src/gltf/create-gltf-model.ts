@@ -72,7 +72,7 @@ export type CreateGLTFModelOptions = {
   geometry: Geometry;
   material: any;
   materialOptions: ParsePBRMaterialOptions;
-  modelOptions?: Record<string, any>;
+  modelOptions?: Partial<ModelProps>;
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
