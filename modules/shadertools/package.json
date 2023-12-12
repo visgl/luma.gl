@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/shadertools",
-  "version": "9.0.0-alpha.45",
+  "version": "9.0.0-alpha.46",
   "description": "Shader module system for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/core": "9.0.0-alpha.45",
+    "@luma.gl/core": "9.0.0-alpha.46",
     "@math.gl/core": "^4.0.0",
     "@math.gl/types": "^4.0.0"
   },

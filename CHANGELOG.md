@@ -1,5 +1,12 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.46
+
+- feat(gltf) Merge modelOptions passed to GLTFInstantiator (#1875)
+- feat(webgl): Adds TransformFeedback resource (#1858)
+- build(deps-dev): bump vite from 5.0.4 to 5.0.5 (#1865)
+- Fix `babel-plugin-inline-webgl-constants` for ES Modules (#1859)
+
 ### v9.0.0-alpha.45
 
 - Differentiate between settings/uniforms in picking (#1862)
