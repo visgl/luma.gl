@@ -227,6 +227,8 @@ export abstract class Device {
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
+  abstract destroy(): void;
+
   // Capabilities
 
   /** Information about the device (vendor, versions etc) */
