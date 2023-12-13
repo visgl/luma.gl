@@ -39,7 +39,7 @@ export class GLTFInstantiator {
     this.options = {...DEFAULT_OPTIONS, ...options};
   }
 
-  instantiate(gltf: any): any {
+  instantiate(gltf: any): GroupNode[] {
     this.gltf = gltf;
     const scenes = (gltf.scenes || []).map((scene) => this.createScene(scene));
     return scenes;
