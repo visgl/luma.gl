@@ -1,5 +1,5 @@
 import {Device} from '@luma.gl/core';
-import {ScenegraphNode} from '@luma.gl/engine';
+import {GroupNode} from '@luma.gl/engine';
 import {GLTFInstantiator, GLTFInstantiatorOptions} from './gltf-instantiator';
 import {GLTFAnimator} from './gltf-animator';
 
@@ -8,7 +8,7 @@ export function createScenegraphsFromGLTF(
   gltf: any,
   options?: GLTFInstantiatorOptions
 ): {
-  scenes: ScenegraphNode[];
+  scenes: GroupNode[];
   animator: GLTFAnimator;
 } {
   const instantiator = new GLTFInstantiator(device, options);
