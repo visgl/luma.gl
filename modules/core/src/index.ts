@@ -52,7 +52,7 @@ export {CommandBuffer} from './adapter/resources/command-buffer';
 export type {VertexArrayProps} from './adapter/resources/vertex-array';
 export {VertexArray} from './adapter/resources/vertex-array';
 
-export type {TransformFeedbackProps} from './adapter/resources/transform-feedback';
+export type {BufferRange, TransformFeedbackProps} from './adapter/resources/transform-feedback';
 export {TransformFeedback} from './adapter/resources/transform-feedback';
 
 // API TYPES

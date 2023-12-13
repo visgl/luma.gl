@@ -73,57 +73,57 @@ function getTestCasesFor(glslFunc) {
   return testCases;
 }
 
-test('fp64#sum_fp64', (t) => {
+test('fp64#sum_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
   } else {
     const glslFunc = 'sum_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
+    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
   }
   t.end();
 });
 
-test('fp64#sub_fp64', (t) => {
+test('fp64#sub_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
   } else {
     const glslFunc = 'sub_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
+    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
   }
   t.end();
 });
 
-test('fp64#mul_fp64', (t) => {
+test('fp64#mul_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
   } else {
     const glslFunc = 'mul_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
+    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
   }
   t.end();
 });
 
-test('fp64#div_fp64', (t) => {
+test('fp64#div_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
   } else {
     const glslFunc = 'div_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
+    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
   }
   t.end();
 });
 
-test('fp64#sqrt_fp64', (t) => {
+test('fp64#sqrt_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
   } else {
     const glslFunc = 'sqrt_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    runTests(webgl2Device, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
+    await runTests(webgl2Device, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
   }
   t.end();
 });
