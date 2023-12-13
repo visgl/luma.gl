@@ -70,7 +70,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   /** Each example maintains an animation loop */
   const animationLoopRef = useRef<AnimationLoop | null>(null);
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-  const usedCanvases = useRef(new WeakMap())
+  const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>())
   const currentTask = useRef<Promise<any> | null>(null);
 
   /** Type type of the device (WebGL, WebGPU, ...) */
