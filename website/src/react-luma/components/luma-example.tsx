@@ -62,7 +62,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   let containerName = 'ssr';
 
   /** Each example maintains an animation loop */
-  const animationLoopRef = useRef<AnimationLoop | null>(null);
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>());
   const currentTask = useRef<Promise<void> | null>(null);
@@ -76,26 +75,21 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     usedCanvases.current.set(canvas, true);
 
+    let animationLoop: AnimationLoop | null = null;
     let device: Device | null = null;
     const asyncCreateLoop = async () => {
-      if (animationLoopRef.current) return;
-
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       device = await luma.createDevice({type: deviceType, canvas, container: containerName});
 
-      const animationLoop = makeAnimationLoop(
-        props.template as unknown as typeof AnimationLoopTemplate,
-        {
-          device,
-          autoResizeViewport: true,
-          autoResizeDrawingBuffer: true
-        }
-      );
+      animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
+        device,
+        autoResizeViewport: true,
+        autoResizeDrawingBuffer: true
+      });
 
       // Start the actual example
       animationLoop?.start();
-      animationLoopRef.current = animationLoop;
 
       // Ensure the example can find its images
       // TODO - this only works for examples/tutorials
@@ -115,10 +109,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     return () => {
       currentTask.current = Promise.resolve(currentTask.current)
-        .then(async () => {
-          if (animationLoopRef.current) {
-            animationLoopRef.current.destroy();
-            animationLoopRef.current = null;
+        .then(() => {
+          if (animationLoop) {
+            animationLoop.destroy();
+            animationLoop = null;
           }
 
           if (device) {
@@ -126,7 +120,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }
         })
         .catch(error => {
-          console.error(`unmounting ${deviceType}, failed`, error);
+          console.error(`unmounting ${deviceType} failed`, error);
         });
     };
   }, [deviceType, canvas]);
