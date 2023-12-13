@@ -178,7 +178,6 @@ function createModel(buffer: Buffer, vertexCount: number): Model {
         attributes: [{attribute: 'inValue', byteOffset: 0, format: 'float32'}]
       }
     ],
-    // @ts-ignore
     varyings: ['outValue'],
     topology: 'point-list',
     vertexCount

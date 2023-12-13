@@ -72,7 +72,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   // SUBCLASS
 
-  setBuffers(buffers: Record<string, Buffer | BufferRange>) {
+  setBuffers(buffers: Record<string, Buffer | BufferRange>): void {
     this.buffers = {};
     this.unusedBuffers = {};
 
@@ -81,17 +81,16 @@ export class WEBGLTransformFeedback extends TransformFeedback {
         this.setBuffer(bufferName, buffers[bufferName]);
       }
     });
-    return this;
   }
 
-  setBuffer(locationOrName: string | number, bufferOrRange: Buffer | BufferRange) {
+  setBuffer(locationOrName: string | number, bufferOrRange: Buffer | BufferRange): void {
     const location = this._getVaryingIndex(locationOrName);
     const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferOrRange);
 
     if (location < 0) {
       this.unusedBuffers[locationOrName] = buffer;
       log.warn(`${this.id} unusedBuffers varying buffer ${locationOrName}`)();
-      return this;
+      return;
     }
 
     this.buffers[location] = {buffer, byteLength, byteOffset};
@@ -101,8 +100,6 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     if (!this.bindOnUse) {
       this._bindBuffer(location, buffer, byteOffset, byteLength);
     }
-
-    return this;
   }
 
   bind(funcOrHandle = this.handle) {
@@ -182,14 +179,13 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     buffer: Buffer,
     byteOffset = 0,
     byteLength?: number
-  ): this {
+  ): void {
     const handle = buffer && (buffer as WEBGLBuffer).handle;
     if (!handle || byteLength === undefined) {
       this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
       this.gl2.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteLength);
     }
-    return this;
   }
 }
 
