@@ -76,6 +76,8 @@ function getTestCasesFor(glslFunc) {
 test('fp64#sum_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
+  } else if (!webgl2Device) {
+    t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sum_fp64';
     const testCases = getTestCasesFor(glslFunc);
@@ -87,6 +89,8 @@ test('fp64#sum_fp64', async (t) => {
 test('fp64#sub_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
+  } else if (!webgl2Device) {
+    t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sub_fp64';
     const testCases = getTestCasesFor(glslFunc);
@@ -98,6 +102,8 @@ test('fp64#sub_fp64', async (t) => {
 test('fp64#mul_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
+  } else if (!webgl2Device) {
+    t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'mul_fp64';
     const testCases = getTestCasesFor(glslFunc);
@@ -109,6 +115,8 @@ test('fp64#mul_fp64', async (t) => {
 test('fp64#div_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
+  } else if (!webgl2Device) {
+    t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'div_fp64';
     const testCases = getTestCasesFor(glslFunc);
@@ -120,6 +128,8 @@ test('fp64#div_fp64', async (t) => {
 test('fp64#sqrt_fp64', async (t) => {
   if (webgl2Device?.info.gpu === 'apple') {
     t.comment('apple GPU has precision issues')
+  } else if (!webgl2Device) {
+    t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sqrt_fp64';
     const testCases = getTestCasesFor(glslFunc);
