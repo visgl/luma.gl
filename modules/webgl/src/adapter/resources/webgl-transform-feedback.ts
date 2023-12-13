@@ -3,7 +3,6 @@ import {log, TransformFeedback, Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../..';
-import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 /** For bindRange */
 type BufferRange = {
@@ -54,12 +53,12 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     super.destroy();
   }
 
-  begin(primitiveMode: 'point-list' | 'line-list' | 'triangle-list' = 'point-list'): void {
+  begin(primitiveMode: GL.POINTS | GL.LINES | GL.TRIANGLES = GL.POINTS): void {
     this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     if (this.bindOnUse) {
       this._bindBuffers();
     }
-    this.gl2.beginTransformFeedback(getGLPrimitive(primitiveMode));
+    this.gl2.beginTransformFeedback(primitiveMode);
   }
 
   end(): void {
