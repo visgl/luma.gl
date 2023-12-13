@@ -210,7 +210,7 @@ export class Transform {
   // Private
 
   _updateModelProps(props: TransformProps): TransformProps {
-    const updatedProps: TransformProps = {...props};
+    // const updatedProps: TransformProps = {...props};
     // const resourceTransforms = [this.bufferTransform, this.textureTransform].filter(Boolean) ;
     // for (const resourceTransform of resourceTransforms) {
     //   updatedProps = resourceTransform.updateModelProps(updatedProps);
