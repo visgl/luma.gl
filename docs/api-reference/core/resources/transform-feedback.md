@@ -6,7 +6,7 @@
 
 `TransformFeedback` objects must assigned to a `Model` with the appropriate varyings. Some caveats apply, see [remarks](#remarks).
 
-When using transform feedback, it is usually desirable to turn off rasterization, preventing the fragment shader from running unnecessarily. This can be achieved with `gl.enable(GL.RASTERIZER_DISCARD)`, enabled with the `discard: true` option when creating a render pipeline.
+When using transform feedback, it is usually desirable to turn off rasterization to prevent the fragment shader from running unnecessarily. This can be achieved by setting the `discard: true` option when creating a render pipeline.
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Transform_Feedback).
 
@@ -21,18 +21,7 @@ return new Model(device, {
   vertexCount,
   topology: 'point-list'
   attributes: {inValue: buffer},
-  bufferLayout: [
-    {
-      name: 'inValue',
-      attributes: [
-        {
-          attribute: 'inValue',
-          byteOffset: 0,
-          format: 'float32'
-        }
-      ]
-    }
-  ],
+  bufferLayout: [{name: 'inValue', format: 'float32'}],
   varyings: ['outValue'],
 });
 ```
@@ -135,7 +124,11 @@ WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/
 
 ## Enumerations
 
-- **PrimitiveTopology:** See See WebGPU's [GPUPrimitiveTopology](https://www.w3.org/TR/webgpu/#enumdef-gpuprimitivetopology).
+| Primitive Mode | Compatible Draw Modes |
+| -------------- | -------------------------------------------------------- |
+| `point-list`    | `point-list`                                            |
+| `line-list`     | `line-list`, `line-strip`, `line-loop-webgl`            |
+| `triangle-list` | `triangle-list`, `triangle-strip`, `triangle-fan-webgl` |
 
 ## Limits
 

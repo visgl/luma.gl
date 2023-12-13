@@ -172,12 +172,7 @@ function createModel(buffer: Buffer, vertexCount: number): Model {
     vs: VS,
     fs: FS,
     attributes: {inValue: buffer},
-    bufferLayout: [
-      {
-        name: 'inValue',
-        attributes: [{attribute: 'inValue', byteOffset: 0, format: 'float32'}]
-      }
-    ],
+    bufferLayout: [{name: 'inValue', format: 'float32'}],
     varyings: ['outValue'],
     topology: 'point-list',
     vertexCount
