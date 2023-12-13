@@ -8,7 +8,7 @@ luma.registerDevices([WebGLDevice, WebGPUDevice]);
 
 export type Store = {
   device?: Device;
-  deviceType?: 'webgl' | 'webgl2' | 'webgpu';
+  deviceType?: 'webgl1' | 'webgl2' | 'webgpu';
   deviceError?: any;
   setDeviceType: (type: any) => Promise<void>;
 };

@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 const DemoContainer = styled.div`
-position: absolute;
 overflow: hidden !important;
 left: 0;
 right: 0;

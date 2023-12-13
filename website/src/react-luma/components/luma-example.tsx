@@ -1,7 +1,6 @@
-import React, {FC, useEffect, useRef, useState, useCallback, forwardRef} from 'react'; // eslint-disable-line
-import {isBrowser} from '@probe.gl/env';
-import {Device, log, luma, setPathPrefix} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationLoop, AnimationProps, makeAnimationLoop} from '@luma.gl/engine';
+import React, {FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
+import {Device, luma, setPathPrefix} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
@@ -63,52 +62,68 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   let containerName = 'ssr';
 
   /** Each example maintains an animation loop */
-  const [animationLoop, setAnimationLoop] = useState<AnimationLoop | null>(null);
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>());
+  const currentTask = useRef<Promise<void> | null>(null);
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
   containerName = props.container || `luma-example-container-${deviceType}`;
 
-  const callbackRef = useCallback((canvas: HTMLCanvasElement) => {
-    if (canvas) {
-      if (!animationLoop) {
-        log.info(0, `creating luma device ${canvas.id}`); // , ref.current);
-        canvas.style.width = '100vw';
-        canvas.style.height = '50vh';
-        const device = luma.createDevice({type: deviceType, canvas, container: containerName});
-  
-        let animationLoop: AnimationLoop | null = null;
-        animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
-          device,
-          autoResizeViewport: true,
-          autoResizeDrawingBuffer: true
+  useEffect(() => {
+    if (!canvas || usedCanvases.current.get(canvas)) return;
+
+    usedCanvases.current.set(canvas, true);
+
+    let animationLoop: AnimationLoop | null = null;
+    let device: Device | null = null;
+    const asyncCreateLoop = async () => {
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      device = await luma.createDevice({type: deviceType, canvas, container: containerName});
+
+      animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
+        device,
+        autoResizeViewport: true,
+        autoResizeDrawingBuffer: true
+      });
+
+      // Start the actual example
+      animationLoop?.start();
+
+      // Ensure the example can find its images
+      // TODO - this only works for examples/tutorials
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
+      if (props.directory) {
+        setPathPrefix(`${RAW_GITHUB}/examples/${props.directory}/${props.id}/`);
+      } else {
+        setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
+      }
+    };
+
+    currentTask.current = Promise.resolve(currentTask.current).then(() => {
+      asyncCreateLoop().catch(error => {
+        console.error(`start ${deviceType} failed`, error);
+      });
+    });
+
+    return () => {
+      currentTask.current = Promise.resolve(currentTask.current)
+        .then(() => {
+          if (animationLoop) {
+            animationLoop.destroy();
+            animationLoop = null;
+          }
+
+          if (device) {
+            device.destroy();
+          }
+        })
+        .catch(error => {
+          console.error(`unmounting ${deviceType} failed`, error);
         });
+    };
+  }, [deviceType, canvas]);
 
-        // Start the actual example
-        animationLoop?.start();
-        setAnimationLoop(animationLoop);
-
-        // Ensure the example can find its images
-        // TODO - this only works for examples/tutorials
-        const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
-        if (props.directory) {
-          setPathPrefix(`${RAW_GITHUB}/examples/${props.directory}/${props.id}/`);
-        } else {
-          setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
-        }
-      }
-
-    } else {
-
-      if (animationLoop) {
-        console.error(`unmounting example ${props.id}`); // , ref.current);
-        animationLoop?.stop();
-        animationLoop?.destroy();
-        setAnimationLoop(null);
-        // animationLoop.device?.destroy();
-      }
-    }
-  }, []);
-
-  return <canvas ref={callbackRef} />;
-}
+  return <canvas key={deviceType} ref={setCanvas} />;
+};
