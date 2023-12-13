@@ -22,7 +22,7 @@ import {WEBGLTexture} from './webgl-texture';
 // import {WEBGLVertexArray} from './webgl-vertex-array';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
-import {getGLDrawMode, getGLPrimitive} from '../helpers/webgl-topology-utils';
+import {getGLDrawMode} from '../helpers/webgl-topology-utils';
 
 const LOG_PROGRAM_PERF_PRIORITY = 4;
 
@@ -235,7 +235,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     vertexArray.bindBeforeRender(renderPass);
 
     if (transformFeedback) {
-      transformFeedback.begin(getGLPrimitive(this.props.topology));
+      transformFeedback.begin(this.props.topology);
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite

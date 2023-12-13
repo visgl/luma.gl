@@ -1,8 +1,9 @@
-import type {ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
+import type {PrimitiveTopology, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
 import {log, TransformFeedback, Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../..';
+import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 /** For bindRange */
 type BufferRange = {
@@ -53,12 +54,12 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     super.destroy();
   }
 
-  begin(primitiveMode: GL.POINTS | GL.LINES | GL.TRIANGLES = GL.POINTS): void {
+  begin(topology: PrimitiveTopology = 'point-list'): void {
     this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     if (this.bindOnUse) {
       this._bindBuffers();
     }
-    this.gl2.beginTransformFeedback(primitiveMode);
+    this.gl2.beginTransformFeedback(getGLPrimitive(topology));
   }
 
   end(): void {
