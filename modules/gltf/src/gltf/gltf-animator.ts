@@ -21,17 +21,26 @@ export const ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY = {
   5126: Float32Array
 };
 
+type GLTFAnimationProps = {
+  name: string;
+  startTime?: number;
+  playing?: boolean;
+  speed?: number;
+  channels?: any;
+}
+
 class GLTFAnimation {
+  name: string;
   startTime: number = 0;
   playing: boolean = true;
   speed: number = 1;
   channels: any = [];
 
-  constructor(props) {
+  constructor(props: GLTFAnimationProps) {
     Object.assign(this, props);
   }
 
-  animate(timeMs) {
+  animate(timeMs: number) {
     if (!this.playing) {
       return;
     }
@@ -49,7 +58,7 @@ class GLTFAnimation {
 export class GLTFAnimator {
   animations: GLTFAnimation[];
 
-  constructor(gltf) {
+  constructor(gltf: any) {
     this.animations = gltf.animations.map((animation, index) => {
       const name = animation.name || `Animation-${index}`;
       const samplers = animation.samplers.map(({input, interpolation = 'LINEAR', output}) => ({
