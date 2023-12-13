@@ -1,49 +1,47 @@
 # TransformFeedback
 
-:::info
-This page describes deprecated components in the legacy luma.gl v8 API.
-:::
+> NOTICE: `TransformFeedback` is only available in WebGL 2.
 
-> `TransformFeedback` is only available in WebGL 2
+`TransformFeedback` objects hold state needed to perform [WebGLTransformFeedback](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTransformFeedback) operations, which capture the output of a vertex shader to varyings in a buffer. Each `TransformFeedback` object holds buffer bindings used to store output, allowing applications to switch between different `TransformFeedback` objects and update bindings, similar to how `VertexArrayObjects` hold input vertex buffers.
 
-`TransformFeedback` objects holds state needed to perform transform feedback operations. They store the buffer bindings that are being recorded to. This makes it easy to switch between different sets of feedback buffer bindings (somewhat similar to how `VertexArrayObjects` hold input vertex buffers.
+`TransformFeedback` objects must assigned to a `Model` with the appropriate varyings. Some caveats apply, see [remarks](#remarks).
 
-The state managed by `TransformFeedback` objects includes the buffers the GPU will use to record the requested varyings.
-
-When `TransformFeedback` objects must be "activated" (`TransformFeedback.begin`) before it can be used. There a number of caveats to be aware of when manually managing `TransformFeedback` object activation, see the remarks. For this reason, luma.gl [`Program.draw`](/docs/api-reference/core/resources/render-pipeline) call takes an optional `TransformFeedback` object as a parameter and activates and deactivates it before and after the draw call.
-
-Finally, note that when using transform feedback it is frequently desirable to turn off rasterization: `gl.enable(GL.RASTERIZER_DISCARD)` to prevent the fragment shader from running.
+When using transform feedback, it is usually desirable to turn off rasterization to prevent the fragment shader from running unnecessarily. This can be achieved by setting the `discard: true` option when creating a render pipeline.
 
 For more information, see [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Transform_Feedback).
 
 ## Usage
 
-Setting up a model object for transform feedback.
+Create a `Model` for transform feedback operations.
 
 ```typescript
-const model = new Model(gl, {
+return new Model(device, {
   vs,
   fs,
-  varyings: ['gl_Position', 'outputColor'],
-  ...
+  vertexCount,
+  topology: 'point-list'
+  attributes: {inValue: buffer},
+  bufferLayout: [{name: 'inValue', format: 'float32'}],
+  varyings: ['outValue'],
 });
 ```
 
-Setting up a transform feedback object and binding buffers
+Create a `TransformFeedback` and assign output buffers.
 
 ```typescript
-const transformFeedback = new TransformFeedback(gl)
-  .setBuffer(0, bufferPosition)
-  .setBuffer(1, bufferColor);
+const transformFeedback = device.createTransformFeedback({
+  layout: model.pipeline.shaderLayout,
+  buffers: {0: positionBuffer, 1: colorBuffer}
+});
+
+model.setTransformFeedback(transformFeedback);
 ```
 
-When binding the buffers, index should be equal to the corresponding varying entry in `varyings` array passed to `Program` constructor.
-
-Buffers can also be bound using varying name if information about varyings are retrieved from `Program` object.
+When binding the buffers, index should be equal to the corresponding varying entry in `varyings` array passed to `Model`. Buffers can also be bound using varying name, and resolved using the model's associated `Pipeline` and `ShaderLayout`.
 
 ```typescript
-const transformFeedback = new TransformFeedback(gl, {
-  program: ..., // linked program, configuration will be read from it
+const transformFeedback = device.createTransformFeedback({
+  layout: model.pipeline.shaderLayout,
   buffers: {
     outputColor: bufferColor,
     gl_Position: bufferPosition
@@ -51,85 +49,65 @@ const transformFeedback = new TransformFeedback(gl, {
 });
 ```
 
-Running program (drawing) with implicit activation of transform feedback (will call `begin` and `end` on supplied `transformFeedback`)
+To run a `TransformFeedback` operation, draw a Model with an associated `TransformFeedback`. Optionally, set `discard` to avoid unnecessary
+rasterization while performing the operation.
 
 ```typescript
-model.draw({
-  drawMode,
-  vertexCount,
-  ...,
-  transformFeedback
-});
+const renderPass = device.beginRenderPass({discard: true});
+
+model.draw(renderPass);
+
+renderPass.end();
 ```
 
-Running a transform feedback operation while turning off rasterization (drawing):
+## Properties
 
-```typescript
-model.transform({
-  drawMode,
-  ...,
-  transformFeedback
-});
-```
-
-or equivalently, just call draw with an additional parameter:
-
-```typescript
-const parameters = {[GL.RASTERIZER_DISCARD]: true}
-model.draw({..., transformFeedback, parameters});
-```
+- `.bindOnUse` = `true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
 
 ## Methods
 
-### constructor(gl : WebGL2RenderingContext, props: Object)
+### constructor(device : WebGLDevice, props: TransformFeedbackProps)
 
-See `TransformFeedback.setProps` for parameters.
+Requires a WebGL 2 device. See `TransformFeedbackProps` for props. `TransformFeedback` instances should be created by `Device#createTransformFeedback`, rather than using the constructor directly.
 
 WebGL APIs [`gl.createTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/createTransformFeedback)
 
-### initialize(props : Object) : TransformFeedback
+Props:
 
-Reinitializes an existing `TransformFeedback` object with new props.
-
-### setProps(props : Object) : TransformFeedback
-
-- `props.program`= (Object) - Gets a mapping of varying name to buffer indices from a linked program if supplied.
-- `props.buffers`=(Object) - Map of location index or name to Buffer object or buffer parameters object. If buffer parameters object is supplied, it contains following fields.
-  - `buffer`=(Buffer) - Buffer object to be bound.
-  - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-  - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-- `props.bindOnUse`=`true` - If true, binds and unbinds buffers before and after use, rather than right away when set. Workaround for a possible [Khronos/Chrome bug](https://github.com/KhronosGroup/WebGL/issues/2346).
+- `props.layout` = (`ShaderLayout`) - Layout of shader (for varyings)
+- `props.buffers` = (Object) - Map of location index or name to Buffer or BufferRange object. Used for varyings. If buffer parameters object is supplied, it contains following fields.
+  - `buffer` = (`Buffer`) - Buffer object to be bound.
+  - `byteOffset`= (Number, default: 0) - Byte offset for writes into the buffer.
+  - `byteLength`= (Number, default: buffer.byteLength) - Byte length, from offset, available for writes into the buffer.
 
 Notes:
 
 - `buffers` - will get bound to indices in the `GL.TRANSFORM_FEEDBACK_BUFFER` target.
 
-### delete() : TransformFeedback
+### destroy() : void
 
 Destroys a `TransformFeedback` object.
 
-WebGL APIS [`gl.deleteTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/deleteTransformFeedback)
+WebGL APIs [`gl.deleteTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/deleteTransformFeedback)
 
-### setBuffers(buffers: Object) : TransformFeedback
+### setBuffers(buffers: Object) : void
 
-- `buffers`=(Object) - Map of location index or name to Buffer object or buffer parameters object. If buffer parameters object is supplied, it contains following fields.
-  - `buffer`=(Buffer) - Buffer object to be bound.
-  - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-  - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+- `buffers` = (Object) - Map of location index or name to Buffer or BufferRange object. Used for varyings. If buffer parameters object is supplied, it contains following fields.
+  - `buffer` = (Buffer) - Buffer object to be bound.
+  - `byteOffset` = (Number, default: 0) - Byte offset for writes into the buffer.
+  - `byteLength` = (Number, default: buffer.byteLength) - Byte length, from offset, available for writes into the buffer.
 
 Notes:
 
-- To use `gl.bindBufferRange`, either `offsetInByts` or `byteSize` must be specified, when only one is specified, default value is used for the other, when both not specified, `gl.bindBufferBase` is used for binding.
+- To use `gl.bindBufferRange`, `byteLength` must be specified. When not specified, `gl.bindBufferBase` is used for binding.
 
 WebGL APIs [`gl.bindBufferBase`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferBase), [`gl.bindBufferRange`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/bindBufferRange)
 
-### begin(primitiveMode : GLEnum) : TransformFeedback
+### begin(topology : PrimitiveTopology = 'point-list') : void
 
 Activates transform feedback using the buffer bindings in this `TransformFeedback` object.
 
-- `primitiveMode` (`GLenum`) -
-
-returns (`TransformFeedback`) - returns self to enable chaining
+- `primitiveMode` (`PrimitiveTopology`) - See WebGPU's [GPUPrimitiveTopology](https://www.w3.org/TR/webgpu/#enumdef-gpuprimitivetopology).
 
 Notes:
 
@@ -138,23 +116,19 @@ Notes:
 
 WebGL APIs [`gl.beginTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/beginTransformFeedback)
 
-### end() : TransformFeedback
+### end() : void
 
-returns (`TransformFeedback`) - returns self to enable chaining
+Ends transform feedback operation, allowing access and changes to Buffers.
 
 WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/endTransformFeedback)
 
-## See also
-
-- `Program` constructor - `varyings` argument to specify which vertex shader outputs to expose to transform feedback operations.
-
 ## Enumerations
 
-| Primitive Mode | Compatible Draw Modes                                  |
-| -------------- | ------------------------------------------------------ |
-| `GL.POINTS`    | `GL.POINTS`                                            |
-| `GL.LINES`     | `GL.LINES`, `GL.LINE_LOOP`, `GL.LINE_STRIP`            |
-| `GL.TRIANGLES` | `GL.TRIANGLES`, `GL.TRIANGLE_STRIP`, `GL.TRIANGLE_FAN` |
+| Primitive Mode | Compatible Topology                                     |
+| -------------- | ------------------------------------------------------- |
+| `GL.POINTS`    | `point-list`                                            |
+| `GL.LINES`     | `line-list`, `line-strip`, `line-loop-webgl`            |
+| `GL.TRIANGLES` | `triangle-list`, `triangle-strip`, `triangle-fan-webgl` |
 
 ## Limits
 
@@ -169,5 +143,5 @@ WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/
 
 About `TransformFeedback` activation caveats
 
-- When activated, `TransformFeedback` are coupled to the "current" `Program`
-- Note that a started and unpaused TransformFeedback prevents the app from changing or re-linking the current program. So for instance, `Program.use` (`gl.useProgram`) cannot be called.
+- When activated, `TransformFeedback` is coupled to the current `Model`.
+- `TransformFeedback#begin` prevents the app from changing or re-linking the current program. So for instance, `Program.use` (`gl.useProgram`) cannot be called until after calling `TransformFeedback#end`.

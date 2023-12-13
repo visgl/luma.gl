@@ -60,6 +60,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   /**   */
   constantAttributes?: Record<string, TypedArray>;
 
+  /** @internal For use with {@link TransformFeedback}, WebGL 2 only. */
+  varyings?: string[];
+
   transformFeedback?: TransformFeedback;
 
   /** Mapped uniforms for shadertool modules */
@@ -89,6 +92,7 @@ export class Model {
     indexBuffer: null,
     attributes: {},
     constantAttributes: {},
+    varyings: [],
 
     pipelineFactory: undefined!,
     transformFeedback: undefined,
