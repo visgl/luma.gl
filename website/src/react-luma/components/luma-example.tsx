@@ -80,7 +80,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     const asyncCreateLoop = async () => {
       if (animationLoopRef.current) return;
 
-      console.log(`starting example ${deviceType}`);
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       device = await luma.createDevice({type: deviceType, canvas, container: containerName});
@@ -110,14 +109,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     currentTask.current = Promise.resolve(currentTask.current).then(() => {
       asyncCreateLoop().catch(error => {
-        console.info(`start ${deviceType} failed`, error);
+        console.error(`start ${deviceType} failed`, error);
       });
     });
 
     return () => {
       currentTask.current = Promise.resolve(currentTask.current)
         .then(async () => {
-          console.log(`unmounting ${deviceType}`);
           if (animationLoopRef.current) {
             animationLoopRef.current.destroy();
             animationLoopRef.current = null;
@@ -126,7 +124,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           if (device) {
             device.destroy();
           }
-          console.log(`umounted ${deviceType}`);
         })
         .catch(error => {
           console.error(`unmounting ${deviceType}, failed`, error);
