@@ -71,12 +71,12 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
       a: 'result'
     },
     varyings: ['result'],
-    elementCount: testCases.length
+    vertexCount: testCases.length
   });
   return {a, b, expected, a_fp64, b_fp64, expected_fp64, transform};
 }
 
-export function runTests(device: Device, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
+export async function runTests(device: Device, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
   if (!Transform.isSupported(device)) {
     t.comment('Transform not supported, skipping tests');
     t.end();
@@ -91,7 +91,7 @@ export function runTests(device: Device, {glslFunc, binary = false, op, limit = 
     testCases
   });
   transform.run({uniforms: {ONE: 1}});
-  const gpu_result = transform.getBuffer('result')?.getData() ;
+  const gpu_result = await transform.readAsync('result');
   for (let idx = 0; idx < testCases.length; idx++) {
     const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
     const result64 = gpu_result[2 * idx] + gpu_result[2 * idx + 1];

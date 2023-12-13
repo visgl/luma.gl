@@ -1,16 +1,9 @@
 import type {PrimitiveTopology, ShaderLayout, TransformFeedbackProps} from '@luma.gl/core';
-import {log, TransformFeedback, Buffer} from '@luma.gl/core';
+import {log, TransformFeedback, Buffer, BufferRange} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../..';
 import {getGLPrimitive} from '../helpers/webgl-topology-utils';
-
-/** For bindRange */
-type BufferRange = {
-  buffer: Buffer;
-  byteOffset?: number;
-  byteLength?: number;
-};
 
 export class WEBGLTransformFeedback extends TransformFeedback {
   readonly device: WebGLDevice;
@@ -102,6 +95,14 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     }
   }
 
+  getBuffer(locationOrName: string | number): Buffer | BufferRange | null {
+    if (isIndex(locationOrName)) {
+      return this.buffers[locationOrName] || null;
+    }
+    const location = this._getVaryingIndex(locationOrName);
+    return location >= 0 ? this.buffers[location] : null;
+  }
+
   bind(funcOrHandle = this.handle) {
     if (typeof funcOrHandle !== 'function') {
       this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, funcOrHandle);
@@ -143,7 +144,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     return {buffer, byteOffset, byteLength};
   }
 
-  protected _getVaryingIndex(locationOrName: string | number) {
+  protected _getVaryingIndex(locationOrName: string | number): number {
     if (isIndex(locationOrName)) {
       return Number(locationOrName);
     }

@@ -21,9 +21,6 @@ export function getVertexBufferLayout(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[]
 ): GPUVertexBufferLayout[] {
-  // @ts-expect-error Deduplicate and make use of the new core attribute logic here in webgpu module
-  const attributeInfos = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
-
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
