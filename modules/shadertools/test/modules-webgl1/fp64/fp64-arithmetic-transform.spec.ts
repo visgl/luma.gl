@@ -8,6 +8,10 @@ import {runTests} from './fp64-test-utils-transform';
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
 // ignoreFor: [{gpu: ['glslFunc-1', 'glslFunc-2']}] => ignores for `'glslFunc-1' and 'glslFunc-2` when running on `gpu`
 const commonTestCases = [
+  {a: 2, b: 2},
+  {a: 2, b: 2},
+  {a: 2, b: 2},
+  {a: 590000, b: 10000},
   {a: 3.0e-19, b: 3.3e13},
   {a: 9.9e-40, b: 1.7e3},
   {a: 1.5e-36, b: 1.7e-16},
@@ -73,10 +77,8 @@ function getTestCasesFor(glslFunc) {
   return testCases;
 }
 
-test('fp64#sum_fp64', async (t) => {
-  if (webgl2Device?.info.gpu === 'apple') {
-    t.comment('apple GPU has precision issues')
-  } else if (!webgl2Device) {
+test.only('fp64#sum_fp64', async (t) => {
+  if (!webgl2Device) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sum_fp64';
