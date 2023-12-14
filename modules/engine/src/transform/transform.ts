@@ -14,12 +14,12 @@ export type TransformProps = {
   vs?: string;
   fs?: string;
   vertexCount?: number;
-  sourceBuffers?: Record<string, Buffer>; // TODO(donmccurdy): Duplicate of attrs?
+  sourceBuffers?: Record<string, Buffer>; // TODO(donmccurdy): Relation to attrs?
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
   varyings?: string[];
   feedbackMap?: Record<string, string>;
   modules?: ShaderModule[];
-  attributes?: Record<string, any>; // TODO(donmccurdy): Did I add this?
+  attributes?: Record<string, any>; // TODO(donmccurdy): Relation to sourceBuffers?
   bufferLayout?: BufferLayout[];
   uniforms?: Record<string, any>;
   defines?: Record<string, any>

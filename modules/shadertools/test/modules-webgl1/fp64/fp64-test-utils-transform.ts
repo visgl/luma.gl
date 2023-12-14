@@ -21,17 +21,6 @@ void main(void) {
 
   result = ${operation}(a, b);
 
-  //// from fp64-arithmetic.glsl.ts ////
-
-  // vec2 s, t;
-  // s = twoSum(a.x, b.x);
-  // t = twoSum(a.y, b.y);
-  // s.y += t.x;
-  // s = quickTwoSum(s.x, s.y);
-  // s.y += t.y;
-  // s = quickTwoSum(s.x, s.y);
-  // result = s;
-
   //// from https://blog.cyclemap.link/2011-06-09-glsl-part2-emu/ ////
 
   // float t1 = a.x + b.x;
@@ -39,6 +28,11 @@ void main(void) {
   // float t2 = ((b.x - e) + (a.x - (t1 - e))) + a.y + b.y;
   // result.x = t1 + t2;
   // result.y = t2 - (result.x - t1);
+
+  //// debug ////
+
+  // result = vec2(1.2, 3.4);
+  // result = a;
 }
 `;
   return shader;
@@ -88,7 +82,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
     vs,
     modules: [fp64],
     attributes: {a: bufferA, b: bufferB},
-    bufferLayout: [{name: 'a', format: 'float32'}, {name: 'b', format: 'float32'}],
+    bufferLayout: [{name: 'a', format: 'float32', byteStride: 8}, {name: 'b', format: 'float32', byteStride: 8}],
     feedbackBuffers: {result: bufferResult},
     varyings: ['result'],
     vertexCount: testCases.length
@@ -117,8 +111,7 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
   const gpuResult = new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
   for (let idx = 0; idx < testCases.length; idx++) {
     const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
-    const stride = 4; // 2; ???
-    const result64 = gpuResult[stride * idx] + gpuResult[stride * idx + 1];
+    const result64 = gpuResult[2 * idx] + gpuResult[2 * idx + 1];
 
     const args = binary
       ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
