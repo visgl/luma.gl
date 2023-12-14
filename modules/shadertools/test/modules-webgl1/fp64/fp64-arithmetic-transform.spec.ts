@@ -11,6 +11,7 @@ const commonTestCases = [
   {a: 2, b: 2},
   {a: 2, b: 2},
   {a: 2, b: 2},
+  {a: 0.1, b: 0.1}, // TODO(donmccurdy): Passes with naive (`vec2(a.x + b.x, a.y + b.y)`) implementation.
   {a: 590000, b: 10000},
   {a: 3.0e-19, b: 3.3e13},
   {a: 9.9e-40, b: 1.7e3},

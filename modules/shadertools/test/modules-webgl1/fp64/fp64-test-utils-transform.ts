@@ -31,8 +31,7 @@ void main(void) {
 
   //// debug ////
 
-  // result = vec2(1.2, 3.4);
-  // result = a;
+  // result = vec2(a.x + b.x, a.y + b.y);
 }
 `;
   return shader;
@@ -42,7 +41,7 @@ function getUnaryShader(operation: string): string {
   return `\
 attribute vec2 a;
 attribute vec2 b;
-varying vec2 result;
+invariant varying vec2 result;
 void main(void) {
   result = ${operation}(a);
 }
@@ -82,7 +81,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
     vs,
     modules: [fp64],
     attributes: {a: bufferA, b: bufferB},
-    bufferLayout: [{name: 'a', format: 'float32', byteStride: 8}, {name: 'b', format: 'float32', byteStride: 8}],
+    bufferLayout: [{name: 'a', format: 'float32x2', byteStride: 8}, {name: 'b', format: 'float32x2', byteStride: 8}],
     feedbackBuffers: {result: bufferResult},
     varyings: ['result'],
     vertexCount: testCases.length
@@ -116,11 +115,20 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
     const args = binary
       ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
       : `(${a[idx].toPrecision(2)})`;
-    const message = `${glslFunc}${args} error within tolerance`;
+    const message = `${glslFunc}${args} error ${Math.abs(result64 - reference64)} < eps`;
     const isEqual = equals(reference64, result64);
+
+    // TODO(donmccurdy): DO NOT SUBMIT.
+    // testCases[idx].expected = testCases[idx].a + testCases[idx].b;
+    // testCases[idx].equal = isEqual;
+    // testCases[idx].error = Math.abs(result64 - reference64);
+
     t.ok(isEqual, message);
     if (!isEqual) {
       t.comment(` (tested ${a_fp64.toString()}, ${b_fp64.toString()})`);
     }
   }
+
+  // TODO(donmccurdy): DO NOT SUBMIT.
+  // console.table(testCases);
 }
