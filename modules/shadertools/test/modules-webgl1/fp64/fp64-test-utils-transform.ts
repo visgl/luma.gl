@@ -11,11 +11,16 @@ import {fp64, fp64arithmetic} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
 
+// Use 'invariant' specifier to work around some issues on Apple GPUs. The
+// specifier may or may not have an effect, depending on the browser and the
+// ANGLE backend, but it's an improvement when it's supported.
+// See: https://github.com/visgl/luma.gl/issues/1764
+
 function getBinaryShader(operation: string): string {
   const shader = `\
 attribute vec2 a;
 attribute vec2 b;
-varying vec2 result;
+invariant varying vec2 result;
 void main(void) {
   result = ${operation}(a, b);
 }
@@ -27,7 +32,7 @@ function getUnaryShader(operation: string): string {
   return `\
 attribute vec2 a;
 attribute vec2 b;
-varying vec2 result;
+invariant varying vec2 result;
 void main(void) {
   result = ${operation}(a);
 }
