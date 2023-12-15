@@ -17,21 +17,7 @@ attribute vec2 a;
 attribute vec2 b;
 varying vec2 result;
 void main(void) {
-  //// original ////
-
   result = ${operation}(a, b);
-
-  //// from https://blog.cyclemap.link/2011-06-09-glsl-part2-emu/ ////
-
-  // float t1 = a.x + b.x;
-  // float e = t1 - a.x;
-  // float t2 = ((b.x - e) + (a.x - (t1 - e))) + a.y + b.y;
-  // result.x = t1 + t2;
-  // result.y = t2 - (result.x - t1);
-
-  //// debug ////
-
-  // result = vec2(a.x + b.x, a.y + b.y);
 }
 `;
   return shader;
@@ -81,7 +67,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
     vs,
     modules: [fp64],
     attributes: {a: bufferA, b: bufferB},
-    bufferLayout: [{name: 'a', format: 'float32x2', byteStride: 8}, {name: 'b', format: 'float32x2', byteStride: 8}],
+    bufferLayout: [{name: 'a', format: 'float32x2'}, {name: 'b', format: 'float32x2'}],
     feedbackBuffers: {result: bufferResult},
     varyings: ['result'],
     vertexCount: testCases.length
@@ -115,7 +101,7 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
     const args = binary
       ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
       : `(${a[idx].toPrecision(2)})`;
-    const message = `${glslFunc}${args} error ${Math.abs(result64 - reference64)} < eps`;
+    const message = `${glslFunc}${args} error within tolerance`;
     const isEqual = equals(reference64, result64);
     t.ok(isEqual, message);
     if (!isEqual) {
