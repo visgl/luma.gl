@@ -15,7 +15,7 @@ function getBinaryShader(operation: string): string {
   const shader = `\
 attribute vec2 a;
 attribute vec2 b;
-varying vec2 result;
+invariant varying vec2 result;
 void main(void) {
   result = ${operation}(a, b);
 }
@@ -27,7 +27,7 @@ function getUnaryShader(operation: string): string {
   return `\
 attribute vec2 a;
 attribute vec2 b;
-varying vec2 result;
+invariant varying vec2 result;
 void main(void) {
   result = ${operation}(a);
 }
