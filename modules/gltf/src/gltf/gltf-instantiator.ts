@@ -149,8 +149,9 @@ export class GLTFInstantiator {
   createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
     const attributes = {}
     for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
-      const {components: size, value} = attribute as GeometryAttribute;
-      attributes[attributeName] = {size, value};
+      const {components, size, value} = attribute as GeometryAttribute;
+
+      attributes[attributeName] = {size: size ?? components, value};
     };
 
     return new Geometry({
