@@ -1,4 +1,4 @@
-import {glsl} from '@luma.gl/core';
+import {glsl, Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {Transform} from '@luma.gl/engine';
 
@@ -56,6 +56,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   transform: Transform;
   model: Model;
 
+  prevPositionBuffer: Buffer;
+  nextPositionBuffer: Buffer;
+  colorBuffer: Buffer;
+
   constructor({device}: AnimationProps) {
     super();
 
@@ -63,29 +67,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error(ALT_TEXT);
     }
 
-    const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    this.prevPositionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    this.nextPositionBuffer = device.createBuffer(new Float32Array(6));
+    this.colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
     this.transform = new Transform(device, {
       vs: transformVs,
-      sourceBuffers: {
-        // @ts-expect-error TODO fix transform so it can use luma/api buffers
-        position: positionBuffer
-      },
-      feedbackMap: {
-        position: 'vPosition'
-      },
-      elementCount: 3
+      attributes: {position: this.prevPositionBuffer},
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      feedbackBuffers: {vPosition: this.nextPositionBuffer},
+      varyings: ['vPosition'],
+      vertexCount: 3
     });
-
-    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
     this.model = new Model(device, {
       vs: renderVs,
       fs: renderFs,
-      attributes: {
-        position: this.transform.getBuffer('vPosition'),
-        color: colorBuffer
-      },
+      attributes: {position: this.nextPositionBuffer, color: this.colorBuffer},
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+        {name: 'color', format: 'float32x3'}
+      ],
       vertexCount: 3
     });
   }
@@ -96,16 +98,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}) {
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.transform.run();
-    this.model.setAttributes({
-      position: this.transform.getBuffer('vPosition')
-    });
 
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.draw(renderPass);
-
-    this.transform.swap();
-
     renderPass.end();
+
+    this._swap();
+  }
+
+  protected _swap() {
+    const prevPositionBuffer = this.nextPositionBuffer;
+    const nextPositionBuffer = this.prevPositionBuffer;
+
+    this.transform.model.setAttributes({position: prevPositionBuffer});
+    this.transform.transformFeedback.setBuffers({vPosition: nextPositionBuffer});
+    this.model.setAttributes({position: nextPositionBuffer, color: this.colorBuffer});
+
+    this.nextPositionBuffer = nextPositionBuffer;
+    this.prevPositionBuffer = prevPositionBuffer;
   }
 }
