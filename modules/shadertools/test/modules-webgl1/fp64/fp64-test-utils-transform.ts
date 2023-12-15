@@ -7,7 +7,7 @@
 
 import {Device} from '@luma.gl/core';
 import {Transform} from '@luma.gl/engine';
-import {fp64} from '@luma.gl/shadertools';
+import {fp64, fp64arithmetic} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
 
@@ -60,16 +60,15 @@ function setupFloatData({limit, op, testCases}) {
 function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, op, testCases}) {
   const {a, b, expected, a_fp64, b_fp64, expected_fp64} = setupFloatData({limit, op, testCases});
   const vs = binary ? getBinaryShader(glslFunc) : getUnaryShader(glslFunc);
+  const bufferA = device.createBuffer({data: a_fp64});
+  const bufferB = device.createBuffer({data: b_fp64});
+  const bufferResult = device.createBuffer({byteLength: a_fp64.byteLength});
   const transform = new Transform(device, {
-    sourceBuffers: {
-      a: device.createBuffer({data: a_fp64}),
-      b: device.createBuffer({data: b_fp64})
-    },
     vs,
     modules: [fp64],
-    feedbackMap: {
-      a: 'result'
-    },
+    attributes: {a: bufferA, b: bufferB},
+    bufferLayout: [{name: 'a', format: 'float32x2'}, {name: 'b', format: 'float32x2'}],
+    feedbackBuffers: {result: bufferResult},
     varyings: ['result'],
     vertexCount: testCases.length
   });
@@ -90,11 +89,14 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
     limit,
     testCases
   });
-  transform.run({uniforms: {ONE: 1}});
-  const gpu_result = await transform.readAsync('result');
+
+  transform.run({uniforms: fp64arithmetic.getUniforms()});
+
+  const {buffer, byteOffset, byteLength} = await transform.readAsync('result');
+  const gpuResult = new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
   for (let idx = 0; idx < testCases.length; idx++) {
     const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
-    const result64 = gpu_result[2 * idx] + gpu_result[2 * idx + 1];
+    const result64 = gpuResult[2 * idx] + gpuResult[2 * idx + 1];
 
     const args = binary
       ? `(${a[idx].toPrecision(2)}, ${b[idx].toPrecision(2)})`
