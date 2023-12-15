@@ -15,7 +15,7 @@ function getBinaryShader(operation: string): string {
   const shader = `\
 attribute vec2 a;
 attribute vec2 b;
-invariant varying vec2 result;
+varying vec2 result;
 void main(void) {
   //// original ////
 
@@ -41,7 +41,7 @@ function getUnaryShader(operation: string): string {
   return `\
 attribute vec2 a;
 attribute vec2 b;
-invariant varying vec2 result;
+varying vec2 result;
 void main(void) {
   result = ${operation}(a);
 }
@@ -117,18 +117,9 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
       : `(${a[idx].toPrecision(2)})`;
     const message = `${glslFunc}${args} error ${Math.abs(result64 - reference64)} < eps`;
     const isEqual = equals(reference64, result64);
-
-    // TODO(donmccurdy): DO NOT SUBMIT.
-    // testCases[idx].expected = testCases[idx].a + testCases[idx].b;
-    // testCases[idx].equal = isEqual;
-    // testCases[idx].error = Math.abs(result64 - reference64);
-
     t.ok(isEqual, message);
     if (!isEqual) {
       t.comment(` (tested ${a_fp64.toString()}, ${b_fp64.toString()})`);
     }
   }
-
-  // TODO(donmccurdy): DO NOT SUBMIT.
-  // console.table(testCases);
 }
