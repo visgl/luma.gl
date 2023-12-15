@@ -1,11 +1,12 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
+import {PrimitiveTopology} from '../types/parameters';
 import {ShaderLayout} from '../types/shader-layout';
 import type {Buffer} from './buffer';
 import {Resource, ResourceProps} from './resource';
 
 /** For bindRange */
-type BufferRange = {
+export type BufferRange = {
   buffer: Buffer;
   byteOffset?: number;
   byteLength?: number;
@@ -34,4 +35,11 @@ export abstract class TransformFeedback extends Resource<TransformFeedbackProps>
   constructor(device: Device, props?: TransformFeedbackProps) {
     super(device, props, TransformFeedback.defaultProps);
   }
+
+  abstract begin(topology?: PrimitiveTopology): void;
+  abstract end(): void;
+
+  abstract setBuffers(buffers: Record<string, Buffer | BufferRange>): void;
+  abstract setBuffer(locationOrName: string | number, bufferOrRange: Buffer | BufferRange): void;
+  abstract getBuffer(locationOrName: string | number): Buffer | BufferRange | null;
 }

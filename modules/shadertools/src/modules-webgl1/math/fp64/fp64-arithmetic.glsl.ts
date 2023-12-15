@@ -9,7 +9,7 @@ About LUMA_FP64_CODE_ELIMINATION_WORKAROUND
 
 The purpose of this workaround is to prevent shader compilers from
 optimizing away necessary arithmetic operations by swapping their sequences
-or transform the equation to some 'equivalent' from.
+or transform the equation to some 'equivalent' form.
 
 The method is to multiply an artifical variable, ONE, which will be known to
 the compiler to be 1 only at runtime. The whole expression is then represented
