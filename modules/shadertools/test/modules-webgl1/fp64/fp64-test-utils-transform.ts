@@ -18,9 +18,10 @@ const {fp64ify} = fp64;
 
 function getBinaryShader(operation: string): string {
   const shader = `\
-attribute vec2 a;
-attribute vec2 b;
-invariant varying vec2 result;
+#version 300 es
+in vec2 a;
+in vec2 b;
+invariant out vec2 result;
 void main(void) {
   result = ${operation}(a, b);
 }
@@ -30,9 +31,10 @@ void main(void) {
 
 function getUnaryShader(operation: string): string {
   return `\
-attribute vec2 a;
-attribute vec2 b;
-invariant varying vec2 result;
+#version 300 es
+in vec2 a;
+in vec2 b;
+invariant out vec2 result;
 void main(void) {
   result = ${operation}(a);
 }

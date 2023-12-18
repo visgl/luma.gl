@@ -2508,10 +2508,10 @@
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@luma.gl/constants@^8.4.0":
-  version "8.5.21"
-  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-8.5.21.tgz#81825e9bd9bdf4a9449bcface8b504389f65f634"
-  integrity sha512-aJxayGxTT+IRd1vfpcgD/cKSCiVJjBNiuiChS96VulrmCvkzUOLvYXr42y5qKB4RyR7vOIda5uQprNzoHrhQAA==
+"@luma.gl/constants@9.0.0-alpha.45":
+  version "9.0.0-alpha.45"
+  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-9.0.0-alpha.45.tgz#f19c9c3c26b95e1dcf118cb1fbf2dbd93ffd8a1e"
+  integrity sha512-ZTLw0YMnPE1efXEoJ5FxUzwOwxTMNswfEUctu6liWM3EpI7s8kC33CX4M8Kr7xcaQLN09X836uKOmGRpyD8yVg==
 
 "@math.gl/core@4.0.0", "@math.gl/core@^4.0.0":
   version "4.0.0"
@@ -3600,12 +3600,12 @@ babel-plugin-add-import-extension@^1.6.0:
   dependencies:
     "@babel/helper-plugin-utils" "^7.14.5"
 
-babel-plugin-inline-webgl-constants@1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/babel-plugin-inline-webgl-constants/-/babel-plugin-inline-webgl-constants-1.0.3.tgz#a6e6eef5fe5594a3371092c97c5ba6c8e2ae2b3a"
-  integrity sha512-zOR9vvd5XScQNmBbP7THPe4BTSB6TG480fKX8O/md97U21j4JwsDvdFGZYA7/mZxseKHlm+wdW07b2utydmu/A==
+babel-plugin-inline-webgl-constants@^2.0.0-alpha.1:
+  version "2.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/babel-plugin-inline-webgl-constants/-/babel-plugin-inline-webgl-constants-2.0.0-alpha.1.tgz#a03ad8e9d650a1ea681b4fd46261d8659f54d274"
+  integrity sha512-VJqBM6hK5iq8BNZ7yoD3+fD8deFAKpnW/NNHRNtseActfksp26l6rdF/4HvoKoK5TmedQMlWzgNQH8jelcwzAg==
   dependencies:
-    "@luma.gl/constants" "^8.4.0"
+    "@luma.gl/constants" "9.0.0-alpha.45"
 
 babel-plugin-istanbul@^6.0.0:
   version "6.1.1"
@@ -5403,7 +5403,7 @@ eslint-plugin-jsx-a11y@^6.1.2:
     semver "^6.3.0"
 
 "eslint-plugin-luma-gl-custom-rules@file:./dev-modules/eslint-plugin-luma-gl-custom-rules":
-  version "9.0.0-alpha.45"
+  version "9.0.0-alpha.46"
 
 eslint-plugin-markdown@^2.2.0:
   version "2.2.1"

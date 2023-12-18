@@ -492,10 +492,10 @@ export class Model {
         vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
         fs: this.fs
           ? this.device.createShader({
-              id: '{$this.id}-fragment',
-              stage: 'fragment',
-              source: this.fs
-            })
+            id: '{$this.id}-fragment',
+            stage: 'fragment',
+            source: this.fs
+          })
           : null
       });
       this._attributeInfos = getAttributeInfosFromLayouts(
