@@ -122,10 +122,7 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
   for (const device of getWebGLTestDevices()) {
     for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
       await testCopyTextureToBuffer(t, device, {...fixture});
-      // TODO(v9): Fix implementation and tests for framebuffer and buffer creation.
-      // await testCopyTextureToBuffer(t, device, {...fixture, useFramebuffer: true});
-      // await testCopyTextureToBuffer(t, device, {...fixture, bufferCreation: true});
-      // await testCopyTextureToBuffer(t, device, {...fixture, bufferCreation: true, useFramebuffer: true});
+      await testCopyTextureToBuffer(t, device, {...fixture, useFramebuffer: true, title: `${fixture.title} + framebuffer`});
     }
   }
   t.end();
@@ -134,7 +131,7 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
 async function testCopyTextureToBuffer(
   t: Test,
   device: Device,
-  options: CopyTextureToBufferFixture & {bufferCreation?: boolean; useFramebuffer?: boolean}
+  options: CopyTextureToBufferFixture & {useFramebuffer?: boolean}
 ) {
   // TODO - should we have a specific feature string?
   if (device.info.type !== 'webgl2') {
@@ -152,7 +149,7 @@ async function testCopyTextureToBuffer(
   let source;
 
   const colorTexture = device.createTexture({
-    data: options.useFramebuffer ? null : srcPixel,
+    data: srcPixel,
     width: 1,
     height: 1,
     format: options.format,
@@ -162,12 +159,7 @@ async function testCopyTextureToBuffer(
   const destination = device.createBuffer({byteLength});
 
   if (options.useFramebuffer) {
-    const framebuffer = device.createFramebuffer({
-      colorAttachments: [colorTexture]
-    });
-    // framebuffer.checkStatus();
-    // framebuffer.clear({color: clearColor});
-    source = framebuffer;
+    source = device.createFramebuffer({colorAttachments: [colorTexture]});
   } else {
     source = colorTexture;
   }
