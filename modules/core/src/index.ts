@@ -116,7 +116,7 @@ export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
 
 // SHADER TYPE UTILS
 export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
+export {decodeShaderAttributeType, getVertexFormatFromAttribute} from './adapter/type-utils/decode-attribute-type';
 
 // COMPILER LOG
 export type {CompilerMessage} from './lib/compiler-log/compiler-message';

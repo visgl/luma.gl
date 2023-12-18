@@ -1,5 +1,5 @@
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
-import {Device, Buffer, uid, assert} from '@luma.gl/core';
+import {Device, Buffer, uid, assert, getVertexFormatFromAttribute} from '@luma.gl/core';
 import type {Geometry} from '../geometry/geometry';
 
 export type GPUGeometryProps = {
@@ -114,7 +114,7 @@ export function getAttributeBuffersFromGeometry(
       case 'TEXCOORD_0': name = 'texCoords'; break;
     }
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
-    bufferLayout.push({name, format: `float32x${attribute.size as 2 | 3 | 4}`});
+    bufferLayout.push({name, format: getVertexFormatFromAttribute(attribute)});
   }
 
   const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)
