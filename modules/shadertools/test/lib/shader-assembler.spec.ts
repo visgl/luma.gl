@@ -5,22 +5,24 @@ const platformInfo: PlatformInfo = {
   type: 'webgl',
   gpu: 'test-gpu',
   shaderLanguage: 'glsl',
+  shaderLanguageVersion: 300,
   features: new Set()
 };
 
 const vs = glsl`\
-attribute vec4 positions;
-
+#version 300 es
+in vec4 positions;
 void main(void) {
   gl_Position = positions;
 }
 `;
 
 const fs = glsl`\
+#version 300 es
 precision highp float;
-
+out vec4 fragmentColor;
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 `;
 
@@ -241,16 +243,14 @@ test('ShaderAssembler#transpileToGLSL100', t => {
     vs: VS_300,
     fs: FS_300
   });
-  const programTranspiled = shaderAssembler.assembleShaders(platformInfo, {
-    vs: VS_300,
-    fs: FS_300,
-    transpileToGLSL100: true
-  });
-  const programTranspiled2 = shaderAssembler.assembleShaders(platformInfo, {
-    vs: VS_300,
-    fs: FS_300,
-    transpileToGLSL100: true
-  });
+  const programTranspiled = shaderAssembler.assembleShaders(
+    {...platformInfo, shaderLanguageVersion: 100},
+    {vs: VS_300, fs: FS_300}
+  );
+  const programTranspiled2 = shaderAssembler.assembleShaders(
+    {...platformInfo, shaderLanguageVersion: 100},
+    {vs: VS_300, fs: FS_300}
+  );
 
   t.equals(programTranspiled.vs, programTranspiled2.vs, 'Transpiled programs match');
   t.equals(programTranspiled.fs, programTranspiled2.fs, 'Transpiled programs match');

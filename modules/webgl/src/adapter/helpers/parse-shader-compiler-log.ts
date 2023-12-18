@@ -3,8 +3,6 @@
 
 import type {CompilerMessage} from '@luma.gl/core';
 
-const MESSAGE_TYPES = ['warning', 'error', 'info'];
-
 /**
  * Parse a WebGL-format GLSL compilation log into an array of WebGPU style message records.
  * This follows documented WebGL conventions for compilation logs.
@@ -22,6 +20,19 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
     }
 
     const segments: string[] = line.split(':');
+
+    // Check for messages with no line information `ERROR: unsupported shader version`
+    if (segments.length === 2) {
+      const [messageType, message] = segments;
+      messages.push({
+        message: message.trim(),
+        type: getMessageType(messageType),
+        lineNum: 0,
+        linePos: 0
+      });
+      continue; // eslint-disable-line no-continue  
+    }
+
     const [messageType, linePosition, lineNumber, ...rest] = segments;
 
     let lineNum = parseInt(lineNumber, 10);
@@ -34,17 +45,20 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
       linePos = 0;
     }
 
-    // Ensure supported type
-    const lowerCaseType = messageType.toLowerCase();
-    const type = (MESSAGE_TYPES.includes(lowerCaseType) ? lowerCaseType : 'info') as 'warning' | 'error' | 'info';
-
     messages.push({
       message: rest.join(':').trim(),
-      type,
+      type: getMessageType(messageType),
       lineNum,
       linePos // TODO
     })
   }
 
   return messages;
+}
+
+/** Ensure supported type */
+function getMessageType(messageType: string): 'warning' | 'error' | 'info' {    
+  const MESSAGE_TYPES = ['warning', 'error', 'info'];
+  const lowerCaseType = messageType.toLowerCase();
+  return (MESSAGE_TYPES.includes(lowerCaseType) ? lowerCaseType : 'info') as 'warning' | 'error' | 'info';
 }

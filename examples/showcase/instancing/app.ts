@@ -22,12 +22,12 @@ const random = makeRandomNumberGenerator();
 const vs = glsl`\
 #version 300 es
 
-attribute vec3 positions;
-attribute vec3 normals;
+in vec3 positions;
+in vec3 normals;
 
-attribute vec2 instanceOffsets;
-attribute vec3 instanceColors;
-attribute vec2 instancePickingColors;
+in vec2 instanceOffsets;
+in vec3 instanceColors;
+in vec2 instancePickingColors;
 
 uniform appUniforms {
   mat4 modelMatrix;
@@ -36,7 +36,7 @@ uniform appUniforms {
   float time;
 } app;
 
-varying vec3 color;
+out vec3 color;
 
 void main(void) {
   // vec3 normal = vec3(uModel * vec4(normals, 1.0));
@@ -71,7 +71,7 @@ const fs = glsl`\
 #version 300 es
 precision highp float;
 
-varying vec3 color;
+in vec3 color;
 
 void main(void) {
   gl_FragColor = vec4(color, 1.);

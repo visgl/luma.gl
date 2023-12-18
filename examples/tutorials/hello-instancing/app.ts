@@ -39,18 +39,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
 
     this.model = new Model(device, {
-      vs: `
-        attribute vec2 position;
-        attribute vec3 instanceColor;
-        attribute vec2 instanceOffset;
+      vs: `\
+#version 300 es
+      in vec2 position;
+        in vec3 instanceColor;
+        in vec2 instanceOffset;
 
         void main() {
           color_setColor(instanceColor);
           gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
         }
       `,
-      fs: `
-        void main() {
+      fs: `\
+#version 300 es
+      void main() {
           gl_FragColor = vec4(color_getColor(), 1.0);
         }
       `,

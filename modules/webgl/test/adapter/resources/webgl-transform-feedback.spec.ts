@@ -10,8 +10,9 @@ import {Model} from '@luma.gl/engine';
 import {WEBGLTransformFeedback} from '@luma.gl/webgl';
 
 const VS = glsl`\
-attribute float inValue;
-varying float outValue;
+#version 300 es
+in float inValue;
+out float outValue;
 void main()
 {
   outValue = 2.0 * inValue;
@@ -19,10 +20,12 @@ void main()
 `;
 
 const FS = glsl`\
-varying float outValue;
+#version 300 es
+in float outValue;
+out vec4 fragmentColor;
 void main()
 {
-  gl_FragColor.x = outValue;
+  fragmentColor.x = outValue;
 }
 `;
 

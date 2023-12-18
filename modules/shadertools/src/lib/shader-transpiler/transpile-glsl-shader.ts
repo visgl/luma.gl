@@ -4,27 +4,54 @@
 // TRANSPILATION TABLES
 
 /**
- * Transpiles shader source code to target GLSL version
+ * Transpiles GLSL 3.00 shader source code to target GLSL version (3.00 or 1.00)
  *
  * @note We always run transpiler even if same version e.g. 3.00 => 3.00
+ * @note For texture sampling transpilation, apps need to use non-standard texture* calls in GLSL 3.00 source
  * RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/portable-glsl-300-rfc.md
  */
-export function transpileGLSLShader(source: string, targetGLSLVersion: number, stage: 'vertex' | 'fragment'): string {
+export function transpileGLSLShader(
+  source: string,
+  targetGLSLVersion: 100 | 300,
+  stage: 'vertex' | 'fragment'
+): string {
+  const sourceGLSLVersion = Number(source.match(/^#version[ \t]+(\d+)/m)?.[1] || 100);
+  if (sourceGLSLVersion !== 300) {
+    throw new Error('luma.gl v9 only supports GLSL 3.00 shader sources');
+  }
+
   switch (targetGLSLVersion) {
     case 300:
       switch (stage) {
-        case 'vertex': return convertShader(source, ES300_VERTEX_REPLACEMENTS);
-        case 'fragment': return convertFragmentShaderTo300(source);
-        default: throw new Error(`unknown shader stage ${stage}`);
+        case 'vertex':
+          source = convertShader(source, ES300_VERTEX_REPLACEMENTS);
+          return source;
+        case 'fragment':
+          source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
+          // source = convertFragmentShaderTo300(source);
+          return source;
+        default:
+          // Unknown shader stage
+          throw new Error(stage);
       }
+      
     case 100:
       switch (stage) {
-        case 'vertex': return convertShader(source, ES100_VERTEX_REPLACEMENTS)
-        case 'fragment': return convertFragmentShaderTo100(source);
-        default: throw new Error(`unknown shader stage ${stage}`);
+        case 'vertex':
+          source = convertShader(source, ES100_VERTEX_REPLACEMENTS);
+          return source;
+        case 'fragment':
+          source = convertShader(source, ES100_FRAGMENT_REPLACEMENTS);
+          source = convertFragmentShaderTo100(source);
+          return source;
+        default:
+          // Unknown shader stage
+          throw new Error(stage);
       }
+
     default:
-      throw new Error(`unknown GLSL version ${targetGLSLVersion}`);
+      // Unknown GLSL version
+      throw new Error(String(targetGLSLVersion));
   }
 }
 
@@ -80,7 +107,7 @@ const ES100_FRAGMENT_REPLACEMENTS: GLSLReplacement[] = [
 
 const ES100_FRAGMENT_OUTPUT_NAME: string = 'gl_FragColor';
 const ES300_FRAGMENT_OUTPUT_REGEX: RegExp = /\bout[ \t]+vec4[ \t]+(\w+)[ \t]*;\n?/;
-const REGEX_START_OF_MAIN: RegExp = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
+// const REGEX_START_OF_MAIN: RegExp = /void\s+main\s*\([^)]*\)\s*\{\n?/; // Beginning of main
 
 function convertShader(source: string, replacements: GLSLReplacement[]) {
   for (const [pattern, replacement] of replacements) {
@@ -90,32 +117,34 @@ function convertShader(source: string, replacements: GLSLReplacement[]) {
 }
 
 /** Transform fragment shader source code to GLSL 3.00 */
-function convertFragmentShaderTo300(source: string): string {
-  source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
+// function convertFragmentShaderTo300(source: string): string {
+//   const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
+//   if (outputMatch) {
+//     const outputName = outputMatch[1];
+//     source = source.replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
+//   } else {
+//     const outputName = 'fragmentColor';
+//     source = source
+//       .replace(REGEX_START_OF_MAIN, match => `out vec4 ${outputName};\n${match}`)
+//       .replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
+//   }
 
-  const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
-  if (outputMatch) {
-    const outputName = outputMatch[1];
-    source = source.replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
-  } else {
-    const outputName = 'fragmentColor';
-    source = source
-      .replace(REGEX_START_OF_MAIN, (match) => `out vec4 ${outputName};\n${match}`)
-      .replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
-  }
-
-  return source;
-}
+//   return source;
+// }
 
 /** Transform fragment shader source code to GLSL ES 100 */
 function convertFragmentShaderTo100(source: string): string {
   source = convertShader(source, ES100_FRAGMENT_REPLACEMENTS);
 
+  // TODO - This seems like a hack to find the color output name,
+  // what if we have several outputs?
   const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
   if (outputMatch) {
     const outputName = outputMatch[1];
     source = source
+      // Remove the GLSL300 output declaration
       .replace(ES300_FRAGMENT_OUTPUT_REGEX, '')
+      // Replace any found output name 
       .replace(new RegExp(`\\b${outputName}\\b`, 'g'), ES100_FRAGMENT_OUTPUT_NAME);
   }
 

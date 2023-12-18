@@ -2,18 +2,19 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {webgl1Device} from '@luma.gl/test-utils';
-import {assembleShaders, glsl} from '@luma.gl/shadertools';
+import {assembleShaders, glsl, PlatformInfo} from '@luma.gl/shadertools';
 import {
   injectShader,
   combineInjects,
   DECLARATION_INJECT_MARKER
 } from '@luma.gl/shadertools/lib/shader-assembly/shader-injections';
 
-function getInfo(device: Device) {
+function getInfo(device: Device): PlatformInfo {
   return {
     type: device.info.type,
     gpu: device.info.gpu,
     shaderLanguage: device.info.shadingLanguages[0],
+    shaderLanguageVersion: device.info.shadingLanguageVersions[0] as any,
     features: device.features
   };
 }

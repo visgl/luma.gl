@@ -25,13 +25,13 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
 
 const vs = glsl`\
 #version 300 es
-  attribute vec3 positions;
-  attribute vec3 normals;
-  attribute vec2 texCoords;
+  in vec3 positions;
+  in vec3 normals;
+  in vec2 texCoords;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  out vec3 vPosition;
+  out vec3 vNormal;
+  out vec2 vUV;
 
   uniform appUniforms {
     mat4 modelMatrix;
@@ -51,9 +51,9 @@ const fs = glsl`\
 #version 300 es
   precision highp float;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  in vec3 vPosition;
+  in vec3 vNormal;
+  in vec2 vUV;
 
   uniform sampler2D uTexture;
 
