@@ -113,10 +113,11 @@ export {UniformStore} from './lib/uniforms/uniform-store';
 // TYPE UTILS
 export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
+export {getVertexFormatFromAttribute} from './adapter/type-utils/vertex-format-from-attribute';
 
 // SHADER TYPE UTILS
 export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
-export {decodeShaderAttributeType, getVertexFormatFromAttribute} from './adapter/type-utils/decode-attribute-type';
+export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
 
 // COMPILER LOG
 export type {CompilerMessage} from './lib/compiler-log/compiler-message';
