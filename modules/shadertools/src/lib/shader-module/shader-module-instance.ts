@@ -87,10 +87,13 @@ export class ShaderModuleInstance {
         assert(false);
     }
 
+    const moduleName = this.name.toUpperCase().replace(/[^0-9a-z]/gi, '_');
     return `\
-#define MODULE_${this.name.toUpperCase().replace(/[^0-9a-z]/gi, '_')}
+// ----- MODULE ${this.name} ---------------
+
+#define MODULE_${moduleName}
 ${moduleSource}\
-// END MODULE_${this.name}
+
 
 `;
   }

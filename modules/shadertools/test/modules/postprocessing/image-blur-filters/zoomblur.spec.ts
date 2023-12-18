@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('zoomBlur#build/uniform', (t) => {
   normalizeShaderModule(zoomBlur);
-  // @ts-expect-error
   const uniforms = zoomBlur.getUniforms();
 
   t.ok(uniforms, 'zoomBlur module build is ok');

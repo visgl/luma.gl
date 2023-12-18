@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('denoise#build/uniform', (t) => {
   normalizeShaderModule(denoise);
-  // @ts-expect-error
   const uniforms = denoise.getUniforms();
 
   t.ok(uniforms, 'denoise module build is ok');

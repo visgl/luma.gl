@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('sepia#build/uniform', (t) => {
   normalizeShaderModule(sepia);
-  // @ts-expect-error
   const uniforms = sepia.getUniforms();
 
   t.ok(uniforms, 'sepia module build is ok');

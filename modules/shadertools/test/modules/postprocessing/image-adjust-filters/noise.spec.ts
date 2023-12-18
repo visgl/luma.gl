@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('noise#build/uniform', (t) => {
   normalizeShaderModule(noise);
-  // @ts-expect-error
   const uniforms = noise.getUniforms();
 
   t.ok(uniforms, 'noise module build is ok');

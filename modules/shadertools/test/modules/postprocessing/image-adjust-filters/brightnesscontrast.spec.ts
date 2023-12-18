@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('brightnessContrast#build/uniform', (t) => {
   normalizeShaderModule(brightnessContrast);
-  // @ts-expect-error
   const uniforms = brightnessContrast.getUniforms();
 
   t.ok(uniforms, 'brightnessContrast module build is ok');

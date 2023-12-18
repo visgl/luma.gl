@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('dotScreen#build/uniform', (t) => {
   normalizeShaderModule(dotScreen);
-  // @ts-expect-error
   const uniforms = dotScreen.getUniforms();
 
   t.ok(uniforms, 'dotScreen module build is ok');

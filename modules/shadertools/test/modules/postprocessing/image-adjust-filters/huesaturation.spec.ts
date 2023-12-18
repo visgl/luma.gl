@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('hueSaturation#build/uniform', (t) => {
   normalizeShaderModule(hueSaturation);
-  // @ts-expect-error
   const uniforms = hueSaturation.getUniforms();
 
   t.ok(uniforms, 'hueSaturation module build is ok');

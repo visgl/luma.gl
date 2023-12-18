@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('vibrance#build/uniform', (t) => {
   normalizeShaderModule(vibrance);
-  // @ts-expect-error
   const uniforms = vibrance.getUniforms();
 
   t.ok(uniforms, 'vibrance module build is ok');

@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('tiltShift#build/uniform', (t) => {
   normalizeShaderModule(tiltShift);
-  // @ts-expect-error
   const uniforms = tiltShift.getUniforms();
 
   t.ok(uniforms, 'tiltShift module build is ok');

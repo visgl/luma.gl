@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('triangleBlur#build/uniform', (t) => {
   normalizeShaderModule(triangleBlur);
-  // @ts-expect-error
   const uniforms = triangleBlur.getUniforms();
 
   t.ok(uniforms, 'triangleBlur module build is ok');

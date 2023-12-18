@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('swirl#build/uniform', (t) => {
   normalizeShaderModule(swirl);
-  // @ts-expect-error
   const uniforms = swirl.getUniforms();
 
   t.ok(uniforms, 'swirl module build is ok');

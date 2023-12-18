@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('vignette#build/uniform', (t) => {
   normalizeShaderModule(vignette);
-  // @ts-expect-error
   const uniforms = vignette.getUniforms();
 
   t.ok(uniforms, 'vignette module build is ok');

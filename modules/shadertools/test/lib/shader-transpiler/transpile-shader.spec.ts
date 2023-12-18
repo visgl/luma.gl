@@ -1,6 +1,6 @@
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
-import test from 'tape-promise/tape';
+import test, {Test} from 'tape-promise/tape';
 
 import {GL} from '@luma.gl/constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
@@ -12,6 +12,18 @@ const fixture = {
   gl1: webgl1Device.gl,
   gl2: webgl2Device?.gl2
 };
+
+function compareStrings(t: Test, string1: string, string2: string): void {
+  const lines1 = string1.split('\n');
+  const lines2 = string2.split('\n');
+
+  for (let i = 0; i < lines1.length; i++) {
+    if (lines1[i] !== lines2[i]) {
+      t.comment(`line ${i + 1}: '${lines1[i]}' --> '${lines2[i]}'`);
+      return;
+    } 
+  }
+}
 
 test('transpileGLSLShader#import', t => {
   t.ok(transpileGLSLShader, 'transpileGLSLShader import successful');
@@ -31,6 +43,7 @@ test('transpileGLSLShader', t => {
     );
 
     assembleResult = transpileGLSLShader(GLSL_300, 100, stage);
+    compareStrings(t, assembleResult, GLSL_100);
     t.equal(assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
   }
   t.end();

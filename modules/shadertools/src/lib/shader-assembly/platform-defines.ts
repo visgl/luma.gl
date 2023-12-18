@@ -74,7 +74,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
     if (platformInfo.features.has('glsl-frag-depth')) {
       versionDefines += glsl`\
 
-// FRAG_DEPTH => gl_FragDepth is available
+// FEATURE_GLSL_FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
 # extension GL_EXT_frag_depth : enable
 # define FEATURE_GLSL_FRAG_DEPTH
@@ -86,22 +86,20 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
     if (platformInfo?.features.has('glsl-derivatives')) {
       versionDefines += glsl`\
 
-// DERIVATIVES => dxdF, dxdY and fwidth are available
+// FEATURE_GLSL_DERIVATIVES => dxdF, dxdY and fwidth are available
 #if defined(GL_OES_standard_derivatives) || defined(FEATURE_GLSL_DERIVATIVES)
 # extension GL_OES_standard_derivatives : enable
 # define FEATURE_GLSL_DERIVATIVES
-# define DERIVATIVES
 #endif
 `;
     }
     if (platformInfo?.features.has('glsl-frag-data')) {
       versionDefines += glsl`\
 
-// DRAW_BUFFERS => gl_FragData[] is available
+// FEATURE_GLSL_DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
 # extension GL_EXT_draw_buffers : require
 # define FEATURE_GLSL_DRAW_BUFFERS
-# define DRAW_BUFFERS
 #endif
 `;
     }

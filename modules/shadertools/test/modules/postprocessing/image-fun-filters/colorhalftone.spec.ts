@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('colorHalftone#build/uniform', (t) => {
   normalizeShaderModule(colorHalftone);
-  // @ts-expect-error
   const uniforms = colorHalftone.getUniforms();
 
   t.ok(uniforms, 'colorHalftone module build is ok');

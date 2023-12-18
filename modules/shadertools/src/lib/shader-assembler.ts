@@ -4,7 +4,7 @@
 import type {ShaderModule} from './shader-module/shader-module';
 import type {PlatformInfo} from './shader-assembly/platform-info';
 import {ShaderModuleInstance} from './shader-module/shader-module-instance';
-import {assembleShaders} from './shader-assembly/assemble-shaders';
+import {GetUniformsFunc, assembleShaders} from './shader-assembly/assemble-shaders';
 import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
 
 /**
@@ -67,19 +67,24 @@ export class ShaderAssembler {
    * @param props 
    * @returns 
    */
-  assembleShaders(platformInfo: PlatformInfo, props: AssembleShaderProps) {
+  assembleShaders(platformInfo: PlatformInfo, props: AssembleShaderProps): {
+    vs: string;
+    fs: string;
+    getUniforms: GetUniformsFunc;
+    modules:ShaderModuleInstance[];
+  } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const options = selectShaders(platformInfo, props);
-    const assembled = assembleShaders(platformInfo, {...options, modules, hookFunctions});
-    return assembled;
+    const assembled = assembleShaders(platformInfo, {...options, modules, hookFunctions}); 
+    return {...assembled, modules};
   }
 
   /** 
-   * Dedupe and combine with default modules 
+   * Dedupe and combine with default modules
    */
-  _getModuleList(appModules: (ShaderModule | ShaderModuleInstance)[] = []): (ShaderModule | ShaderModuleInstance)[] {
-    const modules = new Array(this._defaultModules.length + appModules.length);
+  _getModuleList(appModules: (ShaderModule | ShaderModuleInstance)[] = []): ShaderModuleInstance[] {
+    const modules = new Array<ShaderModule | ShaderModuleInstance>(this._defaultModules.length + appModules.length);
     const seen: Record<string, boolean> = {};
     let count = 0;
 
@@ -101,6 +106,6 @@ export class ShaderAssembler {
 
     modules.length = count;
 
-    return modules;
+    return ShaderModuleInstance.instantiateModules(modules);
   }
 }

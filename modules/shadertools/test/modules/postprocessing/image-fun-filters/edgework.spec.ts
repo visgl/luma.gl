@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('edgeWork#build/uniform', (t) => {
   normalizeShaderModule(edgeWork);
-  // @ts-expect-error
   const uniforms = edgeWork.getUniforms();
 
   t.ok(uniforms, 'edgeWork module build is ok');

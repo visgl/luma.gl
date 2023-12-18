@@ -16,7 +16,7 @@ import {assert} from '../utils/assert';
 /** Define map */
 export type ShaderDefine = string | number | boolean;
 
-const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
+const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
 
 /**
  * Precision prologue to inject before functions are injected in shader
@@ -24,7 +24,6 @@ const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n\n`;
  */
 const FRAGMENT_SHADER_PROLOGUE = glsl`\
 precision highp float;
-
 `;
 
 export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
@@ -292,12 +291,18 @@ function assembleGLSLShader(
       assembledSource = prologue
         ? `\
 ${versionLine}
+
+// ----- PROLOGUE -------------------------
 ${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
 ${getPlatformShaderDefines(platformInfo)}
 ${getVersionDefines(platformInfo)}
-${getApplicationDefines(allDefines)}
 ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
+
+// ----- APPLICATION DEFINES -------------------------
+
+${getApplicationDefines(allDefines)}
+
 `
         : `${versionLine}
 `;
@@ -357,6 +362,8 @@ ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
     }
   }
 
+  assembledSource += '// ----- MAIN SHADER SOURCE -------------------------';
+
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
@@ -369,7 +376,7 @@ ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, stage, mainInjections);
-
+  
   assembledSource = transpileGLSLShader(assembledSource, targetVersion, stage);
 
   return assembledSource.trim();
@@ -418,21 +425,12 @@ function getShaderNameDefine(options: {
 
 /** Generates application defines from an object of key value pairs */
 function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {
-  let count = 0;
   let sourceText = '';
   for (const define in defines) {
-    if (count === 0) {
-      sourceText += '\n// APPLICATION DEFINES\n';
-    }
-    count++;
-
     const value = defines[define];
     if (value || Number.isFinite(value)) {
       sourceText += `#define ${define.toUpperCase()} ${defines[define]}\n`;
     }
-  }
-  if (count === 0) {
-    sourceText += '\n';
   }
   return sourceText;
 }
