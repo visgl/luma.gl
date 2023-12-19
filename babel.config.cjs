@@ -22,7 +22,6 @@ const plugins = [
 // on it. This plugin uses LOCAL `@luma.gl/constants`, and will fail without
 // it, so delay using the plugin until reaching a package depending on constants.
 if (pkg.dependencies && '@luma.gl/constants' in pkg.dependencies) {
-  // TODO(v9): CI builds are flaky with this enabled, need to investigate cause.
   // plugins.push('./dev-modules/babel-plugin-remove-glsl-comments/index.js');
   plugins.push('babel-plugin-inline-webgl-constants');
 }
