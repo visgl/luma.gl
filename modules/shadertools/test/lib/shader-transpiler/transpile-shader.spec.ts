@@ -14,7 +14,7 @@ const fixture = {
 };
 
 /** Compare shader strings - TODO move to test/utils */
-function compareStrings(t: Test, string1: string, string2: string): void {
+function compareStrings(t: Test, string1: string, string2: string,, message?: string): void {
   const lines1 = string1.split('\n');
   const lines2 = string2.split('\n');
 
@@ -24,24 +24,9 @@ function compareStrings(t: Test, string1: string, string2: string): void {
       return;
     } 
   }
-}
 
-/** Compare shader strings - TODO move to test/utils */
-function compareShaders(t: Test, actual: string, expected: string, message: string) {
-  t.equal(actual, expected, message);
-  if (actual !== expected) {
-    const actualLines = actual.split('\n');
-    const expectedLines = expected.split('\n');
-    for (let i = 0; i < Math.max(actualLines.length, expectedLines.length); i++) {
-      if (actualLines[i] !== expectedLines[i]) {
-        t.comment(` Actual   ${i + 1} => ${actualLines[i]}`);
-        t.comment(` Expected ${i + 1} <= ${expectedLines[i]}`);
-        break;
-      }
-    }
-  }
+  t.equal(string1, string2, message);
 }
-
 
 test('transpileGLSLShader#import', t => {
   t.ok(transpileGLSLShader, 'transpileGLSLShader import successful');
@@ -61,8 +46,7 @@ test('transpileGLSLShader', t => {
     );
 
     assembleResult = transpileGLSLShader(GLSL_300, 100, stage);
-    compareStrings(t, assembleResult, GLSL_100);
-    t.equal(assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
+    compareStrings(t, assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
   }
   t.end();
 });
@@ -75,10 +59,10 @@ test('transpileGLSLShader#minified shaders', t => {
 
     // minified shaders
     assembleResult = minifyShader(transpileGLSLShader(minifyShader(GLSL_300), 100, stage));
-    compareShaders(t, assembleResult, minifyShader(GLSL_100), `minified 3.00 => 1.00: ${title}`);
+    compareStrings(t, assembleResult, minifyShader(GLSL_100), `minified 3.00 => 1.00: ${title}`);
 
     assembleResult = minifyShader(transpileGLSLShader(minifyShader(GLSL_300), 300, stage));
-    compareShaders(
+    compareStrings(
       t,
       assembleResult,
       minifyShader(GLSL_300_TRANSPILED),
