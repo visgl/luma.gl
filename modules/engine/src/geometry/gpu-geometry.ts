@@ -114,7 +114,8 @@ export function getAttributeBuffersFromGeometry(
       case 'TEXCOORD_0': name = 'texCoords'; break;
     }
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
-    bufferLayout.push({name, format: getVertexFormatFromAttribute(attribute)});
+    const {value, size} = attribute;
+    bufferLayout.push({name, format: getVertexFormatFromAttribute(value, size)});
   }
 
   const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)
