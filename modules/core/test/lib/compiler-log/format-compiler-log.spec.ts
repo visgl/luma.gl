@@ -1133,103 +1133,123 @@ void main(void) {
 `;
 
 const EXPECTED = `\
- 262:   float x = 1.0 / sqrt(a.x);
- 263:   float yn = a.x * x;
+
+ 264:   float x = 1.0 / sqrt(a.x);
+ 264:   float yn = a.x * x;
  264: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 262:   float x = 1.0 / sqrt(a.x);
- 263:   float yn = a.x * x;
+
+ 264:   float x = 1.0 / sqrt(a.x);
+ 264:   float yn = a.x * x;
  264: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 292:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
- 293: 
+
+ 294:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
+ 294: 
  294:   float m = floor(a.x / LOG2_FP64.x + 0.5);
 WARNING: '/' : Divide by zero during constant folding
 
- 292:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
- 293: 
+
+ 294:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
+ 294: 
  294:   float m = floor(a.x / LOG2_FP64.x + 0.5);
 WARNING: '/' : Divide by zero during constant folding
 
- 342:   vec2 s;
- 343: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
+
+ 344:   vec2 s;
+ 344: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
  344:   s = vec2(ONE, 0.0);
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 342:   vec2 s;
- 343: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
+
+ 344:   vec2 s;
+ 344: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
  344:   s = vec2(ONE, 0.0);
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 445: 
- 446:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 447: 
+ 447:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  447: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 445: 
- 446:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 447: 
+ 447:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  447: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 468:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 469:     }
+
+ 470:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 470:     }
  470: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 468:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 469:     }
+
+ 470:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 470:     }
  470: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 555: 
- 556:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 557: 
+ 557:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  557: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 555: 
- 556:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 557: 
+ 557:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  557: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 578:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 579:     }
+
+ 580:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 580:     }
  580: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 578:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 579:     }
+
+ 580:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 580:     }
  580: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 667: 
- 668:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 669: 
+ 669:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  669: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 667: 
- 668:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
+
+ 669: 
+ 669:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
  669: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 679:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 680:     }
+
+ 681:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 681:     }
  681: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 679:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
- 680:     }
+
+ 681:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
+ 681:     }
  681: 
 WARNING: '/' : Zero divided by zero during constant folding generated NaN
 
- 965:   );
- 966: 
+
+ 967:   );
+ 967: 
  967:   // outline is centered at the radius
 ERROR: 'project_scale' : no matching overloaded function found
 
- 992: 
- 993:   gl_Position = project_to_clipspace_fp64(vertex_pos_modelspace);
+
+ 994: 
+ 994:   gl_Position = project_to_clipspace_fp64(vertex_pos_modelspace);
  994: 
 ERROR: 'project_scale' : no matching overloaded function found
 
@@ -1238,5 +1258,6 @@ ERROR: 'project_scale' : no matching overloaded function found
 test('WebGL#formatGLSLError', (t) => {
   const formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues'});
   t.equal(formattedLog, EXPECTED, 'formatGLSLError generated correct error');
+  debugger
   t.end();
 });

@@ -21,9 +21,12 @@ export function formatCompilerLog(
       let currentMessage = 0;
       for (let lineNum = 0; lineNum < lines.length; lineNum++) {
         formattedLog += getNumberedLine(lines[lineNum], lineNum, options);
-        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum) {
+        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum + 1) {
           const message = log[currentMessage++];
-          formattedLog += formatCompilerMessage(message, lines, message.lineNum, {...options, inlineSource: false});
+          formattedLog += formatCompilerMessage(message, lines, message.lineNum + 1, {
+            ...options,
+            inlineSource: false
+          });
         }
       }
       return formattedLog;
@@ -33,7 +36,7 @@ export function formatCompilerLog(
       // Parse the error - note: browser and driver dependent
       for (const message of shaderLog) {
         formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
-          inlineSource: options?.showSourceCode !== 'no',
+          inlineSource: options?.showSourceCode !== 'no'
         });
       }
       return formattedLog;
@@ -61,13 +64,19 @@ ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.mes
 
 `;
   }
-  return `<div style="color:red;"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`;
+  return options?.html
+    ? `<div style="color:red;"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`
+    : `${message.type.toUpperCase()}: ${message.message}`;
 }
 
-function getNumberedLines(lines: readonly string[], lineNum: number, options?: {html?: boolean}): string {
+function getNumberedLines(
+  lines: readonly string[],
+  lineNum: number,
+  options?: {html?: boolean}
+): string {
   let numberedLines = '';
   for (let line = lineNum - 2; line <= lineNum; line++) {
-    const sourceLine = lines[line]
+    const sourceLine = lines[line];
     if (sourceLine !== undefined) {
       numberedLines += getNumberedLine(sourceLine, lineNum, options);
     }
@@ -76,7 +85,7 @@ function getNumberedLines(lines: readonly string[], lineNum: number, options?: {
 }
 
 function getNumberedLine(line: string, lineNum: number, options?: {html?: boolean}): string {
-  return `${padLeft(String(lineNum), 4)}: ${line}${options.html ? '<br/>' : '\n'}`;
+  return `${padLeft(String(lineNum), 4)}: ${line}${options?.html ? '<br/>' : '\n'}`;
 }
 
 /**
