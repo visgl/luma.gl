@@ -79,7 +79,7 @@ export type EdgeWorkProps = {
  * Picks out different frequencies in the image by subtracting two
  * copies of the image blurred with different radii.
  */
-export const edgeWork: ShaderPass<EdgeWorkProps> = {
+export const edgeWork: ShaderPass<EdgeWorkProps, EdgeWorkProps> = {
   name: 'edgeWork',
   uniformPropTypes: {
     radius: {value: 2, min: 1, softMax: 50},

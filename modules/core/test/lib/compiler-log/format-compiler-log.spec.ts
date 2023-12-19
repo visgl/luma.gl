@@ -1236,7 +1236,7 @@ ERROR: 'project_scale' : no matching overloaded function found
 `;
 
 test('WebGL#formatGLSLError', (t) => {
-  const formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: true});
+  const formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues'});
   t.equal(formattedLog, EXPECTED, 'formatGLSLError generated correct error');
   t.end();
 });

@@ -11,7 +11,7 @@ import {vs} from './pbr-vertex.glsl';
 import {fs} from './pbr-fragment.glsl';
 
 
-export type PBRMaterialSettings = PBRMaterialBindings & {
+export type PBRMaterialProps = PBRMaterialBindings & {
   unlit: boolean;
 
   // Base color map
@@ -94,7 +94,7 @@ export type PBRMaterialUniforms = {
  * An implementation of PBR (Physically-Based Rendering).
  * Physically Based Shading of a microfacet surface defined by a glTF material.
  */
-export const pbrMaterial: ShaderModule<PBRMaterialUniforms, PBRMaterialSettings> = {
+export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = {
   name: 'pbr',
   vs,
   fs,

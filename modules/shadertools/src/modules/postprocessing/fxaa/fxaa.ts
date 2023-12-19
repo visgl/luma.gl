@@ -678,12 +678,13 @@ vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
 }
 `;
 
+export type FXAAProps = {};
 export type FXAAUniforms = {};
 
 /**
  * FXAA - Fast Approximate Anti-aliasing.
  */
-export const fxaa: ShaderPass<FXAAUniforms> = {
+export const fxaa: ShaderPass<FXAAProps, FXAAUniforms> = {
   name: 'fxaa',
   uniformPropTypes: {},
   fs,

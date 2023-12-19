@@ -49,7 +49,7 @@ export type BulgePinchProps = {
  * Bulge / Pinch -
  * Bulges or pinches the image in a circle.
  */
-export const bulgePinch: ShaderPass<BulgePinchProps> = {
+export const bulgePinch: ShaderPass<BulgePinchProps, BulgePinchProps> = {
   name: 'bulgePinch',
   fs,
   uniformTypes: {

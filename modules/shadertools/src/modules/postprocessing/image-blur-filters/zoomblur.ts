@@ -51,7 +51,7 @@ export type ZoomBlurProps = {
  * Zoom Blur
  * Blurs the image away from a certain point, which looks like radial motion blur.
  */
-export const zoomBlur: ShaderPass<ZoomBlurProps> = {
+export const zoomBlur: ShaderPass<ZoomBlurProps, ZoomBlurProps> = {
   name: 'zoomBlur',
   uniformTypes: {
     center: 'vec2<f32>',

@@ -38,7 +38,7 @@ export type NoiseProps = {
  * Noise
  * Adds black and white noise to the image.
  */
-export const noise: ShaderPass<NoiseProps> = {
+export const noise: ShaderPass<NoiseProps, NoiseProps> = {
   name: 'noise',
   uniformTypes: {
     amount: 'f32'

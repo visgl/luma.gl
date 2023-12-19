@@ -63,7 +63,7 @@ export type ColorHalftoneProps = {
  * with a four rotated 2D sine wave patterns, one each for cyan, magenta, yellow,
  * and black.
  */
-export const colorHalftone: ShaderPass<ColorHalftoneProps> = {
+export const colorHalftone: ShaderPass<ColorHalftoneProps, ColorHalftoneProps> = {
   name: 'colorHalftone',
   uniformTypes: {
     center: 'vec2<f32>',

@@ -13,7 +13,7 @@ import {generateWGSLForModule} from './wgsl/generate-wgsl';
 export type ShaderGenerationOptions = GLSLGenerationOptions | WGSLGenerationOptions;
 
 /** Generates shader code for a module */
-export function generateShaderForModule(module: ShaderModule, options: ShaderGenerationOptions): string {
+export function generateShaderForModule(module: ShaderModule<Record<string, unknown>>, options: ShaderGenerationOptions): string {
   switch (options.shaderLanguage) {
     case 'glsl':
       return generateGLSLForModule(module, options);
