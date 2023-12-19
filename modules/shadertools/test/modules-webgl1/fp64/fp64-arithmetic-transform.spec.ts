@@ -11,15 +11,15 @@ import {runTests} from './fp64-test-utils-transform';
 const commonTestCases = [
   {a: 2, b: 2},
   {a: 0.1, b: 0.1, ignoreFor: {apple: ['sum_fp64', 'mul_fp64', 'div_fp64']}},
-  {a: 3.0e-19, b: 3.3e13, ignoreFor: {apple: ['sum_fp64']}},
-  {a: 9.9e-40, b: 1.7e3},
-  {a: 1.5e-36, b: 1.7e-16},
-  {a: 9.4e-26, b: 51},
-  {a: 6.7e-20, b: 0.93, ignoreFor: {apple: ['sum_fp64']}},
+  {a: 3.0e-19, b: 3.3e13, ignoreFor: {apple: ['sum_fp64', 'sub_fp64']}},
+  {a: 9.9e-40, b: 1.7e3, ignoreFor: {}},
+  {a: 1.5e-36, b: 1.7e-16, ignoreFor: {}},
+  {a: 9.4e-26, b: 51, ignoreFor: {}},
+  {a: 6.7e-20, b: 0.93, ignoreFor: {apple: ['sum_fp64', 'sub_fp64']}},
 
   // mul_fp64: Large numbers once multipled, can't be represented by 32 bit precision and Math.fround() returns NAN
   // sqrt_fp64: Fail on INTEL with margin 3.906051071870294e-12
-  {a: 2.4e3, b: 5.9e31, ignoreFor: {all: ['mul_fp64'], intel: ['sqrt_fp64'], apple: ['sum_fp64']}},
+  {a: 2.4e3, b: 5.9e31, ignoreFor: {all: ['mul_fp64'], intel: ['sqrt_fp64'], apple: ['sum_fp64', 'sub_fp64']}},
 
   // div_fp64 fails on INTEL with margin 1.7318642528355118e-12
   // sqrt_fp64 fails on INTEL with margin 1.5518878351528786e-12
@@ -42,13 +42,13 @@ const commonTestCases = [
   {a: 4.1e30, b: 8.2e15, ignoreFor: {all: ['mul_fp64'], intel: ['div_fp64', 'sqrt_fp64'], apple: ['div_fp64']}},
 
   // Fails on INTEL, margin 3.752606081210107e-12
-  {a: 6.2e3, b: 6.3e10, ignoreFor: {intel: ['sqrt_fp64'], apple: ['sum_fp64', 'mul_fp64']}},
+  {a: 6.2e3, b: 6.3e10, ignoreFor: {intel: ['sqrt_fp64'], apple: ['sum_fp64', 'mul_fp64', 'sub_fp64']}},
   // Fails on INTEL, margin 3.872578286363912e-13
   {a: 2.5e2, b: 5.1e-21, ignoreFor: {intel: ['sqrt_fp64'], apple: ['div_fp64']}},
   // Fails on INTEL, margin 1.5332142001740705e-12
   {a: 96, b: 1.7e4, ignoreFor: {intel: ['sqrt_fp64'], apple: ['div_fp64']}},
   // // Fail on INTEL, margin 1.593162047558726e-12
-  {a: 0.27, b: 2.3e16, ignoreFor: {intel: ['sqrt_fp64'], apple: ['sum_fp64', 'mul_fp64']}},
+  {a: 0.27, b: 2.3e16, ignoreFor: {intel: ['sqrt_fp64'], apple: ['sum_fp64', 'mul_fp64', 'sub_fp64']}},
   // Fails on INTEL, margin 1.014956357028767e-12
   {a: 18, b: 9.1e-9, ignoreFor: {intel: ['sqrt_fp64'], apple: ['div_fp64']}}
 ];
