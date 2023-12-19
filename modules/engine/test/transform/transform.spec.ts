@@ -20,7 +20,7 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test.only('Transform#constructor', async (t) => {
+test('Transform#constructor', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (device.isWebGL1) {
       t.throws(() => createTransform(device), /transform feedback/i, 'WebGL 1 throws');
