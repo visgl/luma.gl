@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core-tests",
-  "version": "9.0.0-alpha.46",
+  "version": "9.0.0-alpha.47",
   "description": "luma.gl API",
   "license": "MIT",
   "type": "module",
@@ -37,10 +37,10 @@
     "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
   },
   "devDependencies": {
-    "@luma.gl/core": "9.0.0-alpha.46",
-    "@luma.gl/test-utils": "9.0.0-alpha.46",
-    "@luma.gl/webgl": "9.0.0-alpha.46",
-    "@luma.gl/webgpu": "9.0.0-alpha.46"
+    "@luma.gl/core": "9.0.0-alpha.47",
+    "@luma.gl/test-utils": "9.0.0-alpha.47",
+    "@luma.gl/webgl": "9.0.0-alpha.47",
+    "@luma.gl/webgpu": "9.0.0-alpha.47"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

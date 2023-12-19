@@ -1,5 +1,14 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.47
+
+- feat(engine) Support all vertex format types in GPUGeometry (#1884)
+- fix(shadertools): Add 'invariant' to fp64 varyings, partially fix issue on Apple GPUs (#1882)
+- fix(engine,shadertools) Minimum Transform implementation (#1879)
+- feat(gltf) Support both size & components in GLTF attributes (#1880)
+- feat(gltf) Add name prop to GLTFAnimation class (#1878)
+- [chore] Correct types for GLTFInstantiator (#1877)
+
 ### v9.0.0-alpha.46
 
 - feat(gltf) Merge modelOptions passed to GLTFInstantiator (#1875)
