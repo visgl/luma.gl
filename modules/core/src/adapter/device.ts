@@ -54,46 +54,30 @@ export type DeviceProps = {
   gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
 };
 
-export const DEFAULT_DEVICE_PROPS: Required<DeviceProps> = {
-  id: null!,
-  type: 'best-available',
-  canvas: null,
-  container: null,
-  webgl2: true, // Attempt to create a WebGL2 context
-  webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
-  manageState: true,
-  width: 800, // width are height are only used by headless gl
-  height: 600,
-  debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-  break: [],
-
-  // alpha: undefined,
-  // depth: undefined,
-  // stencil: undefined,
-  // antialias: undefined,
-  // premultipliedAlpha: undefined,
-  // preserveDrawingBuffer: undefined,
-  // failIfMajorPerformanceCaveat: undefined
-
-  gl: null
-};
-
-export type ShadingLanguage = 'glsl' | 'wgsl';
-
 /**
  * Identifies the GPU vendor and driver.
  * @see https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
  * @note Current WebGPU support is very limited
  */
 export type DeviceInfo = {
+  /** Type of  */
   type: 'webgl' | 'webgl2' | 'webgpu';
+
   vendor: string;
   renderer: string;
+  /** version of driver */
   version: string;
+  /** type of GPU */
   gpu: 'nvidia' | 'amd' | 'intel' | 'apple' | 'software' | 'unknown';
-  shadingLanguages: ShadingLanguage[];
-  shadingLanguageVersions: Record<string, string>;
+  /** GPU driver backend. Can sometimes be sniffed */
+  gpuBackend?: 'angle' | 'metal' | 'unknown';
+  /** Shader language supported by device.createShader() */
+  shadingLanguage: 'glsl' | 'wgsl';
+  /** Highest supported shader language version (GLSL 3.00 = 300, GLSL 1.00 = 100) */
+  shadingLanguageVersion: number;
+  /** The masked vendor string */
   vendorMasked?: string;
+  /** The masked renderer string */
   rendererMasked?: string;
 };
 
@@ -205,6 +189,32 @@ export type DeviceFeature =
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
+
+  static defaultProps: Required<DeviceProps> = {
+    id: null!,
+    type: 'best-available',
+    canvas: null,
+    container: null,
+    webgl2: true, // Attempt to create a WebGL2 context
+    webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
+    manageState: true,
+    width: 800, // width are height are only used by headless gl
+    height: 600,
+    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
+    break: [],
+  
+    // alpha: undefined,
+    // depth: undefined,
+    // stencil: undefined,
+    // antialias: undefined,
+    // premultipliedAlpha: undefined,
+    // preserveDrawingBuffer: undefined,
+    // failIfMajorPerformanceCaveat: undefined
+  
+    gl: null
+  };
+  
+
   get [Symbol.toStringTag](): string {
     return 'Device';
   }
@@ -212,7 +222,7 @@ export abstract class Device {
   static VERSION = VERSION;
 
   constructor(props: DeviceProps) {
-    this.props = {...DEFAULT_DEVICE_PROPS, ...props};
+    this.props = {...Device.defaultProps, ...props};
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 

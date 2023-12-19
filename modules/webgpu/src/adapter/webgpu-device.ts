@@ -109,11 +109,8 @@ export class WebGPUDevice extends Device {
       renderer: '',
       version: '',
       gpu: 'unknown', // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
-      shadingLanguages: ['wgsl'],
-      shadingLanguageVersions: {
-        glsl: '450',
-        wgsl: '100'
-      },
+      shadingLanguage: 'wgsl',
+      shadingLanguageVersion: 100,
       vendorMasked: '',
       rendererMasked: ''
     };

@@ -9,8 +9,8 @@ function getInfo(device: Device): PlatformInfo {
   return {
     type: device.info.type,
     gpu: device.info.gpu,
-    shaderLanguage: device.info.shadingLanguages[0],
-    shaderLanguageVersion: device.info.shadingLanguageVersions[0] as any,
+    shaderLanguage: device.info.shadingLanguage,
+    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     features: device.features
   };
 }
@@ -272,12 +272,12 @@ test('assembleShaders#version_directive', (t) => {
   });
   // Verify version directive remains as first line.
   t.equal(
-    assembleResult.vs.indexOf('#version 300 es'),
+    assembleResult.vs.indexOf('#version 100'),
     0,
     'version directive should be first statement'
   );
   t.equal(
-    assembleResult.fs.indexOf('#version 300 es'),
+    assembleResult.fs.indexOf('#version 100'),
     0,
     'version directive should be first statement'
   );
@@ -428,8 +428,9 @@ test('assembleShaders#shaderhooks', (t) => {
       assembleResult.fs.indexOf('color = picking_filterColor(color)'),
     'hook footer injected after injection code'
   );
+
   t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1,
+    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') > -1,
     'regex injection code included in fragment shader with module'
   );
 
@@ -485,7 +486,7 @@ test('assembleShaders#shaderhooks', (t) => {
   });
 
   t.ok(
-    assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
+    assembleResult.fs.indexOf('gl_FragColor -= 0.1;') > -1,
     'regex injection code included in shader hook'
   );
 

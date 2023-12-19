@@ -486,10 +486,10 @@ export class Model {
         vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
         fs: this.fs
           ? this.device.createShader({
-              id: '{$this.id}-fragment',
-              stage: 'fragment',
-              source: this.fs
-            })
+            id: '{$this.id}-fragment',
+            stage: 'fragment',
+            source: this.fs
+          })
           : null
       });
       this._attributeInfos = getAttributeInfosFromLayouts(
@@ -521,8 +521,8 @@ function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]):
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
     type: device.info.type,
-    shaderLanguage: device.info.shadingLanguages[0],
-    shaderLanguageVersion: device.info.shadingLanguageVersions[0] as unknown as 100 | 300,
+    shaderLanguage: device.info.shadingLanguage,
+    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,
     features: device.features
   };

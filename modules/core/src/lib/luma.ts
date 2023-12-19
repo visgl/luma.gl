@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {Device, DeviceProps} from '../adapter/device';
-import {DEFAULT_DEVICE_PROPS} from '../adapter/device';
+import type {DeviceProps} from '../adapter/device';
+import {Device} from '../adapter/device';
 import {StatsManager} from './utils/stats-manager';
 import {lumaStats} from './utils/stats-manager';
 import type {Log} from '@probe.gl/log';
@@ -41,40 +41,40 @@ export class luma {
   }
 
   static setDefaultDeviceProps(props: DeviceProps): void {
-    Object.assign(DEFAULT_DEVICE_PROPS, props);
+    Object.assign(Device.defaultProps, props);
   }
 
   /** Creates a device. Asynchronously. */
   static async createDevice(props: DeviceProps = {}): Promise<Device> {
-    props = {...DEFAULT_DEVICE_PROPS, ...props}
+    props = {...Device.defaultProps, ...props}
     if (props.gl) {
       props.type = 'webgl';
     }
 
-    let Device: any;
+    let DeviceClass: any;
     switch (props.type) {
       case 'webgpu':
-        Device = deviceList.get('webgpu');
-        if (Device) {
-          return await Device.create(props);
+        DeviceClass = deviceList.get('webgpu');
+        if (DeviceClass) {
+          return await DeviceClass.create(props);
         }
         break;
       case 'webgl':
       case 'webgl1':
       case 'webgl2':
-        Device = deviceList.get('webgl');
-        if (Device) {
-          return await Device.create(props);
+        DeviceClass = deviceList.get('webgl');
+        if (DeviceClass) {
+          return await DeviceClass.create(props);
         }
         break;
       case 'best-available':
-        // Device = deviceList.get('webgpu');
-        // if (Device && Device.isSupported()) {
-        //   return await Device.create(props);
+        // DeviceClass = deviceList.get('webgpu');
+        // if (DeviceClass && DeviceClass.isSupported()) {
+        //   return await DeviceClass.create(props);
         // }
-        Device = deviceList.get('webgl');
-        if (Device && Device.isSupported()) {
-          return await Device.create(props);
+        DeviceClass = deviceList.get('webgl');
+        if (DeviceClass && DeviceClass.isSupported()) {
+          return await DeviceClass.create(props);
         }
         break;
     }

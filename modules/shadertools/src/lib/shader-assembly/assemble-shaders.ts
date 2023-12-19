@@ -7,11 +7,11 @@ import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
-import {assert} from '../utils/assert';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
+import {assert} from '../utils/assert';
 
 /** Define map */
 export type ShaderDefine = string | number | boolean;
@@ -263,21 +263,17 @@ function assembleGLSLShader(
 
   assert(typeof source === 'string', 'shader source must be a string');
 
+  const targetVersion = platformInfo.shaderLanguageVersion;
+
   const sourceLines = source.split('\n');
-  let glslVersion: 100 | 300 = 100;
-  let versionLine = '';
-  let coreSource = source;
-  // Extract any version directive string from source.
-  // TODO : keep all pre-processor statements at the beginning of the shader.
-  if (sourceLines[0].indexOf('#version ') === 0) {
-    glslVersion = 300; // TODO - regexp that matches actual version number
-    versionLine = sourceLines[0];
-    coreSource = sourceLines.slice(1).join('\n');
-  } else {
-    versionLine = `#version ${glslVersion}`;
+  if (sourceLines[0].indexOf('#version ') !== 0) {
+    throw new Error('GLSL: no #version');
   }
 
-  const targetVersion = platformInfo.type === 'webgl' ? 100 : 300;
+  // Extract any version directive string from source.
+  const versionLine = sourceLines[0];
+  // TODO : keep all pre-processor statements at the beginning of the shader.
+  const coreSource = sourceLines.slice(1).join('\n');
 
   // Combine Module and Application Defines
   const allDefines = {};
