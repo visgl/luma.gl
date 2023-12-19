@@ -224,21 +224,6 @@ test('ShaderAssembler#defaultModules', t => {
 test('ShaderAssembler#transpileToGLSL100', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  // t.throws(() => {
-  //   shaderAssembler.assembleShaders(platformInfo, {
-  //     vs: VS_300,
-  //     fs: FS_300
-  //   });
-  // }, "Can't compile 300 shader with WebGL 1");
-
-  // t.doesNotThrow(() => {
-  //   shaderAssembler.assembleShaders(platformInfo, {
-  //     vs: VS_300,
-  //     fs: FS_300,
-  //     transpileToGLSL100: true
-  //   });
-  // }, 'Can compile transpiled 300 shader with WebGL 1');
-
   const programUntranspiled = shaderAssembler.assembleShaders(platformInfo, {
     vs: VS_300,
     fs: FS_300

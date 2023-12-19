@@ -365,8 +365,7 @@ test('Model#transpileToGLSL100', (t) => {
   t.doesNotThrow(() => {
     model = new Model(webgl1Device, {
       vs: VS_300,
-      fs: FS_300,
-      transpileToGLSL100: true
+      fs: FS_300
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
@@ -693,14 +692,13 @@ test.skip('PipelineFactory#transpileToGLSL100', (t) => {
     pipelineFactory.createRenderPipeline({
       vs: VS_300,
       fs: FS_300,
-      topology: 'triangle-list',
-      transpileToGLSL100: true
+      topology: 'triangle-list'
     });
   }, 'Can compile transpiled 300 shader with WebGL 1');
 
-  const programTranspiled = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list', transpileToGLSL100: true});
+  const programTranspiled = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const programUntranspiled = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-  const programTranspiled2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list', transpileToGLSL100: true});
+  const programTranspiled2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   t.equals(programTranspiled, programTranspiled2, 'Transpiled programs match');
   t.notEquals(

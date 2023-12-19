@@ -17,6 +17,7 @@ export function transpileGLSLShader(
 ): string {
   const sourceGLSLVersion = Number(source.match(/^#version[ \t]+(\d+)/m)?.[1] || 100);
   if (sourceGLSLVersion !== 300) {
+    // TODO - longer error message to help deck.gl layer writers
     throw new Error('luma.gl v9 only supports GLSL 3.00 shader sources');
   }
 
@@ -28,7 +29,6 @@ export function transpileGLSLShader(
           return source;
         case 'fragment':
           source = convertShader(source, ES300_FRAGMENT_REPLACEMENTS);
-          // source = convertFragmentShaderTo300(source);
           return source;
         default:
           // Unknown shader stage
@@ -115,22 +115,6 @@ function convertShader(source: string, replacements: GLSLReplacement[]) {
   }
   return source;
 }
-
-/** Transform fragment shader source code to GLSL 3.00 */
-// function convertFragmentShaderTo300(source: string): string {
-//   const outputMatch = ES300_FRAGMENT_OUTPUT_REGEX.exec(source);
-//   if (outputMatch) {
-//     const outputName = outputMatch[1];
-//     source = source.replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
-//   } else {
-//     const outputName = 'fragmentColor';
-//     source = source
-//       .replace(REGEX_START_OF_MAIN, match => `out vec4 ${outputName};\n${match}`)
-//       .replace(new RegExp(`\\b${ES100_FRAGMENT_OUTPUT_NAME}\\b`, 'g'), outputName);
-//   }
-
-//   return source;
-// }
 
 /** Transform fragment shader source code to GLSL ES 100 */
 function convertFragmentShaderTo100(source: string): string {

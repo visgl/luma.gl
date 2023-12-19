@@ -242,7 +242,6 @@ function assembleGLSLShader(
     defines?: Record<string, ShaderDefine>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
-    transpileToGLSL100?: boolean;
     prologue?: boolean;
     log?: any;
   }

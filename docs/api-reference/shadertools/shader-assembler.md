@@ -52,7 +52,6 @@ Takes the source code of a vertex shader and a fragment shader, and a list of mo
 - `modules`=`[]` (Array) - list of shader modules (either objects defining the module, or names of previously registered modules)
 - `inject`=`{}` (Object) - map of substituions,
 - `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function. For example:
-- `transpileToGLSL100`: force transpilation to GLSL ES 1.0 (see below)
 
 ```typescript
 [
@@ -169,26 +168,7 @@ new Model(gl, {
 
 ## Transpilation
 
-If the `transpileToGLSL100` option is used, `assembleShaders` will attempt to transpile shaders to GLSL ES 1.0. This is a limited text replacement and requires that certain conventions be followed:
+If the platformInfo specifies that GLSL 1.0 is required, `assembleShaders` will attempt to transpile GLSL 3.0 shaders to GLSL ES 1.0. 
 
-- Statements are written one per line.
-- Only one fragment shader output is supported.
-- GLSL 3.0-only features, such as 3D textures are not supported.
+See the user guide for more details.
 
-Text transformations are performed according to the following tables:
-
-Vertex Shaders
-
-| 3.00 ES | 1.00 ES     | Comment |
-| ------- | ----------- | ------- |
-| `in`    | `attribute` |         |
-| `out`   | `varying`   |         |
-
-Fragment Shaders
-
-| 3.00 ES              | 1.00 ES        | Comment                                                                                                                                                                                                                                                           |
-| -------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `in`                 | `varying`      |                                                                                                                                                                                                                                                                   |
-| `out vec4 <varName>` | `gl_FragColor` | `<varName>` declaration is removed and usage in the code are replaced with `gl_FragColor`                                                                                                                                                                         |
-| `texture`            | `texture2D`    | `texture` will be replaced with `texture2D` to ensure 1.00 code is correct. See note on `textureCube` below.                                                                                                                                                      |
-| `textureCube` \*     | `textureCube`  | `textureCube` is not valid 3.00 syntax, but must be used to ensure 1.00 code is correct, because `texture` will be substituted with `texture2D` when transpiled to 100. Also `textureCube` will be replaced with correct `texture` syntax when transpiled to 300. |
