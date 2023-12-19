@@ -14,7 +14,7 @@ const fixture = {
 };
 
 /** Compare shader strings - TODO move to test/utils */
-function compareStrings(t: Test, string1: string, string2: string,, message?: string): void {
+function compareStrings(t: Test, string1: string, string2: string, message?: string): void {
   const lines1 = string1.split('\n');
   const lines2 = string2.split('\n');
 
