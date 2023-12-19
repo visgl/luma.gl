@@ -24,7 +24,7 @@ const plugins = [
 if (pkg.dependencies && '@luma.gl/constants' in pkg.dependencies) {
   // TODO(v9): CI builds are flaky with this enabled, need to investigate cause.
   // plugins.push('./dev-modules/babel-plugin-remove-glsl-comments/index.js');
-  // plugins.push('babel-plugin-inline-webgl-constants');
+  plugins.push('babel-plugin-inline-webgl-constants');
 }
 
 module.exports = getBabelConfig({

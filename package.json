@@ -16,7 +16,6 @@
   ],
   "workspaces": [
     "examples/*/*",
-    "dev-modules/*",
     "modules/*"
   ],
   "browser": {
