@@ -64,10 +64,7 @@ export {fp32} from './modules/math/fp32/fp32';
 export {picking} from './modules/engine/picking/picking';
 
 // // lighting
-export type {
-  LightingProps,
-  LightingProps as Lighting
-} from './modules/lighting/lights/lighting-uniforms';
+export type {LightingProps} from './modules/lighting/lights/lighting-uniforms';
 export {lighting} from './modules/lighting/lights/lighting-uniforms';
 export {dirlight} from './modules/lighting/no-material/dirlight';
 export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules/lighting/phong-material/phong-material';
