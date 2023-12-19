@@ -24,7 +24,6 @@ import {
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
-import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
@@ -39,8 +38,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   defines?: Record<string, string | number | boolean>;
   // TODO - injections, hooks etc?
 
-  /** Shader inputs, used to generated uniform buffers and bindings */
-  shaderInputs?: ShaderInputs;
   /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
   pipelineFactory?: PipelineFactory;
   /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
@@ -97,7 +94,6 @@ export class Model {
     constantAttributes: {},
     varyings: [],
 
-    shaderInputs: undefined!,
     pipelineFactory: undefined!,
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
@@ -138,6 +134,9 @@ export class Model {
   /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
   uniforms: Record<string, UniformValue> = {};
 
+  /** The underlying GPU "program". @note May be recreated if parameters change */
+  pipeline: RenderPipeline;
+
   /**
    * VertexArray
    * @note not implemented: if bufferLayout is updated, vertex array has to be rebuilt!
@@ -147,12 +146,6 @@ export class Model {
 
   /** TransformFeedback, WebGL 2 only. */
   transformFeedback: TransformFeedback | null = null;
-
-  /** The underlying GPU "program". @note May be recreated if parameters change */
-  pipeline: RenderPipeline;
-
-  /** ShaderInputs instance */
-  shaderInputs: ShaderInputs;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
@@ -170,16 +163,13 @@ export class Model {
 
     const platformInfo = getPlatformInfo(device);
 
-    const {vs, fs, modules, getUniforms} = this.props.shaderAssembler.assembleShaders(
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(
       platformInfo,
       this.props
     );
     this.vs = vs;
     this.fs = fs;
     this._getModuleUniforms = getUniforms;
-
-    const moduleMap = Object.fromEntries(modules.map(module => [module.name, module]));
-    this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
 
     this.vertexCount = this.props.vertexCount;
     this.instanceCount = this.props.instanceCount;
@@ -378,6 +368,13 @@ export class Model {
   }
 
   /**
+   * Updates optional transform feedback. WebGL 2 only.
+   */
+  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
+    this.transformFeedback = transformFeedback;
+  }
+
+  /**
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
@@ -408,13 +405,6 @@ export class Model {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     this.vertexArray.setIndexBuffer(indexBuffer);
-  }
-
-  /**
-   * Updates optional transform feedback. WebGL 2 only.
-   */
-  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
-    this.transformFeedback = transformFeedback;
   }
 
   /**

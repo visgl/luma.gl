@@ -6,38 +6,16 @@ export function formatCompilerLog(
   shaderLog: readonly CompilerMessage[],
   source: string,
   options?: {
-    /** Include source code in the log. Either just the lines before issues or all source code */
-    showSourceCode?: 'no' | 'issues' | 'all';
-    html?: boolean;
+    showSourceCode?: boolean;
   }
 ): string {
-  let formattedLog = '';
+  // Parse the error - note: browser and driver dependent
   const lines = source.split(/\r?\n/);
-  const log = shaderLog.slice().sort((a, b) => a.lineNum - b.lineNum);
-
-  switch (options?.showSourceCode || 'no') {
-    case 'all':
-      // Parse the error - note: browser and driver dependent
-      let currentMessage = 0;
-      for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-        formattedLog += getNumberedLine(lines[lineNum], lineNum, options);
-        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum) {
-          const message = log[currentMessage++];
-          formattedLog += formatCompilerMessage(message, lines, message.lineNum, {...options, inlineSource: false});
-        }
-      }
-      return formattedLog;
-
-    case 'issues':
-    case 'no':
-      // Parse the error - note: browser and driver dependent
-      for (const message of shaderLog) {
-        formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
-          inlineSource: options?.showSourceCode !== 'no',
-        });
-      }
-      return formattedLog;
+  let formattedLog = '';
+  for (const message of shaderLog) {
+    formattedLog += formatCompilerMessage(message, lines, message.lineNum, options);
   }
+  return formattedLog;
 }
 
 // Helpers
@@ -47,36 +25,31 @@ function formatCompilerMessage(
   message: CompilerMessage,
   lines: readonly string[],
   lineNum: number,
-  options: {
-    inlineSource?: boolean;
-    html?: boolean;
+  options?: {
+    showSourceCode?: boolean;
   }
 ): string {
-  if (options?.inlineSource) {
-    const numberedLines = getNumberedLines(lines, lineNum);
+  if (options?.showSourceCode) {
     // If we got error position on line add a `^^^` indicator on next line
     const positionIndicator = message.linePos > 0 ? `${' '.repeat(message.linePos + 5)}^^^\n` : '';
-    return `
+    const numberedLines = getNumberedLines(lines, lineNum);
+    return `\
 ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.message}
 
 `;
   }
-  return `<div style="color:red;"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`;
+  return `${message.type.toUpperCase()}: ${message.message}\n`;
 }
 
-function getNumberedLines(lines: readonly string[], lineNum: number, options?: {html?: boolean}): string {
+function getNumberedLines(lines: readonly string[], lineNum: number): string {
   let numberedLines = '';
   for (let line = lineNum - 2; line <= lineNum; line++) {
     const sourceLine = lines[line]
     if (sourceLine !== undefined) {
-      numberedLines += getNumberedLine(sourceLine, lineNum, options);
+      numberedLines += `${padLeft(String(line), 4)}: ${sourceLine}\n`;
     }
   }
   return numberedLines;
-}
-
-function getNumberedLine(line: string, lineNum: number, options?: {html?: boolean}): string {
-  return `${padLeft(String(lineNum), 4)}: ${line}${options.html ? '<br/>' : '\n'}`;
 }
 
 /**

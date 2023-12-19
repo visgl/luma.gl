@@ -53,6 +53,3 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
-
-// EXPERIMENTAL
-export {ShaderInputs as _ShaderInputs} from './shader-inputs';

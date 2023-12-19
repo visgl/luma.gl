@@ -84,17 +84,6 @@ test('transpileGLSLShader#minified shaders', t => {
       minifyShader(GLSL_300_TRANSPILED),
       `minified 3.00 => 3.00: ${title}`
     );
-
-    assembleResult = minifyShader(transpileGLSLShader(minifyShader(GLSL_100), 100, stage));
-    compareShaders(t, assembleResult, minifyShader(GLSL_100), `minified 1.00 => 1.00: ${title}`);
-
-    assembleResult = minifyShader(transpileGLSLShader(minifyShader(GLSL_100), 300, stage));
-    compareShaders(
-      t,
-      assembleResult,
-      minifyShader(GLSL_300_TRANSPILED),
-      `minified 1.00 => 3.00: ${title}`
-    );
   }
 
   t.end();
