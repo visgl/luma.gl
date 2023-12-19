@@ -1,9 +1,8 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {log, uid, Shader, ShaderProps, CompilerMessage, formatCompilerLog} from '@luma.gl/core';
+import {Shader, ShaderProps, CompilerMessage} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import {getShaderInfo} from '../helpers/get-shader-info';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import {WebGLDevice} from '../webgl-device';
 
@@ -15,7 +14,7 @@ export class WEBGLShader extends Shader {
   readonly handle: WebGLShader;
 
   constructor(device: WebGLDevice, props: ShaderProps) {
-    super(device, {id: getShaderIdFromProps(props), ...props});
+    super(device, props);
     this.device = device;
     switch (this.props.stage) {
       case 'vertex':
@@ -39,15 +38,20 @@ export class WEBGLShader extends Shader {
     }
   }
 
-  async compilationInfo(): Promise<readonly CompilerMessage[]> {
+  override async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
+    return this.getCompilationInfoSync();
+  }
+
+  override getCompilationInfoSync() {
     const log = this.device.gl.getShaderInfoLog(this.handle);
-    return log ? parseShaderCompilerLog(log) : [];
+    return parseShaderCompilerLog(log);
   }
 
   // PRIVATE METHODS
 
   _compile(source: string): void {
-    const addGLSLVersion = (source: string) => source.startsWith('#version ') ? source : `#version 100\n${source}`;
+    const addGLSLVersion = (source: string) =>
+      source.startsWith('#version ') ? source : `#version 100\n${source}`;
     source = addGLSLVersion(source);
 
     const {gl} = this.device;
@@ -57,25 +61,22 @@ export class WEBGLShader extends Shader {
     // TODO - For performance reasons, avoid checking shader compilation errors on production?
     // TODO - Load log even when no error reported, to catch warnings?
     // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-    const compileStatus = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS);
-    if (!compileStatus) {
-      const shaderLog = gl.getShaderInfoLog(this.handle);
-      const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
-      const messages = parsedLog.filter(message => message.type === 'error');
-      const formattedLog = formatCompilerLog(messages, source, {showSourceCode: true});
-      const shaderName: string = getShaderInfo(source).name;
-      const shaderDescription = `${this.stage} shader ${shaderName}`;
-      log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();
-      throw new Error(`GLSL compilation errors in ${shaderName}`);
-    }
+    this.compilationStatus = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS) ? 'success' : 'error';
+
+    this.debugShader();
   }
 }
 
-// HELPERS
+// if (!compilationSuccess) {
+//       const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
+//       const messages = parsedLog.filter(message => message.type === 'error');
+//       const formattedLog = formatCompilerLog(messages, source, {showSourceCode: 'all', html: true});
+//       const shaderDescription = `${this.stage} shader ${shaderName}`;
+//       log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();
 
-/** Deduce an id, from shader source, or supplied id, or shader type */
-function getShaderIdFromProps(props: ShaderProps): string {
-  return getShaderInfo(props.source).name ||
-    props.id ||
-    uid(`unnamed ${props.stage}-shader`);
-}
+//       displayShaderLog(parsedLog, source, shaderName);
+//       throw new Error(`GLSL compilation errors in ${shaderName}`);
+//     }
+//   }
+// }
+
