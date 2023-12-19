@@ -113,6 +113,7 @@ export {UniformStore} from './lib/uniforms/uniform-store';
 // TYPE UTILS
 export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
+export {getDataTypeFromTypedArray, getTypedArrayFromDataType, getVertexFormatFromAttribute} from './adapter/type-utils/vertex-format-from-attribute';
 
 // SHADER TYPE UTILS
 export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';

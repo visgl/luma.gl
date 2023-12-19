@@ -9,6 +9,7 @@ const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
 /**
  * Converts TYPED ARRAYS to corresponding GL constant
  * Used to auto deduce gl parameter types
+ * @deprecated Use getDataTypeFromTypedArray
  * @param arrayOrType
  * @returns
  */
@@ -40,6 +41,7 @@ export function getGLTypeFromTypedArray(arrayOrType: TypedArray): GLDataType {
 /**
  * Converts GL constant to corresponding TYPED ARRAY
  * Used to auto deduce gl parameter types
+ * @deprecated Use getTypedArrayFromDataType
  * @param glType
  * @param param1
  * @returns

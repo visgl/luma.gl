@@ -1,0 +1,85 @@
+// luma.gl, MIT licese
+import {TypedArray, TypedArrayConstructor} from '../..';
+import {VertexFormat} from '../types/vertex-formats';
+
+// import {DataType} from '../types/vertex-formats';
+// type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance
+type DataType = 'uint8' | 'sint8' | 'uint16' | 'sint16' | 'uint32' | 'sint32' | 'float32';
+
+export function getDataTypeFromTypedArray(arrayOrType: TypedArray | TypedArrayConstructor): DataType {
+  const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
+  switch (type) {
+    case Float32Array:
+      return 'float32';
+    case Uint16Array:
+      return 'uint16';
+    case Uint32Array:
+      return 'uint32';
+    case Uint8Array:
+    case Uint8ClampedArray:
+      return 'uint8';
+    case Int8Array:
+      return 'sint8';
+    case Int16Array:
+      return 'sint16';
+    case Int32Array:
+      return 'sint32';
+    default:
+      // Failed to deduce data type from typed array
+      throw new Error(type.constructor.name);
+  }
+}
+
+export function getTypedArrayFromDataType(dataType: DataType): TypedArrayConstructor {
+  switch (dataType) {
+    case 'float32':
+      return Float32Array;
+    case 'uint16':
+      return Uint16Array;
+    case 'uint32':
+      return Uint32Array;
+    case 'uint8':
+      return Uint8Array;
+    case 'sint8':
+      return Int8Array;
+    case 'sint16':
+      return Int16Array;
+    case 'sint32':
+      return Int32Array;
+    default:
+      // Failed to deduce typed array from data type
+      throw new Error(dataType);
+  }
+}
+
+/** Get the vertex format for an attribute with TypedArray and size */
+export function getVertexFormatFromAttribute(typedArray: TypedArray, size?: number): VertexFormat {
+  if(!size || size > 4) {
+    throw new Error(`size ${size}`);
+  }
+
+  const components = size as 1 | 2 | 3 | 4;
+  const dataType: DataType = getDataTypeFromTypedArray(typedArray);
+
+  if (dataType === 'uint8' || dataType === 'sint8') {
+    if (components === 1 || components === 3) {
+      // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
+      throw new Error(`size: ${size}`);
+    }
+    return `${dataType}x${components}`;
+  }
+  if (dataType === 'uint16' || dataType === 'sint16') {
+    if (components === 1 || components === 3) {
+      // WebGPU 16 bit formats must be aligned to 32 bit boundaries
+      throw new Error(`size: ${size}`);
+    }
+    return `${dataType}x${components}`;
+  }
+
+  if (components === 1) {
+    return dataType;
+  }
+
+  return `${dataType}x${components}`;
+}
+

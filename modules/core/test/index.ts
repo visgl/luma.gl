@@ -12,6 +12,7 @@ import './adapter/type-utils/decode-attribute-type.spec';
 
 import './adapter/type-utils/decode-vertex-format.spec';
 import './adapter/type-utils/decode-texture-format.spec';
+import './adapter/type-utils/vertex-format-from-attribute.spec';
 
 // adapter
 import './adapter/canvas-context.spec';
