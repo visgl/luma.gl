@@ -4,7 +4,9 @@
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
-// Instantiate shader modules and any dependencies resolve dependencies
+/** 
+ * Instantiate shader modules and esolve any dependencies
+ */ 
 export function resolveModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
   const instances = ShaderModuleInstance.instantiateModules(modules);
   return getShaderDependencies(instances);

@@ -64,10 +64,7 @@ export {fp32} from './modules/math/fp32/fp32';
 export {picking} from './modules/engine/picking/picking';
 
 // // lighting
-export type {
-  LightingModuleProps,
-  LightingModuleProps as Lighting
-} from './modules/lighting/lights/lighting-uniforms';
+export type {LightingProps} from './modules/lighting/lights/lighting-uniforms';
 export {lighting} from './modules/lighting/lights/lighting-uniforms';
 export {dirlight} from './modules/lighting/no-material/dirlight';
 export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules/lighting/phong-material/phong-material';
@@ -173,7 +170,6 @@ export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
 // projection and lighting
 export {geometry as geometry1} from './modules-webgl1/geometry/geometry';
 export {project as project1} from './modules-webgl1/project/project';
-export {picking as picking1} from './modules-webgl1/picking/picking';
 
 export {lights as lights1} from './modules-webgl1/lighting/lights/lights';
 export {dirlight as dirlight1} from './modules-webgl1/lighting/dirlight/dirlight';
@@ -182,4 +178,3 @@ export {
   phongLighting
 } from './modules-webgl1/lighting/phong-lighting/phong-lighting';
 export {pbr} from './modules-webgl1/lighting/pbr/pbr';
-

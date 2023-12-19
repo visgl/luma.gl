@@ -114,6 +114,7 @@ in vec4 vColor;
 void f(out float a, in float b) {}
 
 out vec4 fragmentColor;
+
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = textureCube(sCube, cubeCoord);
@@ -138,6 +139,7 @@ in vec4 vColor;
 void f(out float a, in float b) {}
 
 out vec4 fragmentColor;
+
 void main(void) {
   vec4 texColor = texture(sampler, texCoord);
   vec4 texCubeColor = texture(sCube, cubeCoord);
@@ -159,6 +161,7 @@ uniform samplerCube sCube;
 varying vec4 vColor;
 
 void f(out float a, in float b) {}
+
 
 void main(void) {
   vec4 texColor = texture2D(sampler, texCoord);

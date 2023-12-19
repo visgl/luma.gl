@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('bulgePinch#build/uniform', (t) => {
   normalizeShaderModule(bulgePinch);
-  // @ts-expect-error
   const uniforms = bulgePinch.getUniforms();
 
   t.ok(uniforms, 'bulgePinch module build is ok');

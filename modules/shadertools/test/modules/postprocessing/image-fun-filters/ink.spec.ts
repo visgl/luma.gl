@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('ink#build/uniform', (t) => {
   normalizeShaderModule(ink);
-  // @ts-expect-error
   const uniforms = ink.getUniforms();
 
   t.ok(uniforms, 'ink module build is ok');

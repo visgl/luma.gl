@@ -43,7 +43,7 @@ export type DirectionalLight = {
   intensity?: number;
 }
 
-export type LightingModuleProps = {
+export type LightingProps = {
   enabled?: boolean;
   lights?: Light[];
   ambientLight?: AmbientLight;
@@ -63,7 +63,7 @@ export type LightingModuleUniforms = {
 };
 
 /** UBO ready lighting module */
-export const lighting: ShaderModule<LightingModuleUniforms, LightingModuleProps> = {
+export const lighting: ShaderModule<LightingModuleUniforms, LightingProps> = {
   name: 'lighting',
   vs: lightingUniforms,
   fs: lightingUniforms,
@@ -98,7 +98,7 @@ export const lighting: ShaderModule<LightingModuleUniforms, LightingModuleProps>
   }
 };
 
-function getUniforms(props?: LightingModuleProps): LightingModuleUniforms {
+function getUniforms(props?: LightingProps): LightingModuleUniforms {
   // TODO legacy
   if (!props) {
     return {...lighting.defaultUniforms};
@@ -133,7 +133,7 @@ function getLightSourceUniforms({
   ambientLight,
   pointLights = [],
   directionalLights = []
-}: LightingModuleProps): Partial<LightingModuleUniforms> {
+}: LightingProps): Partial<LightingModuleUniforms> {
   const lightSourceUniforms: Partial<LightingModuleUniforms> = {
     // lightType: new Array(MAX_LIGHTS).fill(0),
     // lightColor: new Array(MAX_LIGHTS).fill([0, 0, 0]),
@@ -175,8 +175,8 @@ function getLightSourceUniforms({
   return lightSourceUniforms;
 }
 
-function extractLightTypes(lights: Light[]): LightingModuleProps {
-  const lightSources: LightingModuleProps = {pointLights: [], directionalLights: []};
+function extractLightTypes(lights: Light[]): LightingProps {
+  const lightSources: LightingProps = {pointLights: [], directionalLights: []};
   for (const light of lights || []) {
     switch (light.type) {
       case 'ambient':

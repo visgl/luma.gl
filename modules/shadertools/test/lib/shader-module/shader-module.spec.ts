@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import test from 'tape-promise/tape';
 import {normalizeShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
 // import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
@@ -74,7 +76,7 @@ void main() {
 });
 
 test('normalizeShaderModule', (t) => {
-  const module = {
+  const moduleDef = {
     name: 'test-shader-module',
     uniformPropTypes: {
       center: [0.5, 0.5],
@@ -84,7 +86,9 @@ test('normalizeShaderModule', (t) => {
       range: {value: new Float32Array([0, 1]), private: true}
     }
   };
-  normalizeShaderModule(module);
+  
+  // @ts-expect-error
+  const module = normalizeShaderModule(moduleDef);
 
   // @ts-expect-error
   t.deepEqual(module.getUniforms(), {

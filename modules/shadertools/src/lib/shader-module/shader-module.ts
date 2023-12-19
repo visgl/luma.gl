@@ -30,7 +30,7 @@ export type ShaderModule<UniformsT extends Record<string, UniformValue> = Record
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
   /** Function that maps settings to uniforms */
-  getUniforms?: (settings: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
+  getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;

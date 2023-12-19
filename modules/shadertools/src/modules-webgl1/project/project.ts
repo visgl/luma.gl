@@ -2,6 +2,13 @@ import {Matrix4} from '@math.gl/core';
 import {glsl} from '../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../..';
 
+type ProjectionProps = {
+  modelMatrix?: readonly number[],
+  viewMatrix?: readonly number[],
+  projectionMatrix?: readonly number[],
+  cameraPositionWorld?: readonly number[]
+};
+
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
 const DEFAULT_MODULE_OPTIONS = {
@@ -11,7 +18,7 @@ const DEFAULT_MODULE_OPTIONS = {
   cameraPositionWorld: [0, 0, 0]
 };
 
-function getUniforms(opts = DEFAULT_MODULE_OPTIONS, prevUniforms = {}) {
+function getUniforms(opts: ProjectionProps = DEFAULT_MODULE_OPTIONS, prevUniforms = {}) {
   // const viewProjectionInverse = viewProjection.invert();
   // viewInverseMatrix: view.invert(),
   // viewProjectionInverseMatrix: viewProjectionInverse
@@ -116,9 +123,8 @@ ${common}\
 /**
  * Projects coordinates
  */
-export const project: ShaderModule = {
+export const project: ShaderModule<ProjectionProps, ProjectionProps> = {
   name: 'project',
-  // @ts-expect-error
   getUniforms,
   vs,
   fs

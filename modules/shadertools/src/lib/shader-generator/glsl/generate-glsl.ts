@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {UniformFormat} from '../../../types';
-import {ShaderModule, UniformValue} from '../../../lib/shader-module/shader-module';
+import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {capitalize} from '../utils/capitalize';
 
 export type GLSLGenerationOptions = {
@@ -14,7 +14,7 @@ export function generateGLSLForModule(module: ShaderModule, options: GLSLGenerat
   return generateGLSLUniformDeclarations(module, options);
 }
 
-function generateGLSLUniformDeclarations<UniformsT extends Record<string, UniformValue>>(module: ShaderModule<UniformsT>, options: GLSLGenerationOptions) {
+function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGenerationOptions): string {
   const glsl: string[] = [];
 
   // => uniform UniformBlockName {

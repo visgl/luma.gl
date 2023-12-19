@@ -3,7 +3,6 @@ import test from 'tape-promise/tape';
 
 test('hexagonalPixelate#build/uniform', (t) => {
   normalizeShaderModule(hexagonalPixelate);
-  // @ts-expect-error
   const uniforms = hexagonalPixelate.getUniforms();
 
   t.ok(uniforms, 'hexagonalPixelate module build is ok');
