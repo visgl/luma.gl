@@ -25,14 +25,17 @@ function getShaderName(shader: string, defaultName: string = 'unnamed'): string 
 }
 
 /** returns GLSL shader version of given shader string */
-function getShaderVersion(source: string): number {
+function getShaderVersion(source: string): 100 | 300 {
   let version = 100;
   const words = source.match(/[^\s]+/g);
   if (words && words.length >= 2 && words[0] === '#version') {
-    const v = parseInt(words[1], 10);
-    if (Number.isFinite(v)) {
-      version = v;
+    const parsedVersion = parseInt(words[1], 10);
+    if (Number.isFinite(parsedVersion)) {
+      version = parsedVersion;
     }
+  }
+  if (version !== 100 && version !== 300) {
+    throw new Error(`Invalid GLSL version ${version}`);
   }
   return version;
 }

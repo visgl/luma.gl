@@ -1,15 +1,16 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
-import {assembleShaders, picking, fp64, pbr, glsl} from '@luma.gl/shadertools';
+import {assembleShaders, picking, fp64, pbr, glsl, PlatformInfo} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
-function getInfo(device: Device) {
+function getInfo(device: Device): PlatformInfo {
   return {
     type: device.info.type,
     gpu: device.info.gpu,
-    shaderLanguage: device.info.shadingLanguages[0],
+    shaderLanguage: device.info.shadingLanguage,
+    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     features: device.features
   };
 }
@@ -271,12 +272,12 @@ test('assembleShaders#version_directive', (t) => {
   });
   // Verify version directive remains as first line.
   t.equal(
-    assembleResult.vs.indexOf('#version 300 es'),
+    assembleResult.vs.indexOf('#version 100'),
     0,
     'version directive should be first statement'
   );
   t.equal(
-    assembleResult.fs.indexOf('#version 300 es'),
+    assembleResult.fs.indexOf('#version 100'),
     0,
     'version directive should be first statement'
   );
@@ -354,7 +355,7 @@ test('assembleShaders#shaderhooks', (t) => {
           injection: 'color = picking_filterColor(color);',
           order: Number.POSITIVE_INFINITY
         },
-        'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
+        'fs:#main-end': 'fragmentColor = picking_filterColor(fragmentColor);'
       }
     },
     picking
@@ -427,8 +428,9 @@ test('assembleShaders#shaderhooks', (t) => {
       assembleResult.fs.indexOf('color = picking_filterColor(color)'),
     'hook footer injected after injection code'
   );
+
   t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1,
+    assembleResult.fs.indexOf('gl_FragColor = picking_filterColor(gl_FragColor)') > -1,
     'regex injection code included in fragment shader with module'
   );
 
@@ -484,7 +486,7 @@ test('assembleShaders#shaderhooks', (t) => {
   });
 
   t.ok(
-    assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
+    assembleResult.fs.indexOf('gl_FragColor -= 0.1;') > -1,
     'regex injection code included in shader hook'
   );
 
@@ -504,7 +506,6 @@ test('assembleShaders#injection order', (t) => {
       // Hook function has access to injected variable
       'fs:HOOK_FUNCTION': 'value = fsVec4;'
     },
-    transpileToGLSL100: true,
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
@@ -517,7 +518,6 @@ test('assembleShaders#injection order', (t) => {
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
     modules: [TEST_MODULE],
-    transpileToGLSL100: true,
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
@@ -534,8 +534,7 @@ test.skip('assembleShaders#transpilation', (t) => {
   let assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    modules: [picking],
-    transpileToGLSL100: true
+    modules: [picking]
   });
 
   t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
@@ -549,8 +548,7 @@ test.skip('assembleShaders#transpilation', (t) => {
   assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_2,
     fs: FS_GLSL_300_2,
-    modules: [picking],
-    transpileToGLSL100: true
+    modules: [picking]
   });
 
   t.ok(compileAndLinkShaders(t, webgl1Device, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
@@ -561,8 +559,7 @@ test.skip('assembleShaders#transpilation', (t) => {
     t.comment(JSON.stringify(extension));
     assembleResult = assembleShaders(getInfo(webgl1Device), {
       vs: VS_GLSL_300_DECK,
-      fs: FS_GLSL_300_DECK,
-      transpileToGLSL100: true
+      fs: FS_GLSL_300_DECK
     });
 
     t.ok(
@@ -575,8 +572,7 @@ test.skip('assembleShaders#transpilation', (t) => {
   assembleResult = assembleShaders(getInfo(webgl1Device), {
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
-    modules: [pbr],
-    transpileToGLSL100: true
+    modules: [pbr]
   });
 
   t.ok(
@@ -588,8 +584,7 @@ test.skip('assembleShaders#transpilation', (t) => {
     assembleResult = assembleShaders(getInfo(webgl2Device), {
       vs: VS_GLSL_300_GLTF,
       fs: FS_GLSL_300_GLTF,
-      modules: [pbr],
-      transpileToGLSL100: false
+      modules: [pbr]
     });
 
     t.ok(

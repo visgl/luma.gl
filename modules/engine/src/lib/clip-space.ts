@@ -5,13 +5,13 @@ import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = glsl`\
-attribute vec2 aClipSpacePosition;
-attribute vec2 aTexCoord;
-attribute vec2 aCoordinate;
+in vec2 aClipSpacePosition;
+in vec2 aTexCoord;
+in vec2 aCoordinate;
 
-varying vec2 position;
-varying vec2 coordinate;
-varying vec2 uv;
+out vec2 position;
+out vec2 coordinate;
+out vec2 uv;
 
 void main(void) {
   gl_Position = vec4(aClipSpacePosition, 0., 1.);

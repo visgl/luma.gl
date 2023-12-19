@@ -11,6 +11,8 @@ export type PlatformInfo = {
   type: 'webgl' | 'webgl2' | 'webgpu';
   /** Which shader language is supported */
   shaderLanguage: 'glsl' | 'wgsl';
+  /** Which shader language version is preferred */
+  shaderLanguageVersion: 100 | 300;
   /** string identifying current GPU */
   gpu: string;
   /** Feature strings for feature detection */

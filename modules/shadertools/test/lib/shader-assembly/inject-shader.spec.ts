@@ -1,19 +1,20 @@
 /* eslint-disable camelcase, no-console, no-undef */
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
-import {webgl1Device} from '@luma.gl/test-utils';
-import {assembleShaders, glsl} from '@luma.gl/shadertools';
+import {webgl2Device} from '@luma.gl/test-utils';
+import {assembleShaders, glsl, PlatformInfo} from '@luma.gl/shadertools';
 import {
   injectShader,
   combineInjects,
   DECLARATION_INJECT_MARKER
 } from '@luma.gl/shadertools/lib/shader-assembly/shader-injections';
 
-function getInfo(device: Device) {
+function getInfo(device: Device): PlatformInfo {
   return {
     type: device.info.type,
     gpu: device.info.gpu,
-    shaderLanguage: device.info.shadingLanguages[0],
+    shaderLanguage: device.info.shadingLanguage,
+    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     features: device.features
   };
 }
@@ -136,7 +137,12 @@ test('injectShader#injectShader', t => {
 });
 
 test('injectShader#assembleShaders', t => {
-  const assembleResult = assembleShaders(getInfo(webgl1Device), {
+  if (!webgl2Device) {
+    t.end();
+    return;
+  }
+  
+  const assembleResult = assembleShaders(getInfo(webgl2Device), {
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
     inject: INJECT,
@@ -155,6 +161,7 @@ test('injectShader#assembleShaders', t => {
     fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_DECL),
     'declarations correctly assembled in vertex shader'
   );
+
   t.ok(
     fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_MAIN),
     'main correctly assembled in vertex shader'

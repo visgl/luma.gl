@@ -10,7 +10,7 @@ Re-using shader code with shader modules
 // Base vertex and fragment shader code pairs
 const vs1 = `\
 #version 300 es
-  attribute vec2 position;
+  in vec2 position;
   void main() {
     gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
   }
@@ -31,7 +31,7 @@ const fs1 = `\
 
 const vs2 = `\
 #version 300 es
-  attribute vec2 position;
+  in vec2 position;
   void main() {
     gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
   }

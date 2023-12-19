@@ -161,13 +161,7 @@ export class Model {
 
     Object.assign(this.userData, props.userData);
 
-    /** Create a shadertools platform info from the Device */
-    const platformInfo: PlatformInfo = {
-      type: device.info.type,
-      shaderLanguage: device.info.shadingLanguages[0],
-      gpu: device.info.gpu,
-      features: device.features
-    };
+    const platformInfo = getPlatformInfo(device);
 
     const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(
       platformInfo,
@@ -507,6 +501,8 @@ export class Model {
   }
 }
 
+// HELPERS
+
 /** TODO - move to core, document add tests */
 function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
   const layouts = [...layouts1];
@@ -519,4 +515,15 @@ function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]):
     }
   }
   return layouts;
+}
+
+/** Create a shadertools platform info from the Device */
+export function getPlatformInfo(device: Device): PlatformInfo {
+  return {
+    type: device.info.type,
+    shaderLanguage: device.info.shadingLanguage,
+    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
+    gpu: device.info.gpu,
+    features: device.features
+  };
 }

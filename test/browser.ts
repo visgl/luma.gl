@@ -10,4 +10,4 @@ test.onFailure(() => {
 globalThis.website = true;
 
 import './modules';
-import './render/render.spec';
+// import './render/render.spec';

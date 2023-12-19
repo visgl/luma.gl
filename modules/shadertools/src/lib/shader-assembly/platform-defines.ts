@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import {glsl} from '../glsl-utils/highlight';
-import { PlatformInfo } from './platform-info';
+import {PlatformInfo} from './platform-info';
 
 /** Adds defines to help identify GPU architecture / platform */
 export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
@@ -59,17 +59,20 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 
 /** Adds defines to let shaders portably v1/v3 check for features */
 export function getVersionDefines(platformInfo: PlatformInfo): string {
-  let versionDefines = glsl`\
-#if (__VERSION__ > 120)
+  let versionDefines = '';
+
+  if (platformInfo.features.has('webgl2')) {
+    versionDefines += glsl`\
 # define FEATURE_GLSL_DERIVATIVES
 # define FEATURE_GLSL_DRAW_BUFFERS
 # define FEATURE_GLSL_FRAG_DEPTH
 # define FEATURE_GLSL_TEXTURE_LOD
-#endif // __VERSION
 `;
+  }
 
-  if (!platformInfo.features.has('webgl2') && platformInfo.features.has('glsl-frag-depth')) {
-    versionDefines += glsl`\
+  if (!platformInfo.features.has('webgl2')) {
+    if (platformInfo.features.has('glsl-frag-depth')) {
+      versionDefines += glsl`\
 
 // FRAG_DEPTH => gl_FragDepth is available
 #ifdef GL_EXT_frag_depth
@@ -79,9 +82,9 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 # define gl_FragDepth gl_FragDepthEXT
 #endif
 `;
-  }
-  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-derivatives')) {
-    versionDefines += glsl`\
+    }
+    if (platformInfo?.features.has('glsl-derivatives')) {
+      versionDefines += glsl`\
 
 // DERIVATIVES => dxdF, dxdY and fwidth are available
 #if defined(GL_OES_standard_derivatives) || defined(FEATURE_GLSL_DERIVATIVES)
@@ -90,9 +93,9 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 # define DERIVATIVES
 #endif
 `;
-  }
-  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-frag-data')) {
-    versionDefines += glsl`\
+    }
+    if (platformInfo?.features.has('glsl-frag-data')) {
+      versionDefines += glsl`\
 
 // DRAW_BUFFERS => gl_FragData[] is available
 #ifdef GL_EXT_draw_buffers
@@ -101,9 +104,9 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 # define DRAW_BUFFERS
 #endif
 `;
-  }
-  if (!platformInfo.features.has('webgl2') && platformInfo?.features.has('glsl-texture-lod')) {
-    versionDefines += glsl`\
+    }
+    if (platformInfo?.features.has('glsl-texture-lod')) {
+      versionDefines += glsl`\
 // TEXTURE_LOD => texture2DLod etc are available
 #ifdef GL_EXT_shader_texture_lod
 # extension GL_EXT_shader_texture_lod : enable
@@ -111,6 +114,7 @@ export function getVersionDefines(platformInfo: PlatformInfo): string {
 # define TEXTURE_LOD
 #endif
 `;
+    }
   }
   return versionDefines;
 }

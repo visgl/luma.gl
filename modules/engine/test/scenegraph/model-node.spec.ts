@@ -6,13 +6,16 @@ import {getWebGLTestDevices} from '@luma.gl/test-utils';
 // import {makeSpy} from '@probe.gl/test-utils';
 import {Model, ModelNode} from '@luma.gl/engine';
 
-export const DUMMY_VS = `
-  void main() { gl_Position = vec4(1.0); }
+export const DUMMY_VS = `\
+#version 300 es
+void main() { gl_Position = vec4(1.0); }
 `;
 
-export const DUMMY_FS = `
-  precision highp float;
-  void main() { gl_FragColor = vec4(1.0); }
+export const DUMMY_FS = `\
+#version 300 es
+precision highp float;
+out vec4 fragmentColor;
+void main() { fragmentColor = vec4(1.0); }
 `;
 
 test('ModelNode#constructor', (t) => {

@@ -21,14 +21,14 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
 
 const vs = glsl`\
 #version 300 es
-  attribute vec3 positions;
-  attribute vec2 texCoords;
+  in vec3 positions;
+  in vec2 texCoords;
 
   uniform appUniforms {
     uniform mat4 uMVP;
   } app;
 
-  varying vec2 vUV;
+  out vec2 vUV;
 
   void main(void) {
     gl_Position = app.uMVP * vec4(positions, 1.0);
@@ -41,7 +41,7 @@ const fs = glsl`\
   precision highp float;
 
   uniform sampler2D uTexture;
-  varying vec2 vUV;
+  in vec2 vUV;
 
   void main(void) {
     gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));

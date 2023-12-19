@@ -137,7 +137,6 @@ If one is already cached, return it, otherwise create and cache a new one.
 - `defines`: Object indicating `#define` constants to include in the shaders.
 - `modules`: Array of module objects to include in the shaders.
 - `inject`: Object of hook injections to include in the shaders.
-- `transpileToGLSL100`: Transpile shaders to GLSL 1.0.
 
 ### release()
 

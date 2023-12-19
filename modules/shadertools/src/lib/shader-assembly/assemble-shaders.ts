@@ -7,11 +7,11 @@ import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
-import {assert} from '../utils/assert';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
+import {assert} from '../utils/assert';
 
 /** Define map */
 export type ShaderDefine = string | number | boolean;
@@ -46,8 +46,26 @@ export type AssembleShaderOptions = {
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
-  /** Whether to transpile code */
-  transpileToGLSL100?: boolean;
+  /** Whether to inject prologue */
+  prologue?: boolean;
+  /** logger object */
+  log?: any;
+};
+
+type AssembleStageOptions = {
+  /** Inject shader id #defines */
+  id?: string;
+  /** Vertex shader */
+  source: string;
+  stage: 'vertex' | 'fragment';
+  /** Modules to be injected */
+  modules: any[];
+  /** Defines to be injected */
+  defines?: Record<string, ShaderDefine>;
+  /** Hook functions */
+  hookFunctions?: (ShaderHook | string)[];
+  /** Code injections */
+  inject?: Record<string, string | ShaderInjection>;
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
@@ -97,21 +115,7 @@ export function assembleShaders(
  * @param options
  * @returns
  */
-function assembleWGSLShader(
-  platformInfo: PlatformInfo,
-  options: {
-    id?: string;
-    source: string;
-    stage: 'vertex' | 'fragment';
-    modules: any[];
-    defines?: Record<string, ShaderDefine>;
-    hookFunctions?: any[];
-    inject?: Record<string, any>;
-    transpileToGLSL100?: boolean;
-    prologue?: boolean;
-    log?: any;
-  }
-) {
+function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOptions) {
   const {
     // id,
     source,
@@ -168,16 +172,16 @@ function assembleWGSLShader(
       const name = match[3];
       if (hash) {
         if (name === 'decl') {
-          declInjections[key] = [injection];
+          declInjections[key] = [injection as any];
         } else {
-          mainInjections[key] = [injection];
+          mainInjections[key] = [injection as any];
         }
       } else {
-        hookInjections[key] = [injection];
+        hookInjections[key] = [injection as any];
       }
     } else {
       // Regex injection
-      mainInjections[key] = [injection];
+      mainInjections[key] = [injection as any];
     }
   }
 
@@ -217,12 +221,6 @@ function assembleWGSLShader(
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, stage, mainInjections);
 
-  // assembledSource = transpileShader(
-  //   assembledSource,
-  //   transpileToGLSL100 ? 100 : glslVersion,
-  //   isVertex
-  // );
-
   return assembledSource;
 }
 
@@ -238,18 +236,16 @@ function assembleGLSLShader(
   options: {
     id?: string;
     source: string;
-    language?: 'glsl' | 'wgsl',
+    language?: 'glsl' | 'wgsl';
     stage: 'vertex' | 'fragment';
     modules: ShaderModuleInstance[];
     defines?: Record<string, ShaderDefine>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
-    transpileToGLSL100?: boolean;
     prologue?: boolean;
     log?: any;
   }
 ) {
-
   const isWGSL = options.source.includes('->');
   const {
     id,
@@ -260,28 +256,23 @@ function assembleGLSLShader(
     defines = {},
     hookFunctions = [],
     inject = {},
-    transpileToGLSL100 = false,
     prologue = !isWGSL,
     log
   } = options;
 
   assert(typeof source === 'string', 'shader source must be a string');
 
+  const targetVersion = platformInfo.shaderLanguageVersion;
+
   const sourceLines = source.split('\n');
-  let glslVersion = 100;
-  let versionLine = '';
-  let coreSource = source;
-  // Extract any version directive string from source.
-  // TODO : keep all pre-processor statements at the beginning of the shader.
-  if (sourceLines[0].indexOf('#version ') === 0) {
-    glslVersion = 300; // TODO - regexp that matches actual version number
-    versionLine = sourceLines[0];
-    coreSource = sourceLines.slice(1).join('\n');
-  } else {
-    versionLine = `#version ${glslVersion}`;
+  if (sourceLines[0].indexOf('#version ') !== 0) {
+    throw new Error('GLSL: no #version');
   }
 
-  const targetVersion = transpileToGLSL100 ? 100 : glslVersion;
+  // Extract any version directive string from source.
+  const versionLine = sourceLines[0];
+  // TODO : keep all pre-processor statements at the beginning of the shader.
+  const coreSource = sourceLines.slice(1).join('\n');
 
   // Combine Module and Application Defines
   const allDefines = {};
@@ -424,7 +415,6 @@ function getShaderNameDefine(options: {
 `
     : '';
 }
-
 
 /** Generates application defines from an object of key value pairs */
 function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {

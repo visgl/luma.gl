@@ -7,14 +7,17 @@ import {Transform} from '@luma.gl/engine';
 import {Buffer, Device, glsl} from '@luma.gl/core';
 
 const VS = glsl`\
-attribute float src;
-varying float dst;
+#version 300 es
+in float src;
+out float dst;
 void main() { dst = src * src; }
 `;
 
 const FS = glsl`\
-varying float dst;
-void main() { gl_FragColor.x = dst; }
+#version 300 es
+in float dst;
+out vec4 fragColor;
+void main() { fragColor.x = dst; }
 `;
 
 test('Transform#constructor', async (t) => {

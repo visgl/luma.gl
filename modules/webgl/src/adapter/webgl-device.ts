@@ -582,8 +582,9 @@ function setConstantUintArray(device: WebGLDevice, location: number, array: Uint
   // }
 }
 
-/**
- *
+/** 
+ * Compares contents of two typed arrays 
+ * @todo max length?
  */
 function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {
   if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {

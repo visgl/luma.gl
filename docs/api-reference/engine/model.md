@@ -86,7 +86,6 @@ model.draw();
 | `programManager`     |                      | `ProgramManager` to use for program creation and caching.                                                                      |
 | `varyings`           | (WebGL 2)            | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).                        |
 | `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `GL.SEPARATE_ATTRIBS`. |
-| `transpileToGLSL100` |                      | Transpile vertex and fragment shaders to GLSL 1.0.                                                                             |
 
 `ModelProps` passes through `RenderPipelineProps`
 

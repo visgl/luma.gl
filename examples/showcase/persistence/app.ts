@@ -34,8 +34,8 @@ const sphere: {uniformTypes: Record<keyof SphereUniforms, ShaderUniformType>} = 
 const SPHERE_VS = glsl`\
 #version 300 es
 
-attribute vec3 positions;
-attribute vec3 normals;
+in vec3 positions;
+in vec3 normals;
 
 uniform sphereUniforms {
   // fragment shader
@@ -46,7 +46,7 @@ uniform sphereUniforms {
   mat4 projectionMatrix;
 } sphere;
 
-varying vec3 normal;
+out vec3 normal;
 
 void main(void) {
   gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(positions, 1.0);
@@ -68,7 +68,7 @@ uniform sphereUniforms {
   mat4 projectionMatrix;
 } sphere;
 
-varying vec3 normal;
+in vec3 normal;
 
 void main(void) {
   float attenuation = 1.0;

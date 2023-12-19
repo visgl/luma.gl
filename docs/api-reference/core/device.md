@@ -74,20 +74,20 @@ console.error(message);
 
 ### `DeviceProps`
 
-| Parameter                       | Default            | Description                                                                                                                 |
-| ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `type`                          | `'best-available'` | `'webgpu`', `'webgl'`, `'webgl1'`, `'webgl2'`                                                                               |
-| `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.               |
+| Parameter                       | Default            | Description                                                                                                               |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `type`                          | `'best-available'` | `'webgpu`', `'webgl'`, `'webgl1'`, `'webgl2'`                                                                             |
+| `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.             |
 | priority.                       |
-| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                         |
-| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                              |
-| `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                  |
-| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                             |
-| `stencil?`                      | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                            |
-| `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                             |
-| `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.   |
-| `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture. |
-| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                             |
+| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
+| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
+| `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                |
+| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                           |
+| `stencil?`                      | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
+| `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                           |
+| `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
+| `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
+| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
 
 ## Static Methods
 
@@ -148,19 +148,26 @@ info: DeviceInfo
 
 Information about the device (vendor, versions etc).
 
-Get debug information about the device
+Get debug information about the device:
 
-| Field                    | Type     | Description                       |
-| ------------------------ | -------- | --------------------------------- |
-| `vendor`                 | `string` | GPU vendor (unmasked if possible) |
-| `renderer`               | `string` | Renderer (unmasked if possible)   |
-| `version`                | `string` | WebGL version                     |
-| `shadingLanguageVersion` | `string` | shading language version          |
+| Field                    | Type     | Description                           |
+| ------------------------ | -------- | ------------------------------------- |
+| `vendor`                 | `string` | GPU vendor (unmasked if possible)     |
+| `renderer`               | `string` | Renderer (unmasked if possible)       |
+| `version`                | `string` | WebGL version                         |
+| `gpu`                    | `string` | GPU name                              |
+| `gpuBackend?`            | `string` | `'angle' \| 'metal' \| 'unknown'`     |
+| `shadingLanguage`        | `string` | shading language (`'glsl' \| 'wgsl'`) |
+| `shadingLanguageVersion` | `number` | shading language version              |
 
 Remarks:
-
+- Shading language version is the highest supported version of the device's shading language.
+- Version numbers are calculated as:  `<major version> * 100 + <minor version> * 10 + <patch version>`. 
+- The WGSL version is always `100` 
+- The GLSL version is either `300` (WebGL2) or `100` (WebGL1). 
+- Sometimes a vendor provides multiple backends (e.g. Apple ANGLE vs Apple Metal)
 - WebGPU Devices currently do not provide much information due to limitations in the WebGPU API.
-- WebGL Devices can usually provide the full set of information (through the `WEBGL_debug_renderer_info` extension).
+- WebGL Devices can usually provide rich information (through the `WEBGL_debug_renderer_info` extension).
 
 ### features
 
