@@ -11,26 +11,32 @@ export type UniformInfo = {
   format?: UniformFormat; 
 } & PropType;
 
+
+
 /** 
  * A shader module definition object
  * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
  */
-export type ShaderModule<UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>, SettingsT extends Record<string, unknown> = UniformsT, BindingsT extends Record<string, unknown> = {}> = {
-  name: string;
-  fs?: string;
-  vs?: string;
-  
+export type ShaderModule<PropsT extends Record<string, unknown> = Record<string, unknown>, UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>, BindingsT extends Record<string, unknown> = {}> = {
+  /** Used for type inference not for values */
+  props?: Required<PropsT>;
   /** Used for type inference, not currently used for values */
   uniforms?: UniformsT;
 
-  /** Uniform shader types */
+  name: string;
+  fs?: string;
+  vs?: string;
+
+  /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
   uniformTypes?: Record<keyof UniformsT, UniformFormat>;
   /** Uniform JS prop types  */
   uniformPropTypes?: Record<keyof UniformsT, UniformInfo>;
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
+
   /** Function that maps settings to uniforms */
-  getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
+  // getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
+  getUniforms?: (settings?: any, prevUniforms?: any) => Record<string, UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
@@ -38,9 +44,12 @@ export type ShaderModule<UniformsT extends Record<string, UniformValue> = Record
   defines?: Record<string, string | number>;
   /** Injections */
   inject?: Record<string, string | {injection: string; order: number;}>;
-  dependencies?: ShaderModule[];
+  dependencies?: ShaderModule<any, any>[];
   /** Information on deprecated properties */
   deprecations?: ShaderModuleDeprecation[];
+
+  /** Internal */
+  normalized?: boolean;
 };
 
 /** Use to generate deprecations when shader module is used */

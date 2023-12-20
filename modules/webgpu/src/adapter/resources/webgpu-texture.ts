@@ -19,8 +19,8 @@ export class WebGPUTexture extends Texture {
   readonly view: GPUTextureView;
   sampler: WebGPUSampler;
 
-  override height: number;
-  override width: number;
+  override height: number = 1;
+  override width: number = 1;
 
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');

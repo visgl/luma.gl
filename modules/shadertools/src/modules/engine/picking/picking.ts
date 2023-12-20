@@ -9,6 +9,38 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
 
 /** 
+ * Props for the picking module, which depending on mode renders picking colors or highlighted item.
+ * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
+ * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
+ */
+export type PickingProps = {
+  /** Are we picking? I.e. rendering picking colors? */
+  isActive?: boolean;
+  /** Do we have a highlighted item? */
+  isHighlightActive?: boolean;
+  /** Set to true when picking an attribute value instead of object index */
+  isAttribute?: boolean;
+  /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
+  highlightedObjectColor?: NumberArray | null;
+  /** Color of visual highlight of "selected" item */
+  highlightColor?: NumberArray;
+  /** Color range 0-1 or 0-255 */
+  useFloatColors?: boolean;
+};
+
+// TODO - 
+export type PickingSettings = Omit<PickingUniforms, 'isHighlightActive' | 'highlightedObjectColor'> & {
+  /**
+   * Set to a picking color to visually highlight that item.
+   * The picking module will persist the last highlighted object, unless
+   * `null` is passed to explicitly clear
+   **/
+  highlightedObjectColor?: NumberArray | null;
+  /** Color of visual highlight of "selected" item */
+  highlightColor?: NumberArray;
+};
+
+/** 
  * Uniforms for the picking module, which renders picking colors and highlighted item. 
  * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
  * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
@@ -20,7 +52,7 @@ export type PickingUniforms = {
    */
   isActive?: boolean;
   /** Set to true when picking an attribute value instead of object index */
-  isAttribute: boolean;
+  isAttribute?: boolean;
   /** Color range 0-1 or 0-255 */
   useFloatColors?: boolean;
   /** Do we have a highlighted item? */
@@ -29,15 +61,6 @@ export type PickingUniforms = {
   highlightedObjectColor?: NumberArray;
   /** Color of visual highlight of "selected" item */
   highlightColor?: NumberArray;
-};
-
-export type PickingSettings = Omit<PickingUniforms, 'isHighlightActive' | 'highlightedObjectColor'> & {
-  /**
-   * Set to a picking color to visually highlight that item.
-   * The picking module will persist the last highlighted object, unless
-   * `null` is passed to explicitly clear
-   **/
-  highlightedObjectColor?: NumberArray | null;
 };
 
 const vs = glsl`\
@@ -180,7 +203,7 @@ vec4 picking_filterColor(vec4 color) {
  * and correspondingly, supports picking and highlighting groups of
  * primitives with the same picking color in non-instanced draw-calls
  */
-export const picking: ShaderModule<PickingUniforms, PickingSettings> = {
+export const picking: ShaderModule<PickingProps, PickingUniforms> = {
   name: 'picking',
   vs,
   fs,
@@ -203,7 +226,7 @@ export const picking: ShaderModule<PickingUniforms, PickingSettings> = {
   getUniforms
 };
 
-function getUniforms(opts: Partial<PickingSettings> = {}, prevUniforms?: PickingUniforms): PickingUniforms {
+function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {...picking.defaultUniforms};
 
   if (opts.highlightedObjectColor === undefined) {

@@ -17,7 +17,7 @@ export function transpileGLSLShader(
 ): string {
   const sourceGLSLVersion = Number(source.match(/^#version[ \t]+(\d+)/m)?.[1] || 100);
   if (sourceGLSLVersion !== 300) {
-    // TODO - longer error message to help deck.gl layer writers
+    // TODO - we splurge on a longer error message to help deck.gl custom layer developers
     throw new Error('luma.gl v9 only supports GLSL 3.00 shader sources');
   }
 

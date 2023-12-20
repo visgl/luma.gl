@@ -79,7 +79,7 @@ export type TiltShiftProps = {
  * angle. The image is then blurred with a blur radius that starts at zero
  * on the line and increases further from the line.
  */
-export const tiltShift: ShaderPass<TiltShiftProps> = {
+export const tiltShift: ShaderPass<TiltShiftProps, TiltShiftProps> = {
   name: 'tiltShift',
   uniformTypes: {
     blurRadius: 'f32',

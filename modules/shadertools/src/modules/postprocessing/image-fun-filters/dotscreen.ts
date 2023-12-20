@@ -48,7 +48,7 @@ export type DotScreenProps = {
  * Simulates a black and white halftone rendering of the image by multiplying
  * pixel values with a rotated 2D sine wave pattern.
  */
-export const dotScreen: ShaderPass<DotScreenProps> = {
+export const dotScreen: ShaderPass<DotScreenProps, DotScreenProps> = {
   name: 'dotScreen',
   uniformTypes: {
     center: 'vec2<f32>',

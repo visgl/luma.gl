@@ -19,8 +19,8 @@ export type PhongMaterialUniforms = {
 export const phongMaterial: ShaderModule<PhongMaterialProps, PhongMaterialUniforms> = {
   name: 'phong-lighting',
   // Note these are switched between phong and gouraud
-  vs: PHONG_FS,
-  fs: PHONG_VS,
+  vs: PHONG_VS,
+  fs: PHONG_FS,
   defines: {
     LIGHTING_FRAGMENT: 1
   },
@@ -37,7 +37,7 @@ export const phongMaterial: ShaderModule<PhongMaterialProps, PhongMaterialUnifor
     shininess: 32,
     specularColor: [0.15, 0.15, 0.15]
   },
-  getUniforms(props: PhongMaterialProps): PhongMaterialUniforms {
+  getUniforms(props?: PhongMaterialProps): PhongMaterialUniforms {
     return {...phongMaterial.defaultUniforms, ...props};
   }
 };

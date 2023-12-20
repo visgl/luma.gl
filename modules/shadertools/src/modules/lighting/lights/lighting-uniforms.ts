@@ -51,11 +51,11 @@ export type LightingProps = {
   directionalLights?: DirectionalLight[];
 };
 
-export type LightingModuleUniforms = {
+export type LightingUniforms = {
   enabled: boolean;
   ambientLightColor: Readonly<NumberArray>;
   numberOfLights: number;
-  lightType: LIGHT_TYPE; // [];
+  lightType: number; // [];
   lightColor: Readonly<NumberArray>; // [];
   lightPosition: Readonly<NumberArray>; // [];
   lightDirection: Readonly<NumberArray>; // [];
@@ -63,11 +63,14 @@ export type LightingModuleUniforms = {
 };
 
 /** UBO ready lighting module */
-export const lighting: ShaderModule<LightingModuleUniforms, LightingProps> = {
+export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
   name: 'lighting',
   vs: lightingUniforms,
   fs: lightingUniforms,
-  getUniforms,
+
+  getUniforms(props?: LightingProps, prevUniforms?: LightingUniforms): LightingUniforms {
+    return getUniforms(props);
+  },
 
   defines: {
     MAX_LIGHTS
@@ -98,7 +101,7 @@ export const lighting: ShaderModule<LightingModuleUniforms, LightingProps> = {
   }
 };
 
-function getUniforms(props?: LightingProps): LightingModuleUniforms {
+function getUniforms(props?: LightingProps): LightingUniforms {
   // TODO legacy
   if (!props) {
     return {...lighting.defaultUniforms};
@@ -133,8 +136,8 @@ function getLightSourceUniforms({
   ambientLight,
   pointLights = [],
   directionalLights = []
-}: LightingProps): Partial<LightingModuleUniforms> {
-  const lightSourceUniforms: Partial<LightingModuleUniforms> = {
+}: LightingProps): Partial<LightingUniforms> {
+  const lightSourceUniforms: Partial<LightingUniforms> = {
     // lightType: new Array(MAX_LIGHTS).fill(0),
     // lightColor: new Array(MAX_LIGHTS).fill([0, 0, 0]),
     // lightPosition: new Array(MAX_LIGHTS).fill([0, 0, 0]),

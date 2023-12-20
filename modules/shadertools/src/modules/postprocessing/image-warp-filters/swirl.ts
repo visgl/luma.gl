@@ -52,7 +52,7 @@ export type SwirlProps = {
 /**
  * Warps a circular region of the image in a swirl.
  */
-export const swirl: ShaderPass<SwirlProps> = {
+export const swirl: ShaderPass<SwirlProps, SwirlProps> = {
   name: 'swirl',
   fs,
   uniformTypes: {

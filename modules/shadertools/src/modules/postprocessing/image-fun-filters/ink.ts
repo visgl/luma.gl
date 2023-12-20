@@ -54,7 +54,7 @@ export type InkProps = {
  * certain threshold. The edge detection value is the difference of two
  * copies of the image, each blurred using a blur of a different radius.
  */
-export const ink: ShaderPass<InkProps> = {
+export const ink: ShaderPass<InkProps, InkProps> = {
   name: 'ink',
   uniformTypes: {
     strength: 'f32'

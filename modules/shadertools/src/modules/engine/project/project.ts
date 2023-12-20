@@ -11,7 +11,7 @@ const IDENTITY_MATRIX: Readonly<NumberArray> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
  * @note Projection uniforms are normally constant across draw calls,
  * at least for each view.
  */
-export type ProjectionSettings = {
+export type ProjectionProps = {
   viewMatrix?: Readonly<Matrix4 | NumberArray>;
   projectionMatrix?: Readonly<Matrix4 | NumberArray>;
   cameraPositionWorld?: Readonly<Vector3 | NumberArray>;
@@ -35,7 +35,7 @@ const DEFAULT_MODULE_OPTIONS: Required<ProjectionUniforms> = {
   cameraPositionWorld: [0, 0, 0]
 };
 
-function getUniforms(opts: ProjectionSettings = DEFAULT_MODULE_OPTIONS, prevUniforms: ProjectionUniforms = {}): ProjectionUniforms {
+function getUniforms(opts: ProjectionProps = DEFAULT_MODULE_OPTIONS, prevUniforms: ProjectionUniforms = {}): ProjectionUniforms {
   // const viewProjectionInverse = viewProjection.invert();
   // viewInverseMatrix: view.invert(),
   // viewProjectionInverseMatrix: viewProjectionInverse
@@ -144,7 +144,7 @@ vec3 project_getNormal_World() {
 /**
  * Projects coordinates
  */
-export const projection: ShaderModule = {
+export const projection: ShaderModule<ProjectionProps, ProjectionUniforms> = {
   name: 'projection',
   // Note: order and types MUST match declarations in shader
   uniformTypes: {

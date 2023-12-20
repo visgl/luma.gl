@@ -25,50 +25,53 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
 
 const vs = glsl`\
 #version 300 es
-  in vec3 positions;
-  in vec3 normals;
-  in vec2 texCoords;
 
-  out vec3 vPosition;
-  out vec3 vNormal;
-  out vec2 vUV;
+in vec3 positions;
+in vec3 normals;
+in vec2 texCoords;
 
-  uniform appUniforms {
-    mat4 modelMatrix;
-    mat4 mvpMatrix;
-    vec3 eyePosition;
-  } app;
+out vec3 vPosition;
+out vec3 vNormal;
+out vec2 vUV;
 
-  void main(void) {
-    vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
-    vNormal = mat3(app.modelMatrix) * normals;
-    vUV = texCoords;
-    gl_Position = app.mvpMatrix * vec4(positions, 1.0);
-  }
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 mvpMatrix;
+  vec3 eyePosition;
+} app;
+
+void main(void) {
+  vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
+  vNormal = mat3(app.modelMatrix) * normals;
+  vUV = texCoords;
+  gl_Position = app.mvpMatrix * vec4(positions, 1.0);
+}
 `;
 
 const fs = glsl`\
 #version 300 es
-  precision highp float;
+precision highp float;
 
-  in vec3 vPosition;
-  in vec3 vNormal;
-  in vec2 vUV;
+in vec3 vPosition;
+in vec3 vNormal;
+in vec2 vUV;
 
-  uniform sampler2D uTexture;
+uniform sampler2D uTexture;
 
-  uniform appUniforms {
-    mat4 modelMatrix;
-    mat4 mvpMatrix;
-    vec3 eyePosition;
-  } uApp;
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 mvpMatrix;
+  vec3 eyePosition;
+} uApp;
 
-  void main(void) {
-    vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-    vec3 surfaceColor = lighting_getLightColor(materialColor, uApp.eyePosition, vPosition, normalize(vNormal));
+out vec4 fragColor;
 
-    gl_FragColor = vec4(surfaceColor, 1.0);
-  }
+void main(void) {
+  vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
+  vec3 surfaceColor = lighting_getLightColor(materialColor, uApp.eyePosition, vPosition, normalize(vNormal));
+
+  fragColor = vec4(surfaceColor, 1.0);
+}
 `;
 
 // APPLICATION

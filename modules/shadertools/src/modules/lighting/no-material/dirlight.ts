@@ -9,6 +9,8 @@ export type DirlightProps = {
   lightDirection?: NumberArray | [number, number, number]
 }
 
+export type DirlightUniforms = DirlightProps;
+
 const vs = glsl`\
 varying vec3 dirlight_vNormal;
 
@@ -34,7 +36,7 @@ vec4 dirlight_filterColor(vec4 color) {
 /**
  * Cheap lighting - single directional light, single dot product, one uniform
  */
-export const dirlight: ShaderModule<DirlightProps> = {
+export const dirlight: ShaderModule<DirlightProps, DirlightUniforms> = {
   name: 'dirlight',
   dependencies: [],
   vs,
@@ -48,7 +50,7 @@ export const dirlight: ShaderModule<DirlightProps> = {
   getUniforms
 };
 
-function getUniforms(opts: DirlightProps = dirlight.defaultUniforms): Record<string, unknown> {
+function getUniforms(opts: DirlightProps = dirlight.defaultUniforms): DirlightUniforms {
   const uniforms: Record<string, unknown> = {};
   if (opts.lightDirection) {
     // eslint-disable-next-line camelcase
