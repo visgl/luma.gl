@@ -3,7 +3,7 @@ import test from 'tape-promise/tape';
 import {VertexFormat, getDataTypeFromTypedArray, getTypedArrayFromDataType, getVertexFormatFromAttribute} from '@luma.gl/core';
 import type {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
 
-const TEST_CASES: {typedArray: TypedArray, size?: number, result?: VertexFormat, error?: string}[] = [
+const TEST_CASES: {typedArray: TypedArray, size?: number, normalized?: boolean, result?: VertexFormat, error?: string}[] = [
   {typedArray: new Uint8Array(), size: 4, result: 'uint8x4'},
   {typedArray: new Uint8ClampedArray(), size: 2, result: 'uint8x2'},
   {typedArray: new Int8Array(), size: 4, result: 'sint8x4'},
@@ -15,6 +15,12 @@ const TEST_CASES: {typedArray: TypedArray, size?: number, result?: VertexFormat,
   {typedArray: new Float32Array(), size: 3, result: 'float32x3'},
   {typedArray: new Float32Array(), size: 4, result: 'float32x4'},
 
+  {typedArray: new Uint8Array(), size: 2, normalized: true, result: 'unorm8x2'},
+  {typedArray: new Uint8ClampedArray(), size: 4, normalized: true, result: 'unorm8x4'},
+  {typedArray: new Int8Array(), size: 2, normalized: true, result: 'snorm8x2'},
+  {typedArray: new Uint16Array(), size: 2, normalized: true, result: 'unorm16x2'},
+  {typedArray: new Int16Array(), size: 4, normalized: true, result: 'snorm16x4'},
+
   {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
   {typedArray: new Int32Array(), error: 'Missing attribute size'},
   {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
@@ -23,9 +29,9 @@ const TEST_CASES: {typedArray: TypedArray, size?: number, result?: VertexFormat,
 ];
 
 test('api#getVertexFormatFromAttribute', t => {
-  for (const {typedArray, size, result, error} of TEST_CASES) {
+  for (const {typedArray, size, normalized, result, error} of TEST_CASES) {
     if (result) {
-      const vertexFormat = getVertexFormatFromAttribute(typedArray, size);
+      const vertexFormat = getVertexFormatFromAttribute(typedArray, size, normalized);
       t.deepEqual(
         vertexFormat,
         result,
