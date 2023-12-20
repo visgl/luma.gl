@@ -65,7 +65,7 @@ ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.mes
 `;
   }
   return options?.html
-    ? `<div style="color:red;"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`
+    ? `<div class='luma-compiler-log-error' style="color:red;"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`
     : `${message.type.toUpperCase()}: ${message.message}`;
 }
 
