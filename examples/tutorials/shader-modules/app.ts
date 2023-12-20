@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, _ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 
 const INFO_HTML = `
@@ -24,8 +24,9 @@ const fs1 = `\
     vec3 hsv;
   } color;
 
+  out vec4 fragColor;
   void main() {
-    gl_FragColor = vec4(color_hsv2rgb(color.hsv), 1.0);
+    fragColor = vec4(color_hsv2rgb(color.hsv), 1.0);
   }
 `;
 
@@ -46,8 +47,9 @@ const fs2 = `\
     vec3 hsv;
   } color;
 
+  out vec4 fragColor;
   void main() {
-    gl_FragColor = vec4(color_hsv2rgb(color.hsv) - 0.3, 1.0);
+    fragColor = vec4(color_hsv2rgb(color.hsv) - 0.3, 1.0);
   }
 `;
 
@@ -61,12 +63,12 @@ type ColorModuleProps = {
 const colorModule: ShaderModule<ColorModuleProps> = {
   name: 'color',
   fs: `
-    vec3 color_hsv2rgb(vec3 hsv) {
-      vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-      vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
-      vec3 rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
-      return rgb;
-    }
+vec3 color_hsv2rgb(vec3 hsv) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+  vec3 rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
+  return rgb;
+}
   `,
   uniformTypes: {
     hsv: 'vec3<f32>'
@@ -80,7 +82,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model2: Model;
   positionBuffer: Buffer;
 
-  uniformStore = new UniformStore<{color: ColorModuleProps}>({
+  shaderInputs1 = new _ShaderInputs<{color: ColorModuleProps}>({
+    color: colorModule
+  });
+  shaderInputs2 = new _ShaderInputs<{color: ColorModuleProps}>({
     color: colorModule
   });
 
@@ -92,12 +97,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'color', {color: {hsv: [0.7, 1.0, 1.0]}});
-    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'color', {color: {hsv: [1.0, 1.0, 1.0]}});
+    this.shaderInputs1.setProps({color: {hsv: [0.7, 1.0, 1.0]}});
+    this.shaderInputs2.setProps({color: {hsv: [1.0, 1.0, 1.0]}});
+
+    const uniformStore = new UniformStore(this.shaderInputs1.modules);
+    this.uniformBuffer1 = uniformStore.createUniformBuffer(device, 'color', this.shaderInputs1.getUniformValues());
+    this.uniformBuffer2 = uniformStore.createUniformBuffer(device, 'color', this.shaderInputs2.getUniformValues());
+    uniformStore.destroy();
 
     this.model1 = new Model(device, {
       vs: vs1,
       fs: fs1,
+      // shaderInputs: this.shaderInputs1,
       modules: [colorModule],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
@@ -112,6 +123,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model2 = new Model(device, {
       vs: vs2,
       fs: fs2,
+      // shaderInputs: this.shaderInputs2,
       modules: [colorModule],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
@@ -127,8 +139,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize() {
     this.model1.destroy();
     this.model2.destroy();
-    this.positionBuffer.delete();
-    this.uniformStore.destroy();
+    this.positionBuffer.destroy();
     this.uniformBuffer1.destroy();
     this.uniformBuffer2.destroy();
   }

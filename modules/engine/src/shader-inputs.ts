@@ -14,8 +14,8 @@ export type ShaderModuleInputs<
   defaultUniforms?: UniformsT;
   getUniforms?: (settings: Partial<PropsT>, prevUniforms?: UniformsT) => UniformsT;
 
-  /** Not uses. Used to access props type */
-  _props?: PropsT;
+  /** Not used. Used to access props type */
+  props?: PropsT;
 
   bindings?: Record<
     keyof BindingsT,
@@ -24,6 +24,8 @@ export type ShaderModuleInputs<
       type: 'texture' | 'sampler' | 'uniforms';
     }
   >;
+
+  uniformTypes?: any;
 };
 
 /**
@@ -38,6 +40,10 @@ export class ShaderInputs<
     Record<string, Record<string, unknown>>
   >
 > {
+  /** 
+   * The map of modules 
+   * @todo should should this include the resolved dependencies?
+   */
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}>;
 
   /** Stores the uniform values for each module */
@@ -66,7 +72,7 @@ export class ShaderInputs<
       const moduleName = name as keyof ShaderPropsT;
 
       // Get default uniforms from module
-      this.moduleUniforms[moduleName] = module.getUniforms({});
+      this.moduleUniforms[moduleName] = module.getUniforms?.({}) || module.defaultUniforms || {};
       this.moduleBindings[moduleName] = {};
     }
   }
@@ -83,9 +89,11 @@ export class ShaderInputs<
       const moduleProps = props[moduleName];
       const module = this.modules[moduleName];
 
-      const uniforms = module.getUniforms(moduleProps);
-      this.moduleUniforms[moduleName] = uniforms;
+      const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
+      this.moduleUniforms[moduleName] = uniforms || moduleProps as any;
       // this.moduleUniformsChanged ||= moduleName;
+
+      console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
 
       // TODO - Get Module bindings
       // const bindings = module.getBindings?.(moduleProps);
@@ -98,7 +106,16 @@ export class ShaderInputs<
   //   return this.moduleUniforms;
   // }
 
-  getUniformBufferValues(): Record<keyof ShaderPropsT, Record<string, UniformValue>> {
+  /** 
+   * Return the map of modules 
+   * @todo should should this include the resolved dependencies?
+   */
+  getModules(): Record<string, ShaderModuleInputs<any>> {
+    return this.modules;
+  }
+
+  /** Get all uniform values for all modules */
+  getUniformValues(): Record<keyof ShaderPropsT, Record<string, UniformValue>> {
     return this.moduleUniforms;
   }
 

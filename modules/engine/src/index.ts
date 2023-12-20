@@ -55,4 +55,5 @@ export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geome
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 // EXPERIMENTAL
+export type {ShaderModuleInputs} from './shader-inputs';
 export {ShaderInputs as _ShaderInputs} from './shader-inputs';

@@ -9,8 +9,11 @@ import {ShaderInputs} from '../src/shader-inputs';
 test('ShaderInputs#picking', (t) => {
   const shaderInputsUntyped = new ShaderInputs({picking});
   // Add 
-  shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255], invalidKey: 1}});
+  shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   t.ok(shaderInputsUntyped, 'untyped');
+
+  // @ts-expect-error
+  shaderInputsUntyped.setProps({picking: {invalidKey: 1}});
 
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
@@ -23,7 +26,7 @@ test('ShaderInputs#picking', (t) => {
 
 test('ShaderInputs#picking', (t) => {
   const shaderInputsUntyped = new ShaderInputs({picking});
-  shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255], abc: 1}});
+  shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   t.ok(shaderInputsUntyped, 'untyped');
 
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});

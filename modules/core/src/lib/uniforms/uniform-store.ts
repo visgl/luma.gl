@@ -20,7 +20,7 @@ export type ShaderModuleInputs = {
  * - It can update managed uniform buffers with a single call
  * - It performs some book keeping on what has changed to minimize unnecessary writes to uniform buffers.
  */
-export class UniformStore<TPropGroups extends Record<string, Record<string, unknown>>> {
+export class UniformStore<TPropGroups extends Record<string, Record<string, unknown>> = Record<string, Record<string, unknown>>> {
   /** Stores the uniform values for each uniform block */
   uniformBlocks = new Map<keyof TPropGroups, UniformBlock>;
   /** Can generate data for a uniform buffer for each block from data */

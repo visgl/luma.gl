@@ -6,6 +6,8 @@ import {makePropValidators, getValidatedProperties, PropValidator} from '../filt
 import {ShaderModule, ShaderModuleDeprecation} from './shader-module';
 import { ShaderInjection, normalizeInjections } from '../shader-assembly/shader-injections';
 
+let index = 1;
+
 /** An initialized ShaderModule, ready to use with `assembleShaders()` */
 export class ShaderModuleInstance {
   name: string;
@@ -34,12 +36,13 @@ export class ShaderModuleInstance {
         typeof module !== 'string',
         `Shader module use by name is deprecated. Import shader module '${module}' and use it directly.`
       );
-      assert(module.name, 'shader module has no name');
+      if (!module.name) {
+        console.warn('shader module has no name');
+        module.name = `shader-module-${index++}`;
+      }
 
       const moduleObject = new ShaderModuleInstance(module);
-      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(
-        module.dependencies || []
-      );
+      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(module.dependencies || []);
 
       return moduleObject;
     });
