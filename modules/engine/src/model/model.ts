@@ -295,9 +295,7 @@ export class Model {
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
     this.setAttributes(gpuGeometry.attributes);
-    if (gpuGeometry.indices) {
-      this.setIndexBuffer(gpuGeometry.indices);
-    }
+    this.setIndexBuffer(gpuGeometry.indices);
   }
 
   /**
