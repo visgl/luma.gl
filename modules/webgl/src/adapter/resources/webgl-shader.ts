@@ -63,20 +63,22 @@ export class WEBGLShader extends Shader {
     // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
     this.compilationStatus = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS) ? 'success' : 'error';
 
+    // The `Shader` base class will determine if debug window should be opened based on props
     this.debugShader();
+
+    if (this.compilationStatus !== 'error') {
+      throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
+    }
   }
 }
 
+// TODO - Original code from luma.gl v8 - keep until new debug functionality has matured
 // if (!compilationSuccess) {
-//       const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
-//       const messages = parsedLog.filter(message => message.type === 'error');
-//       const formattedLog = formatCompilerLog(messages, source, {showSourceCode: 'all', html: true});
-//       const shaderDescription = `${this.stage} shader ${shaderName}`;
-//       log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();
-
-//       displayShaderLog(parsedLog, source, shaderName);
-//       throw new Error(`GLSL compilation errors in ${shaderName}`);
-//     }
-//   }
+//   const parsedLog = shaderLog ? parseShaderCompilerLog(shaderLog) : [];
+//   const messages = parsedLog.filter(message => message.type === 'error');
+//   const formattedLog = formatCompilerLog(messages, source, {showSourceCode: 'all', html: true});
+//   const shaderDescription = `${this.stage} shader ${shaderName}`;
+//   log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();
+//   displayShaderLog(parsedLog, source, shaderName);
 // }
 

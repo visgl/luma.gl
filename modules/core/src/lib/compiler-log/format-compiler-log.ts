@@ -19,11 +19,11 @@ export function formatCompilerLog(
     case 'all':
       // Parse the error - note: browser and driver dependent
       let currentMessage = 0;
-      for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-        formattedLog += getNumberedLine(lines[lineNum], lineNum, options);
-        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum + 1) {
+      for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
+        formattedLog += getNumberedLine(lines[lineNum - 1], lineNum, options);
+        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum) {
           const message = log[currentMessage++];
-          formattedLog += formatCompilerMessage(message, lines, message.lineNum + 1, {
+          formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
             ...options,
             inlineSource: false
           });
@@ -75,8 +75,8 @@ function getNumberedLines(
   options?: {html?: boolean}
 ): string {
   let numberedLines = '';
-  for (let line = lineNum - 2; line <= lineNum; line++) {
-    const sourceLine = lines[line];
+  for (let lineIndex = lineNum - 2; lineIndex <= lineNum; lineIndex++) {
+    const sourceLine = lines[lineIndex - 1];
     if (sourceLine !== undefined) {
       numberedLines += getNumberedLine(sourceLine, lineNum, options);
     }

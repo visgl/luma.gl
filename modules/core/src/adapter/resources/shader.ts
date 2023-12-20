@@ -89,8 +89,15 @@ export abstract class Shader extends Resource<ShaderProps> {
     this._displayShaderLog(messages);
   }
 
+  // PRIVATE
+
   /** In-browser UI logging of errors */
   protected _displayShaderLog(messages: readonly CompilerMessage[]): void {
+    // Return if under Node.js / incomplete `document` polyfills
+    if (typeof document === 'undefined' || !document?.createElement) {
+      return;
+    }
+
     const shaderName: string = getShaderInfo(this.source).name;
     const shaderTitle: string = `${this.stage} ${shaderName}`;
     const htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
