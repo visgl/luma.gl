@@ -39,12 +39,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 100});
-    const eye = [this.vantage[0] * Math.sin(0.001 * time), this.vantage[1], this.vantage[2] * Math.cos(0.001 * time)];
-    const viewMatrix = new Matrix4().lookAt({eye, center: this.center});
+    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 1000});
+    const vantage = [this.vantage[0] * Math.sin(0.001 * time), this.vantage[1], this.vantage[2] * Math.cos(0.001 * time)];
 
     this.scenes[0].traverse((node, {worldMatrix}) => {
       const {model} = (node as ModelNode);
+
+      const eye = worldMatrix.transformAsPoint(vantage);
+      const center = worldMatrix.transformAsPoint(this.center);
+      const viewMatrix = new Matrix4().lookAt({eye, center});
       const u_MVPMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix).multiplyRight(worldMatrix);
       model.setUniforms({
         u_Camera: eye,
