@@ -66,7 +66,7 @@ export class WEBGLShader extends Shader {
     // The `Shader` base class will determine if debug window should be opened based on props
     this.debugShader();
 
-    if (this.compilationStatus !== 'error') {
+    if (this.compilationStatus === 'error') {
       throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
     }
   }
