@@ -6,6 +6,8 @@ import {VertexFormat} from '../types/vertex-formats';
 // type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance
 type DataType = 'uint8' | 'sint8' | 'uint16' | 'sint16' | 'uint32' | 'sint32' | 'float32';
 
+type DataTypeNorm = 'unorm8' | 'snorm8'| 'unorm16' | 'snorm16';
+
 export function getDataTypeFromTypedArray(arrayOrType: TypedArray | TypedArrayConstructor): DataType {
   const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
   switch (type) {
@@ -53,18 +55,21 @@ export function getTypedArrayFromDataType(dataType: DataType): TypedArrayConstru
 }
 
 /** Get the vertex format for an attribute with TypedArray and size */
-export function getVertexFormatFromAttribute(typedArray: TypedArray, size?: number): VertexFormat {
+export function getVertexFormatFromAttribute(typedArray: TypedArray, size: number, normalized?: boolean): VertexFormat {
   if(!size || size > 4) {
     throw new Error(`size ${size}`);
   }
 
   const components = size as 1 | 2 | 3 | 4;
-  const dataType: DataType = getDataTypeFromTypedArray(typedArray);
+  let dataType: DataType | DataTypeNorm = getDataTypeFromTypedArray(typedArray);
 
   if (dataType === 'uint8' || dataType === 'sint8') {
     if (components === 1 || components === 3) {
       // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
       throw new Error(`size: ${size}`);
+    }
+    if (normalized) {
+      dataType = dataType.replace('int', 'norm') as 'unorm8' | 'snorm8';
     }
     return `${dataType}x${components}`;
   }
@@ -72,6 +77,9 @@ export function getVertexFormatFromAttribute(typedArray: TypedArray, size?: numb
     if (components === 1 || components === 3) {
       // WebGPU 16 bit formats must be aligned to 32 bit boundaries
       throw new Error(`size: ${size}`);
+    }
+    if (normalized) {
+      dataType = dataType.replace('int', 'norm') as 'unorm16' | 'snorm16';
     }
     return `${dataType}x${components}`;
   }
