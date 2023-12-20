@@ -39,7 +39,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!this.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
 
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near: 0.01, far: 1000});
+    const far = 2 * this.vantage[0];
+    const near = far / 1000;
+    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
     const vantage = [this.vantage[0] * Math.sin(0.001 * time), this.vantage[1], this.vantage[2] * Math.cos(0.001 * time)];
 
     this.scenes[0].traverse((node, {worldMatrix}) => {
