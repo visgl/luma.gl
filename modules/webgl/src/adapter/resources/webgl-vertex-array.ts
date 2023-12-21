@@ -54,14 +54,15 @@ export class WEBGLVertexArray extends VertexArray {
   }
 
   /**
-  // Set (bind) an elements buffer, for indexed rendering.
-  // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER. Constants not supported
+  // Set (bind/unbind) an elements buffer, for indexed rendering.
+  // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER or null. Constants not supported
    * 
    * @param elementBuffer 
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
-    if (buffer?.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
+    // Explicitly allow `null` to support clearing the index buffer
+    if (buffer && buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setBuffer()');
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
