@@ -229,8 +229,8 @@ test('ShaderAssembler#transpileToGLSL100', t => {
     fs: FS_300
   });
   const programTranspiled = shaderAssembler.assembleShaders({
-      platformInfo: {...platformInfo, shaderLanguageVersion: 100},
-      vs: VS_300, fs: FS_300}
+    platformInfo: {...platformInfo, shaderLanguageVersion: 100},
+    vs: VS_300, fs: FS_300}
   );
   const programTranspiled2 = shaderAssembler.assembleShaders({
     platformInfo: {...platformInfo, shaderLanguageVersion: 100},
