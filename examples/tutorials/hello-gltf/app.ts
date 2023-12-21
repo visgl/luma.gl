@@ -58,7 +58,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
       })
 
-      model.updateModuleSettings({lightSources});
+      model.shaderInputs.setProps({
+        lights: {lightSources}
+      });
+      // This also doesn't work
+      // model.shaderInputs.setProps({
+      //   lights: {
+      //     lights: [
+      //       {type: 'ambient', color: [255, 255, 255], intensity: 1},
+      //       {type: 'point', color: [255, 255, 255], position: [1, 2, 1]}
+      //     ]
+      //   }
+      // });
       model.draw(renderPass);
     });
     renderPass.end();
