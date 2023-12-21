@@ -156,12 +156,12 @@ export class Model {
     Object.assign(this.userData, props.userData);
 
     // Setup shader module inputs
-    const moduleMap = Object.fromEntries(this.props.modules.map(module => [module.name, module]));
+    const moduleMap = Object.fromEntries(this.props.modules?.map(module => [module.name, module]) || []);
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
-    const modules = this.props.modules.length > 0 ? this.props.modules : this.shaderInputs.getModules()
+    const modules = (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
     const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({platformInfo, ...this.props, modules});
 
     this.vs = vs;
