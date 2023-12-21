@@ -61,6 +61,7 @@ export class WEBGLVertexArray extends VertexArray {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
+    // Explicitly allow `null` to support clearing the index buffer
     if (buffer && buffer.glTarget !== GL.ELEMENT_ARRAY_BUFFER) {
       throw new Error('Use .setBuffer()');
     }
