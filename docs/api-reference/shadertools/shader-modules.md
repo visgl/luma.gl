@@ -1,4 +1,4 @@
-# Core Shader Modules
+# Shader Modules
 
 ## Uniform Blocks
 

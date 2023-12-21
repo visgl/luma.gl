@@ -52,39 +52,6 @@
     "type": "category",
     "label": "API Reference",
     "items": [
-      {
-        "type": "category",
-        "label": "V8 API Reference",
-        "items": [
-          "api-reference-v8/webgl-legacy/README",
-          "api-reference-v8/constants/README",
-          "api-reference-v8/webgl-legacy/class-list",
-          "api-reference-v8/webgl-legacy/accessors",
-          "api-reference-v8/webgl-legacy/context/context-api",
-          "api-reference-v8/webgl-legacy/context/context-properties",
-          "api-reference-v8/webgl-legacy/context/parameter-setting",
-          "api-reference-v8/webgl-legacy/context/feature-checking",
-          "api-reference-v8/webgl-legacy/context/device-pixels",
-          "api-reference-v8/webgl-legacy/parameters-legacy",
-          "api-reference-v8/webgl-legacy/classes/accessor",
-          "api-reference-v8/webgl-legacy/classes/buffer",
-          "api-reference-v8/webgl-legacy/classes/framebuffer",
-          "api-reference-v8/webgl-legacy/classes/moving-data",
-          "api-reference-v8/webgl-legacy/classes/program",
-          "api-reference-v8/webgl-legacy/classes/query",
-          "api-reference-v8/webgl-legacy/classes/renderbuffer",
-          "api-reference-v8/webgl-legacy/classes/resource",
-          "api-reference-v8/webgl-legacy/classes/shader",
-          "api-reference-v8/webgl-legacy/classes/texture",
-          "api-reference-v8/webgl-legacy/classes/texture-2d",
-          "api-reference-v8/webgl-legacy/classes/texture-3d",
-          "api-reference-v8/webgl-legacy/classes/texture-cube",
-          "api-reference-v8/webgl-legacy/classes/transform-feedback",
-          "api-reference-v8/webgl-legacy/classes/uniform-buffer-layout",
-          "api-reference-v8/webgl-legacy/classes/vertex-array",
-          "api-reference-v8/webgl-legacy/classes/vertex-array-object"
-        ]
-      },
       "api-reference/README",
       {
         "type": "category",
@@ -131,16 +98,16 @@
           "api-reference/engine/transform/texture-transform",
           "api-reference/engine/scenegraph/group-node",
           "api-reference/engine/scenegraph/model-node",
-          "api-reference/engine/scenegraph/scenegraph-node"
+          "api-reference/engine/scenegraph/scenegraph-node",
+          "api-reference/engine/gpgpu/gpu-point-in-polygon",
+          "api-reference/engine/gpgpu/histopyramid"
         ]
       },
       {
         "type": "category",
-        "label": "@luma.gl/experimental",
+        "label": "@luma.gl/gltf",
         "items": [
-          "api-reference/experimental/README",
-          "api-reference/experimental/gpgpu/gpu-point-in-polygon",
-          "api-reference/experimental/gpgpu/histopyramid"
+          "api-reference/gltf/README"
         ]
       },
       {
@@ -152,18 +119,20 @@
             "label": "Shader Modules",
             "items": [
               "api-reference/shadertools/shader-modules",
-              "api-reference/shadertools/modules/fp32",
-              "api-reference/shadertools/modules/fp64",
-              "api-reference/shadertools/modules/pbr",
-              "api-reference/shadertools/modules/picking",
-              "api-reference/shadertools/modules/project"
+              "api-reference/shadertools/shader-modules/fp32",
+              "api-reference/shadertools/shader-modules/fp64",
+              "api-reference/shadertools/shader-modules/pbr-material",
+              "api-reference/shadertools/shader-modules/phong-material",
+              "api-reference/shadertools/shader-modules/gouraud-material",
+              "api-reference/shadertools/shader-modules/picking",
+              "api-reference/shadertools/shader-modules/project"
             ]
           },
           {
             "type": "category",
             "label": "Shader Passes",
             "items": [
-              "api-reference/shadertools/passes/image-processing"
+              "api-reference/shadertools/shader-passes/image-processing"
             ]
           },
           "api-reference/shadertools/README",
@@ -176,14 +145,13 @@
         "label": "@luma.gl/test-utils",
         "items": [
           "api-reference/test-utils/README",
-          "api-reference/test-utils/api-reference/snapshot-test-runner",
           "api-reference/test-utils/snapshot-test-runner"
         ]
       },
       {
         "type": "category",
         "label": "@luma.gl/webgl",
-        "items": ["api-reference/webgl/README", "api-reference/webgl/adapter/webgl-device"]
+        "items": ["api-reference/webgl/README"]
       },
       {
         "type": "category",

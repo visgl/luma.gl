@@ -1,4 +1,4 @@
-# lights (Shader Module)
+# lights
 
 The `lights`` shader module collects uniforms describing the lights in a scene.
 No view dependent uniforms are includes so the resulting uniform block should be reusable for all draw calls in a scene.

@@ -1,4 +1,4 @@
-# picking (Shader Module)
+# picking
 
 Provides support for color-based picking. 
 
