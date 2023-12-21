@@ -23,7 +23,7 @@ struct DirectionalLight {
 };
 
 uniform lightingUniforms {
-  bool enabled;
+  int enabled;
   int pointLightCount;
   int directionalLightCount;
 

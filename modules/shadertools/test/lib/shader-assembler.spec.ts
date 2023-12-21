@@ -57,7 +57,7 @@ const FS_300 = glsl`\
 test('ShaderAssembler#hooks', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  const preHookShaders = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const preHookShaders = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
   shaderAssembler.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   shaderAssembler.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
@@ -65,7 +65,7 @@ test('ShaderAssembler#hooks', t => {
     footer: 'color.a *= 1.2;\n'
   });
 
-  const assemblyResults = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const assemblyResults = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
   t.ok(preHookShaders !== assemblyResults, 'Adding hooks changes hash');
 
@@ -82,7 +82,7 @@ test('ShaderAssembler#hooks', t => {
     picking
   );
 
-  const noModuleProgram = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const noModuleProgram = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
   t.ok(preHookShaders !== noModuleProgram, 'Adding hooks changes hash');
 
@@ -104,7 +104,7 @@ test('ShaderAssembler#hooks', t => {
     'injection code not included in fragment shader without module'
   );
 
-  const modulesProgram = shaderAssembler.assembleShaders(platformInfo, {
+  const modulesProgram = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     modules: [pickingInjection]
@@ -135,7 +135,7 @@ test('ShaderAssembler#hooks', t => {
     'hook footer injected after injection code'
   );
 
-  const injectedShaders = shaderAssembler.assembleShaders(platformInfo, {
+  const injectedShaders = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     inject: {
@@ -149,7 +149,7 @@ test('ShaderAssembler#hooks', t => {
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
 
-  const injectDefineProgram1 = shaderAssembler.assembleShaders(platformInfo, {
+  const injectDefineProgram1 = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     inject: {
@@ -157,7 +157,7 @@ test('ShaderAssembler#hooks', t => {
     }
   });
 
-  const injectDefineProgram2 = shaderAssembler.assembleShaders(platformInfo, {
+  const injectDefineProgram2 = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     defines: {
@@ -173,9 +173,9 @@ test('ShaderAssembler#hooks', t => {
 test('ShaderAssembler#defaultModules', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  const program = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const program = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
-  const preDefaultModuleProgram = shaderAssembler.assembleShaders(platformInfo, {
+  const preDefaultModuleProgram = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     modules: [dirlight]
@@ -185,8 +185,8 @@ test('ShaderAssembler#defaultModules', t => {
 
   shaderAssembler.addDefaultModule(dirlight);
 
-  const defaultModuleProgram = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
-  const moduleProgram = shaderAssembler.assembleShaders(platformInfo, {
+  const defaultModuleProgram = shaderAssembler.assembleShaders({platformInfo, vs, fs});
+  const moduleProgram = shaderAssembler.assembleShaders({platformInfo, 
     vs,
     fs,
     modules: [dirlight]
@@ -203,7 +203,7 @@ test('ShaderAssembler#defaultModules', t => {
 
   shaderAssembler.removeDefaultModule(dirlight);
 
-  const noDefaultModuleProgram = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const noDefaultModuleProgram = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
   t.ok(program.fs === noDefaultModuleProgram.fs, 'Default module was removed');
   t.ok(moduleProgram.fs !== noDefaultModuleProgram.fs, 'Default module was removed');
@@ -211,7 +211,7 @@ test('ShaderAssembler#defaultModules', t => {
   // Reset program manager
 
   shaderAssembler.addDefaultModule(dirlight);
-  const uncachedProgram = shaderAssembler.assembleShaders(platformInfo, {vs, fs});
+  const uncachedProgram = shaderAssembler.assembleShaders({platformInfo, vs, fs});
   const defaultModuleSource = uncachedProgram.fs;
 
   // TODO - this deep equal thing doesn't make sense due to getUniforms
@@ -224,17 +224,17 @@ test('ShaderAssembler#defaultModules', t => {
 test('ShaderAssembler#transpileToGLSL100', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  const programUntranspiled = shaderAssembler.assembleShaders(platformInfo, {
+  const programUntranspiled = shaderAssembler.assembleShaders({platformInfo, 
     vs: VS_300,
     fs: FS_300
   });
-  const programTranspiled = shaderAssembler.assembleShaders(
-    {...platformInfo, shaderLanguageVersion: 100},
-    {vs: VS_300, fs: FS_300}
+  const programTranspiled = shaderAssembler.assembleShaders({
+      platformInfo: {...platformInfo, shaderLanguageVersion: 100},
+      vs: VS_300, fs: FS_300}
   );
-  const programTranspiled2 = shaderAssembler.assembleShaders(
-    {...platformInfo, shaderLanguageVersion: 100},
-    {vs: VS_300, fs: FS_300}
+  const programTranspiled2 = shaderAssembler.assembleShaders({
+    platformInfo: {...platformInfo, shaderLanguageVersion: 100},
+    vs: VS_300, fs: FS_300}
   );
 
   t.equals(programTranspiled.vs, programTranspiled2.vs, 'Transpiled programs match');

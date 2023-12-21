@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
+import {Buffer, NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, _ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 
@@ -60,7 +60,7 @@ type ColorModuleProps = {
 // We define a small customer shader module that injects a function into the fragment shader
 //  to convert from HSV to RGB colorspace
 // From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
-const colorModule: ShaderModule<ColorModuleProps> = {
+const color: ShaderModule<ColorModuleProps> = {
   name: 'color',
   fs: `
 vec3 color_hsv2rgb(vec3 hsv) {
@@ -79,18 +79,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model1: Model;
+  shaderInputs1 = new _ShaderInputs<{color: ColorModuleProps}>({color});
+
   model2: Model;
+  shaderInputs2 = new _ShaderInputs<{color: ColorModuleProps}>({color});
+
   positionBuffer: Buffer;
 
-  shaderInputs1 = new _ShaderInputs<{color: ColorModuleProps}>({
-    color: colorModule
-  });
-  shaderInputs2 = new _ShaderInputs<{color: ColorModuleProps}>({
-    color: colorModule
-  });
-
-  uniformBuffer1: Buffer;
-  uniformBuffer2: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
@@ -100,22 +95,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.shaderInputs1.setProps({color: {hsv: [0.7, 1.0, 1.0]}});
     this.shaderInputs2.setProps({color: {hsv: [1.0, 1.0, 1.0]}});
 
-    const uniformStore = new UniformStore(this.shaderInputs1.modules);
-    this.uniformBuffer1 = uniformStore.createUniformBuffer(device, 'color', this.shaderInputs1.getUniformValues());
-    this.uniformBuffer2 = uniformStore.createUniformBuffer(device, 'color', this.shaderInputs2.getUniformValues());
-    uniformStore.destroy();
-
     this.model1 = new Model(device, {
       vs: vs1,
       fs: fs1,
-      // shaderInputs: this.shaderInputs1,
-      modules: [colorModule],
+      shaderInputs: this.shaderInputs1,
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
         position: this.positionBuffer
-      },
-      bindings: {
-        color: this.uniformBuffer1
       },
       vertexCount: 3
     });
@@ -123,14 +109,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model2 = new Model(device, {
       vs: vs2,
       fs: fs2,
-      // shaderInputs: this.shaderInputs2,
-      modules: [colorModule],
+      shaderInputs: this.shaderInputs2,
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
         position: this.positionBuffer
-      },
-      bindings: {
-        color: this.uniformBuffer2
       },
       vertexCount: 3
     });
@@ -140,8 +122,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model1.destroy();
     this.model2.destroy();
     this.positionBuffer.destroy();
-    this.uniformBuffer1.destroy();
-    this.uniformBuffer2.destroy();
   }
 
   onRender({device}) {

@@ -2,7 +2,7 @@
 import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
-import {_resolveModules} from '@luma.gl/shadertools'
+import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools'
 
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
@@ -90,6 +90,7 @@ export class ShaderInputs<
       const module = this.modules[moduleName];
 
       const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
+      console.error(uniforms)
       this.moduleUniforms[moduleName] = uniforms || moduleProps as any;
       // this.moduleUniformsChanged ||= moduleName;
 
@@ -110,8 +111,8 @@ export class ShaderInputs<
    * Return the map of modules 
    * @todo should should this include the resolved dependencies?
    */
-  getModules(): Record<string, ShaderModuleInputs<any>> {
-    return this.modules;
+  getModules(): ShaderModuleInstance[] {
+    return Object.values(this.modules);
   }
 
   /** Get all uniform values for all modules */

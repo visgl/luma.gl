@@ -29,6 +29,8 @@ precision highp float;
 export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
 
 export type AssembleShaderOptions = {
+  /** information about the platform (which shader language & version, extensions etc.) */
+  platformInfo: PlatformInfo,
   /** Inject shader id #defines */
   id?: string;
   /** Vertex shader */
@@ -80,7 +82,6 @@ export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>
  * Inject a list of shader modules into shader sources
  */
 export function assembleShaders(
-  platformInfo: PlatformInfo,
   options: AssembleShaderOptions
 ): {
   vs: string;
@@ -90,18 +91,18 @@ export function assembleShaders(
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
 
-  switch (platformInfo.shaderLanguage) {
+  switch (options.platformInfo.shaderLanguage) {
     case 'glsl':
       return {
-        vs: assembleGLSLShader(platformInfo, {...options, source: vs, stage: 'vertex', modules}),
-        fs: assembleGLSLShader(platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        vs: assembleGLSLShader(options.platformInfo, {...options, source: vs, stage: 'vertex', modules}),
+        fs: assembleGLSLShader(options.platformInfo, {...options, source: fs, stage: 'fragment', modules}),
         getUniforms: assembleGetUniforms(modules)
       };
 
     case 'wgsl':
       return {
-        vs: assembleWGSLShader(platformInfo, {...options, source: vs, stage: 'vertex', modules}),
-        fs: assembleWGSLShader(platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        vs: assembleWGSLShader(options.platformInfo, {...options, source: vs, stage: 'vertex', modules}),
+        fs: assembleWGSLShader(options.platformInfo, {...options, source: fs, stage: 'fragment', modules}),
         getUniforms: assembleGetUniforms(modules)
       };
   }

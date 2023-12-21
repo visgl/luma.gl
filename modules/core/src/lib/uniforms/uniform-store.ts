@@ -117,10 +117,23 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
       const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
-    this.updateUniformBuffers();
+    // this.updateUniformBuffers();
     return this.uniformBuffers.get(uniformBufferName);
   }
 
+  /** Updates all uniform buffers where values have changed */
+  updateUniformBuffers(): false | string {
+    let reason: false | string = false;
+    for (const uniformBufferName of this.uniformBlocks.keys()) {
+      const bufferReason = this.updateUniformBuffer(uniformBufferName);
+      reason ||= bufferReason;
+    }
+    if (reason) {
+      log.log(3, `UniformStore.updateUniformBuffers(): ${reason}`)();
+    }
+    return reason;
+  }
+  
   /** Update one uniform buffer. Only updates if values have changed */
   updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);
@@ -143,18 +156,6 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
         uniformBufferData,
         uniformValues
       )();
-    }
-    return reason;
-  }
-
-  /** Updates all uniform buffers where values have changed */
-  updateUniformBuffers(): false | string {
-    let reason: false | string = false;
-    for (const uniformBufferName of this.uniformBlocks.keys()) {
-      reason ||= this.updateUniformBuffer(uniformBufferName);
-    }
-    if (reason) {
-      log.log(3, `UniformStore.updateUniformBuffers(): ${reason}`)();
     }
     return reason;
   }

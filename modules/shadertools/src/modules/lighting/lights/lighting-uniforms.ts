@@ -46,13 +46,16 @@ export type DirectionalLight = {
 export type LightingProps = {
   enabled?: boolean;
   lights?: Light[];
+  /** @deprecated */
   ambientLight?: AmbientLight;
+  /** @deprecated */
   pointLights?: PointLight[];
+  /** @deprecated */
   directionalLights?: DirectionalLight[];
 };
 
 export type LightingUniforms = {
-  enabled: boolean;
+  enabled: number;
   ambientLightColor: Readonly<NumberArray>;
   numberOfLights: number;
   lightType: number; // [];
@@ -89,7 +92,7 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
   },
 
   defaultUniforms: { 
-    enabled: true,
+    enabled: 1,
     ambientLightColor: [0.1, 0.1, 0.1],
     numberOfLights: 0,
     lightType: LIGHT_TYPE.POINT,
@@ -101,16 +104,17 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
   }
 };
 
-function getUniforms(props?: LightingProps): LightingUniforms {
+function getUniforms(props?: LightingProps, prevUniforms: Partial<LightingUniforms> = {}): LightingUniforms {
+  // Copy props so we can modify 
+  props = props ? {...props} : props;
+
   // TODO legacy
   if (!props) {
     return {...lighting.defaultUniforms};
   }
   // Support for array of lights. Type of light is detected by type field
   if (props.lights) {
-    const lighting = extractLightTypes(props.lights);
-    // Call the `props.lighting`` version
-    return getUniforms(lighting);
+    props = {...props, ...extractLightTypes(props.lights), lights: undefined};
   }
 
   // Specify lights separately
@@ -122,14 +126,21 @@ function getUniforms(props?: LightingProps): LightingUniforms {
 
   // TODO - this may not be the correct decision
   if (!hasLights) {
-    return {...lighting.defaultUniforms, enabled: false};
+    return {...lighting.defaultUniforms, enabled: 0};
   }
 
-  return {
+  const uniforms = {
     ...lighting.defaultUniforms,
+    ...prevUniforms,
     ...getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
-    enabled: true
   };
+
+  if (props.enabled !== undefined) {
+    uniforms.enabled = props.enabled ? 1 : 0;
+  }
+
+  console.error(uniforms)
+  return uniforms;
 }
 
 function getLightSourceUniforms({

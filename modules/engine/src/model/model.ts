@@ -1,26 +1,11 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {
-  TypedArray,
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  VertexArray,
-  AttributeInfo,
-  TransformFeedback
-} from '@luma.gl/core';
-import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {
-  Device,
-  Buffer,
-  RenderPipeline,
-  RenderPass,
-  log,
-  uid,
-  deepEqual,
-  splitUniformsAndBindings
-} from '@luma.gl/core';
+import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
+import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
@@ -90,7 +75,7 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
-    moduleSettings: {},
+    moduleSettings: undefined!,
     geometry: null,
     indexBuffer: null,
     attributes: {},
@@ -154,6 +139,8 @@ export class Model {
   /** ShaderInputs instance */
   shaderInputs: ShaderInputs;
 
+  _uniformStore: UniformStore;
+
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
@@ -168,18 +155,18 @@ export class Model {
 
     Object.assign(this.userData, props.userData);
 
-    const platformInfo = getPlatformInfo(device);
+    // Setup shader module inputs
+    const moduleMap = Object.fromEntries(this.props.modules.map(module => [module.name, module]));
+    this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
-    const {vs, fs, modules, getUniforms} = this.props.shaderAssembler.assembleShaders(
-      platformInfo,
-      this.props
-    );
+    // Setup shader assembler
+    const platformInfo = getPlatformInfo(device);
+    const modules = this.props.modules.length > 0 ? this.props.modules : this.shaderInputs.getModules()
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({platformInfo, ...this.props, modules});
+
     this.vs = vs;
     this.fs = fs;
     this._getModuleUniforms = getUniforms;
-
-    const moduleMap = Object.fromEntries(modules.map(module => [module.name, module]));
-    this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
 
     this.vertexCount = this.props.vertexCount;
     this.instanceCount = this.props.instanceCount;
@@ -236,13 +223,15 @@ export class Model {
       this.setUniforms(props.uniforms);
     }
     if (props.moduleSettings) {
+      console.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()');
       this.updateModuleSettings(props.moduleSettings);
     }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
 
-    this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
+    // WebGL1?
+    // this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
 
     // Catch any access to non-standard props
     Object.seal(this);
@@ -250,11 +239,19 @@ export class Model {
 
   destroy(): void {
     this.pipelineFactory.release(this.pipeline);
+    this._uniformStore.destroy();
   }
 
   // Draw call
 
+  predraw() {
+    // Update uniform buffers if needed
+    this.updateShaderInputs();
+  }
+
   draw(renderPass: RenderPass): void {
+    this.predraw();
+
     // Check if the pipeline is invalidated
     // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
     this.pipeline = this._updatePipeline();
@@ -368,22 +365,33 @@ export class Model {
     this.instanceCount = instanceCount;
   }
 
-  /**
-   * Updates shader module settings (which results in bindings & uniforms being set)
-   */
-  setShaderModuleProps(props: Record<string, any>): void {
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
+  setShaderInputs(shaderInputs: ShaderInputs): void {
+    this.shaderInputs = shaderInputs;
+    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    // Create uniform buffer bindings for all modules
+    for (const moduleName of Object.keys(this.shaderInputs.modules)) {
+      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(
+        this.device,
+        moduleName
+      );
+      this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+    }
+  }
+
+  updateShaderInputs(): void {
+    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
   }
 
   /**
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
-    this.setShaderModuleProps(props);
+    console.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()');
+    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
+    Object.assign(this.bindings, bindings);
+    Object.assign(this.uniforms, uniforms);
   }
-
+ 
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
@@ -496,10 +504,10 @@ export class Model {
         vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
         fs: this.fs
           ? this.device.createShader({
-            id: '{$this.id}-fragment',
-            stage: 'fragment',
-            source: this.fs
-          })
+              id: '{$this.id}-fragment',
+              stage: 'fragment',
+              source: this.fs
+            })
           : null
       });
       this._attributeInfos = getAttributeInfosFromLayouts(
