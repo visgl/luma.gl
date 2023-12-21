@@ -1,11 +1,14 @@
-import type {Buffer} from '@luma.gl/core';
+import {Buffer, NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {ShaderModule} from '@luma.gl/shadertools/index';
 
 const INFO_HTML = `
 Instanced triangles using luma.gl's high-level API
 `;
 
-const colorShaderModule = {
+type ColorModuleProps = {};
+
+const color: ShaderModule<ColorModuleProps> = {
   name: 'color',
   vs: `
     varying vec3 color_vColor;
@@ -52,11 +55,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       `,
       fs: `\
 #version 300 es
+      precision highp float;
+
+      out vec4 fragColor;
       void main() {
-          gl_FragColor = vec4(color_getColor(), 1.0);
+          fragColor = vec4(color_getColor(), 1.0);
         }
       `,
-      modules: [colorShaderModule],
+      modules: [color],
       bufferLayout: [
         {name: 'position', format: 'float32x2'},
         {name: 'instanceColor', format: 'float32x3', stepMode: 'instance'},
