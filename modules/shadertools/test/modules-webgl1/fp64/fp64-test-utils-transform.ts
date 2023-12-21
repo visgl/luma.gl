@@ -6,7 +6,7 @@
 /* eslint-disable camelcase, prefer-template, max-len */
 
 import {Device} from '@luma.gl/core';
-import {Transform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/engine';
 import {fp64, fp64arithmetic} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
@@ -70,7 +70,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
   const bufferA = device.createBuffer({data: a_fp64});
   const bufferB = device.createBuffer({data: b_fp64});
   const bufferResult = device.createBuffer({byteLength: a_fp64.byteLength});
-  const transform = new Transform(device, {
+  const transform = new BufferTransform(device, {
     vs,
     modules: [fp64],
     attributes: {a: bufferA, b: bufferB},
@@ -83,7 +83,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
 }
 
 export async function runTests(device: Device, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
-  if (!Transform.isSupported(device)) {
+  if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not supported, skipping tests');
     t.end();
     return;

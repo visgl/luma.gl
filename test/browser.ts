@@ -1,10 +1,9 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
 
-test.onFinish(window.browserTestDriver_finish);
-test.onFailure(() => {
-  window.browserTestDriver_fail();
-});
+const noop = () => {};
+test.onFinish(window.browserTestDriver_finish || noop);
+test.onFailure(window.browserTestDriver_fail || noop);
 
 // hack: prevent example imports from starting their own animation loop
 globalThis.website = true;

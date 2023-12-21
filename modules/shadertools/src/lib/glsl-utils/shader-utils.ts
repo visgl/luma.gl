@@ -37,10 +37,10 @@ export function getQualifierDetails(line: string, qualifiers: string | string[])
 export function getPassthroughFS(options?: {
   version?: number;
   input?: string;
-  inputType?: string;
+  inputChannels?: 1 | 2 | 3 | 4;
   output?: string;
 }): string {
-  const {version = 100, input, inputType, output} = options || {};
+  const {version = 100, input, inputChannels, output} = options || {};
   if (!input) {
     if (version === 300) {
       // Fast-path for WebGL 2.0
@@ -52,10 +52,11 @@ export function getPassthroughFS(options?: {
     // Fast-path for WebGL 1.0
     return FS100;
   }
-  if (!inputType) {
-    throw new Error('inputType');
+  if (!inputChannels) {
+    throw new Error('inputChannels');
   }
-  const outputValue = convertToVec4(input, inputType);
+  const inputType = channelCountToType(inputChannels);
+  const outputValue = convertToVec4(input, inputChannels);
   if (version >= 300) {
     // If version is 300, assume WebGL 2.0
     return `\
@@ -99,16 +100,27 @@ export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
       throw new Error(type);
   }
 }
+function channelCountToType(channels: 1 | 2 | 3 |4): 'float' | 'vec2' | 'vec3' | 'vec4' {
+  // prettier-ignore
+  switch (channels) {
+    case 1: return 'float';
+    case 2: return 'vec2';
+    case 3: return 'vec3';
+    case 4: return 'vec4';
+    default:
+      throw new Error(`invalid channels: ${channels}`);
+  }
+}
 
 /** Returns glsl instruction for converting to vec4 */
-export function convertToVec4(variable: string, type: string): string {
+export function convertToVec4(variable: string, channels: 1 | 2 | 3 | 4): string {
   // prettier-ignore
-  switch (type) {
-    case 'float': return `vec4(${variable}, 0.0, 0.0, 1.0)`;
-    case 'vec2': return `vec4(${variable}, 0.0, 1.0)`;
-    case 'vec3': return `vec4(${variable}, 1.0)`;
-    case 'vec4': return variable;
+  switch (channels) {
+    case 1: return `vec4(${variable}, 0.0, 0.0, 1.0)`;
+    case 2: return `vec4(${variable}, 0.0, 1.0)`;
+    case 3: return `vec4(${variable}, 1.0)`;
+    case 4: return variable;
     default:
-      throw new Error(type);
+      throw new Error(`invalid channels: ${channels}`);
   }
 }

@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {webgl2Device} from '@luma.gl/test-utils';
 
-import {Transform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
@@ -130,7 +130,7 @@ test('picking#getUniforms', (t) => {
 
 // TODO(v9): Restore picking tests.
 test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) => {
-  if (!Transform.isSupported(webgl2Device)) {
+  if (!BufferTransform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -151,7 +151,8 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) =>
   const vertexColor = webgl2Device.createBuffer(vertexColorData);
   const isPicked = webgl2Device.createBuffer({byteLength: vertexCount * 4});
 
-  const transform = new Transform(webgl2Device, {
+  const transform = new BufferTransform(webgl2Device, {
+    // @ts-expect-error
     sourceBuffers: {
       vertexColor
     },
@@ -183,7 +184,7 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) =>
 // TODO(v9): Restore picking tests.
 /* eslint-disable max-nested-callbacks */
 test.skip('picking#picking_setPickingColor', async (t) => {
-  if (!Transform.isSupported(webgl2Device)) {
+  if (!BufferTransform.isSupported(webgl2Device)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -205,7 +206,7 @@ test.skip('picking#picking_setPickingColor', async (t) => {
   const vertexColor = webgl2Device.createBuffer(vertexColorData);
   const rgbColorASelected = webgl2Device.createBuffer({byteLength: vertexCount * 4});
 
-  const transform = new Transform(webgl2Device, {
+  const transform = new BufferTransform(webgl2Device, {
     attributes: {vertexColor},
     bufferLayout: [{name: 'vertexColor', format: 'float32'}],
     feedbackBuffers: {rgbColorASelected},

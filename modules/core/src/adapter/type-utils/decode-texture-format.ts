@@ -5,8 +5,8 @@ import {decodeVertexType} from './decode-data-type';
 const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
 
 export type DecodedTextureFormat = {
-  format: string;
-  components: number;
+  format: 'r' | 'rg' | 'rgb' | 'rgba';
+  components: 1 | 2 | 3 | 4;
   dataType?: VertexType;
   srgb: boolean;
   webgl: boolean;
@@ -28,8 +28,8 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
       const dataType = `${type}${length}` as VertexType;
       const decodedType = decodeVertexType(dataType);
       return {
-        format,
-        components: 0,
+        format: format as 'r' | 'rg' | 'rgb' | 'rgba',
+        components: format.length as 1 | 2 | 3 | 4,
         // dataType - overwritten by decodedType
         srgb: srgb === '-srgb',
         unsized: suffix === '-unsized',
@@ -73,7 +73,7 @@ function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
   }
   return {
     format: data.format || '',
-    components: data.components || 1,
+    components: data.components || data.format?.length || 1,
     byteLength: data.bpp || 1,
     srgb: false,
     unsized: false    
