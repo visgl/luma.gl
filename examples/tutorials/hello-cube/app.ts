@@ -43,8 +43,9 @@ const fs = glsl`\
   uniform sampler2D uTexture;
   in vec2 vUV;
 
+  out vec4 fragColor;
   void main(void) {
-    gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+    fragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
   }
 `;
 
