@@ -29,7 +29,7 @@ export type ShaderModuleInputs<
 };
 
 /**
- * ShaderInputs holds a uniform and binding alues for one or more shader modules,
+ * ShaderInputs holds uniform and binding values for one or more shader modules,
  * - It can generate binary data for any uniform buffer
  * - It can manage a uniform buffer for each block
  * - It can update managed uniform buffers with a single call
