@@ -148,10 +148,6 @@ export class AnimationLoop {
     this._running = true;
 
     try {
-      // check that we haven't been stopped
-      if (!this._running) {
-        return null;
-      }
 
       let appContext;
       if (!this._initialized) {
