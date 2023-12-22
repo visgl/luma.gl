@@ -1,6 +1,6 @@
-import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import {phongMaterial, lighting} from '@luma.gl/shadertools';
+import {glsl, NumberArray} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, _ShaderInputs} from '@luma.gl/engine';
+import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -8,20 +8,6 @@ const INFO_HTML = `
 Drawing a phong-shaded cube
 </p>
 `;
-
-type AppUniforms = {
-  modelMatrix: NumberArray;
-  mvpMatrix: NumberArray;
-  eyePosition: NumberArray;
-};
-
-const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
-  uniformTypes: {
-    modelMatrix: 'mat4x4<f32>',
-    mvpMatrix: 'mat4x4<f32>',
-    eyePosition: 'vec3<f32>'
-  }
-};
 
 const vs = glsl`\
 #version 300 es
@@ -67,12 +53,28 @@ uniform appUniforms {
 out vec4 fragColor;
 
 void main(void) {
-  vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-  vec3 surfaceColor = lighting_getLightColor(materialColor, uApp.eyePosition, vPosition, normalize(vNormal));
+  vec3 surfaceColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
+  surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
 
   fragColor = vec4(surfaceColor, 1.0);
 }
 `;
+
+type AppUniforms = {
+  modelMatrix: NumberArray;
+  mvpMatrix: NumberArray;
+  eyePosition: NumberArray;
+};
+
+const app: ShaderModule<AppUniforms, AppUniforms> = {
+  name: 'app',
+  uniformTypes: {
+    modelMatrix: 'mat4x4<f32>',
+    mvpMatrix: 'mat4x4<f32>',
+    eyePosition: 'vec3<f32>'
+  }
+};
+
 
 // APPLICATION
 
@@ -81,17 +83,15 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  uniformStore = new UniformStore<{
-    app: AppUniforms;
-    lighting: typeof lighting.uniforms;
-    phongMaterial: typeof phongMaterial.uniforms;
-  }>({
-    app,
-    lighting,
-    phongMaterial
-  });
-
   model: Model;
+
+  shaderInputs = new _ShaderInputs<{
+    app: typeof app.props;
+    lighting: typeof lighting.props;
+    phongMaterial: typeof phongMaterial.props;
+  }>({app, lighting, phongMaterial});
+
+  
   modelMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   mvpMatrix = new Matrix4();
@@ -100,27 +100,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     // Set up static uniforms
-
-    this.uniformStore.setUniforms({
+    this.shaderInputs.setProps({
+      lighting: {
+        lights: [
+          {type: 'ambient', color: [255, 255, 255]},
+          {type: 'point', color: [255, 255, 255], position: [1, 2, 1]}
+        ]
+      },
       phongMaterial: {
         specularColor: [255, 255, 255]
-      },
-      lighting: lighting.getUniforms({
-        lights: [
-          {
-            type: 'ambient',
-            color: [255, 255, 255]
-          },
-          {
-            type: 'point',
-            color: [255, 255, 255],
-            position: [1, 2, 1]
-          }
-        ]
-      }),
-      app: {
-        modelMatrix: this.modelMatrix,
-        eyePosition
       }
     });
 
@@ -129,29 +117,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model = new Model(device, {
       vs,
       fs,
+      shaderInputs: this.shaderInputs,
       geometry: new CubeGeometry(),
-      modules: [phongMaterial],
-      moduleSettings: {
-        // material: {
-        //   specularColor: [255, 255, 255]
-        // },
-        // lights: [
-        //   {
-        //     type: 'ambient',
-        //     color: [255, 255, 255]
-        //   },
-        //   {
-        //     type: 'point',
-        //     color: [255, 255, 255],
-        //     position: [1, 2, 1]
-        //   }
-        // ]
-      },
       bindings: {
-        uTexture: texture,
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        lighting: this.uniformStore.getManagedUniformBuffer(device, 'lighting'),
-        phongMaterial: this.uniformStore.getManagedUniformBuffer(device, 'phongMaterial')
+        uTexture: texture
       },
       parameters: {
         depthWriteEnabled: true,
@@ -162,7 +131,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize() {
     this.model.destroy();
-    this.uniformStore.destroy();
   }
 
   onRender({device, aspect, tick}) {
@@ -177,18 +145,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .multiplyRight(this.modelMatrix);
 
     // This updates the "app" uniform buffer, which is already bound
-    this.uniformStore.setUniforms({
+    this.shaderInputs.setProps({
       app: {
         mvpMatrix: this.mvpMatrix, 
         modelMatrix: this.modelMatrix
       }
     });
 
-    const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1],
-      clearDepth: true
-    });
-    // Draw the cube using the bindings that were set during initialization
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true});
     this.model.draw(renderPass);
     renderPass.end();
   }

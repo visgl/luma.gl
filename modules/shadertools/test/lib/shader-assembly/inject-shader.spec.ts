@@ -142,7 +142,8 @@ test('injectShader#assembleShaders', t => {
     return;
   }
   
-  const assembleResult = assembleShaders(getInfo(webgl2Device), {
+  const assembleResult = assembleShaders({
+    platformInfo: getInfo(webgl2Device),
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,
     inject: INJECT,

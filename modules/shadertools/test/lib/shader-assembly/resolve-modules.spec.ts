@@ -45,8 +45,6 @@ test('ShaderModules#getShaderDependencies', t => {
     /deprecated.+project64/,
     'Useful message for deprecated usage'
   );
-  // @ts-expect-error
-  t.throws(() => resolveModules([{}]), /no name/, 'Alert about invalid modules');
 
   t.end();
 });

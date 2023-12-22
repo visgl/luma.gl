@@ -2,7 +2,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from './shader-module/shader-module';
-import type {PlatformInfo} from './shader-assembly/platform-info';
 import {ShaderModuleInstance} from './shader-module/shader-module-instance';
 import {GetUniformsFunc, assembleShaders} from './shader-assembly/assemble-shaders';
 import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
@@ -67,7 +66,7 @@ export class ShaderAssembler {
    * @param props 
    * @returns 
    */
-  assembleShaders(platformInfo: PlatformInfo, props: AssembleShaderProps): {
+  assembleShaders(props: AssembleShaderProps): {
     vs: string;
     fs: string;
     getUniforms: GetUniformsFunc;
@@ -75,8 +74,8 @@ export class ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const options = selectShaders(platformInfo, props);
-    const assembled = assembleShaders(platformInfo, {...options, modules, hookFunctions}); 
+    const options = selectShaders(props);
+    const assembled = assembleShaders({platformInfo: props.platformInfo, ...options, modules, hookFunctions}); 
     return {...assembled, modules};
   }
 

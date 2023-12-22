@@ -19,3 +19,4 @@ import './scenegraph/model-node.spec';
 
 // Experimental
 import './transform/transform.spec';
+import './shader-inputs.spec';

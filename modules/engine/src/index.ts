@@ -20,9 +20,6 @@ export {Transform} from './transform/transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 
-// shadertools
-export {ShaderModuleUniforms} from './shadertools/shader-module-uniforms';
-
 // Utils
 export {ClipSpace} from './lib/clip-space';
 
@@ -53,3 +50,7 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
+
+// EXPERIMENTAL
+export type {ShaderModuleInputs} from './shader-inputs';
+export {ShaderInputs as _ShaderInputs} from './shader-inputs';

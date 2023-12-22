@@ -1,29 +1,15 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {
-  TypedArray,
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  VertexArray,
-  AttributeInfo,
-  TransformFeedback
-} from '@luma.gl/core';
-import type {Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {
-  Device,
-  Buffer,
-  RenderPipeline,
-  RenderPass,
-  log,
-  uid,
-  deepEqual,
-  splitUniformsAndBindings
-} from '@luma.gl/core';
+import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
+import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
+import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
@@ -38,6 +24,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   defines?: Record<string, string | number | boolean>;
   // TODO - injections, hooks etc?
 
+  /** Shader inputs, used to generated uniform buffers and bindings */
+  shaderInputs?: ShaderInputs;
   /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
   pipelineFactory?: PipelineFactory;
   /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
@@ -87,13 +75,14 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
-    moduleSettings: {},
+    moduleSettings: undefined!,
     geometry: null,
     indexBuffer: null,
     attributes: {},
     constantAttributes: {},
     varyings: [],
 
+    shaderInputs: undefined!,
     pipelineFactory: undefined!,
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
@@ -134,9 +123,6 @@ export class Model {
   /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
   uniforms: Record<string, UniformValue> = {};
 
-  /** The underlying GPU "program". @note May be recreated if parameters change */
-  pipeline: RenderPipeline;
-
   /**
    * VertexArray
    * @note not implemented: if bufferLayout is updated, vertex array has to be rebuilt!
@@ -146,6 +132,14 @@ export class Model {
 
   /** TransformFeedback, WebGL 2 only. */
   transformFeedback: TransformFeedback | null = null;
+
+  /** The underlying GPU "program". @note May be recreated if parameters change */
+  pipeline: RenderPipeline;
+
+  /** ShaderInputs instance */
+  shaderInputs: ShaderInputs;
+
+  _uniformStore: UniformStore;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
@@ -161,12 +155,15 @@ export class Model {
 
     Object.assign(this.userData, props.userData);
 
-    const platformInfo = getPlatformInfo(device);
+    // Setup shader module inputs
+    const moduleMap = Object.fromEntries(this.props.modules?.map(module => [module.name, module]) || []);
+    this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
-    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders(
-      platformInfo,
-      this.props
-    );
+    // Setup shader assembler
+    const platformInfo = getPlatformInfo(device);
+    const modules = (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({platformInfo, ...this.props, modules});
+
     this.vs = vs;
     this.fs = fs;
     this._getModuleUniforms = getUniforms;
@@ -226,13 +223,15 @@ export class Model {
       this.setUniforms(props.uniforms);
     }
     if (props.moduleSettings) {
+      console.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()');
       this.updateModuleSettings(props.moduleSettings);
     }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
 
-    this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
+    // WebGL1?
+    // this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
 
     // Catch any access to non-standard props
     Object.seal(this);
@@ -240,11 +239,19 @@ export class Model {
 
   destroy(): void {
     this.pipelineFactory.release(this.pipeline);
+    this._uniformStore.destroy();
   }
 
   // Draw call
 
+  predraw() {
+    // Update uniform buffers if needed
+    this.updateShaderInputs();
+  }
+
   draw(renderPass: RenderPass): void {
+    this.predraw();
+
     // Check if the pipeline is invalidated
     // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
     this.pipeline = this._updatePipeline();
@@ -358,29 +365,33 @@ export class Model {
     this.instanceCount = instanceCount;
   }
 
-  /**
-   * Updates shader module settings (which results in bindings & uniforms being set)
-   */
-  setShaderModuleProps(props: Record<string, any>): void {
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
+  setShaderInputs(shaderInputs: ShaderInputs): void {
+    this.shaderInputs = shaderInputs;
+    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    // Create uniform buffer bindings for all modules
+    for (const moduleName of Object.keys(this.shaderInputs.modules)) {
+      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(
+        this.device,
+        moduleName
+      );
+      this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+    }
   }
 
-  /**
-   * Updates optional transform feedback. WebGL 2 only.
-   */
-  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
-    this.transformFeedback = transformFeedback;
+  updateShaderInputs(): void {
+    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
   }
 
   /**
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
-    this.setShaderModuleProps(props);
+    console.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()');
+    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
+    Object.assign(this.bindings, bindings);
+    Object.assign(this.uniforms, uniforms);
   }
-
+ 
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
@@ -405,6 +416,13 @@ export class Model {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     this.vertexArray.setIndexBuffer(indexBuffer);
+  }
+
+  /**
+   * Updates optional transform feedback. WebGL 2 only.
+   */
+  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
+    this.transformFeedback = transformFeedback;
   }
 
   /**

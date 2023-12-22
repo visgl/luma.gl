@@ -20,7 +20,7 @@ export type ShaderModuleInputs = {
  * - It can update managed uniform buffers with a single call
  * - It performs some book keeping on what has changed to minimize unnecessary writes to uniform buffers.
  */
-export class UniformStore<TPropGroups extends Record<string, Record<string, unknown>>> {
+export class UniformStore<TPropGroups extends Record<string, Record<string, unknown>> = Record<string, Record<string, unknown>>> {
   /** Stores the uniform values for each uniform block */
   uniformBlocks = new Map<keyof TPropGroups, UniformBlock>;
   /** Can generate data for a uniform buffer for each block from data */
@@ -117,10 +117,23 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
       const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
-    this.updateUniformBuffers();
+    // this.updateUniformBuffers();
     return this.uniformBuffers.get(uniformBufferName);
   }
 
+  /** Updates all uniform buffers where values have changed */
+  updateUniformBuffers(): false | string {
+    let reason: false | string = false;
+    for (const uniformBufferName of this.uniformBlocks.keys()) {
+      const bufferReason = this.updateUniformBuffer(uniformBufferName);
+      reason ||= bufferReason;
+    }
+    if (reason) {
+      log.log(3, `UniformStore.updateUniformBuffers(): ${reason}`)();
+    }
+    return reason;
+  }
+  
   /** Update one uniform buffer. Only updates if values have changed */
   updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);
@@ -143,18 +156,6 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
         uniformBufferData,
         uniformValues
       )();
-    }
-    return reason;
-  }
-
-  /** Updates all uniform buffers where values have changed */
-  updateUniformBuffers(): false | string {
-    let reason: false | string = false;
-    for (const uniformBufferName of this.uniformBlocks.keys()) {
-      reason ||= this.updateUniformBuffer(uniformBufferName);
-    }
-    if (reason) {
-      log.log(3, `UniformStore.updateUniformBuffers(): ${reason}`)();
     }
     return reason;
   }

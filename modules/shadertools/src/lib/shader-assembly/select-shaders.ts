@@ -9,6 +9,7 @@ import type {AssembleShaderOptions} from './assemble-shaders';
  * Options for `ShaderAssembler.assembleShaders()`
  */
 export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
+  platformInfo: PlatformInfo;
   /** Vertex shader source. Can be GLSL or WGSL or both */
   vs?: {glsl?: string; wgsl?: string} | string | null;
   /** Fragment shader source. Can be GLSL or WGSL or both */
@@ -22,7 +23,6 @@ export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
  * @returns
  */
 export function selectShaders(
-  platformInfo: PlatformInfo,
   props: AssembleShaderProps
 ): AssembleShaderOptions {
   if (!props.vs) {
@@ -30,10 +30,10 @@ export function selectShaders(
   }
 
   // Resolve WGSL vs GLSL
-  const vs = getShaderSource(platformInfo, props.vs);
+  const vs = getShaderSource(props.platformInfo, props.vs);
   let fs;
   if (props.fs) {
-    fs = getShaderSource(platformInfo, props.fs);
+    fs = getShaderSource(props.platformInfo, props.fs);
   }
 
   return {...props, vs, fs};
