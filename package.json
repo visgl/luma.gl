@@ -59,11 +59,7 @@
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1"
   },
-  "resolutions_notes": {
-    "escaper": "v2 has an invalid main field in package.json, breaks esbuild during browser test"
-  },
   "resolutions": {
-    "escaper": "3.0.6",
     "typescript": "^5.3.0"
   },
   "pre-commit": [

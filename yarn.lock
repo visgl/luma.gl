@@ -5379,11 +5379,6 @@ escape-string-regexp@^4.0.0:
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz#14ba83a5d373e3d311e5afca29cf5bfad965bf34"
   integrity sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==
 
-escaper@3.0.6:
-  version "3.0.6"
-  resolved "https://registry.yarnpkg.com/escaper/-/escaper-3.0.6.tgz#82cb26d95e3de87c87ef786b0592ac19a55c704b"
-  integrity sha512-QEdbdnIdh8+VgK6jr2iOixGR/havRmnwAMqFmYldBn6QZrTYmuwHlAE4bZ36PUa5kKlnrb0egSvEQTvFfdHtEw==
-
 escodegen@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/escodegen/-/escodegen-2.1.0.tgz#ba93bbb7a43986d29d6041f99f5262da773e2e17"
