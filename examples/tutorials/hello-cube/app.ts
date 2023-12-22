@@ -21,31 +21,32 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
 
 const vs = glsl`\
 #version 300 es
-  in vec3 positions;
-  in vec2 texCoords;
+in vec3 positions;
+in vec2 texCoords;
 
-  uniform appUniforms {
-    uniform mat4 uMVP;
-  } app;
+uniform appUniforms {
+  uniform mat4 uMVP;
+} app;
 
-  out vec2 vUV;
+out vec2 vUV;
 
-  void main(void) {
-    gl_Position = app.uMVP * vec4(positions, 1.0);
-    vUV = texCoords;
-  }
+void main(void) {
+  gl_Position = app.uMVP * vec4(positions, 1.0);
+  vUV = texCoords;
+}
 `;
 
 const fs = glsl`\
 #version 300 es
-  precision highp float;
+precision highp float;
 
-  uniform sampler2D uTexture;
-  in vec2 vUV;
+uniform sampler2D uTexture;
+in vec2 vUV;
+out vec4 fragColor;
 
-  void main(void) {
-    gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
-  }
+void main(void) {
+  fragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+}
 `;
 
 const eyePosition = [0, 0, 5];

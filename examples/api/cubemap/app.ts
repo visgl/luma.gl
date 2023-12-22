@@ -33,10 +33,11 @@ precision highp float;
 
 uniform samplerCube uTextureCube;
 varying vec3 vPosition;
+out vec4 fragColor;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  gl_FragColor = textureCube(uTextureCube, normalize(vPosition));
+  fragColor = textureCube(uTextureCube, normalize(vPosition));
 }
 `;
 
