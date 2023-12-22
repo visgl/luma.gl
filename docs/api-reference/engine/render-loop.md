@@ -1,9 +1,5 @@
 # AnimationLoopTemplate
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 `AnimationLoopTemplate` is a helper class that manages the applications render loop.
 provides a number of conveniences related to initialization of a `Device` 
 and update of per-frame animation parameters.

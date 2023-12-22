@@ -1,9 +1,5 @@
 # Shader
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 The `Shader` class holds a compiled shader. 
 - It takes shader source code and compiles it during construction. 
 - Shaders are used as inputs when creating `RenderPipeline` and `ComputePipeline` objects. 

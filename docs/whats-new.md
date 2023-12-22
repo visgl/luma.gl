@@ -1,18 +1,14 @@
 # What's New
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
-:::danger
-The luma.gl v9 API requires existing luma.gl v8 applications to be [upgraded](/docs/upgrade-guide).
-:::
-
 ## Version 9.0 (In Development)
 
-Target Date: Q4, 2023
+Target Date: Jan 2023
 
-This is a major release that adds WebGPU support to the luma.gl API.
+luma.gl v9 API is a major release that adds WebGPU support to the luma.gl API.
+
+:::danger
+luma.gl v9 API contains breaking changes. It requires existing luma.gl v8 applications to be [upgraded](/docs/upgrade-guide).
+:::
 
 - **Portable GPU API**: `@luma.gl/core` provides a portable GPU resource management API.
 - **WebGPU**: Install the `@luma.gl/webgpu` backend to run luma.gl on WebGPU.
@@ -20,6 +16,7 @@ This is a major release that adds WebGPU support to the luma.gl API.
 - **TypeScript**: All APIs now rigorously typed.
 - **ES modules** - Now offers both ES module and CommonJS entry points for maximum interoperability.
 - **Website** - New Docusaurus website with more embedded live examples and improved documentation.
+
 
 **`@luma.gl/core`**
 

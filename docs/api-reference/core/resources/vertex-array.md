@@ -1,9 +1,5 @@
 # VertexArray
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 A `VertexArray` stores a set of vertex attribute bindings, including the index buffer.
 
 On WebGL, attribute can be bound to constants,

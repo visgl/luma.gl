@@ -1,9 +1,5 @@
 # Model
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 The `Model` class is the centerpiece of the luma.gl API. It brings together all the different functionality needed to run shaders and perform draw calls in a single, easy-to-use interface.
 
 - **render pipeline creation** -

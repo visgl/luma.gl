@@ -1,9 +1,5 @@
 # CanvasContext
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
 
 Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either: 
