@@ -63,11 +63,7 @@
     "escaper": "v2 has an invalid main field in package.json, breaks esbuild during browser test"
   },
   "resolutions": {
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
     "escaper": "3.0.6",
-    "eslint": "^8.52.0",
-    "prettier": "3.0.3",
     "typescript": "^5.3.0"
   },
   "pre-commit": [
