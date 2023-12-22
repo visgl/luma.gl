@@ -1,9 +1,5 @@
 # ShaderLayout
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 A `ShaderLayout` object describes the static structure a `RenderPipeline, "location" and structure of binding points of shaders,
  including attributes, bindings (textures, samplers, uniform buffers), and uniforms (under WebGL) and also lets the application
  assign a name to each binding point (typically matching the name used in the shader code).

@@ -1,4 +1,6 @@
-# Devices and CanvasContexts
+# GPU Access
+
+## Device
 
 The [`Device`](/docs/api-reference/core/device) class provides luma.gl applications with access to the GPU. 
 A luma.gl application first creates a `Device` instance which in turn provides the 
@@ -10,7 +12,7 @@ While a `Device` can be used on its own to perform computations on the GPU,
 at least one `CanvasContext` is required for rendering to the screen.
 Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvasElement` (or `OffscreenCanvas`).
 
-## CanvasContexts
+## CanvasContext
 
 The [`CanvasContext`](/docs/api-reference/core/canvas-context) is an important companion to the `Device`. A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
 

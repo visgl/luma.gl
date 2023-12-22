@@ -1,9 +1,5 @@
 # AnimationLoopTemplate
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 `AnimationLoopTemplate` is a helper class that manages the applications render loop.
 provides a number of conveniences related to initialization of a `Device` 
 and update of per-frame animation parameters.
@@ -54,18 +50,18 @@ new AppAnimationLoopTemplate({canvas: 'my-canvas'}).start();
 
 ### `AnimationLoopTemplateProps`
 
-| Parameter                        | Type                    | Description                                                                                                                                                                 |
-| -------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `device?`                            | `Device` | If supplied, will render into this external context instead of creating a new one.                                                                                          |
-| `glOptions`=`{}` (object)        |                         | Options to create the WebGLContext with. See [createGLContext](/docs/api-reference-v8/webgl-legacy/context/context-api).                                                                        |
-| `onCreateContext?`               | (callback)              | function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.                                   |
-| `onInitialize`                   | (callback)              | if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.                                           |
-| `onRender?`                      | (callback)              | Called on every animation frame.                                                                                                                                            |
-| `onFinalize?`                    | (callback)              | Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.                                                   |
-| `onError?`                       | (callback)              | Called when an error is about to be thrown.                                                                                                                                 |
-| `autoResizeViewport`=`true`      | `boolean`               | If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRender` is called. Set to false to control viewport size.            |
-| `autoResizeDrawingBuffer`=`true` | `boolean`               | If true, checks the canvas size every frame and updates the drawing buffer size if needed.                                                                                  |
-| `useDevicePixels`                | `boolean \| number`     | Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc. Refer to `Experimental API` section below for more use cases of this prop. |
+| Parameter                        | Type                | Description                                                                                                                                                                 |
+| -------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `device?`                        | `Device`            | If supplied, will render into this external context instead of creating a new one.                                                                                          |
+| `glOptions`=`{}` (object)        |                     | Options to create the WebGLContext with.                                                                                                                                    |
+| `onCreateContext?`               | (callback)          | function without parameters that returns a `WebGLRenderingContext`. This callback will be called exactly once, after page load completes.                                   |
+| `onInitialize`                   | (callback)          | if supplied, will be called once after first `start()` has been called, after page load completes and a context has been created.                                           |
+| `onRender?`                      | (callback)          | Called on every animation frame.                                                                                                                                            |
+| `onFinalize?`                    | (callback)          | Called once when animation is stopped. Can be used to delete objects or free any resources created during `onInitialize`.                                                   |
+| `onError?`                       | (callback)          | Called when an error is about to be thrown.                                                                                                                                 |
+| `autoResizeViewport`=`true`      | `boolean`           | If true, calls `gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight)` each frame before `onRender` is called. Set to false to control viewport size.            |
+| `autoResizeDrawingBuffer`=`true` | `boolean`           | If true, checks the canvas size every frame and updates the drawing buffer size if needed.                                                                                  |
+| `useDevicePixels`                | `boolean \| number` | Whether to use `window.devicePixelRatio` as a multiplier, e.g. in `autoResizeDrawingBuffer` etc. Refer to `Experimental API` section below for more use cases of this prop. |
 
 ### `AnimationProps`
 
@@ -73,17 +69,17 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 
 | Parameter         | Type                                     | Description                                                                         |
 | ----------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `animationLoop`  | `AnimationLoopTemplate`                          |  The calling `AnimationLoopTemplate` instance                             |
-| `device`          | `Device`                  | This `AnimationLoopTemplate`'s gl context.                                                  |
+| `animationLoop`   | `AnimationLoopTemplate`                  | The calling `AnimationLoopTemplate` instance                                        |
+| `device`          | `Device`                                 | This `AnimationLoopTemplate`'s gl context.                                          |
 | `canvas`          | `HTMLCanvasElement` or `OffscreenCanvas` | The canvas associated with this context.                                            |
-| `aspect`          | `number`                                         | The canvas aspect ratio (width/height) to update projection matrices                |
+| `aspect`          | `number`                                 | The canvas aspect ratio (width/height) to update projection matrices                |
 | `width`           |                                          | The drawing buffer width, in "device" pixels (can be different from canvas.width).  |
 | `height`          |                                          | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
-| `useDevicePixels` | `boolean`                                         | Boolean indicating if canvas is utilizes full resolution of Retina/                 |
+| `useDevicePixels` | `boolean`                                | Boolean indicating if canvas is utilizes full resolution of Retina/                 |
 | `needsRedraw`     | `String`                                 | Redraw flag (will be automatically set if drawingBuffer resizes)                    |
-| `time`            | `Number`                                 | Milliseconds since `AnimationLoopTemplate` was created (monotonic).                         |
+| `time`            | `Number`                                 | Milliseconds since `AnimationLoopTemplate` was created (monotonic).                 |
 | `tick`            | `Number`                                 | Counter that updates for every frame rendered (monotonic).                          |
-| `renderPass`      | `RenderPass`                            | Availabel if `createFrameBuffer: true` was passed to the constructor.               |
+| `renderPass`      | `RenderPass`                             | Availabel if `createFrameBuffer: true` was passed to the constructor.               |
 | `_mousePosition`  | `[x, y]` or `null`                       | (**experimental**) Current mouse position over the canvas.                          |
 | `_timeline`       | `Timeline`                               | (**experimental**) `Timeline` object tracking the animation timeline and channels.  |
 
@@ -108,7 +104,7 @@ Restarts the animation
 
 `animationLoop.start(options)`
 
-- `options`=`{}` (object) - Options to create the WebGLContext with. See [createGLContext](/docs/api-reference-v8/webgl-legacy/context/context-api).
+- `options`=`{}` (object) - Options to create the WebGLContext with.
 
 ### stop(): AnimationLoopTemplate
 
@@ -176,14 +172,14 @@ Returns the current state of the WebGL context used by the animation loop.
 
 ## Experimental API (`useDevicePixels`)
 
-`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console. For additional details check device pixels [`document`](/docs/api-reference-v8/webgl-legacy/context/device-pixels).
+`useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console.
 
 ## Remarks
 
 - You can instantiate multiple `AnimationLoopTemplate` classes in parallel, rendering into the same or different `WebGLRenderingContext`s.
 - Works both in browser and under Node.js.
 - All `AnimationLoopTemplate` methods can be chained.
-- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids when calling [`createGLContext`](/docs/api-reference-v8/webgl-legacy/context/context-api).
+- Postpones context creation until the page (i.e. all HTML) has been loaded. At this time it is safe to specify canvas ids.
 - The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 - This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoopTemplate constructor.
 

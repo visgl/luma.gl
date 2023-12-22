@@ -1,9 +1,5 @@
 # Texture
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 A `Texture` is a WebGL object that contains one or more images that all have the same image format. Shaders can read from textures (through a sampler uniform) and they can be set up as render targets (by attaching them to a framebuffer).
 
 Note: This section describes the `Texture` base class that implements functionality common to all four types of WebGL:
@@ -267,4 +263,3 @@ The following WebGL APIs are called in the function
 - Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL 2).
 - The WebGL Context has global "pixel store" parameters that control how pixel data is laid out, including Y direction, color space etc.
 - Textures are read from supplied data and written to the specified format/type parameters and pixel store parameters.
-- WebGL: Pixel store parameters are described in [`State Management`](/docs/api-reference-v8/webgl-legacy/context/parameter-setting).

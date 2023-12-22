@@ -1,9 +1,5 @@
 # Device
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 The `Device` class manages the application's connection with the GPU,
 providing methods to:
 
