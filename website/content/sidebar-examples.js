@@ -11,9 +11,10 @@ const sidebars = {
       items: [
         'showcase/instancing',
         'showcase/persistence',
-        'api/animation',
-        'api/cubemap',
-        'api/texture-3d'
+        'api/animation'
+        // Broken pending texture refactor
+        // 'api/cubemap',
+        // 'api/texture-3d'
       ]
     },
     {
@@ -28,17 +29,17 @@ const sidebars = {
         'tutorials/shader-hooks'
       ]
     },
-    {
-      type: 'category',
-      label: 'WebGPU',
-      items: [
-        'webgpu/triangle',
-        'webgpu/rotating-cube',
-        'webgpu/textured-cube',
-        'webgpu/two-cubes',
-        'webgpu/instanced-cubes'
-      ]
-    }
+    // {
+    //   type: 'category',
+    //   label: 'WebGPU',
+    //   items: [
+    //     'webgpu/triangle',
+    //     'webgpu/rotating-cube',
+    //     'webgpu/textured-cube',
+    //     'webgpu/two-cubes',
+    //     'webgpu/instanced-cubes'
+    //   ]
+    // }
   ]
 };
 

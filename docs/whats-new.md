@@ -157,7 +157,7 @@ Date: September 19, 2019
 
 #### Program Management
 
-luma.gl introduces the [ProgramManager](/docs/api-reference-v8/webgl-legacy/engine/program-manager) class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
+luma.gl introduces the `ProgramManager` class to manage caching and re-use of `Program` objects, providing powerful load and runtime optimizations:
 
 - Redundant shader compilation and linking is avoided.
 - Redundant program switching (among the [most expensive](https://computergraphics.stackexchange.com/a/46) GPU state changes) while rendering is avoided.
@@ -484,7 +484,7 @@ Date: Apr 24, 2018
 
 The new experimental [`Transform`](/docs/api-reference/engine/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
 
-**Pixel Readback to GPU Buffers** (WebGL 2) - A new method [`Framebuffer.readPixelsToBuffer`](/docs/api-reference-v8/webgl-legacy/classes/framebuffer) is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
+**Pixel Readback to GPU Buffers** (WebGL 2) - A new method `Framebuffer.readPixelsToBuffer` is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 
 #### Bundle Size Reduction
 
@@ -516,7 +516,7 @@ Two improvements Performing Transform Feedback operations has gotten easier, mai
 
 `Program` now build a `varyingMap` on creation depending on `varyings` array and `drawMode`. This `varyingMap` can be passed to `TransformFeedback.bindBuffers()` enabling buffers to be indexed by the name of the "varying" instead of using an index.
 
-For more details check [`TransformFeedback`](/docs/api-reference-v8/webgl-legacy/classes/transform-feedback) and [`Model`](/docs/api-reference/engine/model) documentation.
+For more details check `TransformFeedback` and [`Model`](/docs/api-reference/engine/model) documentation.
 
 ## Version 5.0
 
@@ -574,7 +574,7 @@ A major release that brings full WebGL 2 support to luma.gl, as well as adding s
 
 luma.gl now exposes the complete WebGL 2 APIs:
 
-- New classes expose all the new WebGL 2 objects ([`Query`](/docs/api-reference-v8/webgl-legacy/classes/query), [`Texture3D`](/docs/api-reference-v8/webgl-legacy/classes/texture-3d), and [`TransformFeedback`](/docs/api-reference-v8/webgl-legacy/classes/transform-feedback)), together with a new [`UniformBufferLayout`](/docs/api-reference-v8/webgl-legacy/classes/uniform-buffer-layout) helper class to make uniform buffers easy to use.
+- New classes expose all the new WebGL 2 objects (`Query`, `Texture3D`, and `TransformFeedback`), together with a new `UniformBufferLayout` helper class to make uniform buffers easy to use.
 - Other existing WebGL classes with new functionalites under WebGL 2 have been updated.
 - Add new WebGL 2 texture formats and types support, including floating point textures, and multiple render targets.
 

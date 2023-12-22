@@ -267,4 +267,3 @@ The following WebGL APIs are called in the function
 - Textures can be created from a number of different sources, including typed arrays, HTML Images, HTML Canvases, HTML Videos and WebGLBuffers (WebGL 2).
 - The WebGL Context has global "pixel store" parameters that control how pixel data is laid out, including Y direction, color space etc.
 - Textures are read from supplied data and written to the specified format/type parameters and pixel store parameters.
-- WebGL: Pixel store parameters are described in [`State Management`](/docs/api-reference-v8/webgl-legacy/context/parameter-setting).

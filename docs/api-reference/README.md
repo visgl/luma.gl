@@ -16,9 +16,9 @@ luma.gl is packaged and published as a suite of composable npm modules, so that 
 
 luma.gl also publishes a legacy moduls that should be avoided in new applications.
 
-| Legacy Module                     | Status     | Description      | Replacement                   |
-| --------------------------------- | ---------- | ---------------- | ----------------------------- |
-| [`@luma.gl/constants`][constants] | Deprecated | WebGL constants. | No longer used in luma.gl v9. |
+| Legacy Module        | Status     | Description      | Replacement                   |
+| -------------------- | ---------- | ---------------- | ----------------------------- |
+| `@luma.gl/constants` | Deprecated | WebGL constants. | No longer used in luma.gl v9. |
 
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu
@@ -27,4 +27,3 @@ luma.gl also publishes a legacy moduls that should be avoided in new application
 [gltf]: /docs/api-reference/gltf
 [test-utils]: /docs/api-reference/test-utils
 [engine]: /docs/api-reference/engine
-[constants]: /docs/api-reference-v8/constants
