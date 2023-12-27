@@ -209,7 +209,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
   // COLOR STATE
 
-  if (parameters.blendColorOperation || parameters.blendColorOperation) {
+  if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
     gl.enable(GL.BLEND);
 
     const colorEquation = convertBlendOperationToEquation('blendColorOperation', parameters.blendColorOperation || 'add');
