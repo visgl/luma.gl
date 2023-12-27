@@ -7,10 +7,12 @@ import {
   CompareFunction,
   StencilOperation,
   log,
-  isObjectEmpty
+  isObjectEmpty,
+  BlendOperation,
+  BlendFactor
 } from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import type {GLParameters} from '@luma.gl/constants';
+import type {GLBlendEquation, GLBlendFunction, GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
@@ -207,21 +209,19 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
   // COLOR STATE
 
-  // if (parameters.blend) {
-  //   gl.enable(GL.BLEND);
+  if (parameters.blendColorOperation || parameters.blendColorOperation) {
+    gl.enable(GL.BLEND);
 
-  //   const blend = parameters.blend;
+    const colorEquation = convertBlendOperationToEquation('blendColorOperation', parameters.blendColorOperation || 'add');
+    const alphaEquation = convertBlendOperationToEquation('blendAlphaOperation', parameters.blendAlphaOperation || 'add');
+    gl.blendEquationSeparate(colorEquation, alphaEquation);
 
-  //   let colorEquation = (blend && blend.color && blend.color.operation) || 'add';
-  //   let alphaEquation = (blend && blend.alpha && blend.alpha.operation) || 'add';
-  //   gl.blendEquationSeparate(colorEquation, alphaEquation);
-
-  //   let colorSrcFactor = (blend && blend.color && blend.color.srcFactor) || 'one';
-  //   let colorDstFactor = (blend && blend.color && blend.color.dstFactor) || 'zero';
-  //   let alphaSrcFactor = (blend && blend.alpha && blend.alpha.srcFactor) || 'one';
-  //   let alphaDstFactor = (blend && blend.alpha && blend.alpha.dstFactor) || 'zero';
-  //   gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
-  // }
+    const colorSrcFactor = convertBlendFactorToFunction('blendColorSrcFactor', parameters.blendColorSrcFactor || 'one');
+    const colorDstFactor = convertBlendFactorToFunction('blendColorDstFactor', parameters.blendColorDstFactor || 'zero');
+    const alphaSrcFactor = convertBlendFactorToFunction('blendAlphaSrcFactor', parameters.blendAlphaSrcFactor || 'one');
+    const alphaDstFactor = convertBlendFactorToFunction('blendAlphaDstFactor', parameters.blendAlphaDstFactor || 'zero');
+    gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
+  }
 }
 
 /*
@@ -286,16 +286,31 @@ function convertStencilOperation(parameter: string, value: StencilOperation): GL
   });
 }
 
-// function convertBlendOperationToEquation(parameter: string, value: string): number {
-//   return map(parameter, value, {
-//     'add': GL.FUNC_ADD,
-//     'sub': GL.FUNC_SUBTRACT,
-//     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
-//     // When using a WebGL 2 context, the following values are available additionally:
-//     'min': GL.MIN,
-//     'max': GL.MAX
-//   });
-// }
+function convertBlendOperationToEquation(parameter: string, value: BlendOperation): GLBlendEquation {
+  return map(parameter, value, {
+    'add': GL.FUNC_ADD,
+    'subtract': GL.FUNC_SUBTRACT,
+    'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
+    // When using a WebGL 2 context, the following values are available additionally:
+    'min': GL.MIN,
+    'max': GL.MAX
+  } as Record<BlendOperation, GLBlendEquation>);
+}
+
+function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GLBlendFunction {
+  return map(parameter, value, {
+    'one': GL.ONE,
+    'zero': GL.ZERO,
+    'src-color': GL.SRC_COLOR,
+    'one-minus-src-color': GL.ONE_MINUS_SRC_COLOR,
+    'dst-color': GL.DST_COLOR,
+    'one-minus-dst-color': GL.ONE_MINUS_DST_COLOR,
+    'src-alpha': GL.SRC_ALPHA,
+    'one-minus-src-alpha': GL.ONE_MINUS_SRC_ALPHA,
+    'dst-alpha': GL.DST_ALPHA,
+    'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA,
+  } as Record<BlendFactor, GLBlendFunction>);
+}
 
 function message(parameter: string, value: any): string {
   return `Illegal parameter ${value} for ${parameter}`;
