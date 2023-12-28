@@ -8,12 +8,14 @@ import {Device, Buffer, Texture} from '@luma.gl/core';
 
 test('TextureTransform#constructor', async t => {
   for (const device of getWebGLTestDevices()) {
-    t.ok(createTextureTransform(device), 'creates transform');
+    if (device.isWebGL1) {
+      t.comment('TextureTransform aggregation not yet supported in WebGL2');
+    } else {
+      t.ok(createSumTextureTransform(device, new Float32Array(8)), 'creates transform');
+    }
   }
   t.end();
 });
-
-
 
 test('TextureTransform#sum', async t => {
   for (const device of getWebGLTestDevices()) {
@@ -39,16 +41,6 @@ test('TextureTransform#sum', async t => {
   t.end();
 });
 
-function createTextureTransform(device: Device): TextureTransform {
-  return new TextureTransform(device, {
-    vs: vsBasic,
-    targetTexture: device.createTexture({width: 2, height: 2}),
-    targetTextureChannels: 1,
-    targetTextureVarying: 'testtesttest',
-    elementCount: 4
-  });
-}
-
 function createSumTextureTransform(device: Device, values: Float32Array): TextureTransform {
   const inputValue = device.createBuffer({data: values});
   const targetTexture = device.createTexture({
@@ -58,7 +50,7 @@ function createSumTextureTransform(device: Device, values: Float32Array): Textur
     format: 'rgba32float',
   });
   return new TextureTransform(device, {
-    vs: vsSum,
+    vs: VS_SUM,
     attributes: {inputValue},
     bufferLayout: [{name: 'inputValue', format: 'float32'}],
     topology: 'point-list',
@@ -71,9 +63,6 @@ function createSumTextureTransform(device: Device, values: Float32Array): Textur
       blendColorOperation: 'add',
       blendColorSrcFactor: 'one',
       blendColorDstFactor: 'one',
-      blendAlphaOperation: 'add', // TODO(donmccurdy): unneeded?
-      blendAlphaSrcFactor: 'one',
-      blendAlphaDstFactor: 'one',
     },
   });
 }
@@ -86,17 +75,7 @@ async function readTextureTransform(device: Device, source: Texture, destination
   return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
 }
 
-const vsBasic = `\
-#version 300 es
-#define SHADER_NAME texture-transform-basic
-
-void main()
-{
-  gl_PointSize = 1.0;
-}
-`;
-
-const vsSum = `\
+const VS_SUM = `\
 #version 300 es
 #define SHADER_NAME texture-transform-sum
 precision highp float;
