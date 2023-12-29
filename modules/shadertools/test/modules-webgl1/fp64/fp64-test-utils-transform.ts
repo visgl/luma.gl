@@ -97,7 +97,8 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
     testCases
   });
 
-  transform.run({uniforms: fp64arithmetic.getUniforms()});
+  transform.model.setUniforms(fp64arithmetic.getUniforms());
+  transform.run();
 
   const {buffer, byteOffset, byteLength} = await transform.readAsync('result');
   const gpuResult = new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);

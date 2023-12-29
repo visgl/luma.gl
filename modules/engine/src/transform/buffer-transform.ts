@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {Device, Buffer, BufferRange, Framebuffer, TransformFeedback, assert, RenderPassParameters} from '@luma.gl/core';
+import {Device, Buffer, BufferRange, TransformFeedback, assert, RenderPassProps} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
 import {Model} from '../model/model';
 import type { ModelProps } from '..';
@@ -13,18 +13,6 @@ import type { ModelProps } from '..';
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   fs?: ModelProps['fs']; // override as optional
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
-};
-
-/**
- * Options for running a {@link BufferTransform}
- * @deprecated
- */
-export type BufferTransformRunOptions = {
-  framebuffer?: Framebuffer;
-  /** @deprecated Use uniform buffers for portability. */
-  uniforms?: Record<string, any>;
-  parameters?: RenderPassParameters;
-  discard?: boolean;
 };
 
 /**
@@ -70,18 +58,24 @@ export class BufferTransform {
     }
   }
 
+  /** @deprecated Use {@link destroy}. */
+  delete(): void {
+    this.destroy();
+  }
+
   /** Run one transform loop. */
-  run(options?: BufferTransformRunOptions): void {
-    const {framebuffer, parameters, discard, uniforms} = options || {};
-    const renderPass = this.device.beginRenderPass({framebuffer, parameters, discard});
-    if (uniforms) this.model.setUniforms(uniforms);
+  run(options?: RenderPassProps): void {
+    const renderPass = this.device.beginRenderPass(options);
     this.model.draw(renderPass);
     renderPass.end();
   }
 
-  /** swap resources if a map is provided */
-  swap(): void {
-    throw new Error('Not implemented');
+  /** @deprecated */
+  update(...args: any[]): void {
+    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
+    // to assist with migrating DeckGL usage.
+    // eslint-disable-next-line no-console
+    console.warn('TextureTransform#update() not implemented');
   }
 
   /** Returns the {@link Buffer} or {@link BufferRange} for given varying name. */

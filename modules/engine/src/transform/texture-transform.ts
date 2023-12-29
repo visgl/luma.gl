@@ -89,6 +89,11 @@ export class TextureTransform {
     }
   }
 
+  /** @deprecated Use {@link destroy}. */
+  delete(): void {
+    this.destroy();
+  }
+
   run(options?: RenderPassProps): void {
     const {framebuffer} = this.bindings[this.currentIndex];
     const renderPass = this.device.beginRenderPass({framebuffer, ...options});
@@ -96,9 +101,12 @@ export class TextureTransform {
     renderPass.end();
   }
 
-  swap(): void {
-    throw new Error('swap() not implemented');
-    // this.currentIndex = (this.currentIndex + 1) % 2;
+  /** @deprecated */
+  update(...args: any[]): void {
+    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
+    // to assist with migrating DeckGL usage.
+    // eslint-disable-next-line no-console
+    console.warn('TextureTransform#update() not implemented');
   }
 
   getData({packed = false} = {}) {
