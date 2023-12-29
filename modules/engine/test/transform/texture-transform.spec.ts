@@ -203,6 +203,6 @@ uniform sampler2D uSampler;
 
 void main()
 {
-  fragColor = texture2D(uSampler, vUv);
+  fragColor = texture(uSampler, vUv);
 }
 `;
