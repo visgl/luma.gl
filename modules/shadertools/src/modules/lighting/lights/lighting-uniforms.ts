@@ -139,7 +139,6 @@ function getUniforms(props?: LightingProps, prevUniforms: Partial<LightingUnifor
     uniforms.enabled = props.enabled ? 1 : 0;
   }
 
-  console.error(uniforms)
   return uniforms;
 }
 

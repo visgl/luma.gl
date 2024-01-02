@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {getAttributeInfosFromLayouts, decodeVertexFormat} from '@luma.gl/core';
+import {decodeVertexFormat} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
 function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
@@ -21,9 +21,6 @@ export function getVertexBufferLayout(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[]
 ): GPUVertexBufferLayout[] {
-  // @ts-expect-error Deduplicate and make use of the new core attribute logic here in webgpu module
-  const attributeInfos = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
-
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 

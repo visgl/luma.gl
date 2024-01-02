@@ -56,17 +56,16 @@ export const DEFAULT_WEBGL_TEXTURE_PROPS = {
   border: 0,
   dataFormat: undefined!,
   textureUnit: undefined!,
-  target: undefined!,
+  target: undefined!
 };
 
-export type TextureSourceData = 
-  TypedArray |
-  ImageData |
-  HTMLImageElement |
-  HTMLCanvasElement |
-  ImageBitmap |
-  HTMLVideoElement
-  ;
+export type TextureSourceData =
+  | TypedArray
+  | ImageData
+  | HTMLImageElement
+  | HTMLCanvasElement
+  | ImageBitmap
+  | HTMLVideoElement;
 
 type SetImageDataOptions = {
   target?: number;
@@ -83,7 +82,7 @@ type SetImageDataOptions = {
   parameters?: Record<GL, any>;
   /** @deprecated */
   pixels?: any;
-}
+};
 
 /**
  * @param {*} pixels, data -
@@ -138,7 +137,6 @@ type SetImageData3DOptions = {
   data: any;
   parameters?: Record<GL, any>;
 };
-
 
 // Polyfill
 export class WEBGLTexture extends Texture<WEBGLTextureProps> {
@@ -241,7 +239,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let data = props.data;
 
     if (data instanceof Promise) {
-      data.then((resolvedImageData) =>
+      data.then(resolvedImageData =>
         this.initialize(
           Object.assign({}, props, {
             pixels: resolvedImageData,
@@ -261,10 +259,9 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       return this;
     }
 
-    const {parameters = {}  as Record<GL, any>} = props;
+    const {parameters = {} as Record<GL, any>} = props;
 
-    const {
-      pixels = null, pixelStore = {}, textureUnit = undefined} = props;
+    const {pixels = null, pixelStore = {}, textureUnit = undefined} = props;
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -319,7 +316,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       format: glFormat,
       type,
       dataFormat,
-      // @ts-expect-error 
+      // @ts-expect-error
       parameters: pixelStore,
       compressed
     });
@@ -345,7 +342,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
   }
 
   initializeCube(props?: WEBGLTextureProps): this {
-    const {mipmaps = true, parameters = {}  as Record<GL, any>} = props;
+    const {mipmaps = true, parameters = {} as Record<GL, any>} = props;
 
     // Store props for accessors
     // this.props = props;
@@ -386,7 +383,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
    * If size has changed, reinitializes with current format
    * @note note clears image and mipmaps
    */
-  resize(options: {height: number, width: number, mipmaps?: boolean}): this {
+  resize(options: {height: number; width: number; mipmaps?: boolean}): this {
     const {height, width, mipmaps = false} = options;
     if (width !== this.width || height !== this.height) {
       return this.initialize({
@@ -471,7 +468,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       level = 0,
       glFormat = this.glFormat,
       offset = 0,
-      parameters = {}  as Record<GL, any>
+      parameters = {} as Record<GL, any>
     } = options;
 
     let {
@@ -509,7 +506,17 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     withGLParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
-          gl.texImage2D(target, level, glFormat, width, height, 0 /* border*/, dataFormat, type, data);
+          gl.texImage2D(
+            target,
+            level,
+            glFormat,
+            width,
+            height,
+            0 /* border*/,
+            dataFormat,
+            type,
+            data
+          );
           break;
         case 'typed-array':
           // Looks like this assert is not necessary, as offset is ignored under WebGL1
@@ -821,7 +828,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     // ... }
 
     const resolvedFaces = await Promise.all(
-      WEBGLTexture.FACES.map((face) => {
+      WEBGLTexture.FACES.map(face => {
         const facePixels = imageDataMap[face];
         return Promise.all(Array.isArray(facePixels) ? facePixels : [facePixels]);
       })
@@ -867,7 +874,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.bind();
     if (imageData instanceof Promise) {
-      imageData.then((resolvedImageData) =>
+      imageData.then(resolvedImageData =>
         this.setImageDataForFace(
           Object.assign({}, options, {
             face,
@@ -974,7 +981,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.gl.bindTexture(this.target, this.handle);
     for (const [pname, pvalue] of Object.entries(parameters)) {
-      const param = Number(pname);
+      const param = Number(pname) as GL.TEXTURE_MIN_LOD | GL.TEXTURE_MAX_LOD;
       const value = pvalue;
 
       // Apparently there are integer/float conversion issues requires two parameter setting functions in JavaScript.
@@ -995,7 +1002,10 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
   }
 
   /** @deprecated For LegacyTexture subclass */
-  protected _getWebGL1NPOTParameterOverride(pname: number, value: number): number {
+  protected _getWebGL1NPOTParameterOverride(
+    pname: GL.TEXTURE_MIN_FILTER | GL.TEXTURE_WRAP_S | GL.TEXTURE_WRAP_T,
+    value: GL.LINEAR | GL.NEAREST
+  ): number {
     // NOTE: Apply NPOT workaround
     const npot = this.device.isWebGL1 && isNPOT(this.width, this.height);
     if (npot) {

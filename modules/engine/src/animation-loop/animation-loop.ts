@@ -300,7 +300,7 @@ export class AnimationLoop {
   }
 
   _cancelAnimationFrame() {
-    if (this._animationFrameId == null) {
+    if (this._animationFrameId === null) {
       return;
     }
 

@@ -178,7 +178,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const {bindings} = splitUniformsAndBindings(uniforms);
     Object.keys(bindings).forEach(name => {
       log.warn(
-        `Unsupported value "${bindings[name]}" used in setUniforms() for key ${name}. Use setBindings() instead?`
+        `Unsupported value "${JSON.stringify(bindings[name])}" used in setUniforms() for key ${name}. Use setBindings() instead?`
       )();
     });
     // TODO - check against layout
@@ -403,7 +403,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           // Set buffer
           const {name} = binding;
           const location = gl2.getUniformBlockIndex(this.handle, name);
-          if (location === GL.INVALID_INDEX) {
+          if (location as GL === GL.INVALID_INDEX) {
             throw new Error(`Invalid uniform block name ${name}`);
           }
           gl2.uniformBlockBinding(this.handle, uniformBufferIndex, location);

@@ -29,7 +29,10 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): GLSam
   }
   if (props.minFilter || props.mipmapFilter) {
     // TODO - arbitrary choice of linear?
-    params[GL.TEXTURE_MIN_FILTER] = convertMinFilterMode(props.minFilter || 'linear', props.mipmapFilter);
+    params[GL.TEXTURE_MIN_FILTER] = convertMinFilterMode(
+      props.minFilter || 'linear',
+      props.mipmapFilter
+    );
   }
   if (props.lodMinClamp !== undefined) {
     params[GL.TEXTURE_MIN_LOD] = props.lodMinClamp;
@@ -54,30 +57,40 @@ export function convertSamplerParametersToWebGL(props: SamplerParameters): GLSam
 /** Convert address more */
 function convertAddressMode(addressMode: 'clamp-to-edge' | 'repeat' | 'mirror-repeat'): GL {
   switch (addressMode) {
-    case 'clamp-to-edge': return GL.CLAMP_TO_EDGE;
-    case 'repeat': return GL.REPEAT;
-    case 'mirror-repeat': return GL.MIRRORED_REPEAT;
+    case 'clamp-to-edge':
+      return GL.CLAMP_TO_EDGE;
+    case 'repeat':
+      return GL.REPEAT;
+    case 'mirror-repeat':
+      return GL.MIRRORED_REPEAT;
   }
 }
 
 function convertMaxFilterMode(maxFilter: 'nearest' | 'linear'): GL {
   switch (maxFilter) {
-    case 'nearest': return GL.NEAREST;
-    case 'linear': return GL.LINEAR;
+    case 'nearest':
+      return GL.NEAREST;
+    case 'linear':
+      return GL.LINEAR;
   }
 }
 
-/** 
- * WebGPU has separate min filter and mipmap filter, 
+/**
+ * WebGPU has separate min filter and mipmap filter,
  * WebGL is combined and effectively offers 6 options
  */
-function convertMinFilterMode(minFilter: 'nearest' | 'linear', mipmapFilter?: 'nearest' | 'linear'): GL {
+function convertMinFilterMode(
+  minFilter: 'nearest' | 'linear',
+  mipmapFilter?: 'nearest' | 'linear'
+): GL {
   if (!mipmapFilter) {
     return convertMaxFilterMode(minFilter);
   }
   switch (minFilter) {
-    case 'nearest': return mipmapFilter === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
-    case 'linear': return mipmapFilter === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
+    case 'nearest':
+      return mipmapFilter === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
+    case 'linear':
+      return mipmapFilter === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
   }
 }
 
@@ -115,7 +128,10 @@ export function convertToSamplerParameters(params: GLSamplerParameters): Sampler
     props.lodMaxClamp = params[GL.TEXTURE_MAX_LOD];
   }
   if (params[GL.TEXTURE_COMPARE_MODE]) {
-    props.type = params[GL.TEXTURE_COMPARE_MODE]  === GL.COMPARE_REF_TO_TEXTURE ? 'comparison-sampler' : 'color-sampler';
+    props.type =
+      params[GL.TEXTURE_COMPARE_MODE] === GL.COMPARE_REF_TO_TEXTURE
+        ? 'comparison-sampler'
+        : 'color-sampler';
   }
   if (params[GL.TEXTURE_COMPARE_FUNC]) {
     props.compare = convertToCompareFunction('compare', params[GL.TEXTURE_COMPARE_FUNC]);
@@ -128,54 +144,87 @@ export function convertToSamplerParameters(params: GLSamplerParameters): Sampler
 }
 
 /** Convert address more */
-function convertToAddressMode(addressMode: number): 'clamp-to-edge' | 'repeat' | 'mirror-repeat' {
+function convertToAddressMode(
+  addressMode: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT
+): 'clamp-to-edge' | 'repeat' | 'mirror-repeat' {
   switch (addressMode) {
-    case GL.CLAMP_TO_EDGE: return 'clamp-to-edge';
-    case GL.REPEAT: return 'repeat';
-    case GL.MIRRORED_REPEAT: return 'mirror-repeat';
-    default: throw new Error('address');
+    case GL.CLAMP_TO_EDGE:
+      return 'clamp-to-edge';
+    case GL.REPEAT:
+      return 'repeat';
+    case GL.MIRRORED_REPEAT:
+      return 'mirror-repeat';
+    default:
+      throw new Error('address');
   }
 }
 
-function convertToMaxFilterMode(filterMode: number): 'nearest' | 'linear' {
+function convertToMaxFilterMode(filterMode: GL.NEAREST | GL.LINEAR): 'nearest' | 'linear' {
   switch (filterMode) {
-    case GL.NEAREST: return 'nearest';
-    case GL.LINEAR: return 'linear';
-    default: throw new Error('maxfilter');
+    case GL.NEAREST:
+      return 'nearest';
+    case GL.LINEAR:
+      return 'linear';
+    default:
+      throw new Error('maxfilter');
   }
 }
+
+type GLMinFilter =
+  | GL.NEAREST
+  | GL.LINEAR
+  | GL.NEAREST_MIPMAP_NEAREST
+  | GL.LINEAR_MIPMAP_NEAREST
+  | GL.NEAREST_MIPMAP_LINEAR
+  | GL.LINEAR_MIPMAP_LINEAR;
 
 /** WebGPU has separate min filter and mipmap filter, WebGL is combined */
-function convertToMinFilterMode(filterMode: number): 'nearest' | 'linear' {
+function convertToMinFilterMode(filterMode: GLMinFilter): 'nearest' | 'linear' {
   switch (filterMode) {
     // TODO is this correct?
-    case GL.NEAREST: return 'nearest';
-    case GL.LINEAR: return 'linear';
-    case GL.NEAREST_MIPMAP_NEAREST: return 'nearest';
-    case GL.LINEAR_MIPMAP_NEAREST: return 'linear';
-    case GL.NEAREST_MIPMAP_LINEAR: return 'nearest';
-    case GL.LINEAR_MIPMAP_LINEAR: return 'linear';
-    default: throw new Error('minfilter');
+    case GL.NEAREST:
+      return 'nearest';
+    case GL.LINEAR:
+      return 'linear';
+    case GL.NEAREST_MIPMAP_NEAREST:
+      return 'nearest';
+    case GL.LINEAR_MIPMAP_NEAREST:
+      return 'linear';
+    case GL.NEAREST_MIPMAP_LINEAR:
+      return 'nearest';
+    case GL.LINEAR_MIPMAP_LINEAR:
+      return 'linear';
+    default:
+      throw new Error('minfilter');
   }
 }
 
-function convertToMipmapFilterMode(filterMode: number): 'nearest' | 'linear' {
+function convertToMipmapFilterMode(filterMode: GLMinFilter): 'nearest' | 'linear' {
   switch (filterMode) {
     // TODO is this correct?
-    case GL.NEAREST: return 'nearest';
-    case GL.LINEAR: return 'linear';
-    case GL.NEAREST_MIPMAP_NEAREST: return 'nearest';
-    case GL.LINEAR_MIPMAP_NEAREST: return 'nearest';
-    case GL.NEAREST_MIPMAP_LINEAR: return 'linear';
-    case GL.LINEAR_MIPMAP_LINEAR: return 'linear';
-    default: throw new Error('mipmap');
+    case GL.NEAREST:
+      return 'nearest';
+    case GL.LINEAR:
+      return 'linear';
+    case GL.NEAREST_MIPMAP_NEAREST:
+      return 'nearest';
+    case GL.LINEAR_MIPMAP_NEAREST:
+      return 'nearest';
+    case GL.NEAREST_MIPMAP_LINEAR:
+      return 'linear';
+    case GL.LINEAR_MIPMAP_LINEAR:
+      return 'linear';
+    default:
+      throw new Error('mipmap');
   }
 }
 
 /**
  * Override sampler settings that are not supported by Non-Power-of-Two textures in WebGL1.
-*/
-export function updateSamplerParametersForNPOT(parameters: GLSamplerParameters): GLSamplerParameters {
+ */
+export function updateSamplerParametersForNPOT(
+  parameters: GLSamplerParameters
+): GLSamplerParameters {
   const newParameters = {...parameters};
   if (parameters[GL.TEXTURE_MIN_FILTER] !== GL.NEAREST) {
     // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
