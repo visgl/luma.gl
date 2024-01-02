@@ -12,6 +12,7 @@ import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
+import { getShaderInfo } from '../glsl-utils/get-shader-info';
 
 /** Define map */
 export type ShaderDefine = string | number | boolean;
@@ -246,31 +247,27 @@ function assembleGLSLShader(
     log?: any;
   }
 ) {
-  const isWGSL = options.source.includes('->');
   const {
     id,
     source,
     stage,
-    language = isWGSL ? 'wgsl' : 'glsl',
+    language = 'glsl',
     modules,
     defines = {},
     hookFunctions = [],
     inject = {},
-    prologue = !isWGSL,
+    prologue = true,
     log
   } = options;
 
   assert(typeof source === 'string', 'shader source must be a string');
 
+  const sourceVersion = language === 'glsl' ?  getShaderInfo(source).version : -1;
   const targetVersion = platformInfo.shaderLanguageVersion;
 
-  const sourceLines = source.split('\n');
-  if (sourceLines[0].indexOf('#version ') !== 0) {
-    throw new Error('GLSL: no #version');
-  }
+  const sourceVersionDirective = sourceVersion === 100 ? '#version 100' : '#version 300 es';
 
-  // Extract any version directive string from source.
-  const versionLine = sourceLines[0];
+  const sourceLines = source.split('\n');
   // TODO : keep all pre-processor statements at the beginning of the shader.
   const coreSource = sourceLines.slice(1).join('\n');
 
@@ -291,7 +288,7 @@ function assembleGLSLShader(
     case 'glsl':
       assembledSource = prologue
         ? `\
-${versionLine}
+${sourceVersionDirective}
 
 // ----- PROLOGUE -------------------------
 ${getShaderNameDefine({id, source, stage})}
@@ -305,7 +302,7 @@ ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 ${getApplicationDefines(allDefines)}
 
 `
-        : `${versionLine}
+        : `${sourceVersionDirective}
 `;
       break;
   }
@@ -378,7 +375,9 @@ ${getApplicationDefines(allDefines)}
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, stage, mainInjections);
   
-  assembledSource = transpileGLSLShader(assembledSource, targetVersion, stage);
+  if (language === 'glsl' && sourceVersion !== targetVersion) {
+    assembledSource = transpileGLSLShader(assembledSource, targetVersion, stage);
+  }
 
   return assembledSource.trim();
 }
