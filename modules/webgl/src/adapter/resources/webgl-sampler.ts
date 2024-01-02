@@ -45,7 +45,7 @@ export class WEBGLSampler extends Sampler {
     for (const [pname, value] of Object.entries(parameters)) {
       // Apparently there are integer/float conversion issues requires two parameter setting functions in JavaScript.
       // For now, pick the float version for parameters specified as GLfloat.
-      const param = Number(pname);
+      const param = Number(pname) as GL.TEXTURE_MIN_LOD | GL.TEXTURE_MAX_LOD;
       switch (param) {
         case GL.TEXTURE_MIN_LOD:
         case GL.TEXTURE_MAX_LOD:

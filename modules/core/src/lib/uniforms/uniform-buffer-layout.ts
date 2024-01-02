@@ -66,6 +66,7 @@ export class UniformBufferLayout {
       const uniformLayout = this.layout[name];
       if (!uniformLayout) {
         log.warn(`Supplied uniform value ${name} not present in uniform block layout`)();
+        // eslint-disable-next-line no-continue
         continue;
       }
 
@@ -74,6 +75,7 @@ export class UniformBufferLayout {
       if (size === 1) {
         if (typeof value !== 'number' && typeof value !== 'boolean') {
           log.warn(`Supplied value for single component uniform ${name} is not a number: ${value}`)();
+          // eslint-disable-next-line no-continue
           continue;
         }
         // single value -> just set it
@@ -82,6 +84,7 @@ export class UniformBufferLayout {
         const numericArray = isNumberArray(value);
         if (!numericArray) {
           log.warn(`Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`)();
+          // eslint-disable-next-line no-continue
           continue;
         }
         // vector/matrix -> copy the supplied (typed) array, starting from offset

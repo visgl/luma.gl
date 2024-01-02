@@ -90,11 +90,11 @@ export class ShaderInputs<
       const module = this.modules[moduleName];
 
       const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
-      console.error(uniforms)
+      // console.error(uniforms)
       this.moduleUniforms[moduleName] = uniforms || moduleProps as any;
       // this.moduleUniformsChanged ||= moduleName;
 
-      console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
+      // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
 
       // TODO - Get Module bindings
       // const bindings = module.getBindings?.(moduleProps);

@@ -87,7 +87,7 @@ export class Accessor implements AccessorObject {
       this.type = props.type;
 
       // Auto-deduce integer type?
-      if (props.type === GL.INT || props.type === GL.UNSIGNED_INT) {
+      if ((props.type as GL) === GL.INT || (props.type as GL) === GL.UNSIGNED_INT) {
         this.integer = true;
       }
     }

@@ -207,7 +207,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 function mapIndexToCubeMapFace(layer: number | GL): GL {
   // TEXTURE_CUBE_MAP_POSITIVE_X is a big value (0x8515)
   // if smaller assume layer is index, otherwise assume it is already a cube map face constant
-  return layer < GL.TEXTURE_CUBE_MAP_POSITIVE_X ? layer + GL.TEXTURE_CUBE_MAP_POSITIVE_X : layer;
+  return layer < (GL.TEXTURE_CUBE_MAP_POSITIVE_X as number) ? layer + GL.TEXTURE_CUBE_MAP_POSITIVE_X : layer;
 }
 
 // Helper METHODS

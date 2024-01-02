@@ -66,7 +66,7 @@ const TEST_CASES = [
 ];
 
 test('WebGLDevice.createFramebuffer()', async (t) => {
-  for (const testDevice of await getWebGLTestDevices()) {
+  for (const testDevice of getWebGLTestDevices()) {
     t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
 
     const framebuffer = testDevice.createFramebuffer({
@@ -85,7 +85,7 @@ test('WebGLDevice.createFramebuffer()', async (t) => {
 });
 
 test('WebGLFramebuffer create and resize attachments', async (t) => {
-  for (const testDevice of await getWebGLTestDevices()) {
+  for (const testDevice of getWebGLTestDevices()) {
     for (const tc of TEST_CASES) {
       let props;
 

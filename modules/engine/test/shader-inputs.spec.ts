@@ -19,8 +19,6 @@ test('ShaderInputs#picking', (t) => {
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   t.ok(shaderInputs, 'typed access');
 
-  shaderInputs
-
   t.end();
 });
 

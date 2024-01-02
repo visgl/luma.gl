@@ -348,7 +348,7 @@ function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
     throw new Error(`Accessing '${canvasId}' before page was loaded`);
   }
   if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error(`'${canvas}' is not a canvas element`);
+    throw new Error('Object is not a canvas element');
   }
   return canvas;
 }

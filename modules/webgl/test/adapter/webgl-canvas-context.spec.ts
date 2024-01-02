@@ -306,7 +306,7 @@ test('WebGLCanvasContext#cssToDevicePixels', (t) => {
       t.deepEqual(
         canvasContext?.cssToDevicePixels( tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
-        `${tc.name}(yInvert=true): device pixel should be ${tc.devicePositionsInverted[i]} for window position ${tc.windowPositions[i]}`
+        `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(tc.devicePositionsInverted[i])} for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
         canvasContext?.cssToDevicePixels(tc.windowPositions[i], false),
