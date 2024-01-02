@@ -22,7 +22,6 @@ export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
   targetTexture: Texture;
   targetTextureChannels: 1 | 2 | 3 | 4;
   targetTextureVarying: string;
-  elementCount: number;
 };
 
 
@@ -43,9 +42,6 @@ export class TextureTransform {
   readonly device: Device;
   readonly model: Model;
   readonly sampler: Sampler;
-
-  readonly elementIDBuffer: Buffer;
-  readonly elementCount: number;
   
   currentIndex = 0;
   samplerTextureMap: Record<string, any> | null = null;
@@ -54,8 +50,6 @@ export class TextureTransform {
 
   constructor(device: Device, props: TextureTransformProps) {
     this.device = device;
-    this.elementIDBuffer = createElementIDBuffer(device, props.elementCount);
-    this.elementCount = props.elementCount;
 
     // For precise picking of element IDs.
     this.sampler = device.createSampler({
@@ -74,7 +68,7 @@ export class TextureTransform {
         inputChannels: props.targetTextureChannels,
         output: FS_OUTPUT_VARIABLE
       }),
-      vertexCount: props.elementCount, // TODO(donmccurdy): Naming?
+      vertexCount: props.vertexCount, // TODO(donmccurdy): Naming?
       ...props
     });
 
@@ -83,11 +77,7 @@ export class TextureTransform {
   }
 
   // Delete owned resources.
-  destroy(): void {
-    if (this.elementIDBuffer) {
-      this.elementIDBuffer.destroy();
-    }
-  }
+  destroy(): void {}
 
   /** @deprecated Use {@link destroy}. */
   delete(): void {
@@ -109,7 +99,10 @@ export class TextureTransform {
     console.warn('TextureTransform#update() not implemented');
   }
 
+
   getData({packed = false} = {}) {
+    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
+    // to assist with migrating DeckGL usage.
     throw new Error('getData() not implemented');
   }
 
@@ -173,11 +166,4 @@ export class TextureTransform {
       sourceTextures[name].sampler = this.sampler;
     }
   }
-}
-
-/** Creates an element ID buffer, using float32 for GLSL 1.00 compatibility. */
-function createElementIDBuffer(device: Device, count: number): Buffer {
-  const data = new Float32Array(count);
-  for (let i = 0; i < count; i++) data[i] = i;
-  return device.createBuffer({data});
 }

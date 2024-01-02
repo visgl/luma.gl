@@ -24,7 +24,7 @@ test('TextureTransform#constructor', async t => {
         targetTexture,
         targetTextureChannels: 1,
         targetTextureVarying: 'vSrc',
-        elementCount: 1,
+        vertexCount: 1,
       });
       t.ok(transform, 'creates transform');
     }
@@ -53,7 +53,7 @@ test('TextureTransform#attribute', async t => {
         targetTexture,
         targetTextureChannels: 1,
         targetTextureVarying: 'vSrc',
-        elementCount: 6,
+        vertexCount: 6,
         parameters: {
           depthCompare: 'always',
           blendColorOperation: 'add',
@@ -102,7 +102,7 @@ test('TextureTransform#texture', async t => {
         vs: BLEND_VS,
         fs: BLEND_FS,
         topology: 'point-list',
-        elementCount: 4,
+        vertexCount: 4,
         targetTexture,
         targetTextureChannels: 4,
         targetTextureVarying: 'vUv',
