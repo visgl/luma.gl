@@ -73,10 +73,12 @@ precision highp float;
 
 in vec3 color;
 
+out vec4 fragColor;
+
 void main(void) {
-  gl_FragColor = vec4(color, 1.);
-  gl_FragColor = dirlight_filterColor(gl_FragColor);
-  gl_FragColor = picking_filterColor(gl_FragColor);
+  fragColor = vec4(color, 1.);
+  fragColor = dirlight_filterColor(fragColor);
+  fragColor = picking_filterColor(fragColor);
 }
 `;
 

@@ -1,9 +1,5 @@
 # Framebuffer
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 A `Framebuffer` holds textures that will be used as render targets for `RenderPipeline`s 
 together with additional information on how the `RenderPipeline` should use the various attached textures:
 

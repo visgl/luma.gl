@@ -69,6 +69,7 @@ uniform sphereUniforms {
 } sphere;
 
 in vec3 normal;
+out vec4 fragColor;
 
 void main(void) {
   float attenuation = 1.0;
@@ -76,7 +77,7 @@ void main(void) {
     vec3 light = normalize(vec3(1,1,2));
     attenuation = dot(normal, light);
   }
-  gl_FragColor = vec4(sphere.color * attenuation, 1);
+  fragColor = vec4(sphere.color * attenuation, 1);
 }
 `;
 
@@ -113,9 +114,11 @@ uniform screenQuadUniforms {
   vec2 resolution;
 } screenQuad;
 
+out vec4 fragColor;
+
 void main(void) {
   vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
-  gl_FragColor = texture2D(uTexture, p);
+  fragColor = texture2D(uTexture, p);
 }
 `;
 
@@ -143,11 +146,13 @@ uniform persistenceQuadUniforms {
   vec2 resolution;
 } persistence;
 
+out vec4 fragColor;
+
 void main(void) {
   vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
   vec4 cS = texture2D(uScene, p);
   vec4 cP = texture2D(uPersistence, p);
-  gl_FragColor = mix(cS*4.0, cP, 0.9);
+  fragColor = mix(cS*4.0, cP, 0.9);
 }
 `;
 

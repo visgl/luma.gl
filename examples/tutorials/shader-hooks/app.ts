@@ -13,24 +13,26 @@ Modifying shader behavior with shader hooks
 const vs = `\
 #version 300 es
 
-  attribute vec2 position;
+in vec2 position;
 
-  void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    OFFSET_POSITION(gl_Position);
-  }
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+  OFFSET_POSITION(gl_Position);
+}
 `;
 
 const fs = `\
 #version 300 es
 
-  uniform appUniforms {  
-    vec3 color;
-  } app;
+uniform appUniforms {  
+  vec3 color;
+} app;
 
-  void main() {
-    gl_FragColor = vec4(app.color, 1.0);
-  }
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(app.color, 1.0);
+}
 `;
 
 const offsetLeftModule = {

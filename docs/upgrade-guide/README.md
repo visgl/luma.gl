@@ -33,17 +33,17 @@ The key goals of luma.gl v8.0 were to simplify the core architecture and signifi
 
 The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
 
-| New Module   | Purpose                                                                     | Components from v7                                                                                         |
-| ------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| constants    | WebGL enum values                                                           | Same as before                                                                                             |
-| shadertools  | Tools for manipulating and composing shader text                            | shadertools and effects (formerly glfx)                                                                    |
-| gltools      | Creation, tooling and polyfilling for the WebGL context                     | webgl2-polyfill and webgl-state-tracker                                                                    |
-| webgl        | Wrapper classes for WebGL                                                   | Same as before                                                                                             |
-| core         | Single module re-exporting key parts of engine, webgl, gltools, shadertools | Changes described below                                                                                    |
+| New Module   | Purpose                                                                     | Components from v7                                                                                           |
+| ------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| constants    | WebGL enum values                                                           | Same as before                                                                                               |
+| shadertools  | Tools for manipulating and composing shader text                            | shadertools and effects (formerly glfx)                                                                      |
+| gltools      | Creation, tooling and polyfilling for the WebGL context                     | webgl2-polyfill and webgl-state-tracker                                                                      |
+| webgl        | Wrapper classes for WebGL                                                   | Same as before                                                                                               |
+| core         | Single module re-exporting key parts of engine, webgl, gltools, shadertools | Changes described below                                                                                      |
 | engine       | High-level drawing APIs                                                     | core/model, engine/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform |
-| debug        | Debug tooling for the other modules                                         | Same as before                                                                                             |
-| test-utils   | Test tooling for the other modules                                          | Same as before                                                                                             |
-| experimental | Experimental, unsupported APIs                                              | core/scenegraph, gpgpu, addons/gltf, addons/webvr                                                          |
+| debug        | Debug tooling for the other modules                                         | Same as before                                                                                               |
+| test-utils   | Test tooling for the other modules                                          | Same as before                                                                                               |
+| experimental | Experimental, unsupported APIs                                              | core/scenegraph, gpgpu, addons/gltf, addons/webvr                                                            |
 
 #### Breaking changes
 
@@ -362,12 +362,12 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 
 #### Constants
 
-| Removed symbol     | Replacement                          | Reason for change                                       |
-| ------------------ | ------------------------------------ | ------------------------------------------------------- |
+| Removed symbol     | Replacement                            | Reason for change                                       |
+| ------------------ | -------------------------------------- | ------------------------------------------------------- |
 | `GL`               | `import {GL} from 'luma.gl/constants'` | Bundle size reduction (by making this import optional). |
-| `glGet(name)`      | `glGet(gl, name)`                    | Bundle size reduction (Was deprecated in v5.3)          |
-| `glKey(value)`     | `glKey(gl, value)`                   | Bundle size reduction (Was deprecated in v5.3)          |
-| `glKeyType(value)` | `glKeyType(gl, value)`               | Bundle size reduction (Was deprecated in v5.3)          |
+| `glGet(name)`      | `glGet(gl, name)`                      | Bundle size reduction (Was deprecated in v5.3)          |
+| `glKey(value)`     | `glKey(gl, value)`                     | Bundle size reduction (Was deprecated in v5.3)          |
+| `glKeyType(value)` | `glKeyType(gl, value)`                 | Bundle size reduction (Was deprecated in v5.3)          |
 
 #### Context
 
@@ -436,11 +436,11 @@ luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now
 
 v5.3 deprecates a number of symbols. It is recommended that you replace their usage in your source code.
 
-| Deprecated symbol | Replacement                          | Reason                      |
-| ----------------- | ------------------------------------ | --------------------------- |
+| Deprecated symbol | Replacement                            | Reason                      |
+| ----------------- | -------------------------------------- | --------------------------- |
 | `GL`              | `import {GL} from 'luma.gl/constants'` | Bundle size concerns        |
-| `deleteGLContest` | `destroyGLContext`                   | API Audit: Naming alignment |
-| `pollContext`     | `pollGLContext`                      | API Audit: Naming alignment |
+| `deleteGLContest` | `destroyGLContext`                     | API Audit: Naming alignment |
+| `pollContext`     | `pollGLContext`                        | API Audit: Naming alignment |
 
 ## Upgrading to v5.2
 
@@ -565,10 +565,10 @@ Some previously deprecated classes and functions have been removed in luma.gl v4
 
 Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but a warning in the console will be generated. These functions are expected to be removed in a future major versions of luma.gl.
 
-| Symbol               | Replacement      | Comment                                                                            |
-| -------------------- | ---------------- | ---------------------------------------------------------------------------------- |
-| `withState`          | `withParameters` | [New WebGL state management](/docs/api-reference-v8/webgl-legacy/context/parameter-setting) |
-| `glContextWithState` | `withParameters` | [New WebGL state management](/docs/api-reference-v8/webgl-legacy/context/parameter-setting) |
+| Symbol               | Replacement      | Comment                    |
+| -------------------- | ---------------- | -------------------------- |
+| `withState`          | `withParameters` | New WebGL state management |
+| `glContextWithState` | `withParameters` | New WebGL state management |
 
 #### Model Class
 

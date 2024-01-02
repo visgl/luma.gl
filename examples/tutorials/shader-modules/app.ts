@@ -10,47 +10,49 @@ Re-using shader code with shader modules
 // Base vertex and fragment shader code pairs
 const vs1 = `\
 #version 300 es
-  in vec2 position;
-  void main() {
-    gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
-  }
+in vec2 position;
+void main() {
+  gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
+}
 `;
 
 const fs1 = `\
 #version 300 es
-  precision highp float;
+precision highp float;
 
-  uniform colorUniforms {
-    vec3 hsv;
-  } color;
+uniform colorUniforms {
+  vec3 hsv;
+} color;
 
-  out vec4 fragColor;
-  void main() {
-    fragColor = vec4(color_hsv2rgb(color.hsv), 1.0);
-  }
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(color_hsv2rgb(color.hsv), 1.0);
+}
 `;
 
 const vs2 = `\
 #version 300 es
-  in vec2 position;
-  void main() {
-    gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
-  }
+in vec2 position;
+void main() {
+  gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
+}
 `;
 
 const fs2 = `\
 #version 300 es
 
-  precision highp float;
-  
-  uniform colorUniforms {
-    vec3 hsv;
-  } color;
+precision highp float;
 
-  out vec4 fragColor;
-  void main() {
-    fragColor = vec4(color_hsv2rgb(color.hsv) - 0.3, 1.0);
-  }
+uniform colorUniforms {
+  vec3 hsv;
+} color;
+
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(color_hsv2rgb(color.hsv) - 0.3, 1.0);
+}
 `;
 
 type ColorModuleProps = {

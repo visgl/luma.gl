@@ -1,13 +1,15 @@
-import {Buffer} from '@luma.gl/core';
+import {glsl, Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 const INFO_HTML = `
 Have to start somewhere...
 `;
 
-const vsglsl = `
-attribute vec2 position;
-attribute vec3 color;
+const vs = `\
+#version 300 es
+
+in vec2 position;
+in vec3 color;
 
 varying vec3 vColor;
 
@@ -17,11 +19,13 @@ void main() {
 }
 `;
 
-const fsglsl = `
-varying vec3 vColor;
+const fs = glsl`\
+#version 300 es
 
+in vec3 vColor;
+out vec4 fragColor;
 void main() {
-  gl_FragColor = vec4(vColor, 1.0);
+  fragColor = vec4(vColor, 1.0);
 }
 `;
 
@@ -46,9 +50,6 @@ void main() {
 //   return vec4<f32>(fragColor, 1.0);
 // }
 // `;
-
-const vs = vsglsl;
-const fs = fsglsl;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;

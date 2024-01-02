@@ -1,9 +1,5 @@
 # Model
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 The `Model` class is the centerpiece of the luma.gl API. It brings together all the different functionality needed to run shaders and perform draw calls in a single, easy-to-use interface.
 
 - **render pipeline creation** -
@@ -190,7 +186,7 @@ Use a `Geometry` instance to define attribute buffers
 
 ### setAttributes(attributes: object); this
 
-Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference-v8/webgl-legacy/classes/vertex-array))
+Sets map of attributes (passes through to [VertexArray.setAttributes](/docs/api-reference/core/resources/vertex-array))
 
 ### setUniforms(uniforms: object): void
 

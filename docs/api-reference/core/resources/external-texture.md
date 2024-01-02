@@ -1,9 +1,5 @@
 # ExternalTexture
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 :::info
 WebGPU only.
 :::

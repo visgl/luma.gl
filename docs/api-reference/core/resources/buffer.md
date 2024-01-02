@@ -1,9 +1,5 @@
 # Buffer
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 Holds a block of GPU memory. The length of a buffer cannot be changed after creation.
 
 ## Types

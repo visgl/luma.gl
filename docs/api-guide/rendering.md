@@ -1,10 +1,6 @@
 # How Rendering Works
 
 :::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
-:::caution
 This page is a work-in-progress
 :::
 
@@ -124,13 +120,6 @@ This data loss is usually a non-issue as resizes are usually performed between r
 (typically to match the size of an off screen render buffer with the new size of the output canvas).
 
 A default Framebuffer should not be manually resized.
-
-### Reading, copying or blitting data from a Framebuffer attachment.
-
-- For reading data into CPU memory check [`readPixelsToArray`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
-- For reading into a Buffer object (GPU memory), doesn't result in CPU and GPU sync, check [`readPixelsToBuffer`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
-- For reading into a Texture object (GPU memory), doesn't result in CPU and GPU sync, check [`copyToTexture`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
-- For blitting between framebuffers (WebGL 2), check [`blit`](/docs/api-reference-v8/webgl-legacy/classes/moving-data)
 
 ### Framebuffer Attachment Values (TBD)
 
@@ -264,10 +253,6 @@ framebuffer.clear({
 
 
 # RenderPipeline
-
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/core/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 
@@ -489,10 +474,6 @@ Use with `RenderPipeline.getParameter(parameter)`
 
 
 # RenderPipeline
-
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
 
 A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/docs/api-reference/core/resources/shader) that can be exectued on the GPU by calling `RenderPipeline.draw()`. Programs handle compilation and linking of shaders, and store uniform values. They provide `draw` call which allows the application to run the shaders on specified input data.
 

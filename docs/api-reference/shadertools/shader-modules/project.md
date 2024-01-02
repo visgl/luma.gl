@@ -1,4 +1,4 @@
-# Shader Module: Project
+# project
 
 A basic projection module.
 

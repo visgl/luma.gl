@@ -1,4 +1,4 @@
-import {Buffer, NumberArray} from '@luma.gl/core';
+import {glsl, Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools/index';
 
@@ -10,19 +10,19 @@ type ColorModuleProps = {};
 
 const color: ShaderModule<ColorModuleProps> = {
   name: 'color',
-  vs: `
-    varying vec3 color_vColor;
+  vs: glsl`\
+out vec3 color_vColor;
 
-    void color_setColor(vec3 color) {
-      color_vColor = color;
-    }
+void color_setColor(vec3 color) {
+  color_vColor = color;
+}
   `,
-  fs: `
-    varying vec3 color_vColor;
+  fs: glsl`\
+in vec3 color_vColor;
 
-    vec3 color_getColor() {
-      return color_vColor;
-    }
+vec3 color_getColor() {
+  return color_vColor;
+}
   `
 };
 
@@ -42,25 +42,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
 
     this.model = new Model(device, {
-      vs: `\
+      vs: glsl`\
 #version 300 es
-      in vec2 position;
-        in vec3 instanceColor;
-        in vec2 instanceOffset;
+in vec2 position;
+in vec3 instanceColor;
+in vec2 instanceOffset;
 
-        void main() {
-          color_setColor(instanceColor);
-          gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
-        }
+void main() {
+  color_setColor(instanceColor);
+  gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
+}
       `,
-      fs: `\
+      fs: glsl`\
 #version 300 es
-      precision highp float;
-
-      out vec4 fragColor;
-      void main() {
-          fragColor = vec4(color_getColor(), 1.0);
-        }
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(color_getColor(), 1.0);
+}
       `,
       modules: [color],
       bufferLayout: [

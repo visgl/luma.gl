@@ -1,9 +1,5 @@
 # Upgrading to V9
 
-:::caution
-The luma.gl v9 API is currently in [public review](/docs/public-review) and may be subject to change.
-:::
-
 This upgrade guide describes upgrading to the luma.gl v9 API, which introduces major API changes. 
 
 ### Notable non-API changes
