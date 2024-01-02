@@ -93,7 +93,7 @@ test('TextureTransform#texture', async t => {
         format: 'rgba8unorm',
       });
       const targetTexture = device.createTexture({
-        data: new Uint8Array([0, 0, 0, 1.0]),
+        data: new Uint8Array([0, 0, 0, 1]),
         width: 1,
         height: 1,
         format: 'rgba8unorm',
@@ -153,7 +153,7 @@ async function readU8(device: Device, source: Texture, byteLength: number): Prom
 
 const BASIC_VS = `\
 #version 300 es
-#define SHADER_NAME texture-transform-sum
+#define SHADER_NAME texture-transform-basic
 precision highp float;
 out float vSrc;
 
