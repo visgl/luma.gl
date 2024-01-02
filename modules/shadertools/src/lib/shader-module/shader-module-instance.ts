@@ -34,7 +34,7 @@ export class ShaderModuleInstance {
 
       assert(
         typeof module !== 'string',
-        `Shader module use by name is deprecated. Import shader module '${module.name}' and use it directly.`
+        `Shader module use by name is deprecated. Import shader module '${JSON.stringify(module)}' and use it directly.`
       );
       if (!module.name) {
         // eslint-disable-next-line no-console
