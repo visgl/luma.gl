@@ -1,6 +1,6 @@
 import {glsl, Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {Transform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/engine';
 
 const INFO_HTML = `
 Animation via transform feedback.
@@ -53,7 +53,7 @@ void main() {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  transform: Transform;
+  transform: BufferTransform;
   model: Model;
 
   prevPositionBuffer: Buffer;
@@ -63,7 +63,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    if (!Transform.isSupported(device)) {
+    if (!device.features.has('transform-feedback-webgl2')) {
       throw new Error(ALT_TEXT);
     }
 
@@ -71,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.nextPositionBuffer = device.createBuffer(new Float32Array(6));
     this.colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
 
-    this.transform = new Transform(device, {
+    this.transform = new BufferTransform(device, {
       vs: transformVs,
       attributes: {position: this.prevPositionBuffer},
       bufferLayout: [{name: 'position', format: 'float32x2'}],
