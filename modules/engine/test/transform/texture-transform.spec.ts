@@ -10,7 +10,7 @@ import {Device, Texture} from '@luma.gl/core';
 test('TextureTransform#constructor', async t => {
   for (const device of getWebGLTestDevices()) {
     if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL2');
+      t.comment('TextureTransform aggregation not yet supported in WebGL1');
     } else {
       const targetTexture = device.createTexture({
         data: new Float32Array([201, 202, 203, 1.0]),
@@ -36,7 +36,7 @@ test('TextureTransform#constructor', async t => {
 test('TextureTransform#attribute', async t => {
   for (const device of getWebGLTestDevices()) {
     if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL2');
+      t.comment('TextureTransform aggregation not yet supported in WebGL1');
     } else {
       const src = device.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
       const targetTexture = device.createTexture({
@@ -80,7 +80,7 @@ test('TextureTransform#attribute', async t => {
 test('TextureTransform#texture', async t => {
   for (const device of getWebGLTestDevices()) {
     if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL2');
+      t.comment('TextureTransform aggregation not yet supported in WebGL1');
     } else {
       const srcData = new Uint8Array([2, 10, 255, 255]);
       const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4
