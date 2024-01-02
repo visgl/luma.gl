@@ -1,5 +1,22 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.48
+
+- fix(shadertools): Explicit GLSL version and language (#1904)
+- feat(webgl): Restore blending in setDeviceParameters (#1902)
+- chore: bump ocular-devtools (#1900)
+- feat(engine): Add ShaderInputs class (#1872)
+- feat(webgl) Allow passing null to setIndexBuffer (#1888)
+- refactor(engine): AnimationLoop start (#1897)
+- fix(engine): AnimationLoop cancelAnimationFrame (#1895)
+- feat(engine) Support normalized attributes in GPUGeometry (#1894)
+- chore(shadertools): Improve ShaderModule typings (#1891)
+- feat(gltf) Improve model positioning by considering worldMatrix (#1893)
+- chore(dev): Remove dev-modules/ from yarn workspace (#1889)
+- chore(shadertools): Improve generated shaders and ShaderModule typing (#1890)
+- chore(shadertools): Port all shaders to GLSL 3.00, enforce GLSL 3.00 source (#1887)
+- chore(shadertools): Port fp64 tests to GLSL 3.00 (#1886)
+
 ### v9.0.0-alpha.47
 
 - feat(engine) Support all vertex format types in GPUGeometry (#1884)
