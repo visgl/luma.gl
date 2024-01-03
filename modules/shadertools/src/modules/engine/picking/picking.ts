@@ -210,16 +210,16 @@ export const picking: ShaderModule<PickingProps, PickingUniforms> = {
   uniformTypes: {
     isActive: 'f32',
     isAttribute: 'f32',
-    useFloatColors: 'f32',
     isHighlightActive: 'f32',
+    useFloatColors: 'f32',
     highlightedObjectColor: 'vec3<f32>',
     highlightColor: 'vec4<f32>'
   },
   defaultUniforms: {
     isActive: false,
     isAttribute: false,
-    useFloatColors: true,
     isHighlightActive: false,
+    useFloatColors: true,
     highlightedObjectColor: new Float32Array([0, 0, 0]),
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
