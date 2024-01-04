@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "9.0.0-alpha.48",
+  "version": "9.0.0-alpha.49",
   "description": "luma.gl API",
   "license": "MIT",
   "type": "module",
