@@ -57,13 +57,7 @@ const TEST_CASES = [
 ];
 
 test('picking#getUniforms', (t) => {
-  t.deepEqual(picking.getUniforms({}), {
-    isActive: false,
-    isAttribute: false,
-    useFloatColors: true,
-    isHighlightActive: false,
-    highlightColor: [0, 1, 1, 1]
-  }, 'Empty input');
+  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
     picking.getUniforms({
@@ -74,10 +68,8 @@ test('picking#getUniforms', (t) => {
     {
       isActive: true,
       isAttribute: false,
-      useFloatColors: true,
-      isHighlightActive: false,
       highlightColor: [1, 0, 0, 1]
-    }, 'Undefined input');
+    }, 'Undefined input (no change to highlighted object)');
 
   t.deepEqual(
     picking.getUniforms({
@@ -88,11 +80,9 @@ test('picking#getUniforms', (t) => {
     {
       isActive: true,
       isAttribute: false,
-      useFloatColors: true,
       isHighlightActive: false,
-      highlightedObjectColor: [0, 0, 0],
       highlightColor: [1, 0, 0, 1]
-    }, 'Null input');
+    }, 'Null input (clear highlighted object)');
 
   t.deepEqual(
     picking.getUniforms({
@@ -100,13 +90,10 @@ test('picking#getUniforms', (t) => {
       highlightColor: [102, 0, 0, 51]
     }),
     {
-      isActive: false,
-      isAttribute: false,
-      useFloatColors: true,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [0.4, 0, 0, 0.2]
-    }
+    }, 'Picked input (set highlighted object)'
   );
 
   t.deepEqual(
@@ -116,13 +103,11 @@ test('picking#getUniforms', (t) => {
       useFloatColors: false
     }),
     {
-      isActive: false,
-      isAttribute: false,
       useFloatColors: false,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
-      highlightColor: [0.4, 0, 0, 0.2]
-    }
+      highlightColor: [0.4, 0, 0, 0.2],
+    }, 'Override useFloatColors'
   );
 
   t.end();

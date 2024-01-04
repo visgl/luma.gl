@@ -89,7 +89,7 @@ export class ShaderInputs<
       const moduleProps = props[moduleName];
       const module = this.modules[moduleName];
 
-      const oldUniforms = this.moduleUniforms[moduleName] || {};  
+      const oldUniforms = this.moduleUniforms[moduleName];  
       const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || moduleProps as any;
       // console.error(uniforms)
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
