@@ -39,3 +39,21 @@ test('ShaderInputs#picking', (t) => {
 
   t.end();
 });
+
+test('ShaderInputs#picking prop merge', (t) => {
+  const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
+  const expected = {...picking.defaultUniforms};
+  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'defaults set');
+
+  shaderInputs.setProps({picking: {highlightColor: [255, 0, 255]}});
+  expected.highlightColor = [1, 0, 1, 1]; // Color normalized and alpha added
+  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'Only highlight color updated');
+
+  // Setting the highlighted object also enables highlight
+  shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
+  expected.highlightedObjectColor = [255, 255, 255];
+  expected.isHighlightActive = true;
+  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'Only highlight object and highlight active updated');
+
+  t.end();
+});
