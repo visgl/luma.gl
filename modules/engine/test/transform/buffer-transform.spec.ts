@@ -3,7 +3,7 @@
 
 import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
-import {Transform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/engine';
 import {Buffer, Device, glsl} from '@luma.gl/core';
 
 const VS = glsl`\
@@ -20,18 +20,18 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test('Transform#constructor', async (t) => {
+test('BufferTransform#constructor', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (device.isWebGL1) {
-      t.throws(() => createTransform(device), /transform feedback/i, 'WebGL 1 throws');
+      t.throws(() => createBufferTransform(device), /transform feedback/i, 'WebGL 1 throws');
     } else {
-      t.ok(createTransform(device), 'WebGL 2 succeeds');
+      t.ok(createBufferTransform(device), 'WebGL 2 succeeds');
     }
   }
   t.end();
 });
 
-test('Transform#run', async (t) => {
+test('BufferTransform#run', async (t) => {
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
   const DST_ARRAY = new Float32Array([0, 1, 4, 9, 16, 25]);
 
@@ -42,7 +42,7 @@ test('Transform#run', async (t) => {
       const src = device.createBuffer({data: SRC_ARRAY});
       const dst = device.createBuffer({byteLength: 24});
       const elementCount = 6;
-      const transform = createTransform(device, src, dst, elementCount);
+      const transform = createBufferTransform(device, src, dst, elementCount);
 
       transform.run();
 
@@ -54,8 +54,8 @@ test('Transform#run', async (t) => {
   t.end();
 });
 
-function createTransform(device: Device, src?: Buffer, dst?: Buffer, vertexCount?: number): Transform {
-  return new Transform(device, {
+function createBufferTransform(device: Device, src?: Buffer, dst?: Buffer, vertexCount?: number): BufferTransform {
+  return new BufferTransform(device, {
     vs: VS,
     fs: FS,
     vertexCount,

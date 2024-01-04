@@ -8,6 +8,8 @@ import {
   glsl
 } from '@luma.gl/shadertools';
 
+type channelCount = 1 | 2 | 3 | 4;
+
 test('shader-utils#getQualifierDetails', (t) => {
   const QUALIFIER_TEST_CASES = [
     {
@@ -57,7 +59,7 @@ test('shader-utils#getPassthroughFS', (t) => {
     {
       version: 100,
       input: 'myInput',
-      inputType: 'vec2',
+      inputChannels: 2 as channelCount,
       expected: glsl`\
 varying vec2 myInput;
 void main() {
@@ -67,7 +69,7 @@ void main() {
     {
       version: 300,
       input: 'myInput',
-      inputType: 'float',
+      inputChannels: 1 as channelCount,
       output: 'myOutput',
       expected: glsl`\
 #version 300 es
@@ -80,12 +82,12 @@ void main() {
   ];
 
   PASSTHROUGH_TEST_CASES.forEach((testCase) => {
-    const {version, input, inputType, output, expected} = testCase;
-    const result = getPassthroughFS({version, input, inputType, output});
+    const {version, input, inputChannels, output, expected} = testCase;
+    const result = getPassthroughFS({version, input, inputChannels, output});
     t.equal(
       result,
       expected,
-      `Passthrough shader should match when version=${version} type=${inputType}`
+      `Passthrough shader should match when version=${version} channels=${inputChannels}`
     );
   });
   t.end();
@@ -109,20 +111,20 @@ test('shader-utils#typeToChannelCount', (t) => {
 
 test('shader-utils#convertToVec4', (t) => {
   t.equal(
-    convertToVec4('one', 'float'),
+    convertToVec4('one', 1),
     'vec4(one, 0.0, 0.0, 1.0)',
     'convertToVec4 should return right value for float'
   );
   t.equal(
-    convertToVec4('one', 'vec2'),
+    convertToVec4('one', 2),
     'vec4(one, 0.0, 1.0)',
     'convertToVec4 should return right value for vec2'
   );
   t.equal(
-    convertToVec4('one', 'vec3'),
+    convertToVec4('one', 3),
     'vec4(one, 1.0)',
     'convertToVec4 should return right value for vec3'
   );
-  t.equal(convertToVec4('one', 'vec4'), 'one', 'convertToVec4 should return right value for vec4');
+  t.equal(convertToVec4('one', 4), 'one', 'convertToVec4 should return right value for vec4');
   t.end();
 });

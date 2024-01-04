@@ -16,7 +16,11 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 
-export {Transform} from './transform/transform';
+// Transforms
+export type {BufferTransformProps} from './transform/buffer-transform';
+export {BufferTransform} from './transform/buffer-transform';
+export type {TextureTransformProps} from './transform/texture-transform';
+export {TextureTransform} from './transform/texture-transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 
