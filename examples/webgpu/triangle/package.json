@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-webgpu-hello-triangle",
-  "version": "9.0.0-alpha.49",
+  "version": "9.0.0-alpha.50",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.49",
-    "@luma.gl/shadertools": "9.0.0-alpha.49",
-    "@luma.gl/webgpu": "9.0.0-alpha.49",
+    "@luma.gl/engine": "9.0.0-alpha.50",
+    "@luma.gl/shadertools": "9.0.0-alpha.50",
+    "@luma.gl/webgpu": "9.0.0-alpha.50",
     "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {

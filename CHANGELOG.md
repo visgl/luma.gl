@@ -1,10 +1,10 @@
 # luma.gl CHANGELOG
 
-### v9.0.0-alpha.49
+### v9.0.0-alpha.50
 
-* feat(engine): Partial prop updates in ShaderInputs.setProps (#1907)
-* feat(engine): Transform → BufferTransform + TextureTransform (#1896)
-* fix(shadertools): Correct order of uniforms in picking module (#1906)
+- feat(engine): Partial prop updates in ShaderInputs.setProps (#1907)
+- feat(engine): Transform → BufferTransform + TextureTransform (#1896)
+- fix(shadertools): Correct order of uniforms in picking module (#1906)
 
 ### v9.0.0-alpha.48
 
