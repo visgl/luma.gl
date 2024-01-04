@@ -72,7 +72,7 @@ export class ShaderInputs<
       const moduleName = name as keyof ShaderPropsT;
 
       // Get default uniforms from module
-      this.moduleUniforms[moduleName] = module.getUniforms?.({}) || module.defaultUniforms || {};
+      this.moduleUniforms[moduleName] = module.defaultUniforms || {};
       this.moduleBindings[moduleName] = {};
     }
   }
@@ -89,9 +89,10 @@ export class ShaderInputs<
       const moduleProps = props[moduleName];
       const module = this.modules[moduleName];
 
-      const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
+      const oldUniforms = this.moduleUniforms[moduleName];  
+      const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || moduleProps as any;
       // console.error(uniforms)
-      this.moduleUniforms[moduleName] = uniforms || moduleProps as any;
+      this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
       // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
