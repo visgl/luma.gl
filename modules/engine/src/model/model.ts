@@ -662,6 +662,6 @@ export function getPlatformInfo(device: Device): PlatformInfo {
 /** Get attribute names from a BufferLayout */
 function getAttributeNames(bufferLayout: BufferLayout): string[] {
   return bufferLayout.attributes
-  ? bufferLayout.attributes?.map(layout => layout.attribute)
-  : [bufferLayout.name];
+    ? bufferLayout.attributes?.map(layout => layout.attribute)
+    : [bufferLayout.name];
 }

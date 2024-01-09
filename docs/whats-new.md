@@ -11,24 +11,24 @@ luma.gl v9 API contains breaking changes. It requires existing luma.gl v8 applic
 :::
 
 - **Portable GPU API**: `@luma.gl/core` provides a portable GPU resource management API.
-- **WebGPU**: Install the `@luma.gl/webgpu` backend to run luma.gl on WebGPU.
-- **WebGL**: `@luma.gl/webgl` is now an optional WebGL backend.
+- **WebGPU bindings**: `@luma.gl/webgpu` is a new, optional WebGPU backend.
+- **WebGL bindings**: `@luma.gl/webgl` is now an optional WebGL backend.
 - **TypeScript**: All APIs now rigorously typed.
-- **ES modules** - Now offers both ES module and CommonJS entry points for maximum interoperability.
+- **ES modules** - Modern ES module and CommonJS entry points for maximum interoperability.
 - **Website** - New Docusaurus website with more embedded live examples and improved documentation.
-
+- **Debugging** - SpectorJS integration. Shader debugger UI.
 
 **`@luma.gl/core`**
 
-- Exports the new portable luma.gl API (a set of interfaces and abstract classes for working with GPU resources).
-- Most important is the new `Device` class. The entry point to the luma.gl API, used to create other GPU resources.
+- The new portable luma.gl GPU API
+- The new `Device` class is he entry point to the luma.gl API, used to create other GPU resources.
 - Applications written against `@luma.gl/core` v9 are portable and can run on both WebGPU, WebGL2 and WebGL devices.
 
-**`@luma.gl/engine`** 
+**`@luma.gl/engine`**
 
-- Exports the classic `@luma.gl/engine` classes such as `Model`, `AnimationLoop` etc. 
+- The classic luma.gl engine classes such as `Model`, `AnimationLoop` etc. 
 - Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`).
-- All engine classes are implemented on top of `@luma.gl/core`, and work portably on both WebGPU and WebGL.
+- All engine classes build on `@luma.gl/core`, and work portably on both WebGPU and WebGL.
 
 **`@luma.gl/shadertools`**
 
@@ -37,13 +37,13 @@ luma.gl v9 API contains breaking changes. It requires existing luma.gl v8 applic
 
 **`@luma.gl/webgl`**
 
-- An optional backend module, that provides a WebGL / WebGL 2 backend implementation of the luma.gl API. 
+- An optional backend module, that provides a WebGL / WebGL 2 backend implementation of the luma.gl core API. 
 - Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'` 
 - Note: Requires a browser / environment that supports the WebGL API.
 
 **`@luma.gl/webgpu`** (new module)
 
-- An optional backend module, that provides a WebGPU implementation of the luma.gl API. 
+- An optional backend module, that provides a WebGPU implementation of the luma.gl core API. 
 - Importing this module enables the application to create `Device`s of type `'webgpu'` 
 - Note: Requires a browser / environment that supports the WebGPU API.
 
