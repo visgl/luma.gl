@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import test from 'tape-promise/tape';
+import test, {Test} from 'tape-promise/tape';
 import {formatCompilerLog, CompilerMessage} from '@luma.gl/core';
 
 const ERROR_LOG: CompilerMessage[] = [
@@ -1132,131 +1132,132 @@ void main(void) {
 }
 `;
 
-const EXPECTED = `\
+export const EXPECTED = `\
 
+ 264: 
  264:   float x = 1.0 / sqrt(a.x);
  264:   float yn = a.x * x;
- 264: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 264: 
  264:   float x = 1.0 / sqrt(a.x);
  264:   float yn = a.x * x;
- 264: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 294:   if (a.x == 0.0 && a.y == 0.0) return vec2(1.0, 0.0);
  294:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
  294: 
- 294:   float m = floor(a.x / LOG2_FP64.x + 0.5);
-WARNING: '/' : Divide by zero during constant folding
+WARNING: \'/\' : Divide by zero during constant folding
 
 
+ 294:   if (a.x == 0.0 && a.y == 0.0) return vec2(1.0, 0.0);
  294:   if (a.x == 1.0 && a.y == 0.0) return E_FP64;
  294: 
- 294:   float m = floor(a.x / LOG2_FP64.x + 0.5);
-WARNING: '/' : Divide by zero during constant folding
+WARNING: \'/\' : Divide by zero during constant folding
 
 
+ 344:   vec2 x = vec2(log(a.x), 0.0);
  344:   vec2 s;
  344: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
- 344:   s = vec2(ONE, 0.0);
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 344:   vec2 x = vec2(log(a.x), 0.0);
  344:   vec2 s;
  344: #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
- 344:   s = vec2(ONE, 0.0);
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 447:     }
  447: 
  447:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 447: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 447:     }
  447: 
  447:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 447: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 470:     } else {
  470:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  470:     }
- 470: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 470:     } else {
  470:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  470:     }
- 470: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 557:     }
  557: 
  557:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 557: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 557:     }
  557: 
  557:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 557: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 580:     } else {
  580:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  580:     }
- 580: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 580:     } else {
  580:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  580:     }
- 580: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 669:     }
  669: 
  669:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 669: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 669:     }
  669: 
  669:     t = sub_fp64(r, mul_fp64(PI_2_FP64, vec2(q, 0.0)));
- 669: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 681:     } else {
  681:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  681:     }
- 681: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 681:     } else {
  681:         t = sub_fp64(t, mul_fp64(PI_16_FP64, vec2(q, 0.0)));
  681:     }
- 681: 
-WARNING: '/' : Zero divided by zero during constant folding generated NaN
+WARNING: \'/\' : Zero divided by zero during constant folding generated NaN
 
 
+ 967:     radiusMinPixels, radiusMaxPixels
  967:   );
  967: 
- 967:   // outline is centered at the radius
-ERROR: 'project_scale' : no matching overloaded function found
+ERROR: \'project_scale\' : no matching overloaded function found
 
 
+ 994:   vertex_pos_modelspace[3] = vec2(1.0, 0.0);
  994: 
  994:   gl_Position = project_to_clipspace_fp64(vertex_pos_modelspace);
- 994: 
-ERROR: 'project_scale' : no matching overloaded function found
+ERROR: \'project_scale\' : no matching overloaded function found
 
 `;
 
-test('WebGL#formatGLSLError', (t) => {
+test('formatGLSLError', (t) => {
   let formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues'});
+  compareStrings(t, formattedLog, EXPECTED, 'formatGLSLError generated correct error');
   t.equal(formattedLog, EXPECTED, 'formatGLSLError generated correct error');
 
   // Run with various options to ensure we don't crash
@@ -1267,3 +1268,16 @@ test('WebGL#formatGLSLError', (t) => {
 
   t.end();
 });
+
+/** Compare shader strings - TODO move to test/utils */
+function compareStrings(t: Test, string1: string, string2: string, message?: string): void {
+  const lines1 = string1.split('\n');
+  const lines2 = string2.split('\n');
+
+  for (let i = 0; i < lines1.length; i++) {
+    if (lines1[i] !== lines2[i]) {
+      t.comment(`line ${i + 1}: '${lines1[i]}' --> '${lines2[i]}'`);
+      return;
+    } 
+  }
+}
