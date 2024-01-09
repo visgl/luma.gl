@@ -31,7 +31,7 @@ export class WebGPUShader extends Shader {
   async _checkCompilationError(errorScope: Promise<GPUError | null>): Promise<void> {
     const error = await errorScope as GPUValidationError;
     if (error) {
-      const shaderLog = await this.compilationInfo();
+      const shaderLog = await this.getCompilationInfo();
       log.error(`Shader compilation error: ${error.message}`, shaderLog)();
       // Note: Even though this error is asynchronous and thrown after the constructor completes,
       // it will result in a useful stack trace leading back to the constructor
@@ -40,8 +40,17 @@ export class WebGPUShader extends Shader {
   }
 
   override destroy(): void {
+    // Note: WebGPU does not offer a method to destroy shaders
     // this.handle.destroy();
   }
+
+  /** Returns compilation info for this shader */
+  async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
+    const compilationInfo = await this.handle.getCompilationInfo();
+    return compilationInfo.messages;
+  }
+
+  // PRIVATE METHODS
 
   protected createHandle(): GPUShaderModule {
     const {source, stage} = this.props;
@@ -65,11 +74,5 @@ export class WebGPUShader extends Shader {
       default:
         throw new Error(language);
     }
-  }
-
-  /** Returns compilation info for this shader */
-  async compilationInfo(): Promise<readonly CompilerMessage[]> {
-    const compilationInfo = await this.handle.getCompilationInfo();
-    return compilationInfo.messages;
   }
 }

@@ -1,22 +1,28 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
+// import { log } from '../../lib/utils/log';
+import {uid} from '../../lib/utils/utils';
 import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
+import {formatCompilerLog} from '../../lib/compiler-log/format-compiler-log';
+import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';
 
 /**
  * Properties for a Shader
  */
 export type ShaderProps = ResourceProps & {
-  stage: 'vertex' | 'fragment' | 'compute'; // Required by WebGL and GLSL transpiler
-  // code: string;
+  /** Shader language (defaults to auto) */ 
+  language?: 'glsl' | 'wgsl' | 'auto';
+  /** Which stage are we compiling? Required by WebGL and GLSL transpiler */
+  stage: 'vertex' | 'fragment' | 'compute';
+  /** Shader source code */
   source: string;
-  sourceMap?: string | null; // WebGPU only
-  language?: 'glsl' | 'wgsl' | 'auto'; // wgsl in WebGPU only
-  // entryPoint?: string;
-
-  // WEBGL
-  /** @deprecated use props.stage */
-  shaderType?: 0x8b30 | 0x8b31 | 0; // GL_FRAGMENT_SHADER | GL_VERTEX_SHADER
+  /** Optional shader source map (WebGPU only) */
+  sourceMap?: string | null;
+  /** Optional shader entry point (WebGPU only) */
+  entryPoint?: string;
+  /** Show shader source in browser? */
+  debug?: 'never' | 'errors' | 'warnings' | 'always';
 };
 
 /**
@@ -26,23 +32,107 @@ export type ShaderProps = ResourceProps & {
 export abstract class Shader extends Resource<ShaderProps> {
   static override defaultProps: Required<ShaderProps> = {
     ...Resource.defaultProps,
+    language: 'auto',
     stage: 'vertex',
     source: '',
     sourceMap: null,
-    language: 'auto',
-    shaderType: 0
+    entryPoint: 'main',
+    debug: 'errors'
   };
 
   override get [Symbol.toStringTag](): string { return 'Shader'; }
 
+  /** The stage of this shader */
   readonly stage: 'vertex' | 'fragment' | 'compute';
+  /** The source code of this shader */
   readonly source: string;
+  /** The compilation status of this shader. May be 'pending' if compilation is done asynchronously */
+  compilationStatus: 'success' | 'error' | 'pending' = 'pending';
 
+  /** Create a new Shader instance */
   constructor(device: Device, props: ShaderProps) {
-    super(device, props, Shader.defaultProps);
+    super(device, {id: getShaderIdFromProps(props), ...props}, Shader.defaultProps);
     this.stage = this.props.stage;
     this.source = this.props.source;
   }
 
-  abstract compilationInfo(): Promise<readonly CompilerMessage[]>;
+  /** Get compiler log asynchronously */
+  abstract getCompilationInfo(): Promise<readonly CompilerMessage[]>;
+
+  /** Get compiler log synchronously (WebGL only) */
+  getCompilationInfoSync(): (readonly CompilerMessage[]) | null {
+    return null;
+  }
+
+  // PORTABLE HELPERS
+
+  /** In browser logging of errors */
+  async debugShader(): Promise<void> {
+    switch (this.props.debug) {
+      case 'never':
+        return;
+      case 'errors':
+        // On WebGL - Don't extract the log unless errors
+        if (this.compilationStatus === 'success') {
+          return;
+        }
+        break;
+      case 'warnings':
+      case 'always':
+        break;
+    }
+
+    const messages = await this.getCompilationInfo();
+    if (this.props.debug === 'warnings' && messages?.length === 0) {
+      return;
+    }
+    this._displayShaderLog(messages);
+  }
+
+  // PRIVATE
+
+  /** In-browser UI logging of errors */
+  protected _displayShaderLog(messages: readonly CompilerMessage[]): void {
+    // Return if under Node.js / incomplete `document` polyfills
+    if (typeof document === 'undefined' || !document?.createElement) {
+      return;
+    }
+
+    const shaderName: string = getShaderInfo(this.source).name;
+    const shaderTitle: string = `${this.stage} ${shaderName}`;
+    const htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
+
+    // Make it clickable so we can copy to clipboard 
+    const button = document.createElement('Button');
+    button.innerHTML = `
+<h1>Shader Compilation Error in ${shaderTitle}</h1><br /><br />
+<code style="user-select:text;"><pre>
+${htmlLog}
+</pre></code>`;
+    button.style.top = '10px';
+    button.style.left = '10px';
+    button.style.position = 'absolute';
+    button.style.zIndex = '9999';
+    button.style.width = '100%';
+    button.style.textAlign = 'left';
+    document.body.appendChild(button);
+
+    document.getElementsByClassName('luma-compiler-log-error')[0]?.scrollIntoView();
+
+    // TODO - add a small embedded copy button (instead of main button)
+    button.onclick = () => {
+      // const source = this.source.replaceAll('\n', '<br />');
+      const dataURI = `data:text/plain,${encodeURIComponent(this.source)}`;
+      navigator.clipboard.writeText(dataURI);
+    };
+
+    // TODO - add a small embedded close button
+  }
+}
+
+// HELPERS
+
+/** Deduce an id, from shader source, or supplied id, or shader type */
+function getShaderIdFromProps(props: ShaderProps): string {
+  return getShaderInfo(props.source).name || props.id || uid(`unnamed ${props.stage}-shader`);
 }

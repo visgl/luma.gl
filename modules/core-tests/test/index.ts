@@ -23,6 +23,7 @@ import './adapter/resources/buffer.spec';
 import './adapter/resources/command-buffer.spec';
 import './adapter/resources/framebuffer.spec';
 import './adapter/resources/render-pipeline.spec';
+import './adapter/resources/shader.spec';
 import './adapter/resources/sampler.spec';
 import './adapter/resources/texture.spec';
 // import './adapter/resources/vertex-array.spec';

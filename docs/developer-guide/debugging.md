@@ -53,10 +53,13 @@ luma.log.level=1
 
 ## Shader compilation errors
 
-luma.gl takes care to extract as much information as possible about shader compiler errors etc, 
-and will throw exceptions with detailed error strings when shaders fail to compile. 
-luma.gl also injects and parses `glslify` style `#define SHADER_NAME` "shader names". 
+luma.gl extract as much information as possible about shader compiler errors etc, 
+and will throw exceptions with messages intended to help narrow down the problematic shader code when a shader fails to compile. 
 
+When running in the browser, luma.gl will open a shader source code viewer window inside the application's browser tab.
+This window shows both the shader source as well as any error messages and warnings from the shader compiler.
+
+Note that luma.gl also injects and parses `glslify`-style `#define SHADER_NAME` "shader names". 
 Naming shaders directly in the shader code can help identify which 
 shader is involved when debugging shader parsing errors occur.
 
