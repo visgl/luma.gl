@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-gltf",
-  "version": "9.0.0-alpha.50",
+  "version": "9.0.0-alpha.51",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -9,9 +9,9 @@
   },
   "dependencies": {
     "@loaders.gl/gltf": "^4.0.4",
-    "@luma.gl/engine": "9.0.0-alpha.50",
-    "@luma.gl/webgl": "9.0.0-alpha.50",
-    "@luma.gl/webgpu": "9.0.0-alpha.50"
+    "@luma.gl/engine": "9.0.0-alpha.51",
+    "@luma.gl/webgl": "9.0.0-alpha.51",
+    "@luma.gl/webgpu": "9.0.0-alpha.51"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

@@ -1,5 +1,10 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.51
+
+- feat(shadertools) Port pbr shader module to glsl300 (#1909)
+- feat(core): Shader debugger (#1892)
+
 ### v9.0.0-alpha.50
 
 - feat(engine): Partial prop updates in ShaderInputs.setProps (#1907)
