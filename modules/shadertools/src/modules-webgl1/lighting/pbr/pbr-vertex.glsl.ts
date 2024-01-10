@@ -5,14 +5,14 @@ uniform mat4 u_MVPMatrix;
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_NormalMatrix;
 
-varying vec3 pbr_vPosition;
-varying vec2 pbr_vUV;
+out vec3 pbr_vPosition;
+out vec2 pbr_vUV;
 
 #ifdef HAS_NORMALS
 # ifdef HAS_TANGENTS
-varying mat3 pbr_vTBN;
+out mat3 pbr_vTBN;
 # else
-varying vec3 pbr_vNormal;
+out vec3 pbr_vNormal;
 # endif
 #endif
 
