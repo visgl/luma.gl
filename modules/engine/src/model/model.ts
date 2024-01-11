@@ -257,7 +257,7 @@ export class Model {
     this.predraw();
 
     try {
-      this._logDrawCallStart(log.level);
+      this._logDrawCallStart();
 
       // Check if the pipeline is invalidated
       // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
@@ -276,7 +276,7 @@ export class Model {
         transformFeedback: this.transformFeedback
       });
     } finally {
-      this._logDrawCallEnd(log.level);
+      this._logDrawCallEnd();
     }
   }
 
