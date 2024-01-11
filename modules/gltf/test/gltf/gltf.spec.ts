@@ -4,9 +4,9 @@ import {webgl1Device} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
+
 import {Texture} from '@luma.gl/core';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {loadPBREnvironment} from '../../dist/pbr/pbr-environment';
+import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async (t) => {
   // TODO - is gl argument used?
