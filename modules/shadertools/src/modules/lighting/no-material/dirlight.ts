@@ -12,7 +12,7 @@ export type DirlightProps = {
 export type DirlightUniforms = DirlightProps;
 
 const vs = glsl`\
-varying vec3 dirlight_vNormal;
+out vec3 dirlight_vNormal;
 
 void dirlight_setNormal(vec3 normal) {
   dirlight_vNormal = normalize(normal);
@@ -24,7 +24,7 @@ uniform dirlightUniforms {
   vec3 lightDirection;
 } dirlight;
 
-varying vec3 dirlight_vNormal;
+in vec3 dirlight_vNormal;
 
 // Returns color attenuated by angle from light source
 vec4 dirlight_filterColor(vec4 color) {

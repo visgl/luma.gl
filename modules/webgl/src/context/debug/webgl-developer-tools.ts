@@ -2,7 +2,8 @@
 // Copyright (c) vis.gl contributors
 
 import {log, loadScript} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+// Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
+import {GL as GLEnum} from '@luma.gl/constants';
 import {isBrowser} from '@probe.gl/env'
 
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
@@ -85,7 +86,7 @@ function getDebugContext(gl: WebGLRenderingContext, props: DebugContextProps): W
   }
 
   // Create a new debug context
-  globalThis.WebGLDebugUtils.init({...GL, ...gl});
+  globalThis.WebGLDebugUtils.init({...GLEnum, ...gl});
   const glDebug = globalThis.WebGLDebugUtils.makeDebugContext(
     gl,
     onGLError.bind(null, props),
@@ -93,9 +94,9 @@ function getDebugContext(gl: WebGLRenderingContext, props: DebugContextProps): W
   );
 
   // Make sure we have all WebGL2 and extension constants (todo dynamic import to circumvent minification?)
-  for (const key in GL) {
-    if (!(key in glDebug) && typeof GL[key] === 'number') {
-      glDebug[key] = GL[key];
+  for (const key in GLEnum) {
+    if (!(key in glDebug) && typeof GLEnum[key] === 'number') {
+      glDebug[key] = GLEnum[key];
     }
   }
   
@@ -147,7 +148,7 @@ function onValidateGLFunc(props: DebugContextProps, functionName: string, functi
     log.log(1, functionString)();
   }
 
-  // If array of breakpoint strings supplied, check if any of them is contained in current GL function
+  // If array of breakpoint strings supplied, check if any of them is contained in current GLEnum function
   if (props.break && props.break.length > 0) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
     const isBreakpoint = props.break.every((breakOn: string) => functionString.indexOf(breakOn) !== -1);

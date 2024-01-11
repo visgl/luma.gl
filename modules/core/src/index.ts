@@ -137,7 +137,7 @@ export {assert} from './lib/utils/assert';
 export {cast} from './lib/utils/cast';
 export {log} from './lib/utils/log';
 export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
-export {isUniformValue, splitUniformsAndBindings} from './lib/utils/uniform';
+export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
 export {formatValue} from './lib/utils/format-value';
 export {stubRemovedMethods} from './lib/utils/stub-methods';
 export {checkProps} from './lib/utils/check-props';
@@ -153,7 +153,7 @@ export {makeRandomNumberGenerator, random} from './lib/utils/random';
 export {deepEqual} from './lib/utils/deep-equal';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
-export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animation-frame';
+export {requestAnimationFrame, cancelAnimationFrame} from './lib/utils/request-animation-frame';
 
 // SHADER HELPERS
 
@@ -162,6 +162,10 @@ export {requestAnimationFrame, cancelAnimationFrame} from './lib/request-animati
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
+
+// DEBUG
+
+export {getDebugTableForShaderLayout} from './lib/debug/debug-shader-layout';
 
 // INTERNAL
 

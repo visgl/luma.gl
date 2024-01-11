@@ -20,5 +20,8 @@ import './adapter/canvas-context.spec';
 // uniforms
 import './lib/uniforms/uniform-buffer-layout.spec';
 
-// lib
+// compiler logs
 import './lib/compiler-log/format-compiler-log.spec';
+
+// debug
+import './lib/debug/get-debug-table-from-shader-layout.spec';

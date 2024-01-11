@@ -6,13 +6,16 @@ import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
-import {getAttributeInfosFromLayouts} from '@luma.gl/core';
+import {getAttributeInfosFromLayouts, getDebugTableForShaderLayout} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
+
+const LOG_DRAW_PRIORITY = 2;
+const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string shaders
@@ -253,22 +256,28 @@ export class Model {
   draw(renderPass: RenderPass): void {
     this.predraw();
 
-    // Check if the pipeline is invalidated
-    // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
-    this.pipeline = this._updatePipeline();
+    try {
+      this._logDrawCallStart();
 
-    // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-    // Any caching needs to be done inside the pipeline functions
-    this.pipeline.setBindings(this.bindings);
-    this.pipeline.setUniforms(this.uniforms);
+      // Check if the pipeline is invalidated
+      // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
+      this.pipeline = this._updatePipeline();
 
-    this.pipeline.draw({
-      renderPass,
-      vertexArray: this.vertexArray,
-      vertexCount: this.vertexCount,
-      instanceCount: this.instanceCount,
-      transformFeedback: this.transformFeedback
-    });
+      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
+      // Any caching needs to be done inside the pipeline functions
+      this.pipeline.setBindings(this.bindings);
+      this.pipeline.setUniforms(this.uniforms);
+
+      this.pipeline.draw({
+        renderPass,
+        vertexArray: this.vertexArray,
+        vertexCount: this.vertexCount,
+        instanceCount: this.instanceCount,
+        transformFeedback: this.transformFeedback
+      });
+    } finally {
+      this._logDrawCallEnd();
+    }
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -518,6 +527,36 @@ export class Model {
       );
     }
     return this.pipeline;
+  }
+
+  /** Throttle draw call logging */
+  _lastLogTime = 0;
+  _logOpen = false;
+
+  _logDrawCallStart(): void {
+    // IF level is 4 or higher, log every frame.
+    const logDrawTimeout = log.level > 3 ? 0 : LOG_DRAW_TIMEOUT;
+    if (Date.now() - this._lastLogTime < logDrawTimeout) {
+      return undefined;
+    }
+
+    this._lastLogTime = Date.now();
+    this._logOpen = true;
+
+    log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
+  }
+
+  _logDrawCallEnd(): void {
+    if (this._logOpen) {
+      const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
+
+      // log.table(logLevel, attributeTable)();
+      // log.table(logLevel, uniformTable)();
+      log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
+
+      log.groupEnd(LOG_DRAW_PRIORITY)();
+      this._logOpen = false;
+    }
   }
 }
 
