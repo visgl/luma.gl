@@ -14,7 +14,7 @@ vec4 goggledygook = 100;
 
 test('Shader', async t => {
   // Only test WebGL, WebGPU is not able to detect shader failures synchronously, but require polling.
-  for (const device of await getWebGLTestDevices()) {
+  for (const device of getWebGLTestDevices()) {
     t.throws(
       () => device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE}),
       `${device.info.type} device.createShader throws on bad shader source`

@@ -16,7 +16,7 @@ const SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-test.only('getDebugTableForShaderLayout#tests', (t) => {
+test('getDebugTableForShaderLayout#tests', (t) => {
   const table = getDebugTableForShaderLayout(SHADER_LAYOUT, 'test');
   t.ok(table);
   t.end();
