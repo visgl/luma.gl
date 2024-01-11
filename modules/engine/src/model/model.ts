@@ -256,22 +256,28 @@ export class Model {
   draw(renderPass: RenderPass): void {
     this.predraw();
 
-    // Check if the pipeline is invalidated
-    // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
-    this.pipeline = this._updatePipeline();
+    try {
+      this._logDrawCallStart(log.level);
 
-    // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-    // Any caching needs to be done inside the pipeline functions
-    this.pipeline.setBindings(this.bindings);
-    this.pipeline.setUniforms(this.uniforms);
+      // Check if the pipeline is invalidated
+      // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
+      this.pipeline = this._updatePipeline();
 
-    this.pipeline.draw({
-      renderPass,
-      vertexArray: this.vertexArray,
-      vertexCount: this.vertexCount,
-      instanceCount: this.instanceCount,
-      transformFeedback: this.transformFeedback
-    });
+      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
+      // Any caching needs to be done inside the pipeline functions
+      this.pipeline.setBindings(this.bindings);
+      this.pipeline.setUniforms(this.uniforms);
+
+      this.pipeline.draw({
+        renderPass,
+        vertexArray: this.vertexArray,
+        vertexCount: this.vertexCount,
+        instanceCount: this.instanceCount,
+        transformFeedback: this.transformFeedback
+      });
+    } finally {
+      this._logDrawCallEnd(log.level);
+    }
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -525,33 +531,32 @@ export class Model {
 
   /** Throttle draw call logging */
   _lastLogTime = 0;
+  _logOpen = false;
 
-  _logDrawCallStart(logLevel: number): number {
-    const logDrawTimeout = logLevel > 3 ? 0 : LOG_DRAW_TIMEOUT;
+  _logDrawCallStart(): void {
+    // IF level is 4 or higher, log every frame.
+    const logDrawTimeout = log.level > 3 ? 0 : LOG_DRAW_TIMEOUT;
     if (Date.now() - this._lastLogTime < logDrawTimeout) {
       return undefined;
     }
 
     this._lastLogTime = Date.now();
+    this._logOpen = true;
 
     log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
-
-    return logLevel;
   }
 
-  _logDrawCallEnd(logLevel: number): void {
-    // HACK: logLevel === undefined means logDrawCallStart didn't run
-    if (logLevel === undefined) {
-      return;
+  _logDrawCallEnd(): void {
+    if (this._logOpen) {
+      const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
+
+      // log.table(logLevel, attributeTable)();
+      // log.table(logLevel, uniformTable)();
+      log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
+
+      log.groupEnd(LOG_DRAW_PRIORITY)();
+      this._logOpen = false;
     }
-
-    const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
-
-    // log.table(logLevel, attributeTable)();
-    // log.table(logLevel, uniformTable)();
-    log.table(logLevel + 1, shaderLayoutTable)();
-
-    log.groupEnd(LOG_DRAW_PRIORITY)();
   }
 }
 
