@@ -117,7 +117,10 @@ ${htmlLog}
     button.style.textAlign = 'left';
     document.body.appendChild(button);
 
-    document.getElementsByClassName('luma-compiler-log-error')[0]?.scrollIntoView();
+    const errors = document.getElementsByClassName('luma-compiler-log-error');
+    if (errors[0]?.scrollIntoView) {
+      errors[0].scrollIntoView();
+    }
 
     // TODO - add a small embedded copy button (instead of main button)
     button.onclick = () => {
