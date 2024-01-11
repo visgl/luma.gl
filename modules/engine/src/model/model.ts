@@ -6,13 +6,16 @@ import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
-import {getAttributeInfosFromLayouts} from '@luma.gl/core';
+import {getAttributeInfosFromLayouts, getDebugTableForShaderLayout} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
+
+const LOG_DRAW_PRIORITY = 2;
+const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   // Model also accepts a string shaders
@@ -518,6 +521,37 @@ export class Model {
       );
     }
     return this.pipeline;
+  }
+
+  /** Throttle draw call logging */
+  _lastLogTime = 0;
+
+  _logDrawCallStart(logLevel: number): number {
+    const logDrawTimeout = logLevel > 3 ? 0 : LOG_DRAW_TIMEOUT;
+    if (Date.now() - this._lastLogTime < logDrawTimeout) {
+      return undefined;
+    }
+
+    this._lastLogTime = Date.now();
+
+    log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
+
+    return logLevel;
+  }
+
+  _logDrawCallEnd(logLevel: number): void {
+    // HACK: logLevel === undefined means logDrawCallStart didn't run
+    if (logLevel === undefined) {
+      return;
+    }
+
+    const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
+
+    // log.table(logLevel, attributeTable)();
+    // log.table(logLevel, uniformTable)();
+    log.table(logLevel + 1, shaderLayoutTable)();
+
+    log.groupEnd(LOG_DRAW_PRIORITY)();
   }
 }
 
