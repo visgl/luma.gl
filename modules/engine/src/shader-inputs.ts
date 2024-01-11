@@ -90,6 +90,7 @@ export class ShaderInputs<
       const module = this.modules[moduleName];
       if (!module) {
         // Ignore props for unregistered modules
+        log.warn(`Module ${name} not found`)();
         continue;
       }
 
