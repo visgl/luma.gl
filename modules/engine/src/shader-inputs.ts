@@ -91,7 +91,7 @@ export class ShaderInputs<
       if (!module) {
         // Ignore props for unregistered modules
         log.warn(`Module ${name} not found`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
 
       const oldUniforms = this.moduleUniforms[moduleName];  
