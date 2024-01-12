@@ -197,7 +197,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.cube = new InstancedCube(device, {
-      // @ts-expect-error
+      // @ts-ignore
       shaderInputs: this.shaderInputs
     });
   }
