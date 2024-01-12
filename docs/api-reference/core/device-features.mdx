@@ -19,17 +19,24 @@ Open this page in different browsers to compare capabilities.
 
 ### Device.info
 
-A `DeviceInfo` object with fields that describe the devices.
+A `DeviceInfo` object with fields that describe the device.
 
 <DeviceTabs />
 
-| Field      | This Browser          | Description                           |
-| ---------- | --------------------- | ------------------------------------- |
-| `type`     | <Info f="type" />     | `webgpu`, `webgl2` or `webgl`         |
-| `gpu`      | <Info f="gpu" />      | `intel`, `nvidia`, `amd` or `unknown` |
-| `renderer` | <Info f="renderer" /> | GPU Driver                            |
-| `vendor`   | <Info f="vendor" />   | GPU vendor                            |
-| `version`  | <Info f="version" />  | Driver version                        |
+| Field                    | This Browser                        | Description                                                |
+| ------------------------ | ----------------------------------- | ---------------------------------------------------------- |
+| `type`                   | <Info f="type" />                   | Device type `webgpu`, `webgl2` or `webgl`                              |
+| `vendor`                 | <Info f="vendor" />                 | GPU vendor                                                 |
+| `renderer`               | <Info f="renderer" />               | GPU Driver                                                 |
+| `version`                | <Info f="version" />                | Driver version                                             |
+| `gpu`                    | <Info f="gpu" />                    | `apple`, `intel`, `nvidia`, `amd`, `software` or `unknown` |
+| `gpuType`                | <Info f="gpuType" />                | `discrete`, `integrated`, `cpu` or `unknown`               |
+| `gpuBackend`             | <Info f="gpuBackend" />             | `metal`, `opengl`, `vulkan`, `d3d12`, ... or `unknown`     |
+| `gpuArchitecture`        | <Info f="gpuArchitecture" />        | `common-3` on Apple                                        |
+| `shadingLanguage`        | <Info f="shadingLanguage" />        | Shanding language `wgsl`, `glsl`                           |
+| `shadingLanguageVersion` | <Info f="shadingLanguageVersion" /> | Shading language version GLSL 3.00 = 300, GLSL 1.00 = 100) |                                   |
+
+- Note that the Chrome browser only exposes limited information by default. Set the [chrome://flags/#enable-webgpu-developer-features](chrome://flags/#enable-webgpu-developer-features) flag to see more WebGPU info.
 
 ### Device.features
 
@@ -126,15 +133,15 @@ On your current browser, this would yield:
 The following table illustrates how WebGL extensions map to luma.gl features.
 
 :::info
-Caveat: this table is mainly included for reference purposes, in cases where 
+Caveat: this table is mainly included for reference purposes, in cases where
 it is helpful to understand exactly which extensions are being used by luma.gl
-under the hood. 
+under the hood.
 :::
 
 :::caution
-WebGL extensions can be demanding to work with directly. The extensions are very granular, 
+WebGL extensions can be demanding to work with directly. The extensions are very granular,
 enabling subfeatures of bigger features.
-Support both WebGL 1 and WebGL2 can require a lot of additional code, 
+Support both WebGL 1 and WebGL2 can require a lot of additional code,
 as WebGL 1 extensions typically require functions to be invoked on the extension object instead of the context.
 Furthermore, WebGL1 extensions are not supported on WebGL2 contexts even though the
 corresponding features are often supported out-of-the-box by WebGL2.
@@ -144,7 +151,7 @@ corresponding features are often supported out-of-the-box by WebGL2.
 | ------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
 | **General WebGL Features**                  |                                                                |                                                                                                                                                                | ß   |
 | `webgl2`                                    | True for WebGL 2 Context                                       |                                                                                                                                                                |
-| `timer-query-webgl` (WebGL1)                | [`EXTx_disjoint_timer_query`][timer_query_webgl]               | `Query` support asynchronous GPU timings                                                                                 |
+| `timer-query-webgl` (WebGL1)                | [`EXTx_disjoint_timer_query`][timer_query_webgl]               | `Query` support asynchronous GPU timings                                                                                                                       |
 | `timer-query-webgl` (WebGL2)                | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        | \* (Same feature has different extension under WebGL1 and WebGL2)                                                                                              |
 | `instanced-rendering-webgl1`                | [`ANGLE_instanced_arrays`][instanced_arrays]                   | Instanced rendering (instanced vertex attributes)                                                                                                              |
 | `vertex-array-object-webgl1`                | [`OES_vertex_array_object`][vertex_array_object]               | `VertexArrayObjects` can be created                                                                                                                            |

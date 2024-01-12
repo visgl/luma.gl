@@ -56,29 +56,33 @@ export type DeviceProps = {
 
 /**
  * Identifies the GPU vendor and driver.
- * @see https://www.khronos.org/registry/webgl/extensions/WEBGL_debug_renderer_info/
- * @note Current WebGPU support is very limited
+ * @note Chrome WebGPU does not provide much information, though more can be enabled with
+ * @see https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
+ * chrome://flags/#enable-webgpu-developer-features
  */
 export type DeviceInfo = {
-  /** Type of  */
+  /** Type of device */
   type: 'webgl' | 'webgl2' | 'webgpu';
-
+  /** Vendor (name of GPU vendor, Apple, nVidia etc */
   vendor: string;
+  /** Renderer (usually driver name) */
   renderer: string;
   /** version of driver */
   version: string;
-  /** type of GPU */
+  /** family of GPU */
   gpu: 'nvidia' | 'amd' | 'intel' | 'apple' | 'software' | 'unknown';
+  /** Type of GPU () */
+  gpuType: 'discrete' | 'integrated' | 'cpu' | 'unknown';
+  /** GPU architecture */
+  gpuArchitecture?: string; // 'common-3' on Apple
   /** GPU driver backend. Can sometimes be sniffed */
-  gpuBackend?: 'angle' | 'metal' | 'unknown';
+  gpuBackend?: 'opengl' | 'opengles' | 'metal' | 'd3d11' | 'd3d12' | 'vulkan' | 'unknown';
+  /** If this is a fallback adapter */
+  fallback?: boolean;
   /** Shader language supported by device.createShader() */
-  shadingLanguage: 'glsl' | 'wgsl';
+  shadingLanguage: 'wgsl' | 'glsl';
   /** Highest supported shader language version (GLSL 3.00 = 300, GLSL 1.00 = 100) */
   shadingLanguageVersion: number;
-  /** The masked vendor string */
-  vendorMasked?: string;
-  /** The masked renderer string */
-  rendererMasked?: string;
 };
 
 /** Limits for a device */

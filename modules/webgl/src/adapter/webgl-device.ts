@@ -132,7 +132,7 @@ export class WebGLDevice extends Device {
   }
 
   static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
-    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created');
+    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
 
     // Wait for page to load. Only wait when props. canvas is string
     // to avoid setting page onload callback unless necessary
@@ -158,7 +158,18 @@ export class WebGLDevice extends Device {
       return WebGLDevice.attach(props.gl);
     }
 
-    return new WebGLDevice(props);
+    const device = new WebGLDevice(props);
+
+    // Log some debug info about the newly created context
+    const message = `\
+Created ${device.info.type}${device.debug ? ' debug' : ''} context: \
+${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContext.id}`;
+    log.probe(LOG_LEVEL, message)();
+    log.table(LOG_LEVEL, device.info)();
+
+    log.groupEnd(LOG_LEVEL)();
+
+    return device;
   }
 
   //
@@ -240,14 +251,6 @@ export class WebGLDevice extends Device {
       const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
       this.spector = initializeSpectorJS({...this.props, canvas});
     }
-
-    // Log some debug info about the newly created context
-    const message = `\
-Created ${this.info.type}${this.debug ? ' debug' : ''} context: \
-${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`;
-    log.probe(LOG_LEVEL, message)();
-
-    log.groupEnd(LOG_LEVEL)();
   }
 
   /**
