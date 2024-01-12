@@ -6,13 +6,14 @@ import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
-import {getAttributeInfosFromLayouts, getDebugTableForShaderLayout} from '@luma.gl/core';
+import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
+import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -304,7 +305,7 @@ export class Model {
   _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
-    this.setAttributes(gpuGeometry.attributes);
+    this.setAttributes(gpuGeometry.attributes, 'ignore-unknown');
     this.setIndexBuffer(gpuGeometry.indices);
   }
 
@@ -438,7 +439,7 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(buffers: Record<string, Buffer>): void {
+  setAttributes(buffers: Record<string, Buffer>, _option?: 'ignore-unknown'): void {
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
@@ -463,7 +464,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set) {
+      if (!set && _option !== 'ignore-unknown') {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
@@ -551,6 +552,9 @@ export class Model {
       // log.table(logLevel, attributeTable)();
       // log.table(logLevel, uniformTable)();
       log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
+
+      const uniformBufferTable = this.shaderInputs.getDebugTable();
+      log.table(LOG_DRAW_PRIORITY, uniformBufferTable)();
 
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;

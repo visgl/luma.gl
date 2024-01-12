@@ -163,10 +163,6 @@ export {requestAnimationFrame, cancelAnimationFrame} from './utils/request-anima
  */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
 
-// DEBUG
-
-export {getDebugTableForShaderLayout} from './lib/debug/debug-shader-layout';
-
 // INTERNAL
 
 export type {

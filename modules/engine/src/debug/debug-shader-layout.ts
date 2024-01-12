@@ -1,4 +1,8 @@
-import type {ShaderLayout} from '../../adapter/types/shader-layout';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {ShaderLayout} from '@luma.gl/core';
 
 /**
  * Extracts a table suitable for `console.table()` from a shader layout to assist in debugging.

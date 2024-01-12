@@ -1,8 +1,8 @@
 // 
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
-import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, glsl} from '@luma.gl/core';
+import {Device, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -39,19 +39,6 @@ uniform appUniforms {
 out vec3 color;
 
 void main(void) {
-  // vec3 normal = vec3(uModel * vec4(normals, 1.0));
-
-  // // Set up data for modules
-  // color = instanceColors;
-  // project_setNormal(normal);
-  // // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  // picking_setPickingColor(vec3(0., instancePickingColors));
-
-  // // Vertex position (z coordinate undulates with time), and model rotates around center
-  // float delta = length(instanceOffsets);
-  // vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
-  // gl_Position = uProjection * uView * (uModel * vec4(positions * 1., 1.0) + offset);
-  // Set up data for modules
   color = instanceColors;
 
   vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
@@ -72,7 +59,6 @@ const fs = glsl`\
 precision highp float;
 
 in vec3 color;
-
 out vec4 fragColor;
 
 void main(void) {
@@ -182,10 +168,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timelineChannels: Record<string, number>;
   pickingFramebuffer: Framebuffer;
 
-  uniformStore = new UniformStore<{
+  shaderInputs = new _ShaderInputs<{
     app: AppUniforms,
-    dirlight: typeof dirlight.uniforms,
-    picking: typeof picking.uniforms
+    dirlight: typeof dirlight.props,
+    picking: typeof picking.props
   }>({
     app,
     dirlight,
@@ -212,11 +198,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   
     this.cube = new InstancedCube(device, {
-      bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        dirlight: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
-        picking: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
-      }
+      shaderInputs: this.shaderInputs,
+      // bindings: {
+      //   app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+      //   dirlight: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
+      //   picking: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
+      // }
     });
   }
 
@@ -225,7 +212,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const {_mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
-    this.uniformStore.setUniforms({
+    this.shaderInputs.setProps({
       app: {
         time: this.timeline.getTime(timeChannel),
         // Basic projection matrix
@@ -270,14 +257,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     framebuffer: Framebuffer
   ) {
     // use the center pixel location in device pixel range
-    const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
+    const devicePixels = device.canvasContext!.cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
     const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
     // Render picking colors
-    framebuffer.resize(device.canvasContext.getPixelSize());
+    framebuffer.resize(device.canvasContext!.getPixelSize());
 
-    this.uniformStore.setUniforms({picking: {isActive: true}});
+    this.shaderInputs.setProps({picking: {isActive: true}});
 
     const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
     model.draw(pickingPass);
@@ -295,7 +282,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
     const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
     
-    this.uniformStore.setUniforms({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
+    this.shaderInputs.setProps({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
   }  
 }
 
