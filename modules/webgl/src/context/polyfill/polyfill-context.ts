@@ -38,9 +38,13 @@ function initializeExtensions(gl: WebGLRenderingContext): void {
   const contextState = getContextData(gl);
   // `getSupportedExtensions` can return null when context is lost.
   const EXTENSIONS = gl.getSupportedExtensions() || [];
+  // Generates warnings in Chrome
+  const IGNORE_EXTENSIONS = ['WEBGL_polygon_mode'];
   for (const extensionName of EXTENSIONS) {
-    const extension = gl.getExtension(extensionName);
-    contextState._extensions[extensionName] = extension;
+    if (!IGNORE_EXTENSIONS.includes(extensionName)) {
+      const extension = gl.getExtension(extensionName);
+      contextState._extensions[extensionName] = extension;
+    }
   }
 }
 

@@ -22,6 +22,3 @@ import './lib/uniforms/uniform-buffer-layout.spec';
 
 // compiler logs
 import './lib/compiler-log/format-compiler-log.spec';
-
-// debug
-import './lib/debug/get-debug-table-from-shader-layout.spec';

@@ -14,7 +14,7 @@ declare global {
 function initializeLuma(): string {
   // Version detection using babel plugin
   // @ts-expect-error
-  const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'untranspiled source';
+  const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'running from source';
 
   const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
   // Assign luma.log.level in console to control logging: \
@@ -27,7 +27,7 @@ function initializeLuma(): string {
 
   if (!globalThis.luma) {
     if (isBrowser()) {
-      log.log(1, `luma.gl ${VERSION} - ${STARTUP_MESSAGE}`)();
+      log.log(1, `${VERSION} - ${STARTUP_MESSAGE}`)();
     }
 
     globalThis.luma = globalThis.luma || {

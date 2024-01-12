@@ -20,3 +20,7 @@ import './scenegraph/model-node.spec';
 import './shader-inputs.spec';
 import './transform/buffer-transform.spec';
 import './transform/texture-transform.spec';
+
+
+// debug
+import './debug/get-debug-table-from-shader-layout.spec';
