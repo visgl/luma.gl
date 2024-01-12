@@ -68,10 +68,10 @@ export class luma {
         }
         break;
       case 'best-available':
-        // DeviceClass = deviceList.get('webgpu');
-        // if (DeviceClass && DeviceClass.isSupported()) {
-        //   return await DeviceClass.create(props);
-        // }
+        DeviceClass = deviceList.get('webgpu');
+        if (DeviceClass && DeviceClass.isSupported()) {
+          return await DeviceClass.create(props);
+        }
         DeviceClass = deviceList.get('webgl');
         if (DeviceClass && DeviceClass.isSupported()) {
           return await DeviceClass.create(props);
