@@ -88,6 +88,11 @@ export class ShaderInputs<
       const moduleName = name as keyof ShaderPropsT;
       const moduleProps = props[moduleName];
       const module = this.modules[moduleName];
+      if (!module) {
+        // Ignore props for unregistered modules
+        log.warn(`Module ${name} not found`)();
+        continue;
+      }
 
       const oldUniforms = this.moduleUniforms[moduleName];  
       const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || moduleProps as any;
