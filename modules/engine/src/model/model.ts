@@ -553,8 +553,12 @@ export class Model {
       // log.table(logLevel, uniformTable)();
       log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
 
-      const uniformBufferTable = this.shaderInputs.getDebugTable();
-      log.table(LOG_DRAW_PRIORITY, uniformBufferTable)();
+      const uniformTable = this.shaderInputs.getDebugTable();
+      // Add any global uniforms
+      for (const [name, value] of Object.entries(this.uniforms)) {
+        uniformTable[name] = {value};
+      }
+      log.table(LOG_DRAW_PRIORITY, uniformTable)();
 
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;
