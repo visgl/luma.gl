@@ -5,7 +5,7 @@ import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from 
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
-import {log} from '../../lib/utils/log';
+import {log} from '../../utils/log';
 
 export type FramebufferProps = ResourceProps & {
   width?: number;

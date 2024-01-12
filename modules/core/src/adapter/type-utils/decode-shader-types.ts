@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {assert} from '../../lib/utils/assert';
+import {assert} from '../../utils/assert';
 import {ShaderUniformType, ShaderDataType} from '../types/shader-types';
 
 const UNIFORM_FORMATS: Record<ShaderUniformType, {type: ShaderDataType, components: number}> = {

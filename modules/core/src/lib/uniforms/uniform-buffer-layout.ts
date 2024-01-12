@@ -2,9 +2,9 @@
 import type {ShaderUniformType, ShaderDataType} from '../../adapter/types/shader-types';
 import type {UniformValue} from '../../adapter/types/types';
 import {decodeShaderUniformType, alignTo} from '../../adapter/type-utils/decode-shader-types';
-import {getScratchArrayBuffer} from '../utils/array-utils-flat';
-import {isNumberArray} from '../utils/is-array';
-import { log } from '../utils/log';
+import {getScratchArrayBuffer} from '../../utils/array-utils-flat';
+import {isNumberArray} from '../../utils/is-array';
+import { log } from '../../utils/log';
 
 /** 
  * Smallest buffer size that can be used for uniform buffers.

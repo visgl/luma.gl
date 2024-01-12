@@ -5,7 +5,7 @@ import type {Device} from '../../adapter/device';
 import {Buffer} from '../../adapter/resources/buffer';
 import {UniformBlock} from './uniform-block';
 import {UniformBufferLayout} from './uniform-buffer-layout';
-import {log} from '../utils/log';
+import {log} from '../../utils/log';
 
 export type ShaderModuleInputs = {
   uniformTypes?: Record<string, ShaderUniformType>;

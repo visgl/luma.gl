@@ -1,9 +1,5 @@
-import {CommandEncoder, CommandEncoderProps, Buffer, Texture, cast, 
-  CopyTextureToTextureOptions, 
-  CopyTextureToBufferOptions
-  // CopyBufferToTextureOptions,
-  // CopyBufferToBufferOptions,
-} from '@luma.gl/core';
+import {CommandEncoder, CommandEncoderProps, Buffer, Texture} from '@luma.gl/core';
+import type {CopyTextureToTextureOptions, CopyTextureToBufferOptions} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';
@@ -15,10 +11,12 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   constructor(device: WebGPUDevice, props: CommandEncoderProps) {
     super(device, props);
     this.device = device;
-    this.handle = props.handle || this.device.handle.createCommandEncoder({
-      // TODO was this removed in standard?
-      // measureExecutionTime: this.props.measureExecutionTime
-    });
+    this.handle =
+      props.handle ||
+      this.device.handle.createCommandEncoder({
+        // TODO was this removed in standard?
+        // measureExecutionTime: this.props.measureExecutionTime
+      });
     this.handle.label = this.props.id;
   }
 
@@ -32,49 +30,51 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
 
   copyBufferToBuffer(options: // CopyBufferToBufferOptions
-    {
-      source: Buffer,
-      sourceOffset?: number,
-      destination: Buffer,
-      destinationOffset?: number,
-      size?: number
-    }
-  ): void {
+  {
+    source: Buffer;
+    sourceOffset?: number;
+    destination: Buffer;
+    destinationOffset?: number;
+    size?: number;
+  }): void {
+    const webgpuSourceBuffer = options.source as WebGPUBuffer;
+    const WebGPUDestinationBuffer = options.destination as WebGPUBuffer;
     this.handle.copyBufferToBuffer(
-      cast<WebGPUBuffer>(options.source).handle,
+      webgpuSourceBuffer.handle,
       options.sourceOffset ?? 0,
-      cast<WebGPUBuffer>(options.destination).handle,
+      WebGPUDestinationBuffer.handle,
       options.destinationOffset ?? 0,
       options.size ?? 0
     );
   }
 
   copyBufferToTexture(options: // CopyBufferToTextureOptions
-    {
-    source: Buffer,
-    offset?: number,
-    bytesPerRow: number,
-    rowsPerImage: number,
+  {
+    source: Buffer;
+    offset?: number;
+    bytesPerRow: number;
+    rowsPerImage: number;
 
-    destination: Texture,
+    destination: Texture;
     mipLevel?: number;
-    aspect?: 'all' | 'stencil-only' | 'depth-only',
+    aspect?: 'all' | 'stencil-only' | 'depth-only';
 
-    origin?: number[] | [number, number, number],
-    extent?: number[] | [number, number, number]
-  }
-  ): void {
+    origin?: number[] | [number, number, number];
+    extent?: number[] | [number, number, number];
+  }): void {
+    const webgpuSourceBuffer = options.source as WebGPUBuffer;
+    const WebGPUDestinationTexture = options.destination as WebGPUTexture;
     this.handle.copyBufferToTexture(
       {
-        buffer: cast<WebGPUBuffer>(options.source).handle,
+        buffer: webgpuSourceBuffer.handle,
         offset: options.offset ?? 0,
         bytesPerRow: options.bytesPerRow,
-        rowsPerImage: options.rowsPerImage,
+        rowsPerImage: options.rowsPerImage
       },
       {
-        texture: cast<WebGPUTexture>(options.destination).handle,
+        texture: WebGPUDestinationTexture.handle,
         mipLevel: options.mipLevel ?? 0,
-        origin: options.origin ?? {},
+        origin: options.origin ?? {}
         // aspect: options.aspect
       },
       {

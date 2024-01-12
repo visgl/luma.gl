@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {isNumberArray} from '../utils/is-array';
+import {isNumberArray} from './is-array';
 
 /** Test if two arrays are deep equal, with a length limit that defaults to 16 */
 export function arrayEqual(a: unknown, b: unknown, limit: number = 16) {

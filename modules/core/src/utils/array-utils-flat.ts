@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray, NumberArray} from '../../types';
+import type {TypedArray, NumberArray} from '../types';
 
 let arrayBuffer: ArrayBuffer;
 

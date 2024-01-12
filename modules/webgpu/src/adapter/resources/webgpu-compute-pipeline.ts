@@ -1,5 +1,5 @@
 // prettier-ignore
-import {ComputePipeline, ComputePipelineProps, cast} from '@luma.gl/core';
+import {ComputePipeline, ComputePipelineProps} from '@luma.gl/core';
 
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';
@@ -15,11 +15,11 @@ export class WebGPUComputePipeline extends ComputePipeline {
     super(device, props);
     this.device = device;
 
-    const module = cast<WebGPUShader>(this.props.cs).handle;
+    const webgpuShader = this.props.cs as WebGPUShader;
     this.handle = this.props.handle || this.device.handle.createComputePipeline({
       label: this.props.id,
       compute: {
-        module,
+        module: webgpuShader.handle,
         entryPoint: this.props.csEntryPoint,
         // constants: this.props.csConstants
       },
