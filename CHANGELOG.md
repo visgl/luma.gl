@@ -1,5 +1,11 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.52
+
+- feat(engine) Ignore props for unregistered modules in ShaderInputs (#1911)
+- feat: ShaderLayout debug trace (#1913)
+- fix(core) Prevent crash when scrollIntoView unavailable #1912
+
 ### v9.0.0-alpha.51
 
 - feat(shadertools) Port pbr shader module to glsl300 (#1909)

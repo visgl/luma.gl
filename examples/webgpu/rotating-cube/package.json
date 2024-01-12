@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-webgpu-rotating-cube",
-  "version": "9.0.0-alpha.51",
+  "version": "9.0.0-alpha.52",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.0-alpha.51",
-    "@luma.gl/engine": "9.0.0-alpha.51",
-    "@luma.gl/shadertools": "9.0.0-alpha.51",
-    "@luma.gl/webgpu": "9.0.0-alpha.51"
+    "@luma.gl/core": "9.0.0-alpha.52",
+    "@luma.gl/engine": "9.0.0-alpha.52",
+    "@luma.gl/shadertools": "9.0.0-alpha.52",
+    "@luma.gl/webgpu": "9.0.0-alpha.52"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
