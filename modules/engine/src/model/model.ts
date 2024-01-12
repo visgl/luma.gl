@@ -226,8 +226,7 @@ export class Model {
       this.setUniforms(props.uniforms);
     }
     if (props.moduleSettings) {
-      // eslint-disable-next-line no-console
-      console.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()');
+      log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
       this.updateModuleSettings(props.moduleSettings);
     }
     if (props.transformFeedback) {
@@ -396,8 +395,7 @@ export class Model {
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
-    // eslint-disable-next-line no-console
-    console.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()');
+    log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
     const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
     Object.assign(this.uniforms, uniforms);
@@ -444,7 +442,7 @@ export class Model {
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
-      );
+      )();
     }
     for (const [bufferName, buffer] of Object.entries(buffers)) {
       const bufferLayout = this.bufferLayout.find(layout => layout.name === bufferName);
