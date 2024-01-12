@@ -226,7 +226,7 @@ export const picking: ShaderModule<PickingProps, PickingUniforms> = {
   getUniforms
 };
 
-function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
+function getUniforms(opts: PickingSettings = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {} as PickingUniforms;
 
   if (opts.highlightedObjectColor === undefined) {
