@@ -1,4 +1,4 @@
-// 
+//
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
@@ -72,7 +72,6 @@ const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
-
   // uniformBuffer: Buffer;
 
   constructor(device: Device, props?: Partial<ModelProps>) {
@@ -125,8 +124,8 @@ class InstancedCube extends Model {
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x2'},
-        // TODO - normalizing picking colors breaks picking 
+        {name: 'instancePickingColors', format: 'unorm8x2'}
+        // TODO - normalizing picking colors breaks picking
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
       attributes: {
@@ -169,9 +168,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   pickingFramebuffer: Framebuffer;
 
   shaderInputs = new _ShaderInputs<{
-    app: AppUniforms,
-    dirlight: typeof dirlight.props,
-    picking: typeof picking.props
+    app: AppUniforms;
+    dirlight: typeof dirlight.props;
+    picking: typeof picking.props;
   }>({
     app,
     dirlight,
@@ -196,14 +195,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth24plus'
     });
-  
+
     this.cube = new InstancedCube(device, {
-      shaderInputs: this.shaderInputs,
-      // bindings: {
-      //   app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-      //   dirlight: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
-      //   picking: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
-      // }
+      // @ts-expect-error
+      shaderInputs: this.shaderInputs
     });
   }
 
@@ -216,7 +211,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       app: {
         time: this.timeline.getTime(timeChannel),
         // Basic projection matrix
-        projectionMatrix: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
+        projectionMatrix: new Matrix4().perspective({
+          fovy: radians(60),
+          aspect,
+          near: 1,
+          far: 2048.0
+        }),
         // Move the eye around the plane
         viewMatrix: new Matrix4().lookAt({
           center: [0, 0, 0],
@@ -231,9 +231,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    if (_mousePosition) {
-      this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
-    }
+    this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
@@ -252,10 +250,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   pickInstance(
     device: Device,
-    mousePosition: number[],
+    mousePosition: number[] | null | undefined,
     model: Model,
     framebuffer: Framebuffer
   ) {
+    if (!mousePosition) {
+      this.shaderInputs.setProps({picking: {highlightedObjectColor: null}});
+      return;
+    }
+    
     // use the center pixel location in device pixel range
     const devicePixels = device.canvasContext!.cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
@@ -266,11 +269,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.shaderInputs.setProps({picking: {isActive: true}});
 
-    const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+    const pickingPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 0, 0],
+      clearDepth: 1
+    });
     model.draw(pickingPass);
     pickingPass.end();
 
-    // Read back 
+    // Read back
     const color255 = readPixelsToArray(framebuffer, {
       sourceX: pickX,
       sourceY: pickY,
@@ -279,10 +286,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     // console.log(color255);
 
-    const highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
-    const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
-    
-    this.shaderInputs.setProps({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
-  }  
-}
+    const highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
+    const isHighlightActive =
+      highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
 
+    this.shaderInputs.setProps({
+      picking: {isActive: false, isHighlightActive, highlightedObjectColor}
+    });
+  }
+}
