@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 import {VERSION} from '../init';
-import {StatsManager, lumaStats} from '../lib/utils/stats-manager';
-import {log} from '../lib/utils/log';
-import {uid} from '../lib/utils/utils';
+import {StatsManager, lumaStats} from '../utils/stats-manager';
+import {log} from '../utils/log';
+import {uid} from '../utils/utils';
 import type {TextureFormat} from './types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';

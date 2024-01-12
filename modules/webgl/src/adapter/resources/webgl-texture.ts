@@ -12,10 +12,9 @@ import {
   Sampler,
   SamplerProps,
   SamplerParameters,
-  TypedArray,
-  isObjectEmpty
+  TypedArray
 } from '@luma.gl/core';
-import {Texture, cast, log, assert, isPowerOfTwo, loadImage} from '@luma.gl/core';
+import {Texture, log, assert, isPowerOfTwo, loadImage, isObjectEmpty} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
@@ -193,7 +192,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
   constructor(device: Device, props: WEBGLTextureProps) {
     super(device, {...DEFAULT_WEBGL_TEXTURE_PROPS, format: 'rgba8unorm', ...props});
 
-    this.device = cast<WebGLDevice>(device);
+    this.device = device as WebGLDevice;
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();

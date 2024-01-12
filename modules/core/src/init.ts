@@ -1,6 +1,6 @@
 import {isBrowser} from '@probe.gl/env';
-import {log} from './lib/utils/log';
-import {lumaStats} from './lib/utils/stats-manager';
+import {log} from './utils/log';
+import {lumaStats} from './utils/stats-manager';
 
 declare global {
   // eslint-disable-next-line no-var

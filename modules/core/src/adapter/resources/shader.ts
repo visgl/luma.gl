@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
-// import { log } from '../../lib/utils/log';
-import {uid} from '../../lib/utils/utils';
+// import { log } from '../../utils/log';
+import {uid} from '../../utils/utils';
 import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
 import {formatCompilerLog} from '../../lib/compiler-log/format-compiler-log';
 import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';

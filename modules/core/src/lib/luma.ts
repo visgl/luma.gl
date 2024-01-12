@@ -1,13 +1,14 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
+import type {Log} from '@probe.gl/log';
 import type {DeviceProps} from '../adapter/device';
 import {Device} from '../adapter/device';
-import {StatsManager} from './utils/stats-manager';
-import {lumaStats} from './utils/stats-manager';
-import type {Log} from '@probe.gl/log';
-import {log} from './utils/log';
-import {assert} from '..';
+import {StatsManager} from '../utils/stats-manager';
+import {lumaStats} from '../utils/stats-manager';
+import {log} from '../utils/log';
+import {assert} from '../utils/assert';
+
 
 const deviceList = new Map<string, typeof Device>();
 
