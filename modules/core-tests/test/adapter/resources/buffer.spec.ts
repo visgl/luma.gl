@@ -146,8 +146,7 @@ test('Buffer#write', async (t) => {
   t.end();
 });
 
-/*
-test('Buffer#getData', async (t) => {
+test.only('Buffer#readAsync', async (t) => {
   for (const device of getWebGLTestDevices()) {
     if (!gl2) {
       t.comment('WebGL2 not available, skipping tests');
@@ -162,41 +161,38 @@ test('Buffer#getData', async (t) => {
     let expectedData = new Float32Array([1, 2, 3]);
     t.deepEqual(data, receivedData, 'Buffer.getData: default parameters successful');
 
-    receivedData = buffer.getData({
-      dstData: new Float32Array(2),
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT
-    });
+    receivedData = await buffer.readAsync(Float32Array.BYTES_PER_ELEMENT);
     expectedData = new Float32Array([2, 3]);
-    t.deepEqual(expectedData, receivedData, "Buffer.getData: with 'dstData' parameter successful");
+    t.deepEqual(expectedData, receivedData, "Buffer.readAsync: with 'dstData' parameter successful");
 
-    receivedData = buffer.getData({
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT,
-      dstOffset: 2
-    });
-    expectedData = new Float32Array([0, 0, 2, 3]);
-    t.deepEqual(expectedData, receivedData, 'Buffer.getData: with src/dst offsets successful');
+    // receivedData = await buffer.readAsync({
+    //   Float32Array.BYTES_PER_ELEMENT,
+    //   dstOffset: 2
+    // });
+    // expectedData = new Float32Array([0, 0, 2, 3]);
+    // t.deepEqual(expectedData, receivedData, 'Buffer.readAsync: with src/dst offsets successful');
 
-    // NOTE: when source and dst offsets are specified, 'length' needs to be set so that
-    // source buffer access is not outof bounds, otherwise 'getBufferSubData' will throw exception.
-    receivedData = buffer.getData({
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT * 2,
-      dstOffset: 1,
-      length: 1
-    });
-    expectedData = new Float32Array([0, 3]);
-    t.deepEqual(
-      expectedData,
-      receivedData,
-      'Buffer.getData: with src/dst offsets and length successful'
-    );
+    // // NOTE: when source and dst offsets are specified, 'length' needs to be set so that
+    // // source buffer access is not outof bounds, otherwise 'getBufferSubData' will throw exception.
+    // receivedData = buffer.readAsync({
+    //   srcByteOffset: Float32Array.BYTES_PER_ELEMENT * 2,
+    //   dstOffset: 1,
+    //   length: 1
+    // });
+    // expectedData = new Float32Array([0, 3]);
+    // t.deepEqual(
+    //   expectedData,
+    //   receivedData,
+    //   'Buffer.getData: with src/dst offsets and length successful'
+    // );
 
     // @ts-expect-error
     data = new Uint8Array([128, 255, 1]);
     buffer = device.createBuffer({data});
-
     receivedData = await buffer.readAsync();
     t.deepEqual(data, receivedData, 'Buffer.getData: Uint8Array + default parameters successful');
   }
+
   t.end();
 });
-*/
+
