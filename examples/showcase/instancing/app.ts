@@ -182,15 +182,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timelineChannels: Record<string, number>;
   pickingFramebuffer: Framebuffer;
 
-  uniformStore = new UniformStore<{
-    app: AppUniforms,
-    dirlight: typeof dirlight.uniforms,
-    picking: typeof picking.uniforms
-  }>({
-    app,
-    dirlight,
-    picking
-  });
+  uniformStore = new UniformStore<{app: AppUniforms}>({app});
 
   constructor({device, animationLoop}: AnimationProps) {
     super();
@@ -214,8 +206,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube = new InstancedCube(device, {
       bindings: {
         app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        dirlight: this.uniformStore.getManagedUniformBuffer(device, 'dirlight'),
-        picking: this.uniformStore.getManagedUniformBuffer(device, 'picking'),
       }
     });
   }
@@ -277,7 +267,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Render picking colors
     framebuffer.resize(device.canvasContext.getPixelSize());
 
-    this.uniformStore.setUniforms({picking: {isActive: true}});
+    model.shaderInputs.setProps({picking: {isActive: true}});
 
     const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
     model.draw(pickingPass);
@@ -292,10 +282,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     // console.log(color255);
 
-    const highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
+    let highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
     const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
+    if (!isHighlightActive) {
+      highlightedObjectColor = null;
+    }
     
-    this.uniformStore.setUniforms({picking: {isActive: false, isHighlightActive, highlightedObjectColor}});
+    model.shaderInputs.setProps({picking: {isActive: false, highlightedObjectColor}});
   }  
 }
 
