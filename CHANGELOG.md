@@ -1,5 +1,13 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-alpha.530
+
+- feat(shadertools): Export PickingProps (#1915)
+- feat: Add shader inputs (uniform buffer) debug trace (#1918)
+- chore(core): Separate GPU-independent utils (#1916)
+- feat: Improve DeviceInfo (#1917)
+- chore(engine) Use log.warn rather than console.warn (#1914)
+
 ### v9.0.0-alpha.52
 
 - feat(engine) Ignore props for unregistered modules in ShaderInputs (#1911)
