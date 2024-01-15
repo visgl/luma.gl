@@ -286,12 +286,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     // console.log(color255);
 
-    const highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
-    const isHighlightActive =
-      highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
+    let highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
+    const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
+    if (!isHighlightActive) {
+      highlightedObjectColor = null;
+    }
 
     this.shaderInputs.setProps({
-      picking: {isActive: false, isHighlightActive, highlightedObjectColor}
+      picking: {isActive: false, highlightedObjectColor}
     });
   }
 }
