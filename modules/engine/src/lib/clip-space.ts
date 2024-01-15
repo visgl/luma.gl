@@ -5,6 +5,7 @@ import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
 
 const CLIPSPACE_VERTEX_SHADER = glsl`\
+#version 300 es
 in vec2 aClipSpacePosition;
 in vec2 aTexCoord;
 in vec2 aCoordinate;
