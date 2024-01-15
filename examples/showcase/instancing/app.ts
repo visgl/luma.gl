@@ -293,7 +293,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     this.shaderInputs.setProps({
-      picking: {isActive: false, isHighlightActive, highlightedObjectColor}
+      picking: {isActive: false, highlightedObjectColor}
     });
   }
 }
