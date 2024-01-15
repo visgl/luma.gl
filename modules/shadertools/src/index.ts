@@ -61,7 +61,7 @@ export {fp32} from './modules/math/fp32/fp32';
 // // projection
 // export type {ProjectionUniforms} from './modules/engine/project/project';
 // export {projection} from './modules/engine/project/project';
-export type {PickingSettings} from './modules/engine/picking/picking';
+export type {PickingProps} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
 
 // // lighting

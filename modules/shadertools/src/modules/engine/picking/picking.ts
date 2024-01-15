@@ -16,8 +16,6 @@ const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
-  /** Do we have a highlighted item? */
-  isHighlightActive?: boolean;
   /** Set to true when picking an attribute value instead of object index */
   isAttribute?: boolean;
   /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
@@ -26,18 +24,6 @@ export type PickingProps = {
   highlightColor?: NumberArray;
   /** Color range 0-1 or 0-255 */
   useFloatColors?: boolean;
-};
-
-// TODO - 
-export type PickingSettings = Omit<PickingUniforms, 'isHighlightActive' | 'highlightedObjectColor'> & {
-  /**
-   * Set to a picking color to visually highlight that item.
-   * The picking module will persist the last highlighted object, unless
-   * `null` is passed to explicitly clear
-   **/
-  highlightedObjectColor?: NumberArray | null;
-  /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
 };
 
 /** 
@@ -226,7 +212,7 @@ export const picking: ShaderModule<PickingProps, PickingUniforms> = {
   getUniforms
 };
 
-function getUniforms(opts: PickingSettings = {}, prevUniforms?: PickingUniforms): PickingUniforms {
+function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {} as PickingUniforms;
 
   if (opts.highlightedObjectColor === undefined) {
