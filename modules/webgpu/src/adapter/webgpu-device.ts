@@ -77,7 +77,7 @@ export class WebGPUDevice extends Device {
     }
 
     const adapterInfo = await adapter.requestAdapterInfo();
-    log.probe(1, 'Adapter available', adapterInfo)();
+    log.probe(2, 'Adapter available', adapterInfo)();
 
     const gpuDevice = await adapter.requestDevice({
       requiredFeatures: adapter.features as ReadonlySet<GPUFeatureName>
@@ -91,28 +91,42 @@ export class WebGPUDevice extends Device {
       log.probe(1, 'DOM is loaded')();
     }
 
-    const device = new WebGPUDevice(gpuDevice, adapter, props);
-    log.probe(1, 'Device created', device.info)();
+    const device = new WebGPUDevice(gpuDevice, adapter, adapterInfo, props);
+
+    log.probe(1, 'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features')();
     log.table(1, device.info)();
     log.groupEnd(1)();
     return device;
   }
 
-  constructor(device: GPUDevice, adapter: GPUAdapter, props: DeviceProps) {
+  constructor(device: GPUDevice, adapter: GPUAdapter, adapterInfo: GPUAdapterInfo, props: DeviceProps) {
     super({...props, id: props.id || uid('webgpu-device')});
     this.handle = device;
     this.adapter = adapter;
 
+    const [driver, driverVersion] = ((adapterInfo as any).driver || '').split(' Version ');
+
+    // See https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
+    const vendor = adapterInfo.vendor || this.adapter.__brand || 'unknown';
+    const renderer = driver || '';
+    const version = driverVersion || '';
+
+    const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
+    const gpuArchitecture = adapterInfo.architecture || 'unknown';
+    const gpuBackend = (adapterInfo as any).backend || 'unknown';
+    const gpuType = ((adapterInfo as any).type || '').split(' ')[0].toLowerCase()  || 'unknown'
+
     this._info = {
       type: 'webgpu',
-      vendor: this.adapter.__brand,
-      renderer: '',
-      version: '',
-      gpu: 'unknown', // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
+      vendor,
+      renderer,
+      version,
+      gpu, 
+      gpuType,
+      gpuBackend,
+      gpuArchitecture,
       shadingLanguage: 'wgsl',
-      shadingLanguageVersion: 100,
-      vendorMasked: '',
-      rendererMasked: ''
+      shadingLanguageVersion: 100
     };
 
     // "Context" loss handling

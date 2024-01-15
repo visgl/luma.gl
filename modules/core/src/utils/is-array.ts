@@ -1,4 +1,4 @@
-import {TypedArray, NumberArray} from '../../types';
+import {TypedArray, NumberArray} from '../types';
 
 /**
  * Check is an array is a typed array

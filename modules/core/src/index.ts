@@ -9,7 +9,7 @@ export type {ConstructorOf, PartialBy} from './types';
 // NUMERIC TYPES - TODO: could be imported from @math.gl/types
 export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray} from './types';
 
-export {isTypedArray, isNumberArray} from './lib/utils/is-array';
+export {isTypedArray, isNumberArray} from './utils/is-array';
 
 // MAIN API ACCESS POINTS
 export {luma} from './lib/luma';
@@ -132,28 +132,28 @@ export {
 
 // GENERAL UTILS
 
-export {StatsManager} from './lib/utils/stats-manager';
-export {assert} from './lib/utils/assert';
-export {cast} from './lib/utils/cast';
-export {log} from './lib/utils/log';
-export {uid, isPowerOfTwo, isObjectEmpty} from './lib/utils/utils';
+export {StatsManager} from './utils/stats-manager';
+export {assert} from './utils/assert';
+export {cast} from './utils/cast';
+export {log} from './utils/log';
+export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
 export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
-export {formatValue} from './lib/utils/format-value';
-export {stubRemovedMethods} from './lib/utils/stub-methods';
-export {checkProps} from './lib/utils/check-props';
+export {formatValue} from './utils/format-value';
+export {stubRemovedMethods} from './utils/stub-methods';
+export {checkProps} from './utils/check-props';
 export {
   setPathPrefix,
   loadFile,
   loadImage,
   loadImageBitmap,
   loadScript
-} from './lib/utils/load-file';
-export {getScratchArrayBuffer, getScratchArray, fillArray} from './lib/utils/array-utils-flat';
-export {makeRandomNumberGenerator, random} from './lib/utils/random';
-export {deepEqual} from './lib/utils/deep-equal';
+} from './utils/load-file';
+export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
+export {makeRandomNumberGenerator, random} from './utils/random';
+export {deepEqual} from './utils/deep-equal';
 
 // ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
-export {requestAnimationFrame, cancelAnimationFrame} from './lib/utils/request-animation-frame';
+export {requestAnimationFrame, cancelAnimationFrame} from './utils/request-animation-frame';
 
 // SHADER HELPERS
 
@@ -162,10 +162,6 @@ export {requestAnimationFrame, cancelAnimationFrame} from './lib/utils/request-a
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
-
-// DEBUG
-
-export {getDebugTableForShaderLayout} from './lib/debug/debug-shader-layout';
 
 // INTERNAL
 

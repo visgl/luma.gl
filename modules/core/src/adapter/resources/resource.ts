@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import type {Device} from '../device';
-import {uid} from '../../lib/utils/utils';
+import {uid} from '../../utils/utils';
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */

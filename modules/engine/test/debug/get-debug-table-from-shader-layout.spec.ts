@@ -2,8 +2,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getDebugTableForShaderLayout, ShaderLayout} from '@luma.gl/core';
-
+import type {ShaderLayout} from '@luma.gl/core';
+import {getDebugTableForShaderLayout} from '../../src/debug/debug-shader-layout';
 
 const SHADER_LAYOUT: ShaderLayout = {
   attributes: [

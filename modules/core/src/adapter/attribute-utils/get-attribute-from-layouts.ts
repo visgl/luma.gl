@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {log} from '../../lib/utils/log';
+import {log} from '../../utils/log';
 import type {ShaderLayout, AttributeDeclaration} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 import type {ShaderDataType, ShaderAttributeType} from '../types/shader-types';

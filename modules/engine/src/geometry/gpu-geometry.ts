@@ -112,6 +112,7 @@ export function getAttributeBuffersFromGeometry(
       case 'POSITION': name = 'positions'; break;
       case 'NORMAL': name = 'normals'; break;
       case 'TEXCOORD_0': name = 'texCoords'; break;
+      case 'COLOR_0': name = 'colors'; break;
     }
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
     const {value, size, normalized} = attribute;

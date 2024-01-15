@@ -1,8 +1,8 @@
-// 
+//
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
-import {Device, Framebuffer, makeRandomNumberGenerator, UniformStore, glsl} from '@luma.gl/core';
+import {Device, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Timeline, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
 import {readPixelsToArray} from '@luma.gl/webgl';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -39,19 +39,6 @@ uniform appUniforms {
 out vec3 color;
 
 void main(void) {
-  // vec3 normal = vec3(uModel * vec4(normals, 1.0));
-
-  // // Set up data for modules
-  // color = instanceColors;
-  // project_setNormal(normal);
-  // // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  // picking_setPickingColor(vec3(0., instancePickingColors));
-
-  // // Vertex position (z coordinate undulates with time), and model rotates around center
-  // float delta = length(instanceOffsets);
-  // vec4 offset = vec4(instanceOffsets, sin((uTime + delta) * 0.1) * 16.0, 0);
-  // gl_Position = uProjection * uView * (uModel * vec4(positions * 1., 1.0) + offset);
-  // Set up data for modules
   color = instanceColors;
 
   vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
@@ -72,7 +59,6 @@ const fs = glsl`\
 precision highp float;
 
 in vec3 color;
-
 out vec4 fragColor;
 
 void main(void) {
@@ -86,7 +72,6 @@ const SIDE = 256;
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
-
   // uniformBuffer: Buffer;
 
   constructor(device: Device, props?: Partial<ModelProps>) {
@@ -139,8 +124,8 @@ class InstancedCube extends Model {
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x2'},
-        // TODO - normalizing picking colors breaks picking 
+        {name: 'instancePickingColors', format: 'unorm8x2'}
+        // TODO - normalizing picking colors breaks picking
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
       attributes: {
@@ -182,7 +167,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timelineChannels: Record<string, number>;
   pickingFramebuffer: Framebuffer;
 
-  uniformStore = new UniformStore<{app: AppUniforms}>({app});
+  shaderInputs = new _ShaderInputs<{
+    app: AppUniforms;
+    dirlight: typeof dirlight.props;
+    picking: typeof picking.props;
+  }>({
+    app,
+    dirlight,
+    picking
+  });
 
   constructor({device, animationLoop}: AnimationProps) {
     super();
@@ -202,11 +195,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth24plus'
     });
-  
+
     this.cube = new InstancedCube(device, {
-      bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-      }
+      // @ts-ignore
+      shaderInputs: this.shaderInputs
     });
   }
 
@@ -215,11 +207,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const {_mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
-    this.uniformStore.setUniforms({
+    this.shaderInputs.setProps({
       app: {
         time: this.timeline.getTime(timeChannel),
         // Basic projection matrix
-        projectionMatrix: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 2048.0}),
+        projectionMatrix: new Matrix4().perspective({
+          fovy: radians(60),
+          aspect,
+          near: 1,
+          far: 2048.0
+        }),
         // Move the eye around the plane
         viewMatrix: new Matrix4().lookAt({
           center: [0, 0, 0],
@@ -234,9 +231,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    if (_mousePosition) {
-      this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
-    }
+    this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
@@ -255,25 +250,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   pickInstance(
     device: Device,
-    mousePosition: number[],
+    mousePosition: number[] | null | undefined,
     model: Model,
     framebuffer: Framebuffer
   ) {
+    if (!mousePosition) {
+      this.shaderInputs.setProps({picking: {highlightedObjectColor: null}});
+      return;
+    }
+    
     // use the center pixel location in device pixel range
-    const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
+    const devicePixels = device.canvasContext!.cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
     const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
     // Render picking colors
-    framebuffer.resize(device.canvasContext.getPixelSize());
+    framebuffer.resize(device.canvasContext!.getPixelSize());
 
-    model.shaderInputs.setProps({picking: {isActive: true}});
+    this.shaderInputs.setProps({picking: {isActive: true}});
 
-    const pickingPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+    const pickingPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 0, 0],
+      clearDepth: 1
+    });
     model.draw(pickingPass);
     pickingPass.end();
 
-    // Read back 
+    // Read back
     const color255 = readPixelsToArray(framebuffer, {
       sourceX: pickX,
       sourceY: pickY,
@@ -287,8 +291,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!isHighlightActive) {
       highlightedObjectColor = null;
     }
-    
-    model.shaderInputs.setProps({picking: {isActive: false, highlightedObjectColor}});
-  }  
-}
 
+    this.shaderInputs.setProps({
+      picking: {isActive: false, isHighlightActive, highlightedObjectColor}
+    });
+  }
+}

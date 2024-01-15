@@ -1,4 +1,4 @@
-import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding, cast} from '@luma.gl/core';
+import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
@@ -27,7 +27,7 @@ export class WebGPUComputePass extends ComputePass {
   }
 
   setPipeline(pipeline: ComputePipeline): void {
-    const wgpuPipeline = cast<WebGPUComputePipeline>(pipeline);
+    const wgpuPipeline = pipeline as WebGPUComputePipeline;
     this.handle.setPipeline(wgpuPipeline.handle);
     this._bindGroupLayout = wgpuPipeline._getBindGroupLayout();
   }
@@ -55,7 +55,8 @@ export class WebGPUComputePass extends ComputePass {
    * @param indirectOffset
    */
   dispatchIndirect(indirectBuffer: Buffer, indirectOffset: number = 0): void {
-    this.handle.dispatchWorkgroupsIndirect(cast<WebGPUBuffer>(indirectBuffer).handle, indirectOffset);
+    const webgpuBuffer = indirectBuffer as WebGPUBuffer;
+    this.handle.dispatchWorkgroupsIndirect(webgpuBuffer.handle, indirectOffset);
   }
 
   pushDebugGroup(groupLabel: string): void {

@@ -6,7 +6,7 @@ import {
   UniformInfo,
   UniformBufferBindingLayout
 } from '../../adapter/types/shader-layout';
-import {arrayEqual, arrayCopy} from '../utils/array-equal';
+import {arrayEqual, arrayCopy} from '../../utils/array-equal';
 
 /**
  * A uniform block holds values of the of uniform values for one uniform block / buffer.

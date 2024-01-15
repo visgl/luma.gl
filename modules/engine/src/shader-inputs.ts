@@ -91,7 +91,7 @@ export class ShaderInputs<
       if (!module) {
         // Ignore props for unregistered modules
         log.warn(`Module ${name} not found`)();
-        continue;
+        continue; // eslint-disable-line no-continue
       }
 
       const oldUniforms = this.moduleUniforms[moduleName];  
@@ -133,5 +133,18 @@ export class ShaderInputs<
       Object.assign(bindings, moduleBindings);
     }
     return bindings;
+  }
+
+  getDebugTable(): Record<string, Record<string, unknown>> {
+    const table: Record<string,Record<string, unknown>> = {};
+    for (const [moduleName, module] of Object.entries(this.moduleUniforms)) {
+      for (const [key, value] of Object.entries(module)) {
+        table[`${moduleName}.${key}`] = {
+          type: this.modules[moduleName].uniformTypes?.[key],
+          value: String(value)
+        };
+      }
+    }
+    return table;
   }
 }

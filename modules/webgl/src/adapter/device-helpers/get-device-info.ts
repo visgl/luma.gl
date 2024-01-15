@@ -25,6 +25,7 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   // "Sniff" the GPU type and backend from the info. This works best if unmasked info is available.
   const gpu = identifyGPUVendor(vendor, renderer);
   const gpuBackend = identifyGPUBackend(vendor, renderer);
+  const gpuType = identifyGPUType(vendor, renderer);
 
   // Determine GLSL version
   // For now, skip parsing of the long version string, just use context type below to deduce version
@@ -36,6 +37,7 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   return {
     type: isWebGL2(gl) ? 'webgl2' : 'webgl',
     gpu,
+    gpuType,
     gpuBackend,
     vendor,
     renderer,
@@ -72,13 +74,30 @@ function identifyGPUVendor(vendor: string, renderer: string): 'nvidia' | 'intel'
 }
 
 /** "Sniff" the GPU backend from the info. This works best if unmasked info is available. */
-function identifyGPUBackend(vendor: string, renderer: string): 'angle' | 'metal' | 'unknown' {
-  if ((/ANGLE/i.exec(vendor)) || (/ANGLE/i.exec(renderer))) {
-    return 'angle';
-  }
+function identifyGPUBackend(vendor: string, renderer: string): 'opengl' | 'metal' | 'unknown' {
   if ((/Metal/i.exec(vendor)) || (/Metal/i.exec(renderer))) {
     return 'metal';
   }
-  
+  if ((/ANGLE/i.exec(vendor)) || (/ANGLE/i.exec(renderer))) {
+    return 'opengl';
+  }  
   return 'unknown';
+}
+
+function identifyGPUType(vendor: string, renderer: string): 'discrete' | 'integrated' | 'cpu' | 'unknown' {
+  if ((/SwiftShader/i.exec(vendor)) || (/SwiftShader/i.exec(renderer))) {
+    return 'cpu';
+  }
+
+  const gpuVendor = identifyGPUVendor(vendor, renderer);
+  switch (gpuVendor) {
+    case 'intel':
+      return 'integrated';
+    case 'software':
+      return 'cpu';
+    case 'unknown':
+      return 'unknown';
+    default:
+      return 'discrete';
+  }
 }
