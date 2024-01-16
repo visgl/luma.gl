@@ -134,11 +134,11 @@ export class WEBGLBuffer extends Buffer {
 
   /** Asynchronously read data from the buffer */
   override async readAsync(byteOffset = 0, byteLength?: number): Promise<Uint8Array> {
-    return this.readSyncWebGL(byteOffset, byteLength);
+    return this.readSyncWebGL2(byteOffset, byteLength);
   }
 
   /** Synchronously read data from the buffer. WebGL only. */
-  override readSyncWebGL(byteOffset = 0, byteLength?: number): Uint8Array {
+  override readSyncWebGL2(byteOffset = 0, byteLength?: number): Uint8Array {
     this.device.assertWebGL2();
 
     byteLength = byteLength ?? this.byteLength - byteOffset;

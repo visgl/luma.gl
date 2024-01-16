@@ -560,9 +560,20 @@ export class Model {
       }
       log.table(LOG_DRAW_PRIORITY, uniformTable)();
 
+      const attributeTable = this._getAttributeDebugTable();
+
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;
     }
+  }
+
+  _getAttributeDebugTable(): Record<string, Record<string, unknown>> {
+    const table: Record<string,Record<string, unknown>> = {};
+    // const attributes = this.vertexArray.attributes;
+    for (const [, attributeInfo] of Object.entries(this._attributeInfos)) {
+      table[attributeInfo.location] = attributeInfo;
+    }
+    return table;
   }
 }
 

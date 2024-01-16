@@ -3,8 +3,6 @@
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 
-const DEBUG_DATA_MAX_LENGTH = 10;
-
 export type BufferProps = ResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
   handle?: WebGLBuffer;
@@ -83,23 +81,26 @@ export abstract class Buffer extends Resource<BufferProps> {
   /** Read data asynchronoursly */
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
-  /** Read data synchronously */
-  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
+  /** Read data synchronously. @note WebGL2 only */
+  readSyncWebGL2(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
 
   // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 
+  /** Max amount of debug data saved. Two vec4's */
+  static DEBUG_DATA_MAX_LENGTH = 32;
   /** A partial CPU-side copy of the data in this buffer, for debugging purposes */
-  debugData: ArrayBuffer | null = null;
+  debugData: ArrayBuffer = new ArrayBuffer(0);
 
   /** This doesn't handle partial non-zero offset updates correctly */
   protected _setDebugData(data: ArrayBufferView | ArrayBuffer | null, byteOffset: number, byteLength: number): void {
     const buffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const debugDataLength = Math.min(data ? data.byteLength : byteLength, Buffer.DEBUG_DATA_MAX_LENGTH);
     if (data === null) {
-      this.debugData = null;
+      this.debugData = new ArrayBuffer(debugDataLength);
     } else if (byteOffset === 0 && byteLength === data.byteLength) {
-      this.debugData = buffer.slice(0, DEBUG_DATA_MAX_LENGTH);
+      this.debugData = buffer.slice(0, debugDataLength);
     } else {
-      this.debugData = buffer.slice(byteOffset, byteOffset + DEBUG_DATA_MAX_LENGTH);
+      this.debugData = buffer.slice(byteOffset, byteOffset + debugDataLength);
     }
   }
 }
