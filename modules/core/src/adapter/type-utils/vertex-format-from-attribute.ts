@@ -5,10 +5,11 @@ import {VertexFormat} from '../types/vertex-formats';
 // import {DataType} from '../types/vertex-formats';
 // type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance
 type DataType = 'uint8' | 'sint8' | 'uint16' | 'sint16' | 'uint32' | 'sint32' | 'float32';
+type DataTypeNorm = 'unorm8' | 'snorm8' | 'unorm16' | 'snorm16';
 
-type DataTypeNorm = 'unorm8' | 'snorm8'| 'unorm16' | 'snorm16';
-
-export function getDataTypeFromTypedArray(arrayOrType: TypedArray | TypedArrayConstructor): DataType {
+export function getDataTypeFromTypedArray(
+  arrayOrType: TypedArray | TypedArrayConstructor
+): DataType {
   const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
   switch (type) {
     case Float32Array:
@@ -32,22 +33,28 @@ export function getDataTypeFromTypedArray(arrayOrType: TypedArray | TypedArrayCo
   }
 }
 
-export function getTypedArrayFromDataType(dataType: DataType): TypedArrayConstructor {
+export function getTypedArrayFromDataType(
+  dataType: DataType | DataTypeNorm
+): TypedArrayConstructor {
   switch (dataType) {
     case 'float32':
       return Float32Array;
-    case 'uint16':
-      return Uint16Array;
     case 'uint32':
       return Uint32Array;
-    case 'uint8':
-      return Uint8Array;
-    case 'sint8':
-      return Int8Array;
-    case 'sint16':
-      return Int16Array;
     case 'sint32':
       return Int32Array;
+    case 'uint16':
+    case 'unorm16':
+      return Uint16Array;
+    case 'sint16':
+    case 'snorm16':
+      return Int16Array;
+    case 'uint8':
+    case 'unorm8':
+      return Uint8Array;
+    case 'sint8':
+    case 'snorm8':
+      return Int8Array;
     default:
       // Failed to deduce typed array from data type
       throw new Error(dataType);
@@ -55,8 +62,12 @@ export function getTypedArrayFromDataType(dataType: DataType): TypedArrayConstru
 }
 
 /** Get the vertex format for an attribute with TypedArray and size */
-export function getVertexFormatFromAttribute(typedArray: TypedArray, size: number, normalized?: boolean): VertexFormat {
-  if(!size || size > 4) {
+export function getVertexFormatFromAttribute(
+  typedArray: TypedArray,
+  size: number,
+  normalized?: boolean
+): VertexFormat {
+  if (!size || size > 4) {
     throw new Error(`size ${size}`);
   }
 
@@ -90,4 +101,3 @@ export function getVertexFormatFromAttribute(typedArray: TypedArray, size: numbe
 
   return `${dataType}x${components}`;
 }
-

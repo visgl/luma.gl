@@ -205,7 +205,7 @@ test('Buffer#debugData', async (t) => {
     const expectedData = new Float32Array([0, 0, 1, 2, 3]);
     buffer.write(expectedData);
     const f32Data = new Float32Array(buffer.debugData);
-    t.equal(f32Data, expectedData, 'Buffer.debugData is null after write');
+    t.deepEqual(f32Data, expectedData, 'Buffer.debugData is null after write');
 
     if (device.isWebGL2) {
       // TODO - not a very useful test, should test that debugData is updated after read
