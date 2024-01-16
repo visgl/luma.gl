@@ -1,10 +1,21 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {
+  TypedArray,
+  RenderPipelineProps,
+  RenderPipelineParameters
+} from '@luma.gl/core';
 import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {
+  Device,
+  Buffer,
+  RenderPipeline,
+  RenderPass,
+  UniformStore,
+  getTypedArrayFromDataType
+} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -160,13 +171,20 @@ export class Model {
     Object.assign(this.userData, props.userData);
 
     // Setup shader module inputs
-    const moduleMap = Object.fromEntries(this.props.modules?.map(module => [module.name, module]) || []);
+    const moduleMap = Object.fromEntries(
+      this.props.modules?.map(module => [module.name, module]) || []
+    );
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
-    const modules = (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
-    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({platformInfo, ...this.props, modules});
+    const modules =
+      (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({
+      platformInfo,
+      ...this.props,
+      modules
+    });
 
     this.vs = vs;
     this.fs = fs;
@@ -380,10 +398,7 @@ export class Model {
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules
     for (const moduleName of Object.keys(this.shaderInputs.modules)) {
-      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(
-        this.device,
-        moduleName
-      );
+      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
       this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
     }
   }
@@ -401,7 +416,7 @@ export class Model {
     Object.assign(this.bindings, bindings);
     Object.assign(this.uniforms, uniforms);
   }
- 
+
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
@@ -560,9 +575,48 @@ export class Model {
       }
       log.table(LOG_DRAW_PRIORITY, uniformTable)();
 
+      const attributeTable = this._getAttributeDebugTable();
+      log.table(LOG_DRAW_PRIORITY, this._attributeInfos)();
+      log.table(LOG_DRAW_PRIORITY, attributeTable)();
+
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;
     }
+  }
+
+  _getAttributeDebugTable(): Record<string, Record<string, unknown>> {
+    const table: Record<string, Record<string, unknown>> = {};
+    for (const [name, attributeInfo] of Object.entries(this._attributeInfos)) {
+      table[attributeInfo.location] = {
+        name,
+        type: attributeInfo.shaderType,
+        values: this._getBufferOrConstantValues(
+          this.vertexArray.attributes[attributeInfo.location],
+          attributeInfo.bufferDataType
+        )
+      };
+    }
+    if (this.vertexArray.indexBuffer) {
+      const {indexBuffer} = this.vertexArray;
+      const values =
+        indexBuffer.indexType === 'uint32'
+          ? new Uint32Array(indexBuffer.debugData)
+          : new Uint16Array(indexBuffer.debugData);
+      table.indices = {
+        name: 'indices',
+        type: indexBuffer.indexType,
+        values: values.toString()
+      };
+    }
+    return table;
+  }
+
+  // TODO - fix typing of luma data types
+  _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
+    const TypedArrayConstructor = getTypedArrayFromDataType(dataType);
+    const typedArray =
+      attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
+    return typedArray.toString();
   }
 }
 

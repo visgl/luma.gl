@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, TypedArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import test from 'tape-promise/tape';
 
@@ -146,57 +146,75 @@ test('Buffer#write', async (t) => {
   t.end();
 });
 
-/*
-test('Buffer#getData', async (t) => {
+test('Buffer#readAsync', async (t) => {
   for (const device of getWebGLTestDevices()) {
-    if (!gl2) {
+    if (device.isWebGL1) {
       t.comment('WebGL2 not available, skipping tests');
       t.end();
       return;
     }
 
-    let data = new Float32Array([1, 2, 3]);
+    let data: TypedArray = new Float32Array([1, 2, 3]);
     let buffer = device.createBuffer({data});
 
     let receivedData = await buffer.readAsync();
+    let f32Data = new Float32Array(receivedData.buffer);
     let expectedData = new Float32Array([1, 2, 3]);
-    t.deepEqual(data, receivedData, 'Buffer.getData: default parameters successful');
+    t.deepEqual(f32Data, expectedData, 'Buffer.readAsync: default parameters successful');
 
-    receivedData = buffer.getData({
-      dstData: new Float32Array(2),
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT
-    });
+    receivedData = await buffer.readAsync(Float32Array.BYTES_PER_ELEMENT);
+    f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([2, 3]);
-    t.deepEqual(expectedData, receivedData, "Buffer.getData: with 'dstData' parameter successful");
+    t.deepEqual(f32Data, expectedData, 'Buffer.readAsync: with \'dstData\' parameter successful');
 
-    receivedData = buffer.getData({
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT,
-      dstOffset: 2
-    });
-    expectedData = new Float32Array([0, 0, 2, 3]);
-    t.deepEqual(expectedData, receivedData, 'Buffer.getData: with src/dst offsets successful');
+    // receivedData = await buffer.readAsync({
+    //   Float32Array.BYTES_PER_ELEMENT,
+    //   dstOffset: 2
+    // });
+    // expectedData = new Float32Array([0, 0, 2, 3]);
+    // t.deepEqual(expectedData, receivedData, 'Buffer.readAsync: with src/dst offsets successful');
 
-    // NOTE: when source and dst offsets are specified, 'length' needs to be set so that
-    // source buffer access is not outof bounds, otherwise 'getBufferSubData' will throw exception.
-    receivedData = buffer.getData({
-      srcByteOffset: Float32Array.BYTES_PER_ELEMENT * 2,
-      dstOffset: 1,
-      length: 1
-    });
-    expectedData = new Float32Array([0, 3]);
-    t.deepEqual(
-      expectedData,
-      receivedData,
-      'Buffer.getData: with src/dst offsets and length successful'
-    );
+    // // NOTE: when source and dst offsets are specified, 'length' needs to be set so that
+    // // source buffer access is not outof bounds, otherwise 'getBufferSubData' will throw exception.
+    // receivedData = buffer.readAsync({
+    //   srcByteOffset: Float32Array.BYTES_PER_ELEMENT * 2,
+    //   dstOffset: 1,
+    //   length: 1
+    // });
+    // expectedData = new Float32Array([0, 3]);
+    // t.deepEqual(
+    //   expectedData,
+    //   receivedData,
+    //   'Buffer.readAsync: with src/dst offsets and length successful'
+    // );
 
-    // @ts-expect-error
     data = new Uint8Array([128, 255, 1]);
     buffer = device.createBuffer({data});
-
     receivedData = await buffer.readAsync();
-    t.deepEqual(data, receivedData, 'Buffer.getData: Uint8Array + default parameters successful');
+    t.deepEqual(data, receivedData, 'Buffer.readAsync: Uint8Array + default parameters successful');
   }
+
   t.end();
 });
-*/
+
+test('Buffer#debugData', async (t) => {
+  for (const device of getWebGLTestDevices()) {
+    const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 24});
+    t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is not null before write');
+
+    const expectedData = new Float32Array([0, 0, 1, 2, 3]);
+    buffer.write(expectedData);
+    const f32Data = new Float32Array(buffer.debugData);
+    t.deepEqual(f32Data, expectedData, 'Buffer.debugData is null after write');
+
+    if (device.isWebGL2) {
+      // TODO - not a very useful test, should test that debugData is updated after read
+      await buffer.readAsync();
+      t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is valid after read');
+    }
+    buffer.destroy();
+  }
+
+  t.end();
+});
+

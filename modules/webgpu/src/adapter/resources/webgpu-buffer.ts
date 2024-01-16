@@ -93,3 +93,55 @@ export class WebGPUBuffer extends Buffer {
     this.handle.unmap();
   }
 }
+
+/*
+// Convenience API
+  /** Read data from the buffer *
+  async readAsync(options: {
+    byteOffset?: number,
+    byteLength?: number,
+    map?: boolean,
+    unmap?: boolean
+  }): Promise<ArrayBuffer> {
+    if (options.map ?? true) {
+      await this.mapAsync(Buffer.MAP_READ, options.byteOffset, options.byteLength);
+    }
+    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
+    if (options.unmap ?? true) {
+      this.unmap();
+    }
+    return arrayBuffer;
+  }
+
+  /** Write data to the buffer *
+  async writeAsync(options: {
+    data: ArrayBuffer,
+    byteOffset?: number,
+    byteLength?: number,
+    map?: boolean,
+    unmap?: boolean
+  }): Promise<void> {
+    if (options.map ?? true) {
+      await this.mapAsync(Buffer.MAP_WRITE, options.byteOffset, options.byteLength);
+    }
+    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
+    const destArray = new Uint8Array(arrayBuffer);
+    const srcArray = new Uint8Array(options.data);
+    destArray.set(srcArray);
+    if (options.unmap ?? true) {
+      this.unmap();
+    }
+  }
+  */
+
+// Mapped API (WebGPU)
+
+/** Maps the memory so that it can be read *
+  // abstract mapAsync(mode, byteOffset, byteLength): Promise<void>
+
+  /** Get the mapped range of data for reading or writing *
+  // abstract getMappedRange(byteOffset, byteLength): ArrayBuffer;
+
+  /** unmap makes the contents of the buffer available to the GPU again *
+  // abstract unmap(): void;
+*/

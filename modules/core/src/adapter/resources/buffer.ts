@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {TypedArray} from '../..';
+
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 
@@ -76,59 +76,31 @@ export abstract class Buffer extends Resource<BufferProps> {
     this.indexType = deducedProps.indexType;
   }
 
-  write(data: ArrayBufferView, byteOffset?: number): void { throw new Error('not implemented'); }
-  readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>  { throw new Error('not implemented'); }
-  // TODO - can sync read be supported in WebGPU?
-  getData(): TypedArray { throw new Error('not implemented'); }
+  /** Write data to buffer */
+  abstract write(data: ArrayBufferView, byteOffset?: number): void;
+  /** Read data asynchronoursly */
+  abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
-  // Convenience API
+  /** Read data synchronously. @note WebGL2 only */
+  readSyncWebGL2(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
 
-  /** Read data from the buffer *
-  async readAsync(options: {
-    byteOffset?: number,
-    byteLength?: number,
-    map?: boolean,
-    unmap?: boolean
-  }): Promise<ArrayBuffer> {
-    if (options.map ?? true) {
-      await this.mapAsync(Buffer.MAP_READ, options.byteOffset, options.byteLength);
-    }
-    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
-    if (options.unmap ?? true) {
-      this.unmap();
-    }
-    return arrayBuffer;
-  }
+  // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 
-  /** Write data to the buffer *
-  async writeAsync(options: {
-    data: ArrayBuffer,
-    byteOffset?: number,
-    byteLength?: number,
-    map?: boolean,
-    unmap?: boolean
-  }): Promise<void> {
-    if (options.map ?? true) {
-      await this.mapAsync(Buffer.MAP_WRITE, options.byteOffset, options.byteLength);
-    }
-    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
-    const destArray = new Uint8Array(arrayBuffer);
-    const srcArray = new Uint8Array(options.data);
-    destArray.set(srcArray);
-    if (options.unmap ?? true) {
-      this.unmap();
+  /** Max amount of debug data saved. Two vec4's */
+  static DEBUG_DATA_MAX_LENGTH = 32;
+  /** A partial CPU-side copy of the data in this buffer, for debugging purposes */
+  debugData: ArrayBuffer = new ArrayBuffer(0);
+
+  /** This doesn't handle partial non-zero offset updates correctly */
+  protected _setDebugData(data: ArrayBufferView | ArrayBuffer | null, byteOffset: number, byteLength: number): void {
+    const buffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const debugDataLength = Math.min(data ? data.byteLength : byteLength, Buffer.DEBUG_DATA_MAX_LENGTH);
+    if (data === null) {
+      this.debugData = new ArrayBuffer(debugDataLength);
+    } else if (byteOffset === 0 && byteLength === data.byteLength) {
+      this.debugData = buffer.slice(0, debugDataLength);
+    } else {
+      this.debugData = buffer.slice(byteOffset, byteOffset + debugDataLength);
     }
   }
-  */
-
-  // Mapped API (WebGPU)
-
-  /** Maps the memory so that it can be read */
-  // abstract mapAsync(mode, byteOffset, byteLength): Promise<void>
-
-  /** Get the mapped range of data for reading or writing */
-  // abstract getMappedRange(byteOffset, byteLength): ArrayBuffer;
-
-  /** unmap makes the contents of the buffer available to the GPU again */
-  // abstract unmap(): void;
 }
