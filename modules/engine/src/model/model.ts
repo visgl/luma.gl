@@ -612,8 +612,10 @@ export class Model {
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
     if (attribute === null) {
+      log.warn('Missing attribute')();
       return 'null';
     } else if (attribute === undefined) {
+      log.warn('Missing attribute')();
       return 'undefined';
     }
     const TypedArrayConstructor = getTypedArrayFromDataType(dataType);
