@@ -336,10 +336,6 @@ export abstract class Device {
   /** Create a compute pipeline (aka program). WebGPU only. */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
 
-  createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
-    throw new Error('not implemented');
-  }
-
   /** Create a vertex array */
   abstract createVertexArray(props: VertexArrayProps): VertexArray;
 
@@ -354,6 +350,48 @@ export abstract class Device {
 
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL 2 only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
+
+  createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
+    throw new Error('not implemented');
+  }
+
+  // HACKS - until we have a better way to handle these
+
+  /** @deprecated - will be removed - should use command encoder */
+  readPixelsToArrayWebGL(
+    source: Framebuffer | Texture,
+    options?: {
+      sourceX?: number;
+      sourceY?: number;
+      sourceFormat?: number;
+      sourceAttachment?: number;
+      target?: Uint8Array | Uint16Array | Float32Array;
+      // following parameters are auto deduced if not provided
+      sourceWidth?: number;
+      sourceHeight?: number;
+      sourceType?: number;
+    }
+  ): Uint8Array | Uint16Array | Float32Array {
+    throw new Error('not implemented');
+  }
+  
+  /** @deprecated - will be removed - should use command encoder */
+  readPixelsToBufferWebGL2(
+    source: Framebuffer | Texture,
+    options?: {
+      sourceX?: number;
+      sourceY?: number;
+      sourceFormat?: number;
+      target?: Buffer; // A new Buffer object is created when not provided.
+      targetByteOffset?: number; // byte offset in buffer object
+      // following parameters are auto deduced if not provided
+      sourceWidth?: number;
+      sourceHeight?: number;
+      sourceType?: number;
+    }
+  ): Buffer {
+    throw new Error('not implemented');
+  }
 
   // Implementation
 

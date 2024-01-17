@@ -25,6 +25,7 @@ import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
+import { copyTextureToImage } from '../debug/copy-texture-to-image';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -294,7 +295,7 @@ export class Model {
         transformFeedback: this.transformFeedback
       });
     } finally {
-      this._logDrawCallEnd();
+      this._logDrawCallEnd(renderPass);
     }
   }
 
@@ -560,7 +561,7 @@ export class Model {
     log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
   }
 
-  _logDrawCallEnd(): void {
+  _logDrawCallEnd(renderPass: RenderPass): void {
     if (this._logOpen) {
       const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
 
@@ -581,6 +582,25 @@ export class Model {
 
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;
+
+      const framebuffer = renderPass.props.framebuffer;
+      if (framebuffer) {
+        const img = copyTextureToImage(renderPass.props.framebuffer, {targetMaxHeight: 100});
+        debugger
+        const scale = 1;
+        console.log(`aaa %c sup?` ,
+        `
+          font-size: 1px;
+          padding: ${Math.floor((img.height * scale) / 2)}px ${Math.floor((img.width * scale) / 2)}px;
+          background-image: url(${img.src});
+          background-repeat: no-repeat;
+          background-size: ${img.width * scale}px ${img.height * scale}px;
+          color: transparent;
+        `
+      );
+        
+        // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
+      }
     }
   }
 
