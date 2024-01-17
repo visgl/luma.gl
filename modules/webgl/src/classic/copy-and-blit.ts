@@ -106,9 +106,9 @@ export function readPixelsToBuffer(
     sourceType?: number;
   }
 ): WEBGLBuffer {
-  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, targetByteOffset = 0} = options || {};
+  const {target, sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, targetByteOffset = 0} = options || {};
   // following parameters are auto deduced if not provided
-  let {target, sourceWidth, sourceHeight, sourceType} = options || {};
+  let {sourceWidth, sourceHeight, sourceType} = options || {};
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   sourceWidth = sourceWidth || framebuffer.width;

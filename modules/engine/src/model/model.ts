@@ -1,11 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {
-  TypedArray,
-  RenderPipelineProps,
-  RenderPipelineParameters
-} from '@luma.gl/core';
+import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
 import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {
@@ -25,7 +21,7 @@ import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
-import { copyTextureToImage } from '../debug/copy-texture-to-image';
+import {debugFramebuffer} from '../debug/debug-framebuffer';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -295,8 +291,9 @@ export class Model {
         transformFeedback: this.transformFeedback
       });
     } finally {
-      this._logDrawCallEnd(renderPass);
+      this._logDrawCallEnd();
     }
+    this._logFramebuffer(renderPass);
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -551,8 +548,8 @@ export class Model {
   _logDrawCallStart(): void {
     // IF level is 4 or higher, log every frame.
     const logDrawTimeout = log.level > 3 ? 0 : LOG_DRAW_TIMEOUT;
-    if (Date.now() - this._lastLogTime < logDrawTimeout) {
-      return undefined;
+    if (log.level < 2 || Date.now() - this._lastLogTime < logDrawTimeout) {
+      return;
     }
 
     this._lastLogTime = Date.now();
@@ -561,7 +558,7 @@ export class Model {
     log.group(LOG_DRAW_PRIORITY, `>>> DRAWING MODEL ${this.id}`, {collapsed: log.level <= 2})();
   }
 
-  _logDrawCallEnd(renderPass: RenderPass): void {
+  _logDrawCallEnd(): void {
     if (this._logOpen) {
       const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
 
@@ -582,25 +579,22 @@ export class Model {
 
       log.groupEnd(LOG_DRAW_PRIORITY)();
       this._logOpen = false;
+    }
+  }
 
-      const framebuffer = renderPass.props.framebuffer;
-      if (framebuffer) {
-        const img = copyTextureToImage(renderPass.props.framebuffer, {targetMaxHeight: 100});
-        debugger
-        const scale = 1;
-        console.log(`aaa %c sup?` ,
-        `
-          font-size: 1px;
-          padding: ${Math.floor((img.height * scale) / 2)}px ${Math.floor((img.width * scale) / 2)}px;
-          background-image: url(${img.src});
-          background-repeat: no-repeat;
-          background-size: ${img.width * scale}px ${img.height * scale}px;
-          color: transparent;
-        `
-      );
-        
-        // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
-      }
+  protected _drawCount = 0;
+  _logFramebuffer(renderPass: RenderPass): void {
+    const debugFramebuffers = log.get('framebuffer');
+    this._drawCount++;
+    // Update first 3 frames and then every 60 frames
+    if (!debugFramebuffers || ((this._drawCount++ > 3) && (this._drawCount % 60))) {
+      return;
+    }
+    // TODO - display framebuffer output in debug window
+    const framebuffer = renderPass.props.framebuffer;
+    if (framebuffer) {
+      debugFramebuffer(framebuffer, {id: framebuffer.id, minimap: true});
+      // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
     }
   }
 
