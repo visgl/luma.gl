@@ -461,16 +461,14 @@ export class Model {
       )();
     }
     for (const [bufferName, buffer] of Object.entries(buffers)) {
-      const bufferLayout = this.bufferLayout.find(layout => layout.name === bufferName);
+      const bufferLayout = this.bufferLayout.find(layout => getAttributeNames(layout).includes(bufferName));
       if (!bufferLayout) {
         log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
         continue; // eslint-disable-line no-continue
       }
 
       // For an interleaved attribute we may need to set multiple attributes
-      const attributeNames = bufferLayout.attributes
-        ? bufferLayout.attributes?.map(layout => layout.attribute)
-        : [bufferLayout.name];
+      const attributeNames = getAttributeNames(bufferLayout);
       let set = false;
       for (const attributeName of attributeNames) {
         const attributeInfo = this._attributeInfos[attributeName];
@@ -645,4 +643,11 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     gpu: device.info.gpu,
     features: device.features
   };
+}
+
+/** Get attribute names from a BufferLayout */
+function getAttributeNames(bufferLayout: BufferLayout): string[] {
+  return bufferLayout.attributes
+  ? bufferLayout.attributes?.map(layout => layout.attribute)
+  : [bufferLayout.name];
 }
