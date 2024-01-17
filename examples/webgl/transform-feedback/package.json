@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-transform-feedback",
-  "version": "9.0.0-alpha.53",
+  "version": "9.0.0-alpha.54",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.53",
-    "@luma.gl/webgl": "9.0.0-alpha.53"
+    "@luma.gl/engine": "9.0.0-alpha.54",
+    "@luma.gl/webgl": "9.0.0-alpha.54"
   },
   "devDependencies": {
     "typescript": "^5.1.6",

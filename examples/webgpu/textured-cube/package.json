@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-webgpu-textured-cube",
-  "version": "9.0.0-alpha.53",
+  "version": "9.0.0-alpha.54",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.53",
-    "@luma.gl/shadertools": "9.0.0-alpha.53",
-    "@luma.gl/webgpu": "9.0.0-alpha.53",
+    "@luma.gl/engine": "9.0.0-alpha.54",
+    "@luma.gl/shadertools": "9.0.0-alpha.54",
+    "@luma.gl/webgpu": "9.0.0-alpha.54",
     "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {

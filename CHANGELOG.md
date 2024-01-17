@@ -1,6 +1,11 @@
 # luma.gl CHANGELOG
 
-### v9.0.0-alpha.530
+### v9.0.0-alpha.54
+
+- Model.setAttributes handle interleaved attributes (#1920)
+- feat: Add Buffer.debugData (#1919)
+
+### v9.0.0-alpha.53
 
 - feat(shadertools): Export PickingProps (#1915)
 - feat: Add shader inputs (uniform buffer) debug trace (#1918)

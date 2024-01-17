@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/test-utils",
-  "version": "9.0.0-alpha.53",
+  "version": "9.0.0-alpha.54",
   "description": "Automated WebGL testing utilities with Puppeteer and image diffing",
   "type": "module",
   "license": "MIT",
@@ -39,10 +39,10 @@
     "pre-build": "echo test utils has no bundle"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.0-alpha.53",
-    "@luma.gl/engine": "9.0.0-alpha.53",
-    "@luma.gl/webgl": "9.0.0-alpha.53",
-    "@luma.gl/webgpu": "9.0.0-alpha.53",
+    "@luma.gl/core": "9.0.0-alpha.54",
+    "@luma.gl/engine": "9.0.0-alpha.54",
+    "@luma.gl/webgl": "9.0.0-alpha.54",
+    "@luma.gl/webgpu": "9.0.0-alpha.54",
     "@probe.gl/env": "^4.0.2",
     "@types/gl": "^6.0.2",
     "gl": "^6.0.1"
