@@ -14,9 +14,9 @@ This upgrade guide describes upgrading to the luma.gl v9 API, which introduces m
 
 ### Effort Estimation
 
-Suddenly having to upgrade an existing to a new breaking API is never fun. A first step for application developers is often to assess how much effort an upgrade is likely to required.
+Suddenly having to upgrade an existing application to a new breaking API version is never fun. A first step for application developers is often to assess how much effort an upgrade is likely to require.
 
-While it is impossible to assess exactly how much work will be required for a specific application, this section provides a few notes that may help give a better sense of what to expect:
+While it is impossible to assess here how much work will be required for a specific application, this section provides a few notes that may help give a better sense of what to expect:
 
 The general "structure" and abstraction level of the luma.gl API has not changed. While the v9 API changes will seem extensive at first:
   - A port of a luma.gl application to v9 should not require the application to be refactored or redesigned in any substantial way. 
@@ -26,36 +26,32 @@ The ground-up focus on TypeScript and strong typing in luma.gl v9 should create 
 
 ### Module-level changes
 
-| **Module**           | v8 Description                                  | v9 Replacement                                                                                                                   |
-| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Module**           | v8 Description                                  | v9 Replacement                                                                                                                    |
+| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `@luma.gl/core`      | The core module was re-exporting other modules. | Replace direct use of WebGL classes with `@luma.gl/core` device API. import directly from `@luma.gl/shadertools`.                 |
 | `@luma.gl/gltools`   | Contained WebGL context functionality.          | Removed. WebGL context is now handled by the  `@luma.gl/webgl` `WebGLDevice` and  `@luma.gl/core` `CanvasContext` classes.        |
 | `@luma.gl/webgl`     | Exported WebGL classes meant for direct usage.  | Now exports the WebGL backend for the `@luma.gl/core` module. `@luma.gl/webgl-legacy` now offers the legacy luma.gl v8 WebGL API. |
-| `@luma.gl/constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                            |
+| `@luma.gl/constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                             |
 
 
-Detailed notes
-
-**`@luma.gl/core`** module is "in transition":
-    - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
-    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/webgl-legacy`.
+## Deleted modules
 
 **`@luma.gl/experimental`**
     - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
 
-**`@luma.gl/constants`** module remains but is no longer needed by applications:
-    - WebGL-style numeric constants (`GL.` constants) are no longer used in the public v9 API.
-    - Instead, the luma.gl v9 API contains strictly types WebGPU style string constants
-    - Breaking change: Constants are now exported via a named export rather than a default export (for better ES modules compatibility): `import GL from @luma.gl/constants` => `import {GL} from @luma.gl/constants`.
+**`@luma.gl/constants`** 
+
+- This module remains as an internal module, but is no longer intended to be imported by applications. 
+- WebGL-style numeric constants (`GL.` constants) are no longer used in the luma.gl v9 API. Instead, the luma.gl v9 API contains strictly typed WebGPU style string constants.
+- Breaking changes
+  - Constants are now exported via a named export rather than a default export for better ES modules compatibility. Change `import GL from @luma.gl/constants` to `import {GL} from @luma.gl/constants`.
 
 **`@luma.gl/gltools`** (removed)
-    - The WebGL context functions (`createGLContext` etc), have been moved to the new `WebGLDevice` and `CanvasContext` classes.
-    - It also contains the classic luma.gl WebGL 2 classes (`Program`, `Texture2D`) etc that used to be improved from `@luma.gl/webgl`. However these classes are now just exposed for backwards compatibility and should gradually be relaced.
-    - To simplify gradual introduction of the new v9 API, all APIs in `@luma.gl/Webgl-legacy` have been updated to optionally accept a `Device` parameter instead of a `WebGLRenderingContext`
+    - The WebGL context functions (`createGLContext` etc), have been replaced by methods on to the new `Device` and `CanvasContext` classes.
 
 #### `@luma.gl/debug` (removed - see upgrade guide)
 
-- `makeDebugContext()` from `@luma.gl/debug` is deprecated. Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
+- `makeDebugContext()` - Khronos WebGL developer tools no longer need to be bundled, they are now dynamically loaded when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`.
 - Debugging:the [Khronos WebGL developer tools](https://github.com/KhronosGroup/WebGLDeveloperTools) no longer need to be bundled. They are now automatically loaded from CDN when WebGL devices are created with `luma.createDevice({debug: true, type: 'webgl'})`
 - Debugging: [Spector.js](https://spector.babylonjs.com/) is pre-integrated. If a `WebGLDevice` is created with `spector: true`, the Spector.js library will be dynamically loaded from CDN, the device canvas will be "captured". Also information about luma.gl objects associated with WebGL handles will be displayed in the Spector UI.
 
@@ -63,8 +59,28 @@ Detailed notes
 
 - The `@luma.gl/gltools` module is removed. Its exports are available in the `@luma.gl/webgl-legacy` module.
 
-### Feature-level changes
+## Changes per module
 
+**`@luma.gl/core`**
+    - in v9, the core module still exports the deprecated v8 classes from `@luma.gl/gltools` (so that applications can gradually start moving to the v10 API).
+    - WebGL class exports are deprecated and should be imported directly from `@luma.gl/webgl-legacy`.
+
+**`@luma.gl/engine`**
+
+#### `AnimationLoop`
+
+| Deleted v8 Properties | Replace with                                        |
+| --------------------- | --------------------------------------------------- |
+| `gl`                  | `props.device`                                 |
+| `glOptions`           | Pass options to `luma.createDevice()`               |
+| `createFramebuffer`   | Create framebuffers explicitly in your application. |
+| `debug`               | Use `luma.createDevice({debug: true})`              |
+
+Deleted v8 methods 
+- isContextLost() - Use `device.isLost()`.
+
+
+### Feature-level changes
 
 A long list of changes, some required to make the API portable between WebGPU and WebGL, and many to accommodate the limitations of the more locked-down WebGPU API.
 

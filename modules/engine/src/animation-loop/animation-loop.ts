@@ -34,7 +34,6 @@ export type MutableAnimationLoopProps = {
   useDevicePixels?: number | boolean;
 }
 
-
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   device: null!,
 
@@ -121,12 +120,13 @@ export class AnimationLoop {
     this.destroy();
   }
 
+  /** Flags this animation loop as needing redraw */
   setNeedsRedraw(reason: string): this {
     this.needsRedraw = this.needsRedraw || reason;
     return this;
   }
 
-  // TODO - move to CanvasContext
+  /** TODO - move these props to CanvasContext? */
   setProps(props: MutableAnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport || false;
@@ -181,6 +181,24 @@ export class AnimationLoop {
     }
   }
 
+  /** Stops a render loop if already running, finalizing */
+  stop() {
+    // console.debug(`Stopping ${this.constructor.name}`);
+    if (this._running) {
+      // call callback
+      // If stop is called immediately, we can end up in a state where props haven't been initialized...
+      if (this.animationProps) {
+        this.props.onFinalize(this.animationProps);
+      }
+
+      this._cancelAnimationFrame();
+      this._nextFramePromise = null;
+      this._resolveNextFrame = null;
+      this._running = false;
+    }
+    return this;
+  }
+
   /** Explicitly draw a frame */
   redraw(): this {
     if (this.device?.isLost) {
@@ -208,33 +226,18 @@ export class AnimationLoop {
     return this;
   }
 
-  // Stops a render loop if already running, finalizing
-  stop() {
-    // console.debug(`Stopping ${this.constructor.name}`);
-    if (this._running) {
-      // call callback
-      // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps) {
-        this.props.onFinalize(this.animationProps);
-      }
-
-      this._cancelAnimationFrame();
-      this._nextFramePromise = null;
-      this._resolveNextFrame = null;
-      this._running = false;
-    }
-    return this;
-  }
-
+  /** Add a timeline, it will be automatically updated by the animation loop. */
   attachTimeline(timeline: Timeline): Timeline {
     this.timeline = timeline;
     return this.timeline;
   }
 
+  /** Remove a timeline */
   detachTimeline(): void {
     this.timeline = null;
   }
 
+  /** Wait until a render completes */
   waitForRender(): Promise<AnimationLoop> {
     this.setNeedsRedraw('waitForRender');
 
@@ -246,6 +249,7 @@ export class AnimationLoop {
     return this._nextFramePromise;
   }
 
+  /** TODO - should use device.deviceContext */
   async toDataURL(): Promise<string> {
     this.setNeedsRedraw('toDataURL');
     await this.waitForRender();
@@ -257,7 +261,7 @@ export class AnimationLoop {
 
   // PRIVATE METHODS
 
-  _initialize() {
+  _initialize(): void {
     this._startEventHandling();
 
     // Initialize the callback data
@@ -271,7 +275,7 @@ export class AnimationLoop {
     // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
   }
 
-  _setDisplay(display: any) {
+  _setDisplay(display: any): void {
     if (this.display) {
       this.display.destroy();
       this.display.animationLoop = null;
@@ -285,7 +289,7 @@ export class AnimationLoop {
     this.display = display;
   }
 
-  _requestAnimationFrame() {
+  _requestAnimationFrame(): void {
     if (!this._running) {
       return;
     }
@@ -299,7 +303,7 @@ export class AnimationLoop {
     this._animationFrameId = requestAnimationFrame(this._animationFrame.bind(this));
   }
 
-  _cancelAnimationFrame() {
+  _cancelAnimationFrame(): void {
     if (this._animationFrameId === null) {
       return;
     }
@@ -314,7 +318,7 @@ export class AnimationLoop {
     this._animationFrameId = null;
   }
 
-  _animationFrame() {
+  _animationFrame(): void {
     if (!this._running) {
       return;
     }
@@ -324,7 +328,7 @@ export class AnimationLoop {
 
   // Called on each frame, can be overridden to call onRender multiple times
   // to support e.g. stereoscopic rendering
-  _renderFrame(animationProps: AnimationProps) {
+  _renderFrame(animationProps: AnimationProps): void {
     // Allow e.g. VR display to render multiple frames.
     if (this.display) {
       this.display._renderFrame(animationProps);
@@ -336,17 +340,17 @@ export class AnimationLoop {
     // end callback
   }
 
-  _clearNeedsRedraw() {
+  _clearNeedsRedraw(): void {
     this.needsRedraw = false;
   }
 
-  _setupFrame() {
+  _setupFrame(): void {
     this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
   }
 
   // Initialize the  object that will be passed to app callbacks
-  _initializeAnimationProps() {
+  _initializeAnimationProps(): void {
     if (!this.device) {
       throw new Error('loop');
     }
@@ -432,7 +436,7 @@ export class AnimationLoop {
     // this._createInfoDiv();
   }
 
-  _createInfoDiv() {
+  _createInfoDiv(): void {
     if (this.canvas && this.props.onAddHTML) {
       const wrapperDiv = document.createElement('div');
       document.body.appendChild(wrapperDiv);
@@ -477,7 +481,7 @@ export class AnimationLoop {
   }
 
   /** Default viewport setup */
-  _resizeViewport() {
+  _resizeViewport(): void {
     // @ts-expect-error Expose on canvasContext
     if (this.props.autoResizeViewport && this.device.gl) {
       // @ts-expect-error Expose canvasContext
@@ -489,7 +493,7 @@ export class AnimationLoop {
    * Resize the render buffer of the canvas to match canvas client size
    * Optionally multiplying with devicePixel ratio
    */
-  _resizeCanvasDrawingBuffer() {
+  _resizeCanvasDrawingBuffer(): void {
     if (this.props.autoResizeDrawingBuffer) {
       this.device?.canvasContext?.resize({useDevicePixels: this.props.useDevicePixels});
     }
