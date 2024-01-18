@@ -96,7 +96,7 @@ const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformT
 const SCREEN_QUAD_VS = glsl`\
 #version 300 es
 
-attribute vec2 aPosition;
+in vec2 aPosition;
 
 void main(void) {
   gl_Position = vec4(aPosition, 0, 1);
@@ -118,7 +118,7 @@ out vec4 fragColor;
 
 void main(void) {
   vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
-  fragColor = texture2D(uTexture, p);
+  fragColor = texture(uTexture, p);
 }
 `;
 
@@ -150,8 +150,8 @@ out vec4 fragColor;
 
 void main(void) {
   vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
-  vec4 cS = texture2D(uScene, p);
-  vec4 cP = texture2D(uPersistence, p);
+  vec4 cS = texture(uScene, p);
+  vec4 cP = texture(uPersistence, p);
   fragColor = mix(cS*4.0, cP, 0.9);
 }
 `;

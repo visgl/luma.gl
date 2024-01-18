@@ -10,6 +10,9 @@ import type {
   TextureFormat,
   VertexArray,
   VertexArrayProps,
+  Framebuffer,
+  Buffer,
+  Texture,
   TypedArray
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
@@ -70,6 +73,8 @@ import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
+
+import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
 
 const LOG_LEVEL = 1;
 
@@ -376,6 +381,46 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   //
+  // TEMPORARY HACKS - will be removed in v9.1
+  // 
+
+  /** @deprecated - should use command encoder */
+  override readPixelsToArrayWebGL(
+    source: Framebuffer | Texture,
+    options?: {
+      sourceX?: number;
+      sourceY?: number;
+      sourceFormat?: number;
+      sourceAttachment?: number;
+      target?: Uint8Array | Uint16Array | Float32Array;
+      // following parameters are auto deduced if not provided
+      sourceWidth?: number;
+      sourceHeight?: number;
+      sourceType?: number;
+    }
+  ): Uint8Array | Uint16Array | Float32Array {
+    return readPixelsToArray(source, options);
+  }
+
+  /** @deprecated - should use command encoder */
+  override readPixelsToBufferWebGL2(
+    source: Framebuffer | Texture,
+    options?: {
+      sourceX?: number;
+      sourceY?: number;
+      sourceFormat?: number;
+      target?: Buffer; // A new Buffer object is created when not provided.
+      targetByteOffset?: number; // byte offset in buffer object
+      // following parameters are auto deduced if not provided
+      sourceWidth?: number;
+      sourceHeight?: number;
+      sourceType?: number;
+    }
+  ): Buffer {
+    return readPixelsToBuffer(source, options);
+  }
+
+  //
   // WebGL-only API (not part of `Device` API)
   //
 
@@ -585,8 +630,8 @@ function setConstantUintArray(device: WebGLDevice, location: number, array: Uint
   // }
 }
 
-/** 
- * Compares contents of two typed arrays 
+/**
+ * Compares contents of two typed arrays
  * @todo max length?
  */
 function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {

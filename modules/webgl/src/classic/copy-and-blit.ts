@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {assert, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
+import {assert, Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {WEBGLTexture} from '../adapter/resources/webgl-texture';
@@ -98,7 +98,7 @@ export function readPixelsToBuffer(
     sourceX?: number;
     sourceY?: number;
     sourceFormat?: number;
-    target?: WEBGLBuffer; // A new Buffer object is created when not provided.
+    target?: Buffer; // A new Buffer object is created when not provided.
     targetByteOffset?: number; // byte offset in buffer object
     // following parameters are auto deduced if not provided
     sourceWidth?: number;
@@ -106,9 +106,9 @@ export function readPixelsToBuffer(
     sourceType?: number;
   }
 ): WEBGLBuffer {
-  const {sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, targetByteOffset = 0} = options || {};
+  const {target, sourceX = 0, sourceY = 0, sourceFormat = GL.RGBA, targetByteOffset = 0} = options || {};
   // following parameters are auto deduced if not provided
-  let {target, sourceWidth, sourceHeight, sourceType} = options || {};
+  let {sourceWidth, sourceHeight, sourceType} = options || {};
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
   sourceWidth = sourceWidth || framebuffer.width;
@@ -120,12 +120,13 @@ export function readPixelsToBuffer(
   // deduce type if not available.
   sourceType = sourceType || GL.UNSIGNED_BYTE;
 
-  if (!target) {
+  let webglBufferTarget = target as unknown as WEBGLBuffer | undefined;
+  if (!webglBufferTarget) {
     // Create new buffer with enough size
     const components = glFormatToComponents(sourceFormat);
     const byteCount = glTypeToBytes(sourceType);
     const byteLength = targetByteOffset + sourceWidth * sourceHeight * components * byteCount;
-    target = webglFramebuffer.device.createBuffer({byteLength});
+    webglBufferTarget = webglFramebuffer.device.createBuffer({byteLength});
   }
 
   // TODO(donmccurdy): Do we have tests to confirm this is working?
@@ -135,7 +136,7 @@ export function readPixelsToBuffer(
     width: sourceWidth,
     height: sourceHeight,
     origin: [sourceX, sourceY],
-    destination: target,
+    destination: webglBufferTarget,
     byteOffset: targetByteOffset
   });
   commandEncoder.destroy();
@@ -144,7 +145,7 @@ export function readPixelsToBuffer(
     framebuffer.destroy();
   }
 
-  return target;
+  return webglBufferTarget;
 }
 
 /**
