@@ -13,6 +13,47 @@ uniform float floaty;
 main() {}
 `;
 
+const SHADER_3 = glsl`\
+uniform float floaty;
+#define  SHADER_NAME name-of-shader
+main() {}
+`;
+
+const SHADER_4 = glsl`\
+uniform float floaty;
+#define  SHADER_NAME  name-of-shader
+main() {}
+`;
+
+const SHADER_5 = glsl`\
+uniform float floaty;
+#define
+SHADER_NAME name-of-shader
+main() {}
+`;
+
+const SHADER_6 = glsl`\
+uniform float floaty;
+#define SHADER_NAME
+name-of-shader
+main() {}
+`;
+const SHADER_7 = glsl`\
+uniform float floaty;
+#define
+
+SHADER_NAME name-of-shader
+main() {}
+`;
+
+const SHADER_8 = glsl`\
+uniform float floaty;
+#define SHADER_NAME
+
+name-of-shader
+main() {}
+`;
+
 const SHADER1 = 'void main() {}';
 
 const SHADER2 = '#version 100 void main() {}';
@@ -57,7 +98,44 @@ test('WebGL#getShaderInfo()', (t) => {
     'name-of-shader',
     'getShaderInfo().name extracted correct name'
   );
+
   t.equal(getShaderInfo(SHADER_2).name, 'unnamed', 'getShaderInfo().name extracted default name');
+
+  t.equal(
+    getShaderInfo(SHADER_3).name,
+    'name-of-shader',
+    'getShaderInfo().name extracted correct name'
+  );
+
+  t.equal(
+    getShaderInfo(SHADER_4).name,
+    'name-of-shader',
+    'getShaderInfo().name extracted correct name'
+  );
+
+  t.equal(
+    getShaderInfo(SHADER_5).name,
+    'unnamed',
+    'getShaderInfo().name extracted default name'
+  );
+
+  t.equal(
+    getShaderInfo(SHADER_6).name,
+    'unnamed',
+    'getShaderInfo().name extracted default name'
+  );
+
+  t.equal(
+    getShaderInfo(SHADER_7).name,
+    'unnamed',
+    'getShaderInfo().name extracted default name'
+  );
+
+  t.equal(
+    getShaderInfo(SHADER_8).name,
+    'unnamed',
+    'getShaderInfo().name extracted default name'
+  );
 
   for (const string in versionTests) {
     t.equal(getShaderInfo(string).version, versionTests[string], 'Version should match');
