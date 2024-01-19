@@ -29,15 +29,10 @@ Use a canvas in the existing DOM through its HTML id
 animationLoop.start({canvas: 'my-canvas'});
 ```
 
-## Methods
+## Types
 
-### constructor
 
-```ts
-new AnimationLoop(props : AnimationLoopProps)
-```
-
-`AnimationLoopProps`:
+### AnimationLoopProps
 
 | Property                   | Type                        | Default | Description                                                                                                          |
 | -------------------------- | --------------------------- |
@@ -50,6 +45,39 @@ new AnimationLoop(props : AnimationLoopProps)
 | `autoResizeDrawingBuffer?` | `boolean`                   | `true`  | If true, resizes the drawing buffer  each frame before `onRender` is called.                                         |
 | `useDevicePixels?`         | `boolean \| number`         |         | Multiplier. `true` uses `window.devicePixelRatio` as a multiplier in `autoResizeDrawingBuffer` etc.                  |
 | `stats?`                   | `Stats`                     |         | A probe.gl `Stats` instance, Auto-created if not supplied.                                                           |
+
+### AnimationProps
+
+The `onInitialize`, `onRender` and `onFinalize`callbacks will be called with an object containing the following fields:
+
+| Parameter         | Type                                     | Description                                                                         |
+| ----------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `animationLoop`   | `AnimationLoopTemplate`                  | The calling `AnimationLoopTemplate` instance                                        |
+| `device`          | `Device`                                 | This `AnimationLoopTemplate`'s gl context.                                          |
+| `canvas`          | `HTMLCanvasElement` or `OffscreenCanvas` | The canvas associated with this context.                                            |
+| `aspect`          | `number`                                 | The canvas aspect ratio (width/height) to update projection matrices                |
+| `width`           |                                          | The drawing buffer width, in "device" pixels (can be different from canvas.width).  |
+| `height`          |                                          | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
+| `useDevicePixels` | `boolean`                                | Boolean indicating if canvas is utilizes full resolution of Retina/                 |
+| `needsRedraw`     | `String`                                 | Redraw flag (will be automatically set if drawingBuffer resizes)                    |
+| `time`            | `Number`                                 | Milliseconds since `AnimationLoopTemplate` was created (monotonic).                 |
+| `tick`            | `Number`                                 | Counter that updates for every frame rendered (monotonic).                          |
+| `renderPass`      | `RenderPass`                             | Availabel if `createFrameBuffer: true` was passed to the constructor.               |
+| `_mousePosition`  | `[x, y]` or `null`                       | (**experimental**) Current mouse position over the canvas.                          |
+| `_timeline`       | `Timeline`                               | (**experimental**) `Timeline` object tracking the animation timeline and channels.  |
+
+
+## Methods
+
+### constructor
+
+Creates a new `AnimationLoop`.
+
+```ts
+new AnimationLoop(props : AnimationLoopProps)
+```
+
+- `props` - See documentation of `AnimationLoopProps` above.
 
 ### setProps(props : Object)
 
@@ -127,23 +155,6 @@ Returns returns a `Promise` that resolves to the data URL of the canvas once dra
 ## Callback Parameters
 
 The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies to the `AnimationLoop`, will be called with an object containing named parameters:
-
-| Parameter         | Type                                                                                | Description                                                                        |
-| ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `_animationLoop`  | `AnimationLoop`                                                                     | (**experimental**) The calling `AnimationLoop` instance                            |
-| `gl`              | `WebGLRenderingContext`                                                             | This `AnimationLoop`'s gl context.                                                 |
-| `canvas`          | `HTMLCanvasElement` or `OffscreenCanvas`                                            | The canvas associated with this context.                                           |
-| `width`           | The drawing buffer width, in "device" pixels (can be different from canvas.width).  |
-| `height`          | The drawing buffer height, in "device" pixels (can be different from canvas.width). |
-| `aspect`          | The canvas aspect ratio (width/height) to update projection matrices                |
-| `useDevicePixels` | Boolean indicating if canvas is utilizes full resolution of Retina/                 |
-| `needsRedraw`     | `String`                                                                            | Redraw flag (will be automatically set if drawingBuffer resizes)                   |
-| `time`            | `Number`                                                                            | Milliseconds since `AnimationLoop` was created (monotonic).                        |
-| `tick`            | `Number`                                                                            | Counter that updates for every frame rendered (monotonic).                         |
-| `framebuffer`     | `FrameBuffer`                                                                       | Availabel if `createFrameBuffer: true` was passed to the constructor.              |
-| `_mousePosition`  | `[x, y]` or `null`                                                                  | (**experimental**) Current mouse position over the canvas.                         |
-| `_timeline`       | `Trimeline`                                                                         | (**experimental**) `Timeline` object tracking the animation timeline and channels. |
-| ...               | Any fields in the object that was returned by the `onInitialize` method.            |
 
 ### Frame timers
 

@@ -87,6 +87,7 @@
         "label": "@luma.gl/engine",
         "items": [
           "api-reference/engine/animation-loop",
+          "api-reference/engine/animation-loop-template",
           "api-reference/engine/animation/key-frames",
           "api-reference/engine/animation/timeline",
           "api-reference/engine/geometry/geometries",

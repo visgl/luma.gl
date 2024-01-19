@@ -26,25 +26,27 @@ luma.gl v9 API contains breaking changes. It requires existing luma.gl v8 applic
 
 **`@luma.gl/engine`**
 
-- The classic luma.gl engine classes such as `Model`, `AnimationLoop` etc. 
-- Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`).
-- All engine classes build on `@luma.gl/core`, and work portably on both WebGPU and WebGL.
-
+- Contains the classic luma.gl engine classes such as `Model`, `AnimationLoop` etc, which now work portably on both WebGPU and WebGL. 
+- NEW: Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`) moved from `@luma.gl/experimental` in v8).
+- NEW: `AnimationLoopTemplate` - a small helper class that can help write more cleanly typed applications.
+- NEW: `ShaderInputs` - A class that manages uniform buffers for a `Model`
+- 
 **`@luma.gl/shadertools`**
 
-- `ShaderAssember` - New class that provides a stateful entry point to the shader module system.
+- All shader modules now use uniform buffers (and accordingly no longer work in WebGL1).
+- NEW: `ShaderAssember` class that provides a clean entry point to the shader module system.
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 
 **`@luma.gl/webgl`**
 
-- An optional backend module, that provides a WebGL / WebGL 2 backend implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of type `'webgl2'` or `'webgl'` 
+- This is now an (optional) "GPU backend module", that provides a WebGL / WebGL 2 implementation of the luma.gl core API. 
+- Importing this module enables the application to create `Device`s of `type` `'webgl2'` or `'webgl'` 
 - Note: Requires a browser / environment that supports the WebGL API.
 
 **`@luma.gl/webgpu`** (new module)
 
-- An optional backend module, that provides a WebGPU implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of type `'webgpu'` 
+- An optional "GPU backend module", that provides a WebGPU implementation of the luma.gl core API. 
+- Importing this module enables the application to create `Device`s of `type` `'webgpu'` 
 - Note: Requires a browser / environment that supports the WebGPU API.
 
 **`@luma.gl/constants`** (deprecated, no longer needed)

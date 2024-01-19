@@ -5,7 +5,7 @@ export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';
 
-export {AnimationLoopTemplate} from './animation-loop/render-loop';
+export {AnimationLoopTemplate} from './animation-loop/animation-loop-template';
 
 export type {AnimationLoopProps} from './animation-loop/animation-loop';
 export {AnimationLoop} from './animation-loop/animation-loop';
