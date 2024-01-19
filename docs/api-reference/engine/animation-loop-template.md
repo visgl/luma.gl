@@ -38,13 +38,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 });
 
-new AppAnimationLoopTemplate().start();
-```
-
-Use a canvas in the existing DOM through its HTML id
-
-```typescript
-new AppAnimationLoopTemplate({canvas: 'my-canvas'}).start();
+const animationLoop = makeAppAnimationLoop(AppAnimationLoopTemplate).start();
 ```
 
 ## Types
@@ -55,17 +49,27 @@ The `AnimationLoopTemplate` class uses the `AnimationLoopProps` and `AnimationPr
 
 ### makeAnimationLoop
 
+Use to instantiate an `AnimateionLoopTemplate` subclass
+
 ```ts
-makeAnimationLoop({
-  autoResizeViewport,
-  autoResizeDrawingBuffer
-});
+makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoopTemplate, props?: MakeAnimationLoopProps) : AnimationLoop
 ```
+
+- `props` - forwarded to the `AnimationLoop` constructor.  If no `device` is passed, `makeAimationLoop()` will create one using `type: 'best-availble'`.
 
 ## Methods
 
 ### constructor
 
-The `AnimationLoopTemplate` class should not be constructed 
+The `AnimationLoopTemplate` class should not be constructed directly. Use the `makeAnimationLoop()` function to create an
+`AnimationLoop` from an `AnimationLoop` template
 
+### onFinalize
 
+The application overrides the `onFinalize`` method to destroy any (GPU) resources created in he constructor.
+Parameters are identical to `AnimationLoopProp.onFinalize`.
+
+### onRender
+
+The application overrides the `onFinalize`` method to render each frame.
+Parameters are identical to `AnimationLoopProp.onRender`.

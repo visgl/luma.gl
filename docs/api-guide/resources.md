@@ -18,7 +18,7 @@ GPU resources correspond to data on the GPU and/or a state object in the GPU dri
 
 ## Creating GPU Resources
 
-The [`Device`](/docs//api-reference/core/device) class provides methods for creating GPU resources
+The [`Device`](/docs/api-reference/core/device) class provides methods for creating GPU resources
 
 luma.gl provides a consistent API
 
