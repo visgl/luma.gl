@@ -1,0 +1,71 @@
+# AnimationLoopTemplate
+
+`AnimationLoopTemplate` is a helper class that creates and manages the application's render loop.
+
+The motivation for this class (compared to directly using [`AnimationLoop`](./animation-loop) class)
+is that the application can create GPU resources in the constructor 
+so that resources can be unconditionally typed in the subclass. This can remove some code clutter in applications
+
+## Usage
+
+```typescript
+import {AnimationLoopTemplate, makeAnimationLoop} from `@luma.gl/engine`;
+```
+
+Autocreates a canvas/context
+
+```typescript
+import {AnimationLoopTemplate, ClipSpace} from '@luma.gl/engine';
+
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  // This resource is always a valid instance since it is initialized in constructor
+  // i.e. no need to type it as `clipSpaceQuad: ClipSpace | null = null;`` 
+  clipSpaceQuad: ClipSpace; 
+
+  constructor({device) {
+    // Keys in the object returned here will be available in onRender
+    this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
+  }
+
+  onFinalize() {
+    this.clipSpaceQuad.destroy();
+  }
+
+  onRender({tick}) {
+    // Tick is auto updated by AnimationLoopTemplate
+    this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
+    this.clipSpaceQuad.draw();
+  }
+});
+
+new AppAnimationLoopTemplate().start();
+```
+
+Use a canvas in the existing DOM through its HTML id
+
+```typescript
+new AppAnimationLoopTemplate({canvas: 'my-canvas'}).start();
+```
+
+## Types
+
+The `AnimationLoopTemplate` class uses the `AnimationLoopProps` and `AnimationProps` type docunented in the [`AnimationLoop`](./animation-loop) page.
+
+## Global Functions
+
+### makeAnimationLoop
+
+```ts
+makeAnimationLoop({
+  autoResizeViewport,
+  autoResizeDrawingBuffer
+});
+```
+
+## Methods
+
+### constructor
+
+The `AnimationLoopTemplate` class should not be constructed 
+
+
