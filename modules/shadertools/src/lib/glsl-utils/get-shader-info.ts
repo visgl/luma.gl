@@ -19,7 +19,7 @@ export function getShaderInfo(source: string, defaultName?: string): ShaderInfo 
 
 /** Extracts GLSLIFY style naming of shaders: `#define SHADER_NAME ...` */
 function getShaderName(shader: string, defaultName: string = 'unnamed'): string {
-  const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_-]+)[\s*]/;
+  const SHADER_NAME_REGEXP = /#define[^\S\r\n]*SHADER_NAME[^\S\r\n]*([A-Za-z0-9_-]+)\s*/;
   const match = SHADER_NAME_REGEXP.exec(shader);
   return match ? match[1] : defaultName;
 }
