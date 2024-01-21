@@ -32,15 +32,27 @@ export class WebGPUTexture extends Texture {
   constructor(device: WebGPUDevice, props: TextureProps) {
     super(device, props);
 
-    if (typeof this.props.format === 'number') {
-      throw new Error('number format');
+    this.device = device;
+
+    if (props.data instanceof Promise) {
+      props.data.then(resolvedImageData => {
+        // @ts-expect-error
+        this.props = {...props, data: resolvedImageData};
+        this.initialize(this.props);
+      });
+      return;
     }
 
-    this.device = device;
+    this.initialize(props);
+  }
+
+  protected initialize(props: TextureProps): void {
+    // @ts-expect-error
     this.handle = this.props.handle || this.createHandle();
+    this.handle.label ||= this.id;
 
     if (this.props.data) {
-      this.setData({data: this.props.data}  );
+      this.setData({data: this.props.data});
     }
 
     this.width = this.handle.width;
@@ -59,22 +71,18 @@ export class WebGPUTexture extends Texture {
 
     // TODO - To support texture arrays we need to create custom views...
     // But we are not ready to expose TextureViews to the public API.
-    this.view = this.handle.createView({
-      // format: this.props.format,
-      // dimension: this.props.dimension,
-      // aspect = "all";
-      // baseMipLevel: 0;
-      // mipLevelCount;
-      // baseArrayLayer = 0;
-      // arrayLayerCount;
-    });
+    // @ts-expect-error
+    this.view = this.createView();
+    // format: this.props.format,
+    // dimension: this.props.dimension,
+    // aspect = "all";
+    // baseMipLevel: 0;
+    // mipLevelCount;
+    // baseArrayLayer = 0;
+    // arrayLayerCount;
   }
 
   protected createHandle(): GPUTexture {
-    if (typeof this.props.format === 'number') {
-      throw new Error('number format');
-    }
-
     // Deduce size from data - TODO this is a hack
     // @ts-expect-error
     const width = this.props.width || this.props.data?.width || 1;
@@ -82,6 +90,7 @@ export class WebGPUTexture extends Texture {
     const height = this.props.height || this.props.data?.height || 1;
 
     return this.device.handle.createTexture({
+      label: this.id,
       size: {
         width,
         height,
@@ -173,6 +182,13 @@ export class WebGPUTexture extends Texture {
     return {width, height};
   }
 
+  // WebGPU specific 
+  
+  /** TODO - intention is to expose TextureViews in the public API */
+  createView(): GPUTextureView {
+    return this.handle.createView({label: this.id});
+  }
+  
   /*
   async readPixels() {
     const readbackBuffer = device.createBuffer({

@@ -18,9 +18,9 @@ export class WebGPURenderPass extends RenderPass {
     this.device = device;
     const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer() ;
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
-    log.groupCollapsed(1, `new WebGPURenderPass(${this.id})`)();
-    log.probe(1, JSON.stringify(renderPassDescriptor, null, 2))();
-    log.groupEnd(1)();
+    log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
+    log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
+    log.groupEnd(3)();
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
     this.handle.label = this.props.id;
   }
@@ -149,12 +149,12 @@ export class WebGPURenderPass extends RenderPass {
       colorClearValue: this.props.clearColor || [0, 0, 0, 0],
       storeOp: this.props.discard? 'discard': 'store',
       // ...colorAttachment,
-      view: (colorAttachment as WebGPUTexture).handle.createView()
+      view: (colorAttachment as WebGPUTexture).createView()
     }));
 
     if (framebuffer.depthStencilAttachment) {
       renderPassDescriptor.depthStencilAttachment = {
-        view: (framebuffer.depthStencilAttachment as WebGPUTexture).handle.createView()
+        view: (framebuffer.depthStencilAttachment as WebGPUTexture).createView()
       };
       const {depthStencilAttachment} = renderPassDescriptor;
 

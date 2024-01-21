@@ -41,14 +41,6 @@ export class WebGPUCanvasContext extends CanvasContext {
     this.gpuCanvasContext.unconfigure();
   }
 
-  getCurrentTexture(): WebGPUTexture {
-    // Wrap the current canvas context texture in a luma.gl texture 
-    return this.device._createTexture({
-      id: 'default-render-target',
-      handle: this.gpuCanvasContext.getCurrentTexture()
-    });
-  }
-
   /** Update framebuffer with properly resized "swap chain" texture views */
   getCurrentFramebuffer(): WebGPUFramebuffer {
     // Ensure the canvas context size is updated
@@ -111,11 +103,19 @@ export class WebGPUCanvasContext extends CanvasContext {
     this.update();
   }
 
+  /** Wrap the current canvas context texture in a luma.gl texture */
+  getCurrentTexture(): WebGPUTexture {
+    return this.device._createTexture({
+      id: `${this.id}#color-texture`,
+      handle: this.gpuCanvasContext.getCurrentTexture()
+    });
+  }
+
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
   _createDepthStencilAttachment() {
     if (!this.depthStencilAttachment) {
       this.depthStencilAttachment = this.device.createTexture({
-        id: 'depth-stencil-target',
+        id: `${this.id}#depth-stencil-texture`,
         format: this.depthStencilFormat,
         width: this.width,
         height: this.height,

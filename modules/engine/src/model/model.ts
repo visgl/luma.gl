@@ -12,10 +12,10 @@ import {
   UniformStore,
   getTypedArrayFromDataType
 } from '@luma.gl/core';
-import {log, uid, deepEqual, splitUniformsAndBindings} from '@luma.gl/core';
+import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
 import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
@@ -27,7 +27,7 @@ const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
-  // Model also accepts a string shaders
+  source?: string;
   vs: {glsl?: string; wgsl?: string} | string | null;
   fs: {glsl?: string; wgsl?: string} | string | null;
   /** shadertool shader modules (added to shader code) */
@@ -80,6 +80,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 export class Model {
   static defaultProps: Required<ModelProps> = {
     ...RenderPipeline.defaultProps,
+    source: null,
     vs: null,
     fs: null,
     id: 'unnamed',
@@ -172,6 +173,22 @@ export class Model {
       this.props.modules?.map(module => [module.name, module]) || []
     );
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
+
+    const isWebGPU = this.device.info.type === 'webgpu';
+    // TODO - hack to support unified WGSL shader
+    // TODO - this is wrong, compile a single shader
+    if (this.props.source) {
+      if (isWebGPU) {
+        this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
+      }
+      this.props.fs = this.props.source;
+      this.props.vs = this.props.source;
+    }
+
+    // Support WGSL shader layout introspection
+    if (isWebGPU && typeof this.props.vs !== 'string') {
+      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.vs.wgsl);
+    }
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
@@ -319,10 +336,22 @@ export class Model {
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
   _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
+    // Filter geometry attribute so that we don't issue warnings for unused attributes
+    const attributes = {...gpuGeometry.attributes};
+    for (const [attributeName] of Object.entries(attributes)) {
+      if (
+        !this.pipeline.shaderLayout.attributes.find(layout => layout.name === attributeName) &&
+        attributeName !== 'positions'
+      ) {
+        delete attributes[attributeName];
+      }
+    }
+
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
-    this.setAttributes(gpuGeometry.attributes, 'ignore-unknown');
     this.setIndexBuffer(gpuGeometry.indices);
+    this.setAttributes(gpuGeometry.attributes, 'ignore-unknown');
+    this.setAttributes(attributes);
   }
 
   /**
@@ -398,6 +427,25 @@ export class Model {
     for (const moduleName of Object.keys(this.shaderInputs.modules)) {
       const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
       this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+    }
+  }
+
+  /**
+   * Updates shader module settings (which results in uniforms being set)
+   */
+  setShaderModuleProps(props: Record<string, any>): void {
+    const uniforms = this._getModuleUniforms(props);
+
+    // Extract textures & framebuffers set by the modules
+    // TODO better way to extract bindings
+    const keys = Object.keys(uniforms).filter(k => {
+      const uniform = uniforms[k];
+      return !isNumberArray(uniform) && typeof uniform !== 'number' && typeof uniform !== 'boolean';
+    });
+    const bindings: Record<string, Binding> = {};
+    for (const k of keys) {
+      bindings[k] = uniforms[k];
+      delete uniforms[k];
     }
   }
 
@@ -516,21 +564,32 @@ export class Model {
           `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
         )();
       }
+      
       this._pipelineNeedsUpdate = false;
+
+      const vs = this.device.createShader({
+        id: `${this.id}-vertex`,
+        stage: 'vertex',
+        source: this.vs
+      });
+
+      const fs = this.fs
+        ? this.device.createShader({
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.fs
+        })
+        : null;
+
       this.pipeline = this.device.createRenderPipeline({
         ...this.props,
         bufferLayout: this.bufferLayout,
         topology: this.topology,
         parameters: this.parameters,
-        vs: this.device.createShader({id: '{$this.id}-vertex', stage: 'vertex', source: this.vs}),
-        fs: this.fs
-          ? this.device.createShader({
-            id: '{$this.id}-fragment',
-            stage: 'fragment',
-            source: this.fs
-          })
-          : null
+        vs,
+        fs
       });
+
       this._attributeInfos = getAttributeInfosFromLayouts(
         this.pipeline.shaderLayout,
         this.bufferLayout
@@ -558,7 +617,7 @@ export class Model {
 
   _logDrawCallEnd(): void {
     if (this._logOpen) {
-      const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout);
+      const shaderLayoutTable = getDebugTableForShaderLayout(this.pipeline.shaderLayout, this.id);
 
       // log.table(logLevel, attributeTable)();
       // log.table(logLevel, uniformTable)();

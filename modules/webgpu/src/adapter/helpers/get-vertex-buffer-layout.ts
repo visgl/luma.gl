@@ -1,6 +1,7 @@
 // luma.gl, MIT license
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {decodeVertexFormat} from '@luma.gl/core';
+import {log, decodeVertexFormat} from '@luma.gl/core';
+// import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
 function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
@@ -51,6 +52,9 @@ export function getVertexBufferLayout(
       // non-interleaved mapping (just set offset and stride)
     } else {
       const attributeLayout = findAttributeLayout(shaderLayout, mapping.name, usedAttributes);
+      if (!attributeLayout) {
+        continue; // eslint-disable-line no-continue
+      }
       byteStride = decodeVertexFormat(mapping.format).byteLength;
 
       stepMode = attributeLayout.stepMode || 'vertex';
@@ -134,7 +138,8 @@ function findAttributeLayout(
 ): AttributeDeclaration {
   const attribute = shaderLayout.attributes.find(attribute => attribute.name === name);
   if (!attribute) {
-    throw new Error(`Unknown attribute ${name}`);
+    log.warn(`Unknown attribute ${name}`)();
+    return null;
   }
   if (attributeNames.has(name)) {
     throw new Error(`Duplicate attribute ${name}`);

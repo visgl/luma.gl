@@ -1,17 +1,17 @@
 // luma.gl MIT license
 
-import type {TypedArray, Binding, UniformValue, RenderPass} from '@luma.gl/core';
-import {Buffer, RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/core';
+import type {Binding, UniformValue, RenderPass, VertexArray} from '@luma.gl/core';
+import {RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';
-import {getVertexBufferLayout, getBufferSlots} from '../helpers/get-vertex-buffer-layout';
+import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 // import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 // import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
 // import type {BufferAccessors} from './webgpu-pipeline';
 
 import type {WebGPUDevice} from '../webgpu-device';
-import type {WebGPUBuffer} from './webgpu-buffer';
+// import type {WebGPUBuffer} from './webgpu-buffer';
 import type {WebGPUShader} from './webgpu-shader';
 import type {WebGPURenderPass} from './webgpu-render-pass';
 
@@ -25,9 +25,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
   vs: WebGPUShader;
   fs: WebGPUShader | null = null;
 
-  private _bufferSlots: Record<string, number>;
-  private _buffers: Buffer[];
-  private _indexBuffer: WebGPUBuffer | null = null;
+  // private _bufferSlots: Record<string, number>;
+  // private _buffers: Buffer[];
   // private _firstIndex: number;
   // private _lastIndex: number;
 
@@ -51,18 +50,19 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.vs = cast<WebGPUShader>(props.vs);
     this.fs = cast<WebGPUShader>(props.fs);
 
-    this._bufferSlots = getBufferSlots(this.props.shaderLayout, this.props.bufferLayout);
-    this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
+    // this._bufferSlots = getBufferSlots(this.props.shaderLayout, this.props.bufferLayout);
+    // this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
   }
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
   }
 
-  setIndexBuffer(indexBuffer: Buffer): void {
-    this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
-  }
+  // setIndexBuffer(indexBuffer: Buffer): void {
+  //   this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
+  // }
 
+  /*
   setAttributes(attributes: Record<string, Buffer>): void {
     for (const [name, buffer] of Object.entries(attributes)) {
       const bufferIndex = this._bufferSlots[name];
@@ -81,10 +81,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     //   }
     // }
   }
+  */
 
-  setConstantAttributes(attributes: Record<string, TypedArray>): void {
-    throw new Error('not implemented');
-  }
+  // setConstantAttributes(attributes: Record<string, TypedArray>): void {
+  //   throw new Error('not implemented');
+  // }
 
   setBindings(bindings: Record<string, Binding>): void {
     if (!isObjectEmpty(this.props.bindings)) {
@@ -110,9 +111,58 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
   }
 
-  _getBuffers() {
-    return this._buffers;
+  draw(options: {
+    renderPass: RenderPass;
+    vertexArray: VertexArray;
+    vertexCount?: number;
+    indexCount?: number;
+    instanceCount?: number;
+    firstVertex?: number;
+    firstIndex?: number;
+    firstInstance?: number;
+    baseVertex?: number;
+  }): void {
+    const webgpuRenderPass: WebGPURenderPass =
+      cast<WebGPURenderPass>(options.renderPass) || this.device.getDefaultRenderPass();
+
+    // Set pipeline
+    webgpuRenderPass.handle.setPipeline(this.handle);
+
+    // Set bindings (uniform buffers, textures etc)
+    const bindGroup = this._getBindGroup();
+    if (bindGroup) {
+      webgpuRenderPass.handle.setBindGroup(0, bindGroup);
+    }
+
+
+    // Set attributes
+    // Note: Rebinds constant attributes before each draw call
+    options.vertexArray.bindBeforeRender(options.renderPass);
+
+    // Draw
+    if (options.indexCount) {
+      webgpuRenderPass.handle.drawIndexed(
+        options.indexCount,
+        options.instanceCount,
+        options.firstIndex,
+        options.baseVertex,
+        options.firstInstance
+      );
+    } else {
+      webgpuRenderPass.handle.draw(
+        options.vertexCount || 0,
+        options.instanceCount || 1, // If 0, nothing will be drawn
+        options.firstInstance
+      );
+    }
+
+    // Note: Rebinds constant attributes before each draw call
+    options.vertexArray.unbindAfterRender(options.renderPass);
   }
+
+  // _getBuffers() {
+  //   return this._buffers;
+  // }
 
   /** Return a bind group created by setBindings */
   _getBindGroup() {
@@ -170,49 +220,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     return descriptor;
   }
 
-  draw(options: {
-    renderPass?: RenderPass;
-    vertexCount?: number;
-    indexCount?: number;
-    instanceCount?: number;
-    firstVertex?: number;
-    firstIndex?: number;
-    firstInstance?: number;
-    baseVertex?: number;
-  }): void {
-    const webgpuRenderPass: WebGPURenderPass =
-      cast<WebGPURenderPass>(options.renderPass) || this.device.getDefaultRenderPass();
-
-    // Set pipeline
-    webgpuRenderPass.handle.setPipeline(this.handle);
-
-    // Set bindings (uniform buffers, textures etc)
-    const bindGroup = this._getBindGroup();
-    if (bindGroup) {
-      webgpuRenderPass.handle.setBindGroup(0, bindGroup);
-    }
-
-    // Set attributes
-    this._setAttributeBuffers(webgpuRenderPass);
-
-    // Draw
-    if (options.indexCount) {
-      webgpuRenderPass.handle.drawIndexed(
-        options.indexCount,
-        options.instanceCount,
-        options.firstIndex,
-        options.baseVertex,
-        options.firstInstance
-      );
-    } else {
-      webgpuRenderPass.handle.draw(
-        options.vertexCount || 0,
-        options.instanceCount || 1, // If 0, nothing will be drawn
-        options.firstInstance
-      );
-    }
-  }
-
+  /**
   _setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
     if (this._indexBuffer) {
       webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
@@ -251,6 +259,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
         }
       }
     }
-    */
+    *
   }
+  */
 }

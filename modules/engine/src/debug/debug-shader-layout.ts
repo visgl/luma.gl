@@ -12,11 +12,15 @@ import type {ShaderLayout} from '@luma.gl/core';
  */
 export function getDebugTableForShaderLayout(
   layout: ShaderLayout,
-  name: string = ''
+  name: string
 ): Record<string, Record<string, string>> {
   const table: Record<string, Record<string, string>> = {};
 
-  const header = `Shader Layout for ${name}`;
+  const header = 'Values'; // '`Shader Layout for ${name}`;
+
+  if (layout.attributes.length === 0 && !layout.varyings?.length) {
+    return {'No attributes or varyings': {[header]: 'N/A'}};
+  }
 
   for (const attributeDeclaration of layout.attributes) {
     if (attributeDeclaration) {
