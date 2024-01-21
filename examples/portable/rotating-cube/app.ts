@@ -137,7 +137,5 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.model.setBindings({app: this.uniformBuffer});
     this.model.draw(renderPass);
     renderPass.end();
-    
-    //device.submit();
   }
 }
