@@ -36,6 +36,12 @@ export class WebGLCanvasContext extends CanvasContext {
     const sizeChanged = size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
     if (sizeChanged) {
       this.presentationSize = size;
+      if (this.device.gl) {
+        // this._canvasSizeInfo.clientHeight = this.canvas.clientHeight;
+        // this._canvasSizeInfo.clientWidth = this.canvas.clientWidth;
+        // this._canvasSizeInfo.devicePixelRatio = this.getDevicePixelRatio();
+        this.setDevicePixelRatio(this.getDevicePixelRatio());
+      }
     }
   }
 
