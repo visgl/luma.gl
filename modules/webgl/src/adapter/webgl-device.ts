@@ -133,7 +133,7 @@ export class WebGLDevice extends Device {
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGLRenderingContext');
     }
-    return new WebGLDevice({gl: gl as WebGLRenderingContext});
+    return new WebGLDevice({gl: gl as WebGLRenderingContext, canvas: (gl as WebGLRenderingContext).canvas});
   }
 
   static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
