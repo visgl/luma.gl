@@ -285,7 +285,7 @@ export abstract class CanvasContext {
   /** @todo Major hack done to port the CSS methods above, base canvas context should not depend on WebGL */
   getDrawingBufferSize(): [number, number] {
     // @ts-expect-error This only works for WebGL
-    const gl = this.device.gl || this.props.gl;
+    const gl = this.device.gl;
     if (!gl) {
       // use default device pixel ratio
       throw new Error('canvas size');
