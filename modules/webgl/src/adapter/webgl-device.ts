@@ -133,7 +133,7 @@ export class WebGLDevice extends Device {
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGLRenderingContext');
     }
-    return new WebGLDevice({gl: gl as WebGLRenderingContext, canvas: (gl as WebGLRenderingContext).canvas});
+    return new WebGLDevice({gl: gl as WebGLRenderingContext});
   }
 
   static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
@@ -192,7 +192,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     }
 
     // Create and instrument context
-    this.canvasContext = new WebGLCanvasContext(this, props);
+    const canvas = props.canvas || props.gl?.canvas;
+    this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
