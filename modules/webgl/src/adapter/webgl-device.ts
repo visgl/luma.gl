@@ -192,7 +192,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     }
 
     // Create and instrument context
-    this.canvasContext = new WebGLCanvasContext(this, props);
+    const canvas = props.canvas || props.gl?.canvas;
+    this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
@@ -221,6 +222,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     this.gl2 = this.gl as WebGL2RenderingContext;
     this.isWebGL2 = isWebGL2(this.gl);
     this.isWebGL1 = !this.isWebGL2;
+    this.canvasContext.resize();
 
     // luma Device fields
     this.info = getDeviceInfo(this.gl);

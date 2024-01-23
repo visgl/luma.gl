@@ -36,6 +36,7 @@ export class WebGLCanvasContext extends CanvasContext {
     const sizeChanged = size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
     if (sizeChanged) {
       this.presentationSize = size;
+      this.resize();
     }
   }
 
@@ -52,6 +53,8 @@ export class WebGLCanvasContext extends CanvasContext {
    * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
    */
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
+    if (!this.device.gl) return;
+
     // Resize browser context .
     if (this.canvas) {
       const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
