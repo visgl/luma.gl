@@ -1,5 +1,13 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.1
+
+- feat(webgl): Pass through canvas in WebGLDevice.attach() (#1931)
+- fix: webgpu examples (#1930)
+- fix(shadertools): Standardize the matching of getShaderName (#1926)
+- chore: publint + bump lerna to beta (#1928)
+- feat(engine): Visual framebuffer debugger (#1922)
+
 ### v9.0.0-alpha.54
 
 - Model.setAttributes handle interleaved attributes (#1920)
