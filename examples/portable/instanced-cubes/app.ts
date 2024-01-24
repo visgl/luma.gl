@@ -8,41 +8,38 @@ export const description = 'Shows usage of multiple uniform buffers.';
 
 // WGSL
 
-const VS_WGSL = /* WGSL */ `\
+const WGSL_SHADER = /* WGSL */ `\
 struct Uniforms {
   modelViewProjectionMatrix : array<mat4x4<f32>, 16>,
 };
 
 @binding(0) @group(0) var<uniform> app : Uniforms;
 
-struct VertexOutput {
+struct VertexInputs {
+  @builtin(instance_index) instanceIdx : u32,
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) texCoords : vec2<f32>
+}
+
+struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) fragUV : vec2<f32>,
   @location(1) fragPosition: vec4<f32>,
 }
 
 @vertex
-fn main(
-  @builtin(instance_index) instanceIdx : u32,
-  // CUBE GEOMETRY
-  @location(0) positions : vec4<f32>,
-  @location(1) texCoords : vec2<f32>
-) -> VertexOutput {
-  var output : VertexOutput;
-  output.Position = app.modelViewProjectionMatrix[instanceIdx] * positions;
-  output.fragUV = texCoords;
-  output.fragPosition = 0.5 * (positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
-  return output;
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix[inputs.instanceIdx] * inputs.positions;
+  outputs.fragUV = inputs.texCoords;
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
+  return outputs;
 }
-`;
 
-const FS_WGSL = /* WGSL */ `\
 @fragment
-fn main(
-  @location(0) fragUV: vec2<f32>,
-  @location(1) fragPosition: vec4<f32>
-) -> @location(0) vec4<f32> {
-  return fragPosition;
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return inputs.fragPosition;
 }
 `;
 
@@ -105,8 +102,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.cubeModel = new Model(device, {
       id: 'cube',
-      vs: {wgsl: VS_WGSL, glsl: VS_GLSL},
-      fs: {wgsl: FS_WGSL, glsl: FS_GLSL},
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
       geometry: new CubeGeometry({indices: false}),
       instanceCount: NUMBER_OF_INSTANCES,
       parameters: {

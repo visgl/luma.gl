@@ -2,22 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@luma.gl/core';
-import type {DeviceFeature, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
-import type {Shader, BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
+import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {
-  Device,
-  Buffer,
-  RenderPipeline,
-  RenderPass,
-  UniformStore,
-  isObjectEmpty
-} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
+import {DeviceFeature, isObjectEmpty} from '@luma.gl/core';
+
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+
 import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
@@ -31,8 +26,8 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   source?: string;
-  vs: {glsl?: string; wgsl?: string} | string | null;
-  fs: {glsl?: string; wgsl?: string} | string | null;
+  vs: string | null;
+  fs: string | null;
 
   /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];
@@ -207,6 +202,7 @@ export class Model {
     // TODO - hack to support unified WGSL shader
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
+      // WGSL
       this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
       const {source, getUniforms} = this.props.shaderAssembler.assembleShader({
         platformInfo,
@@ -216,11 +212,7 @@ export class Model {
       this.source = source;
       this._getModuleUniforms = getUniforms;
     } else {
-      // TODO hack remove - Support WGSL shader layout introspection
-      if (isWebGPU && typeof this.props.vs !== 'string') {
-        this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.vs.wgsl);
-      }
-
+      // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
         platformInfo,
         ...this.props,

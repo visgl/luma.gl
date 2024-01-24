@@ -62,8 +62,6 @@ export const dirlight: ShaderModule<DirlightProps, DirlightUniforms> = {
   dependencies: [],
   vs: VS_GLSL,
   fs: FS_GLSL,
-  // vs: {glsl: VS_GLSL, wgsl: VS_WGSL},
-  // fs: {glsl: FS_GLSL, wgsl: FS_WGSL},
   // fragmentInputs: [
   //   {
   //     name: 'dirlight_vNormal',
