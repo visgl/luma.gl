@@ -40,7 +40,7 @@ export function getVertexBufferLayout(
         const attributeName = attributeMapping.attribute;
         const attributeLayout = findAttributeLayout(shaderLayout, attributeName, usedAttributes);
 
-        stepMode = attributeLayout.stepMode || 'vertex';
+        stepMode = attributeLayout.stepMode || (attributeLayout.name.startsWith('instance') ? 'instance' : 'vertex');
         vertexAttributes.push({
           format: getWebGPUVertexFormat(attributeMapping.format || mapping.format),
           offset: attributeMapping.byteOffset,
@@ -57,7 +57,7 @@ export function getVertexBufferLayout(
       }
       byteStride = decodeVertexFormat(mapping.format).byteLength;
 
-      stepMode = attributeLayout.stepMode || 'vertex';
+      stepMode = attributeLayout.stepMode || (attributeLayout.name.startsWith('instance') ? 'instance' : 'vertex');
       vertexAttributes.push({
         format: getWebGPUVertexFormat(mapping.format),
         // We only support 0 offset for non-interleaved buffer layouts
@@ -69,7 +69,7 @@ export function getVertexBufferLayout(
     // Store all the attribute bindings for one buffer
     vertexBufferLayouts.push({
       arrayStride: mapping.byteStride || byteStride,
-      stepMode: stepMode || 'vertex',
+      stepMode,
       attributes: vertexAttributes
     });
   }
@@ -79,7 +79,7 @@ export function getVertexBufferLayout(
     if (!usedAttributes.has(attribute.name)) {
       vertexBufferLayouts.push({
         arrayStride: decodeVertexFormat('float32x3').byteLength,
-        stepMode: attribute.stepMode || 'vertex',
+        stepMode: attribute.stepMode || (attribute.name.startsWith('instance') ? 'instance' : 'vertex'),
         attributes: [
           {
             format: getWebGPUVertexFormat('float32x3'),

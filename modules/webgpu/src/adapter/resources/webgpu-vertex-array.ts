@@ -42,14 +42,14 @@ export class WebGPUVertexArray extends VertexArray {
     this.indexBuffer = buffer;
   }
 
-  /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
-  setBuffer(location: number, buffer: Buffer): void {
+  /** Set a bufferSlot in vertex attributes array to a buffer, enables the bufferSlot, sets divisor */
+  setBuffer(bufferSlot: number, buffer: Buffer): void {
     // Sanity check target
     // if (buffer.glUsage === GL.ELEMENT_ARRAY_BUFFER) {
     //   throw new Error('Use setIndexBuffer');
     // }
 
-    this.attributes[location] = buffer;
+    this.attributes[bufferSlot] = buffer;
   }
 
   /** Set a location in vertex attributes array to a constant value, disables the location */
@@ -68,7 +68,7 @@ export class WebGPUVertexArray extends VertexArray {
     for (let location = 0; location < this.maxVertexAttributes; location++) {
       const webgpuBuffer = this.attributes[location] as WebGPUBuffer;
       if (webgpuBuffer?.handle) {
-        log.warn('setting vertex buffer', location, webgpuBuffer?.handle)();
+        log.warn(`setting vertex buffer ${location}`,webgpuBuffer?.handle)();
         webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer?.handle);
       }
     }

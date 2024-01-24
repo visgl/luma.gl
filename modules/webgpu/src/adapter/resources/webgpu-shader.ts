@@ -31,6 +31,9 @@ export class WebGPUShader extends Shader {
   async _checkCompilationError(errorScope: Promise<GPUError | null>): Promise<void> {
     const error = await errorScope as GPUValidationError;
     if (error) {
+      // The `Shader` base class will determine if debug window should be opened based on props
+      this.debugShader();
+
       const shaderLog = await this.getCompilationInfo();
       log.error(`Shader compilation error: ${error.message}`, shaderLog)();
       // Note: Even though this error is asynchronous and thrown after the constructor completes,

@@ -37,7 +37,9 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   /** Attribute infos indexed by location - TODO only needed by webgl module? */
   protected readonly attributeInfos: AttributeInfo[];
 
+  /** Index buffer */
   indexBuffer: Buffer | null = null;
+  /** Attributes indexed by buffer slot */
   attributes: (Buffer | TypedArray | null)[];
 
   constructor(device: Device, props: VertexArrayProps) {
@@ -54,7 +56,7 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   /** Set attributes (stored on pipeline and set before each call) */
   abstract setIndexBuffer(indices: Buffer | null): void;
   /** Set attributes (stored on pipeline and set before each call) */
-  abstract setBuffer(location: number, buffer: Buffer | null): void;
+  abstract setBuffer(bufferSlot: number, buffer: Buffer | null): void;
   /** Set constant attributes (WebGL only) */
   abstract setConstant(location: number, value: TypedArray | null): void;
 

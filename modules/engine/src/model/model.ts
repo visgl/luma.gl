@@ -192,8 +192,11 @@ export class Model {
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
+
+    // Extract modules from shader inputs if not supplied
     const modules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+
     const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({
       platformInfo,
       ...this.props,
@@ -300,11 +303,15 @@ export class Model {
       this.pipeline.setBindings(this.bindings);
       this.pipeline.setUniforms(this.uniforms);
 
+      const {indexBuffer} = this.vertexArray;
+      const indexCount = indexBuffer ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2) : undefined;
+  
       this.pipeline.draw({
         renderPass,
         vertexArray: this.vertexArray,
         vertexCount: this.vertexCount,
         instanceCount: this.instanceCount,
+        indexCount,
         transformFeedback: this.transformFeedback
       });
     } finally {
@@ -323,7 +330,7 @@ export class Model {
   setGeometry(geometry: GPUGeometry | Geometry): GPUGeometry {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     this.setTopology(gpuGeometry.topology || 'triangle-list');
-    this.bufferLayout = mergeBufferLayouts(this.bufferLayout, gpuGeometry.bufferLayout);
+    this.bufferLayout = mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
     if (this.vertexArray) {
       this._setGeometryAttributes(gpuGeometry);
     }
