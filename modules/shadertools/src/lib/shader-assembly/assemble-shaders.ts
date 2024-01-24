@@ -122,7 +122,7 @@ function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOp
     source,
     stage,
     modules,
-    defines = {},
+    // defines = {},
     hookFunctions = [],
     inject = {},
     log
