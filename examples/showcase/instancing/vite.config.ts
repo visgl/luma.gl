@@ -7,7 +7,8 @@ const alias = {
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
-  '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`
+  '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
+  '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
 }
 
 // https://vitejs.dev/config/

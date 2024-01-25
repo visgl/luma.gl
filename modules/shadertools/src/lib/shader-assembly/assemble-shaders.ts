@@ -122,7 +122,7 @@ function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOp
     source,
     stage,
     modules,
-    defines = {},
+    // defines = {},
     hookFunctions = [],
     inject = {},
     log
@@ -136,11 +136,11 @@ function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOp
   const coreSource = source;
 
   // Combine Module and Application Defines
-  const allDefines = {};
-  modules.forEach(module => {
-    Object.assign(allDefines, module.getDefines());
-  });
-  Object.assign(allDefines, defines);
+  // const allDefines = {};
+  // modules.forEach(module => {
+  //   Object.assign(allDefines, module.getDefines());
+  // });
+  // Object.assign(allDefines, defines);
 
   // Add platform defines (use these to work around platform-specific bugs and limitations)
   // Add common defines (GLSL version compatibility, feature detection)
@@ -186,7 +186,10 @@ function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOp
     }
   }
 
-  for (const module of modules) {
+  // TODO - hack until shadertool modules support WebGPU
+  const modulesToInject = platformInfo.type !== 'webgpu' ? modules : [];
+
+  for (const module of modulesToInject) {
     if (log) {
       module.checkDeprecations(coreSource, log);
     }

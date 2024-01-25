@@ -88,21 +88,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
   // }
 
   setBindings(bindings: Record<string, Binding>): void {
-    if (!isObjectEmpty(this.props.bindings)) {
-      // Do we want to save things on CPU side?
-      Object.assign(this.props.bindings, bindings);
+    // if (isObjectEmpty(bindings)) {
+    //   return;
+    // }
 
-      // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
-      this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
-
-      // Set up the bindings
-      this._bindGroup = getBindGroup(
-        this.device.handle,
-        this._bindGroupLayout,
-        this.props.shaderLayout,
-        this.props.bindings
-      );
-    }
+    // Do we want to save things on CPU side?
+    Object.assign(this.props.bindings, bindings);
   }
 
   setUniforms(uniforms: Record<string, UniformValue>): void {
@@ -166,7 +157,17 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Return a bind group created by setBindings */
   _getBindGroup() {
-    // assert(this._bindGroup);
+    // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
+    this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
+
+    // Set up the bindings
+    this._bindGroup = this._bindGroup || getBindGroup(
+      this.device.handle,
+      this._bindGroupLayout,
+      this.props.shaderLayout,
+      this.props.bindings
+    );
+
     return this._bindGroup;
   }
 

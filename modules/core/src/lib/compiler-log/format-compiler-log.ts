@@ -85,7 +85,8 @@ function getNumberedLines(
 }
 
 function getNumberedLine(line: string, lineNum: number, options?: {html?: boolean}): string {
-  return `${padLeft(String(lineNum), 4)}: ${line}${options?.html ? '<br/>' : '\n'}`;
+  const escapedLine = options?.html ? escapeHTML(line) : line;
+  return `${padLeft(String(lineNum), 4)}: ${escapedLine}${options?.html ? '<br/>' : '\n'}`;
 }
 
 /**
@@ -100,4 +101,13 @@ function padLeft(string: string, paddedLength: number): string {
     result += ' ';
   }
   return result + string;
+}
+
+function escapeHTML(unsafe: string): string {
+  return unsafe
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#039;');
 }

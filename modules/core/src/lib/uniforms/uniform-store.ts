@@ -20,13 +20,18 @@ export type ShaderModuleInputs = {
  * - It can update managed uniform buffers with a single call
  * - It performs some book keeping on what has changed to minimize unnecessary writes to uniform buffers.
  */
-export class UniformStore<TPropGroups extends Record<string, Record<string, unknown>> = Record<string, Record<string, unknown>>> {
+export class UniformStore<
+  TPropGroups extends Record<string, Record<string, unknown>> = Record<
+    string,
+    Record<string, unknown>
+  >
+> {
   /** Stores the uniform values for each uniform block */
-  uniformBlocks = new Map<keyof TPropGroups, UniformBlock>;
+  uniformBlocks = new Map<keyof TPropGroups, UniformBlock>();
   /** Can generate data for a uniform buffer for each block from data */
-  uniformBufferLayouts = new Map<keyof TPropGroups, UniformBufferLayout>;
+  uniformBufferLayouts = new Map<keyof TPropGroups, UniformBufferLayout>();
   /** Actual buffer for the blocks */
-  uniformBuffers = new Map<keyof TPropGroups, Buffer>;
+  uniformBuffers = new Map<keyof TPropGroups, Buffer>();
 
   /**
    * Create a new UniformStore instance
@@ -90,9 +95,9 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
     return this.uniformBufferLayouts.get(uniformBufferName).getData(uniformValues);
   }
 
-  /** 
-   * Creates an unmanaged uniform buffer (umnanaged means that application is responsible for destroying it) 
-   * The new buffer is initialized with current / supplied values 
+  /**
+   * Creates an unmanaged uniform buffer (umnanaged means that application is responsible for destroying it)
+   * The new buffer is initialized with current / supplied values
    */
   createUniformBuffer(
     device: Device,
@@ -103,7 +108,10 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
       this.setUniforms(uniforms);
     }
     const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-    const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+    const uniformBuffer = device.createBuffer({
+      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      byteLength
+    });
     // Note that this clears the needs redraw flag
     const uniformBufferData = this.getUniformBufferData(uniformBufferName);
     uniformBuffer.write(uniformBufferData);
@@ -114,7 +122,10 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
   getManagedUniformBuffer(device: Device, uniformBufferName: keyof TPropGroups): Buffer {
     if (!this.uniformBuffers.get(uniformBufferName)) {
       const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-      const uniformBuffer = device.createBuffer({usage: Buffer.UNIFORM, byteLength});
+      const uniformBuffer = device.createBuffer({
+        usage: Buffer.UNIFORM | Buffer.COPY_DST,
+        byteLength
+      });
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
     // this.updateUniformBuffers();
@@ -133,7 +144,7 @@ export class UniformStore<TPropGroups extends Record<string, Record<string, unkn
     }
     return reason;
   }
-  
+
   /** Update one uniform buffer. Only updates if values have changed */
   updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);

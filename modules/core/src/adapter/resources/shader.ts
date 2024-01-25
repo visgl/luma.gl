@@ -11,7 +11,7 @@ import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';
  * Properties for a Shader
  */
 export type ShaderProps = ResourceProps & {
-  /** Shader language (defaults to auto) */ 
+  /** Shader language (defaults to auto) */
   language?: 'glsl' | 'wgsl' | 'auto';
   /** Which stage are we compiling? Required by WebGL and GLSL transpiler */
   stage: 'vertex' | 'fragment' | 'compute';
@@ -40,7 +40,9 @@ export abstract class Shader extends Resource<ShaderProps> {
     debug: 'errors'
   };
 
-  override get [Symbol.toStringTag](): string { return 'Shader'; }
+  override get [Symbol.toStringTag](): string {
+    return 'Shader';
+  }
 
   /** The stage of this shader */
   readonly stage: 'vertex' | 'fragment' | 'compute';
@@ -60,7 +62,7 @@ export abstract class Shader extends Resource<ShaderProps> {
   abstract getCompilationInfo(): Promise<readonly CompilerMessage[]>;
 
   /** Get compiler log synchronously (WebGL only) */
-  getCompilationInfoSync(): (readonly CompilerMessage[]) | null {
+  getCompilationInfoSync(): readonly CompilerMessage[] | null {
     return null;
   }
 
@@ -102,7 +104,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     const shaderTitle: string = `${this.stage} ${shaderName}`;
     const htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
 
-    // Make it clickable so we can copy to clipboard 
+    // Make it clickable so we can copy to clipboard
     const button = document.createElement('Button');
     button.innerHTML = `
 <h1>Shader Compilation Error in ${shaderTitle}</h1><br /><br />

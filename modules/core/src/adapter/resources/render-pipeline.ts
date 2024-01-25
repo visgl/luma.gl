@@ -114,6 +114,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     renderPass?: RenderPass;
     /** vertex attributes */
     vertexArray: VertexArray;
+    /** Number of "rows" in index buffer */
+    indexCount?: number;
     /** Number of "rows" in 'vertex' buffers */
     vertexCount?: number;
     /** Number of "rows" in 'instance' buffers */

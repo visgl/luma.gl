@@ -19,7 +19,99 @@ single GPU draw call using instanced vertex attributes.
 
 const random = makeRandomNumberGenerator();
 
-const vs = glsl`\
+// WGSL
+
+// const VS_WGSL = /* WGSL */`\  
+// void dirlight_setNormal(normal: vec3<f32>) {
+//   dirlight_vNormal = normalize(normal);
+// }
+// `;
+
+// const FS_WGSL = /* WGSL */`\
+// uniform dirlightUniforms {
+//   vec3 lightDirection;
+// } dirlight;
+
+// // Returns color attenuated by angle from light source
+// fn dirlight_filterColor(color: vec4<f32>, dirlightInputs): vec4<f32> {
+//   const d: float = abs(dot(dirlight_vNormal, normalize(dirlight.lightDirection)));
+//   return vec4<f32>(color.rgb * d, color.a);
+// }
+// `;
+
+const VS_WGSL = /* WGSL */ `\
+struct AppUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+  time: f32,
+};
+
+@binding(0) @group(0) var<uniform> app : AppUniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) normals : vec3<f32>,
+  // INSTANCED ATTRIBUTES
+  @location(2) instanceOffsets : vec2<f32>,
+  @location(3) instanceColors : vec4<f32>,
+  @location(4) instancePickingColors : vec2<f32>,
+}
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) normal: vec3<f32>,
+  @location(1) color : vec4<f32>,
+}
+
+@vertex
+fn main(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+
+  outputs.normal = (app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.color = inputs.instanceColors;
+
+  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  // picking_setPickingColor(pickColor.rgb);
+
+  // Vertex position (z coordinate undulates with time), and model rotates around center
+  let delta = length(inputs.instanceOffsets);
+  let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * inputs.positions + offset);
+  return outputs;
+}
+`;
+
+const FS_WGSL = /* WGSL */`\
+
+struct DirlightUniforms {
+  lightDirection: vec3<f32>,
+}
+
+// @binding(1) @group(0) var<uniform> dirlight : DirlightUniforms;
+
+fn dirlight_filterColor(color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
+  const dirlight_lightDirection = vec3<f32>(1, 1, 2);
+  let d: f32 = abs(dot(normal, normalize(dirlight_lightDirection)));
+  return vec4<f32>(color.rgb * d, color.a);
+}
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) normal: vec3<f32>,
+  @location(1) color : vec4<f32>,
+}
+
+@fragment
+fn main(inputs: FragmentInputs) -> @location(0) vec4<f32> { 
+  return dirlight_filterColor(inputs.color, inputs.normal); 
+}
+`;
+
+// GLSL
+
+const VS_GLSL = glsl`\
 #version 300 es
 
 in vec3 positions;
@@ -54,7 +146,7 @@ void main(void) {
 }
 `;
 
-const fs = glsl`\
+const FS_GLSL = glsl`\
 #version 300 es
 precision highp float;
 
@@ -91,11 +183,13 @@ class InstancedCube extends Model {
       colors[i + 3] = 255;
     }
 
-    const pickingColors = new Uint8Array(SIDE * SIDE * 2);
+    const pickingColors = new Uint8Array(SIDE * SIDE * 4);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
         pickingColors[(i * SIDE + j) * 2 + 0] = i;
         pickingColors[(i * SIDE + j) * 2 + 1] = j;
+        pickingColors[(i * SIDE + j) * 2 + 2] = 0;
+        pickingColors[(i * SIDE + j) * 2 + 3] = 0;
       }
     }
 
@@ -106,25 +200,15 @@ class InstancedCube extends Model {
     // Model
     super(device, {
       ...props,
-      vs,
-      fs,
-      modules: [dirlight, picking],
+      vs: {wgsl: VS_WGSL, glsl: VS_GLSL},
+      fs: {wgsl: FS_WGSL, glsl: FS_GLSL},
+      modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [],
       instanceCount: SIDE * SIDE,
-      geometry: new CubeGeometry(),
-      shaderLayout: {
-        attributes: [
-          // {name: 'positions', location: 0, type: 'vec3<f32>', stepMode: 'vertex'},
-          // {name: 'normals', location: 1, type: 'vec3<f32>', stepMode: 'vertex'},
-          {name: 'instanceOffsets', location: 2, type: 'vec2<f32>', stepMode: 'instance'},
-          {name: 'instanceColors', location: 3, type: 'vec3<f32>', stepMode: 'instance'},
-          {name: 'instancePickingColors', location: 4, type: 'vec2<f32>', stepMode: 'instance'}
-        ],
-        bindings: []
-      },
+      geometry: new CubeGeometry({indices: true}),
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x2'}
+        {name: 'instancePickingColors', format: 'unorm8x4'}
         // TODO - normalizing picking colors breaks picking
         // {name: 'instancePickingColors', format: 'unorm8x2'},
       ],
@@ -191,10 +275,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       eyeZChannel: this.timeline.addChannel({rate: 0.0002})
     };
 
-    this.pickingFramebuffer = device.createFramebuffer({
-      colorAttachments: ['rgba8unorm'],
-      depthStencilAttachment: 'depth24plus'
-    });
+    if (device.info.type !== 'webgpu') {
+      this.pickingFramebuffer = device.createFramebuffer({
+        colorAttachments: ['rgba8unorm'],
+        depthStencilAttachment: 'depth24plus'
+      });
+    }
 
     this.cube = new InstancedCube(device, {
       // @ts-ignore
@@ -231,7 +317,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
+    if (device.info.type !== 'webgpu') {
+      this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
+    }
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
