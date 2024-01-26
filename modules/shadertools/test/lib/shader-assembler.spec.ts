@@ -26,6 +26,7 @@ void main(void) {
 }
 `;
 
+/*
 const VS_300 = glsl`\
 #version 300 es
 
@@ -53,6 +54,7 @@ const FS_300 = glsl`\
     fragColor = texture(tex, vUV);
   }
 `;
+*/
 
 test('ShaderAssembler#hooks', t => {
   const shaderAssembler = new ShaderAssembler();
@@ -217,33 +219,6 @@ test('ShaderAssembler#defaultModules', t => {
   // TODO - this deep equal thing doesn't make sense due to getUniforms
   t.notDeepEqual(defaultModuleProgram, uncachedProgram, 'Program is not cached');
   t.deepEqual(preDefaultModuleSource, defaultModuleSource, 'Default modules create correct source');
-
-  t.end();
-});
-
-test('ShaderAssembler#transpileToGLSL100', t => {
-  const shaderAssembler = new ShaderAssembler();
-
-  const programUntranspiled = shaderAssembler.assembleShaders({platformInfo, 
-    vs: VS_300,
-    fs: FS_300
-  });
-  const programTranspiled = shaderAssembler.assembleShaders({
-    platformInfo: {...platformInfo, shaderLanguageVersion: 100},
-    vs: VS_300, fs: FS_300}
-  );
-  const programTranspiled2 = shaderAssembler.assembleShaders({
-    platformInfo: {...platformInfo, shaderLanguageVersion: 100},
-    vs: VS_300, fs: FS_300}
-  );
-
-  t.equals(programTranspiled.vs, programTranspiled2.vs, 'Transpiled programs match');
-  t.equals(programTranspiled.fs, programTranspiled2.fs, 'Transpiled programs match');
-  t.notEquals(
-    programTranspiled.fs,
-    programUntranspiled.fs,
-    'Transpiled program does not match untranspiled program'
-  );
 
   t.end();
 });

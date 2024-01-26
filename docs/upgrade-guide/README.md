@@ -19,6 +19,15 @@ luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for
 This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a
 [Porting Guide](/docs/upgrade-guide/porting-guide) that provides more background information and recommended porting strategies.
 
+### Removed Functionality
+
+Going forward, luma.gl will focus on leveraging the capabilities WebGPU, while maintaining a high-quality, compatible WebGL2 backend. 
+To accelerate this roadmap, luma.gl v9 is dropping WebGL 1 support.
+
+- **WebGL1** is no longer supported. The `@luma.gl/webgl` backend now always creates a **WebGL2 context**.
+- **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
+- **headless-gl** integration for Node.js is no longer supported, as it only supports WebGL 1.
+
 ### Non-API changes
 
 luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standards:

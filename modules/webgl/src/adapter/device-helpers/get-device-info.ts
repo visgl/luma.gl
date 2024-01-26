@@ -3,10 +3,9 @@
 
 import {DeviceInfo} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import {isWebGL2} from '../../context/context/webgl-checks';
 
 /** @returns strings identifying the GPU vendor and driver. */
-export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
+export function getDeviceInfo(gl: WebGL2RenderingContext): DeviceInfo {
   // "Masked" info is always available, but don't contain much useful information
   const vendorMasked = gl.getParameter(GL.VENDOR);
   const rendererMasked = gl.getParameter(GL.RENDERER);
@@ -32,10 +31,10 @@ export function getDeviceInfo(gl: WebGLRenderingContext): DeviceInfo {
   // const version = gl.getParameter(GL.SHADING_LANGUAGE_VERSION) as string;
   // const shadingLanguageVersion = parseGLSLVersion(version);
   const shadingLanguage = 'glsl';
-  const shadingLanguageVersion = isWebGL2(gl) ? 300 : 100
+  const shadingLanguageVersion = 300;
 
   return {
-    type: isWebGL2(gl) ? 'webgl2' : 'webgl',
+    type: 'webgl',
     gpu,
     gpuType,
     gpuBackend,

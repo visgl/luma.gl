@@ -8,14 +8,8 @@ test('@luma.gl/constants', (t) => {
   t.end();
 });
 
-test('@luma.gl/constants#WebGL1 context', (t) => {
-  const count = checkConstants(fixture.gl, t);
-  t.comment(`Checked ${count} GL constants against platform WebGL1 context`);
-  t.end();
-});
-
 test('@luma.gl/constants#WebGL2 context', (t) => {
-  const count = checkConstants(fixture.gl2, t);
+  const count = checkConstants(fixture.gl, t);
   t.comment(`Checked ${count} GL constants against platform WebGL2 context`);
   t.end();
 });

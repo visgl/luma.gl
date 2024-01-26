@@ -10,7 +10,7 @@ import {GL, GLCompositeType, GLSamplerType} from '@luma.gl/constants';
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */
 export function setUniform(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   location: WebGLUniformLocation,
   type: GLCompositeType | GLSamplerType,
   value: UniformValue
@@ -29,10 +29,8 @@ export function setUniform(
 
   // prettier-ignore
   switch (type) {
-    // WebGL1 samplers
     case GL.SAMPLER_2D:
     case GL.SAMPLER_CUBE:
-    // WebGL2 samplers
     case GL.SAMPLER_3D:
     case GL.SAMPLER_2D_SHADOW:
     case GL.SAMPLER_2D_ARRAY:

@@ -63,7 +63,6 @@ export class TextureTransform {
     this.model = new Model(this.device, {
       id: props.id || 'texture-transform-model',
       fs: props.fs || getPassthroughFS({
-        version: 300,
         input: props.targetTextureVarying,
         inputChannels: props.targetTextureChannels,
         output: FS_OUTPUT_VARIABLE
@@ -98,7 +97,6 @@ export class TextureTransform {
     // eslint-disable-next-line no-console
     console.warn('TextureTransform#update() not implemented');
   }
-
 
   getData({packed = false} = {}) {
     // TODO(v9): Method should likely be removed for v9. Keeping a method stub

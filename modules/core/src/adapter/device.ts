@@ -24,17 +24,13 @@ import type {TransformFeedback, TransformFeedbackProps} from './resources/transf
 export type DeviceProps = {
   id?: string;
 
-  type?: 'webgl' | 'webgl1' | 'webgl2' | 'webgpu' | 'best-available';
+  type?: 'webgl' | 'webgpu' | 'best-available';
 
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
   container?: HTMLElement | string | null;
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
-
-  // WebGLDevice parameters
-  webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
-  webgl1?: boolean; // set to false to not create a WebGL1 context (fails if webgl2 not available)
 
   // WebGLContext PARAMETERS - Can only be set on context creation...
   // alpha?: boolean; // Default render target has an alpha buffer.
@@ -51,7 +47,7 @@ export type DeviceProps = {
   break?: string[]; // TODO: types
 
   // @deprecated Attach to existing context
-  gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
+  gl?: WebGL2RenderingContext | null;
 };
 
 /**
@@ -62,7 +58,7 @@ export type DeviceProps = {
  */
 export type DeviceInfo = {
   /** Type of device */
-  type: 'webgl' | 'webgl2' | 'webgpu';
+  type: 'webgl' | 'webgpu';
   /** Vendor (name of GPU vendor, Apple, nVidia etc */
   vendor: string;
   /** Renderer (usually driver name) */
@@ -81,7 +77,7 @@ export type DeviceInfo = {
   fallback?: boolean;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
-  /** Highest supported shader language version (GLSL 3.00 = 300, GLSL 1.00 = 100) */
+  /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
   shadingLanguageVersion: number;
 };
 
@@ -135,7 +131,6 @@ export type WebGPUDeviceFeature =
 
 export type WebGLDeviceFeature =
   | 'webgpu'
-  | 'webgl2'
   | 'webgl'
 
   // api support (unify with WebGPU timestamp-query?)
@@ -154,28 +149,15 @@ export type WebGLDeviceFeature =
   | 'texture-renderable-rgba32float-webgl' // TODO - remove
 
   // texture blending
-  | 'texture-blend-float-webgl1'
+  | 'texture-blend-float-webgl'
 
   // texture format support
   | 'texture-formats-norm16-webgl'
-  | 'texture-formats-srgb-webgl1'
-  | 'texture-formats-depth-webgl1'
-  | 'texture-formats-float32-webgl1'
-  | 'texture-formats-float16-webgl1'
 
   // api support
-  | 'vertex-array-object-webgl1'
-  | 'instanced-rendering-webgl1'
-  | 'multiple-render-targets-webgl1'
-  | 'index-uint32-webgl1'
-  | 'blend-minmax-webgl1'
-  | 'transform-feedback-webgl2'
+  | 'transform-feedback-webgl'
 
-  // glsl extensions
-  | 'glsl-frag-data'
-  | 'glsl-frag-depth'
-  | 'glsl-derivatives'
-  | 'glsl-texture-lod';
+  ;
 
 type WebGLCompressedTextureFeatures =
   | 'texture-compression-bc5-webgl'
@@ -199,8 +181,6 @@ export abstract class Device {
     type: 'best-available',
     canvas: null,
     container: null,
-    webgl2: true, // Attempt to create a WebGL2 context
-    webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,

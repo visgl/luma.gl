@@ -13,7 +13,7 @@ const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
 };
 
 /** Create a test WebGL context */
-export function createTestContext(opts: Record<string, any> = {}): WebGLRenderingContext | null {
+export function createTestContext(opts: Record<string, any> = {}): WebGL2RenderingContext | null {
   const device = createTestDevice(opts);
   return device && device.gl;
 }
@@ -31,12 +31,8 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   }
 }
 
-/** A WebGL 1 Device intended for testing */
-export const webgl1Device: WebGLDevice = createTestDevice({id: 'webgl1-test-device', webgl1: true, webgl2: false}) ;
-/** A WebGL 2 Device intended for testing. Can be null */
-export const webgl2Device: WebGLDevice = createTestDevice({id: 'webgl2-test-device', webgl1: false, webgl2: true}) ;
-/** A WebGL 2 or WebGL 1 Device intended for testing. Best available. */
-export const webglDevice: WebGLDevice = webgl2Device || webgl1Device;
+/** A WebGL 2 Device intended for testing */
+export const webglDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device'}) ;
 
 /** Only available after getTestDevices() has completed */
 export let webgpuDevice: WebGPUDevice;
@@ -46,12 +42,7 @@ let webgpuCreated = false;
 /** Synchronously get test devices (only WebGLDevices) */
 export function getWebGLTestDevices(): WebGLDevice[] {
   const devices: WebGLDevice[] = [];
-  if (webgl2Device) {
-    devices.push(webgl2Device);
-  }
-  if (webgl1Device) {
-    devices.push(webgl1Device);
-  }
+  devices.push(webglDevice);
   return devices;
 }
 

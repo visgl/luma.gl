@@ -35,43 +35,26 @@ export function getQualifierDetails(line: string, qualifiers: string | string[])
  * builds and return a pass through fragment shader.
  */
 export function getPassthroughFS(options?: {
-  version?: number;
   input?: string;
   inputChannels?: 1 | 2 | 3 | 4;
   output?: string;
 }): string {
-  const {version = 100, input, inputChannels, output} = options || {};
+  const {input, inputChannels, output} = options || {};
   if (!input) {
-    if (version === 300) {
-      // Fast-path for WebGL 2.0
-      return FS300;
-    } else if (version > 300) {
-      // Use the supplied version for OpenGL/ES 3.2+
-      return `#version ${version}\n${FS_GLES}`;
-    }
-    // Fast-path for WebGL 1.0
-    return FS100;
+    // Fast-path for WebGL 2.0
+    return FS300;
   }
   if (!inputChannels) {
     throw new Error('inputChannels');
   }
   const inputType = channelCountToType(inputChannels);
   const outputValue = convertToVec4(input, inputChannels);
-  if (version >= 300) {
-    // If version is 300, assume WebGL 2.0
-    return `\
-#version ${version} ${version === 300 ? 'es' : ''}
+  return `\
+#version 300 es
 in ${inputType} ${input};
 out vec4 ${output};
 void main() {
   ${output} = ${outputValue};
-}`;
-  }
-  // WebGL 1.0
-  return `\
-varying ${inputType} ${input};
-void main() {
-  gl_FragColor = ${outputValue};
 }`;
 }
 

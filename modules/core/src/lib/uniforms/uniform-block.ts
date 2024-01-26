@@ -11,7 +11,6 @@ import {arrayEqual, arrayCopy} from '../../utils/array-equal';
 /**
  * A uniform block holds values of the of uniform values for one uniform block / buffer.
  * It also does some book keeping on what has changed, to minimize unnecessary writes to uniform buffers.
- * @todo - Track changes to individual uniforms (for WebGL1)
  */
 export class UniformBlock<TUniforms extends Record<string, UniformValue> = Record<string, UniformValue>> {
   name: string;

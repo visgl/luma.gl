@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webgl2Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
@@ -56,10 +56,10 @@ const commonTestCases = [
 // Filter all tests cases based on current gpu and glsFunc
 function getTestCasesFor(glslFunc) {
   // Under node gl2 is not available
-  if (!webgl2Device) {
+  if (!webglDevice) {
     return [];
   }
-  const debugInfo = webgl2Device.info;
+  const debugInfo = webglDevice.info;
   const testCases = commonTestCases.filter((testCase) => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {
@@ -77,56 +77,56 @@ function getTestCasesFor(glslFunc) {
 }
 
 test('fp64#sum_fp64', async (t) => {
-  if (!webgl2Device) {
+  if (!webglDevice) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sum_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
+    await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
   }
   t.end();
 });
 
 test('fp64#sub_fp64', async (t) => {
-  if (!webgl2Device) {
+  if (!webglDevice) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sub_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
+    await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
   }
   t.end();
 });
 
 test('fp64#mul_fp64', async (t) => {
-  if (!webgl2Device) {
+  if (!webglDevice) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'mul_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
+    await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a * b, limit: 128, testCases, t});
   }
   t.end();
 });
 
 test('fp64#div_fp64', async (t) => {
-  if (!webgl2Device) {
+  if (!webglDevice) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'div_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    await runTests(webgl2Device, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
+    await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a / b, limit: 128, testCases, t});
   }
   t.end();
 });
 
 test('fp64#sqrt_fp64', async (t) => {
-  if (!webgl2Device) {
+  if (!webglDevice) {
     t.comment('requires WebGL 2');
   } else {
     const glslFunc = 'sqrt_fp64';
     const testCases = getTestCasesFor(glslFunc);
-    await runTests(webgl2Device, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
+    await runTests(webglDevice, {glslFunc, op: (a) => Math.sqrt(a), limit: 128, testCases, t});
   }
   t.end();
 });

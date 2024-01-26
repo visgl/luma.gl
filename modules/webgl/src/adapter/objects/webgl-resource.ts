@@ -4,7 +4,6 @@
 import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/core';
 import type {Device, ResourceProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import {isWebGL2, assertWebGLContext} from '../../context/context/webgl-checks';
 import {WebGLDevice} from '../webgl-device';
 
 // Requires full GL enum to be bundled... Make these bindings dependent on dynamic import (debug)?
@@ -17,7 +16,7 @@ const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual met
  */
 export abstract class WebGLResource<Props extends ResourceProps> extends Resource<Props> {
   readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
+  readonly gl: WebGL2RenderingContext;
   readonly gl2: WebGL2RenderingContext;
   private _handle: any;
 
@@ -31,12 +30,10 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     this.device = WebGLDevice.attach(device);
     const gl = this.device.gl;
 
-    assertWebGLContext(gl);
-
     // extends 
     const {id} = props || {};
     this.gl = gl;
-    this.gl2 = gl as WebGL2RenderingContext;
+    this.gl2 = gl ;
     this.id = id || uid(this.constructor.name);
 
     // Set the handle
@@ -133,18 +130,12 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     // Use parameter definitions to handle unsupported parameters
     const parameter = parameters[pname];
     if (parameter) {
-      const isWebgl2 = isWebGL2(this.gl);
-
       // Check if we can query for this parameter
       const parameterAvailable =
-        (!('webgl2' in parameter) || isWebgl2) &&
         (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
 
       if (!parameterAvailable) {
-        const webgl1Default = parameter.webgl1;
-        const webgl2Default = 'webgl2' in parameter ? parameter.webgl2 : parameter.webgl1;
-        const defaultValue = isWebgl2 ? webgl2Default : webgl1Default;
-        return defaultValue;
+        return parameter.webgl2;
       }
     }
 
@@ -163,8 +154,6 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     // @ts-expect-error
     const PARAMETERS = this.constructor.PARAMETERS || {};
 
-    const isWebgl2 = isWebGL2(this.gl);
-
     const values: Record<string, any> = {};
 
     // Query all parameters if no list provided
@@ -177,7 +166,6 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
       // Check if this parameter is available on this platform
       const parameterAvailable =
         parameter &&
-        (!('webgl2' in parameter) || isWebgl2) &&
         (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
 
       if (parameterAvailable) {
@@ -210,11 +198,8 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
 
     const parameter = parameters[pname];
     if (parameter) {
-      const isWebgl2 = isWebGL2(this.gl);
-
       // Check if this parameter is available on this platform
       const parameterAvailable =
-        (!('webgl2' in parameter) || isWebgl2) &&
         (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
 
       if (!parameterAvailable) {

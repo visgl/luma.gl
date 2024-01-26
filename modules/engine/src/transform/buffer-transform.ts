@@ -26,17 +26,17 @@ export class BufferTransform {
 
   /** @deprecated Use device feature test. */
   static isSupported(device: Device): boolean {
-    return device.features.has('transform-feedback-webgl2');
+    return device.features.has('transform-feedback-webgl');
   }
 
   constructor(device: Device, props: BufferTransformProps = Model.defaultProps) {
-    assert(device.features.has('transform-feedback-webgl2'), 'Device must support transform feedback');
+    assert(device.features.has('transform-feedback-webgl'), 'Device must support transform feedback');
 
     this.device = device;
 
     this.model = new Model(this.device, {
       id: props.id || 'buffer-transform-model',
-      fs: props.fs || getPassthroughFS({version: 300}),
+      fs: props.fs || getPassthroughFS(),
       topology: props.topology || 'point-list',
       ...props,
     });

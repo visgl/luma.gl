@@ -82,7 +82,7 @@ export abstract class Buffer extends Resource<BufferProps> {
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
   /** Read data synchronously. @note WebGL2 only */
-  readSyncWebGL2(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
+  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
 
   // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 

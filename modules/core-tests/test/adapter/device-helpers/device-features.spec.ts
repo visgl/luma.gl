@@ -1,87 +1,30 @@
 import test from 'tape-promise/tape';
-import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {DeviceFeature} from '@luma.gl/core';
 
-// true: always supported in WebGL2, false: never supported in WebGL1
-const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
-  'webgl2',
-
-  // api support
-  'vertex-array-object-webgl1',
-  'instanced-rendering-webgl1',
-  'multiple-render-targets-webgl1',
-
-  // features
-  'index-uint32-webgl1',
-  'blend-minmax-webgl1',
-  'texture-formats-srgb-webgl1',
-
-  'texture-formats-depth-webgl1',
-  'texture-formats-float32-webgl1',
-  'texture-formats-float16-webgl1',
-
-  // glsl extensions
-  'glsl-frag-data',
-  'glsl-frag-depth',
-  'glsl-derivatives',
-  'glsl-texture-lod'
+// true: always supported in WebGL
+const WEBGL_ALWAYS_FEATURES: DeviceFeature[] = [
+  'webgl',
+  'transform-feedback-webgl',
+  'texture-renderable-float32-webgl'
 ];
-
-const WEBGL2_ONLY_FEATURES: DeviceFeature[] = ['webgl2', 'texture-renderable-float32-webgl'];
 
 test('WebGLDevice#features (query for unknown features)', (t) => {
   // @ts-expect-error
-  t.notOk(webgl1Device.features.has('unknown'), 'features.has should return false');
+  t.notOk(webglDevice.features.has('unknown'), 'features.has should return false');
   // @ts-expect-error
-  t.notOk(webgl1Device.features.has(''), 'features.has should return false');
+  t.notOk(webglDevice.features.has(''), 'features.has should return false');
   t.end();
 });
 
-test('WebGLDevice#features (WebGL1)', (t) => {
-  t.notOk(webgl1Device.features.has('webgl2'), 'features.has should return false');
-  t.notOk(
-    webgl1Device.features.has('texture-renderable-float32-webgl'),
-    'features.has should return false'
-  );
-  t.end();
-});
-
-test('WebGLDevice#hasFeatures (WebGL2)', (t) => {
-  if (webgl2Device) {
-    t.ok(
-      webgl2Device.features.has('vertex-array-object-webgl1'),
-      'features.has should return true'
-    );
-    t.ok(
-      webgl2Device.features.has('instanced-rendering-webgl1'),
-      'features.has should return true'
-    );
-  }
-  t.end();
-});
-
-test('WebGLDevice#hasFeature(WebGL1)', (t) => {
-  for (const feature of WEBGL2_ONLY_FEATURES) {
+test('WebGLDevice#hasFeature(WebGL)', (t) => {
+  for (const feature of WEBGL_ALWAYS_FEATURES) {
     t.equal(
-      webgl1Device.features.has(feature),
-      false,
-      `${feature} is never supported under WebGL1`
+      webglDevice.features.has(feature),
+      true,
+      `${feature} is supported under WebGL`
     );
   }
-  t.end();
-});
-
-test('WebGLDevice#hasFeature(WebGL2)', (t) => {
-  if (webgl2Device) {
-    for (const feature of WEBGL2_ALWAYS_FEATURES) {
-      t.equal(
-        webgl2Device.features.has(feature),
-        true,
-        `${feature} is always supported under WebGL2`
-      );
-    }
-  }
-
   t.end();
 });
 

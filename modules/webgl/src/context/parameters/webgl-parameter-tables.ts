@@ -3,7 +3,6 @@
 
 // Tables describing WebGL parameters
 import {GL, GLParameters} from '@luma.gl/constants';
-import {isWebGL2} from '../context/webgl-checks';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 
@@ -94,24 +93,18 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
 
 // SETTER TABLES - ENABLES SETTING ANY PARAMETER WITH A COMMON API
 
-const enable = (gl: WebGLRenderingContext, value: unknown, key: GL) =>
+const enable = (gl: WebGL2RenderingContext, value: unknown, key: GL) =>
   value ? gl.enable(key) : gl.disable(key);
-const hint = (gl: WebGLRenderingContext, value: GL, key: GL) => gl.hint(key, value);
-const pixelStorei = (gl: WebGLRenderingContext, value: number | boolean, key: GL) =>
+const hint = (gl: WebGL2RenderingContext, value: GL, key: GL) => gl.hint(key, value);
+const pixelStorei = (gl: WebGL2RenderingContext, value: number | boolean, key: GL) =>
   gl.pixelStorei(key, value);
 
-const bindFramebuffer = (gl: WebGLRenderingContext, value: unknown, key: GL) => {
-  let target;
-  if (key === GL.FRAMEBUFFER_BINDING) {
-    target = isWebGL2(gl) ? GL.DRAW_FRAMEBUFFER : GL.FRAMEBUFFER;
-  } else {
-    // GL.READ_FRAMEBUFFER_BINDING
-    target = GL.READ_FRAMEBUFFER;
-  }
+const bindFramebuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
+  const target = (key === GL.FRAMEBUFFER_BINDING) ? GL.DRAW_FRAMEBUFFER : GL.READ_FRAMEBUFFER;
   return gl.bindFramebuffer(target, value);
 };
 
-const bindBuffer = (gl: WebGLRenderingContext, value: unknown, key: GL) => {
+const bindBuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
   const bindingMap: Partial<Record<GL, GL>> = {
     [GL.ARRAY_BUFFER_BINDING]: GL.ARRAY_BUFFER,
     [GL.COPY_READ_BUFFER_BINDING]: GL.COPY_READ_BUFFER,
@@ -134,7 +127,7 @@ function isArray(array: unknown): boolean {
 // NOTE: When value type is a string, it will be handled by 'GL_COMPOSITE_PARAMETER_SETTERS'
 export const GL_PARAMETER_SETTERS = {
   [GL.BLEND]: enable,
-  [GL.BLEND_COLOR]: (gl: WebGLRenderingContext, value: [number, number, number, number]) =>
+  [GL.BLEND_COLOR]: (gl: WebGL2RenderingContext, value: [number, number, number, number]) =>
     gl.blendColor(...value),
   [GL.BLEND_EQUATION_RGB]: 'blendEquation',
   [GL.BLEND_EQUATION_ALPHA]: 'blendEquation',
@@ -142,26 +135,26 @@ export const GL_PARAMETER_SETTERS = {
   [GL.BLEND_DST_RGB]: 'blendFunc',
   [GL.BLEND_SRC_ALPHA]: 'blendFunc',
   [GL.BLEND_DST_ALPHA]: 'blendFunc',
-  [GL.COLOR_CLEAR_VALUE]: (gl: WebGLRenderingContext, value: [number, number, number, number]) =>
+  [GL.COLOR_CLEAR_VALUE]: (gl: WebGL2RenderingContext, value: [number, number, number, number]) =>
     gl.clearColor(...value),
-  [GL.COLOR_WRITEMASK]: (gl: WebGLRenderingContext, value: [boolean, boolean, boolean, boolean]) => gl.colorMask(...value),
+  [GL.COLOR_WRITEMASK]: (gl: WebGL2RenderingContext, value: [boolean, boolean, boolean, boolean]) => gl.colorMask(...value),
   [GL.CULL_FACE]: enable,
-  [GL.CULL_FACE_MODE]: (gl: WebGLRenderingContext, value) => gl.cullFace(value),
+  [GL.CULL_FACE_MODE]: (gl: WebGL2RenderingContext, value) => gl.cullFace(value),
   [GL.DEPTH_TEST]: enable,
-  [GL.DEPTH_CLEAR_VALUE]: (gl: WebGLRenderingContext, value) => gl.clearDepth(value),
-  [GL.DEPTH_FUNC]: (gl: WebGLRenderingContext, value) => gl.depthFunc(value),
-  [GL.DEPTH_RANGE]: (gl: WebGLRenderingContext, value: [number, number]) => gl.depthRange(...value),
-  [GL.DEPTH_WRITEMASK]: (gl: WebGLRenderingContext, value) => gl.depthMask(value),
+  [GL.DEPTH_CLEAR_VALUE]: (gl: WebGL2RenderingContext, value) => gl.clearDepth(value),
+  [GL.DEPTH_FUNC]: (gl: WebGL2RenderingContext, value) => gl.depthFunc(value),
+  [GL.DEPTH_RANGE]: (gl: WebGL2RenderingContext, value: [number, number]) => gl.depthRange(...value),
+  [GL.DEPTH_WRITEMASK]: (gl: WebGL2RenderingContext, value) => gl.depthMask(value),
   [GL.DITHER]: enable,
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: hint,
 
-  [GL.CURRENT_PROGRAM]: (gl: WebGLRenderingContext, value) => gl.useProgram(value),
-  [GL.RENDERBUFFER_BINDING]: (gl: WebGLRenderingContext, value) =>
+  [GL.CURRENT_PROGRAM]: (gl: WebGL2RenderingContext, value) => gl.useProgram(value),
+  [GL.RENDERBUFFER_BINDING]: (gl: WebGL2RenderingContext, value) =>
     gl.bindRenderbuffer(GL.RENDERBUFFER, value),
-  [GL.TRANSFORM_FEEDBACK_BINDING]: (gl: WebGLRenderingContext, value) =>
-    (gl as WebGL2RenderingContext).bindTransformFeedback?.(GL.TRANSFORM_FEEDBACK, value),
-  [GL.VERTEX_ARRAY_BINDING]: (gl: WebGLRenderingContext, value) =>
-    (gl as WebGL2RenderingContext).bindVertexArray(value),
+  [GL.TRANSFORM_FEEDBACK_BINDING]: (gl: WebGL2RenderingContext, value) =>
+    (gl ).bindTransformFeedback?.(GL.TRANSFORM_FEEDBACK, value),
+  [GL.VERTEX_ARRAY_BINDING]: (gl: WebGL2RenderingContext, value) =>
+    (gl ).bindVertexArray(value),
   // NOTE: FRAMEBUFFER_BINDING and DRAW_FRAMEBUFFER_BINDING(WebGL2) refer same state.
   [GL.FRAMEBUFFER_BINDING]: bindFramebuffer,
   [GL.READ_FRAMEBUFFER_BINDING]: bindFramebuffer,
@@ -173,9 +166,9 @@ export const GL_PARAMETER_SETTERS = {
   [GL.PIXEL_PACK_BUFFER_BINDING]: bindBuffer,
   [GL.PIXEL_UNPACK_BUFFER_BINDING]: bindBuffer,
 
-  [GL.FRONT_FACE]: (gl: WebGLRenderingContext, value) => gl.frontFace(value),
+  [GL.FRONT_FACE]: (gl: WebGL2RenderingContext, value) => gl.frontFace(value),
   [GL.GENERATE_MIPMAP_HINT]: hint,
-  [GL.LINE_WIDTH]: (gl: WebGLRenderingContext, value) => gl.lineWidth(value),
+  [GL.LINE_WIDTH]: (gl: WebGL2RenderingContext, value) => gl.lineWidth(value),
   [GL.POLYGON_OFFSET_FILL]: enable,
   [GL.POLYGON_OFFSET_FACTOR]: 'polygonOffset',
   [GL.POLYGON_OFFSET_UNITS]: 'polygonOffset',
@@ -185,12 +178,12 @@ export const GL_PARAMETER_SETTERS = {
   [GL.SAMPLE_COVERAGE_VALUE]: 'sampleCoverage',
   [GL.SAMPLE_COVERAGE_INVERT]: 'sampleCoverage',
   [GL.SCISSOR_TEST]: enable,
-  [GL.SCISSOR_BOX]: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.scissor(...value),
+  [GL.SCISSOR_BOX]: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.scissor(...value),
   [GL.STENCIL_TEST]: enable,
-  [GL.STENCIL_CLEAR_VALUE]: (gl: WebGLRenderingContext, value) => gl.clearStencil(value),
-  [GL.STENCIL_WRITEMASK]: (gl: WebGLRenderingContext, value) =>
+  [GL.STENCIL_CLEAR_VALUE]: (gl: WebGL2RenderingContext, value) => gl.clearStencil(value),
+  [GL.STENCIL_WRITEMASK]: (gl: WebGL2RenderingContext, value) =>
     gl.stencilMaskSeparate(GL.FRONT, value),
-  [GL.STENCIL_BACK_WRITEMASK]: (gl: WebGLRenderingContext, value) =>
+  [GL.STENCIL_BACK_WRITEMASK]: (gl: WebGL2RenderingContext, value) =>
     gl.stencilMaskSeparate(GL.BACK, value),
   [GL.STENCIL_FUNC]: 'stencilFuncFront',
   [GL.STENCIL_REF]: 'stencilFuncFront',
@@ -204,7 +197,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.STENCIL_BACK_FAIL]: 'stencilOpBack',
   [GL.STENCIL_BACK_PASS_DEPTH_FAIL]: 'stencilOpBack',
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: 'stencilOpBack',
-  [GL.VIEWPORT]: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.viewport(...value),
+  [GL.VIEWPORT]: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.viewport(...value),
 
   // WEBGL1 PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: pixelStorei,
@@ -225,85 +218,85 @@ export const GL_PARAMETER_SETTERS = {
   [GL.UNPACK_SKIP_IMAGES]: pixelStorei,
 
   // Function-style setters
-  framebuffer: (gl: WebGLRenderingContext, framebuffer) => {
+  framebuffer: (gl: WebGL2RenderingContext, framebuffer) => {
     // accepts 1) a WebGLFramebuffer 2) null (default framebuffer), or 3) luma.gl Framebuffer class
     // framebuffer is null when restoring to default framebuffer, otherwise use the WebGL handle.
     const handle = framebuffer && 'handle' in framebuffer ? framebuffer.handle : framebuffer;
     return gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   },
-  blend: (gl: WebGLRenderingContext, value) => (value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND)),
-  blendColor: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.blendColor(...value),
-  blendEquation: (gl: WebGLRenderingContext, args: number | [number, number]) => {
+  blend: (gl: WebGL2RenderingContext, value) => (value ? gl.enable(GL.BLEND) : gl.disable(GL.BLEND)),
+  blendColor: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.blendColor(...value),
+  blendEquation: (gl: WebGL2RenderingContext, args: number | [number, number]) => {
     const separateModes = typeof args === 'number' ? [args, args] as [number, number]: args;
     gl.blendEquationSeparate(...separateModes);
   },
-  blendFunc: (gl: WebGLRenderingContext, args: [number, number] | [number, number, number, number]) => {
+  blendFunc: (gl: WebGL2RenderingContext, args: [number, number] | [number, number, number, number]) => {
     const separateFuncs = args?.length === 2 ? [...args, ...args] as [number, number, number, number] : args;
     gl.blendFuncSeparate(...separateFuncs);
   },
 
-  clearColor: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.clearColor(...value),
-  clearDepth: (gl: WebGLRenderingContext, value) => gl.clearDepth(value),
-  clearStencil: (gl: WebGLRenderingContext, value) => gl.clearStencil(value),
+  clearColor: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.clearColor(...value),
+  clearDepth: (gl: WebGL2RenderingContext, value) => gl.clearDepth(value),
+  clearStencil: (gl: WebGL2RenderingContext, value) => gl.clearStencil(value),
 
-  colorMask: (gl: WebGLRenderingContext, value: [boolean, boolean, boolean, boolean]) => gl.colorMask(...value),
+  colorMask: (gl: WebGL2RenderingContext, value: [boolean, boolean, boolean, boolean]) => gl.colorMask(...value),
 
-  cull: (gl: WebGLRenderingContext, value) =>
+  cull: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.CULL_FACE) : gl.disable(GL.CULL_FACE),
-  cullFace: (gl: WebGLRenderingContext, value) => gl.cullFace(value),
+  cullFace: (gl: WebGL2RenderingContext, value) => gl.cullFace(value),
 
-  depthTest: (gl: WebGLRenderingContext, value) =>
+  depthTest: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.DEPTH_TEST) : gl.disable(GL.DEPTH_TEST),
-  depthFunc: (gl: WebGLRenderingContext, value) => gl.depthFunc(value),
-  depthMask: (gl: WebGLRenderingContext, value) => gl.depthMask(value),
-  depthRange: (gl: WebGLRenderingContext, value: [number, number]) => gl.depthRange(...value),
+  depthFunc: (gl: WebGL2RenderingContext, value) => gl.depthFunc(value),
+  depthMask: (gl: WebGL2RenderingContext, value) => gl.depthMask(value),
+  depthRange: (gl: WebGL2RenderingContext, value: [number, number]) => gl.depthRange(...value),
 
-  dither: (gl: WebGLRenderingContext, value) =>
+  dither: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.DITHER) : gl.disable(GL.DITHER),
 
-  derivativeHint: (gl: WebGLRenderingContext, value) => {
+  derivativeHint: (gl: WebGL2RenderingContext, value) => {
     // gl1: 'OES_standard_derivatives'
     gl.hint(GL.FRAGMENT_SHADER_DERIVATIVE_HINT, value);
   },
 
-  frontFace: (gl: WebGLRenderingContext, value) => gl.frontFace(value),
+  frontFace: (gl: WebGL2RenderingContext, value) => gl.frontFace(value),
 
-  mipmapHint: (gl: WebGLRenderingContext, value) => gl.hint(GL.GENERATE_MIPMAP_HINT, value),
+  mipmapHint: (gl: WebGL2RenderingContext, value) => gl.hint(GL.GENERATE_MIPMAP_HINT, value),
 
-  lineWidth: (gl: WebGLRenderingContext, value) => gl.lineWidth(value),
+  lineWidth: (gl: WebGL2RenderingContext, value) => gl.lineWidth(value),
 
-  polygonOffsetFill: (gl: WebGLRenderingContext, value) =>
+  polygonOffsetFill: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.POLYGON_OFFSET_FILL) : gl.disable(GL.POLYGON_OFFSET_FILL),
-  polygonOffset: (gl: WebGLRenderingContext, value: [number, number]) => gl.polygonOffset(...value),
+  polygonOffset: (gl: WebGL2RenderingContext, value: [number, number]) => gl.polygonOffset(...value),
 
-  sampleCoverage: (gl: WebGLRenderingContext, value: [number, boolean?]) => gl.sampleCoverage(...value),
+  sampleCoverage: (gl: WebGL2RenderingContext, value: [number, boolean?]) => gl.sampleCoverage(...value),
 
-  scissorTest: (gl: WebGLRenderingContext, value) =>
+  scissorTest: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.SCISSOR_TEST) : gl.disable(GL.SCISSOR_TEST),
-  scissor: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.scissor(...value),
+  scissor: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.scissor(...value),
 
-  stencilTest: (gl: WebGLRenderingContext, value) =>
+  stencilTest: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.STENCIL_TEST) : gl.disable(GL.STENCIL_TEST),
-  stencilMask: (gl: WebGLRenderingContext, value) => {
+  stencilMask: (gl: WebGL2RenderingContext, value) => {
     value = isArray(value) ? value : [value, value];
     const [mask, backMask] = value;
     gl.stencilMaskSeparate(GL.FRONT, mask);
     gl.stencilMaskSeparate(GL.BACK, backMask);
   },
-  stencilFunc: (gl: WebGLRenderingContext, args) => {
+  stencilFunc: (gl: WebGL2RenderingContext, args) => {
     args = isArray(args) && args.length === 3 ? [...args, ...args] : args;
     const [func, ref, mask, backFunc, backRef, backMask] = args;
     gl.stencilFuncSeparate(GL.FRONT, func, ref, mask);
     gl.stencilFuncSeparate(GL.BACK, backFunc, backRef, backMask);
   },
-  stencilOp: (gl: WebGLRenderingContext, args) => {
+  stencilOp: (gl: WebGL2RenderingContext, args) => {
     args = isArray(args) && args.length === 3 ? [...args, ...args] : args;
     const [sfail, dpfail, dppass, backSfail, backDpfail, backDppass] = args;
     gl.stencilOpSeparate(GL.FRONT, sfail, dpfail, dppass);
     gl.stencilOpSeparate(GL.BACK, backSfail, backDpfail, backDppass);
   },
 
-  viewport: (gl: WebGLRenderingContext, value: [number, number, number, number]) => gl.viewport(...value)
+  viewport: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.viewport(...value)
 };
 
 function getValue(glEnum, values, cache) {
@@ -312,50 +305,50 @@ function getValue(glEnum, values, cache) {
 
 // COMPOSITE_WEBGL_PARAMETER_
 export const GL_COMPOSITE_PARAMETER_SETTERS = {
-  blendEquation: (gl: WebGLRenderingContext, values, cache) =>
+  blendEquation: (gl: WebGL2RenderingContext, values, cache) =>
     gl.blendEquationSeparate(
       getValue(GL.BLEND_EQUATION_RGB, values, cache),
       getValue(GL.BLEND_EQUATION_ALPHA, values, cache)
     ),
-  blendFunc: (gl: WebGLRenderingContext, values, cache) =>
+  blendFunc: (gl: WebGL2RenderingContext, values, cache) =>
     gl.blendFuncSeparate(
       getValue(GL.BLEND_SRC_RGB, values, cache),
       getValue(GL.BLEND_DST_RGB, values, cache),
       getValue(GL.BLEND_SRC_ALPHA, values, cache),
       getValue(GL.BLEND_DST_ALPHA, values, cache)
     ),
-  polygonOffset: (gl: WebGLRenderingContext, values, cache) =>
+  polygonOffset: (gl: WebGL2RenderingContext, values, cache) =>
     gl.polygonOffset(
       getValue(GL.POLYGON_OFFSET_FACTOR, values, cache),
       getValue(GL.POLYGON_OFFSET_UNITS, values, cache)
     ),
-  sampleCoverage: (gl: WebGLRenderingContext, values, cache) =>
+  sampleCoverage: (gl: WebGL2RenderingContext, values, cache) =>
     gl.sampleCoverage(
       getValue(GL.SAMPLE_COVERAGE_VALUE, values, cache),
       getValue(GL.SAMPLE_COVERAGE_INVERT, values, cache)
     ),
-  stencilFuncFront: (gl: WebGLRenderingContext, values, cache) =>
+  stencilFuncFront: (gl: WebGL2RenderingContext, values, cache) =>
     gl.stencilFuncSeparate(
       GL.FRONT,
       getValue(GL.STENCIL_FUNC, values, cache),
       getValue(GL.STENCIL_REF, values, cache),
       getValue(GL.STENCIL_VALUE_MASK, values, cache)
     ),
-  stencilFuncBack: (gl: WebGLRenderingContext, values, cache) =>
+  stencilFuncBack: (gl: WebGL2RenderingContext, values, cache) =>
     gl.stencilFuncSeparate(
       GL.BACK,
       getValue(GL.STENCIL_BACK_FUNC, values, cache),
       getValue(GL.STENCIL_BACK_REF, values, cache),
       getValue(GL.STENCIL_BACK_VALUE_MASK, values, cache)
     ),
-  stencilOpFront: (gl: WebGLRenderingContext, values, cache) =>
+  stencilOpFront: (gl: WebGL2RenderingContext, values, cache) =>
     gl.stencilOpSeparate(
       GL.FRONT,
       getValue(GL.STENCIL_FAIL, values, cache),
       getValue(GL.STENCIL_PASS_DEPTH_FAIL, values, cache),
       getValue(GL.STENCIL_PASS_DEPTH_PASS, values, cache)
     ),
-  stencilOpBack: (gl: WebGLRenderingContext, values, cache) =>
+  stencilOpBack: (gl: WebGL2RenderingContext, values, cache) =>
     gl.stencilOpSeparate(
       GL.BACK,
       getValue(GL.STENCIL_BACK_FAIL, values, cache),
@@ -589,7 +582,7 @@ export const GL_HOOKED_SETTERS = {
 
 // GETTER TABLE - FOR READING OUT AN ENTIRE CONTEXT
 
-const isEnabled = (gl: WebGLRenderingContext, key) => gl.isEnabled(key);
+const isEnabled = (gl: WebGL2RenderingContext, key) => gl.isEnabled(key);
 
 // Exceptions for any keys that cannot be queried by gl.getParameters
 export const GL_PARAMETER_GETTERS = {

@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {RenderPipeline, Buffer, VertexArray} from '@luma.gl/webgl-legacy';
 
-import {webgl1Device,getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice,getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const vs = `
 attribute vec3 positions;
@@ -29,9 +29,9 @@ const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
 
 test('WebGL#RenderPipeline construct/delete', (t) => {
   // @ts-expect-error
-  t.throws(() => webgl1Device.createRenderPipeline( 'RenderPipeline throws on missing shader');
+  t.throws(() => webglDevice.createRenderPipeline( 'RenderPipeline throws on missing shader');
 
-  const renderPipeline = webgl1Device.createRenderPipeline({vs, fs});
+  const renderPipeline = webglDevice.createRenderPipeline({vs, fs});
   t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline construction successful');
 
   renderPipeline.destroy();
@@ -44,9 +44,9 @@ test('WebGL#RenderPipeline construct/delete', (t) => {
 });
 
 test('WebGL#RenderPipeline draw', (t) => {
-  const renderPipeline = webgl1Device.createRenderPipeline({fs, vs});
+  const renderPipeline = webglDevice.createRenderPipeline({fs, vs});
 
-  const vertexArray = webgl1Device.createVertexArray{renderPipeline});
+  const vertexArray = webglDevice.createVertexArray{renderPipeline});
   vertexArray.setAttributes({
     positions: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}}),
     unusedAttributeName: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}})
@@ -70,7 +70,7 @@ test('WebGL#RenderPipeline draw', (t) => {
 });
 
 test('WebGL#RenderPipeline caching', (t) => {
-  const renderPipeline = webgl1Device.createRenderPipeline({fs, vs});
+  const renderPipeline = webglDevice.createRenderPipeline({fs, vs});
 
   renderPipeline._isCached = true;
   renderPipeline.destroy();
@@ -84,7 +84,7 @@ test('WebGL#RenderPipeline caching', (t) => {
 });
 
 test('WebGL#RenderPipeline uniform array', (t) => {
-  const renderPipeline = webgl1Device.createRenderPipeline({vs, fs});
+  const renderPipeline = webglDevice.createRenderPipeline({vs, fs});
 
   t.ok(renderPipeline._uniformSetters.uMVMatrix, 'uniform array is ok');
   t.ok(renderPipeline._uniformSetters['uMVMatrix[0]'], 'uniform array is ok');

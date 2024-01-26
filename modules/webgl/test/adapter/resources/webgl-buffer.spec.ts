@@ -9,16 +9,10 @@ import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
 test('WEBGLBuffer#bind/unbind with index', t => {
   for (const device of getWebGLTestDevices()) {
-    if (!device.isWebGL2) {
-      t.comment('WebGL2 not available, skipping tests');
-      t.end();
-      return;
-    }
-
     const buffer = device.createBuffer({usage: Buffer.UNIFORM});
-    device.gl2.bindBufferBase(buffer.glTarget, 0, buffer.handle);
+    device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
-    device.gl2.bindBufferBase(buffer.glTarget, 0, null);
+    device.gl.bindBufferBase(buffer.glTarget, 0, null);
 
     buffer.destroy();
   }
@@ -36,7 +30,7 @@ test('WEBGLBuffer#write', async t => {
     buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
 
     t.deepEqual(
-      device.isWebGL2 ? await readAsyncF32(buffer) : initialData,
+      await readAsyncF32(buffer),
       initialData,
       `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
     );
@@ -44,7 +38,7 @@ test('WEBGLBuffer#write', async t => {
     buffer.write(updateData);
 
     t.deepEquals(
-      device.isWebGL2 ? await readAsyncF32(buffer) : updateData,
+      await readAsyncF32(buffer),
       updateData,
       `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
     );
@@ -53,7 +47,7 @@ test('WEBGLBuffer#write', async t => {
     buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
 
     t.deepEqual(
-      device.isWebGL2 ? await readAsyncF32(buffer) : initialData,
+      await readAsyncF32(buffer),
       initialData,
       `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
     );
@@ -61,7 +55,7 @@ test('WEBGLBuffer#write', async t => {
     buffer.write(updateData);
 
     t.deepEqual(
-      device.isWebGL2 ? await readAsyncF32(buffer) : updateData,
+      await readAsyncF32(buffer),
       updateData,
       `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
     );

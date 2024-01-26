@@ -79,26 +79,19 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
   const source = cast<WEBGLBuffer>(options.source);
   const destination = cast<WEBGLBuffer>(options.destination);
 
-  const gl2 = device.assertWebGL2();
-  if (gl2) {
-    // In WebGL2 we can perform the copy on the GPU
-    // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
-    gl2.bindBuffer(GL.COPY_READ_BUFFER, source.handle);
-    gl2.bindBuffer(GL.COPY_WRITE_BUFFER, destination.handle);
-    gl2.copyBufferSubData(
-      GL.COPY_READ_BUFFER,
-      GL.COPY_WRITE_BUFFER,
-      options.sourceOffset ?? 0,
-      options.destinationOffset ?? 0,
-      options.size
-    );
-    gl2.bindBuffer(GL.COPY_READ_BUFFER, null);
-    gl2.bindBuffer(GL.COPY_WRITE_BUFFER, null);
-  } else {
-    // TODO - in WebGL1 we would have to read back to CPU
-    // read / write buffer from / to CPU
-    throw new Error('copyBufferToBuffer not implemented in WebGL1');
-  }
+  // {In WebGL2 we can p}erform the copy on the GPU
+  // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
+  device.gl.bindBuffer(GL.COPY_READ_BUFFER, source.handle);
+  device.gl.bindBuffer(GL.COPY_WRITE_BUFFER, destination.handle);
+  device.gl.copyBufferSubData(
+    GL.COPY_READ_BUFFER,
+    GL.COPY_WRITE_BUFFER,
+    options.sourceOffset ?? 0,
+    options.destinationOffset ?? 0,
+    options.size
+  );
+  device.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
+  device.gl.bindBuffer(GL.COPY_WRITE_BUFFER, null);
 }
 
 /**
@@ -158,14 +151,12 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
   }
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const gl2 = device.assertWebGL2();
-
   const {framebuffer, destroyFramebuffer} = getFramebuffer(source);
   try {
     const webglBuffer = destination as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
-    const sourceParams = getWebGLTextureParameters(framebuffer.texture.format, true);
+    const sourceParams = getWebGLTextureParameters(framebuffer.texture.format);
     const sourceFormat = sourceParams.dataFormat;
     const sourceType = sourceParams.type;
 
@@ -177,10 +168,10 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     //   target = device.createBuffer({byteLength});
     // }
 
-    gl2.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
-    gl2.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
+    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
+    device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
 
-    gl2.readPixels(
+    device.gl.readPixels(
       origin[0],
       origin[1],
       sourceWidth,
@@ -190,8 +181,8 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
       byteOffset
     );
   } finally {
-    gl2.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
-    gl2.bindFramebuffer(GL.FRAMEBUFFER, null);
+    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+    device.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
     if (destroyFramebuffer) {
       framebuffer.destroy();
@@ -309,8 +300,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     //     break;
     //   case GL.TEXTURE_2D_ARRAY:
     //   case GL.TEXTURE_3D:
-    //     const gl2 = device.assertWebGL2();
-    //     gl2.copyTexSubImage3D(
+    //     device.gl.copyTexSubImage3D(
     //       textureTarget,
     //       destinationMipmaplevel,
     //       destinationX,

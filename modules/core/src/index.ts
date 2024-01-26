@@ -136,7 +136,7 @@ export {StatsManager} from './utils/stats-manager';
 export {assert} from './utils/assert';
 export {cast} from './utils/cast';
 export {log} from './utils/log';
-export {uid, isPowerOfTwo, isObjectEmpty} from './utils/utils';
+export {uid, isObjectEmpty} from './utils/utils';
 export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
 export {formatValue} from './utils/format-value';
 export {stubRemovedMethods} from './utils/stub-methods';

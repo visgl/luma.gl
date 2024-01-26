@@ -10,12 +10,6 @@ const {abs} = Math;
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
   for (const device of getWebGLTestDevices()) {
-    if (!device.isWebGL2) {
-      t.comment('WebGL2 not available, skipping tests');
-      t.end();
-      return;
-    }
-
     const sourceData = new Float32Array([1, 2, 3]);
     const source = device.createBuffer({data: sourceData});
     const destinationData = new Float32Array([4, 5, 6]);
@@ -133,12 +127,6 @@ async function testCopyTextureToBuffer(
   device: Device,
   options: CopyTextureToBufferFixture & {useFramebuffer?: boolean}
 ) {
-  // TODO - should we have a specific feature string?
-  if (device.info.type !== 'webgl2') {
-    t.comment('WebGL2 not available, skipping tests');
-    return;
-  }
-
   const {title, srcPixel, dstPixel, dstOffset = 0} = options;
 
   const elementCount = 6;
@@ -393,11 +381,7 @@ test('WebGL1#CopyAndBlit readPixelsToArray', t => {
 
 test('WebGL2#CopyAndBlit readPixels', t => {
   for (const device of getWebGLTestDevices()) {
-    if (device.info.type === 'webgl2') {
       testCopyToArray(t, device);
-    } else {
-      t.comment('WebGL2 not available, skipping tests');
-    }
   }
   t.end();
 });

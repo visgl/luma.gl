@@ -34,10 +34,6 @@
     "README.md"
   ],
   "sideEffects": false,
-  "browser": {
-    "gl": false,
-    "gl/wrap": false
-  },
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.dev.js -- --env=dev",

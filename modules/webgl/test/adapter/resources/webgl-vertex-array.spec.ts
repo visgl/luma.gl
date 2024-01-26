@@ -15,9 +15,9 @@ test.skip('WEBGLVertexArray#divisors', t => {
     const maxVertexAttributes = device.limits.maxVertexAttributes;
 
     for (let i = 0; i < maxVertexAttributes; i++) {
-      device.gl2?.bindVertexArray(vertexArray.handle);
+      device.gl.bindVertexArray(vertexArray.handle);
       const divisor = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_DIVISOR);
-      device.gl2?.bindVertexArray(null);
+      device.gl.bindVertexArray(null);
 
       t.equal(divisor, 0, `vertex attribute ${i} should have 0 divisor`);
     }
@@ -37,9 +37,9 @@ test.skip('WEBGLVertexArray#enable', t => {
     t.ok(maxVertexAttributes >= 8, 'maxVertexAttributes >= 8');
 
     for (let i = 1; i < maxVertexAttributes; i++) {
-      device.gl2?.bindVertexArray(vertexArray.handle);
+      device.gl.bindVertexArray(vertexArray.handle);
       const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
-      device.gl2?.bindVertexArray(null);
+      device.gl.bindVertexArray(null);
 
       t.equal(enabled, false, `vertex attribute ${i} should initially be disabled`);
     }
@@ -50,9 +50,9 @@ test.skip('WEBGLVertexArray#enable', t => {
     }
 
     for (let i = 0; i < maxVertexAttributes; i++) {
-      device.gl2?.bindVertexArray(vertexArray.handle);
+      device.gl.bindVertexArray(vertexArray.handle);
       const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
-      device.gl2?.bindVertexArray(null);
+      device.gl.bindVertexArray(null);
 
       t.equal(enabled, true, `vertex attribute ${i} should now be enabled`);
     }
@@ -66,9 +66,9 @@ test.skip('WEBGLVertexArray#enable', t => {
     //   'vertex attribute 0 should **NOT** be disabled');
 
     for (let i = 1; i < maxVertexAttributes; i++) {
-      device.gl2?.bindVertexArray(vertexArray.handle);
+      device.gl.bindVertexArray(vertexArray.handle);
       const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
-      device.gl2?.bindVertexArray(null);
+      device.gl.bindVertexArray(null);
 
       t.equal(enabled, false, `vertex attribute ${i} should now be disabled`);
     }

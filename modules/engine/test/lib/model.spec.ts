@@ -1,6 +1,6 @@
 /*
 import test from 'tape-promise/tape';
-import {webgl1Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 import {luma} from '@luma.gl/core';
@@ -52,7 +52,7 @@ test('Model#construct/destruct', (t) => {
   const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
   const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
 
-  const model = new Model(webgl1Device, {
+  const model = new Model(webglDevice, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
@@ -75,14 +75,14 @@ test('Model#multiple delete', (t) => {
   const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
   const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
 
-  const model1 = new Model(webgl1Device, {
+  const model1 = new Model(webglDevice, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
     fs
   });
 
-  const model2 = new Model(webgl1Device, {
+  const model2 = new Model(webglDevice, {
     drawMode: GL.POINTS,
     vertexCount: 0,
     vs,
@@ -100,15 +100,15 @@ test('Model#multiple delete', (t) => {
 });
 
 test('Model#setAttribute', (t) => {
-  const buffer1 = webgl1Device.createBuffer({
+  const buffer1 = webglDevice.createBuffer({
     accessor: {size: 2},
     data: new Float32Array(4).fill(1)
   });
-  const buffer2 = webgl1Device.createBuffer({data: new Float32Array(8)});
+  const buffer2 = webglDevice.createBuffer({data: new Float32Array(8)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
-  const model = new Model(webgl1Device, {
+  const model = new Model(webglDevice, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     geometry: new CubeGeometry()
@@ -140,7 +140,7 @@ test('Model#setAttribute', (t) => {
 });
 
 test('Model#setters, getters', (t) => {
-  const model = new Model(webgl1Device, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const model = new Model(webglDevice, {vs: DUMMY_VS, fs: DUMMY_FS});
 
   model.setUniforms({
     isPickingActive: 1
@@ -159,7 +159,7 @@ test('Model#setters, getters', (t) => {
 });
 
 test('Model#draw', (t) => {
-  const model = new Model(webgl1Device, {
+  const model = new Model(webglDevice, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     geometry: new CubeGeometry(),
@@ -177,7 +177,7 @@ test('Model#draw', (t) => {
 });
 
 test('Model#program management', (t) => {
-  const pm = new ProgramManager(webgl1Device);
+  const pm = new ProgramManager(webglDevice);
 
   const vs = `
     uniform float x;
@@ -193,7 +193,7 @@ test('Model#program management', (t) => {
     }
   `;
 
-  const model1 = new Model(webgl1Device, {
+  const model1 = new Model(webglDevice, {
     programManager: pm,
     vs,
     fs,
@@ -202,7 +202,7 @@ test('Model#program management', (t) => {
     }
   });
 
-  const model2 = new Model(webgl1Device, {
+  const model2 = new Model(webglDevice, {
     programManager: pm,
     vs,
     fs,
@@ -235,7 +235,7 @@ test('Model#program management', (t) => {
 
   // This part is checking that the use counts
   // don't get bloated by multiple checks.
-  const model3 = new Model(webgl1Device, {
+  const model3 = new Model(webglDevice, {
     programManager: pm,
     vs,
     fs,
@@ -266,12 +266,12 @@ test('Model#program management', (t) => {
 });
 
 test('Model#program management - getModuleUniforms', (t) => {
-  const pm = new ProgramManager(webgl1Device);
+  const pm = new ProgramManager(webglDevice);
 
   const vs = 'void main() {}';
   const fs = 'void main() {}';
 
-  const model = new Model(webgl1Device, {
+  const model = new Model(webglDevice, {
     programManager: pm,
     vs,
     fs
@@ -295,7 +295,7 @@ test('Model#program management - getModuleUniforms', (t) => {
 });
 
 test('Model#getBuffersFromGeometry', (t) => {
-  let buffers = getBuffersFromGeometry(webgl1Device.gl, {
+  let buffers = getBuffersFromGeometry(webglDevice.gl, {
     indices: new Uint16Array([0, 1, 2, 3]),
     attributes: {
       positions: {size: 3, value: new Float32Array(12)},
@@ -316,7 +316,7 @@ test('Model#getBuffersFromGeometry', (t) => {
   buffers.indices[0].destroy();
 
   // Inferring attribute size
-  buffers = getBuffersFromGeometry(webgl1Device.gl, {
+  buffers = getBuffersFromGeometry(webglDevice.gl, {
     attributes: {
       indices: {value: new Uint16Array([0, 1, 2, 3])},
       normals: {value: new Float32Array(12)},
@@ -333,7 +333,7 @@ test('Model#getBuffersFromGeometry', (t) => {
 
   t.throws(
     () =>
-      getBuffersFromGeometry(webgl1Device.gl, {
+      getBuffersFromGeometry(webglDevice.gl, {
         indices: [0, 1, 2, 3]
       }),
     'invalid indices'
@@ -341,7 +341,7 @@ test('Model#getBuffersFromGeometry', (t) => {
 
   t.throws(
     () =>
-      getBuffersFromGeometry(webgl1Device.gl, {
+      getBuffersFromGeometry(webglDevice.gl, {
         attributes: {
           heights: {value: new Float32Array([0, 1, 2, 3])}
         }
@@ -356,14 +356,14 @@ test('Model#transpileToGLSL100', (t) => {
   let model;
 
   t.throws(() => {
-    model = new Model(webgl1Device, {
+    model = new Model(webglDevice, {
       vs: VS_300,
       fs: FS_300
     });
   }, "Can't compile 300 shader with WebGL 1");
 
   t.doesNotThrow(() => {
-    model = new Model(webgl1Device, {
+    model = new Model(webglDevice, {
       vs: VS_300,
       fs: FS_300
     });
@@ -379,7 +379,7 @@ test('Model#transpileToGLSL100', (t) => {
 
 /*
 test.skip('PipelineFactory#basic', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1Device);
+  const pipelineFactory = new PipelineFactory(webglDevice);
 
   const program1 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -495,7 +495,7 @@ const FS_300 = glsl`#version 300 es
 
 // TODO - Move to model: transpilation functionality was moved to model
 test('PipelineFactory#hooks', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1Device);
+  const pipelineFactory = new PipelineFactory(webglDevice);
 
   const preHookPipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -616,7 +616,7 @@ test('PipelineFactory#hooks', (t) => {
 
 // TODO - Move to model: transpilation functionality was moved to model
 test.skip('PipelineFactory#defaultModules', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1Device);
+  const pipelineFactory = new PipelineFactory(webglDevice);
 
   const {pipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
@@ -678,7 +678,7 @@ test.skip('PipelineFactory#defaultModules', (t) => {
 
 // TODO - Move to model: transpilation functionality was moved to model
 test.skip('PipelineFactory#transpileToGLSL100', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1Device);
+  const pipelineFactory = new PipelineFactory(webglDevice);
 
   t.throws(() => {
     pipelineFactory.createRenderPipeline({

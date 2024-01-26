@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webgl1Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {glsl} from '@luma.gl/core';
 import {PipelineFactory} from '@luma.gl/engine';
@@ -28,8 +28,8 @@ test('PipelineFactory#import', (t) => {
 });
 
 test('PipelineFactory#getDefaultPipelineFactory', (t) => {
-  const pm1 = PipelineFactory.getDefaultPipelineFactory(webgl1Device);
-  const pm2 = PipelineFactory.getDefaultPipelineFactory(webgl1Device);
+  const pm1 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
+  const pm2 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
 
   t.ok(pm1 instanceof PipelineFactory, 'Default pipeline manager created');
   t.ok(pm1 === pm2, 'Default pipeline manager cached');
@@ -38,7 +38,7 @@ test('PipelineFactory#getDefaultPipelineFactory', (t) => {
 });
 
 test('PipelineFactory#release', (t) => {
-  const pipelineFactory = new PipelineFactory(webgl1Device);
+  const pipelineFactory = new PipelineFactory(webglDevice);
 
   const pipeline1 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});

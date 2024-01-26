@@ -15,7 +15,7 @@ export type Attachment = WEBGLTexture | WEBGLRenderbuffer | TextureAttachment;
 /** luma.gl Framebuffer, WebGL implementation  */
 export class WEBGLFramebuffer extends Framebuffer {
   device: WebGLDevice;
-  gl: WebGLRenderingContext;
+  gl: WebGL2RenderingContext;
   handle: WebGLFramebuffer;
 
   get texture() {
@@ -165,7 +165,7 @@ export class WEBGLFramebuffer extends Framebuffer {
    * @param attachment
    * @param texture
    * @param layer = 0 - index into WEBGLTextureArray and Texture3D or face for `TextureCubeMap`
-   * @param level  = 0 - mipmapLevel (must be 0 in WebGL1)
+   * @param level = 0 - mipmapLevel
    */
   protected _attachTexture(
     attachment: GL,
@@ -173,14 +173,13 @@ export class WEBGLFramebuffer extends Framebuffer {
     layer: number,
     level: number
   ): void {
-    const {gl, gl2} = this.device;
+    const {gl} = this.device;
     gl.bindTexture(texture.target, texture.handle);
 
     switch (texture.target) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        this.device.assertWebGL2();
-        gl2?.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:

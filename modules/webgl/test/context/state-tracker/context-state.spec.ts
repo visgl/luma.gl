@@ -2,20 +2,25 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import type {GLParameters} from '@luma.gl/constants';
 import {GL} from '@luma.gl/constants';
 
-import type {TypedArray} from '@luma.gl/core'
-import {getGLParameters, setGLParameters, resetGLParameters, withGLParameters} from '@luma.gl/webgl';
+import type {TypedArray} from '@luma.gl/core';
+import {
+  getGLParameters,
+  setGLParameters,
+  resetGLParameters,
+  withGLParameters
+} from '@luma.gl/webgl';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1} from './data/sample-enum-settings';
 import {FUNCTION_STYLE_SETTINGS_SET1} from './data/sample-function-settings';
 
 function isTypedArray(v: unknown): TypedArray | null {
-  return (ArrayBuffer.isView(v) && !(v instanceof DataView)) ? v as TypedArray : null;
+  return ArrayBuffer.isView(v) && !(v instanceof DataView) ? (v as TypedArray) : null;
 }
 
 export function stringifyTypedArray(v: unknown) {
@@ -24,7 +29,7 @@ export function stringifyTypedArray(v: unknown) {
   return JSON.stringify(v);
 }
 
-test('WebGL#state', (t) => {
+test('WebGL#state', t => {
   t.ok(getGLParameters, 'getGLParameters imported ok');
   t.ok(setGLParameters, 'setGLParameters imported ok');
   t.ok(withGLParameters, 'withGLParameters imported ok');
@@ -33,10 +38,9 @@ test('WebGL#state', (t) => {
   t.end();
 });
 
-test('WebGLState#getGLParameters', (t) => {
-
-  resetGLParameters(webgl1Device);
-  const parameters = getGLParameters(webgl1Device);
+test('WebGLState#getGLParameters', t => {
+  resetGLParameters(webglDevice);
+  const parameters = getGLParameters(webglDevice);
 
   for (const setting in GL_PARAMETERS) {
     const value = parameters[setting];
@@ -45,16 +49,16 @@ test('WebGLState#getGLParameters', (t) => {
   t.end();
 });
 
-test('WebGLState#getGLParameters (WebGL2)', (t) => {
-  if (webgl2Device) {
-    resetGLParameters(webgl2Device);
-    const parameters = getGLParameters(webgl2Device);
+test('WebGLState#getGLParameters (WebGL2)', t => {
+  if (webglDevice) {
+    resetGLParameters(webglDevice);
+    const parameters = getGLParameters(webglDevice);
 
     for (const setting in GL_PARAMETERS) {
       const value = parameters[setting];
       t.ok(
         value !== undefined,
-        `${webgl2Device.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
+        `${webglDevice.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
       );
     }
   }
@@ -62,27 +66,25 @@ test('WebGLState#getGLParameters (WebGL2)', (t) => {
 });
 
 // TODO - restore asap
-test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', (t) => {
+test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', t => {
+  resetGLParameters(webglDevice);
 
-  resetGLParameters(webgl1Device);
-
-  setGLParameters(webgl1Device, FUNCTION_STYLE_SETTINGS_SET1);
-  const parameters = getGLParameters(webgl1Device);
+  setGLParameters(webglDevice, FUNCTION_STYLE_SETTINGS_SET1);
+  const parameters = getGLParameters(webglDevice);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${webgl1Device.getGLKey(key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${webglDevice.getGLKey(key)}`
     );
   }
   t.end();
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', (t) => {
-
+test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', t => {
   const expectedValues = {
     // blendFunc
     [GL.BLEND_SRC_RGB]: GL.SRC_ALPHA,
@@ -105,40 +107,39 @@ test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters
     [GL.STENCIL_BACK_PASS_DEPTH_PASS]: GL.DECR
   };
 
-  resetGLParameters(webgl1Device);
+  resetGLParameters(webglDevice);
 
-  setGLParameters(webgl1Device, {
+  setGLParameters(webglDevice, {
     blendFunc: [GL.SRC_ALPHA, GL.ONE],
     stencilFunc: [GL.LEQUAL, 0.5, 0xbbbbbbbb],
     stencilOp: [GL.REPLACE, GL.INCR, GL.DECR]
   });
-  const actualParameters = getGLParameters(webgl1Device);
+  const actualParameters = getGLParameters(webglDevice);
 
   for (const key in expectedValues) {
     const value = actualParameters[key];
     t.deepEqual(
       value,
       expectedValues[key],
-      `got expected value ${stringifyTypedArray(value)} for key: ${webgl1Device.getGLKey(key)}`
+      `got expected value ${stringifyTypedArray(value)} for key: ${webglDevice.getGLKey(key)}`
     );
   }
   t.end();
 });
 
-test('WebGLState#withGLParameters', (t) => {
-
-  const checkParameters = (expected) => {
-    const parameters = getGLParameters(webgl1Device);
+test('WebGLState#withGLParameters', t => {
+  const checkParameters = expected => {
+    const parameters = getGLParameters(webglDevice);
     for (const key in expected) {
       const value = parameters[key];
       t.deepEqual(value, expected[key], `got expected value ${stringifyTypedArray(value)}`);
     }
   };
 
-  resetGLParameters(webgl1Device);
+  resetGLParameters(webglDevice);
 
   // Initialize parameters
-  setGLParameters(webgl1Device, {
+  setGLParameters(webglDevice, {
     clearColor: [0, 0, 0, 0],
     [GL.BLEND]: false
   });
@@ -148,7 +149,7 @@ test('WebGLState#withGLParameters', (t) => {
   });
 
   withGLParameters(
-    webgl1Device,
+    webglDevice,
     {
       clearColor: [0, 1, 0, 1],
       [GL.BLEND]: true
@@ -171,7 +172,7 @@ test('WebGLState#withGLParameters', (t) => {
   t.throws(
     () =>
       withGLParameters(
-        webgl1Device,
+        webglDevice,
         {
           clearColor: [0, 1, 0, 1],
           [GL.BLEND]: true,
@@ -198,18 +199,17 @@ test('WebGLState#withGLParameters', (t) => {
   t.end();
 });
 
-test('WebGLState#withGLParameters: recursive', (t) => {
+test('WebGLState#withGLParameters: recursive', t => {
+  resetGLParameters(webglDevice);
 
-  resetGLParameters(webgl1Device);
-
-  setGLParameters(webgl1Device, {
+  setGLParameters(webglDevice, {
     clearColor: [0, 0, 0, 0],
     [GL.BLEND]: false,
     blendFunc: [GL.ONE_MINUS_SRC_ALPHA, GL.ZERO, GL.CONSTANT_ALPHA, GL.ZERO],
     blendEquation: GL.FUNC_ADD
   });
 
-  let parameters = getGLParameters(webgl1Device);
+  let parameters = getGLParameters(webglDevice);
   let clearColor = parameters[GL.COLOR_CLEAR_VALUE];
   let blendState = parameters[GL.BLEND];
   let blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
@@ -227,13 +227,13 @@ test('WebGLState#withGLParameters: recursive', (t) => {
     `got expected value ${stringifyTypedArray(blendEquation)}`
   );
   withGLParameters(
-    webgl1Device,
+    webglDevice,
     {
       clearColor: [0, 1, 0, 1],
       [GL.BLEND]: true
     },
     () => {
-      parameters = getGLParameters(webgl1Device);
+      parameters = getGLParameters(webglDevice);
       clearColor = parameters[GL.COLOR_CLEAR_VALUE];
       blendState = parameters[GL.BLEND];
       blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
@@ -258,13 +258,13 @@ test('WebGLState#withGLParameters: recursive', (t) => {
       );
 
       withGLParameters(
-        webgl1Device,
+        webglDevice,
         {
           blendFunc: [GL.ZERO, GL.ZERO, GL.CONSTANT_ALPHA, GL.ZERO],
           blendEquation: GL.FUNC_SUBTRACT
         },
         () => {
-          parameters = getGLParameters(webgl1Device);
+          parameters = getGLParameters(webglDevice);
           clearColor = parameters[GL.COLOR_CLEAR_VALUE];
           blendState = parameters[GL.BLEND];
           blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
@@ -289,7 +289,7 @@ test('WebGLState#withGLParameters: recursive', (t) => {
           );
         }
       );
-      parameters = getGLParameters(webgl1Device);
+      parameters = getGLParameters(webglDevice);
       blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
       blendEquation = parameters[GL.BLEND_EQUATION_RGB];
       t.deepEqual(
@@ -305,7 +305,7 @@ test('WebGLState#withGLParameters: recursive', (t) => {
     }
   );
 
-  parameters = getGLParameters(webgl1Device);
+  parameters = getGLParameters(webglDevice);
   clearColor = parameters[GL.COLOR_CLEAR_VALUE];
   blendState = parameters[GL.BLEND];
   blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
@@ -327,14 +327,9 @@ test('WebGLState#withGLParameters: recursive', (t) => {
 });
 
 // EXT_blend_minmax
-test('WebGLState#BlendEquationMinMax', (t) => {
-  // TODO: For WebGL1 this test passing could be false positive.
+test('WebGLState#BlendEquationMinMax', t => {
   // Verify if state set is scuccessful, we could be just returning the value from cache.
 
-  const contexts = {
-    ['WebGL1 Context']: webgl1Device,
-    ['WebGL2 Context']: webgl2Device
-  };
   const parametersArray: GLParameters[] = [
     {
       [GL.BLEND_EQUATION_RGB]: GL.MAX,
@@ -355,178 +350,163 @@ test('WebGLState#BlendEquationMinMax', (t) => {
     }
   ];
 
-  for (const contextName in contexts) {
-    const context = contexts[contextName];
-    if (context) {
-      resetGLParameters(context);
+  if (webglDevice) {
+    resetGLParameters(webglDevice);
 
+    // eslint-disable-next-line @typescript-eslint/no-for-in-array
+    for (const index in parametersArray) {
+      const parameters = parametersArray[index];
+      const expected = expectedArray[index];
+
+      setGLParameters(webglDevice, parameters);
+
+      const actualParameters = getGLParameters(webglDevice);
       // eslint-disable-next-line @typescript-eslint/no-for-in-array
-      for (const index in parametersArray) {
-        const parameters = parametersArray[index];
-        const expected = expectedArray[index];
-
-        setGLParameters(context, parameters);
-
-        const actualParameters = getGLParameters(context);
-        // eslint-disable-next-line @typescript-eslint/no-for-in-array
-        for (const state in expected) {
-          const value = actualParameters[state];
-          t.equal(
-            value,
-            expected[state],
-            `${contextName} : expected value, ${webgl1Device.getGLKey(value)} received for ${webgl1Device.getGLKey(
-              state
-            )}`
-          );
-        }
+      for (const state in expected) {
+        const value = actualParameters[state];
+        t.equal(
+          value,
+          expected[state],
+          `WebGL : expected value, ${webglDevice.getGLKey(
+            value
+          )} received for ${webglDevice.getGLKey(state)}`
+        );
       }
-    } else {
-      t.comment(`${contextName} not available, skipping tests`);
     }
+  } else {
+    t.comment('WebGL not available, skipping tests');
   }
+
   t.end();
 });
 
-test('WebGLState#bindFramebuffer (WebGL1)', (t) => {
-  const framebuffer = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+test('WebGLState#bindFramebuffer (WebGL2)', t => {
+  const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
+  const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
+  const framebufferThree = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   let fbHandle;
 
-  resetGLParameters(webgl1Device);
+  resetGLParameters(webglDevice);
 
-  fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
-  t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
-
-  setGLParameters(webgl1Device, {
-    framebuffer
+  setGLParameters(webglDevice, {
+    framebuffer: framebuffer.handle
   });
 
-  fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
-  t.equal(fbHandle, framebuffer.handle, 'setGLParameters should set framebuffer binding');
+  fbHandle = getGLParameters(webglDevice, [GL.DRAW_FRAMEBUFFER_BINDING])[
+    GL.DRAW_FRAMEBUFFER_BINDING
+  ];
+  // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
+  t.equal(fbHandle, framebuffer.handle, 'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING');
 
+  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
+  t.equal(
+    fbHandle,
+    framebuffer.handle,
+    'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING'
+  );
+
+  webglDevice.gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, framebufferTwo.handle);
+
+  fbHandle = getGLParameters(webglDevice, [GL.DRAW_FRAMEBUFFER_BINDING])[
+    GL.DRAW_FRAMEBUFFER_BINDING
+  ];
+  t.equal(
+    fbHandle,
+    framebufferTwo.handle,
+    'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
+  );
+
+  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
+  t.equal(
+    fbHandle,
+    framebuffer.handle,
+    'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING'
+  );
+
+  webglDevice.gl.bindFramebuffer(GL.READ_FRAMEBUFFER, framebufferThree.handle);
+  fbHandle = getGLParameters(webglDevice, [GL.DRAW_FRAMEBUFFER_BINDING])[
+    GL.DRAW_FRAMEBUFFER_BINDING
+  ];
+  t.equal(
+    fbHandle,
+    framebufferTwo.handle,
+    'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING'
+  );
+
+  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
+  t.equal(
+    fbHandle,
+    framebufferThree.handle,
+    'READ_FRAMEBUFFER binding should set READ_FRAMEBUFFER_BINDING'
+  );
   t.end();
 });
 
-test('WebGLState#bindFramebuffer (WebGL2)', (t) => {
-  if (webgl2Device) {
-    const framebuffer = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
-    const framebufferTwo = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
-    const framebufferThree = webgl2Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
-    let fbHandle;
+test('WebGLState#withGLParameters framebuffer', t => {
+  const framebufferOne = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
-    resetGLParameters(webgl2Device);
+  const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
-    setGLParameters(webgl2Device, {
-      framebuffer: framebuffer.handle
-    });
-
-    fbHandle = getGLParameters(webgl2Device, [GL.DRAW_FRAMEBUFFER_BINDING])[GL.DRAW_FRAMEBUFFER_BINDING];
-    // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
-    t.equal(
-      fbHandle,
-      framebuffer.handle,
-      'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
-    );
-
-    fbHandle = getGLParameters(webgl2Device, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
-    t.equal(
-      fbHandle,
-      framebuffer.handle,
-      'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING'
-    );
-
-    webgl2Device.gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, framebufferTwo.handle);
-
-    fbHandle = getGLParameters(webgl2Device, [GL.DRAW_FRAMEBUFFER_BINDING])[GL.DRAW_FRAMEBUFFER_BINDING];
-    t.equal(
-      fbHandle,
-      framebufferTwo.handle,
-      'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
-    );
-
-    fbHandle = getGLParameters(webgl2Device, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
-    t.equal(
-      fbHandle,
-      framebuffer.handle,
-      'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING'
-    );
-
-    webgl2Device.gl.bindFramebuffer(GL.READ_FRAMEBUFFER, framebufferThree.handle);
-    fbHandle = getGLParameters(webgl2Device, [GL.DRAW_FRAMEBUFFER_BINDING])[GL.DRAW_FRAMEBUFFER_BINDING];
-    t.equal(
-      fbHandle,
-      framebufferTwo.handle,
-      'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING'
-    );
-
-    fbHandle = getGLParameters(webgl2Device, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
-    t.equal(
-      fbHandle,
-      framebufferThree.handle,
-      'READ_FRAMEBUFFER binding should set READ_FRAMEBUFFER_BINDING'
-    );
-  } else {
-    t.comment('WebGL2 not available, skipping tests');
-  }
-  t.end();
-});
-
-test('WebGLState#withGLParameters framebuffer', (t) => {
-  const framebufferOne = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
-
-  const framebufferTwo = webgl1Device.createFramebuffer({colorAttachments: ['rgba8unorm']});
-
-
-  resetGLParameters(webgl1Device);
+  resetGLParameters(webglDevice);
 
   let fbHandle;
-  fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
+  fbHandle = getGLParameters(webglDevice, GL.FRAMEBUFFER_BINDING);
   t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
 
-  withGLParameters(webgl1Device, {framebuffer: framebufferOne}, () => {
-    fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
+  withGLParameters(webglDevice, {framebuffer: framebufferOne}, () => {
+    fbHandle = getGLParameters(webglDevice, GL.FRAMEBUFFER_BINDING);
     t.deepEqual(fbHandle, framebufferOne.handle, 'withGLParameters should bind framebuffer');
 
-    withGLParameters(webgl1Device, {framebuffer: framebufferTwo}, () => {
-      fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
-      t.deepEqual(fbHandle, framebufferTwo.handle, 'Inner withGLParameters should bind framebuffer');
+    withGLParameters(webglDevice, {framebuffer: framebufferTwo}, () => {
+      fbHandle = getGLParameters(webglDevice, GL.FRAMEBUFFER_BINDING);
+      t.deepEqual(
+        fbHandle,
+        framebufferTwo.handle,
+        'Inner withGLParameters should bind framebuffer'
+      );
     });
 
-    fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
+    fbHandle = getGLParameters(webglDevice, GL.FRAMEBUFFER_BINDING);
     t.deepEqual(
       fbHandle,
       framebufferOne.handle,
       'Inner withGLParameters should restore draw framebuffer binding'
     );
   });
-  fbHandle = getGLParameters(webgl1Device, GL.FRAMEBUFFER_BINDING);
+  fbHandle = getGLParameters(webglDevice, GL.FRAMEBUFFER_BINDING);
   t.deepEqual(fbHandle, null, 'withGLParameters should restore framebuffer bidning');
 
   t.end();
 });
 
-test('WebGLState#withGLParameters empty parameters object', (t) => {
+test('WebGLState#withGLParameters empty parameters object', t => {
+  resetGLParameters(webglDevice);
 
-  resetGLParameters(webgl1Device);
-
-  setGLParameters(webgl1Device, {
+  setGLParameters(webglDevice, {
     clearColor: [0, 0, 0, 0],
     [GL.BLEND]: false
   });
 
-  let clearColor = getGLParameters(webgl1Device, GL.COLOR_CLEAR_VALUE);
-  let blendState = getGLParameters(webgl1Device, GL.BLEND);
+  let clearColor = getGLParameters(webglDevice, GL.COLOR_CLEAR_VALUE);
+  let blendState = getGLParameters(webglDevice, GL.BLEND);
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
 
-  withGLParameters(webgl1Device, {}, () => {
-    clearColor = getGLParameters(webgl1Device, GL.COLOR_CLEAR_VALUE);
-    blendState = getGLParameters(webgl1Device, GL.BLEND);
+  withGLParameters(webglDevice, {}, () => {
+    clearColor = getGLParameters(webglDevice, GL.COLOR_CLEAR_VALUE);
+    blendState = getGLParameters(webglDevice, GL.BLEND);
     t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
     t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
   });
 
-  clearColor = getGLParameters(webgl1Device, GL.COLOR_CLEAR_VALUE);
-  blendState = getGLParameters(webgl1Device, GL.BLEND);
+  clearColor = getGLParameters(webglDevice, GL.COLOR_CLEAR_VALUE);
+  blendState = getGLParameters(webglDevice, GL.BLEND);
   t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
   t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
 

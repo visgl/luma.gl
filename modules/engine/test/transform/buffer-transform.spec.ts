@@ -22,11 +22,7 @@ void main() { fragColor.x = dst; }
 
 test('BufferTransform#constructor', async (t) => {
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.throws(() => createBufferTransform(device), /transform feedback/i, 'WebGL 1 throws');
-    } else {
-      t.ok(createBufferTransform(device), 'WebGL 2 succeeds');
-    }
+    t.ok(createBufferTransform(device), 'WebGL 2 succeeds');
   }
   t.end();
 });
@@ -36,20 +32,16 @@ test('BufferTransform#run', async (t) => {
   const DST_ARRAY = new Float32Array([0, 1, 4, 9, 16, 25]);
 
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.comment('Skipping WebGL 1 device.');
-    } else {
-      const src = device.createBuffer({data: SRC_ARRAY});
-      const dst = device.createBuffer({byteLength: 24});
-      const elementCount = 6;
-      const transform = createBufferTransform(device, src, dst, elementCount);
+    const src = device.createBuffer({data: SRC_ARRAY});
+    const dst = device.createBuffer({byteLength: 24});
+    const elementCount = 6;
+    const transform = createBufferTransform(device, src, dst, elementCount);
 
-      transform.run();
+    transform.run();
 
-      const bytes = await transform.readAsync('dst');
-      const array = new Float32Array(bytes.buffer, bytes.byteOffset, elementCount);
-      t.deepEqual(array, DST_ARRAY, 'output transformed');
-    }
+    const bytes = await transform.readAsync('dst');
+    const array = new Float32Array(bytes.buffer, bytes.byteOffset, elementCount);
+    t.deepEqual(array, DST_ARRAY, 'output transformed');
   }
   t.end();
 });

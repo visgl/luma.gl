@@ -5,7 +5,7 @@ import {assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
-export function getKeyValue(gl: WebGLRenderingContext, name: string | GL): GL {
+export function getKeyValue(gl: WebGL2RenderingContext, name: string | GL): GL {
   // If not a string, return (assume number)
   if (typeof name !== 'string') {
     return name;

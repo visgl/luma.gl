@@ -12,7 +12,7 @@ import {Timeline, AnimationProps} from '@luma.gl/engine';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
-import {isWebGL, resetGLParameters} from '@luma.gl/webgl';
+import {resetGLParameters} from '@luma.gl/webgl';
 // import {default as Query} from '../classic/query';
 // import {ClassicFramebuffer} from '../classic/framebuffer';
 
@@ -41,7 +41,7 @@ export type ClassicAnimationProps = AnimationProps & {
   stop: () => ClassicAnimationLoop;
 
   /** @deprecated Use .device */
-  gl: WebGLRenderingContext;
+  gl: WebGL2RenderingContext;
   /** @deprecated Will be removed */
   framebuffer: unknown;
 
@@ -56,7 +56,7 @@ export type ClassicAnimationProps = AnimationProps & {
 /** ClassicAnimationLoop properties */
 export type ClassicAnimationLoopProps = {
   onCreateDevice?: (props: DeviceProps) => Promise<Device>;
-  onCreateContext?: (props: ContextProps) => WebGLRenderingContext; // TODO: signature from createGLContext
+  onCreateContext?: (props: ContextProps) => WebGL2RenderingContext; // TODO: signature from createGLContext
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: ClassicAnimationProps) => {} | void | Promise<{} | void>;
   onRender?: (animationProps: ClassicAnimationProps) => void;
@@ -75,7 +75,7 @@ export type ClassicAnimationLoopProps = {
   useDevicePixels?: number | boolean;
 
   /** @deprecated Use .device */
-  gl?: WebGLRenderingContext | null;
+  gl?: WebGL2RenderingContext | null;
   /** @deprecated Will be removed */
   createFramebuffer?: boolean;
 };
@@ -137,7 +137,7 @@ export class ClassicAnimationLoop {
   // _gpuTimeQuery: Query | null = null;
 
   /** @deprecated */
-  gl: WebGLRenderingContext;
+  gl: WebGL2RenderingContext;
 
   /*
    */
@@ -574,10 +574,6 @@ export class ClassicAnimationLoop {
     this.device = await this.onCreateDevice(deviceProps);
     // @ts-expect-error
     this.gl = this.device.gl;
-
-    if (!isWebGL(this.gl)) {
-      throw new Error('ClassicAnimationLoop.onCreateContext - illegal context returned');
-    }
 
     // Reset the WebGL context.
     resetGLParameters(this.gl);

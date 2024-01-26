@@ -37,7 +37,7 @@ test('shader-utils#getQualifierDetails', (t) => {
     },
     {
       line: 'vec4 pos = vec3(in, 1.0); // some comments',
-      qualifers: ['attribute', 'in'],
+      qualifiers: ['attribute', 'in'],
       expected: null
     }
   ];
@@ -57,17 +57,6 @@ test('shader-utils#getQualifierDetails', (t) => {
 test('shader-utils#getPassthroughFS', (t) => {
   const PASSTHROUGH_TEST_CASES = [
     {
-      version: 100,
-      input: 'myInput',
-      inputChannels: 2 as channelCount,
-      expected: glsl`\
-varying vec2 myInput;
-void main() {
-  gl_FragColor = vec4(myInput, 0.0, 1.0);
-}`
-    },
-    {
-      version: 300,
       input: 'myInput',
       inputChannels: 1 as channelCount,
       output: 'myOutput',

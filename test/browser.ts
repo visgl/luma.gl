@@ -8,5 +8,5 @@ test.onFailure(window.browserTestDriver_fail || noop);
 // hack: prevent example imports from starting their own animation loop
 globalThis.website = true;
 
+import './setup';
 import './modules';
-// import './render/render.spec';

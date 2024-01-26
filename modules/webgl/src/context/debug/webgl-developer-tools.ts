@@ -23,8 +23,8 @@ type DebugContextProps = {
 // }
 
 type ContextData = {
-  realContext?: WebGLRenderingContext;
-  debugContext?: WebGLRenderingContext;
+  realContext?: WebGL2RenderingContext;
+  debugContext?: WebGL2RenderingContext;
 }
 
 // Helper to get shared context data
@@ -55,7 +55,7 @@ export async function loadWebGLDeveloperTools(): Promise<void> {
 
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
-export function makeDebugContext(gl: WebGLRenderingContext, props: DebugContextProps = {}): WebGLRenderingContext | null {
+export function makeDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps = {}): WebGL2RenderingContext | null {
   // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
   if (!gl) {
     return null;
@@ -65,14 +65,14 @@ export function makeDebugContext(gl: WebGLRenderingContext, props: DebugContextP
 }
 
 // Returns the real context from either of the real/debug contexts
-function getRealContext(gl: WebGLRenderingContext): WebGLRenderingContext {
+function getRealContext(gl: WebGL2RenderingContext): WebGL2RenderingContext {
   const data = getContextData(gl);
   // If the context has a realContext member, it is a debug context so return the realContext
   return data.realContext ? data.realContext : gl;
 }
 
 // Returns the debug context from either of the real/debug contexts
-function getDebugContext(gl: WebGLRenderingContext, props: DebugContextProps): WebGLRenderingContext {
+function getDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps): WebGL2RenderingContext {
   if (!globalThis.WebGLDebugUtils) {
     log.warn('webgl-debug not loaded')();
     return gl;

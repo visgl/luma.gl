@@ -20,9 +20,12 @@ export class WebGPUVertexArray extends VertexArray {
   /** Vertex Array is a helper class under WebGPU */
   readonly handle: never;
 
-  /** * Attribute 0 can not be disable on most desktop OpenGL based browsers */
+  /** 
+   * Attribute 0 can not be disable on most desktop OpenGL based browsers 
+   * TODO is this even an issue for WebGPU? 
+   */
   static isConstantAttributeZeroSupported(device: Device): boolean {
-    return device.info.type === 'webgl2' || getBrowser() === 'Chrome';
+    return getBrowser() === 'Chrome';
   }
 
   // Create a VertexArray

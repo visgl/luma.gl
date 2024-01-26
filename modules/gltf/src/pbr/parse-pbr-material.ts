@@ -66,9 +66,8 @@ export function parsePBRMaterial(
     generatedTextures: []
   };
 
-  if (device.features.has('glsl-texture-lod')) {
-    parsedMaterial.defines.USE_TEX_LOD = 1;
-  }
+  // TODO - always available
+  parsedMaterial.defines.USE_TEX_LOD = 1;
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {

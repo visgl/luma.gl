@@ -298,22 +298,7 @@ export class WebGPUDevice extends Device {
 
     features.add('timer-query-webgl');
 
-    // WEBGL1 SUPPORT
-    features.add('vertex-array-object-webgl1');
-    features.add('instanced-rendering-webgl1');
-    features.add('multiple-render-targets-webgl1');
-    features.add('index-uint32-webgl1');
-    features.add('blend-minmax-webgl1');
-    features.add('texture-blend-float-webgl1');
-
-    // TEXTURES, RENDERBUFFERS
-    features.add('texture-formats-srgb-webgl1');
-
     // TEXTURES
-    features.add('texture-formats-depth-webgl1');
-    features.add('texture-formats-float32-webgl1');
-    features.add('texture-formats-float16-webgl1');
-
     features.add('texture-filter-linear-float32-webgl');
     features.add('texture-filter-linear-float16-webgl');
     features.add('texture-filter-anisotropic-webgl');
@@ -322,12 +307,6 @@ export class WebGPUDevice extends Device {
     features.add('texture-renderable-rgba32float-webgl');
     features.add('texture-renderable-float32-webgl');
     features.add('texture-renderable-float16-webgl');
-
-    // GLSL extensions
-    features.add('glsl-frag-data');
-    features.add('glsl-frag-depth');
-    features.add('glsl-derivatives');
-    features.add('glsl-texture-lod');
 
     return features;
   }

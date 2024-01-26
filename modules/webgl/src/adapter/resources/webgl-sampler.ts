@@ -8,8 +8,6 @@ import type {WebGLDevice} from '../webgl-device';
 
 /**
  * Sampler object -
- * Under WebGL2 we create an actual WebGL sampler
- * Under WebGL1, we just store the sampler parameters
  * so that they can be set directly on the texture
  * https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/sampler_object.html
  */
@@ -22,15 +20,13 @@ export class WEBGLSampler extends Sampler {
     super(device, props);
     this.device = device;
     this.parameters = convertSamplerParametersToWebGL(props);
-    if (this.device.isWebGL2) {
-      this.handle = this.handle || this.device.gl2.createSampler();
-      this._setSamplerParameters(this.parameters);
-    }
+    this.handle = this.handle || this.device.gl.createSampler();
+    this._setSamplerParameters(this.parameters);
   }
 
   override destroy(): void {
     if (this.handle) {
-      this.device.gl2.deleteSampler(this.handle);
+      this.device.gl.deleteSampler(this.handle);
       // @ts-expect-error read-only/undefined
       this.handle = undefined;
     }
@@ -49,10 +45,10 @@ export class WEBGLSampler extends Sampler {
       switch (param) {
         case GL.TEXTURE_MIN_LOD:
         case GL.TEXTURE_MAX_LOD:
-          this.device.gl2.samplerParameterf(this.handle, param, value);
+          this.device.gl.samplerParameterf(this.handle, param, value);
           break;
         default:
-          this.device.gl2.samplerParameteri(this.handle, param, value);
+          this.device.gl.samplerParameteri(this.handle, param, value);
           break;
       }
     }

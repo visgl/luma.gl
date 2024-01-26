@@ -176,11 +176,6 @@ test('WebGLRenderPipeline#ShaderLayout', (t) => {
 
 test('WebGLRenderPipeline#ShaderLayout#varyings', (t) => {
   const {gl2} = fixture;
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
 
   let program = new Program(gl2, {fs, vs, varyings: ['vPosition', 'gl_Position']});
 
