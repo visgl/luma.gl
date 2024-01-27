@@ -35,9 +35,3 @@ import {WebGLDevice} from '@luma.gl/webgl'; // Installs the WebGLDevice adapter
 const webglDevice = cast<WebGPUDevice>(device);
 const gl = webglDevice.gl;
 ```
-
-## Legacy WebGL classes
-
-This module also exports a set of JavaScript classes for the WebGL2 API,
-inherited from the legacy luma.gl v8 API. Note that these classes are considered
-deprecated and should be avoided in new code.

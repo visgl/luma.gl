@@ -6,56 +6,66 @@ Target Date: Jan 2023
 
 luma.gl v9 API is a major release that adds WebGPU support to the luma.gl API.
 
-:::danger
-luma.gl v9 API contains breaking changes. It requires existing luma.gl v8 applications to be [upgraded](/docs/upgrade-guide).
+:::caution
+luma.gl v9 contains significant API changes. It requires existing luma.gl v8 applications to be [upgraded](/docs/upgrade-guide).
 :::
 
 - **Portable GPU API**: `@luma.gl/core` provides a portable GPU resource management API.
-- **WebGPU bindings**: `@luma.gl/webgpu` is a new, optional WebGPU backend.
-- **WebGL bindings**: `@luma.gl/webgl` is now an optional WebGL backend.
+- **WebGPU bindings**: `@luma.gl/webgpu` provides a new WebGPU backend for the core API.
+- **WebGL bindings**: `@luma.gl/webgl` is now a WebGL backend for the core API.
+- **Portable Engine API**: `@luma.gl/core` provides portable higher-level classes.
+
+Non-API changes
+
 - **TypeScript**: All APIs now rigorously typed.
 - **ES modules** - Modern ES module and CommonJS entry points for maximum interoperability.
 - **Website** - New Docusaurus website with more embedded live examples and improved documentation.
 - **Debugging** - SpectorJS integration. Shader debugger UI.
 
+API changes
+
 **`@luma.gl/core`**
 
 - The new portable luma.gl GPU API
 - The new `Device` class is he entry point to the luma.gl API, used to create other GPU resources.
-- Applications written against `@luma.gl/core` v9 are portable and can run on both WebGPU, WebGL2 and WebGL devices.
+- Applications written against `@luma.gl/core` v9 are portable and can run on both WebGPU and WebGL2 devices.
 
 **`@luma.gl/engine`**
 
 - Contains the classic luma.gl engine classes such as `Model`, `AnimationLoop` etc, which now work portably on both WebGPU and WebGL. 
-- NEW: Scenegraph classes (`ModelNode`, `GroupNode`, `ScenegraphNode`) moved from `@luma.gl/experimental` in v8).
-- NEW: `AnimationLoopTemplate` - a small helper class that can help write more cleanly typed applications.
+- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`. (Moved from `@luma.gl/experimental`).
 - NEW: `ShaderInputs` - A class that manages uniform buffers for a `Model`
-- 
+- NEW: `AnimationLoopTemplate` - a small helper class that can help write cleaner demos and applications in TypeScript.
+
+**`@luma.gl/gltf`**
+
+- New module that exports the glTF classes (moved from `@luma.gl/experimental`).
+
 **`@luma.gl/shadertools`**
 
-- All shader modules now use uniform buffers (and accordingly no longer work in WebGL1).
+- All shader modules now use uniform buffers.
 - NEW: `ShaderAssember` class that provides a clean entry point to the shader module system.
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 
 **`@luma.gl/webgl`**
 
-- This is now an (optional) "GPU backend module", that provides a WebGL / WebGL 2 implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of `type` `'webgl2'` or `'webgl'` 
+- This is now an (optional) "GPU backend module", that provides a WebGL 2 implementation of the luma.gl core API. 
+- Importing this module enables the application to create `Device`s of `type; 'webgl'`.
 - Note: Requires a browser / environment that supports the WebGL API.
 
 **`@luma.gl/webgpu`** (new module)
 
 - An optional "GPU backend module", that provides a WebGPU implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of `type` `'webgpu'` 
+- Importing this module enables the application to create `Device`s of `type: 'webgpu'`.
 - Note: Requires a browser / environment that supports the WebGPU API.
 
-**`@luma.gl/constants`** (deprecated, no longer needed)
+**`@luma.gl/constants`** (internal, no longer used in applications, see [Upgrade Guide](/docs/upgrade-guide)e)
 
-- This module is now considered an internal luma.gl module (the luma.gl v9 API uses type safe strings instead of GL constants).
+**`@luma.gl/gltools`** (removed, no longer needed, see [Upgrade Guide](/docs/upgrade-guide))
 
-**`@luma.gl/debug`** (removed, no longer needed, see upgrade guide)
+**`@luma.gl/debug`** (removed, no longer needed, see [Upgrade Guide](/docs/upgrade-guide)e)
 
-**`@luma.gl/gltools`** (removed, no longer needed, see upgrade guide)
+---
 
 ## Version 8.5
 

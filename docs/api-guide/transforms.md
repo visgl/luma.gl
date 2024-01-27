@@ -4,7 +4,7 @@
 Note this documentation has not yet been updated to the luma.gl v9 API
 :::
 
-Transform  operations represent a GPGPU/GPU compute technique where GPU draw calls are configured 
+Transform operations represent a GPGPU/GPU compute technique where GPU draw calls are configured 
 so that they write some specified outputs from the vertex shaders to (one or more) GPU memory buffers 
 that have been provided by the application.
 
@@ -29,7 +29,7 @@ Alternatively, the more powerful `Transform` class is preferable if you don't wa
 ## Usage
 
 ```typescript
-import {Transform} from '@luma.gl/core';
+import {Transform} from '@luma.gl/engine';
 ```
 
 ### Use case : Specify source and destination buffers.
@@ -49,12 +49,12 @@ void main()
 `;
 
 const sourceData = new Float32Array([10, 20, 31, 0, -57]);
-const sourceBuffer = new Buffer(gl, {data: sourceData});
+const sourceBuffer = device.createBuffer({data: sourceData});
 
 // Default values applied for size (1) and type (gl.FLOAT)
-const feedbackBuffer = new Buffer(gl, {byteLength: sourceData.length * 4});
+const feedbackBuffer = device.createBuffer({byteLength: sourceData.length * 4});
 
-const transform = new Transform(gl2, {
+const transform = new Transform(device, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -75,7 +75,7 @@ transform.run();
 `Transform` can internally create destination buffers (i.e. feedback buffers), when `feedbackMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `feedbackMap`.
 
 ```typescript
-const transform = new Transform(gl2, {
+const transform = new Transform(device, {
   sourceBuffers: {
     inValue: sourceBuffer
   },

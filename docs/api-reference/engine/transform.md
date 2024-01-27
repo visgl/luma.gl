@@ -1,12 +1,8 @@
 # Transform 
 
-> `Transform` is only available in WebGL2.
-
 The `Transform` class provides easy interface to perform Transform Feedback operations on given data. Applications can use this class to move data processing from CPU to GPU, where multiple parallel execution units will be used for processing. Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory. Output of this class can directly set as attributes on `Model` or `VertexArray` for regular rendering operations, CPU access is not required hence avoids expensive CPU and GPU sync.
 
 `Transform` class creates and holds `Model` and `TransformFeedback` instances.
-
-This class is only supported when using `WebGL2RenderingContext`.
 
 ### Use case : Specify source and destination buffers.
 
@@ -182,11 +178,12 @@ const outTexture = transform._getTargetTexture();
 
 ## Constructor
 
-### Transform(gl : WebGL2RenderingContext, props: Object)
-
+```ts
+### Transform(device: Device, props: Object)
+```
 Constructs a `Transform` object. It then creates destination buffers if needed and binds the buffers to `Model` and `TransformFeedback` objects.
 
-- `gl` (`WebGL2RenderingContext`) gl - context
+- `device` - context
 - `props.sourceBuffers` (`Object`) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
 - `props.feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer a particular offset and size.
   - `buffer`=(Buffer) - Buffer object to be bound.

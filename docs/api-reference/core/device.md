@@ -15,20 +15,13 @@ based on what the run-time environment (ie. browser or Node.js) supports.
 
 ## Usage
 
-Creates a WebGL2 or WebGL context, auto creating a canvas
+TODO - fixme
+
+Creates a WebGL 2 context, auto creating a canvas
 
 ```typescript
 import {Device} from '@luma.gl/core';
-const device = new Device(); // Prefers WebGL 2 but falls back to WebGL 1
-```
-
-Creates a WebGL 2 context (throws if WebGL2 not supported)
-
-```typescript
-import {Device} from '@luma.gl/core';
-const device = createGLContext({
-  webgl1: false
-});
+const device = new Device(); 
 ```
 
 Attaching a Device to an externally created WebGLRendering context instruments it
@@ -38,21 +31,12 @@ so that it works with other luma.gl classes.
 import {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
-const device = Device.attach(gl); // "instruments" the external context
-
-// Instrumentation ensures the context works with higher-level classes.
-const model = new Model(gl, options);
-```
-
-Attaching a device to a WebGL1 context adds WebGL2 "polyfills" to the WebGLRendering context
-extends that context with a subset of WebGL2 APIs that are available via WebGL extensions.
-
-```typescript
-const gl = canvas.createContext('webgl'); // A WebGL 1 context
+const gl = canvas.createContext('webgl2');
 const device = Device.attach(gl);
 
-// Can now use a subset of WebGL2 APIs on
+// Instrumentation ensures the context works with higher-level classes.
 const vao = device.gl.createVertexArray();
+const model = new Model(gl, options);
 ```
 
 Handle GPU disconnections:
@@ -160,7 +144,7 @@ Remarks:
 - Shading language version is the highest supported version of the device's shading language.
 - Version numbers are calculated as:  `<major version> * 100 + <minor version> * 10 + <patch version>`. 
 - The WGSL version is always `100` 
-- The GLSL version is either `300` (WebGL2) or `100` (WebGL1). 
+- The GLSL version is always `300` (WebGL2). 
 - Sometimes a vendor provides multiple backends (e.g. Apple ANGLE vs Apple Metal)
 - WebGPU Devices currently do not provide much information due to limitations in the WebGPU API.
 - WebGL Devices can usually provide rich information (through the `WEBGL_debug_renderer_info` extension).
@@ -408,24 +392,3 @@ Triggers device loss (see below). After this call, the `Device.lost` promise wil
 The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code. 
 `loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension. 
 :::
-
-## WebGL specific fields
-
-### isWebGL
-
-```typescript
-isWebGL: boolean
-```
-
-`true` if the context is a WebGL 1 or 2 Context.
-
-### isWebGL2
-
-```typescript
-isWebGL2: boolean
-```
-
-Test if an object is a WebGL context.
-
-Returns `true` if the context is a WebGL 2 Context.
-

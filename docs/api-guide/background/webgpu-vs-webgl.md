@@ -72,7 +72,7 @@ In WebGL many parameters are set on the WebGL context using individual function 
 | No constant attributes                      | 1) Create dummy buffers 2) dynamically generate shaders with uniforms.                                              |
 | Interleaving specified at Pipeline creation | New `PipelineProps.bufferLayout` concept                                                                               |
 | No transform feedback                       | Compute shaders (storage buffers)                                                                                   |
-| No uniforms, only Uniform buffers           | Add strong uniform buffer support to API, WebGL1 fallback?                                                          |
+| No uniforms, only Uniform buffers           | Add strong uniform buffer support to API                                                          |
 
 ## No Uniforms
 

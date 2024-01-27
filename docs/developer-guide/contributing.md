@@ -41,4 +41,3 @@ When adding new features, please add relevant unit tests to the `test/` director
 ### Helpful Hints
 
 - To only run one test from the suite for debugging purposes, change a call to `test` in the relevant spec to `test.only`. Remember to change this back before committing!
-- If a test fails in `headless`, but not in the browser, it's likely due to a difference in the contexts created (WebGL 1 versus 2), or the extensions available. Running in a browser without WebGL 2 support (e.g. Safari), might help narrow the issue down.

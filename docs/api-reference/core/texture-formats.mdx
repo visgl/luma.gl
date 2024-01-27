@@ -182,7 +182,6 @@ Remarks
 - All depth/stencil formats are renderable.
 - Samplers always read a "vec4" regardless of which texture format is used. For formats with less than 4 components, missing red, green and blue components in the texture format are read as `0.0`, alpha as `1.0`/
 - Note that some formats are not mandated by the base standard but represent additional capabilities (e.g. a WebGL2 device running on top of an OpenGL ES 3.2 driver). .
-- WebGL 1 is very limited and does not provide sized formats (though extensions are often avialble). Unsized formats do give the GPU some freedom to select the most performant internal representation.
 
 ## Texture Format Groups
 
@@ -191,7 +190,7 @@ Support for some types of texture formats come in groups. As an alternative to c
 
 | Feature                               | Optional capabilities                                     |
 | ------------------------------------- | --------------------------------------------------------- |
-| `texture-srgb-webgl1`                  | sRGB formats are supported                                |
+| `texture-srgb-webgl1`                 | sRGB formats are supported                                |
 | `texture-depth-webgl`                 | depth texture formats are supported                       |
 | `texture-float32-webgl`               | Create floating point textures (`nearest` sampling only)  |
 | `texture-float16-webgl`               | Create half-floating point textures (`nearest` sampling)  |
@@ -263,24 +262,24 @@ and exactly the component types shown for that format, although it may not match
 
 Describes the layout of each color component in memory.
 
-| Value                               | WebGL 2 | WebGL 1                  | Description                                         |
-| ----------------------------------- | ------- | ------------------------ | --------------------------------------------------- |
-| `GL.UNSIGNED_BYTE`                  | Yes     | Yes                      | GLbyte 8 bits per channel for `GL.RGBA`             |
-| `GL.UNSIGNED_SHORT_5_6_5`           | Yes     | Yes                      | 5 red bits, 6 green bits, 5 blue bits               |
-| `GL.UNSIGNED_SHORT_4_4_4_4`         | Yes     | Yes                      | 4 red bits, 4 green bits, 4 blue bits, 4 alpha bits |
-| `GL.UNSIGNED_SHORT_5_5_5_1`         | Yes     | Yes                      | 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit  |
-| `GL.BYTE`                           | Yes     | No                       |                                                     |
-| `GL.UNSIGNED_SHORT`                 | Yes     | `WEBGL_depth_texture`    |                                                     |
-| `GL.SHORT`                          | Yes     | No                       |                                                     |
-| `GL.UNSIGNED_INT`                   | Yes     | `WEBGL_depth_texture`    |                                                     |
-| `GL.INT`                            | Yes     | No                       |                                                     |
-| `GL.HALF_FLOAT`                     | Yes     | `OES_texture_half_float` |                                                     |
-| `GL.FLOAT`                          | Yes     | `OES_texture_float`      |
-| `GL.UNSIGNED_INT_2_10_10_10_REV`    | Yes     | No                       |                                                     |
-| `GL.UNSIGNED_INT_10F_11F_11F_REV`   | Yes     | No                       |                                                     |
-| `GL.UNSIGNED_INT_5_9_9_9_REV`       | Yes     | No                       |                                                     |
-| `GL.UNSIGNED_INT_24_8`              | Yes     | `WEBGL_depth_texture`    |                                                     |
-| `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` | Yes     | No                       | (pixels must be null)                               |
+| Value                               | WebGL 2 |
+| ----------------------------------- | ------- | --------------------------------------------------- |
+| `GL.UNSIGNED_BYTE`                  | Yes     | GLbyte 8 bits per channel for `GL.RGBA`             |
+| `GL.UNSIGNED_SHORT_5_6_5`           | Yes     | 5 red bits, 6 green bits, 5 blue bits               |
+| `GL.UNSIGNED_SHORT_4_4_4_4`         | Yes     | 4 red bits, 4 green bits, 4 blue bits, 4 alpha bits |
+| `GL.UNSIGNED_SHORT_5_5_5_1`         | Yes     | 5 red bits, 5 green bits, 5 blue bits, 1 alpha bit  |
+| `GL.BYTE`                           | Yes     |                                                     |
+| `GL.UNSIGNED_SHORT`                 | Yes     |                                                     |
+| `GL.SHORT`                          | Yes     |                                                     |
+| `GL.UNSIGNED_INT`                   | Yes     |                                                     |
+| `GL.INT`                            | Yes     |                                                     |
+| `GL.HALF_FLOAT`                     | Yes     |                                                     |
+| `GL.FLOAT`                          | Yes     |
+| `GL.UNSIGNED_INT_2_10_10_10_REV`    | Yes     |                                                     |
+| `GL.UNSIGNED_INT_10F_11F_11F_REV`   | Yes     |                                                     |
+| `GL.UNSIGNED_INT_5_9_9_9_REV`       | Yes     |                                                     |
+| `GL.UNSIGNED_INT_24_8`              | Yes     |                                                     |
+| `GL.FLOAT_32_UNSIGNED_INT_24_8_REV` | Yes     | (pixels must be null)                               |
 
 ### Texture Format Combinations
 

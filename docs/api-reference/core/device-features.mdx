@@ -24,8 +24,8 @@ A `DeviceInfo` object with fields that describe the device.
 <DeviceTabs />
 
 | Field                    | This Browser                        | Description                                                |
-| ------------------------ | ----------------------------------- | ---------------------------------------------------------- |
-| `type`                   | <Info f="type" />                   | Device type `webgpu`, `webgl2` or `webgl`                              |
+| ------------------------ | ----------------------------------- | ---------------------------------------------------------- | --- |
+| `type`                   | <Info f="type" />                   | Device type `webgpu`, `webgl2` or `webgl`                  |
 | `vendor`                 | <Info f="vendor" />                 | GPU vendor                                                 |
 | `renderer`               | <Info f="renderer" />               | GPU Driver                                                 |
 | `version`                | <Info f="version" />                | Driver version                                             |
@@ -34,7 +34,7 @@ A `DeviceInfo` object with fields that describe the device.
 | `gpuBackend`             | <Info f="gpuBackend" />             | `metal`, `opengl`, `vulkan`, `d3d12`, ... or `unknown`     |
 | `gpuArchitecture`        | <Info f="gpuArchitecture" />        | `common-3` on Apple                                        |
 | `shadingLanguage`        | <Info f="shadingLanguage" />        | Shanding language `wgsl`, `glsl`                           |
-| `shadingLanguageVersion` | <Info f="shadingLanguageVersion" /> | Shading language version GLSL 3.00 = 300, GLSL 1.00 = 100) |                                   |
+| `shadingLanguageVersion` | <Info f="shadingLanguageVersion" /> | Shading language version GLSL 3.00 = 300, GLSL 1.00 = 100) |     |
 
 - Note that the Chrome browser only exposes limited information by default. Set the [chrome://flags/#enable-webgpu-developer-features](chrome://flags/#enable-webgpu-developer-features) flag to see more WebGPU info.
 
@@ -46,13 +46,6 @@ Each device has a `device.features` field that holds a set of strings (`Set<Devi
 A substantial set of features are devoted to texture capabilites, however these can also
 be queried on a per-texture basis
 
-```typescript
-if (device.features.has('instanced-rendering-webgl1')) {
-   // Will work both on WebGL 1 (via extension) and WebGL 2 via the standard API
-   program.draw({instanceCount: ..., ....});
-}
-```
-
 <DeviceTabs />
 
 | `luma.gl Feature`                      | This<br /> Browser                             | Description                    |
@@ -62,6 +55,7 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `indirect-first-instance`              | <F f="indirect-first-instance"/>               | Specify via GPU buffer         |
 | `timestamp-query`                      | <F f="timestamp-query"/>                       |                                |
 | `timer-query-webgl`                    | <F f="timer-query-webgl"/>                     | GPU timer support              |
+| `transform-feedback-webgl`             | <F f="transform-feedback-webgl"/>              | TransformFeedback support      |
 | **Textures**                           |
 | `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                 | `UNSIGNED_INT_24_8_WEBGL`      |
 | `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                 | WebGPU only                    |
@@ -71,11 +65,7 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `texture-renderable-float32-webgl`     | <F f="texture-renderable-float32-webgl"/>      | float32 textures renderable    |
 | `texture-renderable-float16-webgl`     | <F f="texture-renderable-float16-webgl"/>      | float16 textures renderable    |
 | `texture-renderable-rgba32float-webgl` | <F f="texture-renderable-rgba32float-webgl"/>  | float32 textures renderable    |
-| `texture-blend-float-webgl1`           | <F f="texture-blend-float-webgl1"/>            | float texture blending         |
-| `texture-formats-float32-webgl1`       | <F f="texture-formats-float32-webgl1"/>        | float32 texture support        |
-| `texture-formats-float16-webgl1`       | <F f="texture-formats-float16-webgl1"/>        | float16 texture support        |
-| `texture-formats-srgb-webgl1`          | <F f="texture-formats-srgb-webgl1"/>           | SRGB format support            |
-| `texture-formats-depth-webgl1`         | <F f="texture-formats-depth-webgl1"/>          | depth texture supports         |
+| `texture-blend-float-webgl`            | <F f="texture-blend-float-webgl"/>             | float texture blending         |
 | **Compressed Textures**                |
 | `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>         | DXT (BC1-BC5). Desktops.       |
 | `texture-compression-bc`               | <F f="texture-compression-bc"/>                | DXT (BC1-BC7). Desktops.       |
@@ -84,15 +74,6 @@ if (device.features.has('instanced-rendering-webgl1')) {
 | `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>        | Qualcomm Snapdragon. Android.  |
 | `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>       | PowerVR GPUs, iOS devices.     |
 | `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>         | Qualcomm Adreno GPUs. Android. |
-| **WebGL1 checks**                      |
-| `instanced-rendering-webgl1`           | <F f="instanced-rendering-webgl1"/>            | Instanced rendering available? |
-| `multiple-render-targets-webgl1`       | <F f="multiple-render-targets-webgl1"/>        | Multiple render targets        |
-| `index-uint32-webgl1`                  | <F f="index-uint32-webgl1"/>                   | 32 bit indexing supported      |
-| `blend-minmax-webgl1`                  | <F f="blend-minmax-webgl1"/>                   | `min` and `max` blending       |
-| `glsl-frag-data-webgl1`                | <F f="glsl-frag-data"/>                        |                                |
-| `glsl-frag-depth-webgl1`               | <F f="glsl-frag-depth"/>                       |                                |
-| `glsl-derivatives-webgl1`              | <F f="glsl-derivatives"/>                      |                                |
-| `glsl-texture-lod-webgl1`              | <F f="glsl-texture-lod"/>                      |                                |
 
 ## Usage
 
@@ -141,27 +122,14 @@ under the hood.
 :::caution
 WebGL extensions can be demanding to work with directly. The extensions are very granular,
 enabling subfeatures of bigger features.
-Support both WebGL 1 and WebGL2 can require a lot of additional code,
-as WebGL 1 extensions typically require functions to be invoked on the extension object instead of the context.
-Furthermore, WebGL1 extensions are not supported on WebGL2 contexts even though the
-corresponding features are often supported out-of-the-box by WebGL2.
 :::
 
 | `luma.gl feature`                           | WebGL Extension                                                | Description                                                                                                                                                    |
 | ------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
 | **General WebGL Features**                  |                                                                |                                                                                                                                                                | ß   |
 | `webgl2`                                    | True for WebGL 2 Context                                       |                                                                                                                                                                |
-| `timer-query-webgl` (WebGL1)                | [`EXTx_disjoint_timer_query`][timer_query_webgl]               | `Query` support asynchronous GPU timings                                                                                                                       |
-| `timer-query-webgl` (WebGL2)                | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        | \* (Same feature has different extension under WebGL1 and WebGL2)                                                                                              |
-| `instanced-rendering-webgl1`                | [`ANGLE_instanced_arrays`][instanced_arrays]                   | Instanced rendering (instanced vertex attributes)                                                                                                              |
-| `vertex-array-object-webgl1`                | [`OES_vertex_array_object`][vertex_array_object]               | `VertexArrayObjects` can be created                                                                                                                            |
-| `index-uint32-webgl1`                       | [`OES_element_index_uint`][element_index_uint]                 | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                                                                                                        |
-| `blend-minmax-webgl1`                       | [`EXT_blend_minmax`][blend_minmax]                             | `GL.MIN`, `GL.MAX` blending modes are available                                                                                                                |
+| `timer-query-webgl` (WebGL2)                | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        |                                                                                              |
 | \*\* GLSL extensions\*\*                    |                                                                |                                                                                                                                                                |
-| `webgl-shader_texture_lod`                  | [`EXT_shader_texture_lod`][shader_texture_lod]                 | Enables shader control of LOD                                                                                                                                  |
-| `webgl-fragment-shader-draw-buffers`        | [`WEBGL_draw_buffers`][draw_buffers]                           | Fragment shader can draw to multiple render targets                                                                                                            |
-| `webgl-fragment-shader-depth`               | [`EXT_frag_depth`][frag_depth]                                 | Fragment shader can control fragment depth value                                                                                                               |
-| `webgl-fragment-shader-derivatives`         | [`OES_standard_derivatives`][standard_derivatives]             | Derivative functions are available in GLSL                                                                                                                     |
 | **`Texture`s and `Framebuffer`s**           |                                                                |                                                                                                                                                                |
 | `texture-float32-webgl1`                    | [`OES_texture_float`][texture_float]                           | Floating point (`Float32Array`) textures can be created and set as samplers (Note that filtering and rendering need to be queried separately, even in WebGL 2) |
 | `texture-float16-webgl1` (Extension 1 of 2) | [`OES_texture_half_float`][texture_half_float]                 | Half float (`Uint16Array`) textures can be created and set as samplers                                                                                         |
@@ -176,6 +144,13 @@ corresponding features are often supported out-of-the-box by WebGL2.
 | `texture-filter-linear-half-float-webgl`    | [`OES_texture_half_float_linear`][texture_half_float_linear]   | Linear texture filtering for half float textures                                                                                                               |
 | `texture_filter-anisotropic-webgl`          | [`EXT_texture_filter_anisotropic`][texture_filter_anisotropic] | Anisotropic texture filtering                                                                                                                                  |
 | `texture-srgb-webgl1`                       | [`EXT_sRGB`][srgb]                                             | sRGB encoded rendering is available                                                                                                                            |
+
+## Remarks
+
+- Some extensions will not be enabled until they have been queried. luma always queries on startup to enable, app only needs to query again it wants to test platform.
+- The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
+- Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
+
 
 [instanced_arrays]: https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays
 [vertex_array_object]: https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object
@@ -204,62 +179,3 @@ corresponding features are often supported out-of-the-box by WebGL2.
 [texture_half_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float_linear
 [texture_filter_anisotropic]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
 [sRGB]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
-
-## Remarks
-
-- WebGL 1 only supports one color buffer format (RBG32F is deprecated)
-- WebGL 2 supports multiple color buffer formats
-- Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
-- The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
-- Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
-
-WebGL capabilities can vary dramatically (from minimal WebGL 1 (e.g. headless-gl), through WebGL 1 with dozens of extensions, to full WebGL 2 with extensions). Unfortunately, the raw WebGL API sometimes expose the same functionalities through APIs that are slightly different and not exactly compatible.
-
-To simplify detecting and working with conditionally available capabilities (or "features") luma.gl provides:
-
-- A set of functions that enable you to check if the application is currently running on an environment that supports a certain feature (regardless of whether it is supported through e.g. WebGL 2 or a WebGL 1 extension).
-
-In addition, luma.gl's WebGL classes transparently use WebGL extensions or WebGL 2 APIs as appropriate, meaning that the amount of conditional logic in application code can be kept to a minimum. Once you have established that a capability exists, luma.gl offers you one unified way to use it.
-
----
-
-### WebGL 2-only Features
-
-A partial list of features that are only available in WebGL 2:
-
-- Non-power-of-2 textures - non-POT textures can have mipmaps in WebGL 2
-- Sized texture formats -
-- Integer based texture formats and attributes -
-- Multi-Sampled renderbuffers -
-- Guaranteed texture access in vertex shaders - WebGL 1 is not required to support this (although it often does)
-
-### GLSL 3.00
-
-- `textureSize` - query **size of texture** from within shaders
-- `texelFetch` - access textures by **pixel** coordinates (0-width, 0-height) instead of **texel** coordinates (0-1)
-- `inverse` and `transpose` Matrix operations available in GLSL
-- loop restrictions removed
-
-## WebGL Notes
-
-### WebGL 2 Classes with some WebGL 1 support
-
-Note that luma has a few WebGL 2 classes that **can** be instantiated under WebGL 1
-
-- `VertexAttributeObject`. Can be instanitated under WebGL 1 if the commonly supported extension is available. Also, luma.gl treats the global vertex array as a "default" VertexArrayObject, so that can always be accessed.
-- `Query` objects use GPU timing extensions if available. They can always be created but obviously queries will fail if capabilities are not present.
-- `UniformBufferLayout` - this class does not create any WebGL resources, it just helps the application access memory in the layout format expected by WebGL 2 uniform buffers.
-
-`VertexAttributeObject` and `Query` have a static `isSupported()` method that you can call instead of checking for WebGL 2.
-
-### WebGL 2 Classes that only work in WebGL 2
-
-A list of luma classes that can only be instantiated under WebGL 2:
-
-- `Texture3D` - e.g for volumetric rendering
-- `Texture2DArray` - an array of textures, e.g. a texture atlas
-- `Sampler` - holds a separate set of texture sampler parameters
-- `TransformFeedback` - holds a list of output buffers for shaders to write to.
-- `Sync` -
-
-The WebGL standard comes with an elaborate "extension" system allowing applications to check for the availability of features beyond the base WebGL 1 and WebGL 2 standards. These extensions tend to be rather technical, plus they have to be used differently in WebGL 1 and WebGL 2, so luma provides a simplified feature detection system. Following table lists all the available features, and their support under WebGL 1 and WebGL 2 , `NO` implies not supported, 'YES' implies supported and `*` implies supported through an extension.

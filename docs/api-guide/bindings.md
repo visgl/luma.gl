@@ -13,6 +13,7 @@ set up (or "bind") data so that it can be accessed by shader code running on the
 Shaders contain declarations of external inputs such as attributes, uniform blocks, samplers etc.
 Collectively, these inputs define data that the CPU (the application) needs to be provide to the GPU
 (typically by "binding" data to the right "locations").
+
 ## Shader Layout
 
 luma.gl needs a certain amount of metadata describing what bindings a specific shader (or pair of vertex and fragment shaders) expects.
