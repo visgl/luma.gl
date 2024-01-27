@@ -6,14 +6,14 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 
 Most textures tend to be two dimensional textures, however GPUs can support additional configurations
 
-| Dimension    | WebGPU | WebGL2 | WebGL1 | Layout             | Description                                                          |
-| ------------ | ------ | ------ | ------ | ------------------ | -------------------------------------------------------------------- |
-| `1d`         | ✅     | ❌     | ❌     | `TextureData`      | Contains a one dimensional texture (for compute)                     |
-| `2d`         | ✅     | ✅     | ✅     | `TextureData`      | Contains a "normal" image texture                                    |
-| `2d-array`   | ✅     | ✅     | ❌     | `TextureData[]`    | Holds an "array" of 2D textures.                                     |
-| `3d`         | ✅     | ✅     | ❌     | `TextureData[]`    | Holds a "stack" of textures which enables 3D interpolation.          |
-| `cube`       | ✅     | ✅     | ✅     | `TextureData[6]`   | Holds 6 textures representing sides of a cube.                       |
-| `cube-array` | ✅     | ❌     | ❌     | `TextureData[6][]` | Holds an array where every 6 textures represent the sides of a cube. |
+| Dimension    | WebGPU | WebGL2 | Layout             | Description                                                          |
+| ------------ | ------ | ------ | ------------------ | -------------------------------------------------------------------- |
+| `1d`         | ✅     | ❌     | `TextureData`      | Contains a one dimensional texture (for compute)                     |
+| `2d`         | ✅     | ✅     | `TextureData`      | Contains a "normal" image texture                                    |
+| `2d-array`   | ✅     | ✅     | `TextureData[]`    | Holds an "array" of 2D textures.                                     |
+| `3d`         | ✅     | ✅     | `TextureData[]`    | Holds a "stack" of textures which enables 3D interpolation.          |
+| `cube`       | ✅     | ✅     | `TextureData[6]`   | Holds 6 textures representing sides of a cube.                       |
+| `cube-array` | ✅     | ❌     | `TextureData[6][]` | Holds an array where every 6 textures represent the sides of a cube. |
 
 Sometimes a composite texture can be used as a unit, but sometimes it is necessary to specify a specific subtexture.
 
@@ -122,4 +122,3 @@ Remarks
 - All depth/stencil formats are renderable.
 - Samplers always read a "vec4" regardless of which texture format is used. For formats with less than 4 components, missing red, green and blue components in the texture format are read as `0.0`, alpha as `1.0`/
 - Note that some formats are not mandated by the base standard but represent additional capabilities (e.g. a WebGL2 device running on top of an OpenGL ES 3.2 driver). .
-- WebGL 1 is very limited and does not provide sized formats (though extensions are often avialble). Unsized formats do give the GPU some freedom to select the most performant internal representation.

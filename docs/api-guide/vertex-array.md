@@ -10,10 +10,9 @@ By providing a vertexArray to a draw call, the buffers will be made available as
 Using multiple `VertexArray` makes it easy for applications to reuse the same shaders.
 
 Remarks:
-- WebGPU - WebGPU does not provide a native VertexArray type resource. This is just a convenience class that groups all attribute and index buffer bindings for a draw call.
+- WebGPU - WebGPU does not provide a native VertexArray type resource. In WebGPU, `VertexArray` is just a convenience class that groups all attribute and index buffer bindings for a draw call.
 - WebGL - 
 - WebGL2 - see the [OpenGL Wiki](https://www.khronos.org/opengl/wiki/Vertex_Specification#Vertex_Array_Object).
-- WebGL1 - If the [OES_vertex_array_object](https://registry.khronos.org/OpenGL/extensions/OES/OES_vertex_array_object.txt) extension is not available, `VertexArrayObject` is polyfilled (binding all buffers before each draw call). (This is the only WebGL extension that can be polyfilled on the client side).
 
 ## Usage
 
@@ -143,7 +142,6 @@ Notes:
 
 Notes about Instanced Rendering
 
-- About setting `divisor` in attributes: Instanced attributes requires WebGL 2 or a (widely supported) WebGL 1 extension. Apps can use the luma.gl feature detection system to determine if instanced rendering is available, though the extension is so ubiquitously supported that many apps just make the assumption: [instanced_arrays](https://webglstats.com/webgl/extension/ANGLE_instanced_arrays).
 - An attribute is referred to as **instanced** if its divisor value is non-zero.
 - The divisor modifies the rate at which vertex attributes advance when rendering multiple instances of primitives in a single draw call.
 - If divisor is zero, the attribute at slot index advances once per vertex.

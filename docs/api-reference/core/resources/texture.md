@@ -64,7 +64,7 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 
 ## TextureDimension
 
-| Dimension    | WebGPU | WebGL2 | WebGL1 | Description                                                          |
+| Dimension    | WebGPU | WebGL2 | Description                                                          |
 | ------------ | ------ | ------ | ------ | -------------------------------------------------------------------- |
 | `1d`         | ✅     | ❌     | ❌     | Contains a one dimensional texture (typically used for compute )     |
 | `2d`         | ✅     | ✅     | ✅     | Contains a "normal" image texture                                    |
@@ -242,19 +242,6 @@ The following WebGL APIs are called in the function
 
 The following WebGL APIs are called in the function
 [gl.activeTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/activeTexture), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture)
-
-## NOT (Non-Power-of-Two) Textures (WebGL 1)
-
-- Any texture with a `non power of two` dimension (width or height) is referred as `NPOT` texture, under WebGL 1 NPOT textures have following limitations.
-
-| State                   | Limitation                                 |
-| ----------------------- | ------------------------------------------ |
-| Mipmapping              | Should be disabled                         |
-| `GL.TEXTURE_MIN_FILTER` | Must be either `GL.LINEAR` or `GL.NEAREST` |
-| `GL.TEXTURE_WRAP_S`     | Must be `GL.CLAMP_TO_EDGE`                 |
-| `GL.TEXTURE_WRAP_T`     | Must be `GL.CLAMP_TO_EDGE`                 |
-
-- 'Texture' class will perform above settings when NPOT texture resource is created. When un-supported filtering is set using `Texture.setParameters`, those will be overwritten with above supported values (`GL.TEXTURE_MIN_FILTER` will be set to `GL.LINEAR`). This only happens for NPOT textures when using WebGL 1, and a warning log will be printed every time a setting is overwritten.
 
 ## Remarks
 

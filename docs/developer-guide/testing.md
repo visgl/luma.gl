@@ -12,7 +12,7 @@ Testing webgl programs can be tricky...
 
 A small but still annoying issue is that creating too many devices in tests can 
 lead to problems with context loss etc as the test scripts grow. 
-`@luma.gl/test-utils` exports a couple of reusable test devices for WebGL1 and WebGL2.
+`@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.
 
 ## Accessing GPU in Node.js and CI environments
 

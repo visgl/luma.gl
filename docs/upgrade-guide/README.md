@@ -1,601 +1,500 @@
 # Upgrade Guide
 
-This upgrade guide calls out any breaking changes in the luma.gl API. It covers all releases, and includes information on how to update affected applications.
+This upgrade guide lists breaking changes in the luma.gl API, and provides information on how to update applications.
 
 :::info
-luma.gl largely follows [**semantic versioning**](https://semver.org) conventions: breaking changes are done in major versions only, minor version bumps  bring new functionality but no breaking changes, and patch releases contain only low-risk fixes. However luma.gl is a big framework and there are cases where maintainers decide that it is reasonable to make a small breaking change in a minor releases for some infrequently used part of the API. 
+This page covers luma.gl v9 and later releases. For information on upgrading to v8 and earlier releases, see our [Legacy Upgrade Guide](/docs/upgrade-guide/legacy-guide). 
 :::
 
-:::info
-Upgrade instructions assume that you are upgrading from the immediately previous release.
+## Conventions
+
+- **semantic versioning** - luma.gl follows [SEMVER](https://semver.org) conventions. This means that breaking changes are only done in major versions, minor version bumps bring new functionality but no breaking changes, and patch releases typically contain only low-risk fixes. 
+- **sequential upgrades** - Upgrade instructions assume that you are upgrading from the immediately previous release.
 If you are upgrading across multiple releases you will want to consider the release notes for all
 intermediary releases.
-:::
 
 ## Upgrading to v9.0
 
-luma.gl v9 represents a major, "once in a generation" API change and separate documentation is provided:
-- [v9 upgrade guide](/docs/upgrade-guide/upgrade-v9).
-- [v9 GPU parameter upgrade guide](./upgrade-v9-parameters.md)
-- [v9 API philosophy](./api-philosophy).
+luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for this release are unusually long. 
+This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a 
+[Porting Guide](/docs/upgrade-guide/porting-guide) that provides more background information and recommended porting strategies.
 
-## Upgrading to v8.5
+### Non-API changes
 
-**Transpilation Changes**
+luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standards:
 
-- The `"module"` entry point is now only lightly transpiled for the most commonly used evergreen browsers. This change offers significant savings on bundle size. If your application needs to support older browsers such as IE 11, make sure to include `node_modules` in your babel config.
+- **ES modules** - luma.gl is now published as ES modules. This is the modern way of packaging JavaScript applications that fully embraces the static `import`/`export` syntax. While most bundlers and Node.js environments have added support for ES modules, they can introduce incompatibilities with code that uses legacy imports. Getting your build tooling and code base ready for ES modules may be a good first step before you start upgrading luma.gl.
+- **Dependencies** - luma.gl v9 introduces major version bumps of its key vis.gl dependencies: `math.gl v4`, `loaders.gl v4` and `probe.gl v4`. These upgrades ensures that all dependencies also use the same ES module packaging and follow latest typescript standards. Since the new libraries are more strongly typed, some new warnings or errors may result from this upgrade, however we expect that developers will welcome the increased type safety.
 
-## Upgrading to v8.0
+### Module-level changes
 
-The key goals of luma.gl v8.0 were to simplify the core architecture and significantly improve performance. The number of modules has been reduced from 14 to 9, and they are now structured around layers of abstraction (high-level to low-level) to clarify the relationship between them. Unfinished and rarely-used components have been removed, reducing the complexity of the API and leading to significant performance gains (see [What's New](/docs/whats-new)) for details).
+| **Module**           | v8 Description                                  | v9 Replacement                                                                                                                    |
+| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `@luma.gl/core`      | The core module was re-exporting other modules. | Replace direct use of WebGL classes with `@luma.gl/core` device API. import directly from `@luma.gl/shadertools`.                 |
+| `@luma.gl/webgl`     | Exported WebGL classes meant for direct usage.  | Now exports the WebGL backend for the `@luma.gl/core` module. `@luma.gl/webgl-legacy` now offers the legacy luma.gl v8 WebGL API. |
+| `@luma.gl/constants` | Exported numeric OpenGL constants.              | Do not use. The luma.gl v9 API uses strictly typed WebGPU-style strings instead of numeric constants.                             |
+| `@luma.gl/gltools`   | Contained WebGL context functionality.          | Removed. WebGL context is now handled by the  `@luma.gl/webgl` `WebGLDevice` and  `@luma.gl/core` `CanvasContext` classes.        |
 
-#### Module Restructure
+## Core Modules
 
-The module structure has been significantly changed for v8.0 with the intention of clarifying the purpose of each module and the relationships between them.
+**`@luma.gl/core`**
 
-| New Module   | Purpose                                                                     | Components from v7                                                                                           |
-| ------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| constants    | WebGL enum values                                                           | Same as before                                                                                               |
-| shadertools  | Tools for manipulating and composing shader text                            | shadertools and effects (formerly glfx)                                                                      |
-| gltools      | Creation, tooling and polyfilling for the WebGL context                     | webgl2-polyfill and webgl-state-tracker                                                                      |
-| webgl        | Wrapper classes for WebGL                                                   | Same as before                                                                                               |
-| core         | Single module re-exporting key parts of engine, webgl, gltools, shadertools | Changes described below                                                                                      |
-| engine       | High-level drawing APIs                                                     | core/model, engine/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform |
-| debug        | Debug tooling for the other modules                                         | Same as before                                                                                               |
-| test-utils   | Test tooling for the other modules                                          | Same as before                                                                                               |
-| experimental | Experimental, unsupported APIs                                              | core/scenegraph, gpgpu, addons/gltf, addons/webvr                                                            |
+- The core module is no longer an umbrella module that simply re-exports exports from other modules.
+- It now provides the abstract luma.gl `Device` API (for which `@luma.gl/webgpu` and `@luma.gl/webgl` provide backends).
 
-#### Breaking changes
+**`@luma.gl/engine`**
 
-- `Texture2D`'s `unpackFlipY` option is removed. This change ensures that all data sources (Image, ImageBitmap, typed array) are treated consistently. As a result, textures created from Image objects and URL strings are now y-flipped from the v7.3 default. To get the old behavior, specify the `pixelStore` option:
+- The engine module is largely unchanged in that it provides the same classes as before.
+
+**`@luma.gl/webgl`** 
+
+- While the webgl module still contains the WebGL 2 classes, these classes can no longer be imported directly. Instead the application should use `Device` create methods (`device.createBuffer()`, `device.createTexture()` etc to create these ojects in a portable way).
+
+**`@luma.gl/constants`** (INTERNAL)
+
+- The constant module remains but is now considered an internal luma.gl module, and is no longer intended to be imported by applications. 
+- In the external API, all WebGL-style numeric constants (`GL.` constants) have been replaced with strictly typed WebGPU style string constants.
+
+**`@luma.gl/debug`** (REMOVED)
+
+The debug module has been removed. Debug functionality is now built-in (and dynamically loaded when needed) so there is no longer a need to import a separate debug module.
+
+**`@luma.gl/experimental`**
+
+- Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
+- glTF exports have been moved to `@luma.gl/gltf`.
+
+
+## Detailed Upgrade Guide
+
+### `@luma.gl/engine`
+
+#### `AnimationLoop`
+
+| v8 Prop or Method               | v9 Replacement                     | Comment                                          |
+| ------------------------------- | ---------------------------------- | ------------------------------------------------ |
+| Properties                      |
+| `props.gl`                      | `props.device`                     | Now accepts a `Promise<Device>`.                 |
+| `props.glOptions`               | `luma.createDevice(<options>)`     |
+| `props.createFramebuffer`       | N/A                                | You will need to create framebuffers explicitly. |
+| `props.debug`                   | `luma.createDevice({debug: true})` | Device debug functionality is improved.          |
+| Methods                         |
+| `animationLoop.isContextLost()` | `device.lost`, `device.isLost()`   |                                                  |
+
+### `luma.gl/core` / `@luma.gl/webgl`
+
+The core module was re-exporting the webgl classes. 
+
+A long list of changes, some required to make the API portable between WebGPU and WebGL, and many to accommodate the limitations of the more locked-down WebGPU API.
+
+| v8                      | v9                           | Comment                                                                                                                                              |
+| ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new Buffer(gl, props)` | `device.createBuffer(props)` | WebGL classes such as `Buffer`, `Texture2D` etc can no longer be imported and instantiated with . Instead they must be created via a device methods. |
+| `Program`               | `RenderPipeline`             | WebGPU alignment                                                                                                                                     |
+
+**`@luma.gl/gltools`** (removed)
+    
+The WebGL context functions from `@luma.gl/gltools`(`createGLContext` etc), have been replaced by methods on to the new `Device` and `CanvasContext` classes.
+
+The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRenderingContext` object. v9 enables applications to work portably with both WebGPU and WebGL, and accordingly it wraps the WebGL context in a `Device` instance.
+
+| v8 Prop or Method                  | v9 Replacement                        | Comment                                                         |
+| ---------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| `WebGLRenderingContext`            | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.        |
+| `WebGL2RenderingContext`           | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.        |  |
+| `getWebGL2Context(gl)`             | `device.gl2`                          |                                                                 |
+| `assertWebGLContext(gl)`           | N/A                                   | A device will always hold a valid WebGL context                 |
+| `assertWebGL2Context(gl)`          | N/A                                   | `if (device.info.type !== 'webgl2') throw new Error('WebGL2');` |
+|                                    |                                       |
+| `createGLContext()`                | `luma.createDevice()`                 | Will create a WebGL context if `WebGLDevice` is registered.     |
+| `createGLContext({onContextLost})` | `device.lost`                         | `Promise` that lets the application `await` context loss.       |
+| `instrumentGLContext()`            | `WebGLDevice.attach(gl)`              | Contexts are now automatically instrumented.                    |
+| `polyfillGLContext()`              | N/A                                   |                                                                 |
+| `hasFeature(feature)`              | `device.features.has(feature)`        | Note: Feature names now defined by WebGPU style strings.        |
+| `getFeatures()`                    | `Array.from(device.features)`         |                                                                 |
+| `getGLContextInfo(gl)`             | `device.info`                         | Returned object is keyed with strings instead of GL constants.  |
+| `getContextLimits(gl)`             | `device.limits`                       | Returns "WebGPU style" limits instead of WebGL style enums      |
+|                                    |                                       |                                                                 |
+| `canvas`                           | `device.canvasContext.canvas`         |                                                                 |
+| `resizeGLContext(gl, options)`     | `canvasContext.resize(options)`       | Same options: `{width, height, useDevicePixels}`                |
+| `getDevicePixelRatio()`            | `canvasContext.getDevicePixelRatio()` | Uses `useDevicePixels` prop on the `CanvasContext`              |
+| `setDevicePixelRatio()`            | `canvasContext.setDevicePixelRatio()` |                                                                 |
+|                                    | `canvasContext.getPixelSize()`        |
+|                                    | `canvasContext.getAspect()`           |
+| `cssToDeviceRatio()`               | `canvasContext.cssToDeviceRatio()`    |                                                                 |
+| `cssToDevicePixels()`              | `canvasContext.cssToDevicePixels()`   |                                                                 |
+| `hasFeature(gl, ...)`              | `device.features.has(...)`            | See feature constant mapping below                              |
+
+
+### `@luma.gl/constants`
+
+| v8 Prop or Method                   | v9 Replacement                        | Comment                                                             |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| `import GL from @luma.gl/constants` | `import {GL} from @luma.gl/constants` | Changed to use a *named export* ( => ) for ES module compatibility. |
+
+### `@luma.gl/debug`**
+
+| v8 Prop or Method    | v9 Replacement                                      | Comment                                                                                                                             |
+| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `makeDebugContext()` | `luma.createDevice({debug: true, type: 'webgl'})`   | [Khronos WebGL developer tools][khronos_dev_tools] are dynamically loaded when needed.                                              |
+| Spector.js           | `luma.createDevice({spector: true, type: 'webgl'})` | [Spector.js][spector] is pre-integrated. Te Spector.js library will be dynamically loaded when needed and the canvas is "captured". |
+
+[khronos_dev_tools]: https://github.com/KhronosGroup/WebGLDeveloperTools
+[spector]: https://spector.babylonjs.com/
+
+## Constant Upgrade Guide
+
+### Features
+
+Feature constants have been changed to match the WebGPU API and will need to be updated. The strong typing in the luma.gl v9 API means that TypeScript will detect unsupported feature names which should make the conversion process less painful.
+
+| luma.gl v8 `FEATURE`                        | v9 `DeviceFeature`                      | Comments                                                                      |
+| ------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------- |
+| **General WebGL Features**                  |                                         |                                                                               |
+| `FEATURES.WEBGL2`                           | `webgl`                                 | True for WebGL 2 Context                                                      |
+| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                     | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
+| `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                       | Instanced rendering (via instanced vertex attributes)                         |
+| `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                       | `VertexArrayObjects` can be created                                           |
+| `FEATURES.ELEMENT_INDEX_UINT32`             | N/A (always true)                       | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |
+| `FEATURES.BLEND_MINMAX`                     | N/A (always true)                       | `GL.MIN`, `GL.MAX` blending modes are available                               |
+| `FEATURES.FRAGMENT_SHADER_DRAW_BUFFERS`     | N/A (always true)                       | Fragment shader can draw to multiple render targets                           |
+| `FEATURES.FRAGMENT_SHADER_DEPTH`            | N/A (always true)                       | Fragment shader can control fragment depth value                              |
+| `FEATURES.SHADER_TEXTURE_LOD`               | N/A (always true)                       | Enables shader control of LOD                                                 |
+| `FEATURES.FRAGMENT_SHADER_DERIVATIVES`      | N/A (always true)                       | Derivative functions are available in GLSL                                    |
+| **`Texture`s and `Framebuffer`s**           |                                         |                                                                               |
+| `FEATURES.TEXTURE_FLOAT`                    | `texture-renerable-float32-webgl`       | Floating point textures can be created / set as samplers                      |
+| `FEATURES.TEXTURE_HALF_FLOAT`               | `texture-renderable-float16-webgl`      | Half float textures can be created and set as samplers                        |
+| `FEATURES.MULTIPLE_RENDER_TARGETS`          | `multiple-renderable--webgl1`           | `Framebuffer` multiple color attachments that fragment shaders can access     |
+| `FEATURES.COLOR_ATTACHMENT_RGBA32F`         | `texture-renderable-rgba32float-webgl1` | Floating point `Texture` in the `GL.RGBA32F` format are renderable & readable |
+| `FEATURES.COLOR_ATTACHMENT_FLOAT`           | `webgl1`                                | Floating point `Texture`s renderable + readable.                              |
+| `FEATURES.COLOR_ATTACHMENT_HALF_FLOAT`      | `webgl1`                                | Half float format `Texture`s are renderable and readable                      |
+| `FEATURES.FLOAT_BLEND`                      | `texture-blend-float-webgl`             | Blending with 32-bit floating point color buffers                             |
+| `TEXTURE_FILTER_LINEAR_FLOAT`               | `texture-filter-linear-float32-webgl1`  | Linear texture filtering for floating point textures                          |
+| `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | `texture-filter-linear-float16-webgl1`  | Linear texture filtering for half float textures                              |
+| `FEATURES.TEXTURE_FILTER_ANISOTROPIC`       | `texture-filter-anisotropic-webgl`      | Anisotropic texture filtering                                                 |
+| `FEATURES.SRGB`                             | `texture-formats-srgb-webgl1`           | sRGB encoded rendering is available                                           |
+| `FEATURES.TEXTURE_DEPTH_BUFFERS`            | `texture-formats-depth-webgl1`          | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations   |
+
+## GPU Parameters
+
+| setParameters | |  Parameters can no longer be set on the WebGL context. They must be set on a `RenderPipeline`. |
+| setParameters ||  - `RenderPipeline` parameters cannot be changed after creation (though the `Model` class will create new `RenderPipeline` instances if parameters change).
+- Some parameters are set on `RenderPass`.
+- Constant attributes are no longer supported.
+- `clear` can no longer be called directly. Instead attachments are cleared when a `RenderPass` is created and clear colors must be specified in `beginRenderPass`.
+- Uniform buffers are required to run under WebGPU.
+
+## Parameter Mapping
+
+The following table shows mappings from luma v8 WebGL parameters to luma v9 WebGPU style parameters.
+
+| luma v8 / WebGL Parameter                                | v9 Parameter                       | Values                                 | v9 Values                         |
+| -------------------------------------------------------- | ---------------------------------- | -------------------------------------- | --------------------------------- |
+| [polygonOffset][polygonoffset]                           | `depthBias`, `depthBiasSlopeScale` |
+| [depthRange][depthrange]                                 | N/A                                |
+| [clearDepth][cleardepth]                                 |                                    |
+| **Rasterization Parameters**                             |
+| [`cullFace`][cullface]                                   | `cullMode`                         | Which face to cull                     | **`'none'`**, `'front'`, `'back'` |
+| [`frontFace`][frontface]                                 | `frontFace`                        | Which triangle winding order is front  | **`ccw`**, `cw`                   |
+| `polygonOffset`                                          | `depthBias`                        | Small depth offset for polygons        | `float`                           |
+| `polygonOffset`                                          | `depthBiasSlopeScale`              | Small depth factor for polygons        | `float`                           |
+| `polygonOffset`                                          | `depthBiasClamp`                   | Max depth offset for polygons          | `float`                           |
+| **Stencil Parameters**                                   |
+| [`stencilMask`][stencilmask] / `GL.STENCIL_WRITEMASK`    | `stencilReadMask`                  | Binary mask for reading stencil values | `number` (**`0xffffffff`**)       |
+| `stencilFunc` / `GL.STENCIL_VALUE_MASK`                  | `stencilWriteMask`                 | Binary mask for writing stencil values | `number` (**`0xffffffff`**)       |
+| `stencilFunc` / `GL.STENCIL_FUNC`                        | `stencilCompare`                   | How the mask is compared               | **`always`**, `not-equal`, ...    |
+| [`stencilOp`][stencilop] /  `GL.STENCIL_PASS_DEPTH_PASS` | `stencilPassOperation`             |                                        | **`'keep'`**                      |
+| [`stencilOp`][stencilop] / `GL.STENCIL_PASS_DEPTH_FAIL`  | `stencilDepthFailOperation`        |                                        | **`'keep'`**                      |
+| [`stencilOp`][stencilop] / `GL.STENCIL_FAIL`             | `stencilFailOperation`             |                                        | **`'keep'`**                      |
+| [`stencilOpSeparate`][stencilopseparate]                 | ]                                  | N/                                     |
+
+---
+
+::caution
+TODO - this section needs updating
+:::
+
+| WebGL Function                           | WebGL Parameters                                                                                                                                                              | luma.gl v9 counterpart                                                  |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`clearStencil`][clearstencil]           | `GL.STENCIL_CLEAR_VALUE`                                                                                                                                                      |                                                                         |
+|                                          | []                                                                                                                                                                            | `stencilWriteMask`                                                      |
+| [`stencilFunc`][stencilfunc]             | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`]                                                                                                                | `stencilCompare`, `stencilReadMask`                                     |
+| [`stencilOp`][stencilop]                 | `GL.STENCIL_FAIL`, `,                                                                                                                                                         | `stencilPassOperation`, `stencilFailDepth                               |
+| [`stencilOpSeparate`][stencilopseparate] | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`, `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`] | N/A                                                                     |
+| `GL.STENCIL_TEST`                        | `false`                                                                                                                                                                       | Enables stencil testing                                                 |
+| `GL.STENCIL_CLEAR_VALUE`                 | `0`                                                                                                                                                                           | Sets index used when stencil buffer is cleared.                         |
+| `GL.STENCIL_WRITEMASK`                   | `0xFFFFFFFF`                                                                                                                                                                  | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_BACK_WRITEMASK`              | `0xFFFFFFFF`                                                                                                                                                                  | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_FUNC`                        | `GL.ALWAYS`                                                                                                                                                                   |                                                                         |
+| `GL.STENCIL_REF`                         | `0`                                                                                                                                                                           |                                                                         |
+| `GL.STENCIL_VALUE_MASK`                  | `0xFFFFFFFF`                                                                                                                                                                  | Sets bit mask                                                           |
+| `GL.STENCIL_BACK_FUNC`                   | `GL.ALWAYS`                                                                                                                                                                   |                                                                         |
+| `GL.STENCIL_BACK_REF`                    | `0`                                                                                                                                                                           |                                                                         |
+| `GL.STENCIL_BACK_VALUE_MASK`             | `0xFFFFFFFF`                                                                                                                                                                  | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_FAIL`                        | `GL.KEEP`                                                                                                                                                                     | stencil test fail action                                                |
+| `GL.STENCIL_PASS_DEPTH_FAIL`             | `GL.KEEP`                                                                                                                                                                     | depth test fail action                                                  |
+| `GL.STENCIL_PASS_DEPTH_PASS`             | `GL.KEEP`                                                                                                                                                                     | depth test pass action                                                  |
+| `GL.STENCIL_BACK_FAIL`                   | `GL.KEEP`                                                                                                                                                                     | stencil test fail action, back                                          |
+| `GL.STENCIL_BACK_PASS_DEPTH_FAIL`        | `GL.KEEP`                                                                                                                                                                     | depth test fail action, back                                            |
+| `GL.STENCIL_BACK_PASS_DEPTH_PASS`        | `GL.KEEP`                                                                                                                                                                     | depth test pass action, back                                            |
+**Blending**
+| [blendColor][blendcolor]               | `GL.BLEND_COLOR`                                                                     |
+| [blendEquation][blendequation]         | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`]                                 |
+| [blendFunc][blendfunc]                 | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`]                                           |
+| [blendFuncSeparate][blendfuncseparate] | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
+| `GL.BLEND`                | GLboolean       | `false`        | Blending enabled |
+| `GL.BLEND_COLOR`          | Float32Array(4) | `[0, 0, 0, 0]` |                  |
+| `GL.BLEND_EQUATION_RGB`   | GLenum          | `GL.FUNC_ADD`  |                  |
+| `GL.BLEND_EQUATION_ALPHA` | GLenum          | `GL.FUNC_ADD`  |                  |
+| `GL.BLEND_SRC_RGB`        | GLenum          | `GL.ONE`       | srcRgb           |
+| `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO`      | srcAlpha         |
+| `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE`       | dstRgb           |
+| `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO`      | dstAlpha         |
+
+
+- **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
+
+
+After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
+
+| V8/WebGL Function           | Description                            | Values                         |
+| --------------------------- | -------------------------------------- | ------------------------------ | ---------------- |
+| **Stencil Parameters**      |
+| `stencilReadMask`           | Binary mask for reading stencil values | `number` (**`0xffffffff`**)    |
+| `stencilWriteMask`          | Binary mask for writing stencil values | `number` (**`0xffffffff`**)    | `gl.frontFace`   |
+| `stencilCompare`            | How the mask is compared               | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
+| `stencilPassOperation`      |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+| `stencilDepthFailOperation` |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+| `stencilFailOperation`      |                                        | **`'keep'`**                   | `gl.stencilOp`   |
+
+Action when the stencil test fails
+
+- stencil test fail action,
+- depth test fail action,
+- pass action
+
+Remarks:
+
+- By using binary masks, an 8 bit stencil buffer can effectively contain 8 separate masks or stencils
+- The luma.gl API currently does not support setting stencil operations separately for front and back faces.
+
+
+| WebGL Function                           | WebGL Parameters                                                                   | luma.gl v9 counterpart                    |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------- |
+| [`clearStencil`][clearstencil]           | `GL.STENCIL_CLEAR_VALUE`                                                           |                                           |
+| [`stencilMask`][stencilmask]             | [`GL.STENCIL_WRITEMASK`]                                                           | `stencilWriteMask`                        |
+| [`stencilFunc`][stencilfunc]             | [`GL.STENCIL_FUNC`, `GL.STENCIL_REF`, `GL.STENCIL_VALUE_MASK`]                     | `stencilCompare`, `stencilReadMask`       |
+| [`stencilOp`][stencilop]                 | `GL.STENCIL_FAIL`, `GL.STENCIL_PASS_DEPTH_FAIL`, `GL.STENCIL_PASS_DEPTH_PASS`      | `stencilPassOperation`, `stencilFailDepth |
+| [`stencilOpSeparate`][stencilopseparate] | [`GL.STENCIL_FAIL`, `GL.STENCIL_FAIL_DEPTH_FAIL`, `GL.STENCIL_FAIL_DEPTH_PASS`] \* | N/A                                       |
+
+\* `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`
+
+
+[polygonoffset]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset
+[depthrange]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange
+[cleardepth]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth
+
+[cullface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace
+[frontface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/frontFace
+
+
+[clearstencil]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil
+[stencilmask]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask
+[stencilfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc
+[stencilop]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp
+[stencilopseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate
+
+- In WebGL, setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
+
+
+[clearstencil]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil
+[stencilmask]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask
+[stencilfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc
+[stencilop]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp
+[stencilopseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate
+
+- In WebGL, setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
+
+[blendcolor]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor
+[blendequation]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation
+[blendfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc
+[blendfuncseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFuncSeparate
+
+### Clear Color
+
+| Function                                                                                        | Sets parameters      |
+| ----------------------------------------------------------------------------------------------- | -------------------- |
+| [clearColor][https]//developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearColor) | GL.COLOR_CLEAR_VALUE |
+
+| Parameter              | Type                | Default      | Description |
+| ---------------------- | ------------------- | ------------ | ----------- |
+| `GL.COLOR_CLEAR_VALUE` | new Float32Array(4) | [0, 0, 0, 0] | .           |
+
+
+### Color Mask
+
+| Function                                                                                      | Sets parameters    |
+| --------------------------------------------------------------------------------------------- | ------------------ |
+| [colorMask](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/colorMask) | GL.COLOR_WRITEMASK |
+
+| Parameter            | Type                                         | Default                  | Description |
+| -------------------- | -------------------------------------------- | ------------------------ | ----------- |
+| `GL.COLOR_WRITEMASK` | [GLboolean, GLboolean, GLboolean, GLboolean] | [true, true, true, true] | .           |
+
+### Dithering
+
+| Parameter   | Type      | Default | Description                                                                      |
+| ----------- | --------- | ------- | -------------------------------------------------------------------------------- |
+| `GL.DITHER` | GLboolean | `true`  | Enable dithering of color components before they get written to the color buffer |
+
+- Note: Dithering is driver dependent and typically has a stronger effect when the color components have a lower number of bits.
+
+### PolygonOffset
+
+Add small offset to fragment depth values (by factor × DZ + r × units)
+Useful for rendering hidden-line images, for applying decals to surfaces,
+and for rendering solids with highlighted edges.
+
+| Function                                                                                              | Sets parameters                                     |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [polygonOffset](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset) | [GL.POLYGON_OFFSET_FACTOR, GL.POLYGON_OFFSET_UNITS] |
+
+| Parameter                  | Type      | Default | Description |
+| -------------------------- | --------- | ------- | ----------- |
+| `GL.POLYGON_OFFSET_FILL`   | GLboolean | `false` | .           |
+| `GL.POLYGON_OFFSET_FACTOR` | GLfloat   | `0`     | .           |
+| `GL.POLYGON_OFFSET_UNITS`  | GLfloat   | `0`     | .           |
+
+- Note: The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
+
+### Rasterization (WebGL 2)
+
+Primitives are discarded immediately before the rasterization stage, but after the optional transform feedback stage. `gl.clear()` commands are ignored.
+
+| Parameter               | Type      | Default | Description           |
+| ----------------------- | --------- | ------- | --------------------- |
+| `GL.RASTERIZER_DISCARD` | GLboolean | `false` | Disable rasterization |
+
+### Sampling
+
+Specify multisample coverage parameters
+
+| Function                                                                                                | Sets parameters                                           |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [sampleCoverage](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/sampleCoverage) | [`GL.SAMPLE_COVERAGE_VALUE`, `GL.SAMPLE_COVERAGE_INVERT`] |
+
+| Parameter                     | Type      | Default | Description                                                                            |
+| ----------------------------- | --------- | ------- | -------------------------------------------------------------------------------------- |
+| `GL_SAMPLE_COVERAGE`          | GLboolean | `false` | Activates the computation of a temporary coverage value determined by the alpha value. |
+| `GL_SAMPLE_ALPHA_TO_COVERAGE` | GLboolean | `false` | Activates ANDing the fragment's coverage with the temporary coverage value             |
+| `GL.SAMPLE_COVERAGE_VALUE`    | GLfloat   | 1.0     |                                                                                        |
+| `GL.SAMPLE_COVERAGE_INVERT`   | GLboolean | `false` |                                                                                        |
+
+
+### Scissor Test
+
+Settings for scissor test and scissor box.
+
+| Function                                                                                  | Sets parameters  |
+| ----------------------------------------------------------------------------------------- | ---------------- |
+| [scissor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/scissor) | `GL.SCISSOR_BOX` |
+| scissorTest                                                                               | GL.SCISSOR_TEST  |
+
+| Parameter         | Type          | Default                           | Description |
+| ----------------- | ------------- | --------------------------------- | ----------- |
+| `GL.SCISSOR_TEST` | GLboolean     | `false`                           |
+| `GL.SCISSOR_BOX`  | Int32Array(4) | [null, null, null, null]), // TBD |
+
+## Viewport
+
+Specifies the transformation from normalized device coordinates to
+window/framebuffer coordinates. The maximum supported value, is defined by the
+`GL.MAX_VIEWPORT_DIMS` limit.
+
+| Function                                                                                    | Parameters    |
+| ------------------------------------------------------------------------------------------- | ------------- |
+| [viewport](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/viewport) | `GL.VIEWPORT` |
+
+| Parameter     | Type          | Default   | Description |
+| ------------- | ------------- | --------- | ----------- |
+| `GL.VIEWPORT` | Int32Array(4) | [...] TBD | Viewport    |
+
+Example:
 
 ```typescript
-new Texture2D({
-  data,
-  pixelStore: {
-    [GL.UNPACK_FLIP_Y_WEBGL]: true
-  }
+// Set viewport to maximum supported size
+const maxViewport = getLimits(gl)[GL.MAX_VIEWPORT_DIMS];
+setState(gl, {
+  viewport: [0, 0, maxViewport[0], maxViewport[1]]
 });
 ```
 
-- `createGLContext` will no longer attempt to create a headlessgl context under node.js. One can either create headless context externally and use `instrumentGLContext` to prepare it for use with luma.gl or use `createHeadlessContext` from `@luma.gl/test-utils` to create a headlessgl context.
-- `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-guide/shader-modules) instead.
-- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-guide/shader-modules) instead.
-- `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
-- The following are no longer exported by @luma.gl/core, but can still be imported from the modules indicated:
+## Remarks
 
-|                                                                                                                                                                                                  | Available in         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| Query, VertexArrayObject, VertexArray, UniformBufferLayout, Shader, VertexShader, FragmentShader, clearBuffer, clearBuffer, copyToDataUrl, copyToImage, blit, setPathPrefix, loadFile, loadImage | @luma.gl/webgl       |
-| resizeGLContext                                                                                                                                                                                  | @luma.gl/gltools     |
-| combineInjects, lights, getQualifierDetails, getPassthroughFS, typeToChannelSuffix, typeToChannelCount, convertToVec4                                                                            | @luma.gl/shadertools |
+GPU State Management can be quite complicated.
 
-#### Smaller changes
+- A large part of the WebGL API is devoted to parameters. When reading, querying individual values using GL constants is the norm, and when writing, special purpose functions are provided for most parameters. luma.gl supports both forms for both reading and writing parameters.
+- Reading values from WebGL can be very slow if it requires a GPU roundtrip. To get around this, luma.gl reads values once, caches them and tracks them as they are changed through luma functions. The cached values can get out of sync if the context is shared outside of luma.gl.
+- luma.gl's state management enables "conflict-free" programming, so that even when setting global state, one part of the code does not need to worry about whether other parts are changing the global state.
+- Note that to fully support the conflict-free model and detect changes done e.g. in other WebGL libraries, luma.gl needs to hook into the WebGL context to track state changes.
 
-- Functions are no longer accepted as uniform values to the `Model` class. The same effect can be achieved by updating the uniform values each frame prior to drawing.
-- `BaseModel` and `Model` have been consolidated in `Model`. `Model` can be used as a substitute for `BaseModel` where necessary.
-- `AmbientLight`, `DirectionalLight`, `PointLight`, `PhongMaterial`, `PBRMaterial`, `CameraNode` have been removed from @luma.gl/core. These were either empty classes or simple data objects and so can be replaced by plain JavaScript objects in most cases.
-- `ShaderCache` has been removed and superseded by `ProgramManager`.
-- `VertexArray.getDrawParams` no longer takes overrides as an argument. The calling function can manually override values as needed.
-- @luma.gl/main has been removed. Use individual modules instead.
-- `Multipass` classes have been removed.
-- Seer support has been removed.
-- Timeline and Keyframes have been moved from @luma.gl/addons to @luma.gl/engine.
+---
 
-## Upgrading to v7.3
+## Depth testing
 
-`ProgramManager` has replaced `ShaderCache` in the `Model` class as a more robust resource manager. Use of the `ShaderCache` with `Model` will not affect functionality in any way, but it is now a no-op.
-
-## Upgrading to v7.0
-
-luma.gl v7.0 represents a major overhaul of the API. The majority of changes are in areas that are only infrequently used by applications, and the intention is that most applications should only require very light porting.
-
-#### Loading Functions Removed
-
-Extensive loading functionality is now provided by a new companion framework [loaders.gl](https://loaders.gl/) and because of this, most of the limited legacy luma.gl loading functions have been removed.
-
-For the most common case (loading of images for use with textures), loading functions are no longer needed as the `data` prop in the `Texture2D` constructor now accepts url strings and `Promise` objects (this is the new Async Textures function).
-
-| Removed Function               | Replacement                                                        |
-| ------------------------------ | ------------------------------------------------------------------ |
-| `loadTexture(url, parameters)` | `new Texture(gl, {data: url, parameters})`                         |
-| `loadFiles`                    | Multiple calls to `loadFile`                                       |
-| `loadImages`                   | Multiple calls to `loadImage`                                      |
-| `loadTextures`                 | As per `loadTexture`                                               |
-| `loadProgram`                  | Manually load `fs` and `vs`, call `new Program(gl, {vs, fs})`      |
-| `loadModel`                    | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
-| `parseModel`                   | call `loadFile` and copy `parseModel` code from examples/lesson/16 |
-
-#### Attribute Class Removed
-
-This experimental class has been moved to deck.gl and is now an internal class. Attribute accessor API improvements in luma.gl v7 should cover any issue.
-
-#### Sampler Class Removed
-
-The `Sampler` class has been removed as its utility was limited and it added complexity to the library. It may be added back in the future if a clear use case arises.
-
-#### Texture2DArray Class Removed
-
-The `Texture2DArray` class has been removed as its utility was limited and the status of support was unclear due to limited testing. It may be added back in the future if a clear use case arises.
-
-#### FenceSync Class Removed
-
-The `FenceSync` class has been removed as its utility was limited. It may be added back in the future if a clear use case arises. If required, syncing can be done directly through the `WebGLFenceSync` object.
-
-#### Framebuffer and Texture: Copy and Blit methods
-
-Following member function of `Framebuffer` and `Texture` classes are no longer supported, instead use the corresponding new global methods:
-
-| Removed method                   | Replacement          |
-| -------------------------------- | -------------------- |
-| `Framebuffer.readPixels`         | `readPixelsToArray`  |
-| `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`       | `copyToDataUrl`      |
-| `Frambuffer.copyToImage`         | `copyToImage`        |
-| `Frambuffer.copyToTexture`       | `copyToTexture`      |
-| `Frambuffer.blit`                | `blit`               |
-| `Texture.copyFramebuffer`        | `copyToTexture`      |
-
-Parameters have also changed in some cases, see separate section.
-
-#### Debug functionality moved to separate npm module
-
-To reduce bundle size and increase separation of concerns, debug functionality is now more cleanly separated from the core library and needs to be imported from a separate npm module:
-
-To upgrade, install the new module
-
-```bash
-npm install @luma.gl/debug
-```
-
-And replace
+To set up depth testing
 
 ```typescript
-import 'luma.gl/debug';
-```
-
-with
-
-```typescript
-import '@luma.gl/debug';
-```
-
-#### Model
-
-Changes:
-
-- `Model` no longer extends `ScenegraphNode`. This ensures that applications that do not need scenegraph support do not need to include scenegraph related code. Use the new `ModelNode` class to inject `Models` into scenegraphs.
-
-Deletions:
-
-- Redraw flag handling has been removed: `Model.setNeedsRedraw()` and `Model.getNeedsRedraw()`.
-
-Additions:
-
-- A new `Model.isAnimated()` method is provided, indicating that redraws are required every frame.
-
-#### Geometry
-
-The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metatadata describing attributes for a geometry.
-
-| Removal                                               | Replacement               | Reason for Change                 |
-| ----------------------------------------------------- | ------------------------- | --------------------------------- |
-| `Geometry.drawMode` no longer accepts `String` values | `Geometry.DRAW_MODE` enum | API simplification                |
-| `Geometry.setNeedsRedraw()`                           | N/A                       | Not needed for immutable geometry |
-| `Geometry.getNeedsRedraw()`                           | N/A                       | Not needed for immutable geometry |
-
-#### Buffer
-
-| Removed Method               | Replacement                                             | Reason for Change                  |
-| ---------------------------- | ------------------------------------------------------- | ---------------------------------- |
-| `Buffer.updateAccessor(...)` | `Buffer.setAccessor(new Accessor(buffer.accessor, ...)` | Decoupling accessors from `Buffer` |
-
-#### Framebuffer
-
-To maximize rendering performance, the default framebuffer is no longer preserved between frames.
-
-The most common use case for preserving the draw buffer is capturing canvas contents into an image via `toDataURL`. This can now be done via `AnimationLoop.toDataURL` which returns a `Promise` that resolves to the canvas data URL:
-
-```typescript
-dataURL = await animationLoop.toDataURL();
-snapshotImage.src = dataURL;
-```
-
-More generally, moving code that depends on canvas contents to the end of `onRender`, after all draw operations, will ensure that canvas contents are available.
-
-Prior behaviour can re-enabled using the `glOptions` argument to the `createGLContext` or `AnimationLoop` constructors:
-
-```typescript
-new AnimationLoop({
-  glOptions: {
-    preserveDrawingBuffer: true
-  }
+const value = model.setParameters({
+  depthWriteEnabled: true,
+  depthCompare: 'less-equal'
 });
 ```
 
-Note that setting `preserveDrawingBuffers` may result in a performance drop on some platforms.
 
-#### Query
 
-Use `Query.getTimerMilliseconds` to retrieve timer results in milliseconds. `Query.getResult` now returns raw query results.
+| Parameter                         | Type      | Default      | Description                                                             |
+| --------------------------------- | --------- | ------------ | ----------------------------------------------------------------------- |
+| `GL.STENCIL_TEST`                 | GLboolean | `false`      | Enables stencil testing                                                 |
+| `GL.STENCIL_CLEAR_VALUE`          | GLint     | `0`          | Sets index used when stencil buffer is cleared.                         |
+| `GL.STENCIL_WRITEMASK`            | GLuint    | `0xFFFFFFFF` | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_BACK_WRITEMASK`       | GLuint    | `0xFFFFFFFF` | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_FUNC`                 | GLenum    | `GL.ALWAYS`  |                                                                         |
+| `GL.STENCIL_REF`                  | GLint     | `0`          |                                                                         |
+| `GL.STENCIL_VALUE_MASK`           | GLuint    | `0xFFFFFFFF` | Sets bit mask                                                           |
+| `GL.STENCIL_BACK_FUNC`            | GLenum    | `GL.ALWAYS`  |                                                                         |
+| `GL.STENCIL_BACK_REF`             | GLint     | `0`          |                                                                         |
+| `GL.STENCIL_BACK_VALUE_MASK`      | GLuint    | `0xFFFFFFFF` | Sets bit mask enabling writing of individual bits in the stencil planes |
+| `GL.STENCIL_FAIL`                 | GLenum    | `GL.KEEP`    | stencil test fail action                                                |
+| `GL.STENCIL_PASS_DEPTH_FAIL`      | GLenum    | `GL.KEEP`    | depth test fail action                                                  |
+| `GL.STENCIL_PASS_DEPTH_PASS`      | GLenum    | `GL.KEEP`    | depth test pass action                                                  |
+| `GL.STENCIL_BACK_FAIL`            | GLenum    | `GL.KEEP`    | stencil test fail action, back                                          |
+| `GL.STENCIL_BACK_PASS_DEPTH_FAIL` | GLenum    | `GL.KEEP`    | depth test fail action, back                                            |
+| `GL.STENCIL_BACK_PASS_DEPTH_PASS` | GLenum    | `GL.KEEP`    | depth test pass action, back                                            |
+
+### Blending
+
+| Function style                         | Sets parameter(s)                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| [blendColor][blendColor]               | `GL.BLEND_COLOR`                                                                     |
+| [blendEquation][blendEquation]         | [`GL.BLEND_EQUATION_RGB`, `GL.BLEND_EQUATION_ALPHA`]                                 |
+| [blendFunc][blendFunc]                 | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`]                                           |
+| [blendFuncSeparate][blendFuncSeparate] | [`GL.BLEND_SRC_RGB`, `GL.BLEND_SRC_ALPHA`, `GL.BLEND_DST_RGB`, `GL.BLEND_DST_ALPHA`] |
+
+[blendColor]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor
+[blendEquation]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation
+[blendFunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc
+[blendFuncSeparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFuncSeparate
+
+| Parameter                 | Type            | Default        | Description      |
+| ------------------------- | --------------- | -------------- | ---------------- |
+| `GL.BLEND`                | GLboolean       | `false`        | Blending enabled |
+| `GL.BLEND_COLOR`          | Float32Array(4) | `[0, 0, 0, 0]` |                  |
+| `GL.BLEND_EQUATION_RGB`   | GLenum          | `GL.FUNC_ADD`  |                  |
+| `GL.BLEND_EQUATION_ALPHA` | GLenum          | `GL.FUNC_ADD`  |                  |
+| `GL.BLEND_SRC_RGB`        | GLenum          | `GL.ONE`       | srcRgb           |
+| `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO`      | srcAlpha         |
+| `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE`       | dstRgb           |
+| `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO`      | dstAlpha         |
 
-To improve performance and simplify the library, support for tracking `Query` instances with promises has changed: The `Query` constructor no longer takes `onComplete` and `onError` callbacks, and `pollGLContext` has been removed. Instead `Query.createPoll` now provides a simple, optional promise-based API.
 
-#### Copy And Blit Parameter Unification
-
-Names of certain parameters to these methods have been unified in an effort to reduce confusion and use the same conventions across all functions implementing image read-back, copy or blit.
-
-This table lists parameter mapping between old and new function.
-
-| `Framebuffer.readPixels` | `readPixelsToArray`     |
-| ------------------------ | ----------------------- |
-| -                        | `source`                |
-| `opts.x`                 | `opts.sourceX`          |
-| `opts.y`                 | `opts.sourceY`          |
-| `opts.width`             | `opts.sourceWidth`      |
-| `opts.height`            | `opts.sourceHeight`     |
-| `opts.format`            | `opts.sourceFormat`     |
-| `opts.type`              | `opts.sourceType`       |
-| `opts.attachment`        | `opts.sourceAttachment` |
-| `opts.pixelArray`        | `opts.target`           |
-
-| `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer`    |
-| -------------------------------- | ----------------------- |
-| -                                | `source`                |
-| `opts.x`                         | `opts.sourceX`          |
-| `opts.y`                         | `opts.sourceY`          |
-| `opts.width`                     | `opts.sourceWidth`      |
-| `opts.height`                    | `opts.sourceHeight`     |
-| `opts.format`                    | `opts.sourceFormat`     |
-| `opts.type`                      | `opts.sourceType`       |
-| `opts.buffer`                    | `opts.target`           |
-| `opts.byteOffset`                | `opts.targetByteOffset` |
-
-| `Framebuffer.copyToDataUrl` | `copyToDataUrl`         |
-| --------------------------- | ----------------------- |
-| -                           | `source`                |
-| `opts.attachment`           | `opts.sourceAttachment` |
-| `opts.maxheight`            | `opts.targetMaxHeight`  |
-
-| `Framebuffer.copyToImage` | `copyToImage`           |
-| ------------------------- | ----------------------- |
-| -                         | `source`                |
-| `opts.attachment`         | `opts.sourceAttachment` |
-| `opts.image`              | `opts.targetImage`      |
-
-| `Framebuffer.copyToTexture` | `copyToTexture`             |
-| --------------------------- | --------------------------- |
-| -                           | `source`                    |
-| `opts.target`               | `target`                    |
-| `opts.texture`              | `target`                    |
-| `opts.x`                    | `opts.sourceX`              |
-| `opts.y`                    | `opts.sourceY`              |
-| `opts.xoffset`              | `opts.targetX`              |
-| `opts.yoffset`              | `opts.targetY`              |
-| `opts.zoffset`              | `opts.targetZ`              |
-| `opts.width`                | `opts.width`                |
-| `opts.height`               | `opts.height`               |
-| `opts.internalFormat`       | `opts.targetInternalFormat` |
-| `opts.mipmapLevel`          | `opts.targetMipmapLevel`    |
-
-| `Texture.copyFramebuffer` | `copyToTexture`             |
-| ------------------------- | --------------------------- |
-| `opts.framebuffer`        | `source`                    |
-| `opts.target`             | `target`                    |
-| `opts.x`                  | `opts.sourceX`              |
-| `opts.y`                  | `opts.sourceY`              |
-| `opts.width`              | `opts.width`                |
-| `opts.height`             | `opts.height`               |
-| `opts.internalFormat`     | `opts.targetInternalFormat` |
-| `opts.level`              | `opts.targetMipmapLevel`    |
-
-| `Framebuffer.blit`    | `blit`                  |
-| --------------------- | ----------------------- |
-| `opts.srcFramebuffer` | `source`                |
-| -                     | `target`                |
-| `opts.attachment`     | `opts.sourceAttachment` |
-| `opts.srcX0`          | `opts.sourceX0`         |
-| `opts.srcX1`          | `opts.sourceX1`         |
-| `opts.srcY0`          | `opts.sourceY0`         |
-| `opts.srcY1`          | `opts.sourceY1`         |
-| `opts.dstX0`          | `opts.targetX0`         |
-| `opts.dstX1`          | `opts.targetX1`         |
-| `opts.dstY0`          | `opts.targetY0`         |
-| `opts.dstY1`          | `opts.targetY1`         |
-| `opts.color`          | `opts.color`            |
-| `opts.depth`          | `opts.depth`            |
-| `opts.stencil`        | `opts.stencil`          |
-| `opts.mask`           | `opts.mask`             |
-| `opts.filter`         | `opts.filter`           |
-
-#### Geometry Scenegraph Models
-
-Geometry scenegraph models have been deprecated. Simply create a `Model` or `ModelNode` and explicitly pass a `Geometry` instance as
-an argument, e.g.:
-
-```typescript
-const sphere = new Model(gl, {
-  geometry: new SphereGeometry({
-    nlat: 30,
-    nlong: 30,
-    radius: 2
-  })
-});
-```
-
-## Upgrading to v6.0
-
-luma.gl v6.0 underwent a major API cleanup, resulting in a smaller, easier-to-learn API and smaller application bundles. While there are many smaller changes, the impact on most applications should be limited:
-
-- Most removed functions were in practice rarely used by applications, and the impact on typical luma.gl applications should be limited.
-- A number of API changes are related to moving attribute management from `Program` to `VertexArray`, however for higher level applications that work with the `Model` class rather than `Program` directly, there should not be much impact.
-
-#### GL Constants Import Path
-
-The biggest change for many apps will probably be that the static `GL` symbol (that contains all WebGL 2 constants) must now be separately imported GL from 'luma.gl/constants'.
-
-#### Experimental Exports: New Naming Convention
-
-Experimental exports are now prefixed with underscore (\_). The `experimental` "name space" export has been removed.
-
-```typescript
-// NOW: luma.gl v6
-import {_Attribute as Attribute} from 'luma.gl';
-
-// BEFORE: luma.gl v5.x
-import {experimental} from 'luma.gl';
-const {Attribute} = experimental;
-```
-
-This change will enable tree-shaking bundlers to remove unused experimental exports, resulting in smaller final application bundles.
-
-#### Removed symbols
-
-Math functions were moved from luma.gl to the separate math.gl module in v4.1. As of v6.0, they are no longer forwarded by luma.gl and now need to be imported directly from math.gl:
-
-```typescript
-import {radians, degrees, Vector2, Vector3, Vector4, Matrix4} from '@math.gl/core';
-```
-
-luma.gl v6.0 removes a number of previously deprecated symbols. luma.gl will now issue an error rather than a warning if the old usage is detecated.
-
-#### Constants
-
-| Removed symbol     | Replacement                            | Reason for change                                       |
-| ------------------ | -------------------------------------- | ------------------------------------------------------- |
-| `GL`               | `import {GL} from 'luma.gl/constants'` | Bundle size reduction (by making this import optional). |
-| `glGet(name)`      | `glGet(gl, name)`                      | Bundle size reduction (Was deprecated in v5.3)          |
-| `glKey(value)`     | `glKey(gl, value)`                     | Bundle size reduction (Was deprecated in v5.3)          |
-| `glKeyType(value)` | `glKeyType(gl, value)`                 | Bundle size reduction (Was deprecated in v5.3)          |
-
-#### Context
-
-| Removed symbol         | Replacement        | Reason for change                     |
-| ---------------------- | ------------------ | ------------------------------------- |
-| `deleteGLContest`      | `destroyGLContext` | Naming audit (Was deprecated in v5.3) |
-| `pollContext`          | `pollGLContext`    | Naming audit (Was deprecated in v5.3) |
-| `trackContextCreation` | N/A                | Rarely used, overly specialized       |
-
-#### Global Functions
-
-| Removed symbol      | Replacement              | Reason for change                     |
-| ------------------- | ------------------------ | ------------------------------------- |
-| `readPixels`        | `Framebuffer.readPixels` | Naming audit (was deprecated in v3.0) |
-| `FrameBufferObject` | `FrameBuffer`            | Naming audit (was deprecated in v3.0) |
-
-#### AnimationLoop
-
-| Removed symbol                  | Replacement                | Reason for change |
-| ------------------------------- | -------------------------- | ----------------- |
-| `AnimationLoop.setViewParams()` | `AnimationLoop.setProps()` | Naming audit      |
-
-#### Program
-
-| Removed symbol             | Replacement                        | Reason for change                                                 |
-| -------------------------- | ---------------------------------- | ----------------------------------------------------------------- |
-| `varyingMap`               | N/A (`configuration`)              | Program now auto discovers varyings.                              |
-| `Program.setAttributes()`  | `VertexArray.setAttributes()`      | Attribute management moved to `VertexArray`                       |
-| `Program.setBuffers()`     | `VertexArray.setAttributes()`      | Attribute management moved to `VertexArray`                       |
-| `Program.setVertexArray()` | `Program.draw({vertexArray})`      | No longer needed, just supply a `VertexArray` to `Program.draw()` |
-| `Program.unsetBuffers()`   | N/A                                | No longer needed, just supply a `VertexArray` to `Program.draw()` |
-| `Program.use()`            | `gl.useProgram(program.handle)`    | Rarely needed by apps, can use raw WebGL API                      |
-| `getUniformCount()`        | `getParameter(GL.ACTIVE_UNIFORMS)` | Rarely needed                                                     |
-| `getUniformInfo()`         | `gl.getActiveUniform()`            | Rarely needed by apps, can use raw WebGL API                      |
-| `getUniformLocation()`     | `gl.getUniformLocation()`          | Rarely needed by apps, can use raw WebGL API                      |
-| `getUniformValue()`        | `gl.getUniform()`                  | Rarely needed by apps, can use raw WebGL API                      |
-| 'getVarying()'             |                                    | Rarely needed by apps, can use raw WebGL API                      |
-| 'getFragDataLocation()'    |                                    | Rarely needed by apps, can use raw WebGL API                      |
-| 'getAttachedShaders()'     |                                    | Rarely needed by apps, can use raw WebGL API                      |
-| 'getAttributeCount()'      |                                    | Rarely needed by apps, can use raw WebGL API                      |
-| 'getAttributeLocation()'   |                                    | Rarely needed by apps, can use raw WebGL API                      |
-| 'getAttributeInfo()'       |                                    | Rarely needed by apps, can use raw WebGL API                      |
-
-#### TransformFeedback
-
-| Removed symbol               | Replacement                  | Reason for change                            |
-| ---------------------------- | ---------------------------- | -------------------------------------------- |
-| `TransformFeedback.pause()`  | `gl.pauseTransformFeedback`  | Rarely needed by apps, can use raw WebGL API |
-| `TransformFeedback.resume()` | `gl.resumeTransformFeedback` | Rarely needed by apps, can use raw WebGL API |
-
-#### VertexArray
-
-| Removed symbol                   | Replacement                          | Reason for change                                 |
-| -------------------------------- | ------------------------------------ | ------------------------------------------------- |
-| `VertexArray.setBuffers()`       | `VertexArray.setAttributes()`        | API Audit, setAttributes handles more cases.      |
-| `VertexArray.setGeneric()`       | `VertexArray.setConstant()`          | API Audit, prefer "constant" instead of "generic" |
-| `VertexArray.filledLocations()`  | N/A                                  | No longer needed.                                 |
-| `VertexArray.clearBindings()`    | `VertexArray.reset()`                | API Audit                                         |
-| `VertexArray.setLocations()`     | `VertexArray.constructor({program})` | Autodetected from `program` parameter             |
-| `VertexArray.setGenericValues()` | `VertexArray.setConstant()`          | API Audit, prefer "constant" instead of "generic" |
-| `VertexArray.setDivisor()`       | `gl.vertexAttribDivisor()`           | Rarely needed by apps, can use raw WebGL API      |
-| `VertexArray.enable()`           | `gl.enableVertexAttribArray()`       | Rarely needed by apps, can use raw WebGL API      |
-| `VertexArray.disable()`          | `gl.disableVertexAttribArray()`      | Rarely needed by apps, can use raw WebGL API      |
-
-## Upgrading to v5.3
-
-v5.3 deprecates a number of symbols. It is recommended that you replace their usage in your source code.
-
-| Deprecated symbol | Replacement                            | Reason                      |
-| ----------------- | -------------------------------------- | --------------------------- |
-| `GL`              | `import {GL} from 'luma.gl/constants'` | Bundle size concerns        |
-| `deleteGLContest` | `destroyGLContext`                     | API Audit: Naming alignment |
-| `pollContext`     | `pollGLContext`                        | API Audit: Naming alignment |
-
-## Upgrading to v5.2
-
-#### Running under Node.js
-
-[Using with Node](/docs/tutorials/): `"import luma.gl/headless"` is no longer required for luma.gl to load headless gl and the usage has been deprecated. You can now simply remove any such import statements from your code.
-
-#### Using Debug Contexts
-
-[Debugging](/docs/developer-guide/debugging): The Khronos group's `WebGLDeveloperTools` are automatically installed when luma.gl is installed, but are not actually bundled into the application unless explicitly imported. This avoids impacting the size of production bundles built on luma.gl that typically do not need debug support.
-
-To use debug support, first import the debug tools, then call `getDebugContext` to create a debug contexts from a normal WebGL context:
-
-```typescript
-import 'luma.gl/debug';
-const gl = getDebugContext(gl);
-```
-
-## Upgrading to v5.0
-
-Please read this documentation before upgrading your luma.gl dependency from v4 to v5. In v5 a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time.
-
-Before upgrading to v5, it is highly recommended to run your application using latest v4 release, and check the console for any deprecated warnings, if there are any replace deprecated API with newer API as listed below.
-
-#### Model Class
-
-The `Model` constructor expects a gl context as the first argument.
-
-```typescript
-// v5
-Model(gl);
-Model(gl, {...opts});
-Model(gl, {program});
-```
-
-Following style construction was deprecated in v4 and is now removed in v5.
-
-```typescript
-// NOT SUPPORTED
-Model({gl});
-Model({gl, ...opts});
-Model({program});
-```
-
-#### useDevicePixelRatio
-
-`useDevicePixelRatio` is used as a an argument in `AnimationLoop` class constructor and `pickModels` method. It is now deprecated in v5, but still supported with a warning message and will be removed in next major version update. It is recommended to use `useDevicePixels` instead.
-
-#### Geometry
-
-`Geometry` class construction with inline attributes was deprecated in v4 and now removed in v5.
-
-```typescript
-// NOT SUPPORTED
-new Geometry({
-  positions: new Float32Array([ ... ]),
-  colors: {
-    size: 4,
-    value: new Float32Array([ ... ])
-  }
-});
-```
-
-All attributes should be grouped inside `attribute` object.
-
-```typescript
-// SUPPORTED
-new Geometry({
- attributes: {
-   positions: new Float32Array([ ... ]),
-   colors: {
-     size: 4,
-     value: new Float32Array([ ... ])
-   }
- }
-});
-```
-
-#### Removed Features
-
-Following features were deprecated in v3 and v4 are now removed in v5.
-
-- Global symbols:
-
-| Removed symbol / Usage                       | Replacement                     | Comment                    |
-| -------------------------------------------- | ------------------------------- | -------------------------- |
-| `withState`                                  | `withParameters`                | State management           |
-| `glContextWithState`                         | `withParameters`                | State management           |
-| `withParameters({frameBuffer})`              | `withParameters({framebuffer})` | State management           |
-| `MONOLITHIC_SHADERS`                         | `MODULAR_SHADERS`               | default shaders            |
-| `isWebGLContext`                             | `isWebGL`                       | WebGL context validation   |
-| `isWebGL2Context`                            | `isWebGL2`                      | WebGL 2 context validation |
-| `Camera`, `PerspectiveCamera`, `OrthoCamera` | `None`                          |                            |
-| `Scene`                                      | `None`                          |                            |
-
-- Texture construction options:
-
-| Removed symbol / Usage | Replacement                         |
-| ---------------------- | ----------------------------------- |
-| `generateMipmaps`      | `mipmaps`                           |
-| `magFilter`            | `parameters[GL.TEXTURE_MAG_FILTER]` |
-| `minFilter`            | `parameters[GL.TEXTURE_MIN_FILTER]` |
-| `wrapS`                | `parameters[GL.TEXTURE_WRAP_S]`     |
-| `wrapT`                | `parameters[GL.TEXTURE_WRAP_T]`     |
-
-## Upgrading to v4.0
-
-luma.gl v4 is a major release with API changes. Please read this documentation before upgrading your luma.gl's dependency from v3 to v4.
-In addition, a number of previously deprecated features have been removed and a number of additional deprecations have been made at the same time in this version.
-
-#### Removed Features
-
-Some previously deprecated classes and functions have been removed in luma.gl v4 and applications must be updated with the new classes and functions if they are still using these.
-
-| Symbol | Replacement  | Comment                                                 |
-| ------ | ------------ | ------------------------------------------------------- |
-| `Vec3` | `Vector3`    | [New math library](https://github.com/uber-web/math.gl) |
-| `Mat4` | `Matrix4`    | [New math library](https://github.com/uber-web/math.gl) |
-| `Quat` | `Quaternion` | [New math library](https://github.com/uber-web/math.gl) |
-
-#### Deprecated Features
-
-Some classes and functions have been deprecated in luma.gl v4. They will continue to function in v4, but a warning in the console will be generated. These functions are expected to be removed in a future major versions of luma.gl.
-
-| Symbol               | Replacement      | Comment                    |
-| -------------------- | ---------------- | -------------------------- |
-| `withState`          | `withParameters` | New WebGL state management |
-| `glContextWithState` | `withParameters` | New WebGL state management |
-
-#### Model Class
-
-The `Model` constructor now expects a gl context as the first argument.
-
-```typescript
-// v3
-Model({gl});
-Model({gl, ...opts});
-Model({program});
-
-// v4
-Model(gl);
-Model(gl, {...opts});
-Model(gl, {program});
-```
-
-the gl context used to be extracted from the supplied program or provided along side with other options, but in luma.gl v4, it is expected as a separate argument to the constructor. This change is because luma.gl v4 emphasizes sharing shaders rather than programs (often indirectly via shader caching / shader assembly), it is less common that a gl context is available.
-
-## Upgrading to v3.0
-
-V3 was a fairly minor release, a number of deprecations were made.
-
-#### Deprecations
-
-| Symbol | Replacement  | Comment                                                 |
-| ------ | ------------ | ------------------------------------------------------- |
-| `Vec3` | `Vector3`    | [New math library](https://github.com/uber-web/math.gl) |
-| `Mat4` | `Matrix4`    | [New math library](https://github.com/uber-web/math.gl) |
-| `Quat` | `Quaternion` | [New math library](https://github.com/uber-web/math.gl) |

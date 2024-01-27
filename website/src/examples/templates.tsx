@@ -27,11 +27,11 @@ import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
 
 // import AnimationLoop from '../../../examples/webgl/external-webgl-context/app';
 
-import HelloTriangleWebGPUApp from '../../../examples/webgpu/triangle/app';
-import InstancedCubesWebGPUApp from '../../../examples/webgpu/instanced-cubes/app';
-import RotatingCubeWebGPUApp from '../../../examples/webgpu/rotating-cube/app';
+import HelloTriangleWebGPUApp from '../../../examples/portable/triangle/app';
+import InstancedCubesWebGPUApp from '../../../examples/portable/instanced-cubes/app';
+import RotatingCubeWebGPUApp from '../../../examples/portable/rotating-cube/app';
 import TexturedCubeWebGPUApp from '../../../examples/webgpu/textured-cube/app';
-import TwoCubesWebGPUApp from '../../../examples/webgpu/two-cubes/app';
+import TwoCubesWebGPUApp from '../../../examples/portable/two-cubes/app';
 
 const exampleConfig = {};
 

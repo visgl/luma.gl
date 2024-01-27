@@ -76,7 +76,6 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 
 | Limits                                             | This <br/> Browser                                       | Description                          |
 | -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------ |
-| **WebGL 1**                                        |                                                          |                                      |
 | `GL.ALIASED_LINE_WIDTH_RANGE`                      | <WL f="ALIASED_LINE_WIDTH_RANGE" />                      | Width !== 1 are no longer supported. |
 | `GL.ALIASED_POINT_SIZE_RANGE`                      | <WL f="ALIASED_POINT_SIZE_RANGE" />                      | `topology`: `'point'`                |
 | `GL.MAX_TEXTURE_SIZE`                              | <WL f="MAX_TEXTURE_SIZE" />                              | Max width/height of texture          |
@@ -91,7 +90,6 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 | `GL.MAX_FRAGMENT_UNIFORM_VECTORS`                  | <WL f="MAX_FRAGMENT_UNIFORM_VECTORS" />                  |                                      |
 | `GL.MAX_VIEWPORT_DIMS`                             | <WL f="MAX_VIEWPORT_DIMS" />                             |                                      |
 | `GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT`                | <WL f="MAX_TEXTURE_MAX_ANISOTROPY_EXT" />                |                                      |
-| **WebGL 2**                                        |                                                          |                                      |
 | `GL.MAX_3D_TEXTURE_SIZE`                           | <WL f="MAX_3D_TEXTURE_SIZE" />                           |                                      |
 | `GL.MAX_ARRAY_TEXTURE_LAYERS`                      | <WL f="MAX_ARRAY_TEXTURE_LAYERS" />                      |                                      |
 | `GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL`                 | <WL f="MAX_CLIENT_WAIT_TIMEOUT_WEBGL" />                 |                                      |
@@ -124,9 +122,8 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 
 ## Remarks
 
-- WebGL 1 only supports one color buffer format (RBG32F is deprecated)
 - WebGL 2 supports multiple color buffer formats
-- Some extensions will not be enabled until they have been queries. luma always queries on startup to enable, app only needs to query again it wants to test platform.
+- Some extensions will not be enabled until they have been queried. luma always queries on startup to enable extensions, app only needs to query again it wants to test platform.
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
 

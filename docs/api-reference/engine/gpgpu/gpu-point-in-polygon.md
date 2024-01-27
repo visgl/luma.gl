@@ -1,7 +1,5 @@
 # GPUPointInPolygon
 
-> `GPUPointInPolygon` is only available in WebGL 2.
-
 `GPUPointInPolygon` provides GPU accelerated PIP (Point-In-Polygon) testing functionality. A given set of 2D points and one or more 2D polygons, it computes, whether each point is inside or outside of any polygon.
 
 ## Sample Usage
@@ -22,12 +20,12 @@ const points = [
   -3.45, 0.45
 ];
 
-const positionBuffer = new Buffer(gl2, new Float32Array(points));
+const positionBuffer = device.createBuffer(new Float32Array(points));
 const count = 6;
 // Allocate result buffer with enough space (2 floats for each point)
-const filterValueIndexBuffer = new Buffer(gl2, count * 2 * 4);
+const filterValueIndexBuffer = device.createBuffer(count * 2 * 4);
 
-const gpuPointInPolygon = new GPUPointInPolygon(gl2);
+const gpuPointInPolygon = new GPUPointInPolygon(device);
 gpuPointInPolygon.update({polygons});
 gpuPointInPolygon.filter({positionBuffer, filterValueIndexBuffer, count});
 
@@ -40,7 +38,9 @@ const results = filterValueIndexBuffer.getData();
 
 ## Constructor
 
-### GPUPointInPolygon(gl: WebGL2RenderingContext, props: Object)
+```ts
+new GPUPointInPolygon(gl: WebGL2RenderingContext, props: Object);
+```
 
 Creates a new `GPUPointInPolygon` object.
 

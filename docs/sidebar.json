@@ -32,7 +32,6 @@
           "api-guide/background/webgpu-vs-webgl"
         ]
       },
-      "public-review",
       "api-guide/README",
       "api-guide/device",
       "api-guide/resources",
@@ -179,9 +178,8 @@
     "label": "Upgrade Guide",
     "items": [
       "upgrade-guide/README",
-      "upgrade-guide/api-philosophy",
-      "upgrade-guide/upgrade-v9",
-      "upgrade-guide/upgrade-v9-parameters"
+      "upgrade-guide/porting-guide",
+      "upgrade-guide/legacy-guide"
     ]
   }
 ]
