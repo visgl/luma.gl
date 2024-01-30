@@ -7,7 +7,7 @@ module.exports = getESLintConfig({
       project: ['./tsconfig.json']
     },
 
-    plugins: ['tree-shaking', 'luma-gl-custom-rules', 'import'],
+    plugins: ['tree-shaking','import'],
 
     env: {
       browser: true,
