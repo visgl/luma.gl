@@ -11,7 +11,6 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "rootDir": ".",
@@ -66,15 +65,15 @@
   // Better to explicitly exclude things.
   // Points will be awarded every time an exception is removed!
   "include": [
-    "examples/**/*",
-    "modules/**/*",
-    "test/**/*",
+    "modules/*/src",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
     "modules/**/wip",
     "modules/**/dist",
-    "test/apps",
+    "modules/**/test",
+    "modules/shadertools/src/libs/wgsl-reflect/wgsl_reflect.module.js",
+    "test",
     "node_modules"
   ]
 }
