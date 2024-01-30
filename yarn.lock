@@ -2719,13 +2719,6 @@
     "@babel/runtime" "^7.0.0"
     "@probe.gl/env" "4.0.4"
 
-"@probe.gl/stats-widget@^4.0.2":
-  version "4.0.4"
-  resolved "https://registry.yarnpkg.com/@probe.gl/stats-widget/-/stats-widget-4.0.4.tgz#0b400146db321316a147f38b64f9fd36c69770da"
-  integrity sha512-/A/4clZGn2p1YLqMlW6jPu2SqQq0WFKqA73n1sKzSNuDZlYCBabmJkqrav1+8ZqHd3D0MVHRJA33S+X+kynlMw==
-  dependencies:
-    "@babel/runtime" "^7.0.0"
-
 "@probe.gl/stats@^4.0.2":
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@probe.gl/stats/-/stats-4.0.4.tgz#b33a47bf192951d0789dfd2044b295c3709386bd"
@@ -4031,9 +4024,9 @@ camelcase@^5.0.0, camelcase@^5.3.1:
   integrity sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==
 
 caniuse-lite@^1.0.30001517:
-  version "1.0.30001519"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001519.tgz#3e7b8b8a7077e78b0eb054d69e6edf5c7df35601"
-  integrity sha512-0QHgqR+Jv4bxHMp8kZ1Kn8CH55OikjKJ6JmKkZYP1F3D7w+lnFXF70nG5eNfsZS89jadi5Ywy5UCSKLAglIRkg==
+  version "1.0.30001581"
+  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001581.tgz"
+  integrity sha512-whlTkwhqV2tUmP3oYhtNfaWGYHDdS3JYFQBKXxcUR9qqPWsRhFHhoISO2Xnl/g0xyKzht9mI1LZpiNWfMzHixQ==
 
 caseless@~0.12.0:
   version "0.12.0"

@@ -357,7 +357,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.uniformStore.setUniforms({
         sphere: {
           modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
-          projectionMatrix: projectionMatrix
+          projectionMatrix
         }
       });
       this.uniformStore.updateUniformBuffers();
@@ -384,7 +384,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.uniformStore.setUniforms({
         sphere: {
           modelViewMatrix: viewMatrix.clone().multiplyRight(modelMatrix),
-          projectionMatrix: projectionMatrix
+          projectionMatrix
         }
       });
       this.uniformStore.updateUniformBuffers();
