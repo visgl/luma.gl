@@ -52,7 +52,6 @@
     "@types/tape-promise": "^4.0.1",
     "babel-plugin-inline-webgl-constants": "^2.0.0-alpha.1",
     "babel-plugin-remove-glsl-comments": "^1.0.0",
-    "eslint-plugin-luma-gl-custom-rules": "file:./dev-modules/eslint-plugin-luma-gl-custom-rules",
     "eslint-plugin-tree-shaking": "^1.9.2",
     "ocular-dev-tools": "2.0.0-alpha.20",
     "pre-commit": "^1.2.2",

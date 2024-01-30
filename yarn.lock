@@ -5458,9 +5458,6 @@ eslint-plugin-jsx-a11y@^6.1.2:
     object.fromentries "^2.0.6"
     semver "^6.3.0"
 
-"eslint-plugin-luma-gl-custom-rules@file:./dev-modules/eslint-plugin-luma-gl-custom-rules":
-  version "9.0.0-alpha.17"
-
 eslint-plugin-markdown@^2.2.0:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/eslint-plugin-markdown/-/eslint-plugin-markdown-2.2.1.tgz#76b8a970099fbffc6cc1ffcad9772b96911c027a"
