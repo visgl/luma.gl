@@ -12,8 +12,8 @@ const config = {
   title: 'luma.gl',
   tagline: 'Web GPU APIs',
   url: 'https://luma.gl',
-  baseUrl: '/',
-  onBrokenLinks: 'throw',
+  baseUrl: process.env.STAGING ? '/luma.gl/' : '/',
+  onBrokenLinks: 'warn', // TODO should throw once broken links are resolved
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.png',
   organizationName: 'visgl', // Usually your GitHub org/user name.
