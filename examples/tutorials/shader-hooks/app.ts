@@ -85,7 +85,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    let uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    const uniformBufferData = this.uniformStore.getUniformBufferData('app');
     this.uniformBuffer1.write(uniformBufferData);
 
     this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'app', {

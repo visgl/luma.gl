@@ -348,12 +348,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
     
     // use the center pixel location in device pixel range
-    const devicePixels = device.canvasContext!.cssToDevicePixels(mousePosition);
+    const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
     const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
 
     // Render picking colors
-    framebuffer.resize(device.canvasContext!.getPixelSize());
+    framebuffer.resize(device.canvasContext.getPixelSize());
 
     this.shaderInputs.setProps({picking: {isActive: true}});
 

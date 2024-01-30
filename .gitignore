@@ -15,6 +15,7 @@ npm-debug.log
 stats.json
 .reify-cache
 .cache
+jscpd-report.md
 
 tsconfig.tsbuildinfo
 

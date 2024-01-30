@@ -9,7 +9,7 @@ export type PipelineFactoryProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   fs: string;
 };
 
-/** 
+/**
  * Efficiently creates / caches pipelines
  */
 export class PipelineFactory {
@@ -17,7 +17,7 @@ export class PipelineFactory {
     ...RenderPipeline.defaultProps,
     vs: undefined!,
     fs: undefined!
-  }
+  };
 
   readonly device: Device;
 
@@ -27,7 +27,8 @@ export class PipelineFactory {
   private readonly _pipelineCache: Record<string, RenderPipeline> = {};
 
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
-    device._lumaData.defaultPipelineFactory = device._lumaData.defaultPipelineFactory || new PipelineFactory(device);
+    device._lumaData.defaultPipelineFactory =
+      device._lumaData.defaultPipelineFactory || new PipelineFactory(device);
     return device._lumaData.defaultPipelineFactory as PipelineFactory;
   }
 
@@ -44,7 +45,7 @@ export class PipelineFactory {
       const pipeline = this.device.createRenderPipeline({
         ...props,
         vs: this.device.createShader({stage: 'vertex', source: props.vs}),
-        fs: props.fs ? this.device.createShader({stage: 'fragment', source: props.fs}) : null,
+        fs: props.fs ? this.device.createShader({stage: 'fragment', source: props.fs}) : null
       });
 
       pipeline.hash = hash;
@@ -69,22 +70,8 @@ export class PipelineFactory {
 
   // PRIVATE
 
-  _createRenderPipeline(props: PipelineFactoryProps): RenderPipeline {
-    if (!props.fs) {
-      throw new Error('fs');
-    }
-
-    const pipeline = this.device.createRenderPipeline({
-      ...props,
-      vs: this.device.createShader({stage: 'vertex', source: props.vs}),
-      fs: props.fs ? this.device.createShader({stage: 'fragment', source: props.fs}) : null,
-    });
-
-    return pipeline;
-  }
-
   /** Calculate a hash based on all the inputs for a render pipeline */
-  _hashRenderPipeline(props: PipelineFactoryProps): string {
+  private _hashRenderPipeline(props: PipelineFactoryProps): string {
     const vsHash = this._getHash(props.vs);
     const fsHash = props.fs ? this._getHash(props.fs) : 0;
 
@@ -107,11 +94,10 @@ export class PipelineFactory {
     }
   }
 
-  _getHash(key: string): number {
+  private _getHash(key: string): number {
     if (this._hashes[key] === undefined) {
       this._hashes[key] = this._hashCounter++;
     }
     return this._hashes[key];
   }
 }
-
