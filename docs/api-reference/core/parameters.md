@@ -37,7 +37,7 @@ All parameters listed in a single table
 | clearColor                   | `beginRenderPass({colorAttachments})`  |
 
 
-## Otehr types of parameters
+## Other types of parameters
 
 Note that there are certain types of parameters affecting GPU operation that are not handled by the main parameter system:
 
@@ -54,12 +54,12 @@ Note that there are certain types of parameters affecting GPU operation that are
 
 The only parameters that can be changed freely at any time (i.e. between each draw call) are viewport parameters, blend constant and stencil reference.
 
-| Parameter          | Description                                                                                    | Values                      |
-| ------------------ | ---------------------------------------------------------------------------------------------- | --------------------------- | -------------- |
-| `viewport`         | Specifying viewport size                                                                       | `number` (**`0xffffffff`**) |
-| `scissor`          | Specifyi                                                                                       | `number` (**`0xffffffff`**) | `gl.frontFace` |
-| `blendConstant`    | Sets color referenced by pipeline targets using blend factors `constant`, `one-minus-constant` |
-| `stencilReference` |                                                                                                |
+| Parameter          | Description                                                                                    | Values                           |
+| ------------------ | ---------------------------------------------------------------------------------------------- | -------------------------------- |
+| `viewport`         | Specifying viewport size                                                                       | `number` (**`0xffffffff`**)      |
+| `scissor`          | Specifying scissor region                                                                      | `number` (**`0xffffffff`**)      |
+| `blendConstant`    | Sets color referenced by pipeline targets using blend factors                                  | `constant`, `one-minus-constant` |
+| `stencilReference` |                                                                                                |                                  |
 
 These parameters can be set on the current `RenderPass`, and these parameters can be changed at any time.
 

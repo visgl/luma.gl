@@ -2,10 +2,10 @@
 
 A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
 
-Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either: 
-- creates a new canvas element, or 
-- attaches the context to an existing canvas element 
-- 
+Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either:
+- creates a new canvas element, or
+- attaches the context to an existing canvas element
+-
 - (see [remarks](#remarks) below for WebGL limitations).
 
 a `CanvasContext` handles the following responsibilities:
@@ -37,7 +37,7 @@ const renderPass = device.beginRenderPass({
 
 ### `CanvasContextProps`
 
-| Property                | Type                                                 |
+| Property                | Type                                                 |                                                                               |
 | ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `canvas?`               | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                 |
 | `container?`            | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body` |
@@ -106,6 +106,6 @@ canvasContext.resize(options)
 
 ## Remarks
 
-- Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute). 
+- Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute).
 - However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of WebGL.)
 - `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.

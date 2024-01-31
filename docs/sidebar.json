@@ -78,11 +78,6 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/core",
-        "items": ["api-reference/core/README"]
-      },
-      {
-        "type": "category",
         "label": "@luma.gl/engine",
         "items": [
           "api-reference/engine/animation-loop",
@@ -106,9 +101,7 @@
       {
         "type": "category",
         "label": "@luma.gl/gltf",
-        "items": [
-          "api-reference/gltf/README"
-        ]
+        "items": ["api-reference/gltf/README"]
       },
       {
         "type": "category",
@@ -131,9 +124,7 @@
           {
             "type": "category",
             "label": "Shader Passes",
-            "items": [
-              "api-reference/shadertools/shader-passes/image-processing"
-            ]
+            "items": ["api-reference/shadertools/shader-passes/image-processing"]
           },
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-assembler",
@@ -176,10 +167,6 @@
   {
     "type": "category",
     "label": "Upgrade Guide",
-    "items": [
-      "upgrade-guide/README",
-      "upgrade-guide/porting-guide",
-      "upgrade-guide/legacy-guide"
-    ]
+    "items": ["upgrade-guide/README", "upgrade-guide/porting-guide", "upgrade-guide/legacy-guide"]
   }
 ]

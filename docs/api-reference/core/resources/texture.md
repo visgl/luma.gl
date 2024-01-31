@@ -64,7 +64,7 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 
 ## TextureDimension
 
-| Dimension    | WebGPU | WebGL2 | Description                                                          |
+| Dimension    | WebGPU | WebGL2 | WebGL1 | Description                                                          |
 | ------------ | ------ | ------ | ------ | -------------------------------------------------------------------- |
 | `1d`         | ✅     | ❌     | ❌     | Contains a one dimensional texture (typically used for compute )     |
 | `2d`         | ✅     | ✅     | ✅     | Contains a "normal" image texture                                    |

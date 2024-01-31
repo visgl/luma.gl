@@ -3,20 +3,20 @@
 This upgrade guide lists breaking changes in the luma.gl API, and provides information on how to update applications.
 
 :::info
-This page covers luma.gl v9 and later releases. For information on upgrading to v8 and earlier releases, see our [Legacy Upgrade Guide](/docs/upgrade-guide/legacy-guide). 
+This page covers luma.gl v9 and later releases. For information on upgrading to v8 and earlier releases, see our [Legacy Upgrade Guide](/docs/upgrade-guide/legacy-guide).
 :::
 
 ## Conventions
 
-- **semantic versioning** - luma.gl follows [SEMVER](https://semver.org) conventions. This means that breaking changes are only done in major versions, minor version bumps bring new functionality but no breaking changes, and patch releases typically contain only low-risk fixes. 
+- **semantic versioning** - luma.gl follows [SEMVER](https://semver.org) conventions. This means that breaking changes are only done in major versions, minor version bumps bring new functionality but no breaking changes, and patch releases typically contain only low-risk fixes.
 - **sequential upgrades** - Upgrade instructions assume that you are upgrading from the immediately previous release.
 If you are upgrading across multiple releases you will want to consider the release notes for all
 intermediary releases.
 
 ## Upgrading to v9.0
 
-luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for this release are unusually long. 
-This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a 
+luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for this release are unusually long.
+This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a
 [Porting Guide](/docs/upgrade-guide/porting-guide) that provides more background information and recommended porting strategies.
 
 ### Non-API changes
@@ -46,13 +46,13 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 
 - The engine module is largely unchanged in that it provides the same classes as before.
 
-**`@luma.gl/webgl`** 
+**`@luma.gl/webgl`**
 
 - While the webgl module still contains the WebGL 2 classes, these classes can no longer be imported directly. Instead the application should use `Device` create methods (`device.createBuffer()`, `device.createTexture()` etc to create these ojects in a portable way).
 
 **`@luma.gl/constants`** (INTERNAL)
 
-- The constant module remains but is now considered an internal luma.gl module, and is no longer intended to be imported by applications. 
+- The constant module remains but is now considered an internal luma.gl module, and is no longer intended to be imported by applications.
 - In the external API, all WebGL-style numeric constants (`GL.` constants) have been replaced with strictly typed WebGPU style string constants.
 
 **`@luma.gl/debug`** (REMOVED)
@@ -83,7 +83,7 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 
 ### `luma.gl/core` / `@luma.gl/webgl`
 
-The core module was re-exporting the webgl classes. 
+The core module was re-exporting the webgl classes.
 
 A long list of changes, some required to make the API portable between WebGPU and WebGL, and many to accommodate the limitations of the more locked-down WebGPU API.
 
@@ -93,7 +93,7 @@ A long list of changes, some required to make the API portable between WebGPU an
 | `Program`               | `RenderPipeline`             | WebGPU alignment                                                                                                                                     |
 
 **`@luma.gl/gltools`** (removed)
-    
+
 The WebGL context functions from `@luma.gl/gltools`(`createGLContext` etc), have been replaced by methods on to the new `Device` and `CanvasContext` classes.
 
 The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRenderingContext` object. v9 enables applications to work portably with both WebGPU and WebGL, and accordingly it wraps the WebGL context in a `Device` instance.
@@ -257,10 +257,10 @@ TODO - this section needs updating
 
 After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
 
-| V8/WebGL Function           | Description                            | Values                         |
+| V8/WebGL Function           | Description                            | Values                         |                  |
 | --------------------------- | -------------------------------------- | ------------------------------ | ---------------- |
 | **Stencil Parameters**      |
-| `stencilReadMask`           | Binary mask for reading stencil values | `number` (**`0xffffffff`**)    |
+| `stencilReadMask`           | Binary mask for reading stencil values | `number` (**`0xffffffff`**)    |                  |
 | `stencilWriteMask`          | Binary mask for writing stencil values | `number` (**`0xffffffff`**)    | `gl.frontFace`   |
 | `stencilCompare`            | How the mask is compared               | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
 | `stencilPassOperation`      |                                        | **`'keep'`**                   | `gl.stencilOp`   |
@@ -324,7 +324,7 @@ Remarks:
 
 | Function                                                                                        | Sets parameters      |
 | ----------------------------------------------------------------------------------------------- | -------------------- |
-| [clearColor][https]//developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearColor) | GL.COLOR_CLEAR_VALUE |
+| [clearColor](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearColor) | GL.COLOR_CLEAR_VALUE |
 
 | Parameter              | Type                | Default      | Description |
 | ---------------------- | ------------------- | ------------ | ----------- |
@@ -496,5 +496,3 @@ const value = model.setParameters({
 | `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO`      | srcAlpha         |
 | `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE`       | dstRgb           |
 | `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO`      | dstAlpha         |
-
-

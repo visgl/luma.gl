@@ -31,20 +31,19 @@ animationLoop.start({canvas: 'my-canvas'});
 
 ## Types
 
-
 ### AnimationLoopProps
 
-| Property                   | Type                        | Default | Description                                                                                                          |
-| -------------------------- | --------------------------- |
-| `device?`                  | `Device \| Promise<Device>` |         | the `Device` to render into.                                                                                         |
-| `onInitialize?`            | (callback)                  |         | Called once after the first call to `animationLoop.start()`. Use to create GPU resources                             |
-| `onRender?`                | (callback)                  |         | - Called on every animation frame. Use to render .                                                                   |
-| `onFinalize?`              | (callback)                  |         | - Called once when animation is stopped. Used to delete objects or free any resources created during `onInitialize?` |
-| `onError`                  | (callback)                  |         | - Called when an error is about to be thrown.                                                                        |
-| `autoResizeViewport?`      | `boolean`                   | `true`  | If true, auto resizes GPU viewport each frame before `onRender` is called.                                           |
-| `autoResizeDrawingBuffer?` | `boolean`                   | `true`  | If true, resizes the drawing buffer  each frame before `onRender` is called.                                         |
-| `useDevicePixels?`         | `boolean \| number`         |         | Multiplier. `true` uses `window.devicePixelRatio` as a multiplier in `autoResizeDrawingBuffer` etc.                  |
-| `stats?`                   | `Stats`                     |         | A probe.gl `Stats` instance, Auto-created if not supplied.                                                           |
+| Property                   | Type                           | Default | Description                                                                                                          |
+| -------------------------- | ------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `device?`                  | `Device` \| `Promise<Device>`  |         | A `Device` to render into.                                                                                           |
+| `onInitialize?`            | (callback)                     |         | Called once after the first call to `animationLoop.start()`. Use to create GPU resources                             |
+| `onRender?`                | (callback)                     |         | - Called on every animation frame. Use to render .                                                                   |
+| `onFinalize?`              | (callback)                     |         | - Called once when animation is stopped. Used to delete objects or free any resources created during `onInitialize?` |
+| `onError`                  | (callback)                     |         | - Called when an error is about to be thrown.                                                                        |
+| `autoResizeViewport?`      | `boolean`                      | `true`  | If true, auto resizes GPU viewport each frame before `onRender` is called.                                           |
+| `autoResizeDrawingBuffer?` | `boolean`                      | `true`  | If true, resizes the drawing buffer  each frame before `onRender` is called.                                         |
+| `useDevicePixels?`         | `boolean \| number`            |         | Multiplier. `true` uses `window.devicePixelRatio` as a multiplier in `autoResizeDrawingBuffer` etc.                  |
+| `stats?`                   | `Stats`                        |         | A probe.gl `Stats` instance, Auto-created if not supplied.                                                           |
 
 ### AnimationProps
 
@@ -95,7 +94,7 @@ Restarts the animation
 animationLoop.start(options)
 ```
 
-- `options`=`{}` (object) - Options to create the WebGLContext with. 
+- `options`=`{}` (object) - Options to create the WebGLContext with.
 
 ### stop()
 
@@ -170,4 +169,4 @@ The callbacks `onInitialize`, `onRender` and `onFinalize` that the app supplies 
 - The supplied callback function must return a WebGLRenderingContext or an error will be thrown.
 - This callback registration function should not be called if a `WebGLRenderingContext` was supplied to the AnimationLoop constructor.
 - `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down, this happens due to system memory limitation, in such cases a warning will be logged to the browser console.
-- `onInitialize`` is called after page load completes and the passed in device promise has been resolved (the device has been created).                               
+- `onInitialize`` is called after page load completes and the passed in device promise has been resolved (the device has been created).
