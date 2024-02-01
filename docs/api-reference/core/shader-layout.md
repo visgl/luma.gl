@@ -10,17 +10,17 @@ could choose to provide buffers with different vertex formats, strides, and offs
 
 Shader code (WGSL and GLSL) contains declarations of attributes, uniform blocks, samplers etc, describing all required data inputs and outputs. After compilation and linking of fragment and vertex shaders into a pipeline, the resolved declarations collectively define the layout of the data that needs to be bound before the shader can execute on the GPU.
 
-As a preparation to a `RenderPipeline` `draw()` call, the GPU data 
-required by the pipeline's shaders must be bound on the CPU via luma.gl calls such as `setAttributes()`, `setIndexBuffer()`, `setBindings()` etc. 
+As a preparation to a `RenderPipeline` `draw()` call, the GPU data
+required by the pipeline's shaders must be bound on the CPU via luma.gl calls such as `setAttributes()`, `setIndexBuffer()`, `setBindings()` etc.
 For these calls to work, the metadata in the `ShaderLayout` object is needed in JavaScript.
 
 Note that `ShaderLayout`s are designed to be created manually by a programmer (who needs to make sure all relevant declarations in the shader code are described in the `ShaderLayout`).
 
 Remarks:
-- In WebGL, a default `ShaderLayout` is extracted automatically by the `RenderPipeline` in WebGL. 
+- In WebGL, a default `ShaderLayout` is extracted automatically by the `RenderPipeline` in WebGL.
 However this is not yet possible in WebGPU. Therefore it is necessary to provide an explicit `layout` property to any `RenderPipeline` that is expected to run in WebGPU. This restriction may be lifted in the future.
 - It is not possible to automatically infer from a shader which attributes should have instanced step modes. The heuristic applied by luma.gl under WebGL is that any attribute which contains the string `instanced` will be assumed to have `stepMode='instance'`.
--  
+
 ## Usage
 
 ```typescript
@@ -82,7 +82,7 @@ It contains  fixed information about each attribute such as its location (the in
 
 - `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
 - `format: VertexFormat`
-- `stepMode: 'vertex' | 'instance'` - 
+- `stepMode: 'vertex' | 'instance'` -
 
 
 ### bindings
@@ -99,7 +99,7 @@ and type are the key pieces of information that need to be provided.
 ```
 
 - `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
-- `type: 'texture' | 'sampler' | uniform'` The type of bind point (texture, sampler or uniform buffer). WebGPU requires separate bind points for textures and samplers. 
+- `type: 'texture' | 'sampler' | uniform'` The type of bind point (texture, sampler or uniform buffer). WebGPU requires separate bind points for textures and samplers.
 
 
 ### uniforms

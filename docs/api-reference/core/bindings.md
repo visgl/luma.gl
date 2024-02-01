@@ -4,7 +4,7 @@ A key responsibility of any GPU API is to enable the application to
 set up data so that it can be accessed by shaders. in luma.b
 
 The terminology can be a little confusing. To make it easy to cross-reference other code and
-documentation, luma.gl attempts to roughly follow WebGPU / WGLSL conventions. The following terms are used:
+documentation, luma.gl attempts to roughly follow WebGPU / WGSL conventions. The following terms are used:
 
 - **layouts** - metadata for various shader connection points
 - **attribute layout** - actual values for attributes
@@ -109,7 +109,7 @@ new Model(device, {
 })
 ```
 
-WGLSL vertex shader
+WGSL vertex shader
 
 ```rust
 struct Uniforms {
@@ -134,7 +134,7 @@ fn main([[location(0)]] position : vec4<f32>,
 }
 ```
 
-WGLS FRAGMENT SHADER
+WGSL FRAGMENT SHADER
 
 ```rust
 [[group(0), binding(1)]] var mySampler: sampler; // BINDING 1

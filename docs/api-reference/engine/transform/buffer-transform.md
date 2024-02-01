@@ -6,9 +6,7 @@ NOTE: In following sections 'buffer transform' is used to refer to 'reading from
 
 ## Constructor
 
-```ts
 ### Transform(device: Device, props: Object)
-```
 
 - `gl` (`WebGLRenderingContext`) gl - context
 - `props` (`Object`, Optional) - contains following data.
