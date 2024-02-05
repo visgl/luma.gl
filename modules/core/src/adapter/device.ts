@@ -377,7 +377,7 @@ export abstract class Device {
   }
   
   /** @deprecated - will be removed - should use command encoder */
-  readPixelsToBufferWebGL2(
+  readPixelsToBufferWebGL(
     source: Framebuffer | Texture,
     options?: {
       sourceX?: number;
@@ -396,6 +396,11 @@ export abstract class Device {
 
   /** @deprecated - will be removed - should use WebGPU parameters (pipeline) */
   setParametersWebGL(parameters: any): void {
+    throw new Error('not implemented');
+  }
+
+  /** @deprecated - will be removed - should use WebGPU parameters (pipeline) */
+  getParametersWebGL(parameters: any): void {
     throw new Error('not implemented');
   }
 
