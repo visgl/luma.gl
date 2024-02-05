@@ -1,5 +1,13 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.2
+
+- fix(docs): Fix table layouts, broken links, and other typos in v9 docs (#1937)
+- (website) Add staging website build (#1936)
+- chore: enable lint for examples etc (#1935)
+- docs: Upgrade guide polish (#1934)
+- fix: WebGPU instancing example (#1932)
+
 ### v9.0.0-beta.1
 
 - feat(webgl): Pass through canvas in WebGLDevice.attach() (#1931)
