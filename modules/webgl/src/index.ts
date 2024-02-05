@@ -36,7 +36,7 @@ export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
 export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 
-// WebGL adapter classes 
+// WebGL adapter classes
 export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedback';
 
 // WebGL adapter classes
@@ -55,15 +55,6 @@ export {
 
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
-export type {GLParameters} from '@luma.gl/constants';
-export {
-  getGLParameters,
-  setGLParameters,
-  resetGLParameters
-} from './context/parameters/unified-parameter-api';
-
-export {withGLParameters} from './context/state-tracker/with-parameters';
-
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
 export {
@@ -74,9 +65,7 @@ export {
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
 
-// DEPRECATED EXPORTS
-export {clear} from './classic/clear';
-export {readPixelsToBuffer, readPixelsToArray, copyToTexture} from './classic/copy-and-blit';
+// DEPRECATED TEST EXPORTS
 // State tracking
 export {
   trackContextState,
@@ -86,25 +75,10 @@ export {
 // Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
 export {polyfillContext} from './context/polyfill/polyfill-context';
 
-// HELPERS - EXPERIMENTAL
-// export {getShaderLayout, getProgramBindings} from './adapter/helpers/get-shader-layout';
-// export {convertGLToTextureFormat, _checkFloat32ColorAttachment} from './adapter/converters/texture-formats';
-// export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
+export {
+  resetGLParameters,
+  setGLParameters,
+  getGLParameters
+} from './context/parameters/unified-parameter-api';
 
-// // WebGL Types - Experimental exports
-// export type {
-//   GLDrawMode,
-//   GLPrimitive,
-//   GLDataType,
-//   GLPixelType,
-//   GLUniformType,
-//   GLSamplerType,
-//   GLCompositeType,
-//   GLFunction,
-//   GLBlendEquation,
-//   GLBlendFunction,
-//   GLStencilOp,
-//   GLSamplerParameters,
-//   GLValueParameters,
-//   GLFunctionParameters
-// } from '@luma.gl/constants';
+export {withGLParameters} from './context/state-tracker/with-parameters';

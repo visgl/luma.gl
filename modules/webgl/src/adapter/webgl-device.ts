@@ -28,6 +28,7 @@ import {
   createHeadlessContext,
   isHeadlessGLRegistered
 } from '../context/context/create-headless-context';
+
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
@@ -75,6 +76,9 @@ import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 
 import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
+import {setGLParameters} from '../context/parameters/unified-parameter-api';
+import {withGLParameters} from '../context/state-tracker/with-parameters';
+import {clear} from '../classic/clear';
 
 const LOG_LEVEL = 1;
 
@@ -422,6 +426,18 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     return readPixelsToBuffer(source, options);
   }
 
+  override setParametersWebGL(parameters: any): void {
+    setGLParameters(this, parameters);
+  }
+
+  override withParametersWebGL(parameters: any, func: any): any {
+    withGLParameters(this, parameters, func);
+  }
+
+  override clearWebGL(options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}): void {
+    clear(this, options);
+  }
+  
   //
   // WebGL-only API (not part of `Device` API)
   //

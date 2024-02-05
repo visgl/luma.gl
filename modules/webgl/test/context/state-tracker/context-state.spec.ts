@@ -4,10 +4,10 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
+import type {GLParameters} from '@luma.gl/constants';
 import {GL} from '@luma.gl/constants';
 
 import type {TypedArray} from '@luma.gl/core'
-import type {GLParameters} from '@luma.gl/webgl';
 import {getGLParameters, setGLParameters, resetGLParameters, withGLParameters} from '@luma.gl/webgl';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';

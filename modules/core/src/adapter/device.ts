@@ -355,7 +355,8 @@ export abstract class Device {
     throw new Error('not implemented');
   }
 
-  // HACKS - until we have a better way to handle these
+  // WebGL specific HACKS - enables app to remove webgl import
+  // Use until we have a better way to handle these
 
   /** @deprecated - will be removed - should use command encoder */
   readPixelsToArrayWebGL(
@@ -390,6 +391,21 @@ export abstract class Device {
       sourceType?: number;
     }
   ): Buffer {
+    throw new Error('not implemented');
+  }
+
+  /** @deprecated - will be removed - should use WebGPU parameters (pipeline) */
+  setParametersWebGL(parameters: any): void {
+    throw new Error('not implemented');
+  }
+
+  /** @deprecated - will be removed - should use WebGPU parameters (pipeline) */
+  withParametersWebGL(parameters: any, func: any): any {
+    throw new Error('not implemented');
+  }
+
+  /** @deprecated - will be removed - should use clear arguments in RenderPass */
+  clearWebGL(options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}): void {
     throw new Error('not implemented');
   }
 

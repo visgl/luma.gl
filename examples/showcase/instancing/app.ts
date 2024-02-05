@@ -3,7 +3,6 @@ import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
-import {readPixelsToArray} from '@luma.gl/webgl';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -366,7 +365,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     pickingPass.end();
 
     // Read back
-    const color255 = readPixelsToArray(framebuffer, {
+    const color255 = framebuffer.device.readPixelsToArrayWebGL(framebuffer, {
       sourceX: pickX,
       sourceY: pickY,
       sourceWidth: 1,

@@ -4,8 +4,8 @@
 import test from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
-import {GL} from '@luma.gl/constants';
-import {setDeviceParameters, GLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
+import {GL, GLParameters} from '@luma.gl/constants';
+import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 // Settings test, could be beneficial to not reuse a context
 const fixture = {
