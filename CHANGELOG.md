@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.3
+
+- feat(core): Additional WebGL-specific Device methods (#1940)
+
 ### v9.0.0-beta.2
 
 - fix(docs): Fix table layouts, broken links, and other typos in v9 docs (#1937)
