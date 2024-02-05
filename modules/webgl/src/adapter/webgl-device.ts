@@ -76,7 +76,7 @@ import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 
 import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
-import {setGLParameters} from '../context/parameters/unified-parameter-api';
+import {setGLParameters, getGLParameters} from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {clear} from '../classic/clear';
 
@@ -409,7 +409,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   /** @deprecated - should use command encoder */
-  override readPixelsToBufferWebGL2(
+  override readPixelsToBufferWebGL(
     source: Framebuffer | Texture,
     options?: {
       sourceX?: number;
@@ -428,6 +428,10 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   override setParametersWebGL(parameters: any): void {
     setGLParameters(this, parameters);
+  }
+
+  override getParametersWebGL(parameters: any): any {
+    return getGLParameters(this, parameters);
   }
 
   override withParametersWebGL(parameters: any, func: any): any {
