@@ -2,8 +2,8 @@ import test, {Test} from 'tape-promise/tape';
 import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
-import {setDeviceParameters, GLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
+import {GL, GLParameters} from '@luma.gl/constants';
+import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 // import {createTestDevice} from '@luma.gl/test-utils';
 // const webgl1Device = createTestDevice({debug: true, webgl2: false});

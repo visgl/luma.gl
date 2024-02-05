@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
+import type {GLParameters} from '@luma.gl/constants';
 import {GL} from '@luma.gl/constants';
-import {GLParameters} from '@luma.gl/webgl';
 
 // NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1
 export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE: GLParameters = {
