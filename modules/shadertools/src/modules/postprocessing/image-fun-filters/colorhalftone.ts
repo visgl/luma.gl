@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // TODO pass texCoord to angle
 const fs = glsl`\
-uniform ColorHalftone {
+uniform colorHalftoneUniforms {
   vec2 center;
   float angle;
   float size;

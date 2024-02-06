@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
 const fs = glsl`\
-uniform BulgePinch {
+uniform bulgePinchUniforms {
   float radius;
   float strength;
   vec2 center;
@@ -27,11 +27,11 @@ vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
   return coord;
 }
 
-vec4 bulgePinch_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 bulgePinch_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
   coord = bulgePinch_warp(coord, bulgePinch.center * texSize);
 
-  return warp_sampleColor(texture, texSize, coord);
+  return warp_sampleColor(source, texSize, coord);
 }
 `;
 

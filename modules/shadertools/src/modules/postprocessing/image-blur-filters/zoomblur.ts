@@ -5,13 +5,15 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../../math/random/random';
 
 const fs = `
-uniform vec2 center;
-uniform float strength;
+uniform zoomBlurUniforms {
+  vec2 center;
+  float strength;
+} zoomBlur;
 
-vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 zoomBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec4 color = vec4(0.0);
   float total = 0.0;
-  vec2 toCenter = center * texSize - texCoord * texSize;
+  vec2 toCenter = zoomBlur.center * texSize - texCoord * texSize;
 
   /* randomize the lookup values to hide the fixed number of samples */
   float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
@@ -19,7 +21,7 @@ vec4 zoomBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   for (float t = 0.0; t <= 40.0; t++) {
     float percent = (t + offset) / 40.0;
     float weight = 4.0 * (percent - percent * percent);
-    vec4 sample = texture2D(texture, texCoord + toCenter * percent * strength / texSize);
+    vec4 sample = texture(source, texCoord + toCenter * percent * zoomBlur.strength / texSize);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
     sample.rgb *= sample.a;

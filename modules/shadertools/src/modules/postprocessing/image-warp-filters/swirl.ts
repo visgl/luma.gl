@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
 const fs = glsl`\
-uniform Swirl {
+uniform swirlUniforms {
   float radius;
   float angle;
   vec2 center;
@@ -29,11 +29,11 @@ vec2 swirl_warp(vec2 coord, vec2 texCenter) {
   return coord;
 }
 
-vec4 swirl_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 swirl_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
   coord = swirl_warp(coord, swirl.center * texSize);
 
-  return warp_sampleColor(texture, texSize, coord);
+  return warp_sampleColor(source, texSize, coord);
 }
 `;
 

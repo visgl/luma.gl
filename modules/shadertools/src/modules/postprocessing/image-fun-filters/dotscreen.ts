@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform DotScreen {
+uniform dotScreenUniforms {
   vec2 center;
   float angle;
   float size;

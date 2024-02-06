@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../math/random/random';
 
 const fs = glsl`\
-uniform EdgeWork {
+uniform edgeWorkUniforms {
   float radius;
   vec2 delta;
 } edgeWork;
@@ -23,7 +23,7 @@ vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec3 sampleColor = texture2D(source, texCoord + relativeDelta * percent).rgb;
+    vec3 sampleColor = texture(source, texCoord + relativeDelta * percent).rgb;
     float average = (sampleColor.r + sampleColor.g + sampleColor.b) / 3.0;
     color.x += average * weight;
     total.x += weight;
@@ -48,7 +48,7 @@ vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec2 sampleColor = texture2D(source, texCoord + relativeDelta * percent).xy;
+    vec2 sampleColor = texture(source, texCoord + relativeDelta * percent).xy;
     color.x += sampleColor.x * weight;
     total.x += weight;
     if (abs(t) < 15.0) {

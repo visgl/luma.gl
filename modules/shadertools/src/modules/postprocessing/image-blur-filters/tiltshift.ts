@@ -6,7 +6,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../..//math/random/random';
 
 const fs = glsl`\
-uniform TiltShift {
+uniform tiltShiftUniforms {
   float blurRadius;
   float gradientRadius;
   vec2 start;
@@ -19,7 +19,7 @@ vec2 tiltShift_getDelta(vec2 texSize) {
   return tiltShift.invert ? vec2(-vector.y, vector.x) : vector;
 }
 
-vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec4 color = vec4(0.0);
   float total = 0.0;
 
@@ -33,7 +33,7 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec4 sample = texture2D(texture, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
+    vec4 sample = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
     sample.rgb *= sample.a;

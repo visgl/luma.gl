@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
 
-uniform BrightnessContrast{
+uniform brightnessContrastUniforms {
   float brightness;
   float contrast;
 } brightnessContrast;
