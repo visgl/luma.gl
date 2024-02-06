@@ -17,7 +17,7 @@ vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
   float distance = length(coord);
   if (distance < bulgePinch.radius) {
     float percent = distance / bulgePinch.radius;
-    if (strength > 0.0) {
+    if (bulgePinch.strength > 0.0) {
       coord *= mix(1.0, smoothstep(0.0, bulgePinch.radius / distance, percent), bulgePinch.strength * 0.75);
     } else {
       coord *= mix(1.0, pow(percent, 1.0 + bulgePinch.strength * 0.75) * bulgePinch.radius / distance, 1.0 - percent);
