@@ -5,25 +5,25 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Ink {
+uniform inkUniforms {
   float strength;
 } ink;
 
-vec4 ink_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 ink_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 dx = vec2(1.0 / texSize.x, 0.0);
   vec2 dy = vec2(0.0, 1.0 / texSize.y);
-  vec4 color = texture2D(texture, texCoord);
+  vec4 color = texture(source, texCoord);
   float bigTotal = 0.0;
   float smallTotal = 0.0;
   vec3 bigAverage = vec3(0.0);
   vec3 smallAverage = vec3(0.0);
   for (float x = -2.0; x <= 2.0; x += 1.0) {
     for (float y = -2.0; y <= 2.0; y += 1.0) {
-      vec3 sample = texture2D(texture, texCoord + dx * x + dy * y).rgb;
-      bigAverage += sample;
+      vec3 value = texture(source, texCoord + dx * x + dy * y).rgb;
+      bigAverage += value;
       bigTotal += 1.0;
       if (abs(x) + abs(y) < 2.0) {
-        smallAverage += sample;
+        smallAverage += value;
         smallTotal += 1.0;
       }
     }
