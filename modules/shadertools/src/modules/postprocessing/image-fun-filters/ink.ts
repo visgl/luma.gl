@@ -19,11 +19,11 @@ vec4 ink_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec3 smallAverage = vec3(0.0);
   for (float x = -2.0; x <= 2.0; x += 1.0) {
     for (float y = -2.0; y <= 2.0; y += 1.0) {
-      vec3 value = texture(source, texCoord + dx * x + dy * y).rgb;
-      bigAverage += value;
+      vec3 offsetColor = texture(source, texCoord + dx * x + dy * y).rgb;
+      bigAverage += offsetColor;
       bigTotal += 1.0;
       if (abs(x) + abs(y) < 2.0) {
-        smallAverage += value;
+        smallAverage += offsetColor;
         smallTotal += 1.0;
       }
     }

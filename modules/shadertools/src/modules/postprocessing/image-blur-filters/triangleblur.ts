@@ -23,12 +23,12 @@ vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec4 value = texture(source, texCoord + adjustedDelta * percent);
+    vec4 offsetColor = texture(source, texCoord + adjustedDelta * percent);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    value.rgb *= value.a;
+    offsetColor.rgb *= offsetColor.a;
 
-    color += value * weight;
+    color += offsetColor * weight;
     total += weight;
   }
 

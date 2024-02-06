@@ -18,10 +18,10 @@ vec4 denoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   float total = 0.0;
   for (float x = -4.0; x <= 4.0; x += 1.0) {
     for (float y = -4.0; y <= 4.0; y += 1.0) {
-      vec4 value = texture(source, texCoord + vec2(x, y) / texSize);
-      float weight = 1.0 - abs(dot(value.rgb - center.rgb, vec3(0.25)));
+      vec4 offsetColor = texture(source, texCoord + vec2(x, y) / texSize);
+      float weight = 1.0 - abs(dot(offsetColor.rgb - center.rgb, vec3(0.25)));
       weight = pow(weight, adjustedExponent);
-      color += value * weight;
+      color += offsetColor * weight;
       total += weight;
     }
   }
