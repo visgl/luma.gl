@@ -49,7 +49,7 @@ vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  */
 export type TriangleBlurProps = {
   /** The radius of the pyramid convolved with the image. */
-  radius: number;
+  radius?: number;
   /** @deprecated internal property */
   delta?: number[];
 };

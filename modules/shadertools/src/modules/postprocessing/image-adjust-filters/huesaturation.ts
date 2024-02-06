@@ -44,9 +44,9 @@ vec4 hueSaturation_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 export type HueSaturationProps = {
   /** -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
    * and 1 is 180 degree rotation in the positive direction) */
-   hue: number;
+   hue?: number;
    /** @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast) */
-   saturation: number;
+   saturation?: number;
 };
 
 /**

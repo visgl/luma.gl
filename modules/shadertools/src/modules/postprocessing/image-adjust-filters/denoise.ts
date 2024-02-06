@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // Do a 9x9 bilateral box filter
 const fs = glsl`\
-uniform noiseUniforms {
+uniform denoiseUniforms {
   float strength;
 } noise;
 
@@ -41,7 +41,7 @@ export type DenoiseProps = {
    * than zero. A value of zero just gives an 9x9 box blur and high values
    * give the original image, but ideal values are usually around 10-20. 
    */
-  strength: number;
+  strength?: number;
 };
 
 /**

@@ -69,7 +69,7 @@ vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
  */
 export type EdgeWorkProps = {
   /** radius The radius of the effect in pixels. */
-  radius: number;
+  radius?: number;
   /** @deprecated internal */
   delta?: number;
 };

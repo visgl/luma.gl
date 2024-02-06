@@ -28,7 +28,7 @@ vec4 sepia_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 `;
 
 export type SepiaProps = {
-  amount: number;
+  amount?: number;
 };
 
 /**

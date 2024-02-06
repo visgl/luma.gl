@@ -45,7 +45,7 @@ export type InkProps = {
    * Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges. 
    * Negative strength values will create white ink edges instead of black ones.
    */
-   strength: number;
+   strength?: number;
 };
 
 /**

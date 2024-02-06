@@ -38,11 +38,11 @@ vec4 bulgePinch_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
 /** Bulges or pinches the image in a circle. */
 export type BulgePinchProps = {
   /** The [x, y] coordinates of the center of the circle of effect. */
-  center: number[];
+  center?: number[];
   /** The radius of the circle of effect. */
-  radius: number;
+  radius?: number;
   /** strength -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge) */
-  strength: number;
+  strength?: number;
 };
 
 /**

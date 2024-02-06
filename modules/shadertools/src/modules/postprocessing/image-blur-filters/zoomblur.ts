@@ -44,9 +44,9 @@ vec4 zoomBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  */
 export type ZoomBlurProps = {
   /** - The x, y coordinate of the blur origin. */
-  center: number[],
+  center?: number[],
   /** - The strength of the blur. Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 creates a highly blurred image. */
-  strength: number
+  strength?: number
 };
 
 /**

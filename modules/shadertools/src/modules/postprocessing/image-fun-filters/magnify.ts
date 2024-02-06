@@ -32,15 +32,15 @@ vec4 magnify_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  */
 export type MagnifyProps = {
   /** x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`. */
-  screenXY: number[];
+  screenXY?: number[];
   /** effect radius in pixels. Default value is `100`. */
-  radiusPixels: number;
+  radiusPixels?: number;
   /** magnify level. Default value is `2`. */
-  zoom: number;
+  zoom?: number;
   /** border width of the effect circle, will not show border if value <= 0.0. Default value is `0`. */
-  borderWidthPixels: number;
+  borderWidthPixels?: number;
   /** border color of the effect circle. Default value is `[255, 255, 255, 255]`. */
-  borderColor: number[];
+  borderColor?: number[];
 };
 
 /**

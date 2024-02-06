@@ -27,8 +27,8 @@ vec4 brightnessContrast_filterColor(vec4 color, vec2 texSize, vec2 texCoords) {
 `;
 
 export type BrightnessContrastProps = {
-  brightness: number;
-  contrast: number;
+  brightness?: number;
+  contrast?: number;
 };
 
 /**

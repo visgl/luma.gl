@@ -56,9 +56,9 @@ vec4 hexagonalPixelate_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord
  */
 export type HexagonalPixelateProps = {
   /** The [x, y] coordinates of the pattern center. */
-  center: number[];
+  center?: number[];
   /** The width of an individual tile, in pixels. */
-  scale: number;
+  scale?: number;
 };
 
 /**

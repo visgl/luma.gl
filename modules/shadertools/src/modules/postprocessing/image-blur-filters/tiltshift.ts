@@ -57,13 +57,13 @@ vec4 tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  */
 export type TiltShiftProps = {
   /** The x,y coordinate of the start of the line segment. */
-  start: number[];
+  start?: number[];
   /** The xm y coordinate of the end of the line segment. */
-  end: number[];
+  end?: number[];
   /** The maximum radius of the pyramid blur. */
-  blurRadius: number[];
+  blurRadius?: number[];
   /** The distance from the line at which the maximum blur radius is reached. */
-  gradientRadius: number[];
+  gradientRadius?: number[];
   /** @deprecated internal shaderpass use */
   invert?: number;
 };
