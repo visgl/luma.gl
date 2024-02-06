@@ -8,7 +8,7 @@ import type {ShaderModule, UniformValue} from './shader-module';
  * on how to run 
  */
 export type ShaderPass<PropsT extends Record<string, unknown> = Record<string, unknown>, UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>> = ShaderModule<PropsT, UniformsT> & {
-  passes?: ShaderPassData[];
+  passes: ShaderPassData[];
 };
 
 type ShaderPassData = {

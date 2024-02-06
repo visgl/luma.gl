@@ -21,5 +21,6 @@ export type WarpProps = {};
 
 export const warp: ShaderPass<WarpProps, WarpProps> = {
   name: 'warp',
+  passes: [{sampler: true}],
   fs
 };
