@@ -21,12 +21,12 @@ vec4 zoomBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   for (float t = 0.0; t <= 40.0; t++) {
     float percent = (t + offset) / 40.0;
     float weight = 4.0 * (percent - percent * percent);
-    vec4 sample = texture(source, texCoord + toCenter * percent * zoomBlur.strength / texSize);
+    vec4 value = texture(source, texCoord + toCenter * percent * zoomBlur.strength / texSize);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    sample.rgb *= sample.a;
+    value.rgb *= value.a;
 
-    color += sample * weight;
+    color += value * weight;
     total += weight;
   }
 

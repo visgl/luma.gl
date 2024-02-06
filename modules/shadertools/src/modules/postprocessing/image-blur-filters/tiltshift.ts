@@ -61,9 +61,9 @@ export type TiltShiftProps = {
   /** The xm y coordinate of the end of the line segment. */
   end?: number[];
   /** The maximum radius of the pyramid blur. */
-  blurRadius?: number[];
+  blurRadius?: number;
   /** The distance from the line at which the maximum blur radius is reached. */
-  gradientRadius?: number[];
+  gradientRadius?: number;
   /** @deprecated internal shaderpass use */
   invert?: number;
 };
