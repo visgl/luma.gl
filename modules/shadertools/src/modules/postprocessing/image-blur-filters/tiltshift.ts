@@ -26,19 +26,19 @@ vec4 tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   /* randomize the lookup values to hide the fixed number of samples */
   float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
 
-  vec2 normal = normalize(vec2((start.y - end.y) * texSize.y, (end.x - start.x) * texSize.x));
+  vec2 normal = normalize(vec2((tiltShift.start.y - tiltShift.end.y) * texSize.y, (tiltShift.end.x - tiltShift.start.x) * texSize.x));
   float radius = smoothstep(0.0, 1.0,
-    abs(dot(texCoord * texSize - start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
+    abs(dot(texCoord * texSize - tiltShift.start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
 
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec4 sample = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
+    vec4 value = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    sample.rgb *= sample.a;
+    value.rgb *= value.a;
 
-    color += sample * weight;
+    color += value * weight;
     total += weight;
   }
 
@@ -65,7 +65,7 @@ export type TiltShiftProps = {
   /** The distance from the line at which the maximum blur radius is reached. */
   gradientRadius: number[];
   /** @deprecated internal shaderpass use */
-  invert: number;
+  invert?: number;
 };
 
 /**

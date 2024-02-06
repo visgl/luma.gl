@@ -13,7 +13,7 @@ uniform brightnessContrastUniforms {
 
 vec4 brightnessContrast_filterColor(vec4 color) {
   color.rgb += brightnessContrast.brightness;
-  if (contrast > 0.0) {
+  if (brightnessContrast.contrast > 0.0) {
     color.rgb = (color.rgb - 0.5) / (1.0 - brightnessContrast.contrast) + 0.5;
   } else {
     color.rgb = (color.rgb - 0.5) * (1.0 + brightnessContrast.contrast) + 0.5;

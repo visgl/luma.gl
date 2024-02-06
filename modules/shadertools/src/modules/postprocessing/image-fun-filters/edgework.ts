@@ -71,7 +71,7 @@ export type EdgeWorkProps = {
   /** radius The radius of the effect in pixels. */
   radius: number;
   /** @deprecated internal */
-  delta: number;
+  delta?: number;
 };
 
 /**

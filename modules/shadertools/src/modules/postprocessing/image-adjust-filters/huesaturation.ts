@@ -12,7 +12,7 @@ uniform hueSaturationUniforms {
 
 vec4 hueSaturation_filterColor(vec4 color) {
   // hue adjustment, wolfram alpha: RotationTransform[angle, {1, 1, 1}][{x, y, z}]
-  float angle = hue * 3.14159265;
+  float angle = hueSaturation.hue * 3.14159265;
   float s = sin(angle), c = cos(angle);
   vec3 weights = (vec3(2.0 * c, -sqrt(3.0) * s - c, sqrt(3.0) * s - c) + 1.0) / 3.0;
   float len = length(color.rgb);
@@ -24,10 +24,10 @@ vec4 hueSaturation_filterColor(vec4 color) {
 
   // saturation adjustment
   float average = (color.r + color.g + color.b) / 3.0;
-  if (saturation > 0.0) {
-    color.rgb += (average - color.rgb) * (1.0 - 1.0 / (1.001 - saturation));
+  if (hueSaturation.saturation > 0.0) {
+    color.rgb += (average - color.rgb) * (1.0 - 1.0 / (1.001 - hueSaturation.saturation));
   } else {
-    color.rgb += (average - color.rgb) * (-saturation);
+    color.rgb += (average - color.rgb) * (-hueSaturation.saturation);
   }
 
   return color;
