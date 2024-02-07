@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgpu",
-  "version": "9.0.0-beta.3",
+  "version": "9.0.0-beta.4",
   "description": "WebGPU adapter for the luma.gl API",
   "type": "module",
   "license": "MIT",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@luma.gl/core": "9.0.0-beta.3",
+    "@luma.gl/core": "9.0.0-beta.4",
     "@probe.gl/env": "^4.0.2",
     "@webgpu/types": "^0.1.34"
   },

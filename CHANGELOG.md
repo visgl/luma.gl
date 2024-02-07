@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.4
+
+- feat(shadertools) Postprocessing modules in GLSL300 (#1941)
+
 ### v9.0.0-beta.3
 
 - feat(core): Additional WebGL-specific Device methods (#1940)
