@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Magnify {
+uniform magnifyUniforms {
   vec2 screenXY;
   float radiusPixels;
   float zoom;
@@ -13,17 +13,17 @@ uniform Magnify {
   vec4 borderColor;
 } magnify;
 
-vec4 magnify_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 magnify_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 pos = vec2(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
   float dist = distance(texCoord * texSize, pos * texSize);
   if (dist < magnify.radiusPixels) {
-    return texture2D(texture, (texCoord - pos) / magnify.zoom + pos);
+    return texture(source, (texCoord - pos) / magnify.zoom + pos);
   }
 
   if (dist <= magnify.radiusPixels + magnify.borderWidthPixels) {
     return magnify.borderColor;
   }
-  return texture2D(texture, texCoord);
+  return texture(source, texCoord);
 }
 `;
 
@@ -32,15 +32,15 @@ vec4 magnify_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
  */
 export type MagnifyProps = {
   /** x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`. */
-  screenXY: number[];
+  screenXY?: number[];
   /** effect radius in pixels. Default value is `100`. */
-  radiusPixels: number;
+  radiusPixels?: number;
   /** magnify level. Default value is `2`. */
-  zoom: number;
+  zoom?: number;
   /** border width of the effect circle, will not show border if value <= 0.0. Default value is `0`. */
-  borderWidthPixels: number;
+  borderWidthPixels?: number;
   /** border color of the effect circle. Default value is `[255, 255, 255, 255]`. */
-  borderColor: number[];
+  borderColor?: number[];
 };
 
 /**

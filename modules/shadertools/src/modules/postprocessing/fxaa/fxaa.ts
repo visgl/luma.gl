@@ -284,8 +284,8 @@ const fs = `
 #define FxaaTex sampler2D
 
 #define FxaaSat(x) clamp(x, 0.0, 1.0)
-#define FxaaTexTop(t, p) texture2D(t, p)
-#define FxaaTexOff(t, p, o, r) texture2D(t, p + (o * r))
+#define FxaaTexTop(t, p) texture(t, p)
+#define FxaaTexOff(t, p, o, r) texture(t, p + (o * r))
 
 FxaaFloat FxaaLuma_(FxaaFloat4 rgba) { return dot(rgba.rgb, vec3(0.2126, 0.7152, 0.0722)); }
 
@@ -662,14 +662,14 @@ FxaaFloat4 FxaaPixelShader_(
     return FxaaTexTop(tex, posM);
 }
 
-vec4 fxaa_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 fxaa_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
     const float fxaa_QualitySubpix = 0.5;
     const float fxaa_QualityEdgeThreshold = 0.125;
     const float fxaa_QualityEdgeThresholdMin = 0.0833;
 
     return FxaaPixelShader_(
         texCoord,
-        texture,
+        source,
         vec2(1.0) / texSize,
         fxaa_QualitySubpix,
         fxaa_QualityEdgeThreshold,

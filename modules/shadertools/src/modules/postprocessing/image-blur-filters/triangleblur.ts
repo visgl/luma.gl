@@ -6,11 +6,13 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../..//math/random/random';
 
 const fs = glsl`\
-uniform float radius;
-uniform vec2 delta;
+uniform triangleBlurUniforms {
+  float radius;
+  vec2 delta;
+} triangleBlur;
 
-vec4 triangleBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
-  vec2 adjustedDelta = delta * radius / texSize;
+vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  vec2 adjustedDelta = triangleBlur.delta * triangleBlur.radius / texSize;
 
   vec4 color = vec4(0.0);
   float total = 0.0;
@@ -21,12 +23,12 @@ vec4 triangleBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec4 sample = texture2D(texture, texCoord + adjustedDelta * percent);
+    vec4 offsetColor = texture(source, texCoord + adjustedDelta * percent);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    sample.rgb *= sample.a;
+    offsetColor.rgb *= offsetColor.a;
 
-    color += sample * weight;
+    color += offsetColor * weight;
     total += weight;
   }
 
@@ -47,9 +49,9 @@ vec4 triangleBlur_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
  */
 export type TriangleBlurProps = {
   /** The radius of the pyramid convolved with the image. */
-  radius: number;
+  radius?: number;
   /** @deprecated internal property */
-  delta: number[];
+  delta?: number[];
 };
 
 /**

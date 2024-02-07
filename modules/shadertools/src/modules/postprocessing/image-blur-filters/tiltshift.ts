@@ -6,7 +6,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../..//math/random/random';
 
 const fs = glsl`\
-uniform TiltShift {
+uniform tiltShiftUniforms {
   float blurRadius;
   float gradientRadius;
   vec2 start;
@@ -19,26 +19,26 @@ vec2 tiltShift_getDelta(vec2 texSize) {
   return tiltShift.invert ? vec2(-vector.y, vector.x) : vector;
 }
 
-vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec4 color = vec4(0.0);
   float total = 0.0;
 
   /* randomize the lookup values to hide the fixed number of samples */
   float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
 
-  vec2 normal = normalize(vec2((start.y - end.y) * texSize.y, (end.x - start.x) * texSize.x));
+  vec2 normal = normalize(vec2((tiltShift.start.y - tiltShift.end.y) * texSize.y, (tiltShift.end.x - tiltShift.start.x) * texSize.x));
   float radius = smoothstep(0.0, 1.0,
-    abs(dot(texCoord * texSize - start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
+    abs(dot(texCoord * texSize - tiltShift.start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
 
   for (float t = -30.0; t <= 30.0; t++) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
-    vec4 sample = texture2D(texture, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
+    vec4 offsetColor = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    sample.rgb *= sample.a;
+    offsetColor.rgb *= offsetColor.a;
 
-    color += sample * weight;
+    color += offsetColor * weight;
     total += weight;
   }
 
@@ -57,15 +57,15 @@ vec4 tiltShift_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
  */
 export type TiltShiftProps = {
   /** The x,y coordinate of the start of the line segment. */
-  start: number[];
+  start?: number[];
   /** The xm y coordinate of the end of the line segment. */
-  end: number[];
+  end?: number[];
   /** The maximum radius of the pyramid blur. */
-  blurRadius: number[];
+  blurRadius?: number;
   /** The distance from the line at which the maximum blur radius is reached. */
-  gradientRadius: number[];
+  gradientRadius?: number;
   /** @deprecated internal shaderpass use */
-  invert: number;
+  invert?: number;
 };
 
 /**

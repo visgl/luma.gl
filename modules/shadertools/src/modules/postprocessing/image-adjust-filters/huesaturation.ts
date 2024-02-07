@@ -5,14 +5,14 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform HueSaturation {
+uniform hueSaturationUniforms {
   float hue;
   float saturation;
 } hueSaturation;
 
 vec4 hueSaturation_filterColor(vec4 color) {
   // hue adjustment, wolfram alpha: RotationTransform[angle, {1, 1, 1}][{x, y, z}]
-  float angle = hue * 3.14159265;
+  float angle = hueSaturation.hue * 3.14159265;
   float s = sin(angle), c = cos(angle);
   vec3 weights = (vec3(2.0 * c, -sqrt(3.0) * s - c, sqrt(3.0) * s - c) + 1.0) / 3.0;
   float len = length(color.rgb);
@@ -24,10 +24,10 @@ vec4 hueSaturation_filterColor(vec4 color) {
 
   // saturation adjustment
   float average = (color.r + color.g + color.b) / 3.0;
-  if (saturation > 0.0) {
-    color.rgb += (average - color.rgb) * (1.0 - 1.0 / (1.001 - saturation));
+  if (hueSaturation.saturation > 0.0) {
+    color.rgb += (average - color.rgb) * (1.0 - 1.0 / (1.001 - hueSaturation.saturation));
   } else {
-    color.rgb += (average - color.rgb) * (-saturation);
+    color.rgb += (average - color.rgb) * (-hueSaturation.saturation);
   }
 
   return color;
@@ -44,9 +44,9 @@ vec4 hueSaturation_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 export type HueSaturationProps = {
   /** -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
    * and 1 is 180 degree rotation in the positive direction) */
-   hue: number;
+   hue?: number;
    /** @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast) */
-   saturation: number;
+   saturation?: number;
 };
 
 /**

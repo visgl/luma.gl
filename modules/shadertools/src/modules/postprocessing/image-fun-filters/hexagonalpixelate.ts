@@ -5,12 +5,12 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform HexagonalPixelate {
+uniform hexagonalPixelateUniforms {
   vec2 center;
   float scale;
 } hexagonalPixelate;
 
-vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 hexagonalPixelate_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 tex = (texCoord * texSize - hexagonalPixelate.center * texSize) / hexagonalPixelate.scale;
   tex.y /= 0.866025404;
   tex.x -= tex.y * 0.5;
@@ -45,7 +45,7 @@ vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoor
   choice.y *= 0.866025404;
   choice *= hexagonalPixelate.scale / texSize;
 
-  return texture2D(texture, choice + hexagonalPixelate.center);
+  return texture(source, choice + hexagonalPixelate.center);
 }
 `;
 
@@ -56,9 +56,9 @@ vec4 hexagonalPixelate_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoor
  */
 export type HexagonalPixelateProps = {
   /** The [x, y] coordinates of the pattern center. */
-  center: number[];
+  center?: number[];
   /** The width of an individual tile, in pixels. */
-  scale: number;
+  scale?: number;
 };
 
 /**

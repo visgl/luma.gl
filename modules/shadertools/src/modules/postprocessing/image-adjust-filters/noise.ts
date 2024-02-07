@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Noise {
+uniform noiseUniforms {
   float amount;
 } noise;
 
@@ -31,7 +31,7 @@ vec4 noise_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
  */
 export type NoiseProps = {
   /**  0 to 1 (0 for no effect, 1 for maximum noise) */
-  amount: number;
+  amount?: number;
 };
 
 /**

@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Vignette {
+uniform vignetteUniforms {
   float radius;
   float amount;
 } vignette;
@@ -26,9 +26,9 @@ vec4 vignette_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
  */
 export type VignetteProps = {
   /** 0 to 1 (0 for center of frame, 1 for edge of frame) */
-  radius: number;
+  radius?: number;
   /** 0 to 1 (0 for no effect, 1 for maximum lens darkening) */
-  amount: number;
+  amount?: number;
 };
 
 /**

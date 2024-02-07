@@ -6,7 +6,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
 const fs = glsl`\
-uniform BulgePinch {
+uniform bulgePinchUniforms {
   float radius;
   float strength;
   vec2 center;
@@ -17,7 +17,7 @@ vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
   float distance = length(coord);
   if (distance < bulgePinch.radius) {
     float percent = distance / bulgePinch.radius;
-    if (strength > 0.0) {
+    if (bulgePinch.strength > 0.0) {
       coord *= mix(1.0, smoothstep(0.0, bulgePinch.radius / distance, percent), bulgePinch.strength * 0.75);
     } else {
       coord *= mix(1.0, pow(percent, 1.0 + bulgePinch.strength * 0.75) * bulgePinch.radius / distance, 1.0 - percent);
@@ -27,22 +27,22 @@ vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {
   return coord;
 }
 
-vec4 bulgePinch_sampleColor(sampler2D texture, vec2 texSize, vec2 texCoord) {
+vec4 bulgePinch_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   vec2 coord = texCoord * texSize;
   coord = bulgePinch_warp(coord, bulgePinch.center * texSize);
 
-  return warp_sampleColor(texture, texSize, coord);
+  return warp_sampleColor(source, texSize, coord);
 }
 `;
 
 /** Bulges or pinches the image in a circle. */
 export type BulgePinchProps = {
   /** The [x, y] coordinates of the center of the circle of effect. */
-  center: number[];
+  center?: number[];
   /** The radius of the circle of effect. */
-  radius: number;
+  radius?: number;
   /** strength -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge) */
-  strength: number;
+  strength?: number;
 };
 
 /**

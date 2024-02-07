@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Vibrance {
+uniform vibranceUniforms {
   float amount;
 } vibrance;
 
@@ -27,7 +27,7 @@ vec4 vibrance_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
  */
 export type VibranceProps = {
   /** -1 to 1 (-1 is minimum vibrance, 0 is no change, and 1 is maximum vibrance) */
-  amount: number;
+  amount?: number;
 };
 
 /** Vibrance - Modifies the saturation of desaturated colors, leaving saturated colors unmodified. */

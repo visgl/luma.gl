@@ -6,14 +6,14 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
 
-uniform BrightnessContrast{
+uniform brightnessContrastUniforms {
   float brightness;
   float contrast;
 } brightnessContrast;
 
 vec4 brightnessContrast_filterColor(vec4 color) {
   color.rgb += brightnessContrast.brightness;
-  if (contrast > 0.0) {
+  if (brightnessContrast.contrast > 0.0) {
     color.rgb = (color.rgb - 0.5) / (1.0 - brightnessContrast.contrast) + 0.5;
   } else {
     color.rgb = (color.rgb - 0.5) * (1.0 + brightnessContrast.contrast) + 0.5;
@@ -27,8 +27,8 @@ vec4 brightnessContrast_filterColor(vec4 color, vec2 texSize, vec2 texCoords) {
 `;
 
 export type BrightnessContrastProps = {
-  brightness: number;
-  contrast: number;
+  brightness?: number;
+  contrast?: number;
 };
 
 /**

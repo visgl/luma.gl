@@ -5,7 +5,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const fs = glsl`\
-uniform Sepia {
+uniform sepiaUniforms {
   float amount;
 } sepia;
 
@@ -28,7 +28,7 @@ vec4 sepia_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
 `;
 
 export type SepiaProps = {
-  amount: number;
+  amount?: number;
 };
 
 /**
