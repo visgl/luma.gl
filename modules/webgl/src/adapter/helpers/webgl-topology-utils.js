@@ -1,0 +1,87 @@
+// luma.gl, MIT license
+// Copyright (c) vis.gl contributors
+import { GL } from '@luma.gl/constants';
+// Counts the number of complete primitives given a number of vertices and a drawMode
+export function getPrimitiveDrawMode(drawMode) {
+    switch (drawMode) {
+        case GL.POINTS:
+            return GL.POINTS;
+        case GL.LINES:
+            return GL.LINES;
+        case GL.LINE_STRIP:
+            return GL.LINES;
+        case GL.LINE_LOOP:
+            return GL.LINES;
+        case GL.TRIANGLES:
+            return GL.TRIANGLES;
+        case GL.TRIANGLE_STRIP:
+            return GL.TRIANGLES;
+        case GL.TRIANGLE_FAN:
+            return GL.TRIANGLES;
+        default:
+            throw new Error('drawMode');
+    }
+}
+// Counts the number of complete "primitives" given a number of vertices and a drawMode
+export function getPrimitiveCount(options) {
+    const { drawMode, vertexCount } = options;
+    switch (drawMode) {
+        case GL.POINTS:
+        case GL.LINE_LOOP:
+            return vertexCount;
+        case GL.LINES:
+            return vertexCount / 2;
+        case GL.LINE_STRIP:
+            return vertexCount - 1;
+        case GL.TRIANGLES:
+            return vertexCount / 3;
+        case GL.TRIANGLE_STRIP:
+        case GL.TRIANGLE_FAN:
+            return vertexCount - 2;
+        default:
+            throw new Error('drawMode');
+    }
+}
+// Counts the number of vertices after splitting the vertex stream into separate "primitives"
+export function getVertexCount(options) {
+    const { drawMode, vertexCount } = options;
+    const primitiveCount = getPrimitiveCount({ drawMode, vertexCount });
+    switch (getPrimitiveDrawMode(drawMode)) {
+        case GL.POINTS:
+            return primitiveCount;
+        case GL.LINES:
+            return primitiveCount * 2;
+        case GL.TRIANGLES:
+            return primitiveCount * 3;
+        default:
+            throw new Error('drawMode');
+    }
+}
+/** Get the primitive type for draw */
+export function getGLDrawMode(topology) {
+    // prettier-ignore
+    switch (topology) {
+        case 'point-list': return GL.POINTS;
+        case 'line-list': return GL.LINES;
+        case 'line-strip': return GL.LINE_STRIP;
+        case 'line-loop-webgl': return GL.LINE_LOOP;
+        case 'triangle-list': return GL.TRIANGLES;
+        case 'triangle-strip': return GL.TRIANGLE_STRIP;
+        case 'triangle-fan-webgl': return GL.TRIANGLE_FAN;
+        default: throw new Error(topology);
+    }
+}
+/** Get the primitive type for transform feedback */
+export function getGLPrimitive(topology) {
+    // prettier-ignore
+    switch (topology) {
+        case 'point-list': return GL.POINTS;
+        case 'line-list': return GL.LINES;
+        case 'line-strip': return GL.LINES;
+        case 'line-loop-webgl': return GL.LINES;
+        case 'triangle-list': return GL.TRIANGLES;
+        case 'triangle-strip': return GL.TRIANGLES;
+        case 'triangle-fan-webgl': return GL.TRIANGLES;
+        default: throw new Error(topology);
+    }
+}
