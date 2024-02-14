@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/core-tests",
   "version": "9.0.0-beta.4",
-  "description": "luma.gl API",
+  "description": "luma.gl internal test module",
   "license": "MIT",
   "type": "module",
   "private": true,
@@ -33,8 +33,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build-bundle": "ocular-bundle ./src/index.ts",
-    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+    "pre-build": "echo test utils has no bundle"
   },
   "devDependencies": {
     "@luma.gl/core": "9.0.0-beta.4",

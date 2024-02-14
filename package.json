@@ -28,7 +28,7 @@
     "build": "ocular-clean && ocular-build && lerna run pre-build",
     "build-scripts": "lerna run pre-build",
     "cover": "ocular-test cover",
-    "lint": "tsc && ocular-lint",
+    "lint": "ocular-lint",
     "publish": "ocular-publish",
     "version": "ocular-build webgl",
     "test": "ocular-test",

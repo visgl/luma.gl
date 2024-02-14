@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/webgl",
   "version": "9.0.0-beta.4",
-  "description": "WebGL2 adapter for the luma.gl API",
+  "description": "WebGL2 adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
@@ -39,8 +39,9 @@
     "gl/wrap": false
   },
   "scripts": {
-    "build-bundle": "ocular-bundle ./src/index.ts",
-    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+    "build-minified-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.dev.js ----env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-=bundle"
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
@@ -48,11 +49,5 @@
     "@luma.gl/core": "9.0.0-beta.4",
     "@probe.gl/env": "^4.0.2"
   },
-<<<<<<< HEAD
-  "devDependencies": {
-    "@luma.gl/test-utils": "9.0.0-beta.4"
-  },
-=======
->>>>>>> a62b0e170 (wip)
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
