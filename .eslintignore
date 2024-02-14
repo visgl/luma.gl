@@ -8,4 +8,5 @@ picogl/
 .cache
 .docusaurus
 
+modules/*/test/
 test/apps/

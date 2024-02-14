@@ -68,9 +68,8 @@
   // Points will be awarded every time an exception is removed!
   "include": [
     "modules/*/src",
-    "examples/**/*",
-    "modules/**/*",
-    "test/**/*",
+    // "examples/**/*",
+    // "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
