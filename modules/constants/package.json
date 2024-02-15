@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/constants",
   "version": "9.0.0-beta.4",
-  "description": "WebGL and WebGL2 constants",
+  "description": "WebGL2 constants",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -35,8 +35,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build-bundle": "ocular-bundle ./src/bundle.ts",
-    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+    "build-minified-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.dev.js -- --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

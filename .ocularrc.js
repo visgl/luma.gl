@@ -1,6 +1,16 @@
-import {resolve} from 'path';
+/** @typedef {import('ocular-dev-tools').OcularConfig} OcularConfig */
 
-export default {
+import {dirname, join} from 'path';
+import {fileURLToPath} from 'url';
+
+const packageRoot = dirname(fileURLToPath(import.meta.url));
+const devModules = join(packageRoot, 'dev-modules');
+const testDir = join(packageRoot, 'test');
+
+/** @type {OcularConfig} */
+const config = {
+  babel: false,
+
   lint: {
     paths: ['modules', 'docs', 'test', 'examples'],
     extensions: ['js', 'ts']
@@ -12,16 +22,16 @@ export default {
 
   aliases: {
     // DEV MODULES
-    'dev-modules': resolve('./dev-modules'),
+    'dev-modules': devModules,
 
     // TEST
-    test: resolve('./test')
+    test: testDir
   },
 
   bundle: {
     globalName: 'luma',
     externals: [],
-    target: ['supports webgl', 'not dead'],
+    target: ['chrome110', 'firefox110', 'safari15'],
     format: 'umd',
     globals: {
       '@luma.gl/*': 'globalThis.luma'
@@ -36,3 +46,5 @@ export default {
     size: 'test/size/import-nothing.js'
   }
 };
+
+export default config;

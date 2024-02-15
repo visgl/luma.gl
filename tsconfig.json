@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "noEmit": true,
+
     // https://www.npmjs.com/package/@webgpu/types
     "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
 
@@ -11,10 +15,7 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "rootDir": ".",
 
     // BEGIN TYPE CHECK SETTINGS
     "skipLibCheck": true,
@@ -64,17 +65,17 @@
   },
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.
-  // Points will be awarded every time an exception is removed!
   "include": [
+    "modules/*/src",
+    "modules/*/test",
     "examples/**/*",
-    "modules/**/*",
     "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
     "modules/**/wip",
     "modules/**/dist",
-    "test/apps",
+    "modules/shadertools/src/libs/wgsl-reflect/wgsl_reflect.module.js",
     "node_modules"
   ]
 }

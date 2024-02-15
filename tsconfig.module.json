@@ -7,7 +7,7 @@
     "declaration": true,
     "declarationMap": true,
     "noEmit": false,
-    "emitDeclarationOnly": true,
+    // "emitDeclarationOnly": true,
     // Uncomment to debug
     // "listEmittedFiles": true
   },

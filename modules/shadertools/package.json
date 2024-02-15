@@ -41,12 +41,14 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build-bundle": "ocular-bundle ./src/index.ts",
-    "pre-build": "npm run build-bundle && npm run build-bundle -- --env=dev"
+    "build-minified-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.dev.js -- --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
+  },
+  "peerDependencies": {
+    "@luma.gl/core": "^9.0.0-beta.4"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0",
-    "@luma.gl/core": "9.0.0-beta.4",
     "@math.gl/core": "^4.0.0",
     "@math.gl/types": "^4.0.0"
   },
