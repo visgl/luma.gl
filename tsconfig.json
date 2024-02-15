@@ -65,11 +65,10 @@
   },
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.
-  // Points will be awarded every time an exception is removed!
   "include": [
     "modules/*/src",
-    // "examples/**/*",
-    // "test/**/*",
+    "examples/**/*",
+    "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
@@ -77,7 +76,6 @@
     "modules/**/dist",
     "modules/**/test",
     "modules/shadertools/src/libs/wgsl-reflect/wgsl_reflect.module.js",
-    "test",
     "node_modules"
   ]
 }
