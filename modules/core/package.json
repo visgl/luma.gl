@@ -36,8 +36,8 @@
   "sideEffects": false,
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.min.js",
-    "build-dev-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.dev.js ----env=dev",
-    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-=bundle"
+    "build-dev-bundle": "ocular-bundle ./src/index.ts -output=dist/dist.dev.js -- --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
     "@types/offscreencanvas": "^2019.6.4"

@@ -31,7 +31,7 @@ const config = {
   bundle: {
     globalName: 'luma',
     externals: [],
-    target: ['supports webgl', 'not dead'],
+    target: ['chrome110', 'firefox110', 'safari15'],
     format: 'umd',
     globals: {
       '@luma.gl/*': 'globalThis.luma'
