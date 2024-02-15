@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "9.0.0-beta.1",
+  "version": "9.0.0-beta.4",
   "description": "The luma.gl core Device API",
   "license": "MIT",
   "type": "module",
@@ -40,7 +40,6 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-=bundle"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0",
     "@types/offscreencanvas": "^2019.6.4"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
