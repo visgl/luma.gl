@@ -25,7 +25,9 @@ test('splitUniformsAndBindings', (t) => {
     'boolean': true,
     'float32array': new Float32Array([1,2,3,4]),
     'number': 123,
+    // @ts-expect-error TODO
     'sampler': new WEBGLSampler(device, {}),
+    // @ts-expect-error TODO
     'texture': new WEBGLTexture(device, {})
   }
   const {bindings, uniforms} = splitUniformsAndBindings(mixed);
