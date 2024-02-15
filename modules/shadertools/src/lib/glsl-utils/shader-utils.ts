@@ -3,7 +3,6 @@
 
 import {glsl} from './highlight';
 
-const FS100 = glsl`void main() {gl_FragColor = vec4(0);}`;
 const FS_GLES = glsl`\
 out vec4 transform_output;
 void main() {
