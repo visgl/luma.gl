@@ -71,12 +71,12 @@ void main() {
   ];
 
   PASSTHROUGH_TEST_CASES.forEach((testCase) => {
-    const {version, input, inputChannels, output, expected} = testCase;
-    const result = getPassthroughFS({version, input, inputChannels, output});
+    const {input, inputChannels, output, expected} = testCase;
+    const result = getPassthroughFS({input, inputChannels, output});
     t.equal(
       result,
       expected,
-      `Passthrough shader should match when version=${version} channels=${inputChannels}`
+      `Passthrough shader should match when channels=${inputChannels}`
     );
   });
   t.end();

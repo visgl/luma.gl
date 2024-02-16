@@ -30,7 +30,7 @@ export function getQualifierDetails(line: string, qualifiers: string | string[])
 }
 
 /**
- * Given the shader version, input and output variable names,
+ * Given the shader input and output variable names,
  * builds and return a pass through fragment shader.
  */
 export function getPassthroughFS(options?: {
