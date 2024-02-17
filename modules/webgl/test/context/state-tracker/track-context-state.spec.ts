@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {createTestDevice} from '@luma.gl/test-utils';
 
-import type {Device} from '@luma.gl/core';
+import type {WebGLDevice} from '@luma.gl/webgl';
 
 import {
   trackContextState,
@@ -27,7 +27,7 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 
 // Settings test, don't reuse a context
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-const device: Device = createTestDevice({debug: true})!;
+const device = createTestDevice({debug: true}) as WebGLDevice;
 
 test('WebGLState#imports', (t) => {
   t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
