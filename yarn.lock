@@ -1568,13 +1568,6 @@
     js-yaml "^3.13.1"
     resolve-from "^5.0.0"
 
-"@istanbuljs/nyc-config-typescript@^1.0.1":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@istanbuljs/nyc-config-typescript/-/nyc-config-typescript-1.0.2.tgz#1f5235b28540a07219ae0dd42014912a0b19cf89"
-  integrity sha512-iKGIyMoyJuFnJRSVTZ78POIRvNnwZaWIf8vG4ZS3rQq58MMDrqEX2nnzx0R28V2X8JvmKYiqY9FP2hlJsm8A0w==
-  dependencies:
-    "@istanbuljs/schema" "^0.1.2"
-
 "@istanbuljs/schema@^0.1.2", "@istanbuljs/schema@^0.1.3":
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.3.tgz#e45e384e4b8ec16bce2fd903af78450f6bf7ec98"
@@ -2496,11 +2489,6 @@
   dependencies:
     "@babel/runtime" "^7.3.1"
 
-"@luma.gl/constants@9.0.0-alpha.45":
-  version "9.0.0-alpha.45"
-  resolved "https://registry.yarnpkg.com/@luma.gl/constants/-/constants-9.0.0-alpha.45.tgz#f19c9c3c26b95e1dcf118cb1fbf2dbd93ffd8a1e"
-  integrity sha512-ZTLw0YMnPE1efXEoJ5FxUzwOwxTMNswfEUctu6liWM3EpI7s8kC33CX4M8Kr7xcaQLN09X836uKOmGRpyD8yVg==
-
 "@math.gl/core@4.0.0", "@math.gl/core@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@math.gl/core/-/core-4.0.0.tgz#db64af16743ee4def7c1e294b3d1247621d2dabc"
@@ -2687,6 +2675,13 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
 
+"@probe.gl/env@4.0.5":
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/@probe.gl/env/-/env-4.0.5.tgz#3e6e7080d3dd38764f90acdf112dfd38eab5273c"
+  integrity sha512-B9urUsFaXWl0OlSLXOoSI03b84sdgtYCOwtohNoyg6DaNMK9Hlfau6b0c0msTMu0TiA/kM/rX7MnAHv6FCcKEA==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+
 "@probe.gl/log@4.0.4", "@probe.gl/log@^4.0.2":
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@probe.gl/log/-/log-4.0.4.tgz#e42d1d0e22981c4010521c350cad2305bce02976"
@@ -2695,6 +2690,14 @@
     "@babel/runtime" "^7.0.0"
     "@probe.gl/env" "4.0.4"
 
+"@probe.gl/log@4.0.5":
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/@probe.gl/log/-/log-4.0.5.tgz#66ccce92e1ad74caf6c39ad101f1e731f407f750"
+  integrity sha512-5otC74VzKljMnrkFFeZYJRYth/UzDH+UCZOVi1kTkAMquglLnKNC4SuprsO2mFv1Ycl3O8G/6wZkjx8izn7gaQ==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/env" "4.0.5"
+
 "@probe.gl/stats@^4.0.2":
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@probe.gl/stats/-/stats-4.0.4.tgz#b33a47bf192951d0789dfd2044b295c3709386bd"
@@ -2702,7 +2705,7 @@
   dependencies:
     "@babel/runtime" "^7.0.0"
 
-"@probe.gl/test-utils@^4.0.2", "@probe.gl/test-utils@^4.0.3":
+"@probe.gl/test-utils@^4.0.2":
   version "4.0.4"
   resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-4.0.4.tgz#86533d0a6ea3db03d3d41356830e4de8b0d84c8d"
   integrity sha512-VxcFQ0yxgvbdL/4HQnrSFhaSRoUYGm6UB7xlah+DNUhBOJNF+30Cba7ekZYkq6u1ggcS+bRIf7Susgb4UXuI3g==
@@ -2712,6 +2715,16 @@
     "@types/pngjs" "^6.0.1"
     pixelmatch "^4.0.2"
     puppeteer "*"
+
+"@probe.gl/test-utils@^4.0.5":
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/@probe.gl/test-utils/-/test-utils-4.0.5.tgz#da326c89ae49e14ec659e7e9f65f1df32bddaed1"
+  integrity sha512-2/KmY4tdMCgPPS1vZccUIBHJQfrJCQzp/RXHv5gitkVSOOf3O+m0s3jLGBsL/Co4o9lSYsOYuVLB6MK5Dn/bfQ==
+  dependencies:
+    "@babel/runtime" "^7.0.0"
+    "@probe.gl/log" "4.0.5"
+    "@types/pngjs" "^6.0.1"
+    pixelmatch "^4.0.2"
 
 "@puppeteer/browsers@1.5.0":
   version "1.5.0"
@@ -2818,60 +2831,6 @@
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.4.tgz#0b92dcc0cc1c81f6f306a381f28e31b1a56536e9"
   integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
-
-"@turf/bbox@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/bbox/-/bbox-6.5.0.tgz#bec30a744019eae420dac9ea46fb75caa44d8dc5"
-  integrity sha512-RBbLaao5hXTYyyg577iuMtDB8ehxMlUqHEJiMs8jT1GHkFhr6sYre3lmLsPeYEi/ZKj5TP5tt7fkzNdJ4GIVyw==
-  dependencies:
-    "@turf/helpers" "^6.5.0"
-    "@turf/meta" "^6.5.0"
-
-"@turf/boolean-point-in-polygon@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/boolean-point-in-polygon/-/boolean-point-in-polygon-6.5.0.tgz#6d2e9c89de4cd2e4365004c1e51490b7795a63cf"
-  integrity sha512-DtSuVFB26SI+hj0SjrvXowGTUCHlgevPAIsukssW6BG5MlNSBQAo70wpICBNJL6RjukXg8d2eXaAWuD/CqL00A==
-  dependencies:
-    "@turf/helpers" "^6.5.0"
-    "@turf/invariant" "^6.5.0"
-
-"@turf/boolean-point-on-line@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/boolean-point-on-line/-/boolean-point-on-line-6.5.0.tgz#a8efa7bad88760676f395afb9980746bc5b376e9"
-  integrity sha512-A1BbuQ0LceLHvq7F/P7w3QvfpmZqbmViIUPHdNLvZimFNLo4e6IQunmzbe+8aSStH9QRZm3VOflyvNeXvvpZEQ==
-  dependencies:
-    "@turf/helpers" "^6.5.0"
-    "@turf/invariant" "^6.5.0"
-
-"@turf/boolean-within@^6.0.1":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/boolean-within/-/boolean-within-6.5.0.tgz#31a749d3be51065da8c470a1e5613f4d2efdee06"
-  integrity sha512-YQB3oU18Inx35C/LU930D36RAVe7LDXk1kWsQ8mLmuqYn9YdPsDQTMTkLJMhoQ8EbN7QTdy333xRQ4MYgToteQ==
-  dependencies:
-    "@turf/bbox" "^6.5.0"
-    "@turf/boolean-point-in-polygon" "^6.5.0"
-    "@turf/boolean-point-on-line" "^6.5.0"
-    "@turf/helpers" "^6.5.0"
-    "@turf/invariant" "^6.5.0"
-
-"@turf/helpers@^6.1.4", "@turf/helpers@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/helpers/-/helpers-6.5.0.tgz#f79af094bd6b8ce7ed2bd3e089a8493ee6cae82e"
-  integrity sha512-VbI1dV5bLFzohYYdgqwikdMVpe7pJ9X3E+dlr425wa2/sMJqYDhTO++ec38/pcPvPE6oD9WEEeU3Xu3gza+VPw==
-
-"@turf/invariant@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/invariant/-/invariant-6.5.0.tgz#970afc988023e39c7ccab2341bd06979ddc7463f"
-  integrity sha512-Wv8PRNCtPD31UVbdJE/KVAWKe7l6US+lJItRR/HOEW3eh+U/JwRCSUl/KZ7bmjM/C+zLNoreM2TU6OoLACs4eg==
-  dependencies:
-    "@turf/helpers" "^6.5.0"
-
-"@turf/meta@^6.5.0":
-  version "6.5.0"
-  resolved "https://registry.yarnpkg.com/@turf/meta/-/meta-6.5.0.tgz#b725c3653c9f432133eaa04d3421f7e51e0418ca"
-  integrity sha512-RrArvtsV0vdsCBegoBtOalgdSOfkBrTJ07VkpiCnq/491W67hnMWmDu7e6Ztw0C3WldRYTXkg3SumfdzZxLBHA==
-  dependencies:
-    "@turf/helpers" "^6.5.0"
 
 "@types/crypto-js@^4.0.2":
   version "4.1.3"
@@ -3551,13 +3510,6 @@ babel-plugin-add-import-extension@^1.6.0:
   dependencies:
     "@babel/helper-plugin-utils" "^7.14.5"
 
-babel-plugin-inline-webgl-constants@^2.0.0-alpha.1:
-  version "2.0.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/babel-plugin-inline-webgl-constants/-/babel-plugin-inline-webgl-constants-2.0.0-alpha.1.tgz#a03ad8e9d650a1ea681b4fd46261d8659f54d274"
-  integrity sha512-VJqBM6hK5iq8BNZ7yoD3+fD8deFAKpnW/NNHRNtseActfksp26l6rdF/4HvoKoK5TmedQMlWzgNQH8jelcwzAg==
-  dependencies:
-    "@luma.gl/constants" "9.0.0-alpha.45"
-
 babel-plugin-istanbul@^6.0.0:
   version "6.1.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-istanbul/-/babel-plugin-istanbul-6.1.1.tgz#fa88ec59232fd9b4e36dbbc540a8ec9a9b47da73"
@@ -3592,13 +3544,6 @@ babel-plugin-polyfill-regenerator@^0.5.1:
   integrity sha512-tAlOptU0Xj34V1Y2PNTL4Y0FOJMDB6bZmoW39FeCQIhigGLkqu3Fj6uiXpxIf6Ij274ENdYx64y6Au+ZKlb1IA==
   dependencies:
     "@babel/helper-define-polyfill-provider" "^0.4.2"
-
-babel-plugin-remove-glsl-comments@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-remove-glsl-comments/-/babel-plugin-remove-glsl-comments-1.0.0.tgz#62c0910707798a60504b70d09f9e2733ae10fc93"
-  integrity sha512-Z11LLl2UgZHiNTHkwHAyB8/eTaJpq9ih28aR7VtXk1ky3dwQJFGHUqOQFy8MH6ZQ6Ky9PmoWreWeoRxT1Zs68w==
-  dependencies:
-    minimatch "^3.0.0"
 
 babel-plugin-version-inline@^1.0.0:
   version "1.0.0"
@@ -7622,7 +7567,7 @@ min-indent@^1.0.0:
   resolved "https://registry.yarnpkg.com/min-indent/-/min-indent-1.0.1.tgz#a63f681673b30571fbe8bc25686ae746eefa9869"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
-minimatch@^3.0.0, minimatch@^3.0.4, minimatch@^3.0.5, minimatch@^3.1.1, minimatch@^3.1.2:
+minimatch@^3.0.4, minimatch@^3.0.5, minimatch@^3.1.1, minimatch@^3.1.2:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-3.1.2.tgz#19cd194bfd3e428f049a70817c038d89ab4be35b"
   integrity sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==
@@ -8177,10 +8122,10 @@ octokit-pagination-methods@^1.1.0:
   resolved "https://registry.yarnpkg.com/octokit-pagination-methods/-/octokit-pagination-methods-1.1.0.tgz#cf472edc9d551055f9ef73f6e42b4dbb4c80bea4"
   integrity sha512-fZ4qZdQ2nxJvtcasX7Ghl+WlWS/d9IgnBIwFZXVNNZUmzpno91SX5bc5vuxiuKoCtK78XxGGNuSCrDC7xYB3OQ==
 
-ocular-dev-tools@2.0.0-alpha.22:
-  version "2.0.0-alpha.22"
-  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-2.0.0-alpha.22.tgz#a0b46c18c6085f93f9b3f115af60673bbba09717"
-  integrity sha512-nNP9ZbN7EuLm4MvcWiBvOocKv+BI/j/ZIFLkhNyuZvaoiyQrallQHzd4apD7cC0PjEFDUrAXnMz5PHkTnrEJtQ==
+ocular-dev-tools@2.0.0-alpha.23:
+  version "2.0.0-alpha.23"
+  resolved "https://registry.yarnpkg.com/ocular-dev-tools/-/ocular-dev-tools-2.0.0-alpha.23.tgz#96c33d30447fa6b3d78aebb3bcdbb48b80675123"
+  integrity sha512-CopooX8FixyoVt/+NpLL9uC8K9c5r3KRx/D+C6JE9Rf6m655ynTLW51IOV6tLO1Vp0Py92Rft+BmAEpi2O9hSA==
   dependencies:
     "@babel/cli" "^7.14.5"
     "@babel/core" "^7.14.5"
@@ -8192,7 +8137,7 @@ ocular-dev-tools@2.0.0-alpha.22:
     "@babel/runtime" "7.14.5"
     "@esbuild-plugins/node-globals-polyfill" "^0.2.0"
     "@esbuild-plugins/node-modules-polyfill" "^0.2.0"
-    "@probe.gl/test-utils" "^4.0.3"
+    "@probe.gl/test-utils" "^4.0.5"
     "@typescript-eslint/eslint-plugin" "^6.14.0"
     "@typescript-eslint/parser" "^6.14.0"
     babel-loader "8.2.2"
