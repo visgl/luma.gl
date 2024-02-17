@@ -52,7 +52,7 @@
     "babel-plugin-inline-webgl-constants": "^2.0.0-alpha.1",
     "babel-plugin-remove-glsl-comments": "^1.0.0",
     "eslint-plugin-tree-shaking": "^1.9.2",
-    "ocular-dev-tools": "2.0.0-alpha.22",
+    "ocular-dev-tools": "2.0.0-alpha.23",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1"
   },
