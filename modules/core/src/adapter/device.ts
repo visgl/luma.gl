@@ -113,51 +113,49 @@ export type DeviceLimits = {
 
 export type WebGPUDeviceFeature =
   | 'depth-clip-control'
+  | 'indirect-first-instance'
+  | 'timestamp-query'
+  | 'shader-f16'
   | 'depth24unorm-stencil8'
   | 'depth32float-stencil8'
-  | 'timestamp-query'
-  | 'indirect-first-instance'
+  | 'rg11b10ufloat-renderable'
+  | 'float32-filterable'
+  | 'bgra8unorm-storage'
   | 'texture-compression-bc'
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
 
 // obsolete...
 // 'depth-clamping' |
-// 'depth24unorm-stencil8' |
-// 'depth32float-stencil8' |
 // 'pipeline-statistics-query' |
-// 'timestamp-query' |
-// 'texture-compression-bc'
 
 export type WebGLDeviceFeature =
   | 'webgpu'
   | 'webgl'
-
-  // api support (unify with WebGPU timestamp-query?)
-  | 'timer-query-webgl'
-  | 'uniform-buffers-webgl'
-  | 'uniforms-webgl'
-
-  // texture filtering
-  | 'texture-filter-linear-float32-webgl'
-  | 'texture-filter-linear-float16-webgl'
-  | 'texture-filter-anisotropic-webgl'
-
-  // texture rendering
-  | 'texture-renderable-float32-webgl'
-  | 'texture-renderable-float16-webgl'
-  | 'texture-renderable-rgba32float-webgl' // TODO - remove
-
-  // texture blending
-  | 'texture-blend-float-webgl'
-
-  // texture format support
-  | 'texture-formats-norm16-webgl'
+  | 'glsl'
+  | 'wgsl'
 
   // api support
+  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
+  | 'uniforms-webgl'
   | 'transform-feedback-webgl'
 
-  ;
+  // texture rendering
+  | 'rg11b10ufloat-renderable'
+  | 'float32-renderable-webgl'
+  | 'float16-renderable-webgl'
+  | 'norm16-renderable-webgl'
+
+  // texture filtering
+  | 'float32-filterable-linear-webgl'
+  | 'float16-filterable-linear-webgl'
+  | 'texture-filterable-anisotropic-webgl'
+
+  // texture storage bindings
+  | 'bgra8unorm-storage'
+
+  // texture blending
+  | 'texture-blend-float-webgl';
 
 type WebGLCompressedTextureFeatures =
   | 'texture-compression-bc5-webgl'
@@ -175,7 +173,6 @@ export type DeviceFeature =
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
-
   static defaultProps: Required<DeviceProps> = {
     id: null!,
     type: 'best-available',
@@ -186,7 +183,7 @@ export abstract class Device {
     height: 600,
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
     break: [],
-  
+
     // alpha: undefined,
     // depth: undefined,
     // stencil: undefined,
@@ -194,10 +191,9 @@ export abstract class Device {
     // premultipliedAlpha: undefined,
     // preserveDrawingBuffer: undefined,
     // failIfMajorPerformanceCaveat: undefined
-  
+
     gl: null
   };
-  
 
   get [Symbol.toStringTag](): string {
     return 'Device';
@@ -355,7 +351,7 @@ export abstract class Device {
   ): Uint8Array | Uint16Array | Float32Array {
     throw new Error('not implemented');
   }
-  
+
   /** @deprecated - will be removed - should use command encoder */
   readPixelsToBufferWebGL(
     source: Framebuffer | Texture,

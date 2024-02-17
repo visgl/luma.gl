@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {fixture} from 'test/setup';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 
@@ -9,7 +9,7 @@ test('@luma.gl/constants', (t) => {
 });
 
 test('@luma.gl/constants#WebGL2 context', (t) => {
-  const count = checkConstants(fixture.gl, t);
+  const count = checkConstants(webglDevice.gl, t);
   t.comment(`Checked ${count} GL constants against platform WebGL2 context`);
   t.end();
 });

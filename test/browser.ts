@@ -8,5 +8,7 @@ test.onFailure(window.browserTestDriver_fail || noop);
 // hack: prevent example imports from starting their own animation loop
 globalThis.website = true;
 
-import './setup';
+// Register WebGL and WebGPU
+import '@luma.gl/test-utils';
+// Run tests
 import './modules';

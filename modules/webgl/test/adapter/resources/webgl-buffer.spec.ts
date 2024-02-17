@@ -1,9 +1,9 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
+import test from 'tape-promise/tape';
 import {Buffer} from '@luma.gl/core';
 import {WEBGLBuffer} from '@luma.gl/webgl';
-import test from 'tape-promise/tape';
 
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 

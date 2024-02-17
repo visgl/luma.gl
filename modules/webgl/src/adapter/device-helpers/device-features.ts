@@ -34,8 +34,7 @@ export function getWebGLFeatures(gl: WebGL2RenderingContext): Set<DeviceFeature>
   gl.getExtension('WEBGL_color_buffer_float');
   gl.getExtension('EXT_float_blend');
 
-  const features = new Set<DeviceFeature>();
-  features.add('webgl');
+  const features = new Set<DeviceFeature>(WEBGL_ALWAYS_FEATURES);
   for (const feature of Object.keys(WEBGL_FEATURES)) {
     // @ts-expect-error
     if (isFeatureSupported(gl, feature)) {
@@ -63,6 +62,8 @@ function isFeatureSupported(gl: WebGL2RenderingContext, feature: DeviceFeature):
   return Boolean(gl.getExtension(featureDefinition));
 }
 
+const WEBGL_ALWAYS_FEATURES: DeviceFeature[] = ['webgl', 'glsl', 'transform-feedback-webgl'];
+
 /** 
  * Defines luma.gl "feature" names and semantics
  * when value is 'string' it is the name of the extension that enables this feature
@@ -74,12 +75,11 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // WEBGL1 SUPPORT
   'texture-blend-float-webgl': 'EXT_float_blend',
 
-  'texture-filter-linear-float32-webgl': 'OES_texture_float_linear',
-  'texture-filter-linear-float16-webgl': 'OES_texture_half_float_linear',
-  'texture-filter-anisotropic-webgl': 'EXT_texture_filter_anisotropic',
+  'float32-filterable-linear-webgl': 'OES_texture_float_linear',
+  'float16-filterable-linear-webgl': 'OES_texture_half_float_linear',
+  'texture-filterable-anisotropic-webgl': 'EXT_texture_filter_anisotropic',
 
   // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-  'texture-renderable-rgba32float-webgl': 'EXT_color_buffer_float', // Note override check
-  'texture-renderable-float32-webgl': 'EXT_color_buffer_float',
-  'texture-renderable-float16-webgl': 'EXT_color_buffer_half_float',
+  'float32-renderable-webgl': 'EXT_color_buffer_float',
+  'float16-renderable-webgl': 'EXT_color_buffer_half_float',
 };

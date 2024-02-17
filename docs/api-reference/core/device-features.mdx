@@ -48,32 +48,41 @@ be queried on a per-texture basis
 
 <DeviceTabs />
 
-| `luma.gl Feature`                      | This<br /> Browser                             | Description                    |
-| -------------------------------------- | ---------------------------------------------- | ------------------------------ |
+| `luma.gl Feature`                      | This<br /> Browser                            | Description                       |
+| -------------------------------------- | --------------------------------------------- | --------------------------------- |
+| **Platform**                           |
+| `webgpu`                               | <F f="webgpu"/>                               | WebGPU device.                    |
+| `webgl`                                | <F f="webgl"/>                                | WebGL2 device.                    |
+| `glsl`                                 | <F f="glsl"/>                                 | GLSL shader language.             |
+| `wgsl`                                 | <F f="wgsl"/>                                 | WGSL shader language.             |
 | **Features**                           |
-| `depth-clip-control`                   | <F f="depth-clip-control"/>                    | Depth clamps instead of clips. |
-| `indirect-first-instance`              | <F f="indirect-first-instance"/>               | Specify via GPU buffer         |
-| `timestamp-query`                      | <F f="timestamp-query"/>                       |                                |
-| `timer-query-webgl`                    | <F f="timer-query-webgl"/>                     | GPU timer support              |
-| `transform-feedback-webgl`             | <F f="transform-feedback-webgl"/>              | TransformFeedback support      |
+| `depth-clip-control`                   | <F f="depth-clip-control"/>                   | Depth clamps instead of clips.    |
+| `indirect-first-instance`              | <F f="indirect-first-instance"/>              | Specify via GPU buffer            |
+| `timestamp-query`                      | <F f="timestamp-query"/>                      |                                   |
+| `timer-query-webgl`                    | <F f="timer-query-webgl"/>                    | GPU timer support                 |
+| `transform-feedback-webgl`             | <F f="transform-feedback-webgl"/>             | TransformFeedback support         |
+| **Shaders**                            |
+| `shader-f16`                           | <F f="shader-f16"/>                           | WGSL supports `f16`               |
 | **Textures**                           |
-| `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                 | `UNSIGNED_INT_24_8_WEBGL`      |
-| `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                 | WebGPU only                    |
-| `texture-filter-anisotropic-webgl`     | <F f="texture-filter-anisotropic-webgl"/>      | anisotropic filtering, common  |
-| `texture-filter-linear-float32-webgl`  | <F f="texture-filter-linear-float32-webgl"/>   | float32 `linear` filtering     |
-| `texture-filter-linear-float16-webgl`  | <F f="texture-filter-linear-float16-webgl`" /> | float16 `linear` filtering     |
-| `texture-renderable-float32-webgl`     | <F f="texture-renderable-float32-webgl"/>      | float32 textures renderable    |
-| `texture-renderable-float16-webgl`     | <F f="texture-renderable-float16-webgl"/>      | float16 textures renderable    |
-| `texture-renderable-rgba32float-webgl` | <F f="texture-renderable-rgba32float-webgl"/>  | float32 textures renderable    |
-| `texture-blend-float-webgl`            | <F f="texture-blend-float-webgl"/>             | float texture blending         |
+| `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                | `UNSIGNED_INT_24_8_WEBGL`         |
+| `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                | WebGPU only                       |
+| `float32-filterable`                   | <F f="float32-filterable"/>                   | float32 textures are filterable   |
+| `float32-filterable-linear-webgl`      | <F f="float32-filterable-linear-webgl"/>      | float32 `linear` filtering        |
+| `float16-filterable-linear-webgl`      | <F f="float16-filterable-linear-webgl`" />    | float16 `linear` filtering        |
+| `rg11b10ufloat-renderable`             | <F f="rg11b10ufloat-renderable"/>             | rg11b10ufloat textures renderable |
+| `float32-renderable-webgl`             | <F f="float32-renderable-webgl"/>             | float32 textures renderable       |
+| `float16-renderable-webgl`             | <F f="float16-renderable-webgl"/>             | float16 textures renderable       |
+| `bgra8unorm-storage`                   | <F f="bgra8unorm-storage"/>                   | can be used as storage binding.   |
+| `texture-filterable-anisotropic-webgl` | <F f="texture-filterable-anisotropic-webgl"/> | anisotropic filtering, common     |
+| `texture-blend-float-webgl`            | <F f="texture-blend-float-webgl"/>            | float texture blending            |
 | **Compressed Textures**                |
-| `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>         | DXT (BC1-BC5). Desktops.       |
-| `texture-compression-bc`               | <F f="texture-compression-bc"/>                | DXT (BC1-BC7). Desktops.       |
-| `texture-compression-etc2`             | <F f="texture-compression-etc2"/>              | Performance caveats.           |
-| `texture-compression-astc`             | <F f="texture-compression-astc"/>              | ASTC.                          |
-| `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>        | Qualcomm Snapdragon. Android.  |
-| `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>       | PowerVR GPUs, iOS devices.     |
-| `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>         | Qualcomm Adreno GPUs. Android. |
+| `texture-compression-bc`               | <F f="texture-compression-bc"/>               | DXT (BC1-BC7). Desktops.          |
+| `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>        | DXT (BC1-BC5). Desktops.          |
+| `texture-compression-etc2`             | <F f="texture-compression-etc2"/>             | Performance caveats.              |
+| `texture-compression-astc`             | <F f="texture-compression-astc"/>             | ASTC.                             |
+| `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>       | Qualcomm Snapdragon. Android.     |
+| `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>      | PowerVR GPUs, iOS devices.        |
+| `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>        | Qualcomm Adreno GPUs. Android.    |
 
 ## Usage
 
@@ -135,9 +144,8 @@ enabling subfeatures of bigger features.
 | `texture-float16-webgl1` (Extension 1 of 2) | [`OES_texture_half_float`][texture_half_float]                 | Half float (`Uint16Array`) textures can be created and set as samplers                                                                                         |
 | `texture-float16-webgl1` (Extension 2 of 2) | [`WEBGL_color_buffer_float`][webgl_color_buffer_float]         | (This feature depends on 2 extensions)                                                                                                                         |
 | `multiple-render-targets-webgl1`            | [`WEBGL_draw_buffers`][draw_buffers]                           | `Framebuffer`s can have multiple color attachments that fragment shaders can access, see `Framebuffer.drawBuffers`                                             |
-| `texture-renderable-rgba32float-webgl`      |                                                                | Floating point `Texture`s using the `GL.RGBA32F` format are renderable and readable                                                                            |
-| `texture-renderable-float32-webgl`          | [`EXT_color_buffer_float`][ext_color_buffer_float]             | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`s and write from fragment shaders, read from with `readPixels` etc. `GL.RGBA32F`.   |
-| `texture-renderable-float16-webgl`          | [`EXT_color_buffer_half_float`][color_buffer_half_float]       | Half float format `Texture`s are renderable and readable                                                                                                       |
+| `float32-renderable-webgl`                  | [`EXT_color_buffer_float`][ext_color_buffer_float]             | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`s and write from fragment shaders, read from with `readPixels` etc. `GL.RGBA32F`.   |
+| `float16-renderable-webgl`                  | [`EXT_color_buffer_half_float`][color_buffer_half_float]       | Half float format `Texture`s are renderable and readable                                                                                                       |
 | `float-blend-webgl1`                        | [`EXT_float_blend`][float_blend]                               | Blending with 32-bit floating point color buffers                                                                                                              |
 | `depth_buffers`                             | [`WEBGL_depth_texture`][depth_texture]                         | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations                                                                                    |
 | `texture-filter-linear-float`               | [`OES_texture_float_linear`][texture_float_linear]             | Linear texture filtering for floating point textures                                                                                                           |
@@ -150,7 +158,6 @@ enabling subfeatures of bigger features.
 - Some extensions will not be enabled until they have been queried. luma always queries on startup to enable, app only needs to query again it wants to test platform.
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
-
 
 [instanced_arrays]: https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays
 [vertex_array_object]: https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object

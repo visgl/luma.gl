@@ -1,5 +1,5 @@
-// Recursively copies objects
-export default function deepCopy(object: Record<string, any>) {
+/** Recursively copies objects */
+export function deepCopy(object: Record<string, any>) {
   if (Array.isArray(object)) {
     return object.map((element) => deepCopy(element));
   }

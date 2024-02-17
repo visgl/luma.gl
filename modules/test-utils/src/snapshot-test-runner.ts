@@ -1,5 +1,5 @@
 import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';
-import {getBoundingBoxInPage} from './utils';
+import {getBoundingBoxInPage} from './utils/get-bounding-box';
 
 /** A snapshot test case */
 export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
