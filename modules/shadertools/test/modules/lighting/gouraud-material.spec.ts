@@ -2,12 +2,15 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
+import type {UniformValue} from '@luma.gl/core';
 import {gouraudMaterial} from '@luma.gl/shadertools';
 
 test('shadertools#gouraudMaterial', (t) => {
-  let uniforms = gouraudMaterial.getUniforms?.({});
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  let uniforms: Record<string, UniformValue> = gouraudMaterial.getUniforms?.({})!;
   t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   uniforms = gouraudMaterial.getUniforms?.({ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]})!;
   // t.equal(
   //   uniforms.enabled,
@@ -25,6 +28,7 @@ test('shadertools#gouraudMaterial', (t) => {
 
   // t.equal(uniforms.enabled, false, 'Disable lighting without material');
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   uniforms = gouraudMaterial.getUniforms?.({})!;
   t.equal(uniforms.ambient, 0.35, 'ambient');
   t.equal(uniforms.diffuse, 0.6, 'diffuse');
