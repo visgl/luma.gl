@@ -38,29 +38,16 @@ test('WebGL#state', t => {
   t.end();
 });
 
-test('WebGLState#getGLParameters', t => {
+test('WebGLState#getGLParameters (WebGL)', t => {
   resetGLParameters(webglDevice);
   const parameters = getGLParameters(webglDevice);
 
   for (const setting in GL_PARAMETERS) {
     const value = parameters[setting];
-    t.ok(value !== undefined, `${setting}: got a value ${stringifyTypedArray(value)}`);
-  }
-  t.end();
-});
-
-test('WebGLState#getGLParameters (WebGL2)', t => {
-  if (webglDevice) {
-    resetGLParameters(webglDevice);
-    const parameters = getGLParameters(webglDevice);
-
-    for (const setting in GL_PARAMETERS) {
-      const value = parameters[setting];
-      t.ok(
-        value !== undefined,
-        `${webglDevice.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
-      );
-    }
+    t.ok(
+      value !== undefined,
+      `${webglDevice.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
+    );
   }
   t.end();
 });
@@ -350,37 +337,33 @@ test('WebGLState#BlendEquationMinMax', t => {
     }
   ];
 
-  if (webglDevice) {
-    resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice);
 
+  // eslint-disable-next-line @typescript-eslint/no-for-in-array
+  for (const index in parametersArray) {
+    const parameters = parametersArray[index];
+    const expected = expectedArray[index];
+
+    setGLParameters(webglDevice, parameters);
+
+    const actualParameters = getGLParameters(webglDevice);
     // eslint-disable-next-line @typescript-eslint/no-for-in-array
-    for (const index in parametersArray) {
-      const parameters = parametersArray[index];
-      const expected = expectedArray[index];
-
-      setGLParameters(webglDevice, parameters);
-
-      const actualParameters = getGLParameters(webglDevice);
-      // eslint-disable-next-line @typescript-eslint/no-for-in-array
-      for (const state in expected) {
-        const value = actualParameters[state];
-        t.equal(
-          value,
-          expected[state],
-          `WebGL : expected value, ${webglDevice.getGLKey(
-            value
-          )} received for ${webglDevice.getGLKey(state)}`
-        );
-      }
+    for (const state in expected) {
+      const value = actualParameters[state];
+      t.equal(
+        value,
+        expected[state],
+        `WebGL : expected value, ${webglDevice.getGLKey(
+          value
+        )} received for ${webglDevice.getGLKey(state)}`
+      );
     }
-  } else {
-    t.comment('WebGL not available, skipping tests');
   }
 
   t.end();
 });
 
-test('WebGLState#bindFramebuffer (WebGL2)', t => {
+test('WebGLState#bindFramebuffer', t => {
   const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   const framebufferThree = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});

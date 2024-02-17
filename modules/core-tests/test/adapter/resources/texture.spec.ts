@@ -133,25 +133,16 @@ function testFormatDeduction(t, device: Device) {
 }
 
 test.skip('WebGL#Texture format deduction', t => {
-  if (webglDevice) {
-    testFormatDeduction(t, webglDevice);
-  }
   testFormatDeduction(t, webglDevice);
   t.end();
 });
 
 test.skip('WebGL#Texture format creation', t => {
-  if (webglDevice) {
-    testFormatCreation(t, webglDevice);
-  }
   testFormatCreation(t, webglDevice);
   t.end();
 });
 
 test.skip('WebGL#Texture format creation with data', t => {
-  if (webglDevice) {
-    testFormatCreation(t, webglDevice, true);
-  }
   testFormatCreation(t, webglDevice, true);
   t.end();
 });

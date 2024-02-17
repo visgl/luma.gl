@@ -592,22 +592,8 @@ test.skip('assembleShaders#transpilation', (t) => {
 
   t.ok(
     compileAndLinkShaders(t, webglDevice, assembleResult),
-    'assemble GLSL300 + PBR assemble to 100'
+    'assemble GLSL300 + PBR assemble, WebGL2'
   );
-
-  if (webglDevice) {
-    assembleResult = assembleShaders({
-      platformInfo: getInfo(webglDevice),
-      vs: VS_GLSL_300_GLTF,
-      fs: FS_GLSL_300_GLTF,
-      modules: [pbr]
-    });
-
-    t.ok(
-      compileAndLinkShaders(t, webglDevice, assembleResult),
-      'assemble GLSL300 + PBR assemble to 100, WebGL2'
-    );
-  }
 
   t.end();
 });
@@ -616,7 +602,7 @@ test.skip('assembleShaders#transpilation', (t) => {
 
 function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   const gl = device.gl;
-  const vShader = gl.createShader(gl.VERTEX_SHADER) ;
+  const vShader = gl.createShader(gl.VERTEX_SHADER)!;
   gl.shaderSource(vShader, assembleResult.vs);
   gl.compileShader(vShader);
   let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
