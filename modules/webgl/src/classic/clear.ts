@@ -23,10 +23,9 @@ const ERR_ARGUMENTS = 'clear: bad arguments';
  * @deprecated Set clear color when creating a RenderPass.
  */
 export function clear(
-  gl: Device | WebGLRenderingContext,
+  device: Device,
   options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}
 ): void {
-  const device = WebGLDevice.attach(gl);
   const {framebuffer = null, color = null, depth = null, stencil = null} = options || {};
   const parameters: any = {};
 
@@ -60,8 +59,9 @@ export function clear(
   assert(clearFlags !== 0, ERR_ARGUMENTS);
 
   // Temporarily set any clear "colors" and call clear
-  withGLParameters(device.gl, parameters, () => {
-    device.gl.clear(clearFlags);
+  withGLParameters(device, parameters, () => {
+    const gl = (device as WebGLDevice).gl;
+    gl.clear(clearFlags);
   });
 }
 
@@ -70,40 +70,39 @@ export function clear(
  * @deprecated Set clear color when creating a RenderPass
  */
 export function clearBuffer(
-  gl: Device | WebGLRenderingContext,
+  device: Device,
   options?: {framebuffer?: Framebuffer; buffer?: any; drawBuffer?: any; value?: any}
 ) {
-  const device = WebGLDevice.attach(gl);
-
   const {framebuffer = null, buffer = GL_COLOR, drawBuffer = 0, value = [0, 0, 0, 0]} = options || {};
-  withGLParameters(device.gl2, {framebuffer}, () => {
+  const gl = (device as WebGLDevice).gl;
+  withGLParameters(gl, {framebuffer}, () => {
     // Method selection per OpenGL ES 3 docs
     switch (buffer) {
       case GL_COLOR:
         switch (value.constructor) {
           case Int32Array:
-            device.gl2.clearBufferiv(buffer, drawBuffer, value);
+            gl.clearBufferiv(buffer, drawBuffer, value);
             break;
           case Uint32Array:
-            device.gl2.clearBufferuiv(buffer, drawBuffer, value);
+            gl.clearBufferuiv(buffer, drawBuffer, value);
             break;
           case Float32Array:
           default:
-            device.gl2.clearBufferfv(buffer, drawBuffer, value);
+            gl.clearBufferfv(buffer, drawBuffer, value);
         }
         break;
 
       case GL_DEPTH:
-        device.gl2.clearBufferfv(GL_DEPTH, 0, [value]);
+        gl.clearBufferfv(GL_DEPTH, 0, [value]);
         break;
 
       case GL_STENCIL:
-        device.gl2.clearBufferiv(GL_STENCIL, 0, [value]);
+        gl.clearBufferiv(GL_STENCIL, 0, [value]);
         break;
 
       case GL_DEPTH_STENCIL:
         const [depth, stencil] = value;
-        device.gl2.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
+        gl.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
         break;
 
       default:

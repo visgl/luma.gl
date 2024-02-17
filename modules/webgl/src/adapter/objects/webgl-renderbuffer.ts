@@ -57,7 +57,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
       throw new Error('Renderbuffer');
     }
     super(device, props, WEBGLRenderbuffer.defaultProps);
-    this.glFormat = convertTextureFormatToGL(this.props.format, device.isWebGL2);
+    this.glFormat = convertTextureFormatToGL(this.props.format);
     this._initialize(this.props);
   }
 
@@ -80,8 +80,8 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
 
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
-    if (samples !== 0 && this.device.isWebGL2) {
-      this.gl2.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, this.glFormat, width, height);
+    if (samples !== 0) {
+      this.gl.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, this.glFormat, width, height);
     } else {
       this.gl.renderbufferStorage(GL.RENDERBUFFER, this.glFormat, width, height);
     }
@@ -89,7 +89,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 
     this.trackAllocatedMemory(
-      width * height * (samples || 1) * getTextureFormatBytesPerPixel(this.glFormat, this.device.isWebGL2)
+      width * height * (samples || 1) * getTextureFormatBytesPerPixel(this.glFormat)
     );
   }
 

@@ -240,8 +240,7 @@ export function copyToTexture(
         break;
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        device.assertWebGL2();
-        device.gl2.copyTexSubImage3D(
+        device.gl.copyTexSubImage3D(
           textureTarget,
           targetMipmaplevel,
           targetX,

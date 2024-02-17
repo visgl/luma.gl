@@ -19,6 +19,15 @@ luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for
 This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a
 [Porting Guide](/docs/upgrade-guide/porting-guide) that provides more background information and recommended porting strategies.
 
+### Removed Functionality
+
+Going forward, luma.gl will focus on leveraging the capabilities WebGPU, while maintaining a high-quality, compatible WebGL2 backend. 
+To accelerate this roadmap, luma.gl v9 is dropping WebGL 1 support.
+
+- **WebGL1** is no longer supported. The `@luma.gl/webgl` backend now always creates a **WebGL2 context**.
+- **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
+- **headless-gl** integration for Node.js is no longer supported, as it only supports WebGL 1.
+
 ### Non-API changes
 
 luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standards:
@@ -163,15 +172,15 @@ Feature constants have been changed to match the WebGPU API and will need to be 
 | `FEATURES.FRAGMENT_SHADER_DERIVATIVES`      | N/A (always true)                       | Derivative functions are available in GLSL                                    |
 | **`Texture`s and `Framebuffer`s**           |                                         |                                                                               |
 | `FEATURES.TEXTURE_FLOAT`                    | `texture-renerable-float32-webgl`       | Floating point textures can be created / set as samplers                      |
-| `FEATURES.TEXTURE_HALF_FLOAT`               | `texture-renderable-float16-webgl`      | Half float textures can be created and set as samplers                        |
+| `FEATURES.TEXTURE_HALF_FLOAT`               | `float16-renderable-webgl`      | Half float textures can be created and set as samplers                        |
 | `FEATURES.MULTIPLE_RENDER_TARGETS`          | `multiple-renderable--webgl1`           | `Framebuffer` multiple color attachments that fragment shaders can access     |
-| `FEATURES.COLOR_ATTACHMENT_RGBA32F`         | `texture-renderable-rgba32float-webgl1` | Floating point `Texture` in the `GL.RGBA32F` format are renderable & readable |
+| `FEATURES.COLOR_ATTACHMENT_RGBA32F`         | `rgba32float-renderable-webgl1` | Floating point `Texture` in the `GL.RGBA32F` format are renderable & readable |
 | `FEATURES.COLOR_ATTACHMENT_FLOAT`           | `webgl1`                                | Floating point `Texture`s renderable + readable.                              |
 | `FEATURES.COLOR_ATTACHMENT_HALF_FLOAT`      | `webgl1`                                | Half float format `Texture`s are renderable and readable                      |
 | `FEATURES.FLOAT_BLEND`                      | `texture-blend-float-webgl`             | Blending with 32-bit floating point color buffers                             |
-| `TEXTURE_FILTER_LINEAR_FLOAT`               | `texture-filter-linear-float32-webgl1`  | Linear texture filtering for floating point textures                          |
-| `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | `texture-filter-linear-float16-webgl1`  | Linear texture filtering for half float textures                              |
-| `FEATURES.TEXTURE_FILTER_ANISOTROPIC`       | `texture-filter-anisotropic-webgl`      | Anisotropic texture filtering                                                 |
+| `TEXTURE_FILTER_LINEAR_FLOAT`               | `float32-filterable-linear-webgl1`  | Linear texture filtering for floating point textures                          |
+| `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | `float16-filterable-linear-webgl1`  | Linear texture filtering for half float textures                              |
+| `FEATURES.TEXTURE_FILTER_ANISOTROPIC`       | `texture-filterable-anisotropic-webgl`      | Anisotropic texture filtering                                                 |
 | `FEATURES.SRGB`                             | `texture-formats-srgb-webgl1`           | sRGB encoded rendering is available                                           |
 | `FEATURES.TEXTURE_DEPTH_BUFFERS`            | `texture-formats-depth-webgl1`          | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations   |
 

@@ -24,17 +24,13 @@ import type {TransformFeedback, TransformFeedbackProps} from './resources/transf
 export type DeviceProps = {
   id?: string;
 
-  type?: 'webgl' | 'webgl1' | 'webgl2' | 'webgpu' | 'best-available';
+  type?: 'webgl' | 'webgpu' | 'best-available';
 
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
   container?: HTMLElement | string | null;
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
-
-  // WebGLDevice parameters
-  webgl2?: boolean; // Set to false to not create a WebGL2 context (force webgl1)
-  webgl1?: boolean; // set to false to not create a WebGL1 context (fails if webgl2 not available)
 
   // WebGLContext PARAMETERS - Can only be set on context creation...
   // alpha?: boolean; // Default render target has an alpha buffer.
@@ -51,7 +47,7 @@ export type DeviceProps = {
   break?: string[]; // TODO: types
 
   // @deprecated Attach to existing context
-  gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
+  gl?: WebGL2RenderingContext | null;
 };
 
 /**
@@ -62,7 +58,7 @@ export type DeviceProps = {
  */
 export type DeviceInfo = {
   /** Type of device */
-  type: 'webgl' | 'webgl2' | 'webgpu';
+  type: 'webgl' | 'webgpu';
   /** Vendor (name of GPU vendor, Apple, nVidia etc */
   vendor: string;
   /** Renderer (usually driver name) */
@@ -81,7 +77,7 @@ export type DeviceInfo = {
   fallback?: boolean;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
-  /** Highest supported shader language version (GLSL 3.00 = 300, GLSL 1.00 = 100) */
+  /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
   shadingLanguageVersion: number;
 };
 
@@ -117,65 +113,49 @@ export type DeviceLimits = {
 
 export type WebGPUDeviceFeature =
   | 'depth-clip-control'
+  | 'indirect-first-instance'
+  | 'timestamp-query'
+  | 'shader-f16'
   | 'depth24unorm-stencil8'
   | 'depth32float-stencil8'
-  | 'timestamp-query'
-  | 'indirect-first-instance'
+  | 'rg11b10ufloat-renderable'
+  | 'float32-filterable'
+  | 'bgra8unorm-storage'
   | 'texture-compression-bc'
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
 
 // obsolete...
 // 'depth-clamping' |
-// 'depth24unorm-stencil8' |
-// 'depth32float-stencil8' |
 // 'pipeline-statistics-query' |
-// 'timestamp-query' |
-// 'texture-compression-bc'
 
 export type WebGLDeviceFeature =
   | 'webgpu'
-  | 'webgl2'
   | 'webgl'
-
-  // api support (unify with WebGPU timestamp-query?)
-  | 'timer-query-webgl'
-  | 'uniform-buffers-webgl'
-  | 'uniforms-webgl'
-
-  // texture filtering
-  | 'texture-filter-linear-float32-webgl'
-  | 'texture-filter-linear-float16-webgl'
-  | 'texture-filter-anisotropic-webgl'
-
-  // texture rendering
-  | 'texture-renderable-float32-webgl'
-  | 'texture-renderable-float16-webgl'
-  | 'texture-renderable-rgba32float-webgl' // TODO - remove
-
-  // texture blending
-  | 'texture-blend-float-webgl1'
-
-  // texture format support
-  | 'texture-formats-norm16-webgl'
-  | 'texture-formats-srgb-webgl1'
-  | 'texture-formats-depth-webgl1'
-  | 'texture-formats-float32-webgl1'
-  | 'texture-formats-float16-webgl1'
+  | 'glsl'
+  | 'wgsl'
 
   // api support
-  | 'vertex-array-object-webgl1'
-  | 'instanced-rendering-webgl1'
-  | 'multiple-render-targets-webgl1'
-  | 'index-uint32-webgl1'
-  | 'blend-minmax-webgl1'
-  | 'transform-feedback-webgl2'
+  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
+  | 'uniforms-webgl'
+  | 'transform-feedback-webgl'
 
-  // glsl extensions
-  | 'glsl-frag-data'
-  | 'glsl-frag-depth'
-  | 'glsl-derivatives'
-  | 'glsl-texture-lod';
+  // texture rendering
+  | 'rg11b10ufloat-renderable'
+  | 'float32-renderable-webgl'
+  | 'float16-renderable-webgl'
+  | 'norm16-renderable-webgl'
+
+  // texture filtering
+  | 'float32-filterable-linear-webgl'
+  | 'float16-filterable-linear-webgl'
+  | 'texture-filterable-anisotropic-webgl'
+
+  // texture storage bindings
+  | 'bgra8unorm-storage'
+
+  // texture blending
+  | 'texture-blend-float-webgl';
 
 type WebGLCompressedTextureFeatures =
   | 'texture-compression-bc5-webgl'
@@ -193,20 +173,17 @@ export type DeviceFeature =
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
-
   static defaultProps: Required<DeviceProps> = {
     id: null!,
     type: 'best-available',
     canvas: null,
     container: null,
-    webgl2: true, // Attempt to create a WebGL2 context
-    webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
     break: [],
-  
+
     // alpha: undefined,
     // depth: undefined,
     // stencil: undefined,
@@ -214,10 +191,9 @@ export abstract class Device {
     // premultipliedAlpha: undefined,
     // preserveDrawingBuffer: undefined,
     // failIfMajorPerformanceCaveat: undefined
-  
+
     gl: null
   };
-  
 
   get [Symbol.toStringTag](): string {
     return 'Device';
@@ -375,7 +351,7 @@ export abstract class Device {
   ): Uint8Array | Uint16Array | Float32Array {
     throw new Error('not implemented');
   }
-  
+
   /** @deprecated - will be removed - should use command encoder */
   readPixelsToBufferWebGL(
     source: Framebuffer | Texture,

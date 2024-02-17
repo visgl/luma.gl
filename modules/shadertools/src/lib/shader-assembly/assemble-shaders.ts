@@ -379,7 +379,7 @@ ${getApplicationDefines(allDefines)}
   assembledSource = injectShader(assembledSource, stage, mainInjections);
   
   if (language === 'glsl' && sourceVersion !== targetVersion) {
-    assembledSource = transpileGLSLShader(assembledSource, targetVersion, stage);
+    assembledSource = transpileGLSLShader(assembledSource, stage);
   }
 
   return assembledSource.trim();

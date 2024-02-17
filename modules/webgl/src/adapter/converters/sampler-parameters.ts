@@ -52,23 +52,6 @@ export function convertSamplerParametersToWebGL(props: SamplerProps): GLSamplerP
   return params;
 }
 
-/**
- * Override sampler settings that are not supported by Non-Power-of-Two textures in WebGL1.
- */
-export function updateSamplerParametersForNPOT(
-  parameters: GLSamplerParameters
-): GLSamplerParameters {
-  const newParameters = {...parameters};
-  if (parameters[GL.TEXTURE_MIN_FILTER] !== GL.NEAREST) {
-    // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
-    newParameters[GL.TEXTURE_MIN_FILTER] = GL.LINEAR;
-  }
-  // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_WRAP_S to CLAMP_TO_EDGE`)();
-  newParameters[GL.TEXTURE_WRAP_S] = GL.CLAMP_TO_EDGE;
-  newParameters[GL.TEXTURE_WRAP_T] = GL.CLAMP_TO_EDGE;
-  return newParameters;
-}
-
 // HELPERS
 
 /** Convert address more */

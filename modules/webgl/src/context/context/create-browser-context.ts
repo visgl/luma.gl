@@ -3,8 +3,6 @@
 
 /**
  * ContextProps
- * @param webgl2 Set to false to not create a WebGL2 context (force webgl1)
- * @param webgl1 set to false to not create a WebGL1 context (fail if webgl2 not available)
  * @param onContextLost
  * @param onContextRestored
  *
@@ -19,9 +17,6 @@
  * @param failIfMajorPerformanceCaveat Do not create if the system performance is low.
  */
 type ContextProps = {
-  type?: 'webgl' | 'webgl1' | 'webgl2' | string;
-  webgl1?: boolean;
-  webgl2?: boolean;
   onContextLost?: (event: Event) => void;
   onContextRestored?: (event: Event) => void;
   alpha?: boolean; // indicates if the canvas contains an alpha buffer.
@@ -35,8 +30,6 @@ type ContextProps = {
 };
 
 const DEFAULT_CONTEXT_PROPS: ContextProps = {
-  webgl2: true, // Attempt to create a WebGL2 context
-  webgl1: true, // Attempt to create a WebGL1 context (false to fail if webgl2 not available)
   powerPreference: 'high-performance', // After all, most apps are using WebGL for performance reasons
   // eslint-disable-next-line no-console
   onContextLost: () => console.error('WebGL context lost'),
@@ -52,7 +45,7 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
 export function createBrowserContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
   props: ContextProps
-): WebGLRenderingContext {
+): WebGL2RenderingContext {
   props = {...DEFAULT_CONTEXT_PROPS, ...props};
 
   // Try to extract any extra information about why context creation failed
@@ -61,24 +54,12 @@ export function createBrowserContext(
   canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
   // Create the desired context
-  let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
-
-  if (props.type === 'webgl2') {
-    props = {...props, webgl1: false};
-  }
-  if (props.type === 'webgl1') {
-    props = {...props, webgl2: false};
-  }
+  let gl: WebGL2RenderingContext | null = null;
 
   // props.failIfMajorPerformanceCaveat = true;
 
   // Prefer webgl2 over webgl1 if both are acceptable
-  if (!gl && props.webgl2) {
-    gl = canvas.getContext('webgl2', props) as WebGL2RenderingContext;
-  }
-  if (!gl && props.webgl1) {
-    gl = canvas.getContext('webgl', props) as WebGLRenderingContext;
-  }
+  gl ||= canvas.getContext('webgl2', props) as WebGL2RenderingContext;
 
   // Software GPU
 
@@ -94,11 +75,7 @@ export function createBrowserContext(
   canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
 
   if (!gl) {
-    throw new Error(
-      `Failed to create ${props.webgl2 && !props.webgl1 ? 'WebGL2' : 'WebGL'} context: ${
-        errorMessage || 'Unknown error'
-      }`
-    );
+    throw new Error(`Failed to create WebGL context: ${errorMessage || 'Unknown error'}`);
   }
 
   if (props.onContextLost) {
@@ -120,7 +97,7 @@ export function createBrowserContext(
 }
 
 /* TODO - can we call this asynchronously to catch the error events?
-export async function createBrowserContextAsync(canvas: HTMLCanvasElement | OffscreenCanvas, props: ContextProps): Promise<WebGLRenderingContext> {
+export async function createBrowserContextAsync(canvas: HTMLCanvasElement | OffscreenCanvas, props: ContextProps): Promise<WebGL2RenderingContext> {
   props = {...DEFAULT_CONTEXT_PROPS, ...props};
 
  // Try to extract any extra information about why context creation failed

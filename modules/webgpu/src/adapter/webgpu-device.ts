@@ -278,7 +278,7 @@ export class WebGPUDevice extends Device {
   }
 
   _getFeatures() {
-    // WebGPU Features
+    // Initialize with actual WebGPU Features (note that unknown features may not be in DeviceFeature type)
     const features = new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>);
 
     // Fixups for pre-standard names: https://github.com/webgpu-native/webgpu-headers/issues/133
@@ -289,45 +289,25 @@ export class WebGPUDevice extends Device {
       features.add('depth-clip-control');
     }
 
-    // Add subsets
+    // Some subsets of WebGPU extensions correspond to WebGL extensions
     if (features.has('texture-compression-bc')) {
       features.add('texture-compression-bc5-webgl');
     }
 
-    features.add('webgpu');
+    const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
+      'webgpu',
+      'wgsl',
+      'timer-query-webgl',
+      'float32-filterable-linear-webgl',
+      'float16-filterable-linear-webgl',
+      'texture-filterable-anisotropic-webgl',
+      'float32-renderable-webgl',
+      'float16-renderable-webgl'
+    ];
 
-    features.add('timer-query-webgl');
-
-    // WEBGL1 SUPPORT
-    features.add('vertex-array-object-webgl1');
-    features.add('instanced-rendering-webgl1');
-    features.add('multiple-render-targets-webgl1');
-    features.add('index-uint32-webgl1');
-    features.add('blend-minmax-webgl1');
-    features.add('texture-blend-float-webgl1');
-
-    // TEXTURES, RENDERBUFFERS
-    features.add('texture-formats-srgb-webgl1');
-
-    // TEXTURES
-    features.add('texture-formats-depth-webgl1');
-    features.add('texture-formats-float32-webgl1');
-    features.add('texture-formats-float16-webgl1');
-
-    features.add('texture-filter-linear-float32-webgl');
-    features.add('texture-filter-linear-float16-webgl');
-    features.add('texture-filter-anisotropic-webgl');
-
-    // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-    features.add('texture-renderable-rgba32float-webgl');
-    features.add('texture-renderable-float32-webgl');
-    features.add('texture-renderable-float16-webgl');
-
-    // GLSL extensions
-    features.add('glsl-frag-data');
-    features.add('glsl-frag-depth');
-    features.add('glsl-derivatives');
-    features.add('glsl-texture-lod');
+    for (const feature of WEBGPU_ALWAYS_FEATURES) {
+      features.add(feature);
+    }
 
     return features;
   }

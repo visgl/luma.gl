@@ -61,8 +61,6 @@ export class luma {
         }
         break;
       case 'webgl':
-      case 'webgl1':
-      case 'webgl2':
         DeviceClass = deviceList.get('webgl');
         if (DeviceClass) {
           return await DeviceClass.create(props);

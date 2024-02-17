@@ -65,9 +65,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // @ts-expect-error WebGL only
     const {varyings, bufferMode = GL.SEPARATE_ATTRIBS} = props;
     if (varyings && varyings.length > 0) {
-      this.device.assertWebGL2();
       this.varyings = varyings;
-      this.device.gl2?.transformFeedbackVaryings(this.handle, varyings, bufferMode);
+      this.device.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
     }
 
     this._compileAndLink();
@@ -220,7 +219,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     //     // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
     //     if (isIndexed && isInstanced) {
     //       // ANGLE_instanced_arrays extension
-    //       this.device.gl2?.drawElementsInstanced(
+    //       this.device.gl.drawElementsInstanced(
     //         drawMode,
     //         vertexCount || 0, // indexCount?
     //         indexType,
@@ -228,11 +227,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     //         instanceCount || 0
     //       );
     //       // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-    //       //   this.device.gl2.drawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
+    //       //   this.device.gldrawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
     //     } else if (isIndexed) {
     //       this.device.gl.drawElements(drawMode, vertexCount || 0, indexType, firstVertex); // indexCount?
     //     } else if (isInstanced) {
-    //       this.device.gl2?.drawArraysInstanced(
+    //       this.device.gl.drawArraysInstanced(
     //         drawMode,
     //         firstVertex,
     //         vertexCount || 0,
@@ -250,7 +249,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       () => {
         if (isIndexed && isInstanced) {
           // ANGLE_instanced_arrays extension
-          this.device.gl2?.drawElementsInstanced(
+          this.device.gl.drawElementsInstanced(
             glDrawMode,
             vertexCount || 0, // indexCount?
             glIndexType,
@@ -258,11 +257,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             instanceCount || 0
           );
           // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-          //   this.device.gl2.drawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
+          //   this.device.gldrawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
         } else if (isIndexed) {
           this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
         } else if (isInstanced) {
-          this.device.gl2?.drawArraysInstanced(
+          this.device.gl.drawArraysInstanced(
             glDrawMode,
             firstVertex,
             vertexCount || 0,
@@ -334,12 +333,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   /** Apply any bindings (before each draw call) */
   _applyBindings() {
-    this.device.gl.useProgram(this.handle);
-
-    const {gl2} = this.device;
-    if (!gl2) {
-      throw new Error('bindings');
-    }
+    const {gl} = this.device;
+    gl.useProgram(this.handle);
 
     let textureUnit = 0;
     let uniformBufferIndex = 0;
@@ -354,16 +349,16 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         case 'uniform':
           // Set buffer
           const {name} = binding;
-          const location = gl2.getUniformBlockIndex(this.handle, name);
+          const location = gl.getUniformBlockIndex(this.handle, name);
           if (location as GL === GL.INVALID_INDEX) {
             throw new Error(`Invalid uniform block name ${name}`);
           }
-          gl2.uniformBlockBinding(this.handle, uniformBufferIndex, location);
+          gl.uniformBlockBinding(this.handle, uniformBufferIndex, location);
           // console.debug(binding, location);
           if (value instanceof WEBGLBuffer) {
-            gl2.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
+            gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
-            gl2.bindBufferRange(
+            gl.bindBufferRange(
               GL.UNIFORM_BUFFER,
               uniformBufferIndex,
               // @ts-expect-error
@@ -396,9 +391,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             throw new Error('No texture');
           }
 
-          gl2.activeTexture(GL.TEXTURE0 + textureUnit);
-          gl2.bindTexture(texture.target, texture.handle);
-          // gl2.bindSampler(textureUnit, sampler.handle);
+          gl.activeTexture(GL.TEXTURE0 + textureUnit);
+          gl.bindTexture(texture.target, texture.handle);
+          // gl.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;
 

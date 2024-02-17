@@ -116,5 +116,5 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 }
 
 function addVersionToShader(device: Device, source: string): string {
-  return device.info.type === 'webgl2' ? `#version 300 es\n${source}` : source;
+  return `#version 300 es\n${source}`;
 }

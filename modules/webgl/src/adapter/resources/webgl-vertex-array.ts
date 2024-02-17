@@ -28,14 +28,14 @@ export class WEBGLVertexArray extends VertexArray {
 
   /** * Attribute 0 can not be disable on most desktop OpenGL based browsers */
   static isConstantAttributeZeroSupported(device: Device): boolean {
-    return device.info.type === 'webgl2' || getBrowser() === 'Chrome';
+    return getBrowser() === 'Chrome';
   }
 
   // Create a VertexArray
   constructor(device: WebGLDevice, props?: VertexArrayProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.device.gl2.createVertexArray();
+    this.handle = this.device.gl.createVertexArray();
   }
 
   override destroy(): void {
@@ -44,7 +44,7 @@ export class WEBGLVertexArray extends VertexArray {
       this.buffer?.destroy();
     }
     if (this.handle) {
-      this.device.gl2.deleteVertexArray(this.handle);
+      this.device.gl.deleteVertexArray(this.handle);
       // @ts-expect-error read-only/undefined
       this.handle = undefined!;
     }
@@ -66,9 +66,9 @@ export class WEBGLVertexArray extends VertexArray {
       throw new Error('Use .setBuffer()');
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
-    this.device.gl2.bindVertexArray(this.handle);
+    this.device.gl.bindVertexArray(this.handle);
     // TODO - this initial binding does not seem to take effect? see bindBeforeRender()
-    this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
+    this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
     // log.log(1, 'VertexArray.setIndexBuffer', indexBuffer)();
     // log.log(1, `Binding vertex array ${this.id}`, buffer?.id)();
 
@@ -85,14 +85,13 @@ export class WEBGLVertexArray extends VertexArray {
 
     const {size, type, stride, offset, normalized, integer, divisor} = this._getAccessor(location);
 
-    this.device.gl2.bindVertexArray(this.handle);
+    this.device.gl.bindVertexArray(this.handle);
     // A non-zero buffer object must be bound to the GL_ARRAY_BUFFER target
     this.device.gl.bindBuffer(GL.ARRAY_BUFFER, buffer.handle);
 
     // WebGL2 supports *integer* data formats, i.e. GPU will see integer values
     if (integer) {
-      this.device.assertWebGL2();
-      this.device.gl2.vertexAttribIPointer(location, size, type, stride, offset);
+      this.device.gl.vertexAttribIPointer(location, size, type, stride, offset);
     } else {
       // Attaches ARRAY_BUFFER with specified buffer format to location
       this.device.gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
@@ -101,7 +100,7 @@ export class WEBGLVertexArray extends VertexArray {
     // Mark as non-constant
     this.device.gl.enableVertexAttribArray(location);
     // Set the step mode 0=vertex, 1=instance
-    this.device.gl2.vertexAttribDivisor(location, divisor || 0);
+    this.device.gl.vertexAttribDivisor(location, divisor || 0);
 
     this.attributes[location] = buffer;
   }
@@ -115,12 +114,12 @@ export class WEBGLVertexArray extends VertexArray {
   init = false;
 
   override bindBeforeRender(): void {
-    this.device.gl2.bindVertexArray(this.handle);
+    this.device.gl.bindVertexArray(this.handle);
     // TODO - the initial bind does not seem to take effect.
     if (!this.init) {
       // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
       const webglBuffer = this.indexBuffer as WEBGLBuffer;
-      this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
+      this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
       this.init = true;
     }
     this._applyConstantAttributes();
@@ -130,8 +129,8 @@ export class WEBGLVertexArray extends VertexArray {
     // log.log(1, `Unbinding vertex array ${this.id}`)();
     // TODO technically this is not necessary, but we might be interfacing
     // with code that does not use vertex array objects
-    this.device.gl2.bindVertexArray(null);
-    // this.device.gl2.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+    this.device.gl.bindVertexArray(null);
+    // this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
   }
 
   // Internal methods
@@ -161,13 +160,12 @@ export class WEBGLVertexArray extends VertexArray {
 
   //   // WebGL2 supports *integer* data formats, i.e. GPU will see integer values
   //   if (integer) {
-  //     this.device.assertWebGL2();
-  //     this.device.gl2.vertexAttribIPointer(location, size, type, stride, offset);
+  //     this.device.gl.vertexAttribIPointer(location, size, type, stride, offset);
   //   } else {
   //     // Attaches ARRAY_BUFFER with specified buffer format to location
   //     this.device.gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
   //   }
-  //   this.device.gl2.vertexAttribDivisor(location, divisor || 0);
+  //   this.device.gl.vertexAttribDivisor(location, divisor || 0);
   // }
 
   /** Get an accessor from the  */
@@ -206,13 +204,13 @@ export class WEBGLVertexArray extends VertexArray {
 
     if (enable || canDisableAttribute) {
       location = Number(location);
-      this.device.gl2.bindVertexArray(this.handle);
+      this.device.gl.bindVertexArray(this.handle);
       if (enable) {
         this.device.gl.enableVertexAttribArray(location);
       } else {
         this.device.gl.disableVertexAttribArray(location);
       }
-      this.device.gl2.bindVertexArray(null);
+      this.device.gl.bindVertexArray(null);
     }
   }
 

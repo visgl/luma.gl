@@ -65,13 +65,6 @@ test('api#UniformBufferLayout', (t) => {
 });
 
 test.skip('api#UniformBufferLayout getData', (t) => {
-  const {gl2} = fixture;
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
-
   const program = new Program(gl2, {vs: VS, fs: FS});
 
   const uniformBlockIndex = program.getUniformBlockIndex('uboStruct');
@@ -113,11 +106,6 @@ test.skip('api#UniformBufferLayout getData', (t) => {
 
 test.skip('api#UniformBufferLayout setData', (t) => {
   const {gl2} = fixture;
-  if (!gl2) {
-    t.comment('WebGL2 not available, skipping tests');
-    t.end();
-    return;
-  }
 
   const sourceData = new Float32Array([1, 2, 3, 4, 5]);
   const sourceBuffer = new Buffer(gl2, {data: sourceData});

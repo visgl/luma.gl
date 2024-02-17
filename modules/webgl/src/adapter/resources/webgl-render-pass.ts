@@ -142,18 +142,18 @@ export class WEBGLRenderPass extends RenderPass {
    * WebGL2 - clear a specific color buffer 
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumberArray = [0, 0, 0, 0]) {
-    withGLParameters(this.device.gl2, {framebuffer: this.props.framebuffer}, () => {
+    withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
         case Int32Array:
-          this.device.gl2.clearBufferiv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferiv(GL_COLOR, drawBuffer, value);
           break;
         case Uint32Array:
-          this.device.gl2.clearBufferuiv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferuiv(GL_COLOR, drawBuffer, value);
           break;
         case Float32Array:
         default:
-          this.device.gl2.clearBufferfv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferfv(GL_COLOR, drawBuffer, value);
           break;
       }
     });
@@ -165,16 +165,16 @@ export class WEBGLRenderPass extends RenderPass {
   // const GL_DEPTH_STENCIL = 0x84f9;
 
   //     case GL_DEPTH:
-  //       this.device.gl2.clearBufferfv(GL_DEPTH, 0, [value]);
+  //       this.device.gl.clearBufferfv(GL_DEPTH, 0, [value]);
   //       break;
 
   //     case GL_STENCIL:
-  //       this.device.gl2.clearBufferiv(GL_STENCIL, 0, [value]);
+  //       this.device.gl.clearBufferiv(GL_STENCIL, 0, [value]);
   //       break;
 
   //     case GL_DEPTH_STENCIL:
   //       const [depth, stencil] = value;
-  //       this.device.gl2.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
+  //       this.device.gl.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
   //       break;
 
   //     default:

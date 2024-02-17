@@ -9,8 +9,7 @@ import {WebGLDevice} from '../webgl-device';
 /** WebGL Buffer interface */
 export class WEBGLBuffer extends Buffer {
   readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
-  readonly gl2: WebGL2RenderingContext | null;
+  readonly gl: WebGL2RenderingContext;
   readonly handle: WebGLBuffer;
 
   /** Target in OpenGL defines the type of buffer */
@@ -30,7 +29,6 @@ export class WEBGLBuffer extends Buffer {
 
     this.device = device;
     this.gl = this.device.gl;
-    this.gl2 = this.device.gl2;
 
     const handle = typeof props === 'object' ? props.handle : undefined;
     this.handle = handle || this.gl.createBuffer();
@@ -118,12 +116,11 @@ export class WEBGLBuffer extends Buffer {
 
     // Create the buffer - binding it here for the first time locks the type
     // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
-    const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+    const glTarget = GL.COPY_WRITE_BUFFER;
     this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
-      this.device.assertWebGL2();
-      this.gl2.bufferSubData(glTarget, byteOffset, data, srcOffset, byteLength);
+      this.gl.bufferSubData(glTarget, byteOffset, data, srcOffset, byteLength);
     } else {
       this.gl.bufferSubData(glTarget, byteOffset, data);
     }
@@ -134,20 +131,18 @@ export class WEBGLBuffer extends Buffer {
 
   /** Asynchronously read data from the buffer */
   override async readAsync(byteOffset = 0, byteLength?: number): Promise<Uint8Array> {
-    return this.readSyncWebGL2(byteOffset, byteLength);
+    return this.readSyncWebGL(byteOffset, byteLength);
   }
 
   /** Synchronously read data from the buffer. WebGL only. */
-  override readSyncWebGL2(byteOffset = 0, byteLength?: number): Uint8Array {
-    this.device.assertWebGL2();
-
+  override readSyncWebGL(byteOffset = 0, byteLength?: number): Uint8Array {
     byteLength = byteLength ?? this.byteLength - byteOffset;
     const data = new Uint8Array(byteLength);
     const dstOffset = 0;
 
     // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
-    this.gl2.getBufferSubData(GL.COPY_READ_BUFFER, byteOffset, data, dstOffset, byteLength);
+    this.gl.getBufferSubData(GL.COPY_READ_BUFFER, byteOffset, data, dstOffset, byteLength);
     this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
 
     // Update local `data` if offsets are 0

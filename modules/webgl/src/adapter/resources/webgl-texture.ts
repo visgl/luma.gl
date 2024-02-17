@@ -14,7 +14,7 @@ import {
   SamplerParameters,
   TypedArray
 } from '@luma.gl/core';
-import {Texture, log, assert, isPowerOfTwo, loadImage, isObjectEmpty} from '@luma.gl/core';
+import {Texture, log, assert, loadImage, isObjectEmpty} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
@@ -22,10 +22,7 @@ import {
   getWebGLTextureParameters,
   getTextureFormatBytesPerPixel
 } from '../converters/texture-formats';
-import {
-  convertSamplerParametersToWebGL,
-  updateSamplerParametersForNPOT
-} from '../converters/sampler-parameters';
+import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLSampler} from './webgl-sampler';
@@ -151,8 +148,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
   readonly MAX_ATTRIBUTES: number;
   readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
-  readonly gl2: WebGL2RenderingContext | null;
+  readonly gl: WebGL2RenderingContext;
   readonly handle: WebGLTexture;
 
   /** Sampler object (currently unused) */
@@ -194,7 +190,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.device = device as WebGLDevice;
     this.gl = this.device.gl;
-    this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();
     this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data}); // {name: this.props.id};
 
@@ -260,7 +255,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     const {parameters = {} as Record<GL, any>} = props;
 
-    const {pixels = null, pixelStore = {}, textureUnit = undefined} = props;
+    const {pixels = null, pixelStore = {}, textureUnit = undefined, mipmaps = true} = props;
 
     // pixels variable is for API compatibility purpose
     if (!data) {
@@ -270,10 +265,10 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       data = pixels;
     }
 
-    let {width, height, dataFormat, type, compressed = false, mipmaps = true} = props;
+    let {width, height, dataFormat, type, compressed = false} = props;
     const {depth = 0} = props;
 
-    const glFormat = convertTextureFormatToGL(props.format, this.device.isWebGL2);
+    const glFormat = convertTextureFormatToGL(props.format);
 
     // Deduce width and height
     ({width, height, compressed, dataFormat, type} = this._deduceParameters({
@@ -298,11 +293,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     if (Number.isFinite(this.textureUnit)) {
       this.gl.activeTexture(GL.TEXTURE0 + this.textureUnit);
       this.gl.bindTexture(this.target, this.handle);
-    }
-
-    if (mipmaps && this.device.isWebGL1 && isNPOT(this.width, this.height)) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaps`)();
-      mipmaps = false;
     }
 
     this.mipmaps = mipmaps;
@@ -372,7 +362,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       samplerProps = sampler as SamplerProps;
     }
 
-    // TODO - technically, this is only needed in WebGL1. In WebGL2 we could always use the sampler.
     const parameters = convertSamplerParametersToWebGL(samplerProps);
     this._setSamplerParameters(parameters);
     return this;
@@ -418,11 +407,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
   // Call to regenerate mipmaps after modifying texture(s)
   generateMipmap(params = {}): this {
-    if (this.device.isWebGL1 && isNPOT(this.width, this.height)) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaping`)();
-      return this;
-    }
-
     this.mipmaps = true;
 
     this.gl.bindTexture(this.target, this.handle);
@@ -500,8 +484,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let dataType = null;
     ({data, dataType} = this._getDataType({data, compressed}));
 
-    let gl2;
-
     withGLParameters(this.gl, parameters, () => {
       switch (dataType) {
         case 'null':
@@ -518,8 +500,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
           );
           break;
         case 'typed-array':
-          // Looks like this assert is not necessary, as offset is ignored under WebGL1
-          // assert((offset === 0 || this.device.isWebGL2), 'offset supported in WebGL2 only');
           gl.texImage2D(
             target,
             level,
@@ -530,15 +510,13 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
             dataFormat,
             type,
             data,
-            // @ts-expect-error
             offset
           );
           break;
         case 'buffer':
           // WebGL2 enables creating textures directly from a WebGL buffer
-          gl2 = this.device.assertWebGL2();
-          gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
-          gl2.texImage2D(
+          this.device.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle || data);
+          this.device.gl.texImage2D(
             target,
             level,
             glFormat,
@@ -549,24 +527,20 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
             type,
             offset
           );
-          gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+          this.device.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
           break;
         case 'browser-object':
-          if (this.device.isWebGL2) {
-            gl.texImage2D(
-              target,
-              level,
-              glFormat,
-              width,
-              height,
-              0 /* border*/,
-              dataFormat,
-              type,
-              data
-            );
-          } else {
-            gl.texImage2D(target, level, glFormat, dataFormat, type, data);
-          }
+          gl.texImage2D(
+            target,
+            level,
+            glFormat,
+            width,
+            height,
+            0 /* border*/,
+            dataFormat,
+            type,
+            data
+          );
           break;
         case 'compressed':
           for (const [levelIndex, levelData] of data.entries()) {
@@ -590,7 +564,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format);
       this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
     }
 
@@ -659,22 +633,16 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       } else if (data === null) {
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, null);
       } else if (ArrayBuffer.isView(data)) {
-        // const gl2 = this.device.assertWebGL2();
-        // @ts-expect-error last offset parameter is ignored under WebGL1
         this.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data, offset);
       } else if (typeof WebGLBuffer !== 'undefined' && data instanceof WebGLBuffer) {
         // WebGL2 allows us to create texture directly from a WebGL buffer
-        const gl2 = this.device.assertWebGL2();
         // This texImage2D signature uses currently bound GL.PIXEL_UNPACK_BUFFER
-        gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
-        gl2.texSubImage2D(target, level, x, y, width, height, dataFormat, type, offset);
-        gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-      } else if (this.device.isWebGL2) {
-        // Assume data is a browser supported object (ImageData, Canvas, ...)
-        const gl2 = this.device.assertWebGL2();
-        gl2.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data);
+        this.device.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data);
+        this.device.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, offset);
+        this.device.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       } else {
-        this.gl.texSubImage2D(target, level, x, y, dataFormat, type, data);
+        // Assume data is a browser supported object (ImageData, Canvas, ...)
+        this.device.gl.texSubImage2D(target, level, x, y, width, height, dataFormat, type, data);
       }
     });
 
@@ -754,7 +722,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
-    const parameters = getWebGLTextureParameters(format, this.device.isWebGL2);
+    const parameters = getWebGLTextureParameters(format);
     dataFormat = dataFormat || parameters.dataFormat;
     type = type || parameters.type;
     compressed = compressed || parameters.compressed;
@@ -910,11 +878,10 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.gl.bindTexture(this.target, this.handle);
 
-    const webglTextureFormat = getWebGLTextureParameters(format, this.device.isWebGL2);
+    const webglTextureFormat = getWebGLTextureParameters(format);
 
     withGLParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
-        // @ts-expect-error
         this.gl.texImage3D(
           this.target,
           level,
@@ -931,7 +898,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
       if (data instanceof WEBGLBuffer) {
         this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, data.handle);
-        // @ts-expect-error
         this.gl.texImage3D(
           this.target,
           level,
@@ -950,7 +916,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
     } else {
-      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
+      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format);
       this.trackAllocatedMemory(this.width * this.height * this.depth * bytesPerPixel, 'Texture');
     }
 
@@ -963,14 +929,8 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
   /**
    * Sets sampler parameters on texture
-   * @note: Applies NPOT workaround if appropriate
    */
   _setSamplerParameters(parameters: GLSamplerParameters): void {
-    // Work around WebGL1 sampling restrictions on NPOT textures
-    if (this.device.isWebGL1 && isNPOT(this.width, this.height)) {
-      parameters = updateSamplerParametersForNPOT(parameters);
-    }
-
     // NPOT parameters may populate an empty object
     if (isObjectEmpty(parameters)) {
       return;
@@ -999,32 +959,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     this.gl.bindTexture(this.target, null);
     return;
   }
-
-  /** @deprecated For LegacyTexture subclass */
-  protected _getWebGL1NPOTParameterOverride(
-    pname: GL.TEXTURE_MIN_FILTER | GL.TEXTURE_WRAP_S | GL.TEXTURE_WRAP_T,
-    value: GL.LINEAR | GL.NEAREST
-  ): number {
-    // NOTE: Apply NPOT workaround
-    const npot = this.device.isWebGL1 && isNPOT(this.width, this.height);
-    if (npot) {
-      switch (pname) {
-        case GL.TEXTURE_MIN_FILTER:
-          if (value !== GL.LINEAR && value !== GL.NEAREST) {
-            // log.warn(`texture: ${this} is Non-Power-Of-Two, forcing TEXTURE_MIN_FILTER to LINEAR`)();
-            return GL.LINEAR;
-          }
-          break;
-        case GL.TEXTURE_WRAP_S:
-        case GL.TEXTURE_WRAP_T:
-          // if (value !== GL.CLAMP_TO_EDGE) { log.warn(`texture: ${this} is Non-Power-Of-Two, ${getKey(this.gl, pname)} to CLAMP_TO_EDGE`)(); }
-          return GL.CLAMP_TO_EDGE;
-        default:
-          break;
-      }
-    }
-    return value;
-  }
 }
 
 // HELPERS
@@ -1047,14 +981,6 @@ function getWebGLTextureTarget(props: TextureProps) {
     default:
       throw new Error(props.dimension);
   }
-}
-
-function isNPOT(width: number, height: number): boolean {
-  // Width and height not available, avoid classifying as NPOT texture
-  if (!width || !height) {
-    return false;
-  }
-  return !isPowerOfTwo(width) || !isPowerOfTwo(height);
 }
 
 function logParameters(parameters: Record<number, GL | number>) {

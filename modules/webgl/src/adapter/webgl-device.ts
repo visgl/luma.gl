@@ -17,18 +17,12 @@ import type {
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
-import {polyfillContext} from '../context/polyfill/polyfill-context';
 import {
   popContextState,
   pushContextState,
   trackContextState
 } from '../context/state-tracker/track-context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
-import {
-  createHeadlessContext,
-  isHeadlessGLRegistered
-} from '../context/context/create-headless-context';
-
 import {getDeviceInfo} from './device-helpers/get-device-info';
 import {getDeviceFeatures} from './device-helpers/device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
@@ -91,13 +85,13 @@ export class WebGLDevice extends Device {
   static type: string = 'webgl';
 
   static isSupported(): boolean {
-    return typeof WebGLRenderingContext !== 'undefined' || isHeadlessGLRegistered();
+    return typeof WebGL2RenderingContext !== 'undefined';
   }
 
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
 
-  readonly handle: WebGLRenderingContext;
+  readonly handle: WebGL2RenderingContext;
 
   get features(): Set<DeviceFeature> {
     this._features = this._features || getDeviceFeatures(this.gl);
@@ -125,7 +119,7 @@ export class WebGLDevice extends Device {
    * @param gl
    * @returns
    */
-  static attach(gl: Device | WebGLRenderingContext | WebGL2RenderingContext): WebGLDevice {
+  static attach(gl: Device | WebGL2RenderingContext): WebGLDevice {
     if (gl instanceof WebGLDevice) {
       return gl;
     }
@@ -135,9 +129,9 @@ export class WebGLDevice extends Device {
       return gl.device as WebGLDevice;
     }
     if (!isWebGL(gl)) {
-      throw new Error('Invalid WebGLRenderingContext');
+      throw new Error('Invalid WebGL2RenderingContext');
     }
-    return new WebGLDevice({gl: gl as WebGLRenderingContext});
+    return new WebGLDevice({gl: gl as WebGL2RenderingContext});
   }
 
   static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
@@ -209,23 +203,19 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
         message: 'Computer entered sleep mode, or too many apps or browser tabs are using the GPU.'
       });
 
-    let gl: WebGLRenderingContext | WebGL2RenderingContext | null = props.gl || null;
+    let gl: WebGL2RenderingContext | null = props.gl || null;
     gl =
       gl ||
       (isBrowser()
         ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost})
         : null);
-    gl = gl || (!isBrowser() ? createHeadlessContext({...props, onContextLost}) : null);
-
+    
     if (!gl) {
       throw new Error('WebGL context creation failed');
     }
 
     this.handle = gl;
     this.gl = this.handle;
-    this.gl2 = this.gl as WebGL2RenderingContext;
-    this.isWebGL2 = isWebGL2(this.gl);
-    this.isWebGL1 = !this.isWebGL2;
     this.canvasContext.resize();
 
     // luma Device fields
@@ -235,9 +225,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     this.gl.device = this;
     // @ts-expect-error Annotate webgl context to handle
     this.gl._version = this.isWebGL2 ? 2 : 1;
-
-    // Add subset of WebGL2 methods to WebGL1 context
-    polyfillContext(this.gl);
 
     // Install context state tracking
     // @ts-expect-error - hidden parameters
@@ -250,8 +237,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
     // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
     if (isBrowser() && props.debug) {
-      this.gl = makeDebugContext(this.gl, {...props, webgl2: this.isWebGL2, throwOnError: true});
-      this.gl2 = this.gl as WebGL2RenderingContext;
+      this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
@@ -269,10 +255,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    * @note Has no effect for browser contexts, there is no browser API for destroying contexts
    */
   destroy(): void {
-    const ext = this.gl.getExtension('STACKGL_destroy_context');
-    if (ext) {
-      ext.destroy();
-    }
   }
 
   get isLost(): boolean {
@@ -293,16 +275,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   isTextureFormatRenderable(format: TextureFormat): boolean {
     return isTextureFormatRenderable(this.gl, format);
-  }
-
-  // WEBGL SPECIFIC METHODS
-
-  /** Returns a WebGL2RenderingContext or throws an error */
-  assertWebGL2(): WebGL2RenderingContext {
-    if (!this.gl2) {
-      throw new Error('Requires WebGL2');
-    }
-    return this.gl2;
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -377,7 +349,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   /**
    * Offscreen Canvas Support: Commit the frame
-   * https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/commit
+   * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
   submit(): void {
@@ -446,16 +418,9 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   // WebGL-only API (not part of `Device` API)
   //
 
-  /** WebGL1 typed context. Can always be used. */
-  readonly gl: WebGLRenderingContext;
-  /** WebGL2 typed context. Need to check isWebGL2 or isWebGL1 before using. */
-  readonly gl2: WebGL2RenderingContext | null = null;
+  /** WebGL2 context. */
+  readonly gl: WebGL2RenderingContext;
   readonly debug: boolean = false;
-
-  /** `true` if this is a WebGL1 context. @note `false` if WebGL2 */
-  readonly isWebGL1: boolean;
-  /** `true` if this is a WebGL2 context. @note `false` if WebGL1 */
-  readonly isWebGL2: boolean;
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
@@ -519,7 +484,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    * Be aware that there are some duplicates especially for constants that are 0,
    * so this isn't guaranteed to return the right key in all cases.
    */
-  getGLKey(value: unknown, gl?: WebGLRenderingContext): string {
+  getGLKey(value: unknown, gl?: WebGL2RenderingContext): string {
     // @ts-ignore expect-error depends on settings
     gl = gl || this.gl2 || this.gl;
     const number = Number(value);
@@ -566,25 +531,13 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 }
 
-/** Check if supplied parameter is a WebGLRenderingContext */
+/** Check if supplied parameter is a WebGL2RenderingContext */
 function isWebGL(gl: any): boolean {
-  if (typeof WebGLRenderingContext !== 'undefined' && gl instanceof WebGLRenderingContext) {
-    return true;
-  }
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
     return true;
   }
   // Look for debug contexts, headless gl etc
   return Boolean(gl && Number.isFinite(gl._version));
-}
-
-/** Check if supplied parameter is a WebGL2RenderingContext */
-function isWebGL2(gl: any): boolean {
-  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
-    return true;
-  }
-  // Look for debug contexts, headless gl etc
-  return Boolean(gl && gl._version === 2);
 }
 
 /** Set constant float array attribute */
@@ -609,8 +562,7 @@ function setConstantFloatArray(device: WebGLDevice, location: number, array: Flo
 
 /** Set constant signed int array attribute */
 function setConstantIntArray(device: WebGLDevice, location: number, array: Int32Array): void {
-  device.assertWebGL2();
-  device.gl2?.vertexAttribI4iv(location, array);
+  device.gl.vertexAttribI4iv(location, array);
   // TODO - not clear if we need to use the special forms, more testing needed
   // switch (array.length) {
   //   case 1:
@@ -631,8 +583,7 @@ function setConstantIntArray(device: WebGLDevice, location: number, array: Int32
 
 /** Set constant unsigned int array attribute */
 function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array) {
-  device.assertWebGL2();
-  device.gl2?.vertexAttribI4uiv(location, array);
+  device.gl.vertexAttribI4uiv(location, array);
   // TODO - not clear if we need to use the special forms, more testing needed
   // switch (array.length) {
   //   case 1:

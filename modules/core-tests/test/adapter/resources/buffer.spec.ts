@@ -33,14 +33,12 @@ test('Buffer#constructor offset and size', async (t) => {
       `${device.info.type} Buffer byteLength set properly`
     );
 
-    if (device.isWebGL2) {
-      const receivedData = await buffer.readAsync();
-      t.deepEqual(
-        new Float32Array(receivedData.buffer),
-        expectedData,
-        `${device.info.type} Buffer constructor offsets data`
-      );
-    }
+    let receivedData = await buffer.readAsync();
+    t.deepEqual(
+      new Float32Array(receivedData.buffer),
+      expectedData,
+      `${device.info.type} Buffer constructor offsets data`
+    );
 
     buffer = device.createBuffer({data, byteLength: data.byteLength + 12});
     expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
@@ -49,14 +47,13 @@ test('Buffer#constructor offset and size', async (t) => {
       expectedData.byteLength,
       `${device.info.type} Buffer byteLength set properly`
     );
-    if (device.isWebGL2) {
-      const receivedData = await buffer.readAsync();
-      t.deepEqual(
-        new Float32Array(receivedData.buffer),
-        expectedData,
-        `${device.info.type} Buffer constructor sets buffer data`
-      );
-    }
+
+    receivedData = await buffer.readAsync();
+    t.deepEqual(
+      new Float32Array(receivedData.buffer),
+      expectedData,
+      `${device.info.type} Buffer constructor sets buffer data`
+    );
 
     buffer = device.createBuffer({data, byteOffset: 8, byteLength: data.byteLength + 12});
     expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
@@ -66,14 +63,12 @@ test('Buffer#constructor offset and size', async (t) => {
       `${device.info.type} Buffer byteLength set properly`
     );
 
-    if (device.isWebGL2) {
-      const receivedData = await buffer.readAsync();
-      t.deepEqual(
-        new Float32Array(receivedData.buffer),
-        expectedData,
-        `${device.info.type} Buffer constructor sets buffer byteLength and offsets data`
-      );
-    }
+    receivedData = await buffer.readAsync();
+    t.deepEqual(
+      new Float32Array(receivedData.buffer),
+      expectedData,
+      `${device.info.type} Buffer constructor sets buffer byteLength and offsets data`
+    );
   }
   t.end();
 });
@@ -118,16 +113,12 @@ test('Buffer#write', async (t) => {
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
     buffer.write(expectedData);
-    if (device.isWebGL2) {
-      const receivedData = await buffer.readAsync();
-      t.deepEqual(
-        new Float32Array(receivedData.buffer),
-        expectedData,
-        `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
-      );
-    } else {
-      t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
-    }
+    const receivedData = await buffer.readAsync();
+    t.deepEqual(
+      new Float32Array(receivedData.buffer),
+      expectedData,
+      `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
+    );
     buffer.destroy();
 
     // TODO - this seems to be testing that usage is correctly observed, move up
@@ -148,12 +139,6 @@ test('Buffer#write', async (t) => {
 
 test('Buffer#readAsync', async (t) => {
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.comment('WebGL2 not available, skipping tests');
-      t.end();
-      return;
-    }
-
     let data: TypedArray = new Float32Array([1, 2, 3]);
     let buffer = device.createBuffer({data});
 
@@ -207,11 +192,10 @@ test('Buffer#debugData', async (t) => {
     const f32Data = new Float32Array(buffer.debugData);
     t.deepEqual(f32Data, expectedData, 'Buffer.debugData is null after write');
 
-    if (device.isWebGL2) {
-      // TODO - not a very useful test, should test that debugData is updated after read
-      await buffer.readAsync();
-      t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is valid after read');
-    }
+    // TODO - not a very useful test, should test that debugData is updated after read
+    await buffer.readAsync();
+    t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is valid after read');
+
     buffer.destroy();
   }
 

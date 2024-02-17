@@ -7,7 +7,7 @@ import {getGLPrimitive} from '../helpers/webgl-topology-utils';
 
 export class WEBGLTransformFeedback extends TransformFeedback {
   readonly device: WebGLDevice;
-  readonly gl2: WebGL2RenderingContext;
+  readonly gl: WebGL2RenderingContext;
   readonly handle: WebGLTransformFeedback;
 
   /**
@@ -29,10 +29,9 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   constructor(device: WebGLDevice, props: TransformFeedbackProps) {
     super(device, props);
 
-    device.assertWebGL2();
     this.device = device;
-    this.gl2 = device.gl2;
-    this.handle = this.props.handle || this.gl2.createTransformFeedback();
+    this.gl = device.gl;
+    this.handle = this.props.handle || this.gl.createTransformFeedback();
     this.layout = this.props.layout;
 
     if (props.buffers) {
@@ -43,24 +42,24 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   }
 
   override destroy(): void {
-    this.gl2.deleteTransformFeedback(this.handle);
+    this.gl.deleteTransformFeedback(this.handle);
     super.destroy();
   }
 
   begin(topology: PrimitiveTopology = 'point-list'): void {
-    this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
     if (this.bindOnUse) {
       this._bindBuffers();
     }
-    this.gl2.beginTransformFeedback(getGLPrimitive(topology));
+    this.gl.beginTransformFeedback(getGLPrimitive(topology));
   }
 
   end(): void {
-    this.gl2.endTransformFeedback();
+    this.gl.endTransformFeedback();
     if (!this.bindOnUse) {
       this._unbindBuffers();
     }
-    this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
+    this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
   }
 
   // SUBCLASS
@@ -105,18 +104,18 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   bind(funcOrHandle = this.handle) {
     if (typeof funcOrHandle !== 'function') {
-      this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, funcOrHandle);
+      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, funcOrHandle);
       return this;
     }
 
     let value: unknown;
 
     if (!this._bound) {
-      this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
+      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, this.handle);
       this._bound = true;
       value = funcOrHandle();
       this._bound = false;
-      this.gl2.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
+      this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);
     } else {
       value = funcOrHandle();
     }
@@ -171,7 +170,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   protected _unbindBuffers(): void {
     for (const bufferIndex in this.buffers) {
-      this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
+      this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, Number(bufferIndex), null);
     }
   }
 
@@ -183,9 +182,9 @@ export class WEBGLTransformFeedback extends TransformFeedback {
   ): void {
     const handle = buffer && (buffer as WEBGLBuffer).handle;
     if (!handle || byteLength === undefined) {
-      this.gl2.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
+      this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);
     } else {
-      this.gl2.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteLength);
+      this.gl.bindBufferRange(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle, byteOffset, byteLength);
     }
   }
 }

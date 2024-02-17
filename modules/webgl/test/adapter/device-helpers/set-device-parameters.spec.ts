@@ -2,79 +2,73 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webgl1Device, webgl2Device} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {GL, GLParameters} from '@luma.gl/constants';
 import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 // Settings test, could be beneficial to not reuse a context
-const fixture = {
-  gl: webgl1Device.gl,
-  gl2: webgl2Device?.gl2
-};
-
-const {gl} = fixture;
 
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
 const getGLParameter = (parameter: keyof GLParameters): any => {
-  const parameters = getGLParameters(gl, [parameter]);
+  const parameters = getGLParameters(webglDevice, [parameter]);
   return parameters[parameter];
 }
 
 test('setDeviceParameters#cullMode', (t) => {
-  resetGLParameters(gl);
+  resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {cullMode: 'front'});
+  setDeviceParameters(webglDevice, {cullMode: 'front'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), true, 'got expected value');
   t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.FRONT, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {cullMode: 'back'});
+  setDeviceParameters(webglDevice, {cullMode: 'back'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), true, 'got expected value');
   t.deepEqual(getGLParameter(GL.CULL_FACE_MODE), GL.BACK, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {cullMode: 'none'});
+  setDeviceParameters(webglDevice, {cullMode: 'none'});
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
   t.end();
 });
 
 test('setDeviceParameters#frontFace', (t) => {
-  resetGLParameters(gl);
+  resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {frontFace: 'cw'});
+  setDeviceParameters(webglDevice, {frontFace: 'cw'});
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CW, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {frontFace: 'ccw'});
+  setDeviceParameters(webglDevice, {frontFace: 'ccw'});
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
   t.end();
 });
 
 test('setDeviceParameters#depthWriteEnabled', (t) => {
-  resetGLParameters(gl);
+  resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {depthWriteEnabled: false});
+  setDeviceParameters(webglDevice, {depthWriteEnabled: false});
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), false, 'got expected value');
 
-  setDeviceParameters(webgl1Device, {depthWriteEnabled: true});
+  setDeviceParameters(webglDevice, {depthWriteEnabled: true});
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
   t.end();
 });
 
 test('setDeviceParameters#blending', (t) => {
-  resetGLParameters(gl);
+  resetGLParameters(webglDevice);
 
   t.equal(getGLParameter(GL.BLEND), false, 'blending disabled');
 
-  setDeviceParameters(webgl1Device, {blendColorOperation: 'add', blendAlphaOperation: 'subtract'});
+  setDeviceParameters(webglDevice, {blendColorOperation: 'add', blendAlphaOperation: 'subtract'});
 
   t.equal(getGLParameter(GL.BLEND), true, 'GL.BLEND = true');
   t.equal(getGLParameter(GL.BLEND_EQUATION_RGB), GL.FUNC_ADD, 'GL.BLEND_EQUATION_RGB = GL.FUNC_ADD');
@@ -84,7 +78,7 @@ test('setDeviceParameters#blending', (t) => {
   t.equal(getGLParameter(GL.BLEND_SRC_ALPHA), GL.ONE, 'GL.BLEND_SRC_ALPHA = GL.ONE');
   t.equal(getGLParameter(GL.BLEND_DST_ALPHA), GL.ZERO, 'GL.BLEND_DST_ALPHA = GL.ZERO');
 
-  setDeviceParameters(webgl1Device, {
+  setDeviceParameters(webglDevice, {
     blendColorOperation: 'max',
     blendAlphaOperation: 'min',
     blendColorSrcFactor: 'src-alpha',
@@ -105,15 +99,15 @@ test('setDeviceParameters#blending', (t) => {
 });
 
 test('setDeviceParameters#depthCompare', (t) => {
-  resetGLParameters(gl);
+  resetGLParameters(webglDevice);
 
   t.equal(getGLParameter(GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
 
-  setDeviceParameters(webgl1Device, {depthCompare: 'less'});
+  setDeviceParameters(webglDevice, {depthCompare: 'less'});
   t.equal(getGLParameter(GL.DEPTH_TEST), true, 'GL.DEPTH_TEST = true');
   t.equal(getGLParameter(GL.DEPTH_FUNC), GL.LESS, 'GL.DEPTH_FUNC = GL.LESS');
 
-  setDeviceParameters(webgl1Device, {depthCompare: 'always'});
+  setDeviceParameters(webglDevice, {depthCompare: 'always'});
   t.equal(getGLParameter(GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
   t.equal(getGLParameter(GL.DEPTH_FUNC), GL.ALWAYS, 'GL.DEPTH_FUNC = GL.ALWAYS');
 

@@ -61,18 +61,12 @@ export class WebGLCanvasContext extends CanvasContext {
       this.setDevicePixelRatio(devicePixelRatio, options);
       return;
     }
-
-    // Resize headless gl context
-    const ext = this.device.gl.getExtension('STACKGL_resize_drawingbuffer');
-    if (ext && options && 'width' in options && 'height' in options) {
-      ext.resize(options.width, options.height);
-    }
   }
 
   commit() {
     // gl.commit was ultimately removed from the WebGL standard??
     // if (this.offScreen && this.gl.commit) {
-    //   // @ts-expect-error gl.commit is not officially part of WebGLRenderingContext
+    //   // @ts-expect-error gl.commit is not officially part of WebGL2RenderingContext
     //   this.gl.commit();
     // }
   }

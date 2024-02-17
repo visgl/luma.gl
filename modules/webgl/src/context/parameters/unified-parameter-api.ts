@@ -24,7 +24,7 @@ export type {GLParameters};
  * This object is used to fill in any missing values for composite setter functions
  */
 export function setGLParameters(
-  device: Device | WebGLRenderingContext,
+  device: Device | WebGL2RenderingContext,
   parameters: GLParameters
 ): void {
   const webglDevice = WebGLDevice.attach(device);
@@ -92,7 +92,7 @@ export function setGLParameters(
  * by external code needs to be synchronized for the first time
  */
 export function getGLParameters(
-  device: Device | WebGLRenderingContext,
+  device: Device | WebGL2RenderingContext,
   parameters: keyof GLParameters | (keyof GLParameters)[] | GLParameters = GL_PARAMETER_DEFAULTS
 ): GLParameters {
   const webglDevice = WebGLDevice.attach(device);
@@ -123,7 +123,7 @@ export function getGLParameters(
  * NOT the canvas size dimensions, so they will have to be properly set after
  * calling this function.
  */
-export function resetGLParameters(device: Device | WebGLRenderingContext): void {
+export function resetGLParameters(device: Device | WebGL2RenderingContext): void {
   setGLParameters(device, GL_PARAMETER_DEFAULTS);
 }
 

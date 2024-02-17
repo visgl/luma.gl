@@ -269,7 +269,7 @@ export class Model {
       this.transformFeedback = props.transformFeedback;
     }
 
-    // WebGL1?
+    // TODO - restore?
     // this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
 
     // Catch any access to non-standard props

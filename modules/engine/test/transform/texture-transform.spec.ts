@@ -9,25 +9,21 @@ import {Device, Texture} from '@luma.gl/core';
 /** Creates a minimal, no-op transform. */
 test('TextureTransform#constructor', async t => {
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL1');
-    } else {
-      const targetTexture = device.createTexture({
-        data: new Float32Array([201, 202, 203, 1.0]),
-        width: 1,
-        height: 1,
-        format: 'rgba32float',
-      });
-      const transform = new TextureTransform(device, {
-        vs: BASIC_VS,
-        topology: 'point-list',
-        targetTexture,
-        targetTextureChannels: 1,
-        targetTextureVarying: 'vSrc',
-        vertexCount: 1,
-      });
-      t.ok(transform, 'creates transform');
-    }
+    const targetTexture = device.createTexture({
+      data: new Float32Array([201, 202, 203, 1.0]),
+      width: 1,
+      height: 1,
+      format: 'rgba32float',
+    });
+    const transform = new TextureTransform(device, {
+      vs: BASIC_VS,
+      topology: 'point-list',
+      targetTexture,
+      targetTextureChannels: 1,
+      targetTextureVarying: 'vSrc',
+      vertexCount: 1,
+    });
+    t.ok(transform, 'creates transform');
   }
   t.end();
 });
@@ -35,43 +31,39 @@ test('TextureTransform#constructor', async t => {
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
 test('TextureTransform#attribute', async t => {
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL1');
-    } else {
-      const src = device.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
-      const targetTexture = device.createTexture({
-        data: new Float32Array([201, 202, 203, 1.0]),
-        width: 1,
-        height: 1,
-        format: 'rgba32float',
-      });
-      const transform = new TextureTransform(device, {
-        vs: SUM_VS,
-        attributes: {src},
-        bufferLayout: [{name: 'src', format: 'float32'}],
-        topology: 'point-list',
-        targetTexture,
-        targetTextureChannels: 1,
-        targetTextureVarying: 'vSrc',
-        vertexCount: 6,
-        parameters: {
-          depthCompare: 'always',
-          blendColorOperation: 'add',
-          blendColorSrcFactor: 'one',
-          blendColorDstFactor: 'one',
-        },
-      });
-      const source = transform.getTargetTexture();
-    
-      // TODO(donmccurdy): Consider having Transform inherit from Model, or at
-      // least mimic its API by accepting a RenderPass in .run().
-      transform.run({clearColor: [0, 0, 0, 0]});
+    const src = device.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
+    const targetTexture = device.createTexture({
+      data: new Float32Array([201, 202, 203, 1.0]),
+      width: 1,
+      height: 1,
+      format: 'rgba32float',
+    });
+    const transform = new TextureTransform(device, {
+      vs: SUM_VS,
+      attributes: {src},
+      bufferLayout: [{name: 'src', format: 'float32'}],
+      topology: 'point-list',
+      targetTexture,
+      targetTextureChannels: 1,
+      targetTextureVarying: 'vSrc',
+      vertexCount: 6,
+      parameters: {
+        depthCompare: 'always',
+        blendColorOperation: 'add',
+        blendColorSrcFactor: 'one',
+        blendColorDstFactor: 'one',
+      },
+    });
+    const source = transform.getTargetTexture();
+  
+    // TODO(donmccurdy): Consider having Transform inherit from Model, or at
+    // least mimic its API by accepting a RenderPass in .run().
+    transform.run({clearColor: [0, 0, 0, 0]});
 
-      const sum = await readF32(device, source, 16);
-      t.is(sum[0], 300, 'computes sum');
+    const sum = await readF32(device, source, 16);
+    t.is(sum[0], 300, 'computes sum');
 
-      transform.destroy();
-    }
+    transform.destroy();
   }
   t.end();
 });
@@ -79,57 +71,53 @@ test('TextureTransform#attribute', async t => {
 /** Computes a sum over texture pixels by writing to framebuffer. */
 test('TextureTransform#texture', async t => {
   for (const device of getWebGLTestDevices()) {
-    if (device.isWebGL1) {
-      t.comment('TextureTransform aggregation not yet supported in WebGL1');
-    } else {
-      const srcData = new Uint8Array([2, 10, 255, 255]);
-      const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4
-      const dstOffsetData = new Uint8Array([108, 140, 255, 255]); // src x 4 + 100
+    const srcData = new Uint8Array([2, 10, 255, 255]);
+    const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4
+    const dstOffsetData = new Uint8Array([108, 140, 255, 255]); // src x 4 + 100
 
-      const inputTexture = device.createTexture({
-        data: srcData,
-        width: 1,
-        height: 1,
-        format: 'rgba8unorm',
-      });
-      const targetTexture = device.createTexture({
-        data: new Uint8Array([0, 0, 0, 1]),
-        width: 1,
-        height: 1,
-        format: 'rgba8unorm',
-      });
-      const transform = new TextureTransform(device, {
-        vs: BLEND_VS,
-        fs: BLEND_FS,
-        topology: 'point-list',
-        vertexCount: 4,
-        targetTexture,
-        targetTextureChannels: 4,
-        targetTextureVarying: 'vUv',
-        bindings: {uSampler: inputTexture},
-        parameters: {
-          depthCompare: 'always',
-          blendColorOperation: 'add',
-          blendColorSrcFactor: 'one',
-          blendColorDstFactor: 'one',
-        },
-      });
+    const inputTexture = device.createTexture({
+      data: srcData,
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+    });
+    const targetTexture = device.createTexture({
+      data: new Uint8Array([0, 0, 0, 1]),
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+    });
+    const transform = new TextureTransform(device, {
+      vs: BLEND_VS,
+      fs: BLEND_FS,
+      topology: 'point-list',
+      vertexCount: 4,
+      targetTexture,
+      targetTextureChannels: 4,
+      targetTextureVarying: 'vUv',
+      bindings: {uSampler: inputTexture},
+      parameters: {
+        depthCompare: 'always',
+        blendColorOperation: 'add',
+        blendColorSrcFactor: 'one',
+        blendColorDstFactor: 'one',
+      },
+    });
 
-      // TODO(donmccurdy): Consider having Transform inherit from Model, or at
-      // least mimic its API by accepting a RenderPass in .run().
-      transform.run({clearColor: [0, 0, 0, 0]});
-      let blend = await readU8(device, targetTexture, 4);
-      t.deepEqual(Array.from(blend), Array.from(dstData), 'computes blend');
+    // TODO(donmccurdy): Consider having Transform inherit from Model, or at
+    // least mimic its API by accepting a RenderPass in .run().
+    transform.run({clearColor: [0, 0, 0, 0]});
+    let blend = await readU8(device, targetTexture, 4);
+    t.deepEqual(Array.from(blend), Array.from(dstData), 'computes blend');
 
-      const offset = 100 / 255;
-      transform.run({clearColor: [offset, offset, offset, 1]});
-      blend = await readU8(device, targetTexture, 4);
-      t.deepEqual(Array.from(blend), Array.from(dstOffsetData), 'computes blend');
+    const offset = 100 / 255;
+    transform.run({clearColor: [offset, offset, offset, 1]});
+    blend = await readU8(device, targetTexture, 4);
+    t.deepEqual(Array.from(blend), Array.from(dstOffsetData), 'computes blend');
 
-      transform.destroy();
-      inputTexture.destroy();
-      targetTexture.destroy();
-    }
+    transform.destroy();
+    inputTexture.destroy();
+    targetTexture.destroy();
   }
   t.end();
 });

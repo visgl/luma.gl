@@ -10,8 +10,6 @@
 // Types
 export type {WebGLLimits} from './adapter/device-helpers/device-limits';
 
-export {registerHeadlessGL} from './context/context/create-headless-context';
-
 // WebGL adapter classes
 export {WebGLDevice} from './adapter/webgl-device';
 export {WebGLCanvasContext} from './adapter/webgl-canvas-context';
@@ -43,24 +41,13 @@ export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedba
 export {Accessor} from './classic/accessor';
 export type {AccessorObject} from './types';
 
-export {
-  isWebGL,
-  isWebGL2,
-  getWebGL2Context,
-  assertWebGLContext,
-  assertWebGL2Context
-} from './context/context/webgl-checks';
-
 // Unified parameter API
 
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
-export {
-  convertGLToTextureFormat,
-  _checkFloat32ColorAttachment
-} from './adapter/converters/texture-formats';
+export {convertGLToTextureFormat} from './adapter/converters/texture-formats';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
@@ -72,8 +59,6 @@ export {
   pushContextState,
   popContextState
 } from './context/state-tracker/track-context-state';
-// Polyfills (supports a subset of WebGL2 APIs on WebGL1 contexts)
-export {polyfillContext} from './context/polyfill/polyfill-context';
 
 export {
   resetGLParameters,

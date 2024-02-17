@@ -10,7 +10,6 @@ import type {
 } from '@luma.gl/core';
 
 import {GL} from '@luma.gl/constants';
-import {isWebGL2} from '../../context/context/webgl-checks';
 import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
 import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './decode-webgl-types';
 
@@ -19,7 +18,7 @@ import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './de
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
  */
-export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram): ShaderLayout {
+export function getShaderLayout(gl: WebGL2RenderingContext, program: WebGLProgram): ShaderLayout {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: []
@@ -88,7 +87,7 @@ export function getShaderLayout(gl: WebGLRenderingContext, program: WebGLProgram
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
 function readAttributeDeclarations(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   program: WebGLProgram
 ): AttributeDeclaration[] {
   const attributes: AttributeDeclaration[] = [];
@@ -132,17 +131,12 @@ function readAttributeDeclarations(
  *
  * linkProgram needs to have been called, although linking does not need to have been successful
  */
-function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): VaryingBinding[] {
-  if (!isWebGL2(gl)) {
-    return [];
-  }
-  const gl2 = gl as WebGL2RenderingContext;
-
+function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): VaryingBinding[] {
   const varyings: VaryingBinding[] = [];
 
   const count = gl.getProgramParameter(program, GL.TRANSFORM_FEEDBACK_VARYINGS);
   for (let location = 0; location < count; location++) {
-    const activeInfo = gl2.getTransformFeedbackVarying(program, location);
+    const activeInfo = gl.getTransformFeedbackVarying(program, location);
     if (!activeInfo) {
       throw new Error('activeInfo');
     }
@@ -162,7 +156,7 @@ function readVaryings(gl: WebGLRenderingContext, program: WebGLProgram): Varying
  *
  * Query uniform locations and build name to setter map.
  */
-function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): UniformBinding[] {
+function readUniformBindings(gl: WebGL2RenderingContext, program: WebGLProgram): UniformBinding[] {
   const uniforms: UniformBinding[] = [];
 
   const uniformCount = gl.getProgramParameter(program, GL.ACTIVE_UNIFORMS);
@@ -209,23 +203,18 @@ function readUniformBindings(gl: WebGLRenderingContext, program: WebGLProgram): 
  * @note In WebGL, "active" just means that unused (inactive) blocks may have been optimized away during linking)
  */
 function readUniformBlocks(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   program: WebGLProgram
 ): UniformBlockBinding[] {
-  if (!isWebGL2(gl)) {
-    return [];
-  }
-  const gl2 = gl as WebGL2RenderingContext;
-
   const getBlockParameter = (blockIndex: number, pname: GL): any =>
-    gl2.getActiveUniformBlockParameter(program, blockIndex, pname);
+    gl.getActiveUniformBlockParameter(program, blockIndex, pname);
 
   const uniformBlocks: UniformBlockBinding[] = [];
 
-  const blockCount = gl2.getProgramParameter(program, GL.ACTIVE_UNIFORM_BLOCKS);
+  const blockCount = gl.getProgramParameter(program, GL.ACTIVE_UNIFORM_BLOCKS);
   for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
     const blockInfo: UniformBlockBinding = {
-      name: gl2.getActiveUniformBlockName(program, blockIndex) || '',
+      name: gl.getActiveUniformBlockName(program, blockIndex) || '',
       location: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_BINDING),
       byteLength: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_DATA_SIZE),
       vertex: getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER),
@@ -237,23 +226,23 @@ function readUniformBlocks(
     const uniformIndices =
       (getBlockParameter(blockIndex, GL.UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES) as number[]) || [];
 
-    const uniformType = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
-    const uniformArrayLength = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
-    // const uniformBlockIndex = gl2.getActiveUniforms(
+    const uniformType = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_TYPE); // Array of GLenum indicating the types of the uniforms.
+    const uniformArrayLength = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_SIZE); // Array of GLuint indicating the sizes of the uniforms.
+    // const uniformBlockIndex = gl.getActiveUniforms(
     //   program,
     //   uniformIndices,
     //   GL.UNIFORM_BLOCK_INDEX
     // ); // Array of GLint indicating the block indices of the uniforms.
-    const uniformOffset = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
-    const uniformStride = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
-    // const uniformMatrixStride = gl2.getActiveUniforms(
+    const uniformOffset = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_OFFSET); // Array of GLint indicating the uniform buffer offsets.
+    const uniformStride = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_ARRAY_STRIDE); // Array of GLint indicating the strides between the elements.
+    // const uniformMatrixStride = gl.getActiveUniforms(
     //   program,
     //   uniformIndices,
     //   GL.UNIFORM_MATRIX_STRIDE
     // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
-    // const uniformRowMajor = gl2.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
+    // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
-      const activeInfo = gl2.getActiveUniform(program, uniformIndices[i]);
+      const activeInfo = gl.getActiveUniform(program, uniformIndices[i]);
       if (!activeInfo) {
         throw new Error('activeInfo');
       }

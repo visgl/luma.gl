@@ -4,8 +4,7 @@
 /*
 export class WEBGLExternalTexture extends WEBGLTexture {
   readonly device: WebGLDevice;
-  readonly gl: WebGLRenderingContext;
-  readonly gl2: WebGL2RenderingContext | null;
+  readonly gl: WebGL2RenderingContext;
   readonly handle: WebGLTexture;
 
   data;
@@ -53,7 +52,7 @@ export class WEBGLExternalTexture extends WEBGLTexture {
   }
 
   // eslint-disable-next-line max-statements
-  constructor(device: Device | WebGLRenderingContext, props: TextureProps) {
+  constructor(device: Device | WebGL2RenderingContext, props: TextureProps) {
     super(WebGLDevice.attach(device), {id: uid('texture'), ...props});
 
     this.glTarget = getWebGLTextureTarget(props);

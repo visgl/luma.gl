@@ -42,7 +42,6 @@ void main() {
 
 const NEAR = 0.1;
 const FAR = 10.0;
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
@@ -55,10 +54,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     
-    if (device.info.type !== 'webgl2') {
-      throw new Error(ALT_TEXT);
-    }
-
     const noise = perlin({
       interpolation: lerp,
       permutation: shuffle(range(0, 255), random)
