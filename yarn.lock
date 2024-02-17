@@ -5209,6 +5209,11 @@ eslint-plugin-react@^7.22.0:
     semver "^6.3.1"
     string.prototype.matchall "^4.0.8"
 
+eslint-plugin-tree-shaking@^1.9.2:
+  version "1.12.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-tree-shaking/-/eslint-plugin-tree-shaking-1.12.1.tgz#ba0f4290cd1f3a99084a393b8caadba6116dc06d"
+  integrity sha512-nq2wZd2APlS+Fsk/1/iYVwpByMH2+x69+dB5wMrZuvu9PqKI1lyfu/gk2xvzihmDUeF23aeZZ0/WyqJSp4EG3A==
+
 eslint-rule-composer@^0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/eslint-rule-composer/-/eslint-rule-composer-0.3.0.tgz#79320c927b0c5c0d3d3d2b76c8b4a488f25bbaf9"
