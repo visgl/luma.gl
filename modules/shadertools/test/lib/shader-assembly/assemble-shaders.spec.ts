@@ -602,7 +602,8 @@ test.skip('assembleShaders#transpilation', (t) => {
 
 function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   const gl = device.gl;
-  const vShader = gl.createShader(gl.VERTEX_SHADER)!;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  const vShader: WebGLShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader;
   gl.shaderSource(vShader, assembleResult.vs);
   gl.compileShader(vShader);
   let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);

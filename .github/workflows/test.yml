@@ -16,21 +16,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.1
-      
+      - uses: volta-cli/action@v4
       - name: Use Node.js
         uses: actions/setup-node@v4.0.0
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6
-          yarn bootstrap
+          yarn install
 
+      - name: Build code
+        run: |
+          yarn bootstrap
+  
       - name: Run tests
         run: |
-          xvfb-run -s "-ac -screen 0 1280x1024x16" yarn test ci
+          yarn test ci
 
       - name: Coveralls
         uses: coverallsapp/github-action@master

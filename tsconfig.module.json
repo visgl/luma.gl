@@ -9,7 +9,7 @@
     "noEmit": false,
     // "emitDeclarationOnly": true,
     // Uncomment to debug
-    // "listEmittedFiles": true
+    // "listEmittedFiles": true,
   },
   "include": [
     "modules/*/src"
