@@ -16,14 +16,8 @@ export const fs = glsl`\
 # error PBR fragment shader: Derivatives are not available
 #endif
 
-// WebGL 1.0 does not support non-constant in for loops
-// This provides an easy way to handle these cases
-// and still take advantage of WebGL 2.0
-#if (__VERSION__ < 300)
-  #define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL1COND; INCR)
-#else
-  #define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL2COND; INCR)
-#endif
+// TODO - remove we only support WebGL2
+#define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL2COND; INCR)
 
 precision highp float;
 

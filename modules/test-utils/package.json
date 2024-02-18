@@ -12,10 +12,10 @@
     "url": "https://github.com/visgl/luma.gl"
   },
   "keywords": [
-    "webgl2",
+    "webgpu",
     "webgl",
     "automation",
-    "testing"
+    "test"
   ],
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",

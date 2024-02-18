@@ -1,6 +1,7 @@
 [
   "README",
   "whats-new",
+  "upgrade-guide",
   {
     "type": "category",
     "label": "Tutorials",
@@ -23,6 +24,7 @@
     "type": "category",
     "label": "API Guide",
     "items": [
+      "api-guide/README",
       {
         "type": "category",
         "label": "Background",
@@ -32,19 +34,37 @@
           "api-guide/background/webgpu-vs-webgl"
         ]
       },
-      "api-guide/README",
-      "api-guide/device",
-      "api-guide/resources",
-      "api-guide/memory",
-      "api-guide/buffers",
-      "api-guide/textures",
-      "api-guide/rendering",
-      "api-guide/parameters",
-      "api-guide/bindings",
-      "api-guide/attributes",
-      "api-guide/uniforms",
-      "api-guide/transforms",
-      "api-guide/shader-modules"
+      {
+        "type": "category",
+        "label": "GPU Programming",
+        "items": [
+          "api-guide/gpu/gpu-initialization",
+          "api-guide/gpu/gpu-resources",
+          "api-guide/gpu/gpu-memory",
+          "api-guide/gpu/gpu-buffers",
+          "api-guide/gpu/gpu-textures",
+          "api-guide/gpu/gpu-rendering",
+          "api-guide/gpu/gpu-parameters",
+          "api-guide/gpu/gpu-bindings",
+          "api-guide/gpu/gpu-attributes",
+          "api-guide/gpu/gpu-uniforms"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Shader Programming",
+        "items": [
+          "api-guide/shaders/shader-modules",
+          "api-guide/shaders/shader-transpilation"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Engine Programming",
+        "items": [
+          "api-guide/engine/transforms"
+        ]
+      }
     ]
   },
   {
@@ -166,7 +186,7 @@
   },
   {
     "type": "category",
-    "label": "Upgrade Guide",
-    "items": ["upgrade-guide/README", "upgrade-guide/porting-guide", "upgrade-guide/legacy-guide"]
+    "label": "Legacy Guides",
+    "items": ["legacy/porting-guide", "legacy/legacy-upgrade-guide", "legacy/legacy-whats-new"]
   }
 ]

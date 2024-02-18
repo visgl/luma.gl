@@ -22,7 +22,7 @@ void main() { fragColor.x = dst; }
 
 test('BufferTransform#constructor', async (t) => {
   for (const device of getWebGLTestDevices()) {
-    t.ok(createBufferTransform(device), 'WebGL 2 succeeds');
+    t.ok(createBufferTransform(device), 'WebGL succeeds');
   }
   t.end();
 });

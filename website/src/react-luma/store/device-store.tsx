@@ -8,7 +8,7 @@ luma.registerDevices([WebGLDevice, WebGPUDevice]);
 
 export type Store = {
   device?: Device;
-  deviceType?: 'webgl1' | 'webgl2' | 'webgpu';
+  deviceType?: 'webgl' | 'webgpu';
   deviceError?: any;
   setDeviceType: (type: any) => Promise<void>;
 };
@@ -25,9 +25,7 @@ function getCanvasContainer() {
   return cachedContainer;
 }
 
-export async function createDevice(deviceType: string): Promise<Device> {
-  const type = deviceType.toLowerCase();
-  // @ts-expect-error
+export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
   cachedDevice[type] =
     cachedDevice[type] || luma.createDevice({type, height: 0, container: getCanvasContainer()});
   return await cachedDevice[type];
@@ -50,4 +48,4 @@ export const useStore = create<Store>(set => ({
 }));
 
 // Initialize store
-useStore.getState().setDeviceType('webgl2');
+useStore.getState().setDeviceType('webgl');

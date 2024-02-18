@@ -173,10 +173,10 @@ Potentially autodeduced parameters
 - `isInstanced`=`false` - Set to enable instanced rendering.
 - `instanceCount`=`0` - Number of instances
 
-Parameters for drawing a limited range (WebGL 2 only)
+Parameters for drawing a limited range
 
-- `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
-- `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
+- `start` - hint to GPU, activates `gl.drawElementsRange`
+- `end` - hint to GPU, activates `gl.drawElementsRange`
 
 Returns: `true` if successful, `false` if draw call is blocked due to missing resources.
 
@@ -221,13 +221,13 @@ Sets named uniforms from a map, ignoring names
 
 The following device limits apply to render pipelines.
 
-| Limit                                                | Value          | Description |
-| ---------------------------------------------------- | -------------- | ----------- |
-| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`                  | >= 0 (GLint)   |             |
-| `GL.MAX_RENDERBUFFER_SIZE`                           | >= 1 (GLint)   |             |
-| `GL.MAX_VARYING_VECTORS`                             | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_ATTRIBS`                              | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_UNIFORM_VECTORS`                      | >= 128 (GLint) |             |
-| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`                    | >= 16 (GLint)  |             |
-| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL 2) | -              | -           |
+| Limit                                      | Value          | Description |
+| ------------------------------------------ | -------------- | ----------- |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`        | >= 0 (GLint)   |             |
+| `GL.MAX_RENDERBUFFER_SIZE`                 | >= 1 (GLint)   |             |
+| `GL.MAX_VARYING_VECTORS`                   | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_ATTRIBS`                    | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`            | >= 128 (GLint) |             |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`          | >= 16 (GLint)  |             |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` | -              | -           |
 

@@ -1,6 +1,6 @@
-# GPU Memory Management
+# GPU Memory
 
-Memory on GPU is managed through [Buffer](/docs/api-guide/buffers) and [Texture](/docs/api-guide/textures) resources.
+Memory on GPU is managed through [Buffer](/docs/api-guide/gpu/gpu-buffers) and [Texture](/docs/api-guide/gpu/gpu-textures) resources.
 
 This article provides some background information on how GPU memory works that can be helpful in understanding limitations and performance characteristics.
 

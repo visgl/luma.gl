@@ -126,7 +126,7 @@ A default Framebuffer should not be manually resized.
 The following values can be provided for each attachment point
 
 - `Texture` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
-- [`Texture`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D` (WebGL 2), or cubemap face. The second element in the array must be `0`.
+- [`Texture`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D`, or cubemap face. The second element in the array must be `0`.
 - [`Texture` (cube), face (number), mipmapLevel=0 (number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level.
 - [`Texture`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
 - [`Texture3D`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
@@ -235,7 +235,7 @@ void main(void) {
 }
 ```
 
-Clearing a specific draw buffer in a framebuffer (WebGL 2)
+Clearing a specific draw buffer in a framebuffer
 
 ```typescript
 framebuffer.clear({
@@ -343,7 +343,7 @@ const pipeline = device.createRenderPipeline({
 - `id` (`string`, optional) - string id (to help indentify the pipeline during debugging).
 - `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 - `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-- `varyings` WebGL 2 (`String[]`) - a list of names of varyings.
+- `varyings` WebGL (`String[]`) - a list of names of varyings.
 
 
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
@@ -415,10 +415,10 @@ Potentially autodeduced parameters
 - `isInstanced`=`false` - Set to enable instanced rendering.
 - `instanceCount`=`0` - Number of instances
 
-Parameters for drawing a limited range (WebGL 2 only)
+Parameters for drawing a limited range
 
-- `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
-- `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
+- `start` - hint to GPU, activates `gl.drawElementsRange`
+- `end` - hint to GPU, activates `gl.drawElementsRange`
 
 Returns: `true` if successful, `false` if draw call is blocked due to missing resources.
 
@@ -434,10 +434,10 @@ The following WebGL APIs are called in this function:
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram),
 [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements),
-[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL 2),
+[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements),
 [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays),
-[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL 2),
-[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL 2),
+[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced),
+[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced),
 [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
 [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
 [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
@@ -446,31 +446,31 @@ The following WebGL APIs are called in this function:
 
 ### Limits
 
-| Limit                                                | Value          | Description |
-| ---------------------------------------------------- | -------------- | ----------- |
-| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`                  | >= 0 (GLint)   |             |
-| `GL.MAX_RENDERBUFFER_SIZE`                           | >= 1 (GLint)   |             |
-| `GL.MAX_VARYING_VECTORS`                             | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_ATTRIBS`                              | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_UNIFORM_VECTORS`                      | >= 128 (GLint) |             |
-| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`                    | >= 16 (GLint)  |             |
-| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL 2) | -              | -           |
+| Limit                                      | Value          | Description |
+| ------------------------------------------ | -------------- | ----------- |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`        | >= 0 (GLint)   |             |
+| `GL.MAX_RENDERBUFFER_SIZE`                 | >= 1 (GLint)   |             |
+| `GL.MAX_VARYING_VECTORS`                   | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_ATTRIBS`                    | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`            | >= 128 (GLint) |             |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`          | >= 16 (GLint)  |             |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` | -              | -           |
 
 ### Parameters
 
 Use with `RenderPipeline.getParameter(parameter)`
 
-| Parameter                           | Type      | Description                                                                                                                                                        |
-| ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Parameter                           | Type      | Description                                                                                                                                                                  |
+| ----------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.destroy()`), but the delete is pending because pipeline is still part of current rendering state |
-| `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                               |
-| `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
-| `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |
-| `GL.ACTIVE_ATTRIBUTES`              | GLint     | Number of active attribute variables to a pipeline                                                                                                                  |
-| `GL.ACTIVE_UNIFORMS`                | GLint     | Number of active attribute variables to a pipeline                                                                                                                  |
-| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | GLenum    | (WebGL 2) Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS`                                                                                   |
-| `GL.TRANSFORM_FEEDBACK_VARYINGS`    | GLint     | (WebGL 2) Number of varying variables to capture in transform feedback mode.                                                                                       |
-| `GL.ACTIVE_UNIFORM_BLOCKS`          | GLint     | (WebGL 2) Number of uniform blocks containing active uniforms.                                                                                                     |
+| `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                                 |
+| `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                              |
+| `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                                 |
+| `GL.ACTIVE_ATTRIBUTES`              | GLint     | Number of active attribute variables to a pipeline                                                                                                                           |
+| `GL.ACTIVE_UNIFORMS`                | GLint     | Number of active attribute variables to a pipeline                                                                                                                           |
+| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | GLenum    | Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS`                                                                                                       |
+| `GL.TRANSFORM_FEEDBACK_VARYINGS`    | GLint     | Number of varying variables to capture in transform feedback mode.                                                                                                           |
+| `GL.ACTIVE_UNIFORM_BLOCKS`          | GLint     | Number of uniform blocks containing active uniforms.                                                                                                                         |
 
 
 # RenderPipeline
@@ -558,8 +558,8 @@ const pipeline = device.createRenderPipeline({
 - `id` (`string`, optional) - string id (to help indentify the pipeline during debugging).
 - `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 - `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
-- `varyings` WebGL 2 (`String[]`) - a list of names of varyings.
-- `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL 2 (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
+- `varyings` WebGL (`String[]`) - a list of names of varyings.
+- `bufferMode`=`GL.SEPARATE_ATTRIBS` WebGL (`GLenum`) - Optional, specifies how transform feedback should store the varyings.
 
 | `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | Description                  |
 | ----------------------------------- | ---------------------------- |
@@ -631,10 +631,10 @@ Potentially autodeduced parameters
 - `isInstanced`=`false` - Set to enable instanced rendering.
 - `instanceCount`=`0` - Number of instances
 
-Parameters for drawing a limited range (WebGL 2 only)
+Parameters for drawing a limited range
 
-- `start` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
-- `end` - hint to GPU, activates `gl.drawElementsRange` (WebGL 2)
+- `start` - hint to GPU, activates `gl.drawElementsRange`
+- `end` - hint to GPU, activates `gl.drawElementsRange`
 
 Returns: `true` if successful, `false` if draw call is blocked due to missing resources.
 
@@ -650,10 +650,10 @@ The following WebGL APIs are called in this function:
 
 [gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram),
 [gl.drawElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawElements),
-[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements) (WebGL 2),
+[gl.drawRangeElements](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawRangeElements),
 [gl.drawArrays](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/drawArrays),
-[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced) (WebGL 2),
-[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced) (WebGL 2),
+[gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced),
+[gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced),
 [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
 [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
 [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
@@ -662,28 +662,28 @@ The following WebGL APIs are called in this function:
 
 ### Limits
 
-| Limit                                                | Value          | Description |
-| ---------------------------------------------------- | -------------- | ----------- |
-| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`                  | >= 0 (GLint)   |             |
-| `GL.MAX_RENDERBUFFER_SIZE`                           | >= 1 (GLint)   |             |
-| `GL.MAX_VARYING_VECTORS`                             | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_ATTRIBS`                              | >= 8 (GLint)   |             |
-| `GL.MAX_VERTEX_UNIFORM_VECTORS`                      | >= 128 (GLint) |             |
-| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`                    | >= 16 (GLint)  |             |
-| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` (WebGL 2) | -              | -           |
+| Limit                                      | Value          | Description |
+| ------------------------------------------ | -------------- | ----------- |
+| `GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS`        | >= 0 (GLint)   |             |
+| `GL.MAX_RENDERBUFFER_SIZE`                 | >= 1 (GLint)   |             |
+| `GL.MAX_VARYING_VECTORS`                   | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_ATTRIBS`                    | >= 8 (GLint)   |             |
+| `GL.MAX_VERTEX_UNIFORM_VECTORS`            | >= 128 (GLint) |             |
+| `GL.MAX_FRAGMENT_UNIFORM_VECTORS`          | >= 16 (GLint)  |             |
+| `GL.TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH` | -              | -           |
 
 ### Parameters
 
 Use with `RenderPipeline.getParameter(parameter)`
 
-| Parameter                           | Type      | Description                                                                                                                                                        |
-| ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Parameter                           | Type      | Description                                                                                                                                                                  |
+| ----------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GL.DELETE_STATUS`                  | GLboolean | If true, pipeline has been flagged for deletion (by calling `RenderPipeline.destroy()`), but the delete is pending because pipeline is still part of current rendering state |
-| `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                               |
-| `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                    |
-| `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                       |
-| `GL.ACTIVE_ATTRIBUTES`              | GLint     | Number of active attribute variables to a pipeline                                                                                                                  |
-| `GL.ACTIVE_UNIFORMS`                | GLint     | Number of active attribute variables to a pipeline                                                                                                                  |
-| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | GLenum    | (WebGL 2) Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS`                                                                                   |
-| `GL.TRANSFORM_FEEDBACK_VARYINGS`    | GLint     | (WebGL 2) Number of varying variables to capture in transform feedback mode.                                                                                       |
-| `GL.ACTIVE_UNIFORM_BLOCKS`          | GLint     | (WebGL 2) Number of uniform blocks containing active uniforms.                                                                                                     |
+| `GL.LINK_STATUS`                    | GLboolean | Indicates whether last link operation was successful. RenderPipeline linking is performed by luma on pipeline initialization                                                 |
+| `GL.VALIDATE_STATUS`                | GLboolean | Result of last `gl.validateProgram()` operation                                                                                                                              |
+| `GL.ATTACHED_SHADERS`               | GLint     | Number of attached shaders (`0`, `1` or `2`)                                                                                                                                 |
+| `GL.ACTIVE_ATTRIBUTES`              | GLint     | Number of active attribute variables to a pipeline                                                                                                                           |
+| `GL.ACTIVE_UNIFORMS`                | GLint     | Number of active attribute variables to a pipeline                                                                                                                           |
+| `GL.TRANSFORM_FEEDBACK_BUFFER_MODE` | GLenum    | Buffer capture mode, `GL.SEPARATE_ATTRIBS` or `GL.INTERLEAVED_ATTRIBS`                                                                                                       |
+| `GL.TRANSFORM_FEEDBACK_VARYINGS`    | GLint     | Number of varying variables to capture in transform feedback mode.                                                                                                           |
+| `GL.ACTIVE_UNIFORM_BLOCKS`          | GLint     | Number of uniform blocks containing active uniforms.                                                                                                                         |

@@ -188,7 +188,6 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl'},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: 'float32-renderable-webgl', renderbuffer: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, renderbuffer: true},
-  // webgl2 only
   'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
 
   // 48-bit formats

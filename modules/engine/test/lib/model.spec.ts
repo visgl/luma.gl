@@ -351,28 +351,6 @@ test('Model#getBuffersFromGeometry', (t) => {
 
   t.end();
 });
-
-test('Model#transpileToGLSL100', (t) => {
-  let model;
-
-  t.throws(() => {
-    model = new Model(webglDevice, {
-      vs: VS_300,
-      fs: FS_300
-    });
-  }, "Can't compile 300 shader with WebGL 1");
-
-  t.doesNotThrow(() => {
-    model = new Model(webglDevice, {
-      vs: VS_300,
-      fs: FS_300
-    });
-  }, 'Can compile transpiled 300 shader with WebGL 1');
-
-  @ts-expect-error object possibly undefined
-  t.ok(model.program, 'Created a program');
-  t.end();
-});
 */
 
 
@@ -675,38 +653,3 @@ test.skip('PipelineFactory#defaultModules', (t) => {
 
   t.end();
 });
-
-// TODO - Move to model: transpilation functionality was moved to model
-test.skip('PipelineFactory#transpileToGLSL100', (t) => {
-  const pipelineFactory = new PipelineFactory(webglDevice);
-
-  t.throws(() => {
-    pipelineFactory.createRenderPipeline({
-      vs: VS_300,
-      fs: FS_300,
-      topology: 'triangle-list'
-    });
-  }, 'Can\'t compile 300 shader with WebGL 1');
-
-  t.doesNotThrow(() => {
-    pipelineFactory.createRenderPipeline({
-      vs: VS_300,
-      fs: FS_300,
-      topology: 'triangle-list'
-    });
-  }, 'Can compile transpiled 300 shader with WebGL 1');
-
-  const programTranspiled = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-  const programUntranspiled = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-  const programTranspiled2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-
-  t.equals(programTranspiled, programTranspiled2, 'Transpiled programs match');
-  t.notEquals(
-    programTranspiled,
-    programUntranspiled,
-    'Transpiled pipeline does not match untranspiled pipeline'
-  );
-
-  t.end();
-});
-*/

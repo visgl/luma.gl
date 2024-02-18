@@ -60,7 +60,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   /**   */
   constantAttributes?: Record<string, TypedArray>;
 
-  /** @internal For use with {@link TransformFeedback}, WebGL 2 only. */
+  /** @internal For use with {@link TransformFeedback}, WebGL only. */
   varyings?: string[];
 
   transformFeedback?: TransformFeedback;
@@ -497,7 +497,7 @@ export class Model {
   }
 
   /**
-   * Updates optional transform feedback. WebGL 2 only.
+   * Updates optional transform feedback. WebGL only.
    */
   setTransformFeedback(transformFeedback: TransformFeedback | null): void {
     this.transformFeedback = transformFeedback;

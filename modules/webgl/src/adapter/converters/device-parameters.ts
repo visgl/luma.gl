@@ -291,7 +291,6 @@ function convertBlendOperationToEquation(parameter: string, value: BlendOperatio
     'add': GL.FUNC_ADD,
     'subtract': GL.FUNC_SUBTRACT,
     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
-    // When using a WebGL 2 context, the following values are available additionally:
     'min': GL.MIN,
     'max': GL.MAX
   } as Record<BlendOperation, GLBlendEquation>);

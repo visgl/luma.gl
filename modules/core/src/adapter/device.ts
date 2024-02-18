@@ -217,6 +217,7 @@ export abstract class Device {
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
+  
   abstract destroy(): void;
 
   // Capabilities
@@ -324,7 +325,7 @@ export abstract class Device {
   /** Get a renderpass that is set up to render to the primary CanvasContext */
   abstract getDefaultRenderPass(): RenderPass;
 
-  /** Create a transform feedback (immutable set of output buffer bindings). WebGL 2 only. */
+  /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {

@@ -1619,7 +1619,7 @@ Debug improvements
 
 - Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
 - `shadertools` module no longer experimental
-- webgl2 uniform support
+- uniform support
 
 ## 4.0.0-alpha.12
 
@@ -1722,7 +1722,6 @@ Codebase/Build tooling improvements
 - Changed precommit hook from `husky` to `pre-commit`
 - `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
 - `probe` moved to `/experimental`
-- `webgl` folder now contains both webgl1 and webgl2 classes
 
 Feature Improvements
 
@@ -1910,7 +1909,6 @@ precedence when using wildcard installs.
 
 - `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
 - `probe` moved to `/experimental`
-- `webgl` folder now contains both webgl1 and webgl2 classes
 
 ### 3.0.0-alpha1
 

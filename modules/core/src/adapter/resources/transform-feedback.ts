@@ -12,7 +12,7 @@ export type BufferRange = {
   byteLength?: number;
 };
 
-/** Configures a set of output buffers for pipeline (WebGL 2 only) */
+/** Configures a set of output buffers for pipeline (WebGL only) */
 export type TransformFeedbackProps = ResourceProps & {
   /** Layout of shader (for varyings) */
   layout: ShaderLayout;
@@ -20,7 +20,7 @@ export type TransformFeedbackProps = ResourceProps & {
   buffers: Record<string, Buffer | BufferRange>;
 };
 
-/** Holds a set of output buffers for pipeline (WebGL 2 only) */
+/** Holds a set of output buffers for pipeline (WebGL only) */
 export abstract class TransformFeedback extends Resource<TransformFeedbackProps> {
   static override defaultProps: Required<TransformFeedbackProps> = {
     ...Resource.defaultProps,

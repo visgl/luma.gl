@@ -1,7 +1,5 @@
 # Histopyramid
 
-> `histopyramid` is only available in WebGL 2.
-
 `Histopyramid` aka `Histogram Pyramid` provides an efficient way of converting sparse matrix (represented by a texture) into list of coordinates (points). Where each active cell in the matrix can contribute to 1 or more points. All operations of the algorithm can be executed in parallel hence are performed on the GPU.
 
 Following set of methods implement `Histopyramid` operations as described in `High‐speed marching cubes using histopyramids` by `Dyken C`, `Ziegler G`, `Theobalt C` and `Seidel H`

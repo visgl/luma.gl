@@ -126,18 +126,17 @@ When setting `Buffer` attributes, additional data can be provided to specify how
 - `size` (_GLuint_) - number of values (components) per element (1-4)
 - `type` (_GLuint_) - type of values (e.g. gl.FLOAT)
 - `normalized` (_boolean_, false) - normalize integers to [-1,1] or [0,1]
-- `integer` (_boolean_, false) - `WebGL 2` disable int-to-float conversion
+- `integer` (_boolean_, false) - disable int-to-float conversion
 - `stride` (_GLuint_, 0) - supports strided arrays
 - `offset` (_GLuint_, 0) - supports strided arrays
 - `layout.normalized`=`false` (GLbool) - normalize integers to [-1,1], [0,1]
-- `layout.integer`=`false` (GLuint) - WebGL 2 only, disable int-to-float conv.
+- `layout.integer`=`false` (GLuint) -  disable int-to-float conv.
 
 - `divisor` - Sets the frequency divisor used for instanced rendering (instances that pass between updates of attribute). Usually simply set to 1 or 0 to enable/disable instanced rendering. 0 disables instancing, >=1 enables it.
 
 Notes:
 
 - The application can enable normalization by setting the `normalized` flag to `true` in the `setBuffer` call.
-- **WebGL 2** The application can disable integer to float conversion when running under WebGL 2, by setting the `integer` flag to `true`.
 - [`glVertexAttribIPointer`](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/vertexAttribIPointer) specifies _integer_ data formats and locations of vertex attributes. Values are always left as integer values. Only accepts the integer types gl.BYTE, gl.UNSIGNED_BYTE, gl.SHORT, gl.UNSIGNED_SHORT, gl.INT, gl.UNSIGNED_INT
 
 Notes about Instanced Rendering
