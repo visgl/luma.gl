@@ -7,7 +7,7 @@ const shaderModules = {};
 
 // HACK - sniff out modules from * imports
 for (const [name, value] of Object.entries(imports)) {
-  // @ts-expect-error
+  // @ts-ignore
   if (value?.fs || value?.vs) {
     shaderModules[name] = value;
   }
