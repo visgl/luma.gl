@@ -15,13 +15,13 @@ surface
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = glsl`\
-attribute vec3 positions;
+in vec3 positions;
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 
-varying vec3 vPosition;
+out vec3 vPosition;
 
 void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
@@ -32,7 +32,7 @@ void main(void) {
 precision highp float;
 
 uniform samplerCube uTextureCube;
-varying vec3 vPosition;
+in vec3 vPosition;
 out vec4 fragColor;
 
 void main(void) {
@@ -48,17 +48,17 @@ void main(void) {
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = glsl`\
-attribute vec3 positions;
-attribute vec3 normals;
-attribute vec2 texCoords;
+in vec3 positions;
+in vec3 normals;
+in vec2 texCoords;
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 
-varying vec3 vPosition;
-varying vec3 vNormal;
-varying vec2 vUV;
+out vec3 vPosition;
+out vec3 vNormal;
+out vec2 vUV;
 
 void main(void) {
   gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
@@ -74,12 +74,12 @@ uniform sampler2D uTexture;
 uniform samplerCube uTextureCube;
 uniform vec3 uEyePosition;
 
-varying vec3 vPosition;
-varying vec3 vNormal;
-varying vec2 vUV;
+in vec3 vPosition;
+in vec3 vNormal;
+in vec2 vUV;
 
 void main(void) {
-  vec4 color = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+  vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - uEyePosition), vNormal);
   vec4 reflectedColor = textureCube(uTextureCube, reflectedDir);
 

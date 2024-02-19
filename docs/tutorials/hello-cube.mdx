@@ -34,7 +34,7 @@ const vs = `\
 
   uniform mat4 uMVP;
 
-  varying vec2 vUV;
+  out vec2 vUV;
 
   void main(void) {
     gl_Position = uMVP * vec4(positions, 1.0);
@@ -48,7 +48,7 @@ const fs = `\
   uniform sampler2D uTexture;
   uniform vec3 uEyePosition;
 
-  varying vec2 vUV;
+  in vec2 vUV;
 
   void main(void) {
     gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
@@ -131,7 +131,7 @@ const vs = `\
 
   uniform mat4 uMVP;
 
-  varying vec2 vUV;
+  out vec2 vUV;
 
   void main(void) {
     gl_Position = uMVP * vec4(positions, 1.0);
@@ -145,7 +145,7 @@ const fs = `\
   uniform sampler2D uTexture;
   uniform vec3 uEyePosition;
 
-  varying vec2 vUV;
+  in vec2 vUV;
 
   void main(void) {
     gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));

@@ -43,8 +43,8 @@ const app: {uniformTypes: Record<string, ShaderUniformType>} = {
 const vs = glsl`\
 #version 300 es
 
-attribute vec3 positions;
-attribute vec3 normals;
+in vec3 positions;
+in vec3 normals;
 
 uniform appUniforms {
   vec3 uColor;
@@ -53,7 +53,7 @@ uniform appUniforms {
   mat4 uProjection;
 } app;
 
-varying vec3 color;
+out vec3 color;
 
 void main(void) {
   vec3 normal = vec3(app.uModel * vec4(normals, 0.0));
@@ -70,7 +70,7 @@ const fs = glsl`\
 
 precision highp float;
 
-varying vec3 color;
+in vec3 color;
 out vec4 fragColor;
 
 void main(void) {

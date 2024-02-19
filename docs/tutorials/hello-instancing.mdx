@@ -20,14 +20,14 @@ import {clear} from '@luma.gl/webgl';
 const colorShaderModule = {
   name: 'color',
   vs: `
-    varying vec3 color_vColor;
+    out vec3 color_vColor;
 
     void color_setColor(vec3 color) {
       color_vColor = color;
     }
   `,
   fs: `
-    varying vec3 color_vColor;
+    in vec3 color_vColor;
 
     vec3 color_getColor() {
       return color_vColor;
@@ -36,7 +36,7 @@ const colorShaderModule = {
 };
 ```
 
-A shader module is essentially just some GLSL code that will be inserted into our vertex and fragment shaders. They're usually used to define functions that implement generic functionality that can be reused in different programs. In this case, we're defining one to simply pass a color from the vertex shader to the fragment shader in a varying. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
+A shader module is essentially just some GLSL code that will be inserted into our vertex and fragment shaders. They're usually used to define functions that implement generic functionality that can be reused in different programs. In this case, we're defining one to simply pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
 
 Now let's update our vertex and fragment shaders to use the module functions:
 
@@ -132,14 +132,14 @@ import {clear} from '@luma.gl/webgl';
 const colorShaderModule = {
   name: 'color',
   vs: `
-    varying vec3 color_vColor;
+    out vec3 color_vColor;
 
     void color_setColor(vec3 color) {
       color_vColor = color;
     }
   `,
   fs: `
-    varying vec3 color_vColor;
+    in vec3 color_vColor;
 
     vec3 color_getColor() {
       return color_vColor;

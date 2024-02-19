@@ -58,19 +58,19 @@
           const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
           const vs = glsl`\
-      attribute float instanceSizes;
-      attribute vec3 positions;
-      attribute vec3 normals;
-      attribute vec2 instanceOffsets;
-      attribute vec3 instanceColors;
-      attribute vec2 instancePickingColors;
+      in float instanceSizes;
+      in vec3 positions;
+      in vec3 normals;
+      in vec2 instanceOffsets;
+      in vec3 instanceColors;
+      in vec2 instancePickingColors;
 
       uniform mat4 uModel;
       uniform mat4 uView;
       uniform mat4 uProjection;
       uniform float uTime;
 
-      varying vec3 color;
+      out vec3 color;
 
       void main(void) {
         vec3 normal = vec3(uModel * vec4(normals, 1.0));
@@ -90,7 +90,7 @@
           const fs = glsl`\
       precision highp float;
 
-      varying vec3 color;
+      in vec3 color;
 
       void main(void) {
         gl_FragColor = vec4(color, 1.);

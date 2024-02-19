@@ -95,7 +95,7 @@ const vs = `
  attribute vec2 position;
  attribute vec3 color;
 
- varying vec3 vColor;
+ out vec3 vColor;
 
  void main() {
    vColor = color;
@@ -104,7 +104,7 @@ const vs = `
 `;
 
 const fs = `
- varying vec3 vColor;
+ in vec3 vColor;
 
  void main() {
    gl_FragColor = vec4(vColor, 1.0);

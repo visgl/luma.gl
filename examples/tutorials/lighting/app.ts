@@ -53,7 +53,7 @@ uniform appUniforms {
 out vec4 fragColor;
 
 void main(void) {
-  vec3 surfaceColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
+  vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
   surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
 
   fragColor = vec4(surfaceColor, 1.0);
