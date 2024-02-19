@@ -188,17 +188,17 @@ Remarks
 Support for some types of texture formats come in groups. As an alternative to checking texture support format-by-format,
 [`Device.features`](./device-features) can be queried to determine if specific groups or classes of texture formats are supported.
 
-| Feature                               | Optional capabilities                                     |
-| ------------------------------------- | --------------------------------------------------------- |
-| `texture-srgb-webgl1`                 | sRGB formats are supported                                |
-| `texture-depth-webgl`                 | depth texture formats are supported                       |
-| `texture-float32-webgl`               | Create floating point textures (`nearest` sampling only)  |
-| `texture-float16-webgl`               | Create half-floating point textures (`nearest` sampling)  |
-| `float32-renderable-webgl`    | Floating point textures are color-renderable and readable |
-| `texture-renderable-float15-webgl`    | Half float textures are color-renderable and readable     |
-| `texture-filterable-anisotropic-webgl`    | anisotropic filtering                                     |
-| `float32-filterable-linear-webgl` | `linear` sampling of floating point textures              |
-| `float16-filterable-linear-webgl` | `linear` sampling of half-floating point textures         |
+| Feature                                | Optional capabilities                                     |
+| -------------------------------------- | --------------------------------------------------------- |
+| `texture-srgb-webgl1`                  | sRGB formats are supported                                |
+| `texture-depth-webgl`                  | depth texture formats are supported                       |
+| `texture-float32-webgl`                | Create floating point textures (`nearest` sampling only)  |
+| `texture-float16-webgl`                | Create half-floating point textures (`nearest` sampling)  |
+| `float32-renderable-webgl`             | Floating point textures are color-renderable and readable |
+| `texture-renderable-float15-webgl`     | Half float textures are color-renderable and readable     |
+| `texture-filterable-anisotropic-webgl` | anisotropic filtering                                     |
+| `float32-filterable-linear-webgl`      | `linear` sampling of floating point textures              |
+| `float16-filterable-linear-webgl`      | `linear` sampling of half-floating point textures         |
 
 ## Compressed Textures
 
@@ -232,31 +232,31 @@ and exactly the component types shown for that format, although it may not match
 
 ### Internal Formats
 
-| Sized Internal Format                | Comp. | Size     | Description                                                                                   |
-| ------------------------------------ | ----- | -------- | --------------------------------------------------------------------------------------------- |
-| `GL.R8` (WebGL 2)                    | 1     | 8 bits   | red component                                                                                 |
-| `GL.R16F` (WebGL 2)                  | 1     | 16 bits  | half float red component                                                                      |
-| `GL.R32F` (WebGL 2)                  | 1     | 32 bits  | float red component                                                                           |
-| `GL.R8UI` (WebGL 2)                  | 1     | 8 bits   | unsigned int red component, `usampler`, no filtering                                          |
-| `GL.RG8` (WebGL 2)                   | 1     | 16 bits  | red and green components                                                                      |
-| `GL.RG16F` (WebGL 2)                 | 2     | 32 bits  | red and green components, half float                                                          |
-| `GL.RG32F` (WebGL 2)                 | 2     | 64 bits  | red and green components, float                                                               |
-| `GL.RGUI` (WebGL 2)                  | 2     | 16 bits  | red and green components, `usampler`, no filtering                                            |
-| `GL.RGB8` (WebGL 2)                  | 3     | 24 bits  | red, green and blue components                                                                |
-| `GL.SRGB8` (WebGL 2, EXT_sRGB)       | 3     | 24 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
-| `GL.RGB565` (WebGL 2)                | 3     | 16 bits  | 5 bit red, 6 bit green, 5 bit blue                                                            |
-| `GL.R11F_G11F_B10F` (WebGL 2)        | 3     | 32 bits  | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats)        |
-| `GL.RGB9_E5` (WebGL 2)               | 3     | 32 bits  | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
-| `GL.RGB16F` (WebGL 2)                | 3     | 48 bits  | half float RGB                                                                                |
-| `GL.RGB32F` (WebGL 2)                | 3     | 96 bits  | float RBG                                                                                     |
-| `GL.RGB8UI` (WebGL 2)                | 3     | 24 bits  | unsigned integer 8 bit RGB: use `usampler`, no filtering                                      |
-| `GL.RGBA8` (WebGL 2)                 | 4     | 32 bits  | 8 bit RGBA, typically what `GL.RGBA` "resolves" to                                            |
-| `GL.SRGB_APLHA8` (WebGL 2, EXT_sRGB) | 4     | 32 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
-| `GL.RGB5_A1` (WebGL 2)               | 4     | 16 bits  | 5 bit RGB, 1 bit alpha                                                                        |
-| `GL.RGBA4444` (WebGL 2)              | 4     | 16 bits  | 4 bit RGBA                                                                                    |
-| `GL.RGBA16F` (WebGL 2)               | 4     | 64 bits  | half float RGBA                                                                               |
-| `GL.RGBA32F` (WebGL 2)               | 4     | 128 bits | float RGA                                                                                     |
-| `GL.RGBA8UI` (WebGL 2)               | 4     | 32 bits  | unsigned integer 8 bit RGBA, `usampler`, no filtering                                         |
+| Sized Internal Format       | Comp. | Size     | Description                                                                                   |
+| --------------------------- | ----- | -------- | --------------------------------------------------------------------------------------------- |
+| `GL.R8`                     | 1     | 8 bits   | red component                                                                                 |
+| `GL.R16F`                   | 1     | 16 bits  | half float red component                                                                      |
+| `GL.R32F`                   | 1     | 32 bits  | float red component                                                                           |
+| `GL.R8UI`                   | 1     | 8 bits   | unsigned int red component, `usampler`, no filtering                                          |
+| `GL.RG8`                    | 1     | 16 bits  | red and green components                                                                      |
+| `GL.RG16F`                  | 2     | 32 bits  | red and green components, half float                                                          |
+| `GL.RG32F`                  | 2     | 64 bits  | red and green components, float                                                               |
+| `GL.RGUI`                   | 2     | 16 bits  | red and green components, `usampler`, no filtering                                            |
+| `GL.RGB8`                   | 3     | 24 bits  | red, green and blue components                                                                |
+| `GL.SRGB8` (EXT_sRGB)       | 3     | 24 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
+| `GL.RGB565`                 | 3     | 16 bits  | 5 bit red, 6 bit green, 5 bit blue                                                            |
+| `GL.R11F_G11F_B10F`         | 3     | 32 bits  | [11 and 10 bit floating point colors](https://www.opengl.org/wiki/Small_Float_Formats)        |
+| `GL.RGB9_E5`                | 3     | 32 bits  | [14 bit floating point RGB, shared exponent](https://www.opengl.org/wiki/Small_Float_Formats) |
+| `GL.RGB16F`                 | 3     | 48 bits  | half float RGB                                                                                |
+| `GL.RGB32F`                 | 3     | 96 bits  | float RBG                                                                                     |
+| `GL.RGB8UI`                 | 3     | 24 bits  | unsigned integer 8 bit RGB: use `usampler`, no filtering                                      |
+| `GL.RGBA8`                  | 4     | 32 bits  | 8 bit RGBA, typically what `GL.RGBA` "resolves" to                                            |
+| `GL.SRGB_APLHA8` (EXT_sRGB) | 4     | 32 bits  | Color values are encoded to/decoded from sRGB before being written to/read from framebuffer   |
+| `GL.RGB5_A1`                | 4     | 16 bits  | 5 bit RGB, 1 bit alpha                                                                        |
+| `GL.RGBA4444`               | 4     | 16 bits  | 4 bit RGBA                                                                                    |
+| `GL.RGBA16F`                | 4     | 64 bits  | half float RGBA                                                                               |
+| `GL.RGBA32F`                | 4     | 128 bits | float RGA                                                                                     |
+| `GL.RGBA8UI`                | 4     | 32 bits  | unsigned integer 8 bit RGBA, `usampler`, no filtering                                         |
 
 ### Texture Component Type
 

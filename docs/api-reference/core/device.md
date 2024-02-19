@@ -5,27 +5,27 @@ providing methods to:
 
 - create GPU resources
 - query the capabilities of the GPU
-- detect error conditions.
+- detect GPU error conditions.
 
-A `Device` is created through static `Device.create(...)` method.
-
-Note that the actual `Device` returned by `Device.create()` will be either
+A `Device` instance is created through the `luma.createDevice(...)` method.
+Note that the actual `Device` returned by `luma.createDevice()` will be either
 a `WebGLDevice` wrapping a WebGL context or a `WebGPUDevice` wrapping a WebGPU device
-based on what the run-time environment (ie. browser or Node.js) supports.
+based on what the run-time environment supports.
+
+The `Device` API is intentionally designed to be similar to the 
+WebGPU [`GPUDevice`](https://www.w3.org/TR/webgpu/#gpu-device) class API
+with changes to enable a WebGL2 implementation.
 
 ## Usage
 
-TODO - fixme
-
-Creates a WebGL 2 context, auto creating a canvas
+Create a new Device, auto creating a canvas and a new WebGL 2 context
 
 ```typescript
 import {Device} from '@luma.gl/core';
-const device = new Device(); 
+const device = new luma.createDevice({type: 'webgl2'}); 
 ```
 
-Attaching a Device to an externally created WebGLRendering context instruments it
-so that it works with other luma.gl classes.
+Attaching a Device to an externally created `WebGL2RenderingContext`.
 
 ```typescript
 import {Device} from '@luma.gl/core';
@@ -34,16 +34,14 @@ import {Model} from '@luma.gl/engine';
 const gl = canvas.createContext('webgl2');
 const device = Device.attach(gl);
 
-// Instrumentation ensures the context works with higher-level classes.
-const vao = device.gl.createVertexArray();
-const model = new Model(gl, options);
+const model = new Model(device, options);
 ```
 
 Handle GPU disconnections:
 
 ```typescript
 if (!device.isLost) {
-  ...
+  console.error('Device lost');
 }
 
 const {message} = await device.lost;
@@ -56,7 +54,7 @@ console.error(message);
 
 | Parameter                       | Default            | Description                                                                                                               |
 | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `type`                          | `'best-available'` | `'webgpu`', `'webgl'`, `'webgl1'`, `'webgl2'`                                                                             |
+| `type`                          | `'best-available'` | `'webgpu'`, `'webgl'`, `'best-available'`                                                                                 |
 | `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.             |
 | priority.                       |
 | `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
@@ -68,23 +66,6 @@ console.error(message);
 | `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
 | `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
 | `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
-
-## Static Methods
-
-### create
-
-```typescript
-Device.create(props: DeviceProps): Promise<Device>
-```
-
-Creating device is done with the static `Device.create()` method.
-Creates and returns a WebGL context, both in browsers and in Node.js.
-
-```typescript
-const device = await Device.create(props);
-```
-
-- `props` (_Object_) - key/value pairs containing context creation options
 
 ## Fields
 
@@ -241,14 +222,15 @@ Use the static `Device.create()` method to create classes.
 Releases resources associated with this `Device`.
 
 :::info
-Whether destroying a device actually releases resources depends on the underlying `Device` implementation in use.
-- WebGL does not have a context destroy function.
-- However, if headless gl is running the destroy extension will be called.
+WebGPU only. Calling `device.destroy()` on a WebGL `Device` will not immediately release GPU resources. 
+The WebGL API does not provide a context destroy function,
+instead relying on garbage collection to eventually release the resources.
 :::
 
-:::info
+:::caution
 Interaction between `Device.destroy()`, `Device.lost` and `Device.isLost` is implementation-dependent.
-Whether destroying a device trigger a device loss, the order of isLost promise resolution versus API errors caused by destroyed device etc, should not be relied upon.
+The application should not assume that destroying a device triggers a device loss, 
+or that the `lost` promise is resolved before any API errors are triggered by access to the destroyed device.
 :::
 
 ### createCanvasContext()
@@ -256,11 +238,12 @@ Whether destroying a device trigger a device loss, the order of isLost promise r
 ```typescript
 createCanvasContext(props?: CanvasContextProps): CanvasContext
 ```
-:::info
-WebGPU only. (WebGL devices can only render into the canvas they were created with).
-:::
 
 Creates a new [`CanvasContext`](./canvas-context).
+
+:::info
+WebGPU only. WebGL devices can only render into the canvas they were created with.
+:::
 
 ### getCanvasContext()
 
@@ -268,12 +251,11 @@ Creates a new [`CanvasContext`](./canvas-context).
 getCanvasContext(): CanvasContext
 ```
 
-Returns the primary canvas context of a device.
+- Returns the primary canvas context of a device.
+- Throws an error if no canvas context is available (a WebGPU compute device).
+
 In TypeScript applications this helps applications avoid having to repeatedly check if `device.canvasContext` is null,
 otherwise the two are equivalent.
-
-Throws an error if no canvas context is available (a WebGPU compute device).
-
 
 ### submit
 
@@ -281,7 +263,8 @@ Throws an error if no canvas context is available (a WebGPU compute device).
 submit(): void
 ```
 
-Call after rendering a frame is complete.
+The application should call `device.submit()` after rendering of a frame is complete 
+to ensure that the generated command queue is submitted to the GPU.
 
 ### createBuffer
 
@@ -369,13 +352,6 @@ A default `RenderPass` is provided for applications that don't need to create
 multiple or specially configured render passes.
 
 Note that a new default `RenderPass` is returned every animation frame.
-
-## Remarks
-
-- Note that the actual `Device` returned by `Device.create()` can be either
-  a `WebGLDevice` wrapping a WebGL context or a `WebGPUDevice` wrapping a WebGPU device
-  based on what the run-time environment (ie. browser or Node.js) supports.
-- The `Device` API is intentionally similar, but not identical, to the [WebGPU `GPUDevice`](https://www.w3.org/TR/webgpu/#gpu-device) class API.
 
 ### loseDevice
 

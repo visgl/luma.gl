@@ -11,7 +11,7 @@ The list of attachments cannot be changed after creation, however a Framebuffer 
 
 Special `Framebuffer`s can be obtained from `CanvasContext`s that enabled rendering directly into HTML canvases (i.e. onto the screen). 
 
-The use of framebuffers is described in detail in the [Rendering Guide](/docs/api-guide/rendering)/
+The use of framebuffers is described in detail in the [Rendering Guide](/docs/api-guide/gpu/gpu-rendering).
 
 ## Usage
 

@@ -139,7 +139,7 @@ export type UnsizedColorTextureFormat =
   // 'rgba8unorm-srgb-unsized'
   ;
 
-/** Sized formats unique to WebGL 2. Will perhaps be added to WebGPU? */
+/** Sized formats unique to WebGL 2. Some will perhaps be added to WebGPU standard? */
 export type WebGL2ColorTextureFormat =
   'r16unorm-webgl' |
   'r16snorm-webgl' |

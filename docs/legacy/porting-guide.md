@@ -1,33 +1,131 @@
-# Upgrade Guide
+# Porting Guide
 
-This upgrade guide lists breaking changes in the luma.gl API, and provides information on how to update applications.
+Given that the changes in the v9 API are quite extensive, this separate porting guide is provided to hopefully help plan the upgrade process.
 
-:::info
-This page covers luma.gl v9 and later releases. For information on upgrading to v8 and earlier releases, see our [Legacy Upgrade Guide](/docs/upgrade-guide/legacy-guide).
-:::
+## v9 API Design background
 
-## Conventions
+We'll start with motivating the changes in v9.
 
-- **semantic versioning** - luma.gl follows [SEMVER](https://semver.org) conventions. This means that breaking changes are only done in major versions, minor version bumps bring new functionality but no breaking changes, and patch releases typically contain only low-risk fixes.
-- **sequential upgrades** - Upgrade instructions assume that you are upgrading from the immediately previous release.
-If you are upgrading across multiple releases you will want to consider the release notes for all
-intermediary releases.
+### Why is the v9 API a major breaking change?
+
+The v8 API design was focused on providing a set of classes optimized for working with the WebGL2 API, and a significant part of the code was untyped, predating TypeScript introduction.
+
+The v9 API design makes a number breaking changes in order to take full advantage of WebGPU and TypeScript.
+
+#### Goal: A "WebGPU-first" API
+
+Adding WebGPU support was the top priority for luma.gl v9. Some consideration was given towards keeping the existing WebGL2-centric API and providing a WebGPU implementation for that API, to avoid breaking applications. But ultimately that did not make sense. The WebGPU API is quite different from WebGL. WebGPU was designed to avoid the performance overhead that is unavoidable in WebGL APIs (e.g. avoid repeated validation of GPU objects, avoid repeated issuing of same commands, avoid constructs that prevent deep shader optimizations etc). WebGPU is clearly the future of GPU APIs in the browser (WebGL is no longer evolving). It seems doubtful that luma.gl would be able to remain relevant if it stuck to a WebGL-focused API.
+
+#### Goal: A "TypeScript-first" API
+
+As luma.gl continued to adopt TypeScript it become clear that modern TypeScript enables a number of simpler, more intuitive API constructions. One example is that in TypeScript we can now safely specify that an "enum type" argument must be one of a few specific strings. By using string values in types, we don't need to introduce enumerations or key-value object constants. As an example the `Sampler` `minFilter` property is now specified as either `'linear'` or `'nearest'`, rather than `GL.LINEAR` or `GL.NEAREST`. This move to string constant values enabled luma.gl to align string constants with the WebGPU standard, avoiding the need to define additional mappings and abstractions on top of the WebGPU API.
+
+#### Goal: Improved Maintainability
+
+Another reason for the breaking changes in v9 is simply the removal and restructuring of legacy code. Over 8 releases, the luma.gl API had grown quite large. It exposed all the functionality offered by WebGL2, however many WebGL 2 functions were rarely used. luma.gl contained a lot of code for mutating WebGL resources, which would not work for an applications that also attempts to run on WebGPU, since WebGPU classes are (mostly) immutable. In addition, some core maintainers of luma.gl have moved on, so we took the opportunity to cut out some legacy code to make sure the code base remains accessible and easy to understand for the community. The new WebGPU compatible API provided the just the lens we needed to decide which particular pieces of functionality should be cut. 
+
+## Effort Estimation
+
+Suddenly having to upgrade an existing application to a new breaking API version is never fun. A first step for a developer is often to assess how much effort an upgrade is likely to require.
+
+While it is impossible for us to assess here how much work will be required for your specific application, and the list of luma.gl v9 changes listed below is long, it probably looks worse than it is:
+
+- While the entire API has been modernized, the overall structure and concepts of the classic luma.gl API have been preserved. 
+- The API abstraction level has not changed, and while constants and names etc will need to be updated, programmers should find themselves comfortably working with the same classes in luma.gl v9 as they did in v8, without having to re-learn the API. 
+- They key building block classes like `AnimationLoop`, `Model`, `Buffer`, `Texture` etc are still available.
+- Many changes affect parts of the API that are not frequently used in most applications.
+- In addition, the strong TypeScript typings in luma.gl v9 should create a strong safety net when porting. This means that the typescript compiler should be able to pinpoint most breakages in your application before you even run your code.
+
+## Quick v9 API overview
+
+The luma.gl v9 API is designed to provide portable WebGPU / WebGL 2 API, ground-up TypeScript support, and strong support for working with both WGSL and GLSL shaders.
+
+The new v9 GPU API is now an abstract Device API, meaning that the API itself is specified in terms of TypeScript interfaces and abstract classes that cannot be directly instantiates. Types such as `Buffer`, `Texture` etc can not be used on their own, but a subclass that implements the functionality of that class a specific GPU API must be requested from a Device (`WebGLBuffer`, `WebGPUTexture`). 
+
+The new `Device` class provides the access point to the new GPU interface. It creates and instruments the WebGL context or the WebGPU adapter, and provides methods to create all the implementation classes (`WebGLDevice.createBuffer(... =>  WebGLBuffer`, `WebGPUDevice.createTexture(... =>  WebGLGPUTexture`)
+
+The new `CanvasContext` class handles context sizing, resolution etc.
+
+The v9 API no longer accepts/returns `GL` constants, but instead uses the corresponding string values from the WebGPU standard (mapping those transparently under WebGL).
+
+- The parameter API has been updated to more closely match the WebGPU API. Also parameters are specified on pipelines and render pass creation and are and not as easy to change per draw call as they were in luma.gl v8.
+
+
+In progress
+- Reading and writing buffers is now an async operation. While WebGL does not support async reads and writes on MacOS, the API is still async to ensure portability to WebGPU.
+
+- Uniform buffers are now the standard way for the application to specify uniforms. Uniform buffers are "emulated" under WebGL.
+
+A subset of the new interfaces in the luma.gl v9 API:
+
+
+| Interface | Description |
+| --- | --- |
+| `Adapter` | luma.gl exposes GPU capabilities on the device in the form of one or more as `Adapter`s. |
+| `Device`  | Manages resources, and the device’s GPUQueues, which execute commands. |
+| `Buffer`  | The physical resources backed by GPU memory. A `Device` may have its own memory with high-speed access to the processing units. |
+| `Texture` | Like buffer, but supports random access |
+GPUCommandBuffer and GPURenderBundle are containers for user-recorded commands.
+| `Shader` | Compiled shader code.
+| `Sampler` | or GPUBindGroup, configure the way physical resources are used by the GPU. |
+
+GPUs execute commands encoded in GPUCommandBuffers by feeding data through a pipeline, which is a mix of fixed-function and programmable stages. Programmable stages execute shaders, which are special programs designed to run on GPU hardware. Most of the state of a pipeline is defined by a GPURenderPipeline or a GPUComputePipeline object. The state not included in these pipeline objects is set during encoding with commands, such as beginRenderPass() or setBlendColor().
+
+## Porting Strategy
+
+This is based on the porting strategy used to port [deck.gl](https://deck.gl), which is the biggest luma.gl-dependent code base.
+
+### Step 1: Update Imports
+
+- Change imports from `@luma.gl/gltools` to `@luma.gl/webgl`.
+- Change imports from `@luma.gl/core` to `@luma.gl/webgl`.
+
+### Step 2: Replace WebGLRenderingContext with Device
+
+The quickest way to start porting would be to start updating your application to consistently use the new `Device` class instead of directly working with .
+
+- **Feature Detection** - At the end of this stage it is also possible to replace feature detection constants with the new `device.features` functionality.
+
+### Step 3: Replace canvas manipulation with CanvasContext
+
+The handling of canvas related functionality (size, resolution etc) can
+be a messy part of WebGL applications.
+
+### Step 3: Replace parameter names
+
+Recommended changes:
+
+- Gradually reduce the number of imports `@luma.gl/constants` and start adopting string constants.
+
+## Upgrading GPU Parameters
+
+- Parameters are set on `Pipeline` creation. They can not be modified, or passed as parameters to draw calls.
+- Parameters can now only be set, not queried. luma.gl no longer provides a way to query parameters.
+
+## Depth testing
+
+To set up depth testing
+
+```typescript
+const value = model.setParameters({
+  depthWriteEnabled: true,
+  depthCompare: 'less-equal'
+});
+```
 
 ## Upgrading to v9.0
 
 luma.gl v9 is a major modernization of the luma.gl API, so the upgrade notes for this release are unusually long.
 This page primarily contains a reference list of API changes. To facilitate porting to the v9 release we have also provided a
-[Porting Guide](/docs/upgrade-guide/porting-guide) that provides more background information and recommended porting strategies.
+[Porting Guide](/docs/legacy/porting-guide) that provides more background information and recommended porting strategies.
 
 ### Removed Functionality
 
-Going forward, luma.gl will focus on leveraging the capabilities WebGPU, while maintaining a high-quality, compatible WebGL2 backend. 
-To accelerate this roadmap, luma.gl v9 is dropping WebGL 1 support.
+Going forward, luma.gl will focus on leveraging the capabilities WebGPU, while maintaining a high-quality, compatible WebGL2 backend. To accelerate this roadmap, luma.gl v9 is dropping WebGL 1 support.
 
 - **WebGL1** is no longer supported. The `@luma.gl/webgl` backend now always creates a **WebGL2 context**.
 - **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
-- **headless-gl** integration for Node.js is no longer supported, as it only supports WebGL 1.
-
+- **headless-gl** integration for Node.js is no longer supported (as it only supported WebGL 1).
 ### Non-API changes
 
 luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standards:
@@ -73,6 +171,9 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
 - glTF exports have been moved to `@luma.gl/gltf`.
 
+**`@luma.gl/gltools`** (removed, no longer needed, see [Upgrade Guide](/docs/upgrade-guide))
+
+
 
 ## Detailed Upgrade Guide
 
@@ -107,32 +208,32 @@ The WebGL context functions from `@luma.gl/gltools`(`createGLContext` etc), have
 
 The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRenderingContext` object. v9 enables applications to work portably with both WebGPU and WebGL, and accordingly it wraps the WebGL context in a `Device` instance.
 
-| v8 Prop or Method                  | v9 Replacement                        | Comment                                                         |
-| ---------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
-| `WebGLRenderingContext`            | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.        |
-| `WebGL2RenderingContext`           | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.        |  |
-| `getWebGL2Context(gl)`             | `device.gl2`                          |                                                                 |
-| `assertWebGLContext(gl)`           | N/A                                   | A device will always hold a valid WebGL context                 |
-| `assertWebGL2Context(gl)`          | N/A                                   | `if (device.info.type !== 'webgl2') throw new Error('WebGL2');` |
+| v8 Prop or Method                  | v9 Replacement                        | Comment                                                        |
+| ---------------------------------- | ------------------------------------- | -------------------------------------------------------------- |
+| `WebGLRenderingContext`            | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.       |
+| `WebGL2RenderingContext`           | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.       |  |
+| `getWebGL2Context(gl)`             | `device.gl2`                          |                                                                |
+| `assertWebGLContext(gl)`           | N/A                                   | A device will always hold a valid WebGL context                |
+| `assertWebGL2Context(gl)`          | N/A                                   | Not needed. WebGL devices now always use WebGL2.                   |
 |                                    |                                       |
-| `createGLContext()`                | `luma.createDevice()`                 | Will create a WebGL context if `WebGLDevice` is registered.     |
-| `createGLContext({onContextLost})` | `device.lost`                         | `Promise` that lets the application `await` context loss.       |
-| `instrumentGLContext()`            | `WebGLDevice.attach(gl)`              | Contexts are now automatically instrumented.                    |
-| `polyfillGLContext()`              | N/A                                   |                                                                 |
-| `hasFeature(feature)`              | `device.features.has(feature)`        | Note: Feature names now defined by WebGPU style strings.        |
-| `getFeatures()`                    | `Array.from(device.features)`         |                                                                 |
-| `getGLContextInfo(gl)`             | `device.info`                         | Returned object is keyed with strings instead of GL constants.  |
-| `getContextLimits(gl)`             | `device.limits`                       | Returns "WebGPU style" limits instead of WebGL style enums      |
-|                                    |                                       |                                                                 |
-| `canvas`                           | `device.canvasContext.canvas`         |                                                                 |
-| `resizeGLContext(gl, options)`     | `canvasContext.resize(options)`       | Same options: `{width, height, useDevicePixels}`                |
-| `getDevicePixelRatio()`            | `canvasContext.getDevicePixelRatio()` | Uses `useDevicePixels` prop on the `CanvasContext`              |
-| `setDevicePixelRatio()`            | `canvasContext.setDevicePixelRatio()` |                                                                 |
+| `createGLContext()`                | `luma.createDevice()`                 | Will create a WebGL context if `WebGLDevice` is registered.    |
+| `createGLContext({onContextLost})` | `device.lost`                         | `Promise` that lets the application `await` context loss.      |
+| `instrumentGLContext()`            | `WebGLDevice.attach(gl)`              | Contexts are now automatically instrumented.                   |
+| `polyfillGLContext()`              | N/A                                   |                                                                |
+| `hasFeature(feature)`              | `device.features.has(feature)`        | Note: Feature names now defined by WebGPU style strings.       |
+| `getFeatures()`                    | `Array.from(device.features)`         |                                                                |
+| `getGLContextInfo(gl)`             | `device.info`                         | Returned object is keyed with strings instead of GL constants. |
+| `getContextLimits(gl)`             | `device.limits`                       | Returns "WebGPU style" limits instead of WebGL style enums     |
+|                                    |                                       |                                                                |
+| `canvas`                           | `device.canvasContext.canvas`         |                                                                |
+| `resizeGLContext(gl, options)`     | `canvasContext.resize(options)`       | Same options: `{width, height, useDevicePixels}`               |
+| `getDevicePixelRatio()`            | `canvasContext.getDevicePixelRatio()` | Uses `useDevicePixels` prop on the `CanvasContext`             |
+| `setDevicePixelRatio()`            | `canvasContext.setDevicePixelRatio()` |                                                                |
 |                                    | `canvasContext.getPixelSize()`        |
 |                                    | `canvasContext.getAspect()`           |
-| `cssToDeviceRatio()`               | `canvasContext.cssToDeviceRatio()`    |                                                                 |
-| `cssToDevicePixels()`              | `canvasContext.cssToDevicePixels()`   |                                                                 |
-| `hasFeature(gl, ...)`              | `device.features.has(...)`            | See feature constant mapping below                              |
+| `cssToDeviceRatio()`               | `canvasContext.cssToDeviceRatio()`    |                                                                |
+| `cssToDevicePixels()`              | `canvasContext.cssToDevicePixels()`   |                                                                |
+| `hasFeature(gl, ...)`              | `device.features.has(...)`            | See feature constant mapping below                             |
 
 
 ### `@luma.gl/constants`
@@ -157,32 +258,32 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 
 Feature constants have been changed to match the WebGPU API and will need to be updated. The strong typing in the luma.gl v9 API means that TypeScript will detect unsupported feature names which should make the conversion process less painful.
 
-| luma.gl v8 `FEATURE`                        | v9 `DeviceFeature`                      | Comments                                                                      |
-| ------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------- |
-| **General WebGL Features**                  |                                         |                                                                               |
-| `FEATURES.WEBGL2`                           | `webgl`                                 | True for WebGL 2 Context                                                      |
-| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                     | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
-| `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                       | Instanced rendering (via instanced vertex attributes)                         |
-| `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                       | `VertexArrayObjects` can be created                                           |
-| `FEATURES.ELEMENT_INDEX_UINT32`             | N/A (always true)                       | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |
-| `FEATURES.BLEND_MINMAX`                     | N/A (always true)                       | `GL.MIN`, `GL.MAX` blending modes are available                               |
-| `FEATURES.FRAGMENT_SHADER_DRAW_BUFFERS`     | N/A (always true)                       | Fragment shader can draw to multiple render targets                           |
-| `FEATURES.FRAGMENT_SHADER_DEPTH`            | N/A (always true)                       | Fragment shader can control fragment depth value                              |
-| `FEATURES.SHADER_TEXTURE_LOD`               | N/A (always true)                       | Enables shader control of LOD                                                 |
-| `FEATURES.FRAGMENT_SHADER_DERIVATIVES`      | N/A (always true)                       | Derivative functions are available in GLSL                                    |
-| **`Texture`s and `Framebuffer`s**           |                                         |                                                                               |
-| `FEATURES.TEXTURE_FLOAT`                    | `texture-renerable-float32-webgl`       | Floating point textures can be created / set as samplers                      |
-| `FEATURES.TEXTURE_HALF_FLOAT`               | `float16-renderable-webgl`      | Half float textures can be created and set as samplers                        |
-| `FEATURES.MULTIPLE_RENDER_TARGETS`          | `multiple-renderable--webgl1`           | `Framebuffer` multiple color attachments that fragment shaders can access     |
-| `FEATURES.COLOR_ATTACHMENT_RGBA32F`         | `rgba32float-renderable-webgl1` | Floating point `Texture` in the `GL.RGBA32F` format are renderable & readable |
-| `FEATURES.COLOR_ATTACHMENT_FLOAT`           | `webgl1`                                | Floating point `Texture`s renderable + readable.                              |
-| `FEATURES.COLOR_ATTACHMENT_HALF_FLOAT`      | `webgl1`                                | Half float format `Texture`s are renderable and readable                      |
-| `FEATURES.FLOAT_BLEND`                      | `texture-blend-float-webgl`             | Blending with 32-bit floating point color buffers                             |
-| `TEXTURE_FILTER_LINEAR_FLOAT`               | `float32-filterable-linear-webgl1`  | Linear texture filtering for floating point textures                          |
-| `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | `float16-filterable-linear-webgl1`  | Linear texture filtering for half float textures                              |
-| `FEATURES.TEXTURE_FILTER_ANISOTROPIC`       | `texture-filterable-anisotropic-webgl`      | Anisotropic texture filtering                                                 |
-| `FEATURES.SRGB`                             | `texture-formats-srgb-webgl1`           | sRGB encoded rendering is available                                           |
-| `FEATURES.TEXTURE_DEPTH_BUFFERS`            | `texture-formats-depth-webgl1`          | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations   |
+| luma.gl v8 `FEATURE`                        | v9 `DeviceFeature`                     | Comments                                                                      |
+| ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| **General WebGL Features**                  |                                        |                                                                               |
+| `FEATURES.WEBGL2`                           | `webgl`                                | True for WebGL Contexts                                                      |
+| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                    | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
+| `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                      | Instanced rendering (via instanced vertex attributes)                         |
+| `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                      | `VertexArrayObjects` can be created                                           |
+| `FEATURES.ELEMENT_INDEX_UINT32`             | N/A (always true)                      | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |
+| `FEATURES.BLEND_MINMAX`                     | N/A (always true)                      | `GL.MIN`, `GL.MAX` blending modes are available                               |
+| `FEATURES.FRAGMENT_SHADER_DRAW_BUFFERS`     | N/A (always true)                      | Fragment shader can draw to multiple render targets                           |
+| `FEATURES.FRAGMENT_SHADER_DEPTH`            | N/A (always true)                      | Fragment shader can control fragment depth value                              |
+| `FEATURES.SHADER_TEXTURE_LOD`               | N/A (always true)                      | Enables shader control of LOD                                                 |
+| `FEATURES.FRAGMENT_SHADER_DERIVATIVES`      | N/A (always true)                      | Derivative functions are available in GLSL                                    |
+| **`Texture`s and `Framebuffer`s**           |                                        |                                                                               |
+| `FEATURES.TEXTURE_FLOAT`                    | `texture-renerable-float32-webgl`      | Floating point textures can be created / set as samplers                      |
+| `FEATURES.TEXTURE_HALF_FLOAT`               | `float16-renderable-webgl`             | Half float textures can be created and set as samplers                        |
+| `FEATURES.MULTIPLE_RENDER_TARGETS`          | `multiple-renderable--webgl1`          | `Framebuffer` multiple color attachments that fragment shaders can access     |
+| `FEATURES.COLOR_ATTACHMENT_RGBA32F`         | `rgba32float-renderable-webgl1`        | Floating point `Texture` in the `GL.RGBA32F` format are renderable & readable |
+| `FEATURES.COLOR_ATTACHMENT_FLOAT`           | `webgl1`                               | Floating point `Texture`s renderable + readable.                              |
+| `FEATURES.COLOR_ATTACHMENT_HALF_FLOAT`      | `webgl1`                               | Half float format `Texture`s are renderable and readable                      |
+| `FEATURES.FLOAT_BLEND`                      | `texture-blend-float-webgl`            | Blending with 32-bit floating point color buffers                             |
+| `TEXTURE_FILTER_LINEAR_FLOAT`               | `float32-filterable-linear-webgl1`     | Linear texture filtering for floating point textures                          |
+| `FEATURES.TEXTURE_FILTER_LINEAR_HALF_FLOAT` | `float16-filterable-linear-webgl1`     | Linear texture filtering for half float textures                              |
+| `FEATURES.TEXTURE_FILTER_ANISOTROPIC`       | `texture-filterable-anisotropic-webgl` | Anisotropic texture filtering                                                 |
+| `FEATURES.SRGB`                             | `texture-formats-srgb-webgl1`          | sRGB encoded rendering is available                                           |
+| `FEATURES.TEXTURE_DEPTH_BUFFERS`            | `texture-formats-depth-webgl1`         | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations   |
 
 ## GPU Parameters
 
@@ -219,7 +320,7 @@ The following table shows mappings from luma v8 WebGL parameters to luma v9 WebG
 
 ---
 
-::caution
+:::caution
 TODO - this section needs updating
 :::
 

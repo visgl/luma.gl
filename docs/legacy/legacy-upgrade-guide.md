@@ -45,8 +45,8 @@ new Texture2D({
 
 - `createGLContext` will no longer attempt to create a headlessgl context under node.js. One can either create headless context externally and use `instrumentGLContext` to prepare it for use with luma.gl or use `createHeadlessContext` from `@luma.gl/test-utils` to create a headlessgl context.
 - `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-guide/shader-modules) instead.
-- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-guide/shader-modules) instead.
+- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-guide/shaders/shader-modules) instead.
+- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-guide/shaders/shader-modules) instead.
 - `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
 - The following are no longer exported by @luma.gl/core, but can still be imported from the modules indicated:
 
@@ -510,16 +510,16 @@ Following features were deprecated in v3 and v4 are now removed in v5.
 
 - Global symbols:
 
-| Removed symbol / Usage                       | Replacement                     | Comment                    |
-| -------------------------------------------- | ------------------------------- | -------------------------- |
-| `withState`                                  | `withParameters`                | State management           |
-| `glContextWithState`                         | `withParameters`                | State management           |
-| `withParameters({frameBuffer})`              | `withParameters({framebuffer})` | State management           |
-| `MONOLITHIC_SHADERS`                         | `MODULAR_SHADERS`               | default shaders            |
-| `isWebGLContext`                             | `isWebGL`                       | WebGL context validation   |
-| `isWebGL2Context`                            | `isWebGL2`                      | WebGL 2 context validation |
-| `Camera`, `PerspectiveCamera`, `OrthoCamera` | `None`                          |                            |
-| `Scene`                                      | `None`                          |                            |
+| Removed symbol / Usage                       | Replacement                       | Comment                    |
+| -------------------------------------------- | --------------------------------- | -------------------------- |
+| `withState`                                  | `withParameters`                  | State management           |
+| `glContextWithState`                         | `withParameters`                  | State management           |
+| `withParameters({frameBuffer})`              | `withParameters({framebuffer})`   | State management           |
+| `MONOLITHIC_SHADERS`                         | `MODULAR_SHADERS`                 | default shaders            |
+| `isWebGLContext`                             | N/A, WebGLDevice is always WebGL2 | WebGL context validation   |
+| `isWebGL2Context`                            | N/A, WebGLDevice is always WebGL2 | WebGL 2 context validation |
+| `Camera`, `PerspectiveCamera`, `OrthoCamera` | `None`                            |                            |
+| `Scene`                                      | `None`                            |                            |
 
 - Texture construction options:
 

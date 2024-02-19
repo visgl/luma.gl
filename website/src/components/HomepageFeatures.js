@@ -27,7 +27,7 @@ const FeatureList = [
     Svg: require('../../static/img/icon-high-precision.svg').default,
     description: (
       <>
-        A clean TypeScript and WebGPU friendly GPU API that works across WebGPU, WebGL 2 and WebGL.
+        A clean TypeScript and WebGPU friendly GPU API that works across WebGPU and WebGL 2.
       </>
     ),
   },

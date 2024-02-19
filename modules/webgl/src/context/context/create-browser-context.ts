@@ -58,15 +58,13 @@ export function createBrowserContext(
 
   // props.failIfMajorPerformanceCaveat = true;
 
-  // Prefer webgl2 over webgl1 if both are acceptable
+  // We require webgl2 context
   gl ||= canvas.getContext('webgl2', props) as WebGL2RenderingContext;
 
   // Software GPU
 
   // props.failIfMajorPerformanceCaveat = false;
-  // if (!gl && props.webgl2) {
-  //   gl = canvas.getContext('webgl2', props);
-  // }
+  
   // if (!gl && props.webgl1) {
   //   gl = canvas.getContext('webgl', props);
   // }

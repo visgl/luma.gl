@@ -9,7 +9,7 @@ Goals:
 - The luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 - Avoid creating a thick abstraction layer hiding the underlying API.
 - Big data processing (thinking about the GPU as a parallel binary columnar table processor rather than a scenegraph rendering engine).
-- Cross platform support: backwards compatibility with WebGL 2 and WebGL on a "best effort" basis.
+- Cross platform support: backwards compatibility with WebGL 2.
 
 Non-goals:
 

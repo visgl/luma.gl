@@ -12,7 +12,6 @@ type DebugContextProps = {
   debug?: boolean;
   throwOnError?: boolean;
   break?: string[];
-  webgl2?: boolean;
 };
 
 // const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
@@ -131,8 +130,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
   args = Array.from(args).map(arg => arg === undefined ? 'undefined' : arg);
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
-  const glName = props.webgl2 ? 'gl2' : 'gl1';
-  const message = `${errorMessage} in ${glName}.${functionName}(${functionArgs})`;
+  const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
   log.error(message)();
   debugger; // eslint-disable-line
   if (props.throwOnError) {

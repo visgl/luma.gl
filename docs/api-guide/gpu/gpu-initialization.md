@@ -1,4 +1,4 @@
-# GPU Access
+# GPU Initialization
 
 ## Device
 
@@ -24,24 +24,26 @@ A `CanvasContext` takes care of:
 
 ## Usage
 
-Create a WebGL2 context, auto creating a canvas
+Create a `Device` using the best available registered backend, 
+specifying an existing canvas to initialize the default `CanvasContext`.
 
 ```typescript
 import {luma} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGPUDevice} from '@luma.gl/webgpu';
 
 luma.registerDevices([WebGLDevice]);
-const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
+const device = luma.createDevice({canvas: ...});
 ```
 
-Create a WebGL 2 context (throws if WebGL2 not supported)
+Create a WebGL 2 device, auto creating a canvas.
 
 ```typescript
 import {luma} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 luma.registerDevices([WebGLDevice]);
-const webgpuDevice = luma.createDevice({type: 'webgl', canvas: ...});
+const webglDevice = luma.createDevice({type: 'webgl'});
 ```
 
 ## Registering Device Backends

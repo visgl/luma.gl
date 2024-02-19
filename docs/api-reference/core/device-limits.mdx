@@ -122,7 +122,6 @@ console.log(webglDevice ? webglDevice.webglLimits[GL.MAX_VERTEX_ATTRIBS]);
 
 ## Remarks
 
-- WebGL 2 supports multiple color buffer formats
 - Some extensions will not be enabled until they have been queried. luma always queries on startup to enable extensions, app only needs to query again it wants to test platform.
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.

@@ -595,8 +595,6 @@ export const GL_PARAMETER_GETTERS = {
   [GL.SAMPLE_COVERAGE]: isEnabled,
   [GL.SCISSOR_TEST]: isEnabled,
   [GL.STENCIL_TEST]: isEnabled,
-
-  // WebGL 2
   [GL.RASTERIZER_DISCARD]: isEnabled
 };
 

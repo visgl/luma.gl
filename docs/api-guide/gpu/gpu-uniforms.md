@@ -2,7 +2,6 @@
 
 Uniforms are shader variables whose values can be set from JavaScript.
 
-
 ## Uniform Buffers
 
 The recommended, portable method of providing uniform information to a program is 

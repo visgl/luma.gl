@@ -54,38 +54,38 @@ Usage expresses two things: The type of texture and what operations can be perfo
 
 Note that the allowed combinations are very limited, especially in WebGPU.
 
-| Usage Flag             | Value  | Description                                              |
-| ---------------------- | ------ | -------------------------------------------------------- |
-|  `Texture.COPY_SRC` | 0x01 | |
-|  `Texture.COPY_DST` | 0x02 | |
-|  `Texture.TEXTURE_BINDING` | 0x04 | |
-|  `Texture.STORAGE_BINDING` | 0x08 | |
-|  `Texture.RENDER_ATTACHMENT` | 0x10 | |
+| Usage Flag                  | Value | Description |
+| --------------------------- | ----- | ----------- |
+| `Texture.COPY_SRC`          | 0x01  |             |
+| `Texture.COPY_DST`          | 0x02  |             |
+| `Texture.TEXTURE_BINDING`   | 0x04  |             |
+| `Texture.STORAGE_BINDING`   | 0x08  |             |
+| `Texture.RENDER_ATTACHMENT` | 0x10  |             |
 
 ## TextureDimension
 
 | Dimension    | WebGPU | WebGL2 | WebGL1 | Description                                                          |
 | ------------ | ------ | ------ | ------ | -------------------------------------------------------------------- |
-| `1d`         | ✅     | ❌     | ❌     | Contains a one dimensional texture (typically used for compute )     |
-| `2d`         | ✅     | ✅     | ✅     | Contains a "normal" image texture                                    |
-| `2d-array`   | ✅     | ✅     | ❌     | Holds an "array" of 2D textures.                                     |
-| `3d`         | ✅     | ✅     | ❌     | Holds a "stack" of textures which enables 3D interpolation.          |
-| `cube`       | ✅     | ✅     | ✅     | Holds 6 textures representing sides of a cube.                       |
-| `cube-array` | ✅     | ❌     | ❌     | Holds an array where every 6 textures represent the sides of a cube. |
+| `1d`         | ✅      | ❌      | ❌      | Contains a one dimensional texture (typically used for compute )     |
+| `2d`         | ✅      | ✅      | ✅      | Contains a "normal" image texture                                    |
+| `2d-array`   | ✅      | ✅      | ❌      | Holds an "array" of 2D textures.                                     |
+| `3d`         | ✅      | ✅      | ❌      | Holds a "stack" of textures which enables 3D interpolation.          |
+| `cube`       | ✅      | ✅      | ✅      | Holds 6 textures representing sides of a cube.                       |
+| `cube-array` | ✅      | ❌      | ❌      | Holds an array where every 6 textures represent the sides of a cube. |
 
 ## TextureData
 
 WebGL allows textures to be created from a number of different data sources.
 
-| Type                                  | Description                                                                                           |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `null`                                | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
-| `typed array`                         | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
-| `Buffer` or `WebGLBuffer` (`WebGL 2`) | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
-| `Image` (`HTMLImageElement`)          | image will be used to fill the texture. width and height will be deduced.                             |
-| `Video` (`HTMLVideoElement`)          | video will be used to continously update the texture. width and height will be deduced.               |
-| `Canvas` (`HTMLCanvasElement`)        | canvas will be used to fill the texture. width and height will be deduced.                            |
-| `ImageData`                           | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
+| Type                           | Description                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `null`                         | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
+| `typed array`                  | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
+| `Buffer`                       | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
+| `Image` (`HTMLImageElement`)   | image will be used to fill the texture. width and height will be deduced.                             |
+| `Video` (`HTMLVideoElement`)   | video will be used to continously update the texture. width and height will be deduced.               |
+| `Canvas` (`HTMLCanvasElement`) | canvas will be used to fill the texture. width and height will be deduced.                            |
+| `ImageData`                    | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
 
 ## Members
 
@@ -98,7 +98,7 @@ A number of read only accessors are available:
 
 - `type` - type used to create face textures
 - `dataFormat` - data format used to create face textures.
-- `offset` - offset used to create face textures. Always 0, unless specified using WebGL 2 buffer constructor.
+- `offset` - offset used to create face textures.
 
 - `handle` - The underlying WebGL or WebGPU object.
 - `id` - An identifying string that is intended to help debugging.

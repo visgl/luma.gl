@@ -1,11 +1,5 @@
 # UniformBufferLayout
 
-:::info
-This page describes deprecated components in the legacy luma.gl v8 API.
-:::
-
-> `UniformBufferLayout` is only available in WebGL 2.
-
 A helper class that lets the application describe the contents of a uniform block and then perform `setUniforms({uniform: value})` calls on it, manipulating individual values without concern for memory layout requirements.
 
 ## Usage

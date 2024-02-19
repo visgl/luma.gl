@@ -40,7 +40,7 @@ export function getPassthroughFS(options?: {
 }): string {
   const {input, inputChannels, output} = options || {};
   if (!input) {
-    // Fast-path for WebGL 2.0
+    // Default shader
     return FS300;
   }
   if (!inputChannels) {
