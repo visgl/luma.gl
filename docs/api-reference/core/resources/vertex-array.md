@@ -62,4 +62,3 @@ vertexArray.setConstant(location: number, buffer | null): void
 Note:
 - Under WebGL, a WebGL VertexArrayObject will be created.
 - Under WebGPU, this is a simply an API class that holds attributes.
-

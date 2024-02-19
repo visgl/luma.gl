@@ -24,31 +24,23 @@ const pyramidGeometry= new Geometry({
 
 ## Properties
 
-### `id` - (_string_, optional)
+### `id: string` 
 
 An id for the model. If not provided, a random unique identifier will be created.
 
-### drawMode : number
+### topology
 
 The draw mode, or primitive type.
 
-Some options are `GL.TRIANGLES` (default), `GL.TRIANGLE_STRIP`, `GL.POINTS`, `GL.LINES`.
+Some options are `triangle-list` (default), `triangle-strip`, `point-list`, `line-list`.
 
-### `attributes` - (_object_, optional)
+### `attributes`
 
 An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model.
 
-### attributes : Object
-
-A map of `Accessor` instances describing the geometry of this primitive.
-
-### indices : Accessor
+### `indices`
 
 An optional `Accessor` instance that contains the indices (aka elements) for this geometry. Can be `null` or `undefined` if this primitive doesn't use indices. Note that indices can also be stored inside `attributes`.
-
-### material : Object
-
-An object with key/value pairs that indicate how various uniforms should be set up before the GPU draw call. The `Geometry` class itself does not directly use the contents of the `material` field, however other classes such as `Mesh` will refer to it if available, and normally expects it to be set to an instance of the `Material` class.
 
 ## Methods
 
@@ -66,19 +58,9 @@ Update properties
 
 ## Types and Enumerations
 
-### drawMode
+### topology
 
 Follows glTF/OpenGL/WebGL conventions:
-
-| Value | Primitive Mode   |
-| ----- | ---------------- |
-| `0`   | `POINTS`         |
-| `1`   | `LINES`          |
-| `2`   | `LINE_LOOP`      |
-| `3`   | `LINE_STRIP`     |
-| `4`   | `TRIANGLES`      |
-| `5`   | `TRIANGLE_STRIP` |
-| `6`   | `TRIANGLE_FAN`   |
 
 ### Typical Attributes
 

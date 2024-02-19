@@ -3,6 +3,10 @@ import {HelloCubeExample} from '@site';
 
 # Hello Cube
 
+:::caution
+The tutorial pages have not yet been updated for luma.gl v9. 
+:::
+
 <DeviceTabs />
 <HelloCubeExample />
 
@@ -80,8 +84,7 @@ The set up to render in 3D involves a few extra steps compared to the triangles 
         uTexture: texture
       },
       parameters: {
-        depthTest: true,
-        depthFunc: GL.LEQUAL
+        depthTest: true
       }
     });
   }
@@ -152,8 +155,7 @@ const fs = `\
 const loop = new AnimationLoop({
   override onInitialize({device}) {
     setParameters(device, {
-      depthTest: true,
-      depthFunc: GL.LEQUAL
+      depthTest: true
     });
 
     const texture = device.createTexture({data: 'vis-logo.png'});

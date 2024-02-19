@@ -3,14 +3,16 @@ import {TransformFeedbackExample} from '@site';
 
 # Transform Feedback
 
-:::info
-TransformFeedback based examples are temporarily disabled until `Transform` class is ported to luma.gl v9
+In this tutorial, we'll learn how to use [transform feedback](https://www.khronos.org/opengl/wiki/Transform_Feedback) using luma.gl's high-level API. Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parrallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.
+
+:::caution
+The tutorial pages have not yet been updated for luma.gl v9. 
+- TransformFeedback based examples are temporarily disabled until `Transform` class is ported to luma.gl v9
 :::
 
 <DeviceTabs />
 <TransformFeedbackExample />
 
-In this tutorial, we'll learn how to use [transform feedback](https://www.khronos.org/opengl/wiki/Transform_Feedback) using luma.gl's high-level API. Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parrallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.
 
 In luma.gl, transform feedback is primarily exposed via the [Transform](/docs/api-reference/engine/transform) class, which simplifies usage by managing input and output buffers. We'll demonstrate its usage by setting up a simple animation that runs completely on the GPU.
 
