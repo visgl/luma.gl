@@ -653,3 +653,4 @@ test.skip('PipelineFactory#defaultModules', (t) => {
 
   t.end();
 });
+*/
