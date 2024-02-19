@@ -74,6 +74,38 @@ const screenRenderPass = device.getDefaultRenderPass();
 model2.draw({renderPass: screenRenderPass, ...});
 ```
 
+## Overview
+
+### Framebuffer Attachment Values
+
+:::info
+This system is expected to be replaced with a `TextureView` class in a future release.
+:::
+
+The following values can be provided for each attachment point
+
+- `Texture` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
+- [`Texture`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D`, or cubemap face. The second element in the array must be `0`.
+- [`Texture` (cube), face (number), mipmapLevel=0 (number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level.
+- [`Texture`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
+- [`Texture3D`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
+## Framebuffer Attachments
+
+A `Framebuffer` holds:
+
+- an array of "color attachments" (often just one) that store data (one or more color `Texture`s)
+- an optional depth, stencil or combined depth-stencil `Texture`).
+
+All attachments must be in the form of `Texture`s.
+
+## Resizing Framebuffers
+
+Resizing a framebuffer effectively destroys all current textures and creates new 
+textures with otherwise similar properties. All data stored in the previous textures are lost.
+This data loss is usually a non-issue as resizes are usually performed between render passes,
+(typically to match the size of an off screen render buffer with the new size of the output canvas).
+
+
 ## Types
 
 ### `FramebufferProps`

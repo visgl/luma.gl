@@ -64,14 +64,14 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 
 ## TextureDimension
 
-| Dimension    | WebGPU | WebGL2 | WebGL1 | Description                                                          |
-| ------------ | ------ | ------ | ------ | -------------------------------------------------------------------- |
-| `1d`         | ✅      | ❌      | ❌      | Contains a one dimensional texture (typically used for compute )     |
-| `2d`         | ✅      | ✅      | ✅      | Contains a "normal" image texture                                    |
-| `2d-array`   | ✅      | ✅      | ❌      | Holds an "array" of 2D textures.                                     |
-| `3d`         | ✅      | ✅      | ❌      | Holds a "stack" of textures which enables 3D interpolation.          |
-| `cube`       | ✅      | ✅      | ✅      | Holds 6 textures representing sides of a cube.                       |
-| `cube-array` | ✅      | ❌      | ❌      | Holds an array where every 6 textures represent the sides of a cube. |
+| Dimension    | WebGPU | WebGL2 | Description                                                          |
+| ------------ | ------ | ------ | | -------------------------------------------------------------------- |
+| `1d`         | ✅      | ❌      | Contains a one dimensional texture (typically used for compute )     |
+| `2d`         | ✅      | ✅      | Contains a "normal" image texture                                    |
+| `2d-array`   | ✅      | ✅      | Holds an "array" of 2D textures.                                     |
+| `3d`         | ✅      | ✅      | Holds a "stack" of textures which enables 3D interpolation.          |
+| `cube`       | ✅      | ✅      | Holds 6 textures representing sides of a cube.                       |
+| `cube-array` | ✅      | ❌      | Holds an array where every 6 textures represent the sides of a cube. |
 
 ## TextureData
 
@@ -149,9 +149,7 @@ Allocates storage and sets image data
     width,
     height,
     level = 0,
-    format = GL.RGBA,
     type,
-    dataFormat,
     offset = 0,
     border = 0,
     compressed = false,
@@ -199,9 +197,7 @@ Note: does not allocate storage
     width,
     height,
     level = 0,
-    format = GL.RGBA,
     type,
-    dataFormat,
     compressed = false,
     offset = 0,
     border = 0,
@@ -226,22 +222,6 @@ See also [gl.compressedTexSubImage2D](https://developer.mozilla.org/en-US/docs/W
 ### update()
 
 Update this texture if `HTMLVideoElement` is used as the data source. This method is automatically called before every draw call if this texture is bound to a uniform.
-
-### getActiveUnit()
-
-Returns number of active textures.
-
-### bind()
-
-Binds itself to given textureUnit.
-
-The following WebGL APIs are called in the function
-[gl.activeTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/activeTexture), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture)
-
-### unbind()
-
-The following WebGL APIs are called in the function
-[gl.activeTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/activeTexture), [gl.bindTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/bindTexture)
 
 ## Remarks
 

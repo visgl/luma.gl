@@ -15,7 +15,7 @@ layout (std140) uniform matrix {
 
 ```typescript
 const matrixBlockLayout = new UniformBufferLayout({
-  mvp: GL.FLOAT_MAT4
+  mvp: 'mat4x4<f32>'
 });
 ```
 

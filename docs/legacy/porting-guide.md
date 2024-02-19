@@ -400,35 +400,10 @@ Remarks:
 \* `GL.STENCIL_BACK_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_FAIL`, `GL.STENCIL_BACK_FAIL_DEPTH_PASS`
 
 
-[polygonoffset]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset
-[depthrange]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange
-[cleardepth]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth
-
-[cullface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace
-[frontface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/frontFace
-
-
-[clearstencil]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil
-[stencilmask]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask
-[stencilfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc
-[stencilop]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp
-[stencilopseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate
+- In WebGL, setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
 
 - In WebGL, setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
 
-
-[clearstencil]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil
-[stencilmask]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask
-[stencilfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc
-[stencilop]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp
-[stencilopseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate
-
-- In WebGL, setting any value will enable stencil testing (i.e. enable `GL.STENCIL_TEST`).
-
-[blendcolor]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor
-[blendequation]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation
-[blendfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc
-[blendfuncseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFuncSeparate
 
 ### Clear Color
 
@@ -606,3 +581,25 @@ const value = model.setParameters({
 | `GL.BLEND_SRC_ALPHA`      | GLenum          | `GL.ZERO`      | srcAlpha         |
 | `GL.BLEND_DST_RGB`        | GLenum          | `GL.ONE`       | dstRgb           |
 | `GL.BLEND_DST_ALPHA`      | GLenum          | `GL.ZERO`      | dstAlpha         |
+
+
+[polygonoffset]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/polygonOffset
+[depthrange]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/depthRange
+[cleardepth]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearDepth
+
+[cullface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/cullFace
+[frontface]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/frontFace
+
+
+[clearstencil]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/clearStencil
+[stencilmask]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilMask
+[stencilfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilFunc
+[stencilop]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOp
+[stencilopseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/stencilOpSeparate
+
+
+
+[blendcolor]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor
+[blendequation]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendEquation
+[blendfunc]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc
+[blendfuncseparate]: https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFuncSeparate

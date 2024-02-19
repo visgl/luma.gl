@@ -81,7 +81,7 @@ model.draw();
 | `modules`            |                      | shader modules to be applied (shadertools).                                                                                    |
 | `programManager`     |                      | `ProgramManager` to use for program creation and caching.                                                                      |
 | `varyings`           | (WebGL 2)            | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).                        |
-| `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). Default value is `GL.SEPARATE_ATTRIBS`. |
+| `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). |
 
 `ModelProps` passes through `RenderPipelineProps`
 
@@ -165,12 +165,6 @@ The remaining draw options are passed directly to `Program.draw()`:
 - `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 - `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
-
-### setDrawMode(); this
-
-Sets the WebGL `drawMode`.
-
-`GL.POINTS` etc.
 
 ### setVertexCount(); this
 

@@ -2,16 +2,17 @@ import {DeviceTabs} from '@site/src/react-luma';
 
 # External WebGL Contexts
 
-:::info
-This page applies to WebGL only
-:::
-:::caution
-External context example is temporarily disabled until support is added to luma.gl v9
-:::
-
-
 This tutorial will be a simple demonstration of how to use an externally created WebGL context 
-with luma.gl's higher-level APIs. So far, we have either created a WebGL context ourselves 
+with luma.gl's higher-level APIs. 
+
+:::caution
+The tutorial pages have not yet been updated for luma.gl v9. 
+- External context example is temporarily disabled until support is added to luma.gl v9
+- This page applies to WebGL only
+:::
+
+
+So far, we have either created a WebGL context ourselves 
 to use with low-level APIs, or allowed the the `AnimationLoop` class to create a WebGL context for us. 
 luma.gl's higher-level APIs expect some instrumentation on the WebGL context, 
 so we can't just use a context we create ourselves with classes like `Model` and `Buffer`. 
