@@ -1,7 +1,7 @@
 import {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 
-import {fp64arithmeticShader} from './fp64-arithmetic.glsl';
-import {fp64functionShader} from './fp64-functions.glsl';
+import {fp64arithmeticShader} from './fp64-arithmetic-glsl';
+import {fp64functionShader} from './fp64-functions-glsl';
 
 const CONST_UNIFORMS = {
   // Used in LUMA_FP64_CODE_ELIMINATION_WORKAROUND

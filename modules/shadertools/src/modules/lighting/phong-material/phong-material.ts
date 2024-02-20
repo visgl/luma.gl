@@ -3,7 +3,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
-import {PHONG_VS, PHONG_FS} from './phong-shaders.glsl';
+import {PHONG_VS, PHONG_FS} from './phong-shaders-glsl';
 
 export type PhongMaterialProps = PhongMaterialUniforms;
 
