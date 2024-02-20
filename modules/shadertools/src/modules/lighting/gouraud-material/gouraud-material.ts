@@ -3,7 +3,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
-import {GOURAUD_VS, GOURAUD_FS} from './gouraud-shaders.glsl';
+import {GOURAUD_VS, GOURAUD_FS} from './gouraud-shaders-glsl';
 
 export type GouraudMaterialProps = GouraudMaterialUniforms;
 

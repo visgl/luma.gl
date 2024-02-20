@@ -3,7 +3,7 @@
 
 import type {NumberArray} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lightingUniforms} from './lighting-uniforms.glsl';
+import {lightingUniforms} from './lighting-uniforms-glsl';
 
 /** Max number of supported lights (in addition to ambient light */
 const MAX_LIGHTS = 5;

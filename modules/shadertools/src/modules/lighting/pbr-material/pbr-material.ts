@@ -7,8 +7,8 @@ import type {Vector2, Vector3, Vector4} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
 
-import {vs} from './pbr-vertex.glsl';
-import {fs} from './pbr-fragment.glsl';
+import {vs} from './pbr-vertex-glsl';
+import {fs} from './pbr-fragment-glsl';
 
 
 export type PBRMaterialProps = PBRMaterialBindings & {
