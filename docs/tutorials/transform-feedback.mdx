@@ -97,7 +97,8 @@ In `onInitialize`, we create our `Transform` instance:
   }
 ```
 
-We pass the vertex shader we defined, as well as the initial input buffer in the `sourceBuffers` property, which maps attribute names to buffers. The `feedbackMap` property maps input attributes to output varyings from the vertex shader. Internally it will create an output buffer of the same size as the input buffer into which transformed data will be written.
+We pass the vertex shader we defined, as well as the initial input buffer in the `sourceBuffers` property, which maps attribute names to buffers.
+The `feedbackMap` property maps input attributes to output values from the vertex shader. Internally it will create an output buffer of the same size as the input buffer into which transformed data will be written.
 
 Finally, we create a model instance to perform the rendering:
 

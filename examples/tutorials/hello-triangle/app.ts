@@ -11,7 +11,7 @@ const vs = `\
 in vec2 position;
 in vec3 color;
 
-varying vec3 vColor;
+out vec3 vColor;
 
 void main() {
   vColor = color;

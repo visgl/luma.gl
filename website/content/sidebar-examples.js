@@ -1,9 +1,9 @@
 const sidebars = {
   examplesSidebar: [
     {
-        type: 'doc',
-        label: 'Overview',
-        id: 'index'
+      type: 'doc',
+      label: 'Overview',
+      id: 'index'
     },
     {
       type: 'category',
@@ -19,6 +19,17 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Portable',
+      items: [
+        'portable/hello-triangle',
+        'portable/rotating-cube',
+        // "portable/textured-cube",
+        'portable/two-cubes',
+        'portable/instanced-cubes'
+      ]
+    },
+    {
+      type: 'category',
       label: 'Tutorials',
       items: [
         'tutorials/hello-triangle',
@@ -28,18 +39,7 @@ const sidebars = {
         'tutorials/shader-modules',
         'tutorials/shader-hooks'
       ]
-    },
-    // {
-    //   type: 'category',
-    //   label: 'WebGPU',
-    //   items: [
-    //     'webgpu/triangle',
-    //     'webgpu/rotating-cube',
-    //     'webgpu/textured-cube',
-    //     'webgpu/two-cubes',
-    //     'webgpu/instanced-cubes'
-    //   ]
-    // }
+    }
   ]
 };
 

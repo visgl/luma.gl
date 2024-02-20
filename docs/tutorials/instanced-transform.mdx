@@ -33,9 +33,9 @@ The vertex shader for our transform feedback is quite simple. It just increments
 
 ```typescript
 const transformVs = `
-  attribute float rotations;
+  in float rotations;
 
-  varying float vRotation;
+  out float vRotation;
 
   void main() {
     vRotation = rotations + 0.01;
@@ -43,23 +43,23 @@ const transformVs = `
 `;
 ```
 
-In order to handle rotation updates in the transform feedback, we have to move construction of the rotation matrix into the vertex shader. We'll use an [axis-angle](https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle), passing the axis and rotation angle as instanced attributes (with the rotation angles being updated by transform feedback):
+In order to handle rotation updates in the transform feedback, we have to move construction of the rotation matrix into the vertex shader. We'll use an [axis-angle](https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle), passing the axis and rotation angle as instanced ins (with the rotation angles being updated by transform feedback):
 
 ```typescript
 const vs = `\
-  attribute vec3 positions;
-  attribute vec3 normals;
-  attribute vec2 texCoords;
-  attribute vec2 offsets;
-  attribute vec3 axes;
-  attribute float rotations;
+  in vec3 positions;
+  in vec3 normals;
+  in vec2 texCoords;
+  in vec2 offsets;
+  in vec3 axes;
+  in float rotations;
 
   uniform mat4 uView;
   uniform mat4 uProjection;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  out vec3 vPosition;
+  out vec3 vNormal;
+  out vec2 vUV;
 
   void main(void) {
     float s = sin(rotations);
@@ -92,7 +92,7 @@ const vs = `\
   }
 ```
 
-We also pass an `offsets` instanced attribute to position each cube.
+We also pass an `offsets` instanced in to position each cube.
 
 Our fragment shader doesn't change at all:
 
@@ -103,9 +103,9 @@ const fs = `\
   uniform sampler2D uTexture;
   uniform vec3 uEyePosition;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  in vec3 vPosition;
+  in vec3 vNormal;
+  in vec2 vUV;
 
   void main(void) {
     vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
@@ -162,14 +162,14 @@ const transform = new Transform(device, {
 });
 ```
 
-And the `Model` needs to be updated to take the instanced attributes and `instanceCount`:
+And the `Model` needs to be updated to take the instanced ins and `instanceCount`:
 
 ```typescript
 const model = new Model(device, {
   vs,
   fs,
   geometry: new CubeGeometry(),
-  attributes: {
+  ins: {
     offsets: [offsetBuffer, {divisor: 1}],
     axes: [axisBuffer, {divisor: 1}],
     rotations: [rotationBuffer, {divisor: 1}]
@@ -227,9 +227,9 @@ import {phongLighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const transformVs = `
-  attribute float rotations;
+  in float rotations;
 
-  varying float vRotation;
+  out float vRotation;
 
   void main() {
     vRotation = rotations + 0.01;
@@ -237,19 +237,19 @@ const transformVs = `
 `;
 
 const vs = `\
-  attribute vec3 positions;
-  attribute vec3 normals;
-  attribute vec2 texCoords;
-  attribute vec2 offsets;
-  attribute vec3 axes;
-  attribute float rotations;
+  in vec3 positions;
+  in vec3 normals;
+  in vec2 texCoords;
+  in vec2 offsets;
+  in vec3 axes;
+  in float rotations;
 
   uniform mat4 uView;
   uniform mat4 uProjection;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  out vec3 vPosition;
+  out vec3 vNormal;
+  out vec2 vUV;
 
   void main(void) {
     float s = sin(rotations);
@@ -288,9 +288,9 @@ const fs = `\
   uniform sampler2D uTexture;
   uniform vec3 uEyePosition;
 
-  varying vec3 vPosition;
-  varying vec3 vNormal;
-  varying vec2 vUV;
+  in vec3 vPosition;
+  in vec3 vNormal;
+  in vec2 vUV;
 
   void main(void) {
     vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
@@ -353,7 +353,7 @@ const loop = new AnimationLoop({
       vs,
       fs,
       geometry: new CubeGeometry(),
-      attributes: {
+      ins: {
         offsets: [offsetBuffer, {divisor: 1}],
         axes: [axisBuffer, {divisor: 1}],
         rotations: [rotationBuffer, {divisor: 1}]
