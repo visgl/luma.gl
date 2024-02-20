@@ -41,8 +41,7 @@
     "@luma.gl/shadertools": "9.0.0-beta.4",
     "@luma.gl/test-utils": "9.0.0-beta.4",
     "@luma.gl/webgl": "9.0.0-beta.4",
-    "@luma.gl/webgpu": "9.0.0-beta.4",
-    "@probe.gl/test-utils": "^4.0.0"
+    "@luma.gl/webgpu": "9.0.0-beta.4"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

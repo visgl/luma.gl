@@ -3305,7 +3305,6 @@ __metadata:
     "@luma.gl/test-utils": "npm:9.0.0-beta.4"
     "@luma.gl/webgl": "npm:9.0.0-beta.4"
     "@luma.gl/webgpu": "npm:9.0.0-beta.4"
-    "@probe.gl/test-utils": "npm:^4.0.0"
   languageName: unknown
   linkType: soft
 
@@ -3338,7 +3337,6 @@ __metadata:
     "@loaders.gl/math": "npm:^4.0.4"
     "@luma.gl/test-utils": "npm:9.0.0-beta.4"
     "@math.gl/core": "npm:4.0.0"
-    "@probe.gl/test-utils": "npm:^4.0.0"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta.4
     "@luma.gl/engine": ^9.0.0-beta.4
@@ -3367,7 +3365,6 @@ __metadata:
     "@luma.gl/webgl": "npm:^9.0.0-beta.4"
     "@luma.gl/webgpu": "npm:^9.0.0-beta.4"
     "@probe.gl/env": "npm:^4.0.2"
-    "@probe.gl/test-utils": "npm:^4.0.2"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta.4
     "@luma.gl/engine": ^9.0.0-beta.4
@@ -3384,7 +3381,6 @@ __metadata:
     "@luma.gl/constants": "npm:9.0.0-beta.4"
     "@luma.gl/core": "npm:9.0.0-beta.4"
     "@probe.gl/env": "npm:^4.0.2"
-    "@probe.gl/test-utils": "npm:^4.0.0"
   peerDependencies:
     "@luma.gl/constants": ^9.0.0-beta.4
   languageName: unknown
@@ -3714,7 +3710,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@probe.gl/test-utils@npm:^4.0.0, @probe.gl/test-utils@npm:^4.0.2, @probe.gl/test-utils@npm:^4.0.5":
+"@probe.gl/test-utils@npm:^4.0.2, @probe.gl/test-utils@npm:^4.0.5":
   version: 4.0.5
   resolution: "@probe.gl/test-utils@npm:4.0.5"
   dependencies:
