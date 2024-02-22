@@ -597,10 +597,10 @@ export class Model {
 
       const fs = this.fs
         ? this.shaderFactory.createShader({
-            id: `${this.id}-fragment`,
-            stage: 'fragment',
-            source: this.fs
-          })
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.fs
+        })
         : null;
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
