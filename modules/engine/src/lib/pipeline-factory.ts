@@ -2,22 +2,13 @@
 import type {RenderPipelineProps} from '@luma.gl/core';
 import {Device, RenderPipeline} from '@luma.gl/core';
 
-/** Todo - should be same as RenderPipelineProps */
-export type PipelineFactoryProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
-  // Only accepts string shaders
-  vs: string;
-  fs: string;
-};
+export type PipelineFactoryProps = RenderPipelineProps;
 
 /**
  * Efficiently creates / caches pipelines
  */
 export class PipelineFactory {
-  static defaultProps: Required<PipelineFactoryProps> = {
-    ...RenderPipeline.defaultProps,
-    vs: undefined!,
-    fs: undefined!
-  };
+  static defaultProps: Required<PipelineFactoryProps> = {...RenderPipeline.defaultProps};
 
   readonly device: Device;
 
@@ -42,11 +33,7 @@ export class PipelineFactory {
     const hash = this._hashRenderPipeline({...props});
 
     if (!this._pipelineCache[hash]) {
-      const pipeline = this.device.createRenderPipeline({
-        ...props,
-        vs: this.device.createShader({stage: 'vertex', source: props.vs}),
-        fs: props.fs ? this.device.createShader({stage: 'fragment', source: props.fs}) : null
-      });
+      const pipeline = this.device.createRenderPipeline({...props});
 
       pipeline.hash = hash;
       this._pipelineCache[hash] = pipeline;
@@ -72,25 +59,25 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   private _hashRenderPipeline(props: PipelineFactoryProps): string {
-    const vsHash = this._getHash(props.vs);
-    const fsHash = props.fs ? this._getHash(props.fs) : 0;
+    const vsHash = this._getHash(props.vs.source);
+    const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
 
     // WebGL specific
     // const {varyings = [], bufferMode = {}} = props;
     // const varyingHashes = varyings.map((v) => this._getHash(v));
     const varyingHash = '-'; // `${varyingHashes.join('/')}B${bufferMode}`
+    const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     switch (this.device.info.type) {
       case 'webgpu':
         // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
-        const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
         // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
         // create a deepHash() to deduplicate?
-        return `${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}}`;
+        return `${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}`;
       default:
         // WebGL is more dynamic
-        return `${vsHash}/${fsHash}V${varyingHash}`;
+        return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
     }
   }
 
