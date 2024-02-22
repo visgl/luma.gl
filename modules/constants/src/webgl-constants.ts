@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable key-spacing, max-len, no-inline-comments, camelcase */
 
 /** 
@@ -1052,7 +1056,12 @@ enum GLEnum {
   /** The current time. */
   TIMESTAMP_EXT = 0x8e28,
   /** A Boolean indicating whether or not the GPU performed any disjoint operation. */
-  GPU_DISJOINT_EXT = 0x8fbb // A Boolean indicating whether or not the GPU performed any disjoint operation.
+  GPU_DISJOINT_EXT = 0x8fbb,
+
+  // https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
+  
+  /** a non-blocking poll operation, so that compile/link status availability can be queried without potentially incurring stalls */
+  COMPLETION_STATUS                = 0x91B1
 }
 
 export {GLEnum as GL};

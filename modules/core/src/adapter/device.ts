@@ -118,9 +118,9 @@ export type WebGPUDeviceFeature =
   | 'shader-f16'
   | 'depth24unorm-stencil8'
   | 'depth32float-stencil8'
-  | 'rg11b10ufloat-renderable'
-  | 'float32-filterable'
-  | 'bgra8unorm-storage'
+  | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
+  | 'float32-filterable' // Is the float32 format filterable?
+  | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
   | 'texture-compression-bc'
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
@@ -130,18 +130,16 @@ export type WebGPUDeviceFeature =
 // 'pipeline-statistics-query' |
 
 export type WebGLDeviceFeature =
-  | 'webgpu'
-  | 'webgl'
-  | 'glsl'
-  | 'wgsl'
+  // webgl unique features
+  | 'uniforms-webgl' // Supports non-UBO uniforms: renderPipeline.setUniforms()
+  | 'transform-feedback-webgl' // device.createTransformFeedback()
+  | 'constant-attributes-webgl' // vertexArray.setConstant()
 
   // api support
   | 'timer-query-webgl' // unify with WebGPU timestamp-query?
-  | 'uniforms-webgl'
-  | 'transform-feedback-webgl'
+  | 'shader-status-async-webgl' // Non-blocking shader compile/link status query available
 
   // texture rendering
-  | 'rg11b10ufloat-renderable'
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'
   | 'norm16-renderable-webgl'
@@ -159,6 +157,7 @@ export type WebGLDeviceFeature =
 
 type WebGLCompressedTextureFeatures =
   | 'texture-compression-bc5-webgl'
+  | 'texture-compression-bc7-webgl'
   | 'texture-compression-etc1-webgl'
   | 'texture-compression-pvrtc-webgl'
   | 'texture-compression-atc-webgl';
@@ -167,7 +166,11 @@ type WebGLCompressedTextureFeatures =
 export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures;
+  | WebGLCompressedTextureFeatures
+  | 'webgl'
+  | 'glsl'
+  | 'webgpu'
+  | 'wgsl';
 
 /**
  * WebGPU Device/WebGL context abstraction
@@ -217,7 +220,6 @@ export abstract class Device {
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
-  
   abstract destroy(): void;
 
   // Capabilities

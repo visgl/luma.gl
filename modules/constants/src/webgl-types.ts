@@ -1,6 +1,9 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable camelcase */
-import {GL} from './constants-enum';
+import {GL} from './webgl-constants';
 
 /** Type covering all typed arrays and classic arrays consisting of numbers */
 export type NumberArray = number[] | TypedArray;

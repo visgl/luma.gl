@@ -18,6 +18,9 @@ const texture_compression_etc1_webgl: DeviceFeature = 'texture-compression-etc1-
 const texture_compression_pvrtc_webgl: DeviceFeature = 'texture-compression-pvrtc-webgl';
 const texture_compression_atc_webgl: DeviceFeature = 'texture-compression-atc-webgl';
 
+// const float32_renderable_webgl: DeviceFeature = 'float32-renderable-webgl';
+// const float16_renderable_webgl: DeviceFeature = 'float16-renderable-webgl';
+
 // Define local webgl extension strings to optimize minification
 const X_S3TC = 'WEBGL_compressed_texture_s3tc'; // BC1, BC2, BC3
 const X_S3TC_SRGB = 'WEBGL_compressed_texture_s3tc_srgb'; // BC1, BC2, BC3
@@ -30,46 +33,46 @@ const X_PVRTC = 'WEBGL_compressed_texture_pvrtc';
 const X_ATC = 'WEBGL_compressed_texture_atc';
 
 // Define local webgl extension strings to optimize minification
-const EXT_SRGB = 'EXT_sRGB'; // https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
 const EXT_TEXTURE_NORM16 = 'EXT_texture_norm16';
-const EXT_FLOAT_WEBGL1 = 'WEBGL_color_buffer_float';
 const EXT_FLOAT_RENDER_WEBGL2 = 'EXT_color_buffer_float';
 // const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 // const DEPTH = 'WEBGL_depth_texture';
 
-const checkExtension = (gl: WebGL2RenderingContext, extension: string): boolean =>
-  gl.getExtension(extension);
-const checkExtensions = (gl: WebGL2RenderingContext, extensions: string[]): boolean =>
-  extensions.every(extension => gl.getExtension(extension));
+// WebGL1-only extensions
+// const EXT_SRGB = 'EXT_sRGB'; // https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
 
 // prettier-ignore
-const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, (gl: WebGL2RenderingContext) => boolean> > = {
-  'texture-blend-float-webgl': (gl) => checkExtension(gl, 'EXT_float_blend'),
-  'norm16-renderable-webgl': (gl) => checkExtension(gl, EXT_TEXTURE_NORM16),
-  'float32-filterable-linear-webgl': (gl) => checkExtension(gl, 'OES_texture_float_linear'),
-  'float16-filterable-linear-webgl': (gl) => checkExtension(gl, 'OES_texture_half_float_linear'),
-  'texture-filterable-anisotropic-webgl': (gl) => checkExtension(gl, 'EXT_texture_filter_anisotropic'),
-  'float32-renderable-webgl': (gl) => checkExtension(gl, 'EXT_color_buffer_float'), // [false, 'EXT_color_buffer_float'],
-  'float16-renderable-webgl': (gl) => checkExtension(gl, 'EXT_color_buffer_half_float'),
+const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, string[]>> = {
+  'float32-renderable-webgl': ['EXT_color_buffer_float'], // [false, 'EXT_color_buffer_float'],
+  'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
+  'norm16-renderable-webgl': [EXT_TEXTURE_NORM16],
 
-  'texture-compression-bc': (gl) => checkExtensions(gl, [X_S3TC, X_S3TC_SRGB, X_RGTC, X_BPTC]),
-  'texture-compression-bc5-webgl': (gl) => checkExtensions(gl, [X_RGTC]),
-  // 'texture-compression-bc7-webgl': gl => checkExtensions(gl, [X_BPTC]),
-  // 'texture-compression-bc3-srgb-webgl': gl => checkExtensions(gl, [X_S3TC_SRGB]),
-  // 'texture-compression-bc3-webgl': gl => checkExtensions(gl, [X_S3TC]),
-  'texture-compression-etc2': (gl) => checkExtensions(gl, [X_ETC2]),
-  'texture-compression-astc': (gl) => checkExtensions(gl, [X_ASTC]),
-  'texture-compression-etc1-webgl': (gl) => checkExtensions(gl, [X_ETC1]),
-  'texture-compression-pvrtc-webgl': (gl) => checkExtensions(gl, [X_PVRTC]),
-  'texture-compression-atc-webgl': (gl) => checkExtensions(gl, [X_ATC])
+  'float32-filterable-linear-webgl': ['OES_texture_float_linear'],
+  'float16-filterable-linear-webgl': ['OES_texture_half_float_linear'],
+  'texture-filterable-anisotropic-webgl': ['EXT_texture_filter_anisotropic'],
+
+  'texture-blend-float-webgl': ['EXT_float_blend'],
+
+  'texture-compression-bc': [X_S3TC, X_S3TC_SRGB, X_RGTC, X_BPTC],
+  // 'texture-compression-bc3-srgb-webgl': [X_S3TC_SRGB],
+  // 'texture-compression-bc3-webgl': [X_S3TC],
+  'texture-compression-bc5-webgl': [X_RGTC],
+  'texture-compression-bc7-webgl': [X_BPTC],
+  'texture-compression-etc2': [X_ETC2],
+  'texture-compression-astc': [X_ASTC],
+  'texture-compression-etc1-webgl': [X_ETC1],
+  'texture-compression-pvrtc-webgl': [X_PVRTC],
+  'texture-compression-atc-webgl': [X_ATC]
 };
 
-export function checkTextureFeature(gl: WebGL2RenderingContext, feature: DeviceFeature): boolean {
-  return TEXTURE_FEATURE_CHECKS[feature]?.(gl) || false;
+function checkTextureFeature(gl: WebGL2RenderingContext, feature: DeviceFeature): boolean {
+  const extensions = TEXTURE_FEATURE_CHECKS[feature] || [];
+  return extensions.every(extension => gl.getExtension(extension));
 }
 
-const checkTextureFeatures = (gl: WebGL2RenderingContext, features: DeviceFeature[]): boolean =>
-  features.every(feature => checkTextureFeature(gl, feature));
+function checkTextureFeatures(gl: WebGL2RenderingContext, features: DeviceFeature[]): boolean {
+  return features.every(feature => checkTextureFeature(gl, feature));
+}
 
 /** Return a list of texture feature strings (for Device.features). Mainly compressed texture support */
 export function getTextureFeatures(gl: WebGL2RenderingContext): DeviceFeature[] {
@@ -82,9 +85,6 @@ export function getTextureFeatures(gl: WebGL2RenderingContext): DeviceFeature[] 
 /** Map a format to webgl and constants */
 type Format = {
   gl?: GL;
-  /** If a different unsized format is needed in WebGL1 */
-  gl1?: GL;
-  gl1ext?: string;
   /** format requires WebGL2, when using a WebGL 1 context, color renderbuffer formats are limited */
   gl2ext?: string;
 
@@ -129,9 +129,9 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // Unsized formats that leave the precision up to the driver.
   // TODO - Fix bpp constants
   // 'r8unorm-unsized': {gl: GL.LUMINANCE, b: 4, c: 2, bpp: 4},
-  'rgb8unorm-unsized': {gl: GL.RGB, gl1: GL.RGB, b: 4, c: 2, bpp: 4,
+  'rgb8unorm-unsized': {gl: GL.RGB, b: 4, c: 2, bpp: 4,
     dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
-  'rgba8unorm-unsized': {gl: GL.RGBA, gl1: GL.RGBA, b: 4, c: 2, bpp: 4,
+  'rgba8unorm-unsized': {gl: GL.RGBA, b: 4, c: 2, bpp: 4,
     dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
   // 'rgb8unorm-srgb-unsized': {gl: GL.SRGB_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
   // 'rgba8unorm-srgb-unsized': {gl: GL.SRGB_ALPHA_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
@@ -164,8 +164,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rgb8snorm-webgl': {gl: GL.RGB8_SNORM, b: 3, c: 3, wgpu: false},
 
   // 32-bit formats  
-  'rgba8unorm': {gl: GL.RGBA8, gl1: GL.RGBA, b: 4, c: 2, bpp: 4},
-  'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8, gl1: GL.SRGB_ALPHA_EXT, b: 4, c: 4, gl1ext: EXT_SRGB, bpp: 4},
+  'rgba8unorm': {gl: GL.RGBA8, b: 4, c: 2, bpp: 4},
+  'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8, b: 4, c: 4, bpp: 4},
   'rgba8snorm': {gl: GL.RGBA8_SNORM, b: 4, c: 4},
   'rgba8uint': {gl: GL.RGBA8UI, b: 4, c: 4, bpp: 4},
   'rgba8sint': {gl: GL.RGBA8I, b: 4, c: 4, bpp: 4},
@@ -200,14 +200,13 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: 'float32-renderable-webgl', filter: 'float32-filterable-linear-webgl', renderbuffer: true},
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, renderbuffer: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, renderbuffer: true},
-  'rgba16float': {gl: GL.RGBA16F, gl1: GL.RGBA, b: 8, c: 4, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl'},
+  'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl'},
   'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_TEXTURE_NORM16},
   'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
 
   // 96-bit formats (deprecated!)
-  'rgb32float-webgl': {gl: GL.RGB32F, gl1: GL.RGB, render: 'float32-renderable-webgl', filter: 'float32-filterable-linear-webgl',
-    gl2ext: EXT_FLOAT_RENDER_WEBGL2,  gl1ext: EXT_FLOAT_WEBGL1, // WebGL1 render buffers are supported with GL.RGB32F
-    dataFormat: GL.RGB, types: [GL.FLOAT]},
+  'rgb32float-webgl': {gl: GL.RGB32F, render: 'float32-renderable-webgl', filter: 'float32-filterable-linear-webgl',
+    gl2ext: EXT_FLOAT_RENDER_WEBGL2, dataFormat: GL.RGB, types: [GL.FLOAT]},
   
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, renderbuffer: true},
@@ -215,14 +214,14 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, render: 'float32-renderable-webgl', filter: 'float32-filterable-linear-webgl', renderbuffer: true},
 
   // Depth and stencil formats
-  'stencil8': {gl: GL.STENCIL_INDEX8, gl1: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT, renderbuffer: true}, // 8 stencil bits
+  'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT, renderbuffer: true}, // 8 stencil bits
 
-  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, gl1: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT, renderbuffer: true}, // 16 depth bits
+  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT, renderbuffer: true}, // 16 depth bits
   'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, attachment: GL.DEPTH_ATTACHMENT},
   'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, attachment: GL.DEPTH_ATTACHMENT, renderbuffer: true},
 
   // The depth component of the "depth24plus" and "depth24plus-stencil8" formats may be implemented as either a 24-bit depth value or a "depth32float" value.
-  'depth24plus-stencil8': {gl: GL.DEPTH_STENCIL, gl1: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true, depthTexture: true},
+  'depth24plus-stencil8': {gl: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true, depthTexture: true},
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true},
   // "depth32float-stencil8" feature
@@ -313,8 +312,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
 };
 
 /** Legal combinations for internalFormat, format and type *
-// [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8], gl1ext: DEPTH},
-// [GL.DEPTH_STENCIL]: {gl1ext: DEPTH},
+// [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8]},
+// [GL.DEPTH_STENCIL]: ,
 // Sized texture format
 // R
 [GL.R8]: {dataFormat: GL.RED, types: [GL.UNSIGNED_BYTE], gl2: true},
@@ -326,19 +325,19 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
 [GL.RG8UI]: {dataFormat: GL.RG_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
 // // RGB
 [GL.RGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true},
-[GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true, gl1ext: EXT_SRGB},
-[GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1ext: EXT_HALF_FLOAT_WEBGL1},
+[GL.SRGB8]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE], gl2: true},
+[GL.RGB16F]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
 [GL.RGB8UI]: {dataFormat: GL.RGB_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true},
 // // RGBA
 
 [GL.RGB565]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5], gl2: true},
 [GL.R11F_G11F_B10F]: {dataFormat: GL.RGB, types: [GL.UNSIGNED_INT_10F_11F_11F_REV, GL.HALF_FLOAT, GL.FLOAT], gl2: true},
-[GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1ext: EXT_HALF_FLOAT_WEBGL1},
+[GL.RGB9_E5]: {dataFormat: GL.RGB, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
 [GL.RGBA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true},
 [GL.SRGB8_ALPHA8]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE], gl2: true, gl1ext: EXT_SRGB},
 [GL.RGB5_A1]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_5_5_1], gl2: true},
 [GL.RGBA4]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4], gl2: true},
-[GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true, gl1ext: EXT_HALF_FLOAT_WEBGL1},
+[GL.RGBA16F]: {dataFormat: GL.RGBA, types: [GL.HALF_FLOAT, GL.FLOAT], gl2: true},
 [GL.RGBA8UI]: {dataFormat: GL.RGBA_INTEGER, types: [GL.UNSIGNED_BYTE], gl2: true}
 */
 
@@ -474,9 +473,7 @@ export function convertGLToTextureFormat(format: GL | TextureFormat): TextureFor
   if (typeof format === 'string') {
     return format;
   }
-  const entry = Object.entries(TEXTURE_FORMATS).find(
-    ([, entry]) => entry.gl === format || entry.gl1 === format
-  );
+  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
   if (!entry) {
     throw new Error(`Unknown texture format ${format}`);
   }
