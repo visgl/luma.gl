@@ -8,7 +8,7 @@
 // Higher level abstractions can be built on these classes
 
 // Types
-export type {WebGLLimits} from './adapter/device-helpers/device-limits';
+export type {WebGLLimits} from './adapter/device-helpers/webgl-device-limits';
 
 // WebGL adapter classes
 export {WebGLDevice} from './adapter/webgl-device';

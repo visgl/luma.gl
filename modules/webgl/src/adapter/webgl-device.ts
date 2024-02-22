@@ -23,9 +23,9 @@ import {
   trackContextState
 } from '../context/state-tracker/track-context-state';
 import {createBrowserContext} from '../context/context/create-browser-context';
-import {getDeviceInfo} from './device-helpers/get-device-info';
-import {getDeviceFeatures} from './device-helpers/device-features';
-import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/device-limits';
+import {getDeviceInfo} from './device-helpers/webgl-device-info';
+import {getDeviceFeatures} from './device-helpers/webgl-device-features';
+import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools, makeDebugContext} from '../context/debug/webgl-developer-tools';

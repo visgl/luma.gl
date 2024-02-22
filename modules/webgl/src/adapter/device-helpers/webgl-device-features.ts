@@ -12,7 +12,7 @@ export function getDeviceFeatures(gl: WebGL2RenderingContext): Set<DeviceFeature
   const features = getWebGLFeatures(gl);
 
   // texture features
-  // features.add('texture-compression-bc'); 
+  // features.add('texture-compression-bc');
   for (const textureFeature of getTextureFeatures(gl)) {
     features.add(textureFeature);
   }
@@ -29,16 +29,12 @@ export function getDeviceFeatures(gl: WebGL2RenderingContext): Set<DeviceFeature
 
 /** Extract all WebGL features */
 export function getWebGLFeatures(gl: WebGL2RenderingContext): Set<DeviceFeature> {
-  // Enables EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
+  // Enable EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
   gl.getExtension('EXT_color_buffer_float');
-  gl.getExtension('WEBGL_color_buffer_float');
-  gl.getExtension('EXT_float_blend');
 
-  const features = new Set<DeviceFeature>(WEBGL_ALWAYS_FEATURES);
-  for (const feature of Object.keys(WEBGL_FEATURES)) {
-    // @ts-expect-error
+  const features = new Set<DeviceFeature>();
+  for (const feature of Object.keys(WEBGL_FEATURES) as DeviceFeature[]) {
     if (isFeatureSupported(gl, feature)) {
-      // @ts-expect-error
       features.add(feature);
     }
   }
@@ -47,39 +43,27 @@ export function getWebGLFeatures(gl: WebGL2RenderingContext): Set<DeviceFeature>
 
 function isFeatureSupported(gl: WebGL2RenderingContext, feature: DeviceFeature): boolean {
   const featureInfo = WEBGL_FEATURES[feature];
-  if (!featureInfo) {
-    return false;
-  }
 
-  // Get extension name from table
-  const featureDefinition = featureInfo;
-
-  // Check if the value is dependent on checking one or more extensions
-  if (typeof featureDefinition === 'boolean') {
-    return featureDefinition;
-  }
-
-  return Boolean(gl.getExtension(featureDefinition));
+  // string value requires checking the corresponding WebGL extension
+  return typeof featureInfo === 'string'
+    ? Boolean(gl.getExtension(featureInfo))
+    : Boolean(featureInfo);
 }
 
-const WEBGL_ALWAYS_FEATURES: DeviceFeature[] = ['webgl', 'glsl', 'transform-feedback-webgl'];
-
-/** 
+/**
  * Defines luma.gl "feature" names and semantics
  * when value is 'string' it is the name of the extension that enables this feature
  */
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
-  'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
+  webgl: true,
+  glsl: true,
+
+  'uniforms-webgl': true,
   'transform-feedback-webgl': true,
+  'constant-attributes-webgl': true,
 
-  // WEBGL1 SUPPORT
-  'texture-blend-float-webgl': 'EXT_float_blend',
+  'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
+  'shader-status-async-webgl': 'KHR_parallel_shader_compile'
 
-  'float32-filterable-linear-webgl': 'OES_texture_float_linear',
-  'float16-filterable-linear-webgl': 'OES_texture_half_float_linear',
-  'texture-filterable-anisotropic-webgl': 'EXT_texture_filter_anisotropic',
-
-  // FRAMEBUFFERS, TEXTURES AND RENDERBUFFERS
-  'float32-renderable-webgl': 'EXT_color_buffer_float',
-  'float16-renderable-webgl': 'EXT_color_buffer_half_float',
+  // Textures are handled by getTextureFeatures()
 };
