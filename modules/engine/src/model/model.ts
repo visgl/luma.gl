@@ -1,7 +1,12 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {
+  TypedArray,
+  RenderPipelineProps,
+  RenderPipelineParameters,
+  Shader
+} from '@luma.gl/core';
 import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {
@@ -20,6 +25,7 @@ import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {PipelineFactory} from '../lib/pipeline-factory';
+import {ShaderFactory} from '../lib/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 
@@ -40,6 +46,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   shaderInputs?: ShaderInputs;
   /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
   pipelineFactory?: PipelineFactory;
+  /** shader factory to use to create shaders. Defaults to default factory for the device. */
+  shaderFactory?: ShaderFactory;
   /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
   shaderAssembler?: ShaderAssembler;
 
@@ -97,6 +105,7 @@ export class Model {
 
     shaderInputs: undefined!,
     pipelineFactory: undefined!,
+    shaderFactory: undefined!,
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
   };
@@ -106,6 +115,7 @@ export class Model {
   readonly vs: string;
   readonly fs: string;
   readonly pipelineFactory: PipelineFactory;
+  readonly shaderFactory: ShaderFactory;
   userData: {[key: string]: any} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
@@ -221,6 +231,7 @@ export class Model {
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
+    this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
     // Create the pipeline
     // @note order is important
@@ -277,6 +288,8 @@ export class Model {
   }
 
   destroy(): void {
+    this.shaderFactory.release(this.pipeline.vs);
+    this.shaderFactory.release(this.pipeline.fs);
     this.pipelineFactory.release(this.pipeline);
     this._uniformStore.destroy();
   }
@@ -565,27 +578,29 @@ export class Model {
 
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
+      const prevShaders = [] as Shader[];
       if (this.pipeline) {
         log.log(
           1,
           `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
         )();
+        prevShaders.push(this.pipeline.vs, this.pipeline.fs);
       }
 
       this._pipelineNeedsUpdate = false;
 
-      const vs = this.device.createShader({
+      const vs = this.shaderFactory.createShader({
         id: `${this.id}-vertex`,
         stage: 'vertex',
         source: this.vs
       });
 
       const fs = this.fs
-        ? this.device.createShader({
-          id: `${this.id}-fragment`,
-          stage: 'fragment',
-          source: this.fs
-        })
+        ? this.shaderFactory.createShader({
+            id: `${this.id}-fragment`,
+            stage: 'fragment',
+            source: this.fs
+          })
         : null;
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
@@ -601,6 +616,10 @@ export class Model {
         this.pipeline.shaderLayout,
         this.bufferLayout
       );
+
+      for (const shader of prevShaders) {
+        this.shaderFactory.release(shader);
+      }
     }
     return this.pipeline;
   }

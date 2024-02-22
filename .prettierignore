@@ -16,6 +16,7 @@ test
 !modules/core/src/adapter/types/shader-layout.ts
 !modules/core/src/index.ts
 !modules/engine/src/model/model.ts
+!modules/engine/src/lib/shader-factory.ts
 !modules/webgl/src/adapter/resources/webgl-buffer.ts
 !modules/webgl/src/adapter/resources/webgl-render-pipeline.ts
 !modules/webgl/src/adapter/resources/webgl-transform-feedback.ts

@@ -23,6 +23,7 @@ export type {TextureTransformProps} from './transform/texture-transform';
 export {TextureTransform} from './transform/texture-transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
+export {ShaderFactory} from './lib/shader-factory';
 
 // Utils
 export {ClipSpace} from './lib/clip-space';
