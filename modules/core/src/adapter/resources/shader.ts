@@ -48,8 +48,8 @@ export abstract class Shader extends Resource<ShaderProps> {
   readonly stage: 'vertex' | 'fragment' | 'compute';
   /** The source code of this shader */
   readonly source: string;
-  /** The compilation status of this shader. May be 'pending' if compilation is done asynchronously */
-  compilationStatus: 'success' | 'error' | 'pending' = 'pending';
+  /** The compilation status of the shader. 'pending' if compilation is asynchronous, and on production */
+  compilationStatus: 'pending' | 'success' | 'error' = 'pending';
 
   /** Create a new Shader instance */
   constructor(device: Device, props: ShaderProps) {

@@ -92,6 +92,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   shaderLayout: ShaderLayout;
   /** Buffer map describing buffer interleaving etc */
   readonly bufferLayout: BufferLayout[];
+  /** The linking status of the pipeline. 'pending' if linking is asynchronous, and on production */
+  linkStatus: 'pending' | 'success' | 'error' = 'pending';
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, RenderPipeline.defaultProps);

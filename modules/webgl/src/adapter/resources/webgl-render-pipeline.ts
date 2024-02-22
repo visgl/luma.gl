@@ -69,7 +69,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       this.device.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
     }
 
-    this._compileAndLink();
+    this._linkShaders();
 
     this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
     // Merge provided layout with introspected layout
@@ -79,7 +79,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     switch (this.props.topology) {
       case 'triangle-fan-webgl':
       case 'line-loop-webgl':
-        log.warn(`Primitive topology ${this.props.topology} is deprecated and will be removed in v9.1`);
+        log.warn(
+          `Primitive topology ${this.props.topology} is deprecated and will be removed in v9.1`
+        );
         break;
       default:
     }
@@ -151,7 +153,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const {bindings} = splitUniformsAndBindings(uniforms);
     Object.keys(bindings).forEach(name => {
       log.warn(
-        `Unsupported value "${JSON.stringify(bindings[name])}" used in setUniforms() for key ${name}. Use setBindings() instead?`
+        `Unsupported value "${JSON.stringify(
+          bindings[name]
+        )}" used in setUniforms() for key ${name}. Use setBindings() instead?`
       )();
     });
     // TODO - check against layout
@@ -175,6 +179,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
   }): boolean {
+    // If we are using async linking, we need to wait until linking completes
+    if (this.linkStatus !== 'success') {
+      return false;
+    }
+
     const {
       renderPass,
       vertexArray,
@@ -282,10 +291,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     return true;
   }
 
+  // PRIVATE METHODS
+
   // setAttributes(attributes: Record<string, Buffer>): void {}
   // setBindings(bindings: Record<string, Binding>): void {}
 
-  protected _compileAndLink() {
+  protected async _linkShaders() {
     const {gl} = this.device;
     gl.attachShader(this.handle, this.vs.handle);
     gl.attachShader(this.handle, this.fs.handle);
@@ -293,25 +304,89 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     gl.linkProgram(this.handle);
     log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
 
-    // Avoid checking program linking error in production
-    // @ts-expect-error
-    if (!gl.debug && log.level === 0) {
+    // TODO Avoid checking program linking error in production
+    if (log.level === 0) {
       // return;
     }
 
+    if (!this.device.features.has('shader-status-async-webgl')) {
+      const status = this._getLinkStatus();
+      this._reportLinkStatus(status);
+      return;
+    }
+
+    // async case
+    log.once(1, 'RenderPipeline linking is asynchronous')();
+    await this._waitForLinkComplete();
+    log.info(2, `RenderPipeline ${this.id} - async linking complete: ${this.linkStatus}`)();
+    const status = this._getLinkStatus();
+    this._reportLinkStatus(status);
+  }
+
+  /** Report link status. First, check for shader compilation failures if linking fails */
+  _reportLinkStatus(status: 'success' | 'linking' | 'validation') {
+    switch (status) {
+      case 'success':
+        return;
+
+      default:
+        // First check for shader compilation failures if linking fails
+        if (this.vs.compilationStatus === 'error') {
+          this.vs.debugShader();
+          throw new Error(`Error during compilation of shader ${this.vs.id}`);
+        }
+        if (this.fs?.compilationStatus === 'error') {
+          this.vs.debugShader();
+          throw new Error(`Error during compilation of shader ${this.fs.id}`);
+        }
+        throw new Error(`Error during ${status}: ${this.device.gl.getProgramInfoLog(this.handle)}`);
+    }
+  }
+
+  /**
+   * Get the shader compilation status
+   * TODO - Load log even when no error reported, to catch warnings?
+   * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
+   */
+  _getLinkStatus(): 'success' | 'linking' | 'validation' {
+    const {gl} = this.device;
     const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
     if (!linked) {
-      throw new Error(`Error linking: ${gl.getProgramInfoLog(this.handle)}`);
+      this.linkStatus = 'error';
+      return 'linking';
     }
 
     gl.validateProgram(this.handle);
     const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
     if (!validated) {
-      throw new Error(`Error validating: ${gl.getProgramInfoLog(this.handle)}`);
+      this.linkStatus = 'error';
+      return 'validation';
     }
+
+    this.linkStatus = 'success';
+    return 'success';
   }
 
-  // PRIVATE METHODS
+  /** Use KHR_parallel_shader_compile extension if available */
+  async _waitForLinkComplete(): Promise<void> {
+    const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms));
+    const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
+
+    // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
+    if (!this.device.features.has('shader-status-async-webgl')) {
+      await waitMs(DELAY_MS);
+      return;
+    }
+
+    const {gl} = this.device;
+    for (;;) {
+      const complete = gl.getProgramParameter(this.handle, GL.COMPLETION_STATUS);
+      if (complete) {
+        return;
+      }
+      await waitMs(DELAY_MS);
+    }
+  }
 
   /**
    * Checks if all texture-values uniforms are renderable (i.e. loaded)
@@ -333,6 +408,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   /** Apply any bindings (before each draw call) */
   _applyBindings() {
+    // If we are using async linking, we need to wait until linking completes
+    if (this.linkStatus !== 'success') {
+      return;
+    }
+
     const {gl} = this.device;
     gl.useProgram(this.handle);
 
@@ -350,7 +430,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           // Set buffer
           const {name} = binding;
           const location = gl.getUniformBlockIndex(this.handle, name);
-          if (location as GL === GL.INVALID_INDEX) {
+          if ((location as GL) === GL.INVALID_INDEX) {
             throw new Error(`Invalid uniform block name ${name}`);
           }
           gl.uniformBlockBinding(this.handle, uniformBufferIndex, location);

@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {Shader, ShaderProps, CompilerMessage} from '@luma.gl/core';
+import {Shader, ShaderProps, CompilerMessage, log} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import {WebGLDevice} from '../webgl-device';
@@ -39,6 +39,7 @@ export class WEBGLShader extends Shader {
   }
 
   override async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
+    await this._waitForCompilationComplete();
     return this.getCompilationInfoSync();
   }
 
@@ -49,7 +50,8 @@ export class WEBGLShader extends Shader {
 
   // PRIVATE METHODS
 
-  _compile(source: string): void {
+  /** Compile a shader and get compilation status */
+  protected async _compile(source: string): Promise<void> {
     const addGLSLVersion = (source: string) =>
       source.startsWith('#version ') ? source : `#version 100\n${source}`;
     source = addGLSLVersion(source);
@@ -58,17 +60,63 @@ export class WEBGLShader extends Shader {
     gl.shaderSource(this.handle, source);
     gl.compileShader(this.handle);
 
-    // TODO - For performance reasons, avoid checking shader compilation errors on production?
-    // TODO - Load log even when no error reported, to catch warnings?
-    // https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-    this.compilationStatus = gl.getShaderParameter(this.handle, GL.COMPILE_STATUS) ? 'success' : 'error';
-
-    // The `Shader` base class will determine if debug window should be opened based on props
-    this.debugShader();
-
-    if (this.compilationStatus === 'error') {
-      throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
+    // For performance reasons, avoid checking shader compilation errors on production
+    if (log.level === 0) {
+      this.compilationStatus = 'pending';
+      return;
     }
+
+    // Sync case - slower, but advantage is that it throws in the constructor, making break on error more useful
+    if (!this.device.features.has('shader-status-async-webgl')) {
+      this._getCompilationStatus();
+      if (this.compilationStatus === 'error') {
+        throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
+      }
+      // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
+      this.debugShader();
+      return;
+    }
+
+    // async case
+    log.once(1, 'Shader compilation is asynchronous')();
+    await this._waitForCompilationComplete();
+    log.info(2, `Shader ${this.id} - async compilation complete: ${this.compilationStatus}`)();
+    this._getCompilationStatus();
+
+    // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
+    this.debugShader();
+  }
+
+  /** Use KHR_parallel_shader_compile extension if available */
+  protected async _waitForCompilationComplete(): Promise<void> {
+    const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms));
+    const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
+
+    // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
+    if (!this.device.features.has('shader-status-async-webgl')) {
+      await waitMs(DELAY_MS);
+      return;
+    }
+
+    const {gl} = this.device;
+    for (;;) {
+      const complete = gl.getShaderParameter(this.handle, GL.COMPLETION_STATUS);
+      if (complete) {
+        return;
+      }
+      await waitMs(DELAY_MS);
+    }
+  }
+
+  /**
+   * Get the shader compilation status
+   * TODO - Load log even when no error reported, to catch warnings?
+   * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
+  */
+  protected _getCompilationStatus() {
+    this.compilationStatus = this.device.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS)
+      ? 'success'
+      : 'error';
   }
 }
 
@@ -81,4 +129,3 @@ export class WEBGLShader extends Shader {
 //   log.error(`GLSL compilation errors in ${shaderDescription}\n${formattedLog}`)();
 //   displayShaderLog(parsedLog, source, shaderName);
 // }
-

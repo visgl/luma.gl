@@ -33,6 +33,17 @@ Legacy Functionality
 - **GLSL 1.00** is  no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
 - **headless-gl** Node.js integration is no longer supported
 
+New module structure
+
+| Module                     | Impact               | Description                                                                                                     |
+| -------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
+| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
+| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
+| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                         |
+| **`@luma.gl/webgl`**       | No exported API      | Now an optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s. |
+| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.  |
+
 New features
 
 **`@luma.gl/core`**
@@ -49,38 +60,12 @@ New features
 
 - New module that exports the glTF classes (moved from `@luma.gl/experimental`).
 
-**`@luma.gl/shadertools`** (lightly updated API)
+**`@luma.gl/shadertools`**
 
 - All shader modules now use uniform buffers.
 - NEW: `ShaderAssember` class that provides a clean entry point to the shader module system.
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 
-Module changes
+**`@luma.gl/webgl`** 
 
-**`@luma.gl/core`** (new API)
-
-- The new portable luma.gl GPU API. Applications written against `@luma.gl/core` v9 are portable and can run on both WebGPU and WebGL2 devices.
-
-**`@luma.gl/engine`** (lightly updated API)
-
-- Exports classic luma.gl engine classes such as `Model`, `AnimationLoop` etc, which now work portably on both WebGPU and WebGL. 
-
-**`@luma.gl/gltf`** ("renamed" module)
-
-- New module that exports the glTF classes (moved from `@luma.gl/experimental`).
-
-**`@luma.gl/shadertools`** (lightly updated API)
-
-- Exports the shader assembler API and the shader module library.
-
-**`@luma.gl/webgl`** (rewritten, no longer exports an API)
-
-- This is now an optional "GPU backend module", that provides a WebGL 2 implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of `type; 'webgl'`.
-- Note: Requires a browser / environment that supports the WebGL API.
-
-**`@luma.gl/webgpu`** (new module, does not export an API)
-
-- A new optional "GPU backend module", that provides a WebGPU implementation of the luma.gl core API. 
-- Importing this module enables the application to create `Device`s of `type: 'webgpu'`.
-- Note: Requires a browser / environment that supports the WebGPU API.
+- Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
