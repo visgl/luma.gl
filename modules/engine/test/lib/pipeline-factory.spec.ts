@@ -7,14 +7,14 @@ import {PipelineFactory} from '@luma.gl/engine';
 
 // TODO - this doesn't test that parameters etc are properly cached
 
-const vs = glsl`\
+const vsSource = glsl`\
 attribute vec4 positions;
 
 void main(void) {
   gl_Position = positions;
 }
 `;
-const fs = glsl`\
+const fsSource = glsl`\
 precision highp float;
 
 void main(void) {
@@ -40,6 +40,8 @@ test('PipelineFactory#getDefaultPipelineFactory', (t) => {
 test('PipelineFactory#release', (t) => {
   const pipelineFactory = new PipelineFactory(webglDevice);
 
+  const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
+  const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
   const pipeline1 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
   const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 

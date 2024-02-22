@@ -571,7 +571,7 @@ export class Model {
           `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
         )();
       }
-      
+
       this._pipelineNeedsUpdate = false;
 
       const vs = this.device.createShader({
@@ -588,7 +588,7 @@ export class Model {
         })
         : null;
 
-      this.pipeline = this.device.createRenderPipeline({
+      this.pipeline = this.pipelineFactory.createRenderPipeline({
         ...this.props,
         bufferLayout: this.bufferLayout,
         topology: this.topology,
