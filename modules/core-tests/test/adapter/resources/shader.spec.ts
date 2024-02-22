@@ -12,7 +12,8 @@ vec4 goggledygook = 100;
 #define AND_NEVER_EVER_GET_HERE
 `;
 
-test('Shader', async t => {
+// TODO - sync shader compilation checks and throws are now a debug-only feature
+test.skip('Shader', async t => {
   // Only test WebGL, WebGPU is not able to detect shader failures synchronously, but require polling.
   for (const device of getWebGLTestDevices()) {
     t.throws(
