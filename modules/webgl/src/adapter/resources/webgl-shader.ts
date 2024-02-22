@@ -51,7 +51,7 @@ export class WEBGLShader extends Shader {
   // PRIVATE METHODS
 
   /** Compile a shader and get compilation status */
-  async _compile(source: string): Promise<void> {
+  protected async _compile(source: string): Promise<void> {
     const addGLSLVersion = (source: string) =>
       source.startsWith('#version ') ? source : `#version 100\n${source}`;
     source = addGLSLVersion(source);
@@ -80,21 +80,21 @@ export class WEBGLShader extends Shader {
     // async case
     log.once(1, 'Shader compilation is asynchronous')();
     await this._waitForCompilationComplete();
-    this._getCompilationStatus();
     log.info(2, `Shader ${this.id} - async compilation complete: ${this.compilationStatus}`)();
+    this._getCompilationStatus();
 
     // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
     this.debugShader();
   }
 
   /** Use KHR_parallel_shader_compile extension if available */
-  async _waitForCompilationComplete(): Promise<void> {
-    const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, 10));
+  protected async _waitForCompilationComplete(): Promise<void> {
+    const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms));
     const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
 
     // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
     if (!this.device.features.has('shader-status-async-webgl')) {
-      waitMs(DELAY_MS);
+      await waitMs(DELAY_MS);
       return;
     }
 
@@ -104,7 +104,7 @@ export class WEBGLShader extends Shader {
       if (complete) {
         return;
       }
-      waitMs(DELAY_MS);
+      await waitMs(DELAY_MS);
     }
   }
 
@@ -113,7 +113,7 @@ export class WEBGLShader extends Shader {
    * TODO - Load log even when no error reported, to catch warnings?
    * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
   */
-  _getCompilationStatus() {
+  protected _getCompilationStatus() {
     this.compilationStatus = this.device.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS)
       ? 'success'
       : 'error';

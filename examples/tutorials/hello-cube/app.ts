@@ -27,8 +27,6 @@ uniform appUniforms {
   mat4 uMVP;
 } app;
 
-l;ajhfdh;lsadf
-
 // CUBE GEOMETRY 
 layout(location=0) in vec3 positions;
 layout(location=1) in vec2 texCoords;
