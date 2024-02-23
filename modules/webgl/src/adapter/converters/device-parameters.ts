@@ -151,6 +151,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   //   // Handled by depthBias
   // },
 
+  // WEBGL EXTENSIONS
+
   if (device.features.has('provoking-vertex-webgl')) {
     const extensions = webglDevice.getExtension('WEBGL_provoking_vertex');
     const ext = extensions.WEBGL_provoking_vertex;
@@ -161,6 +163,24 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
         last: GL.LAST_VERTEX_CONVENTION
       });
       ext?.provokingVertexWEBGL(vertex);
+    }
+  }
+
+  if (device.features.has('polygon-mode-webgl')) {
+    const extensions = webglDevice.getExtension('WEBGL_polygon_mode');
+    const ext = extensions.WEBGL_polygon_mode;
+
+    if (parameters.polygonMode) {
+      const mode = map('polygonMode', parameters.provokingVertex, {
+        fill: GL.FILL_WEBGL,
+        lint: GL.LINE_WEBGL
+      });
+      ext?.polygonModeWEBGL(GL.FRONT, mode);
+      ext?.polygonModeWEBGL(GL.BACK, mode);
+    }
+
+    if (parameters.polygonOffsetLine) {
+      gl.enable(GL.POLYGON_OFFSET_LINE_WEBGL);
     }
   }
 

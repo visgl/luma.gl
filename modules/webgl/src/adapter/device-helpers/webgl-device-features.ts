@@ -63,7 +63,9 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   'constant-attributes-webgl': true,
 
   'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
-  'shader-status-async-webgl': 'KHR_parallel_shader_compile'
+  'shader-status-async-webgl': 'KHR_parallel_shader_compile',
+  'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
+  'polygon-mode-webgl': 'WEBGL_polygon_mode',
 
   // Textures are handled by getTextureFeatures()
 };

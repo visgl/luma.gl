@@ -62,6 +62,7 @@ be queried on a per-texture basis
 | `timer-query-webgl`                    | <F f="timer-query-webgl"/>                    | GPU timer support                      |
 | `shader-status-async-webgl`            | <F f="shader-status-async-webgl"/>            | Non-blocking compile/link status       |
 | `provoking-vertex-webgl`               | <F f="provoking-vertex-webgl"/>               | Primitive vertex used for flat shading |
+| `polygon-mode-webgl`                   | <F f="polygon-mode-webgl"/>                   | Wireframe rendering parameters         |
 | **WebGL-only Features**                |
 | `transform-feedback-webgl`             | <F f="transform-feedback-webgl"/>             | `TransformFeedback` support            |
 | `uniforms-webgl`                       | <F f="uniforms-webgl"/>                       | non-UBO uniforms support               |
@@ -125,18 +126,9 @@ On your current browser, this would yield:
 
 <WebGLExtensions />
 
-The following table illustrates how WebGL extensions map to luma.gl features.
-
-:::info
-Caveat: this table is mainly included for reference purposes, in cases where
-it is helpful to understand exactly which extensions are being used by luma.gl
-under the hood.
-:::
-
-:::caution
-WebGL extensions can be demanding to work with directly. The extensions are very granular,
-enabling subfeatures of bigger features.
-:::
+The following table illustrates how luma.gl features map to WebGL 2 extensions.
+This table is mainly included for reference purposes,
+WebGL extensions are very granular and can be demanding to work with directly.
 
 | `luma.gl feature`                           | WebGL Extension                                                | Description                                                                                                                     |
 | ------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -144,14 +136,12 @@ enabling subfeatures of bigger features.
 | `webgl`                                     | True for WebGL Context                                         |                                                                                                                                 |
 | `timer-query-webgl`                         | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        |                                                                                                                                 |
 | \*\* GLSL extensions\*\*                    |                                                                |                                                                                                                                 |
-| **`Texture`s and `Framebuffer`s**           |                                                                |                                                                                                                                 |
+| **`Texture` and `Framebuffer`**             |                                                                |                                                                                                                                 |
 | `texture-float32-webgl1`                    | [`OES_texture_float`][texture_float]                           | Floating point textures can be created and sampled (filtering/rendering are queried separately)                                 |
 | `texture-float16-webgl1` (Extension 1 of 2) | [`OES_texture_half_float`][texture_half_float]                 | Half float (`Uint16Array`) textures can be created and set as samplers                                                          |
 | `texture-float16-webgl1` (Extension 2 of 2) | [`WEBGL_color_buffer_float`][webgl_color_buffer_float]         | (This feature depends on 2 extensions)                                                                                          |
 | `float32-renderable-webgl`                  | [`EXT_color_buffer_float`][ext_color_buffer_float]             | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`, write in fragment shaders, read with `readPixels`. |
 | `float16-renderable-webgl`                  | [`EXT_color_buffer_half_float`][color_buffer_half_float]       | Half float format `Texture`s are renderable and readable                                                                        |
-| `float-blend-webgl1`                        | [`EXT_float_blend`][float_blend]                               | Blending with 32-bit floating point color buffers                                                                               |
-| `depth_buffers`                             | [`WEBGL_depth_texture`][depth_texture]                         | Depth buffers can be stored in `Texture`s, e.g. for shadow map calculations                                                     |
 | `texture-filter-linear-float`               | [`OES_texture_float_linear`][texture_float_linear]             | Linear texture filtering for floating point textures                                                                            |
 | `texture-filter-linear-half-float-webgl`    | [`OES_texture_half_float_linear`][texture_half_float_linear]   | Linear texture filtering for half float textures                                                                                |
 | `texture_filter-anisotropic-webgl`          | [`EXT_texture_filter_anisotropic`][texture_filter_anisotropic] | Anisotropic texture filtering                                                                                                   |
@@ -162,28 +152,28 @@ enabling subfeatures of bigger features.
 - The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
 - Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
 
-[instanced_arrays]: https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays
-[vertex_array_object]: https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object
-[element_index_uint]: https://developer.mozilla.org/en-US/docs/Web/API/OES_element_index_uint
-[blend_minmax]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_blend_minmax
-[timer_query_webgl]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/
 [texture_compression_bptc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_bptc
 [texture_compression_rgtc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_rgtc
 [texture_float]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float
 [texture_half_float]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float
-[draw_buffers]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers
 [ext_color_buffer_float]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float
 [webgl_color_buffer_float]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_color_buffer_float
+[color_buffer_float]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float
+[color_buffer_half_float]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_half_float
+[texture_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float_linear
+[texture_half_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float_linear
+[texture_filter_anisotropic]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
+[instanced_arrays]: https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays
+[vertex_array_object]: https://developer.mozilla.org/en-US/docs/Web/API/OES_vertex_array_object
+[element_index_uint]: https://developer.mozilla.org/en-US/docs/Web/API/OES_element_index_uint
+[blend_minmax]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_blend_minmax
+[timer_query_webgl]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_disjoint_timer_query
+[draw_buffers]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers
 [shader_texture_lod]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_shader_texture_lod
 [draw_buffers]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_draw_buffers
 [frag_depth]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
 [standard_derivatives]: https://developer.mozilla.org/en-US/docs/Web/API/OES_standard_derivatives
-[color_buffer_float]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_float
-[color_buffer_half_float]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_color_buffer_half_float
 [float_blend]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
 [depth_texture]: https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_depth_texture
-[texture_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float_linear
-[texture_half_float_linear]: https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_half_float_linear
-[texture_filter_anisotropic]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_filter_anisotropic
 [sRGB]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB

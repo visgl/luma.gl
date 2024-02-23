@@ -6,6 +6,7 @@ luma.gl provides a unified API for working with GPU parameters.
 
 All parameters listed in a single table
 
+<<<<<<< HEAD
 | Function                     | How to set                             | Description                                                                | Values                            | WebGL counterpart        |
 | ---------------------------- | -------------------------------------- | -------------------------------------------------------------------------- | --------------------------------- | ------------------------ |
 | **Rasterization Parameters** |
@@ -18,7 +19,11 @@ All parameters listed in a single table
 | `depthBias`                  | `createRenderPipeline()`               | Small depth offset for polygons                                            | `float`                           | `gl.polygonOffset`       |
 | `depthBiasSlopeScale`        | `createRenderPipeline()`               | Small depth factor for polygons                                            | `float`                           | `gl.polygonOffset`       |
 | `depthBiasClamp`             | `createRenderPipeline()`               | Max depth offset for polygons                                              | `float`                           | N/A                      |
-| `unclippedDepth`             | `createRenderPipeline()`               | Disable depth value clipping to [0, 1]. Requires `depth-clip-control`      | **false** boolean                 |
+| **Extension Parameters**     |
+| `unclippedDepth`             | `createRenderPipeline()`               | Disable depth value clipping to [0, 1]. Requires `depth-clip-control`      | **`false`** `boolean`             |
+| `provokingVertex`            | `createRenderPipeline()`               | Vertex used for flat shading. Requires `provoking-vertex-webgl`            | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex` |
+| `polygonMode`                | `createRenderPipeline()`               | Enable wire frame rendering. Requires `polygon-mode-webgl`                 | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`     |
+| `polygonOffsetLine`          | `createRenderPipeline()`               | Vertex used for flat shading. Requires `polygon-mode-webgl`                | **`false`** `boolean`             | `WEBGL_polygon_mode`     |
 | **Stencil Buffer**           |
 | `stencilReference`           | `RenderPass.setParameters()`           |
 | `stencilReadMask`            | `createRenderPipeline()`               | Binary mask for reading stencil values                                     | `number` (**`0xffffffff`**)       |

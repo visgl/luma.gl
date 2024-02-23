@@ -1058,17 +1058,17 @@ enum GLEnum {
   /** A Boolean indicating whether or not the GPU performed any disjoint operation. */
   GPU_DISJOINT_EXT = 0x8fbb,
 
-  // https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
+  // KHR_parallel_shader_compile https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
   
   /** a non-blocking poll operation, so that compile/link status availability can be queried without potentially incurring stalls */
   COMPLETION_STATUS                = 0x91B1,
 
-  // https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+  // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
 
   /** Disables depth clipping */
   DEPTH_CLAMP = 0x864F,
 
-  // https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
+  // WEBGL_provoking_vertex https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
 
   /** Values of first vertex in primitive are used for flat shading */
   FIRST_VERTEX_CONVENTION = 0x8E4D,
@@ -1076,6 +1076,13 @@ enum GLEnum {
   LAST_VERTEX_CONVENTION  = 0x8E4E, // default
   /** Controls which vertex in primitive is used for flat shading */
   PROVOKING_VERTEX        = 0x8E4F,
+
+  // WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/
+
+  POLYGON_MODE_WEBGL = 0x0B40,
+  POLYGON_OFFSET_LINE_WEBGL = 0x2A02,
+  LINE_WEBGL = 0x1B01,
+  FILL_WEBGL = 0x1B02,
 }
 
 export {GLEnum as GL};
