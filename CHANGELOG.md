@@ -1,5 +1,16 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.5
+
+- feat(webgl): async shader compilation (#1952)
+- feat(engine): Use PipelineFactory in Model. (#1953)
+- chore: DeviceFeature cleanup (#1951)
+- chore: Remove @probe.gl/test=utils imports (#1949)
+- chore: Remove double extensions in source filenames (#1948)
+- chore: Clean up package.json (#1943)
+- chore: Remove WebGL1 support (#1933)
+- chore: Update build system to latest ocular: typescript+esbuild (#1942)
+
 ### v9.0.0-beta.4
 
 - feat(shadertools) Postprocessing modules in GLSL300 (#1941)
