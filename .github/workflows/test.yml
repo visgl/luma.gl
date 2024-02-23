@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          yarn install
+        YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
 
       - name: Build code
         run: |
