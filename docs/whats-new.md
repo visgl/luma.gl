@@ -35,14 +35,14 @@ Legacy Functionality
 
 New module structure
 
-| Module                     | Impact               | Description                                                                                                     |
-| -------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
-| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
-| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
-| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                         |
+| Module                     | Impact               | Description                                                                                                      |
+| -------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                        |
+| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2.  |
+| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                   |
+| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                          |
 | **`@luma.gl/webgl`**       | No exported API      | Now an optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s. |
-| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.  |
+| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.   |
 
 New features
 
@@ -58,7 +58,7 @@ New features
 
 **`@luma.gl/gltf`**
 
-- New module that exports the glTF classes (moved from `@luma.gl/experimental`).
+- New module that exports glTF functionality (in v8 these were found in `@luma.gl/experimental`).
 
 **`@luma.gl/shadertools`**
 
@@ -68,5 +68,15 @@ New features
 
 **`@luma.gl/webgl`** 
 
-- Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
+- Asynchronous shader compilation and linking is used if the [`KHR_parallel_shader_compile`][KHR_parallel_shader_compile] WebGL extension is available. This should speed up initialization of applications that create many `RenderPipelines`.
 - `Parameters.provokingVertex: 'first' \| 'last'` can be used to control which primitive vertex is used for flat shading if the `provoking-vertex-webgl` feature is available. Can improve performance.
+- `Shader.getTranslatedSource()` returns translated native shader source if the [`WEBGL_debug_shaders`][WEBGL_debug_shaders] extension is supported.
+
+Debugging improvements
+
+- `Shader.debugShader()` - Shader compilation errors are shown in a window inside your canvas.
+
+
+[KHR_parallel_shader_compile]: https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/
+[WEBGL_debug_shaders]: https://registry.khronos.org/webgl/extensions/WEBGL_debug_shaders/
+

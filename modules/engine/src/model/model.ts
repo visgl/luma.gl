@@ -30,6 +30,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   source?: string;
   vs: {glsl?: string; wgsl?: string} | string | null;
   fs: {glsl?: string; wgsl?: string} | string | null;
+
   /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];
   /** Shadertool module defines (configures shader code)*/
@@ -67,6 +68,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Mapped uniforms for shadertool modules */
   moduleSettings?: Record<string, Record<string, any>>;
+
+  /** Show shader source in browser? */
+  debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
 };
 
 /**
@@ -98,7 +102,9 @@ export class Model {
     shaderInputs: undefined!,
     pipelineFactory: undefined!,
     transformFeedback: undefined,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler()
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+
+    debugShaders: undefined
   };
 
   readonly device: Device;
@@ -304,8 +310,10 @@ export class Model {
       this.pipeline.setUniforms(this.uniforms);
 
       const {indexBuffer} = this.vertexArray;
-      const indexCount = indexBuffer ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2) : undefined;
-  
+      const indexCount = indexBuffer
+        ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+        : undefined;
+
       this.pipeline.draw({
         renderPass,
         vertexArray: this.vertexArray,
@@ -514,7 +522,9 @@ export class Model {
       )();
     }
     for (const [bufferName, buffer] of Object.entries(buffers)) {
-      const bufferLayout = this.bufferLayout.find(layout => getAttributeNames(layout).includes(bufferName));
+      const bufferLayout = this.bufferLayout.find(layout =>
+        getAttributeNames(layout).includes(bufferName)
+      );
       if (!bufferLayout) {
         log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
         continue; // eslint-disable-line no-continue
@@ -577,14 +587,16 @@ export class Model {
       const vs = this.device.createShader({
         id: `${this.id}-vertex`,
         stage: 'vertex',
-        source: this.vs
+        source: this.vs,
+        debug: this.props.debugShaders
       });
 
       const fs = this.fs
         ? this.device.createShader({
           id: `${this.id}-fragment`,
           stage: 'fragment',
-          source: this.fs
+          source: this.fs,
+          debug: this.props.debugShaders
         })
         : null;
 
@@ -651,7 +663,7 @@ export class Model {
     const debugFramebuffers = log.get('framebuffer');
     this._drawCount++;
     // Update first 3 frames and then every 60 frames
-    if (!debugFramebuffers || ((this._drawCount++ > 3) && (this._drawCount % 60))) {
+    if (!debugFramebuffers || (this._drawCount++ > 3 && this._drawCount % 60)) {
       return;
     }
     // TODO - display framebuffer output in debug window

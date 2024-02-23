@@ -48,6 +48,11 @@ export class WEBGLShader extends Shader {
     return parseShaderCompilerLog(log);
   }
 
+  override getTranslatedSource(): string | null {
+    const ext = this.device.gl.getExtension('WEBGL_debug_shaders');
+    return  ext?.getTranslatedShaderSource(this.handle);
+  }
+
   // PRIVATE METHODS
 
   /** Compile a shader and get compilation status */

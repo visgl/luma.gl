@@ -10,9 +10,7 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **shader transpilation****
 - **debugging** - Detailed debug logging of draw calls
 
-
 The `Model` class integrates with the `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
-
 
  (Accepts a [`Mesh`] or a [`Geometry`](/docs/- - api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
@@ -55,13 +53,11 @@ const model = new Model(device, {
   },
   uniforms: {uSampler: texture},
 })
-
 ```
-
 
 On each frame, call the `model.draw()` function after updating any uniforms (typically matrices).
 
-```
+```ts
 model.setUniforms({
   uPMatrix: currentProjectionMatrix,
   uMVMatrix: current ModelViewMatrix
@@ -69,41 +65,49 @@ model.setUniforms({
 model.draw();
 ```
 
+Debug shader source (even when shader successful)
+```ts
+// construct the model.
+const model = new Model(device, {
+  vs: VERTEX_SHADER,
+  fs: FRAGMENT_SHADER,
+  debugShaders: true
+});
+```
 
 ## Types
 
 ### ModelProps
 
-| Property             | Type                 | Description                                                                                                                    |
-| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `vs`                 | `Shader` \| _string_ | A vertex shader object, or source as a string.                                                                                 |
-| `fs`                 | `Shader` \| _string_ | A fragment shader object, or source as a string.                                                                               |
-| `modules`            |                      | shader modules to be applied (shadertools).                                                                                    |
-| `programManager`     |                      | `ProgramManager` to use for program creation and caching.                                                                      |
-| `varyings`           | (WebGL 2)            | An array of vertex shader output variables, that needs to be recorded (used in TransformFeedback flow).                        |
-| `bufferMode`         | (WebGL 2)            | Mode to be used when recording vertex shader outputs (used in TransformFeedback flow). |
+| Property           | Type                                           | Description                                                                         |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `vs`               | `Shader` \| _string_                           | A vertex shader object, or source as a string.                                      |
+| `fs`               | `Shader` \| _string_                           | A fragment shader object, or source as a string.                                    |
+| `modules`          |                                                | shader modules to be applied (shadertools).                                         |
+| `pipelineFactory?` |                                                | `PipelineFactory` to use for program creation and caching.                          |
+| `varyings?`        | `string[]`                                     | WebGL 2: Array of vertex shader output variables (used in TransformFeedback flow).  |
+| `bufferMode`       |                                                | WebGL 2: Mode for recording vertex shader outputs (used in TransformFeedback flow). |
+| `debugShaders?`    | `'error' \| 'never' \| 'warnings' \| 'always'` | Specify in what triggers the display shader compilation log (default: `'error'`).   |
 
 `ModelProps` passes through `RenderPipelineProps`
 
-| Property      | Type                       | Description                                                                             |
-| ------------- | -------------------------- | --------------------------------------------------------------------------------------- |
-| `layout`      | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
-| `topology?`   |                            | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
-| `parameters?` | `RenderPipelineParameters` |                                                                                         |
-| Property          | Type                     | Description                                                         |
-| ----------------- | ------------------------ | ------------------------------------------------------------------- |
-| `vertexCount?`    | `number`                 |                                                                     |
-| `instanceCount?`  | `number`                 |                                                                     |
-| `moduleSettings?` | `Record<string, any>`    | any values required by shader modules (will be mapped to uniforms). |
-| `uniforms?`       | `Record<string, any>`    | any non-binding uniform values                                      |
-| `bindings?`       | `Record<string, any>`    |                                                                     |
-| `buffers?`        | `Record<string, Buffer>` |                                                                     |
+| Property          | Type                       | Description                                                                             |
+| ----------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `layout`          | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
+| `topology?`       |                            | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
+| `parameters?`     | `RenderPipelineParameters` |                                                                                         |
+| `vertexCount?`    | `number`                   |                                                                                         |
+| `instanceCount?`  | `number`                   |                                                                                         |
+| `moduleSettings?` | `Record<string, any>`      | any values required by shader modules (will be mapped to uniforms).                     |
+| `uniforms?`       | `Record<string, any>`      | any non-binding uniform values                                                          |
+| `bindings?`       | `Record<string, any>`      |                                                                                         |
+| `buffers?`        | `Record<string, Buffer>`   |                                                                                         |
 
 ## Properties
 
 ### renderPipeline: RenderPipeline
 
-Get model's `Program` instance
+Get model's `RenderPipeline` instance
 
 ### onBeforeRender
 
