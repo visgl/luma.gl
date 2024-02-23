@@ -231,7 +231,7 @@ export class Model {
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
-    this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
+    this.shaderFactory ||= ShaderFactory.getDefaultShaderFactory(this.device);
 
     // Create the pipeline
     // @note order is important
@@ -578,7 +578,7 @@ export class Model {
 
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
-      const prevShaders = [] as Shader[];
+      const prevShaders: Shader[] = [];
       if (this.pipeline) {
         log.log(
           1,
