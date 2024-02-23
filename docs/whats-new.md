@@ -69,6 +69,11 @@ New features
 **`@luma.gl/webgl`** 
 
 - Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
+- `parameters.unclippedDepth` - depth clipping can now be disabled if the `depth-clip-control` feature is available. See [`EXT_depth_clamp`][EXT_depth_clamp].
 - `parameters.provokingVertex: 'first'` controls which primitive vertex is used for flat shading. Check the `provoking-vertex-webgl` feature. 
 - `parameters.polygonMode: 'line'` enables wire frame rendering of polygons. Check the `polygon-mode-webgl` feature. 
 - `parameters.polygonOffsetLine: true` enables depth bias (polygon offset) for lines. Check the `polygon-mode-webgl` feature. 
+
+- Check WebGL 2 extension availability with [WebGL Report](https://webglreport.com/?v=2).
+
+[EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/

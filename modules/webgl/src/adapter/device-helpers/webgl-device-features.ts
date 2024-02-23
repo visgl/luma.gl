@@ -58,10 +58,15 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   webgl: true,
   glsl: true,
 
+  // optional WebGPU features
+  'depth-clip-control': 'EXT_depth_clamp',
+
+  // WebGL only features
   'uniforms-webgl': true,
   'transform-feedback-webgl': true,
   'constant-attributes-webgl': true,
 
+  // optional WebGL features
   'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
   'shader-status-async-webgl': 'KHR_parallel_shader_compile',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',

@@ -349,29 +349,21 @@ export type GLParameters = GLValueParameters & GLFunctionParameters;
 
 /** WebGL2 Extensions */
 export type GLExtensions = {
-  // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
-  // EXT_blend_minmax?: EXT_blend_minmax | null;
   EXT_color_buffer_float?: EXT_color_buffer_float | null;
   EXT_color_buffer_half_float?: EXT_color_buffer_half_float | null;
-  // EXT_float_blend?: EXT_float_blend | null;
-  // EXT_frag_depth?: EXT_frag_depth | null;
-  // EXT_sRGB?: EXT_sRGB | null;
-  // EXT_shader_texture_lod?: EXT_shader_texture_lod | null;
   EXT_texture_compression_bptc?: EXT_texture_compression_bptc | null;
   EXT_texture_compression_rgtc?: EXT_texture_compression_rgtc | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_texture_filter_anisotropic */
   EXT_texture_filter_anisotropic?: EXT_texture_filter_anisotropic | null;
   /** https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile */
   KHR_parallel_shader_compile?: KHR_parallel_shader_compile | null;
-  // OES_element_index_uint?: OES_element_index_uint | null;
   OES_fbo_render_mipmap?: OES_fbo_render_mipmap | null;
-  // OES_standard_derivatives?: OES_standard_derivatives | null;
   OES_texture_float?: OES_texture_float | null;
   OES_texture_float_linear?: OES_texture_float_linear | null;
   OES_texture_half_float?: OES_texture_half_float | null;
   OES_texture_half_float_linear?: OES_texture_half_float_linear | null;
   OES_vertex_array_object?: OES_vertex_array_object | null;
   OVR_multiview2?: OVR_multiview2 | null;
-  // WEBGL_color_buffer_float?: WEBGL_color_buffer_float | null;
   WEBGL_compressed_texture_astc?: WEBGL_compressed_texture_astc | null;
   WEBGL_compressed_texture_etc?: WEBGL_compressed_texture_etc | null;
   WEBGL_compressed_texture_etc1?: WEBGL_compressed_texture_etc1 | null;
@@ -380,10 +372,7 @@ export type GLExtensions = {
   WEBGL_compressed_texture_s3tc_srgb?: WEBGL_compressed_texture_s3tc_srgb | null;
   WEBGL_debug_renderer_info?: WEBGL_debug_renderer_info | null;
   WEBGL_debug_shaders?: WEBGL_debug_shaders | null;
-  // WEBGL_depth_texture?: WEBGL_depth_texture | null;
-  // WEBGL_draw_buffers?: WEBGL_draw_buffers | null;
   WEBGL_lose_context?: WEBGL_lose_context | null;
-  // WEBGL_multi_draw?: WEBGL_multi_draw | null;
 
   /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
   EXT_depth_clamp?: EXT_depth_clamp | null;
@@ -393,6 +382,21 @@ export type GLExtensions = {
 
   /** https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
   WEBGL_polygon_mode?: WEBGL_polygon_mode | null;
+
+  // WEBGL1 extensions (available as built-in WebGL 2 APIs)
+
+  // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
+  // EXT_blend_minmax?: EXT_blend_minmax | null;
+  // EXT_float_blend?: EXT_float_blend | null;
+  // EXT_frag_depth?: EXT_frag_depth | null;
+  // EXT_sRGB?: EXT_sRGB | null;
+  // EXT_shader_texture_lod?: EXT_shader_texture_lod | null;
+  // OES_element_index_uint?: OES_element_index_uint | null;
+  // OES_standard_derivatives?: OES_standard_derivatives | null;
+  // WEBGL_color_buffer_float?: WEBGL_color_buffer_float | null;
+  // WEBGL_depth_texture?: WEBGL_depth_texture | null;
+  // WEBGL_draw_buffers?: WEBGL_draw_buffers | null;
+  // WEBGL_multi_draw?: WEBGL_multi_draw | null;
 };
 
 /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
