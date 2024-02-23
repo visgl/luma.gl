@@ -130,15 +130,16 @@ export type WebGPUDeviceFeature =
 // 'pipeline-statistics-query' |
 
 export type WebGLDeviceFeature =
-  // webgl unique features
-  | 'uniforms-webgl' // Supports non-UBO uniforms: renderPipeline.setUniforms()
+  // webgl standard features
   | 'transform-feedback-webgl' // device.createTransformFeedback()
   | 'constant-attributes-webgl' // vertexArray.setConstant()
-  | 'provoking-vertex-webgl' // Parameters.provokingVertex
-  
-  // api support
+  | 'uniforms-webgl' // Supports non-UBO uniforms: renderPipeline.setUniforms()
+
+  // webgl extension features
   | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'shader-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'provoking-vertex-webgl' // parameters.provokingVertex
+  | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
   
   // texture rendering
   | 'float32-renderable-webgl'

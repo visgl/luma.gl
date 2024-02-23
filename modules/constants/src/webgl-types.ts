@@ -389,7 +389,10 @@ export type GLExtensions = {
   EXT_depth_clamp?: EXT_depth_clamp | null;
 
   /** https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/ */
-  WEBGL_provoking_vertex?: WEBGL_provoking_vertex | null
+  WEBGL_provoking_vertex?: WEBGL_provoking_vertex | null;
+
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
+  WEBGL_polygon_mode?: WEBGL_polygon_mode | null;
 };
 
 /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
@@ -402,4 +405,9 @@ type WEBGL_provoking_vertex = {
   // Constants in GL enum
   /** Set the provoking vertex */
   provokingVertexWEBGL(provokeMode: GL.FIRST_VERTEX_CONVENTION | GL.LAST_VERTEX_CONVENTION): void;
+};
+
+/** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
+type WEBGL_polygon_mode = {
+  polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GL.LINE_WEBGL | GL.FILL_WEBGL): void;
 };

@@ -35,16 +35,23 @@ type _RenderParameters = {
   cullMode?: CullMode;
   /** Defines which polygons are considered front-facing. Only applies to triangle topologies. Default to "ccw" */
   frontFace?: FrontFace;
-  /** If true, indicates that depth clipping is disabled. */
-  unclippedDepth?: boolean;
   /** Constant depth bias (polygon offset) added to each fragment. */
   depthBias?: number;
   /** Depth bias (polygon offset) that scales with the fragment’s slope. */
   depthBiasSlopeScale?: number;
   /** Maximum depth bias of a fragment. */
   depthBiasClamp?: number;
-  /** Which vertex in primitive to use for flat shading (perf may differ) */
+
+  // Extensions
+
+  /** Disable depth clipping. Requires 'depth-clip-control' */
+  unclippedDepth?: boolean;
+  /** Which vertex in primitive to use for flat shading (perf may improve). Requires 'provoking-vertex-webgl' */
   provokingVertex?: 'first' | 'last',
+  /** Debug: Set polygon rasterization mode to 'line' for wire frames. Requires: 'polygon-mode-webgl' */
+  polygonMode?: 'fill' | 'line';
+  /** Debug: Enable polygon offset (`depthBias`) for 'line' primitives: Requires 'polygon-mode-webgl' */
+  polygonOffsetLine?: boolean;
 }
 
 export type RasterizationParameters = _RenderParameters & {
@@ -211,7 +218,6 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
 
   cullMode: 'none',
   frontFace: 'ccw',
-  provokingVertex: 'last',
 
   // Depth Parameters
 
@@ -219,11 +225,17 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   depthCompare: 'always',
   depthFormat: 'depth24plus',
 
-  unclippedDepth: false,
   depthBias: 0,
   depthBiasSlopeScale: 0,
   depthBiasClamp: 0,
 
+  // Extensions
+
+  unclippedDepth: false,
+  provokingVertex: 'last',
+  polygonMode: 'fill',
+  polygonOffsetLine: false,
+  
   // Stencil parameters
 
   stencilReadMask: 0xFFFFFFFF,
