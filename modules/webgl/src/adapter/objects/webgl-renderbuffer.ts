@@ -48,7 +48,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
   glFormat: GL;
 
   static isTextureFormatSupported(device: WebGLDevice, format: TextureFormat): boolean {
-    return isRenderbufferFormatSupported(device.gl, format);
+    return isRenderbufferFormatSupported(device.gl, format, device._extensions);
   }
 
   constructor(device: WebGLDevice, props: RenderbufferProps) {

@@ -49,7 +49,8 @@ export class WEBGLShader extends Shader {
   }
 
   override getTranslatedSource(): string | null {
-    const ext = this.device.gl.getExtension('WEBGL_debug_shaders');
+    const extensions = this.device.getExtension('WEBGL_debug_shaders');
+    const ext = extensions.WEBGL_debug_shaders;
     return  ext?.getTranslatedShaderSource(this.handle);
   }
 

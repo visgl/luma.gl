@@ -3,7 +3,8 @@
 
 import type {TextureFormat, DeviceFeature} from '@luma.gl/core';
 import {decodeTextureFormat} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL, GLExtensions} from '@luma.gl/constants';
+import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './vertex-formats';
 
 /* eslint-disable camelcase */
@@ -61,19 +62,27 @@ const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, string[]>> = {
   'texture-compression-atc-webgl': [X_ATC]
 };
 
-function checkTextureFeature(gl: WebGL2RenderingContext, feature: DeviceFeature): boolean {
-  const extensions = TEXTURE_FEATURE_CHECKS[feature] || [];
-  return extensions.every(extension => gl.getExtension(extension));
-}
-
-function checkTextureFeatures(gl: WebGL2RenderingContext, features: DeviceFeature[]): boolean {
-  return features.every(feature => checkTextureFeature(gl, feature));
-}
-
 /** Return a list of texture feature strings (for Device.features). Mainly compressed texture support */
-export function getTextureFeatures(gl: WebGL2RenderingContext): DeviceFeature[] {
-  const textureFeatures = Object.keys(TEXTURE_FEATURE_CHECKS) as DeviceFeature[];
-  return textureFeatures.filter(feature => checkTextureFeature(gl, feature));
+// export function getTextureFeatures(
+//   gl: WebGL2RenderingContext,
+//   extensions: GLExtensions
+// ): DeviceFeature[] {
+//   const textureFeatures = Object.keys(TEXTURE_FEATURE_CHECKS) as DeviceFeature[];
+//   return textureFeatures.filter(feature => checkTextureFeature(gl, feature, extensions));
+// }
+
+export function isTextureFeature(feature: DeviceFeature): boolean {
+  return feature in  TEXTURE_FEATURE_CHECKS;
+}
+
+/** Checks a texture feature (for Device.features). Mainly compressed texture support */
+export function checkTextureFeature(
+  gl: WebGL2RenderingContext,
+  feature: DeviceFeature,
+  extensions: GLExtensions
+): boolean {
+  const textureExtensions = TEXTURE_FEATURE_CHECKS[feature] || [];
+  return textureExtensions.every(extension => getWebGLExtension(gl, extension, extensions));
 }
 
 // TEXTURE FORMATS
@@ -435,7 +444,8 @@ const TYPE_SIZES = {
 /** Checks if a texture format is supported */
 export function isTextureFormatSupported(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL
+  formatOrGL: TextureFormat | GL,
+  extensions: GLExtensions
 ): boolean {
   const format = convertGLToTextureFormat(formatOrGL);
   const info = TEXTURE_FORMATS[format];
@@ -449,17 +459,18 @@ export function isTextureFormatSupported(
   // Check extensions
   const extension = info.x || info.gl2ext;
   if (extension) {
-    return Boolean(gl.getExtension(extension));
+    return Boolean(getWebGLExtension(gl, extension, extensions));
   }
   return true;
 }
 
 export function isRenderbufferFormatSupported(
   gl: WebGL2RenderingContext,
-  format: TextureFormat
+  format: TextureFormat,
+  extensions: GLExtensions
 ): boolean {
   // Note: Order is important since the function call initializes extensions.
-  return isTextureFormatSupported(gl, format) && TEXTURE_FORMATS[format]?.renderbuffer;
+  return isTextureFormatSupported(gl, format, extensions) && TEXTURE_FORMATS[format]?.renderbuffer;
 }
 
 /**
@@ -491,7 +502,8 @@ export function convertTextureFormatToGL(format: TextureFormat): GL | undefined 
 /** Checks if a texture format is supported */
 export function getTextureFormatSupport(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL
+  formatOrGL: TextureFormat | GL,
+  extensions: GLExtensions
 ): {
   supported: boolean;
   filterable?: boolean;
@@ -511,20 +523,20 @@ export function getTextureFormatSupport(
 
   // Support Check that we have a GL constant
   let supported = info.gl === undefined;
-  supported = supported && checkTextureFeatures(gl, [info.f]);
+  supported = supported && checkTextureFeature(gl, info.f, extensions);
 
   // Filtering
   // const filterable = info.filter
-  //   ? checkTextureFeatures(gl, [info.filter])
+  //   ? checkTextureFeature(gl, infofilter])
   //   : decoded && !decoded.signed;
   // const renderable = info.filter
-  //   ? checkTextureFeatures(gl, [info.render])
+  //   ? checkTextureFeature(gl, inforender])
   //   : decoded && !decoded.signed;
 
   return {
     supported,
-    renderable: supported && checkTextureFeatures(gl, [info.render]),
-    filterable: supported && checkTextureFeatures(gl, [info.filter]),
+    renderable: supported && checkTextureFeature(gl, info.render, extensions),
+    filterable: supported && checkTextureFeature(gl, info.filter, extensions),
     blendable: false, // tod,
     storable: false
   };
@@ -533,10 +545,11 @@ export function getTextureFormatSupport(
 /** Checks whether linear filtering (interpolated sampling) is available for floating point textures */
 export function isTextureFormatFilterable(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL
+  formatOrGL: TextureFormat | GL,
+  extensions: GLExtensions
 ): boolean {
   const format = convertGLToTextureFormat(formatOrGL);
-  if (!isTextureFormatSupported(gl, format)) {
+  if (!isTextureFormatSupported(gl, format, extensions)) {
     return false;
   }
   try {
@@ -548,20 +561,21 @@ export function isTextureFormatFilterable(
     return false;
   }
   if (format.endsWith('32float')) {
-    return Boolean(gl.getExtension('OES_texture_float_linear'));
+    return Boolean(getWebGLExtension(gl, 'OES_texture_float_linear, extensions', extensions));
   }
   if (format.endsWith('16float')) {
-    return Boolean(gl.getExtension('OES_texture_half_float_linear'));
+    return Boolean(getWebGLExtension(gl, 'OES_texture_half_float_linear, extensions', extensions));
   }
   return true;
 }
 
 export function isTextureFormatRenderable(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL
+  formatOrGL: TextureFormat | GL,
+  extensions: GLExtensions
 ): boolean {
   const format = convertGLToTextureFormat(formatOrGL);
-  if (!isTextureFormatSupported(gl, format)) {
+  if (!isTextureFormatSupported(gl, format, extensions)) {
     return false;
   }
   if (typeof format === 'number') {

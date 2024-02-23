@@ -125,7 +125,7 @@ export type WebGPUDeviceFeature =
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
 
-// Removed WebGPU features...
+// WebGPU features that have been removed from the WebGPU spec...
 // 'depth-clamping' |
 // 'pipeline-statistics-query' |
 
@@ -169,6 +169,19 @@ export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
   | WebGLCompressedTextureFeatures;
+
+/** Set-like class for testing features */
+export class DeviceFeatures {
+  protected features: Set<DeviceFeature>;
+
+  constructor(features: DeviceFeature[] = []) {
+    this.features = new Set<DeviceFeature>(features);
+  }
+
+  has(feature: DeviceFeature): boolean {
+    return this.features.has(feature);
+  }
+}
 
 /**
  * WebGPU Device/WebGL context abstraction

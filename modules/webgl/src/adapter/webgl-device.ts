@@ -23,9 +23,9 @@ import {
   pushContextState,
   trackContextState
 } from '../context/state-tracker/track-context-state';
-import {createBrowserContext} from '../context/context/create-browser-context';
+import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
-import {getDeviceFeatures} from './device-helpers/webgl-device-features';
+import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
@@ -74,6 +74,7 @@ import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
 import {setGLParameters, getGLParameters} from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {clear} from '../classic/clear';
+import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 const LOG_LEVEL = 1;
 
@@ -95,7 +96,7 @@ export class WebGLDevice extends Device {
   readonly handle: WebGL2RenderingContext;
 
   get features(): Set<DeviceFeature> {
-    this._features = this._features || getDeviceFeatures(this.gl);
+    this._features = this._features || getDeviceFeatures(this.gl, this._extensions);
     return this._features;
   }
 
@@ -220,7 +221,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     this.canvasContext.resize();
 
     // luma Device fields
-    this.info = getDeviceInfo(this.gl);
+    this.info = getDeviceInfo(this.gl, this._extensions);
 
     // @ts-expect-error Link webgl context back to device
     this.gl.device = this;
@@ -267,15 +268,15 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   isTextureFormatSupported(format: TextureFormat): boolean {
-    return isTextureFormatSupported(this.gl, format);
+    return isTextureFormatSupported(this.gl, format, this._extensions);
   }
 
   isTextureFormatFilterable(format: TextureFormat): boolean {
-    return isTextureFormatFilterable(this.gl, format);
+    return isTextureFormatFilterable(this.gl, format, this._extensions);
   }
 
   isTextureFormatRenderable(format: TextureFormat): boolean {
-    return isTextureFormatRenderable(this.gl, format);
+    return isTextureFormatRenderable(this.gl, format, this._extensions);
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -533,10 +534,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   /** Ensure extensions are only requested once */
-  getExtension(name: string): GLExtensions {
-    if (this._extensions[name] === undefined) {
-      this._extensions[name] = this.gl.getExtension(name) || null;
-    }
+  getExtension(name: keyof GLExtensions): GLExtensions {
+    getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
   }
 }

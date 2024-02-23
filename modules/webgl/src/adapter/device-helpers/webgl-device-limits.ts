@@ -97,8 +97,9 @@ export function getWebGLLimits(gl: WebGL2RenderingContext): WebGLLimits {
     return (gl.getParameter(pname) as T) || defaultValue;
   }
   // function getMaxAnistropy() {
-  //   const extension = gl.getExtension('EXT_texture_filter_anisotropic');
+  //   const extension = getWebGLExtension(gl, 'EXT_texture_filter_anisotropic');
   // }
+
   return {
     [GL.ALIASED_LINE_WIDTH_RANGE]: get(GL.ALIASED_LINE_WIDTH_RANGE),
     [GL.ALIASED_POINT_SIZE_RANGE]: get(GL.ALIASED_POINT_SIZE_RANGE),
