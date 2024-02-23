@@ -3,8 +3,8 @@
   "license": "MIT",
   "contributors": [
     "Evan Wallace",
-    "David McArthur <daviestar@gmail.com>",
-    "Ib Green <ib@uber.com>"
+    "David McArthur",
+    "Ib Green"
   ],
   "scripts": {
     "start": "yarn build-lib && open index.html",

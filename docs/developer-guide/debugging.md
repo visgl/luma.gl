@@ -24,7 +24,7 @@ Most classes in luma.gl allow you to supply an optional `id` string to their con
 This allows you to later easily check in the debugger which object 
 (which specific instance of that class) you are looking at when debugging code.
 
-```typescript
+```ts
 const program = device.createRenderPipeline({id: 'cube-program', ...});
 const program = device.createRenderPipeline({id: 'pyramid-program', ...});
 ```
@@ -42,7 +42,7 @@ luma.gl logs its activities.
 
 Set the global variable `luma.log.level` (this can be done in the browser console at any time) 
 
-```typescript
+```ts
 luma.log.level=1 
 ```
 
@@ -56,12 +56,16 @@ luma.log.level=1
 luma.gl extract as much information as possible about shader compiler errors etc, 
 and will throw exceptions with messages intended to help narrow down the problematic shader code when a shader fails to compile. 
 
-When running in the browser, luma.gl will open a shader source code viewer window inside the application's browser tab.
+When running in the browser, luma.gl will open a shader source code viewer window inside the application's canvas.
 This window shows both the shader source as well as any error messages and warnings from the shader compiler.
+If available translated native source is also shown.
+Normally this window is shown only if errors occur. By setting `Model.props.debugShaders: 'always'` the application can force
+the debug window to always appear.
 
 Note that luma.gl also injects and parses `glslify`-style `#define SHADER_NAME` "shader names". 
 Naming shaders directly in the shader code can help identify which 
 shader is involved when debugging shader parsing errors occur.
+
 
 ## Buffer data inspection
 
@@ -99,7 +103,7 @@ then reload your browser tab.
 
 While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/core) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
 
-```typescript
+```ts
 import {luma} from '@luma.gl/core';
 const device = luma.createDevice({type: 'webgl', debug: true});
 ```

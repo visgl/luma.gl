@@ -66,11 +66,16 @@ export abstract class Shader extends Resource<ShaderProps> {
     return null;
   }
 
+  /** Get translated shader source in host platform's native language (HLSL, GLSL, and even GLSL ES), if available */
+  getTranslatedSource(): string | null {
+    return null;
+  }
+
   // PORTABLE HELPERS
 
   /** In browser logging of errors */
-  async debugShader(): Promise<void> {
-    switch (this.props.debug) {
+  async debugShader(trigger = this.props.debug): Promise<void> {
+    switch (trigger) {
       case 'never':
         return;
       case 'errors':
@@ -102,8 +107,12 @@ export abstract class Shader extends Resource<ShaderProps> {
 
     const shaderName: string = getShaderInfo(this.source).name;
     const shaderTitle: string = `${this.stage} ${shaderName}`;
-    const htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
-
+    let htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
+    // Show translated source if available
+    const translatedSource = this.getTranslatedSource();
+    if (translatedSource) {
+      htmlLog += `<br /><br /><h1>Translated Source</h1><br /><br /><code style="user-select:text;"><pre>${translatedSource}</pre></code>`;
+    }
     // Make it clickable so we can copy to clipboard
     const button = document.createElement('Button');
     button.innerHTML = `
