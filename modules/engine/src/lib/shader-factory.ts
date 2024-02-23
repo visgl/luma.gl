@@ -6,8 +6,7 @@ export class ShaderFactory {
 
   public readonly device: Device;
 
-  private readonly _shaderCache: Record<string, Shader> = {};
-  private readonly _useCounts: Record<string, number> = {};
+  private readonly _cache: Record<string, {shader: Shader; useCount: number}> = {};
 
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
@@ -23,23 +22,24 @@ export class ShaderFactory {
   /** Requests a {@link Shader} from the cache, creating a new Shader only if necessary. */
   createShader(props: ShaderProps): Shader {
     const key = this._hashShader(props);
-    if (!this._shaderCache[key]) {
-      this._shaderCache[key] = this.device.createShader(props);
-      this._useCounts[key] = 0;
+
+    let cacheEntry = this._cache[key];
+    if (!cacheEntry) {
+      this._cache[key] = cacheEntry = {shader: this.device.createShader(props), useCount: 0};
     }
-    this._useCounts[key]++;
-    return this._shaderCache[key];
+
+    cacheEntry.useCount++;
+    return cacheEntry.shader;
   }
 
   /** Releases a previously-requested {@link Shader}, destroying it if no users remain. */
   release(shader: Shader): void {
     const key = this._hashShader(shader);
-    this._useCounts[key]--;
-    if (this._useCounts[key] === 0) {
-      const shader = this._shaderCache[key];
-      delete this._shaderCache[key];
-      delete this._useCounts[key];
-      shader.destroy();
+    const cacheEntry = this._cache[key];
+    cacheEntry.useCount--;
+    if (cacheEntry.useCount === 0) {
+      delete this._cache[key];
+      cacheEntry.shader.destroy();
     }
   }
 

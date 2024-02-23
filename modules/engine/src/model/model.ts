@@ -44,9 +44,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
-  /** pipeline factory to use to create render pipelines. Defaults to default factory for the device */
+  /** Factory used to create a {@link RenderPipeline}. Defaults to {@link Device} default factory. */
   pipelineFactory?: PipelineFactory;
-  /** shader factory to use to create shaders. Defaults to default factory for the device. */
+  /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
   shaderFactory?: ShaderFactory;
   /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
   shaderAssembler?: ShaderAssembler;
@@ -231,7 +231,8 @@ export class Model {
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
-    this.shaderFactory ||= ShaderFactory.getDefaultShaderFactory(this.device);
+    this.shaderFactory =
+      props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
     // Create the pipeline
     // @note order is important
@@ -288,9 +289,9 @@ export class Model {
   }
 
   destroy(): void {
+    this.pipelineFactory.release(this.pipeline);
     this.shaderFactory.release(this.pipeline.vs);
     this.shaderFactory.release(this.pipeline.fs);
-    this.pipelineFactory.release(this.pipeline);
     this._uniformStore.destroy();
   }
 
@@ -578,13 +579,15 @@ export class Model {
 
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
-      const prevShaders: Shader[] = [];
+      let prevShaderVs: Shader | null = null;
+      let prevShaderFs: Shader | null = null;
       if (this.pipeline) {
         log.log(
           1,
           `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
         )();
-        prevShaders.push(this.pipeline.vs, this.pipeline.fs);
+        prevShaderVs = this.pipeline.vs;
+        prevShaderFs = this.pipeline.fs;
       }
 
       this._pipelineNeedsUpdate = false;
@@ -617,9 +620,8 @@ export class Model {
         this.bufferLayout
       );
 
-      for (const shader of prevShaders) {
-        this.shaderFactory.release(shader);
-      }
+      if (prevShaderVs) this.shaderFactory.release(prevShaderVs);
+      if (prevShaderFs) this.shaderFactory.release(prevShaderFs);
     }
     return this.pipeline;
   }
