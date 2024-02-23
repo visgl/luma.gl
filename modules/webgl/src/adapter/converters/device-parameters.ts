@@ -143,6 +143,12 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     );
   }
 
+  if (parameters.unclippedDepth) {
+    if (device.features.has('depth-clip-control')) { // EXT_depth_clamp
+      gl.enable(GL.DEPTH_CLAMP);
+    }
+  }
+
   if (parameters.depthBias !== undefined) {
     gl.polygonOffset(parameters.depthBias, parameters.depthBiasSlopeScale || 0);
   }
