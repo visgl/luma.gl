@@ -28,7 +28,7 @@ import {WebGLDevice} from '../webgl-device';
  * - Returns the return value of the supplied function
  */
 export function withDeviceAndGLParameters<T = unknown>(
-  device: Device, 
+  device: Device,
   parameters: Parameters,
   glParameters: GLParameters,
   func: (device?: Device) => T
@@ -151,15 +151,16 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   //   // Handled by depthBias
   // },
 
-  if (parameters.provokingVertex) {
-    if (device.features.has('provoking-vertex-webgl')) {
-      const extensions = webglDevice.getExtension('EXT_provoking_vertex');
-      const ext = extensions.EXT_provoking_vertex;
+  if (device.features.has('provoking-vertex-webgl')) {
+    const extensions = webglDevice.getExtension('WEBGL_provoking_vertex');
+    const ext = extensions.WEBGL_provoking_vertex;
+
+    if (parameters.provokingVertex) {
       const vertex = map('provokingVertex', parameters.provokingVertex, {
         first: GL.FIRST_VERTEX_CONVENTION,
         last: GL.LAST_VERTEX_CONVENTION
       });
-      ext?.provokeVertex(vertex);
+      ext?.provokingVertexWEBGL(vertex);
     }
   }
 
@@ -224,14 +225,32 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
     gl.enable(GL.BLEND);
 
-    const colorEquation = convertBlendOperationToEquation('blendColorOperation', parameters.blendColorOperation || 'add');
-    const alphaEquation = convertBlendOperationToEquation('blendAlphaOperation', parameters.blendAlphaOperation || 'add');
+    const colorEquation = convertBlendOperationToEquation(
+      'blendColorOperation',
+      parameters.blendColorOperation || 'add'
+    );
+    const alphaEquation = convertBlendOperationToEquation(
+      'blendAlphaOperation',
+      parameters.blendAlphaOperation || 'add'
+    );
     gl.blendEquationSeparate(colorEquation, alphaEquation);
 
-    const colorSrcFactor = convertBlendFactorToFunction('blendColorSrcFactor', parameters.blendColorSrcFactor || 'one');
-    const colorDstFactor = convertBlendFactorToFunction('blendColorDstFactor', parameters.blendColorDstFactor || 'zero');
-    const alphaSrcFactor = convertBlendFactorToFunction('blendAlphaSrcFactor', parameters.blendAlphaSrcFactor || 'one');
-    const alphaDstFactor = convertBlendFactorToFunction('blendAlphaDstFactor', parameters.blendAlphaDstFactor || 'zero');
+    const colorSrcFactor = convertBlendFactorToFunction(
+      'blendColorSrcFactor',
+      parameters.blendColorSrcFactor || 'one'
+    );
+    const colorDstFactor = convertBlendFactorToFunction(
+      'blendColorDstFactor',
+      parameters.blendColorDstFactor || 'zero'
+    );
+    const alphaSrcFactor = convertBlendFactorToFunction(
+      'blendAlphaSrcFactor',
+      parameters.blendAlphaSrcFactor || 'one'
+    );
+    const alphaDstFactor = convertBlendFactorToFunction(
+      'blendAlphaDstFactor',
+      parameters.blendAlphaDstFactor || 'zero'
+    );
     gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
   }
 }
@@ -298,20 +317,23 @@ function convertStencilOperation(parameter: string, value: StencilOperation): GL
   });
 }
 
-function convertBlendOperationToEquation(parameter: string, value: BlendOperation): GLBlendEquation {
+function convertBlendOperationToEquation(
+  parameter: string,
+  value: BlendOperation
+): GLBlendEquation {
   return map(parameter, value, {
-    'add': GL.FUNC_ADD,
-    'subtract': GL.FUNC_SUBTRACT,
+    add: GL.FUNC_ADD,
+    subtract: GL.FUNC_SUBTRACT,
     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
-    'min': GL.MIN,
-    'max': GL.MAX
+    min: GL.MIN,
+    max: GL.MAX
   } as Record<BlendOperation, GLBlendEquation>);
 }
 
 function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GLBlendFunction {
   return map(parameter, value, {
-    'one': GL.ONE,
-    'zero': GL.ZERO,
+    one: GL.ONE,
+    zero: GL.ZERO,
     'src-color': GL.SRC_COLOR,
     'one-minus-src-color': GL.ONE_MINUS_SRC_COLOR,
     'dst-color': GL.DST_COLOR,
@@ -319,7 +341,7 @@ function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GL
     'src-alpha': GL.SRC_ALPHA,
     'one-minus-src-alpha': GL.ONE_MINUS_SRC_ALPHA,
     'dst-alpha': GL.DST_ALPHA,
-    'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA,
+    'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA
   } as Record<BlendFactor, GLBlendFunction>);
 }
 
