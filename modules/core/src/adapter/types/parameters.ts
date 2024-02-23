@@ -48,10 +48,10 @@ type _RenderParameters = {
   unclippedDepth?: boolean;
   /** Which vertex in primitive to use for flat shading (perf may improve). Requires 'provoking-vertex-webgl' */
   provokingVertex?: 'first' | 'last',
-  /** Debug: Enable polygon offset (`depthBias`) for 'line' primitives: Requires 'polygon-mode-webgl' */
-  polygonOffsetLine?: boolean;
   /** Debug: Set polygon rasterization mode to 'line' for wire frames. Requires: 'polygon-mode-webgl' */
   polygonMode?: 'fill' | 'line';
+  /** Debug: Enable polygon offset (`depthBias`) for 'line' primitives: Requires 'polygon-mode-webgl' */
+  polygonOffsetLine?: boolean;
 }
 
 export type RasterizationParameters = _RenderParameters & {
@@ -218,7 +218,6 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
 
   cullMode: 'none',
   frontFace: 'ccw',
-  provokingVertex: 'last',
 
   // Depth Parameters
 
@@ -226,11 +225,17 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   depthCompare: 'always',
   depthFormat: 'depth24plus',
 
-  unclippedDepth: false,
   depthBias: 0,
   depthBiasSlopeScale: 0,
   depthBiasClamp: 0,
 
+  // Extensions
+
+  unclippedDepth: false,
+  provokingVertex: 'last',
+  polygonMode: 'fill',
+  polygonOffsetLine: false,
+  
   // Stencil parameters
 
   stencilReadMask: 0xFFFFFFFF,
