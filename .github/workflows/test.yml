@@ -17,15 +17,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.1
       - uses: volta-cli/action@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
 
       - name: Install dependencies
         run: |
           yarn install
-        env: |
+        env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false 
-
+  
       - name: Build code
         run: |
           yarn bootstrap
