@@ -42,8 +42,9 @@ New features
 **`@luma.gl/engine`**
 
 - NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`. (Moved from `@luma.gl/experimental`).
-- NEW: `ShaderInputs` - A class that manages uniform buffers for a `Model`
-- NEW: `AnimationLoopTemplate` - a small helper class that can help write cleaner demos and applications in TypeScript.
+- NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
+- NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
+- NEW: `AnimationLoopTemplate` - Small helper class that can help write cleaner demos and applications in TypeScript.
 
 **`@luma.gl/gltf`**
 

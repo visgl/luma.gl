@@ -2,16 +2,16 @@
 
 The `PipelineFactory` class provides a `createRenderPipeline()` method that caches and reuses render pipelines.
 
-The purpose of the pipeline factory is to speed up applications that tend to create multiple render pipelines with the same shaders and other properties. By returning the same cached pipeline, the pipeline factory minimizes the amount of time spent in shader compilation and linking.
+The purpose of the pipeline factory is to speed up applications that tend to create multiple render pipelines with the same shaders and other properties. By returning the same cached pipeline, and when used alongside a `ShaderFactory`, the pipeline factory minimizes the amount of time spent in shader compilation and linking.
 
 :::info
-Pipeline creation involves compiling and linking shaders. The linking stage in particular is highly dependent on graphics drivers, and the time spent accumulates when creating many pipelines during application startup or during dynamic renderings. Also, on some graphics drivers, pipeline linking can grow non-linearly into the multi-second range for big shaders.
+Pipeline creation involves linking shaders. The linking stage is highly dependent on graphics drivers, and the time spent accumulates when creating many pipelines during application startup or during dynamic renderings. Also, on some graphics drivers, pipeline linking can grow non-linearly into the multi-second range for big shaders.
 :::
 
 The `PipelineFactory` will return the requested pipeline, creating it the first time, and then re-using a cached version if it is requested more than once. An application that tends to create multiple identical `RenderPipeline` instances
 should consider replacing normal pipeline creation.
 
-It is possible to create multiple pipeline factories, but normally applications rely on the default pipeline factory that is be created for each device.
+It is possible to create multiple pipeline factories, but normally applications rely on the default pipeline factory that is created for each device.
 
 Limitations:
 - `ComputePipeline` caching is not currently supported.
@@ -31,7 +31,8 @@ with similar calls to the default pipeline factory
 
 ```typescript
 import {PipelineFactory} from '@luma.gl/engine';
-const pipeline = PipelineFactory.getDefaultFactory(device).createRenderPipeline({vs, fs, ...}));
+const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
+const pipeline = pipelineFactory.createRenderPipeline({vs, fs, ...}));
 ```
 
 To prevent the cache from growing too big, an optional `release()` method is also available.
@@ -40,13 +41,18 @@ To prevent the cache from growing too big, an optional `release()` method is als
 pipelineFactory.release(pipeline);
 ```
 
+Pipelines are destroyed by the factory automatically after all users of the pipeline have released their references. To clean up unused pipelines and avoid memory leaks, every call to `createRenderPipeline` must be paired with a corresponding call to `release` at some later time.
+
 ## shadertools Integration
 
 ```typescript
 import {PipelineFactory} from '@luma.gl/engine';
-const pf = new PipelineFactory(gl);
 
-const vs = `
+const pipelineFactory = new PipelineFactory(device);
+
+const vs = device.createShader({
+  stage: 'vertex',
+  source: `
 attribute vec4 position;
 
 void main() {
@@ -56,14 +62,18 @@ void main() {
   gl_Position = position.wzyx;
 #endif
 }
-`;
+`
+});
 
-const fs = `
+const fs = device.createShader({
+  stage: 'fragment',
+  source: `
 void main() {
   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
   MY_SHADER_HOOK(gl_FragColor);
 }
-`;
+`
+});
 
 pipelineFactory.addShaderHook('fs:MY_SHADER_HOOK(inout vec4 color)');
 
@@ -109,12 +119,12 @@ pipelineFactory.release(program5); // Cached pipeline deleted
 
 ## Static Methods
 
-### PipelineFactory.getDefaultFactory()
+### PipelineFactory.getDefaultPipelineFactory()
 
 Returns the default pipeline factory for a device.
 
 ```typescript
-PipelineFactory.getDefaultFactory(device: Device): PipelineFactory
+PipelineFactory.getDefaultPipelineFactory(device: Device): PipelineFactory
 ```
 
 While it is possible to create multiple factories, most applications will use the default factory.
@@ -132,8 +142,8 @@ createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 If one is already cached, return it, otherwise create and cache a new one.
 `opts` can include the following (see `assembleShaders` for details):
 
-- `vs`: Base vertex shader source.
-- `fs`: Base fragment shader source.
+- `vs`: Base vertex `Shader` resource.
+- `fs`: Base fragment `Shader` resource.
 - `defines`: Object indicating `#define` constants to include in the shaders.
 - `modules`: Array of module objects to include in the shaders.
 - `inject`: Object of hook injections to include in the shaders.
