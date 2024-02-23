@@ -35,14 +35,16 @@ type _RenderParameters = {
   cullMode?: CullMode;
   /** Defines which polygons are considered front-facing. Only applies to triangle topologies. Default to "ccw" */
   frontFace?: FrontFace;
-  /** TBD */
-  depthClamp?: boolean;
+  /** If true, indicates that depth clipping is disabled. */
+  unclippedDepth?: boolean;
   /** Constant depth bias (polygon offset) added to each fragment. */
   depthBias?: number;
   /** Depth bias (polygon offset) that scales with the fragment’s slope. */
   depthBiasSlopeScale?: number;
   /** Maximum depth bias of a fragment. */
   depthBiasClamp?: number;
+  /** Which vertex in primitive to use for flat shading (perf may differ) */
+  provokingVertex?: 'first' | 'last',
 }
 
 export type RasterizationParameters = _RenderParameters & {
@@ -209,6 +211,7 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
 
   cullMode: 'none',
   frontFace: 'ccw',
+  provokingVertex: 'last',
 
   // Depth Parameters
 
@@ -216,7 +219,7 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   depthCompare: 'always',
   depthFormat: 'depth24plus',
 
-  depthClamp: false,
+  unclippedDepth: false,
   depthBias: 0,
   depthBiasSlopeScale: 0,
   depthBiasClamp: 0,

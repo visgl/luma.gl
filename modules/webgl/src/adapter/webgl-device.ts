@@ -16,6 +16,7 @@ import type {
   TypedArray
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
+import type {GLExtensions} from '@luma.gl/constants';
 import {isBrowser} from '@probe.gl/env';
 import {
   popContextState,
@@ -426,7 +427,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
 
   /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: Record<string, any> = {};
+  readonly _extensions: GLExtensions = {};
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
@@ -446,7 +447,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    */
   override loseDevice(): boolean {
     let deviceLossTriggered = false;
-    const ext = this.gl.getExtension('WEBGL_lose_context');
+    const extensions = this.getExtension('WEBGL_lose_context');
+    const ext = extensions.WEBGL_lose_context;
     if (ext) {
       deviceLossTriggered = true;
       ext.loseContext();
@@ -528,6 +530,14 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
       default:
         assert(false);
     }
+  }
+
+  /** Ensure extensions are only requested once */
+  getExtension(name: string): GLExtensions {
+    if (this._extensions[name] === undefined) {
+      this._extensions[name] = this.gl.getExtension(name) || null;
+    }
+    return this._extensions;
   }
 }
 

@@ -134,11 +134,12 @@ export type WebGLDeviceFeature =
   | 'uniforms-webgl' // Supports non-UBO uniforms: renderPipeline.setUniforms()
   | 'transform-feedback-webgl' // device.createTransformFeedback()
   | 'constant-attributes-webgl' // vertexArray.setConstant()
-
+  | 'provoking-vertex-webgl' // Parameters.provokingVertex
+  
   // api support
   | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'shader-status-async-webgl' // Non-blocking shader compile/link status query available
-
+  
   // texture rendering
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'
