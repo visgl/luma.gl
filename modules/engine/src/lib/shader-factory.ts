@@ -25,7 +25,11 @@ export class ShaderFactory {
 
     let cacheEntry = this._cache[key];
     if (!cacheEntry) {
-      this._cache[key] = cacheEntry = {shader: this.device.createShader(props), useCount: 0};
+      const shader = this.device.createShader({
+        ...props,
+        id: props.id ? `${props.id}-cached` : undefined
+      });
+      this._cache[key] = cacheEntry = {shader, useCount: 0};
     }
 
     cacheEntry.useCount++;
