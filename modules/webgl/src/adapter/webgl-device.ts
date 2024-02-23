@@ -448,7 +448,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   override loseDevice(): boolean {
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
-    const ext = extensions['WEBGL_lose_context'];
+    const ext = extensions.WEBGL_lose_context;
     if (ext) {
       deviceLossTriggered = true;
       ext.loseContext();

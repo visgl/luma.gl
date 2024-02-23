@@ -154,7 +154,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   if (parameters.provokingVertex) {
     if (device.features.has('provoking-vertex-webgl')) {
       const extensions = webglDevice.getExtension('EXT_provoking_vertex');
-      const ext = extensions['EXT_provoking_vertex'];
+      const ext = extensions.EXT_provoking_vertex;
       const vertex = map('provokingVertex', parameters.provokingVertex, {
         first: GL.FIRST_VERTEX_CONVENTION,
         last: GL.LAST_VERTEX_CONVENTION
