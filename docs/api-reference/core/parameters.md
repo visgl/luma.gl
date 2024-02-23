@@ -6,7 +6,6 @@ luma.gl provides a unified API for working with GPU parameters.
 
 All parameters listed in a single table
 
-<<<<<<< HEAD
 | Function                     | How to set                             | Description                                                                | Values                            | WebGL counterpart        |
 | ---------------------------- | -------------------------------------- | -------------------------------------------------------------------------- | --------------------------------- | ------------------------ |
 | **Rasterization Parameters** |
