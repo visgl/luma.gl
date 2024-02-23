@@ -40,9 +40,11 @@ test('ShaderFactory#createShader', t => {
   t.isEqual(shader1, shader2, 'Caches identical shaders');
   t.notEqual(shader1, shader3, 'Does not cache non-identical shaders');
 
-  t.isEqual(shader1.id, '1-cached', 'Annotates IDs of cached shaders');
-  t.isEqual(shader2.id, '1-cached', 'Annotates IDs of cached shaders');
-  t.isEqual(shader3.id, '3-cached', 'Annotates IDs of cached shaders');
+  t.deepEqual(
+    [shader1.id, shader2.id, shader3.id],
+    ['1-cached', '1-cached', '3-cached'],
+    'Annotates IDs of cached shaders'
+  );
 
   factory.release(shader1);
   factory.release(shader2);
