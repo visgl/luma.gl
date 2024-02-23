@@ -69,3 +69,4 @@ New features
 **`@luma.gl/webgl`** 
 
 - Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
+- `Parameters.provokingVertex: 'first' \| 'last'` can be used to control which primitive vertex is used for flat shading if the `provoking-vertex-webgl` feature is available. Can improve performance.

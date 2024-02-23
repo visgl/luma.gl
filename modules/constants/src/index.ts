@@ -21,5 +21,6 @@ export type {
   GLSamplerParameters,
   GLValueParameters,
   GLFunctionParameters,
-  GLParameters
+  GLParameters,
+  GLExtensions
 } from './webgl-types';

@@ -1061,7 +1061,21 @@ enum GLEnum {
   // https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
   
   /** a non-blocking poll operation, so that compile/link status availability can be queried without potentially incurring stalls */
-  COMPLETION_STATUS                = 0x91B1
+  COMPLETION_STATUS                = 0x91B1,
+
+  // https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+
+  /** Disables depth clipping */
+  DEPTH_CLAMP = 0x864F,
+
+  // https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
+
+  /** Values of first vertex in primitive are used for flat shading */
+  FIRST_VERTEX_CONVENTION = 0x8E4D,
+  /** Values of first vertex in primitive are used for flat shading */
+  LAST_VERTEX_CONVENTION  = 0x8E4E, // default
+  /** Controls which vertex in primitive is used for flat shading */
+  PROVOKING_VERTEX        = 0x8E4F,
 }
 
 export {GLEnum as GL};
