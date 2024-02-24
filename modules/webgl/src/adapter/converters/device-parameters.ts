@@ -145,7 +145,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
   if (parameters.unclippedDepth) {
     if (device.features.has('depth-clip-control')) { // EXT_depth_clamp
-      gl.enable(GL.DEPTH_CLAMP);
+      gl.enable(GL.DEPTH_CLAMP_EXT);
     }
   }
 
@@ -165,8 +165,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
     if (parameters.provokingVertex) {
       const vertex = map('provokingVertex', parameters.provokingVertex, {
-        first: GL.FIRST_VERTEX_CONVENTION,
-        last: GL.LAST_VERTEX_CONVENTION
+        first: GL.FIRST_VERTEX_CONVENTION_WEBGL,
+        last: GL.LAST_VERTEX_CONVENTION_WEBGL
       });
       ext?.provokingVertexWEBGL(vertex);
     }

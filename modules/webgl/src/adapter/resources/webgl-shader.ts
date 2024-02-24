@@ -105,7 +105,7 @@ export class WEBGLShader extends Shader {
 
     const {gl} = this.device;
     for (;;) {
-      const complete = gl.getShaderParameter(this.handle, GL.COMPLETION_STATUS);
+      const complete = gl.getShaderParameter(this.handle, GL.COMPLETION_STATUS_KHR);
       if (complete) {
         return;
       }

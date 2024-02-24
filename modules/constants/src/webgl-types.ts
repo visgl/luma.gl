@@ -384,7 +384,7 @@ export type GLExtensions = {
   WEBGL_polygon_mode?: WEBGL_polygon_mode | null;
 
   /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
-  WEBGL_clip_cull_distance: WEBGL_clip_cull_distance | null;
+  WEBGL_clip_cull_distance?: WEBGL_clip_cull_distance | null;
 
   // WEBGL1 extensions (available as built-in WebGL 2 APIs)
 
