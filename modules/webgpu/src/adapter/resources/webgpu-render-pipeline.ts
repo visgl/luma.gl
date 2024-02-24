@@ -62,26 +62,24 @@ export class WebGPURenderPipeline extends RenderPipeline {
   //   this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
   // }
 
-  /*
-  setAttributes(attributes: Record<string, Buffer>): void {
-    for (const [name, buffer] of Object.entries(attributes)) {
-      const bufferIndex = this._bufferSlots[name];
-      if (bufferIndex >= 0) {
-        this._buffers[bufferIndex] = buffer;
-      } else {
-        throw new Error(
-          `Setting attribute '${name}' not listed in shader layout for program ${this.id}`
-        );
-      }
-    }
-    // for (let i = 0; i < this._bufferSlots.length; ++i) {
-    //   const bufferName = this._bufferSlots[i];
-    //   if (attributes[bufferName]) {
-    //     this.handle
-    //   }
-    // }
-  }
-  */
+  // setAttributes(attributes: Record<string, Buffer>): void {
+  //   for (const [name, buffer] of Object.entries(attributes)) {
+  //     const bufferIndex = this._bufferSlots[name];
+  //     if (bufferIndex >= 0) {
+  //       this._buffers[bufferIndex] = buffer;
+  //     } else {
+  //       throw new Error(
+  //         `Setting attribute '${name}' not listed in shader layout for program ${this.id}`
+  //       );
+  //     }
+  //   }
+  //   // for (let i = 0; i < this._bufferSlots.length; ++i) {
+  //   //   const bufferName = this._bufferSlots[i];
+  //   //   if (attributes[bufferName]) {
+  //   //     this.handle
+  //   //   }
+  //   // }
+  // }
 
   setBindings(bindings: Record<string, Binding>): void {
     // if (isObjectEmpty(bindings)) {
