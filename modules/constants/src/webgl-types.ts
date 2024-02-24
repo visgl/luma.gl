@@ -264,15 +264,11 @@ export type GLValueParameters = {
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]?: GLStencilOp;
   [GL.VIEWPORT]?: [number, number, number, number] | NumberArray;
 
-  // WEBGL1 PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]?: number;
   [GL.UNPACK_ALIGNMENT]?: number;
   [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
-
-  // WEBGL2 PIXEL PACK/UNPACK MODES
-  // RASTERIZER_DISCARD ...
   [GL.PACK_ROW_LENGTH]?: number;
   [GL.PACK_SKIP_PIXELS]?: number;
   [GL.PACK_SKIP_ROWS]?: number;

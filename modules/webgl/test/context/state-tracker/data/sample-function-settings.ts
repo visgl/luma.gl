@@ -35,16 +35,14 @@ export const FUNCTION_STYLE_SETTINGS_SET1: GLParameters = {
   stencilOp: [GL.REPLACE, GL.INCR, GL.DECR, GL.REPLACE, GL.INCR, GL.DECR],
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   viewport: new Int32Array([0, 0, 100, 100]),
-  // WEBGL1 PIXEL PACK/UNPACK MODES
+
+  derivativeHint: GL.FASTEST,
+
   [GL.PACK_ALIGNMENT]: 8,
   [GL.UNPACK_ALIGNMENT]: 8,
   [GL.UNPACK_FLIP_Y_WEBGL]: true,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: true,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.NONE,
-
-  // WEBGL2 / EXTENSIONS
-  // gl1: 'OES_standard_derivatives'
-  derivativeHint: GL.FASTEST,
   [GL.RASTERIZER_DISCARD]: true,
   [GL.PACK_ROW_LENGTH]: 2,
   [GL.PACK_SKIP_PIXELS]: 4,

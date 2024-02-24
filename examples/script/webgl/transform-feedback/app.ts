@@ -63,7 +63,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    if (!device.features.has('transform-feedback-webgl')) {
+    if (device.info.type !== 'webgl') {
       throw new Error(ALT_TEXT);
     }
 

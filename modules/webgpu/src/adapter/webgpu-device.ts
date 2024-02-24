@@ -295,8 +295,6 @@ export class WebGPUDevice extends Device {
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
-      'webgpu',
-      'wgsl',
       'timer-query-webgl',
       'float32-filterable-linear-webgl',
       'float16-filterable-linear-webgl',

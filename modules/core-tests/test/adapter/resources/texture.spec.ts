@@ -151,9 +151,6 @@ test.skip('WebGL#Texture format creation with data', t => {
 test.skip('WebGL#Texture WebGL2 format creation', t => {
 
   for (const format in TEXTURE_FORMATS) {
-    if (!WEBGL1_FORMATS.indexOf(format)) {
-    }
-
   }
   let texture = webglDevice.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');

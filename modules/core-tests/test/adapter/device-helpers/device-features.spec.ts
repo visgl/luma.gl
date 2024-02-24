@@ -5,16 +5,9 @@ import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 import {DeviceFeature} from '@luma.gl/core';
 
-// true: always supported in WebGL2, false: never supported in WebGL1
-const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [
-  'webgl',
-  'glsl',
-  // api support
-  'transform-feedback-webgl'
-  // features
-];
-
-const WEBGL2_NEVER_FEATURES: DeviceFeature[] = ['webgpu', 'wgsl'];
+// TODO - we are not actually testing any features
+const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [];
+const WEBGL2_NEVER_FEATURES: DeviceFeature[] = [];
 
 test('WebGLDevice#features (unknown features)', t => {
   // @ts-expect-error
@@ -25,17 +18,12 @@ test('WebGLDevice#features (unknown features)', t => {
 });
 
 test('WebGLDevice#hasFeatures (WebGL)', t => {
-  t.notOk(webglDevice.features.has('webgpu'), 'features.has should return false');
-  t.notOk(webglDevice.features.has('wgsl'), 'features.has should return false');
-  // t.notOk(webglDevice.features.has('float32-renderable-webgl'), 'features.has should return false');
-
-
   for (const feature of WEBGL2_ALWAYS_FEATURES) {
-    t.equal(webglDevice.features.has(feature), true, `${feature} is always supported under WebGL2`);
+    t.equal(webglDevice.features.has(feature), true, `${feature} is always supported under WebGL`);
   }
 
   for (const feature of WEBGL2_NEVER_FEATURES) {
-    t.equal(webglDevice.features.has(feature), false, `${feature} is never supported under WebGL1`);
+    t.equal(webglDevice.features.has(feature), false, `${feature} is never supported under WebGL`);
   }
   t.end();
 });

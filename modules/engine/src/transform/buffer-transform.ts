@@ -1,10 +1,17 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {Device, Buffer, BufferRange, TransformFeedback, assert, RenderPassProps} from '@luma.gl/core';
+import {
+  Device,
+  Buffer,
+  BufferRange,
+  TransformFeedback,
+  assert,
+  RenderPassProps
+} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
 import {Model} from '../model/model';
-import type { ModelProps } from '..';
+import type {ModelProps} from '..';
 
 /**
  * Properties for creating a {@link BufferTransform}
@@ -26,11 +33,11 @@ export class BufferTransform {
 
   /** @deprecated Use device feature test. */
   static isSupported(device: Device): boolean {
-    return device.features.has('transform-feedback-webgl');
+    return device?.info?.type === 'webgl';
   }
 
   constructor(device: Device, props: BufferTransformProps = Model.defaultProps) {
-    assert(device.features.has('transform-feedback-webgl'), 'Device must support transform feedback');
+    assert(BufferTransform.isSupported(device), 'BufferTransform not yet implemented on WebGPU');
 
     this.device = device;
 
@@ -38,12 +45,12 @@ export class BufferTransform {
       id: props.id || 'buffer-transform-model',
       fs: props.fs || getPassthroughFS(),
       topology: props.topology || 'point-list',
-      ...props,
+      ...props
     });
 
     this.transformFeedback = this.device.createTransformFeedback({
       layout: this.model.pipeline.shaderLayout,
-      buffers: props.feedbackBuffers,
+      buffers: props.feedbackBuffers
     });
 
     this.model.setTransformFeedback(this.transformFeedback);

@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {Device, Buffer, VertexArrayProps, RenderPass, TypedArray} from '@luma.gl/core';
+import type {Device, Buffer, VertexArrayProps, RenderPass} from '@luma.gl/core';
 import {VertexArray, log} from '@luma.gl/core';
 import {getBrowser} from '@probe.gl/env';
 
@@ -19,14 +19,6 @@ export class WebGPUVertexArray extends VertexArray {
   readonly device: WebGPUDevice;
   /** Vertex Array is a helper class under WebGPU */
   readonly handle: never;
-
-  /** 
-   * Attribute 0 can not be disable on most desktop OpenGL based browsers 
-   * TODO is this even an issue for WebGPU? 
-   */
-  static isConstantAttributeZeroSupported(device: Device): boolean {
-    return getBrowser() === 'Chrome';
-  }
 
   // Create a VertexArray
   constructor(device: WebGPUDevice, props?: VertexArrayProps) {
@@ -55,11 +47,6 @@ export class WebGPUVertexArray extends VertexArray {
     this.attributes[bufferSlot] = buffer;
   }
 
-  /** Set a location in vertex attributes array to a constant value, disables the location */
-  override setConstant(location: number, value: TypedArray): void {
-    log.warn(`${this.id} constant attributes not supported on WebGPU`)
-  }
-
   override bindBeforeRender(renderPass: RenderPass, firstIndex?: number, indexCount?: number): void {
     const webgpuRenderPass = renderPass as WebGPURenderPass;
     const webgpuIndexBuffer = this.indexBuffer as WebGPUBuffer;
@@ -83,4 +70,15 @@ export class WebGPUVertexArray extends VertexArray {
     // In fact we can't easily do it. setIndexBuffer/setVertexBuffer don't accept null.
     // Unbinding presumably happens automatically when the render pass is ended.
   }
+
+  // DEPRECATED METHODS
+
+  /** 
+   * @deprecated is this even an issue for WebGPU? 
+   * Attribute 0 can not be disable on most desktop OpenGL based browsers 
+   */
+  static isConstantAttributeZeroSupported(device: Device): boolean {
+    return getBrowser() === 'Chrome';
+  }
+
 }

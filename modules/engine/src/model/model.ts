@@ -287,9 +287,6 @@ export class Model {
       this.transformFeedback = props.transformFeedback;
     }
 
-    // TODO - restore?
-    // this.setUniforms(this._getModuleUniforms()); // Get all default module uniforms
-
     // Catch any access to non-standard props
     Object.seal(this);
   }
@@ -321,7 +318,7 @@ export class Model {
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
       this.pipeline.setBindings(this.bindings);
-      this.pipeline.setUniforms(this.uniforms);
+      this.pipeline.setUniformsWebGL(this.uniforms);
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -506,7 +503,7 @@ export class Model {
    * @returns self for chaining
    */
   setUniforms(uniforms: Record<string, UniformValue>): void {
-    this.pipeline.setUniforms(uniforms);
+    this.pipeline.setUniformsWebGL(uniforms);
     Object.assign(this.uniforms, uniforms);
   }
 
@@ -574,7 +571,7 @@ export class Model {
     for (const [attributeName, value] of Object.entries(attributes)) {
       const attributeInfo = this._attributeInfos[attributeName];
       if (attributeInfo) {
-        this.vertexArray.setConstant(attributeInfo.location, value);
+        this.vertexArray.setConstantWebGL(attributeInfo.location, value);
       } else {
         log.warn(
           `Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`

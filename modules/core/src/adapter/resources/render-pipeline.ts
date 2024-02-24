@@ -85,15 +85,17 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     return 'RenderPipeline';
   }
 
-  hash: string = '';
   abstract readonly vs: Shader;
   abstract readonly fs: Shader | null;
+
   /** The merged layout */
   shaderLayout: ShaderLayout;
   /** Buffer map describing buffer interleaving etc */
   readonly bufferLayout: BufferLayout[];
   /** The linking status of the pipeline. 'pending' if linking is asynchronous, and on production */
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
+  /** The hash of the pipeline */
+  hash: string = '';
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, RenderPipeline.defaultProps);
@@ -103,12 +105,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
 
   /** Set bindings (stored on pipeline and set before each call) */
   abstract setBindings(bindings: Record<string, Binding>): void;
-  /** Uniforms
-   * @deprecated Only supported on WebGL devices.
-   * @note textures, samplers and uniform buffers should be set via `setBindings()`, these are not considered uniforms.
-   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing.
-   */
-  abstract setUniforms(bindings: Record<string, UniformValue>): void;
 
   /** Draw call */
   abstract draw(options: {
@@ -132,4 +128,16 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
   }): void;
+
+  // DEPRECATED METHODS
+
+  /**
+   * Uniforms
+   * @deprecated Use uniforms buffers
+   * @note textures, samplers and uniform buffers should be set via `setBindings()`, these are not considered uniforms.
+   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing.
+   */
+  setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
+    throw new Error('Use uniform blocks');
+  }
 }

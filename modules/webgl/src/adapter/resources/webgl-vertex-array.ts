@@ -106,7 +106,7 @@ export class WEBGLVertexArray extends VertexArray {
   }
 
   /** Set a location in vertex attributes array to a constant value, disables the location */
-  override setConstant(location: number, value: TypedArray): void {
+  override setConstantWebGL(location: number, value: TypedArray): void {
     this._enable(location, false);
     this.attributes[location] = value;
   }
@@ -146,7 +146,7 @@ export class WEBGLVertexArray extends VertexArray {
       const constant = this.attributes[location];
       // A typed array means this is a constant
       if (ArrayBuffer.isView(constant)) {
-        this.device.setConstantAttribute(location, constant);
+        this.device.setConstantAttributeWebGL(location, constant);
       }
     }
   }

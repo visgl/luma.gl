@@ -1,7 +1,7 @@
 // luma.gl MIT license
 
-import type {Binding, UniformValue, RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, RenderPipelineProps, cast, log, isObjectEmpty} from '@luma.gl/core';
+import type {Binding, RenderPass, VertexArray} from '@luma.gl/core';
+import {RenderPipeline, RenderPipelineProps, cast, log} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';
@@ -83,10 +83,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
   */
 
-  // setConstantAttributes(attributes: Record<string, TypedArray>): void {
-  //   throw new Error('not implemented');
-  // }
-
   setBindings(bindings: Record<string, Binding>): void {
     // if (isObjectEmpty(bindings)) {
     //   return;
@@ -94,12 +90,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Do we want to save things on CPU side?
     Object.assign(this.props.bindings, bindings);
-  }
-
-  setUniforms(uniforms: Record<string, UniformValue>): void {
-    if (!isObjectEmpty(uniforms)) {
-      throw new Error('WebGPU does not support uniforms');
-    }
   }
 
   draw(options: {
