@@ -115,7 +115,8 @@ export class Model {
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
 
-    debugShaders: undefined
+    debugShaders: undefined,
+    ignoreUnknownAttributes: undefined
   };
 
   readonly device: Device;
@@ -609,11 +610,11 @@ export class Model {
 
       const fs = this.fs
         ? this.shaderFactory.createShader({
-            id: `${this.id}-fragment`,
-            stage: 'fragment',
-            source: this.fs,
-            debug: this.props.debugShaders
-          })
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.fs,
+          debug: this.props.debugShaders
+        })
         : null;
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
