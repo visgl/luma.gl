@@ -831,7 +831,6 @@ enum GLEnum {
   /** Passed to texParameter to set the desired maximum anisotropy for a texture. */
   TEXTURE_MAX_ANISOTROPY_EXT = 0x84fe,
 
-
   // EXT_texture_norm16 - https://khronos.org/registry/webgl/extensions/EXT_texture_norm16/
 
   R16_EXT = 0x822a,
@@ -1018,7 +1017,27 @@ enum GLEnum {
   /** Enable gl_ClipDistance[6] and gl_CullDistance[6] */
   CLIP_DISTANCE6_WEBGL = 0x3006,
   /** Enable gl_ClipDistance[7] and gl_CullDistance[7] */
-  CLIP_DISTANCE7_WEBGL = 0x3007
+  CLIP_DISTANCE7_WEBGL = 0x3007,
+
+  /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
+  POLYGON_OFFSET_CLAMP_EXT = 0x8e1b,
+
+  /** EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/ */
+  LOWER_LEFT_EXT = 0x8ca1,
+  UPPER_LEFT_EXT = 0x8ca2,
+
+  NEGATIVE_ONE_TO_ONE_EXT = 0x935e,
+  ZERO_TO_ONE_EXT = 0x935f,
+
+  CLIP_ORIGIN_EXT = 0x935c,
+  CLIP_DEPTH_MODE_EXT = 0x935d,
+
+  /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
+  SRC1_COLOR_WEBGL = 0x88f9,
+  SRC1_ALPHA_WEBGL = 0x8589,
+  ONE_MINUS_SRC1_COLOR_WEBGL = 0x88fa,
+  ONE_MINUS_SRC1_ALPHA_WEBGL = 0x88fb,
+  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL = 0x88fc
 }
 
 export {GLEnum as GL};

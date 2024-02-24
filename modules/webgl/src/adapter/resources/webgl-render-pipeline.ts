@@ -309,7 +309,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // return;
     }
 
-    if (!this.device.features.has('shader-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-webgl')) {
       const status = this._getLinkStatus();
       this._reportLinkStatus(status);
       return;
@@ -373,7 +373,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
 
     // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
-    if (!this.device.features.has('shader-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-webgl')) {
       await waitMs(DELAY_MS);
       return;
     }

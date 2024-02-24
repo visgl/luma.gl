@@ -302,7 +302,8 @@ export class WebGPUDevice extends Device {
       'float16-filterable-linear-webgl',
       'texture-filterable-anisotropic-webgl',
       'float32-renderable-webgl',
-      'float16-renderable-webgl'
+      'float16-renderable-webgl',
+      'shader-noperspective-interpolation-webgl'
     ];
 
     for (const feature of WEBGPU_ALWAYS_FEATURES) {

@@ -35,14 +35,14 @@ Legacy Functionality
 
 New module structure
 
-| Module                     | Impact               | Description                                                                                                     |
-| -------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
-| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
-| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
-| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                         |
+| Module                     | Impact               | Description                                                                                                      |
+| -------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                        |
+| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2.  |
+| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                   |
+| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                          |
 | **`@luma.gl/webgl`**       | No exported API      | Now an optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s. |
-| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.  |
+| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.   |
 
 New features
 
@@ -74,6 +74,8 @@ New features
 - `parameters.provokingVertex: 'first'` controls which primitive vertex is used for flat shading. Check the `provoking-vertex-webgl` feature. 
 - `parameters.polygonMode: 'line'` enables wire frame rendering of polygons. Check the `polygon-mode-webgl` feature. 
 - `parameters.polygonOffsetLine: true` enables depth bias (polygon offset) for lines. Check the `polygon-mode-webgl` feature. 
-- `parameters.clipCullDistance0-7: true` enables `gl_ClipDistance[] / gl_CullDistance[]`. Check the `clip-cull-distance-webgl` feature. 
+- `parameters.clipCullDistance0-7: true` enables `gl_ClipDistance[] / gl_CullDistance[]`. Check the `shader-clip-cull-distance-webgl` feature. 
+- `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
+- `shader-conservative-depth-webgl`: New GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 
 [EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/

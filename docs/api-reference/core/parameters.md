@@ -39,7 +39,7 @@ All parameters listed in a single table
 | `provokingVertex`            | `RenderPipeline`               | Vertex used for flat shading. Requires `provoking-vertex-webgl`       | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
 | `polygonMode`                | `RenderPipeline`               | Enable wire frame rendering. Requires `polygon-mode-webgl`            | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
 | `polygonOffsetLine`          | `RenderPipeline`               | Vertex used for flat shading. Requires `polygon-mode-webgl`           | `boolean`                         | `WEBGL_polygon_mode`       |
-| `clipDistance0` (`0-7`)      | `RenderPipeline`               | Enable `gl_ClipDistance, gl_CullDistance`. `clip-cull-distance-webgl` | `boolean`                         | `WEBGL_clip_cull_distance` |
+| `clipDistance0` (`0-7`)      | `RenderPipeline`               | Enable `gl_ClipDistance, gl_CullDistance`. `shader-clip-cull-distance-webgl` | `boolean`                         | `WEBGL_clip_cull_distance` |
 
 ## Other types of parameters
 

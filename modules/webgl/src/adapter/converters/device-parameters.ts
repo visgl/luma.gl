@@ -190,7 +190,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     }
   }
 
-  if (device.features.has('clip-cull-distance-webgl')) {
+  if (device.features.has('shader-clip-cull-distance-webgl')) {
     if (parameters.clipDistance0) {
       gl.enable(GL.CLIP_DISTANCE0_WEBGL);
     }

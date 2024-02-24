@@ -68,10 +68,12 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
 
   // optional WebGL features
   'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
-  'shader-status-async-webgl': 'KHR_parallel_shader_compile',
+  'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
-  'clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
+  'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
+  'shader-noperspective-interpolation-webgl': 'NV_shader_noperspective_interpolation',
+  'shader-conservative-depth-webgl': 'EXT_conservative_depth'
 
   // Textures are handled by getTextureFeatures()
 };
