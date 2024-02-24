@@ -30,17 +30,18 @@ export const ENUM_STYLE_SETTINGS_SET1_PRIMITIVE: GLParameters = {
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   // TODO - this triggers test errors with single WebGL2Device
   // [GL.VIEWPORT]: new Int32Array([0, 0, 100, 100]),
-  // WEBGL1 PIXEL PACK/UNPACK MODES
+
+  // gl1: 'OES_standard_derivatives'
+  // [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.FASTEST,
+  // [GL.RASTERIZER_DISCARD]: true,
+
+  // PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: 8,
   [GL.UNPACK_ALIGNMENT]: 8,
   [GL.UNPACK_FLIP_Y_WEBGL]: true,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: true,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.NONE
-
-  // WEBGL2 / EXTENSIONS
-  // gl1: 'OES_standard_derivatives'
-  // [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.FASTEST,
-  // [GL.RASTERIZER_DISCARD]: true,
+  // TODO
   // [GL.PACK_ROW_LENGTH]: 2,
   // [GL.PACK_SKIP_PIXELS]: 4,
   // [GL.PACK_SKIP_ROWS]: 8
@@ -127,17 +128,18 @@ export const ENUM_STYLE_SETTINGS_SET2: GLParameters = {
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: GL.INCR,
   // Dynamic value: We use [0, 0, 1024, 1024] as default, but usually this is updated in each frame.
   [GL.VIEWPORT]: new Int32Array([0, 0, 200, 200]),
+
+  // gl1: 'OES_standard_derivatives'
+  // [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.NICEST,
+  // [GL.RASTERIZER_DISCARD]: false,
+
   // WEBGL1 PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: 2,
   [GL.UNPACK_ALIGNMENT]: 2,
   [GL.UNPACK_FLIP_Y_WEBGL]: false,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: false,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: GL.BROWSER_DEFAULT_WEBGL
-
-  // WEBGL2 / EXTENSIONS
-  // gl1: 'OES_standard_derivatives'
-  // [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]: GL.NICEST,
-  // [GL.RASTERIZER_DISCARD]: false,
+  // TODO
   // [GL.PACK_ROW_LENGTH]: 64,
   // [GL.PACK_SKIP_PIXELS]: 128,
   // [GL.PACK_SKIP_ROWS]: 512,

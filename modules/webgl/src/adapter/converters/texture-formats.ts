@@ -33,19 +33,15 @@ const X_PVRTC = 'WEBGL_compressed_texture_pvrtc';
 const X_ATC = 'WEBGL_compressed_texture_atc';
 
 // Define local webgl extension strings to optimize minification
-const EXT_TEXTURE_NORM16 = 'EXT_texture_norm16';
-const EXT_FLOAT_RENDER_WEBGL2 = 'EXT_color_buffer_float';
+const EXT_texture_norm16 = 'EXT_texture_norm16';
+const EXT_color_buffer_float = 'EXT_color_buffer_float';
 // const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
-// const DEPTH = 'WEBGL_depth_texture';
-
-// WebGL1-only extensions
-// const EXT_SRGB = 'EXT_sRGB'; // https://developer.mozilla.org/en-US/docs/Web/API/EXT_sRGB
 
 // prettier-ignore
 const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, string[]>> = {
   'float32-renderable-webgl': ['EXT_color_buffer_float'], // [false, 'EXT_color_buffer_float'],
   'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
-  'norm16-renderable-webgl': [EXT_TEXTURE_NORM16],
+  'norm16-renderable-webgl': [EXT_texture_norm16],
 
   'float32-filterable-linear-webgl': ['OES_texture_float_linear'],
   'float16-filterable-linear-webgl': ['OES_texture_half_float_linear'],
@@ -151,8 +147,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'r16uint': {gl: GL.R16UI, b: 2, c: 1, renderbuffer: true},
   'r16sint': {gl: GL.R16I, b: 2, c: 1, renderbuffer: true},
   'r16float': {gl: GL.R16F, b: 2, c: 1, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl', renderbuffer: true},
-  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_TEXTURE_NORM16},
-  'r16snorm-webgl': {gl: GL.R16_SNORM_EXT, b:2, c:1, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
+  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_texture_norm16},
+  'r16snorm-webgl': {gl: GL.R16_SNORM_EXT, b:2, c:1, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
 
   // Packed 16-bit formats
   'rgba4unorm-webgl': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false, renderbuffer: true},
@@ -177,8 +173,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, bpp: 4},
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
   'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl', renderbuffer: true},
-  'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
-  'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
+  'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
 
   'r32uint': {gl: GL.R32UI, b: 4, c: 1, bpp: 4, renderbuffer: true},
   'r32sint': {gl: GL.R32I, b: 4, c: 1, bpp: 4, renderbuffer: true},
@@ -191,8 +187,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
 
   // 48-bit formats
-  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
-  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
+  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
 
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, renderbuffer: true},
@@ -201,12 +197,12 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, renderbuffer: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, renderbuffer: true},
   'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: 'float16-renderable-webgl', filter: 'float16-filterable-linear-webgl'},
-  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_TEXTURE_NORM16},
-  'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, f: 'norm16-renderable-webgl', x: EXT_TEXTURE_NORM16},
+  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_texture_norm16},
+  'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
 
   // 96-bit formats (deprecated!)
   'rgb32float-webgl': {gl: GL.RGB32F, render: 'float32-renderable-webgl', filter: 'float32-filterable-linear-webgl',
-    gl2ext: EXT_FLOAT_RENDER_WEBGL2, dataFormat: GL.RGB, types: [GL.FLOAT]},
+    gl2ext: EXT_color_buffer_float, dataFormat: GL.RGB, types: [GL.FLOAT]},
   
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, renderbuffer: true},
@@ -400,7 +396,7 @@ export const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
   [GL.RG32F]: {ext: EXT_FLOAT_WEBGL2, bpp: 8},
   // TODO - can't get WEBGL_color_buffer_float to work on renderbuffers
   [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2, bpp: 16},
-  // [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2, gl1: EXT_FLOAT_WEBGL1},
+  // [GL.RGBA32F]: {ext: EXT_FLOAT_WEBGL2},
   [GL.R11F_G11F_B10F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4}
 };
 */

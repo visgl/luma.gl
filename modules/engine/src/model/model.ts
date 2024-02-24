@@ -318,7 +318,7 @@ export class Model {
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
       this.pipeline.setBindings(this.bindings);
-      this.pipeline.setUniforms(this.uniforms);
+      this.pipeline.setUniformsWebGL(this.uniforms);
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer

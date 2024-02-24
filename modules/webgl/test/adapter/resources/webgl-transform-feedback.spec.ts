@@ -27,11 +27,6 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback feature flag', t => {
-  t.true(webglDevice.features.has('transform-feedback-webgl'), 'webgl supports transform feedback');
-  t.end();
-});
-
 test('WebGL#TransformFeedback constructor/destroy', t => {
   const buffer1 = webglDevice.createBuffer({byteLength: 16});
   const buffer2 = webglDevice.createBuffer({byteLength: 16});

@@ -16,9 +16,6 @@ export const fs = glsl`\
 # error PBR fragment shader: Derivatives are not available
 #endif
 
-// TODO - remove we no longer support WebGL1
-#define SMART_FOR(INIT, WEBGL1COND, WEBGL2COND, INCR) for (INIT; WEBGL2COND; INCR)
-
 precision highp float;
 
 uniform bool pbr_uUnlit;
@@ -347,7 +344,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     color += calculateFinalColor(pbrInputs, lighting_uAmbientLight.color);
 
     // Apply directional light
-    SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uDirectionalLightCount, i++) {
+    for(int i = 0, i < lighting_uDirectionalLightCount, i++) {
       if (i < lighting_uDirectionalLightCount) {
         PBRInfo_setDirectionalLight(pbrInputs, lighting_uDirectionalLight[i].direction);
         color += calculateFinalColor(pbrInputs, lighting_uDirectionalLight[i].color);
@@ -355,7 +352,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     }
 
     // Apply point light
-    SMART_FOR(int i = 0, i < MAX_LIGHTS, i < lighting_uPointLightCount, i++) {
+    for(int i = 0, i < lighting_uPointLightCount, i++) {
       if (i < lighting_uPointLightCount) {
         PBRInfo_setPointLight(pbrInputs, lighting_uPointLight[i]);
         float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
