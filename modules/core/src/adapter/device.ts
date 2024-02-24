@@ -137,11 +137,15 @@ export type WebGLDeviceFeature =
 
   // webgl extension features
   | 'timer-query-webgl' // unify with WebGPU timestamp-query?
-  | 'shader-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
-  | 'clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
-  
+
+  // GLSL extension features
+  | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
+  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test 
+  | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
+
   // texture rendering
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'

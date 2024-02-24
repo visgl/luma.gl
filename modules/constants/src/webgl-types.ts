@@ -386,6 +386,12 @@ export type GLExtensions = {
   /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
   WEBGL_clip_cull_distance?: WEBGL_clip_cull_distance | null;
 
+  /** NV_shader_noperspective_interpolation https://registry.khronos.org/webgl/extensions/NV_shader_noperspective_interpolation/ */
+  NV_shader_noperspective_interpolation?: NV_shader_noperspective_interpolation | null;
+
+  /** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
+  EXT_conservative_depth?: EXT_conservative_depth | null;
+
   // WEBGL1 extensions (available as built-in WebGL 2 APIs)
 
   // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
@@ -411,7 +417,9 @@ type EXT_depth_clamp = {
 type WEBGL_provoking_vertex = {
   // Constants in GL enum
   /** Set the provoking vertex */
-  provokingVertexWEBGL(provokeMode: GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL): void;
+  provokingVertexWEBGL(
+    provokeMode: GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL
+  ): void;
 };
 
 /** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
@@ -423,11 +431,11 @@ type WEBGL_polygon_mode = {
 /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
 type WEBGL_clip_cull_distance = {
   /** Max clip distances */
-  MAX_CLIP_DISTANCES_WEBGL: 0x0D32;
+  MAX_CLIP_DISTANCES_WEBGL: 0x0d32;
   /** Max cull distances */
-  MAX_CULL_DISTANCES_WEBGL: 0x82F9;
+  MAX_CULL_DISTANCES_WEBGL: 0x82f9;
   /** Max clip and cull distances */
-  MAX_COMBINED_CLIP_AND_CULL_DISTANCES_WEBGL: 0x82FA;
+  MAX_COMBINED_CLIP_AND_CULL_DISTANCES_WEBGL: 0x82fa;
 
   /** Enable gl_ClipDistance[0] and gl_CullDistance[0] */
   CLIP_DISTANCE0_WEBGL: 0x3000;
@@ -446,3 +454,9 @@ type WEBGL_clip_cull_distance = {
   /** Enable gl_ClipDistance[7] and gl_CullDistance[7] */
   CLIP_DISTANCE7_WEBGL: 0x3007;
 };
+
+/** NV_shader_noperspective_interpolation https://registry.khronos.org/webgl/extensions/NV_shader_noperspective_interpolation/ */
+type NV_shader_noperspective_interpolation = {};
+
+/** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
+type EXT_conservative_depth = {};

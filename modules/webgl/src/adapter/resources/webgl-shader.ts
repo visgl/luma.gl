@@ -72,7 +72,7 @@ export class WEBGLShader extends Shader {
     }
 
     // Sync case - slower, but advantage is that it throws in the constructor, making break on error more useful
-    if (!this.device.features.has('shader-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-webgl')) {
       this._getCompilationStatus();
       if (this.compilationStatus === 'error') {
         throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
@@ -98,7 +98,7 @@ export class WEBGLShader extends Shader {
     const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
 
     // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
-    if (!this.device.features.has('shader-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-webgl')) {
       await waitMs(DELAY_MS);
       return;
     }

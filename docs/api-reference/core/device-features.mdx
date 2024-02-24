@@ -48,47 +48,50 @@ be queried on a per-texture basis
 
 <DeviceTabs />
 
-| `luma.gl Feature`                      | This<br /> Browser                            | Description                             |
-| -------------------------------------- | --------------------------------------------- | --------------------------------------- |
-| **Platform**                           |
-| `webgpu`                               | <F f="webgpu"/>                               | WebGPU device.                          |
-| `webgl`                                | <F f="webgl"/>                                | WebGL2 device.                          |
-| `glsl`                                 | <F f="glsl"/>                                 | GLSL shader language.                   |
-| `wgsl`                                 | <F f="wgsl"/>                                 | WGSL shader language.                   |
-| **Features**                           |
-| `depth-clip-control`                   | <F f="depth-clip-control"/>                   | Disable depth clipping `unclippedDepth` |
-| `indirect-first-instance`              | <F f="indirect-first-instance"/>              | Specify via GPU buffer                  |
-| `timestamp-query`                      | <F f="timestamp-query"/>                      |                                         |
-| `timer-query-webgl`                    | <F f="timer-query-webgl"/>                    | GPU timer support                       |
-| `shader-status-async-webgl`            | <F f="shader-status-async-webgl"/>            | Non-blocking compile/link status        |
-| `provoking-vertex-webgl`               | <F f="provoking-vertex-webgl"/>               | Primitive vertex used for flat shading  |
-| `polygon-mode-webgl`                   | <F f="polygon-mode-webgl"/>                   | Wireframe rendering parameters          |
-| **WebGL-only Features**                |
-| `transform-feedback-webgl`             | <F f="transform-feedback-webgl"/>             | `TransformFeedback` support             |
-| `uniforms-webgl`                       | <F f="uniforms-webgl"/>                       | non-UBO uniforms support                |
-| `constant-attributes-webgl`            | <F f="constant-attributes-webgl"/>            | Constant attributes                     |
-| **Shaders**                            |
-| `shader-f16`                           | <F f="shader-f16"/>                           | WGSL supports `f16`                     |
-| **Textures**                           |
-| `depth24unorm-stencil8`                | <F f="depth24unorm-stencil8"/>                | `UNSIGNED_INT_24_8_WEBGL`               |
-| `depth32float-stencil8`                | <F f="depth32float-stencil8"/>                | WebGPU only                             |
-| `float32-filterable`                   | <F f="float32-filterable"/>                   | float32 textures are filterable         |
-| `float32-filterable-linear-webgl`      | <F f="float32-filterable-linear-webgl"/>      | float32 `linear` filtering              |
-| `float16-filterable-linear-webgl`      | <F f="float16-filterable-linear-webgl`" />    | float16 `linear` filtering              |
-| `rg11b10ufloat-renderable`             | <F f="rg11b10ufloat-renderable"/>             | rg11b10ufloat textures renderable       |
-| `float32-renderable-webgl`             | <F f="float32-renderable-webgl"/>             | float32 textures renderable             |
-| `float16-renderable-webgl`             | <F f="float16-renderable-webgl"/>             | float16 textures renderable             |
-| `bgra8unorm-storage`                   | <F f="bgra8unorm-storage"/>                   | can be used as storage binding.         |
-| `texture-filterable-anisotropic-webgl` | <F f="texture-filterable-anisotropic-webgl"/> | anisotropic filtering, common           |
-| `texture-blend-float-webgl`            | <F f="texture-blend-float-webgl"/>            | float texture blending                  |
-| **Compressed Textures**                |
-| `texture-compression-bc`               | <F f="texture-compression-bc"/>               | DXT (BC1-BC7). Desktops.                |
-| `texture-compression-bc5-webgl`        | <F f="texture-compression-bc5-webgl"/>        | DXT (BC1-BC5). Desktops.                |
-| `texture-compression-etc2`             | <F f="texture-compression-etc2"/>             | Performance caveats.                    |
-| `texture-compression-astc`             | <F f="texture-compression-astc"/>             | ASTC.                                   |
-| `texture-compression-etc1-webgl`       | <F f="texture-compression-etc1-webgl"/>       | Qualcomm Snapdragon. Android.           |
-| `texture-compression-pvrtc-webgl`      | <F f="texture-compression-pvrtc-webgl"/>      | PowerVR GPUs, iOS devices.              |
-| `texture-compression-atc-webgl`        | <F f="texture-compression-atc-webgl"/>        | Qualcomm Adreno GPUs. Android.          |
+| `luma.gl Feature`                          | This<br /> Browser                                | Description                                  |
+| ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- |
+| **Platform**                               |
+| `webgpu`                                   | <F f="webgpu"/>                                   | WebGPU device.                               |
+| `webgl`                                    | <F f="webgl"/>                                    | WebGL2 device.                               |
+| `glsl`                                     | <F f="glsl"/>                                     | GLSL shader language.                        |
+| `wgsl`                                     | <F f="wgsl"/>                                     | WGSL shader language.                        |
+| **Features**                               |
+| `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping `unclippedDepth`      |
+| `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify via GPU buffer                       |
+| `timestamp-query`                          | <F f="timestamp-query"/>                          |                                              |
+| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            |
+| `compilation-status-async-webgl`                | <F f="compilation-status-async-webgl"/>                | Non-blocking compile/link status             |
+| `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       |
+| `polygon-mode-webgl`                       | <F f="shader-clip-cull-distance-webgl"/>                 | Wireframe rendering parameters               |
+| `shader-clip-cull-distance-webgl`                 | <F f="polygon-mode-webgl"/>                       | Enable `gl_ClipDistance[]/gl_CullDistance[]` |
+| **WebGL-only Features**                    |
+| `transform-feedback-webgl`                 | <F f="transform-feedback-webgl"/>                 | `TransformFeedback` support                  |
+| `uniforms-webgl`                           | <F f="uniforms-webgl"/>                           | non-UBO uniforms support                     |
+| `constant-attributes-webgl`                | <F f="constant-attributes-webgl"/>                | Constant attributes                          |
+| **Shaders**                                |
+| `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          |
+| `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier |
+| `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   |
+| **Textures**                               |
+| `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    | `UNSIGNED_INT_24_8_WEBGL`                    |
+| `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    | WebGPU only                                  |
+| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              |
+| `float32-filterable-linear-webgl`          | <F f="float32-filterable-linear-webgl"/>          | float32 `linear` filtering                   |
+| `float16-filterable-linear-webgl`          | <F f="float16-filterable-linear-webgl`" />        | float16 `linear` filtering                   |
+| `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            |
+| `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  |
+| `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  |
+| `bgra8unorm-storage`                       | <F f="bgra8unorm-storage"/>                       | can be used as storage binding.              |
+| `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                |
+| `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       |
+| **Compressed Textures**                    |
+| `texture-compression-bc`                   | <F f="texture-compression-bc"/>                   | DXT (BC1-BC7). Desktops.                     |
+| `texture-compression-bc5-webgl`            | <F f="texture-compression-bc5-webgl"/>            | DXT (BC1-BC5). Desktops.                     |
+| `texture-compression-etc2`                 | <F f="texture-compression-etc2"/>                 | Performance caveats.                         |
+| `texture-compression-astc`                 | <F f="texture-compression-astc"/>                 | ASTC.                                        |
+| `texture-compression-etc1-webgl`           | <F f="texture-compression-etc1-webgl"/>           | Qualcomm Snapdragon. Android.                |
+| `texture-compression-pvrtc-webgl`          | <F f="texture-compression-pvrtc-webgl"/>          | PowerVR GPUs, iOS devices.                   |
+| `texture-compression-atc-webgl`            | <F f="texture-compression-atc-webgl"/>            | Qualcomm Adreno GPUs. Android.               |
 
 ## Usage
 
