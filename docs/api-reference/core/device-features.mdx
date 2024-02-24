@@ -56,14 +56,14 @@ be queried on a per-texture basis
 | `timestamp-query`                          | <F f="timestamp-query"/>                          |                                              |
 | **WebGL-only Features**                    |
 | `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            |
-| `compilation-status-async-webgl`                | <F f="compilation-status-async-webgl"/>                | Non-blocking compile/link status             |
+| `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             |
+| `polygon-mode-webgl`                       | <F f="shader-clip-cull-distance-webgl"/>          | Wireframe rendering parameters               |
 | `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       |
-| `polygon-mode-webgl`                       | <F f="shader-clip-cull-distance-webgl"/>                 | Wireframe rendering parameters               |
-| `shader-clip-cull-distance-webgl`                 | <F f="polygon-mode-webgl"/>                       | Enable `gl_ClipDistance[]/gl_CullDistance[]` |
 | **Shaders**                                |
 | `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          |
 | `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier |
 | `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   |
+| `shader-clip-cull-distance-webgl`          | <F f="polygon-mode-webgl"/>                       | Enable `gl_ClipDistance[]/gl_CullDistance[]` |
 | **Textures**                               |
 | `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    | `UNSIGNED_INT_24_8_WEBGL`                    |
 | `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    | WebGPU only                                  |
@@ -95,7 +95,7 @@ if (device.features.has('timer-query-webgl')) {
    ...
 }
 // Alternatively - do the same query using raw WebGL extensions
-if (webglDevice.gl.getExtension('EXT_disjoint_timer_query') || webglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
+if (wwebglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
    ...
 }
 ```
