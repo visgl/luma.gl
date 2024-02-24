@@ -26,11 +26,11 @@ export class BufferTransform {
 
   /** @deprecated Use device feature test. */
   static isSupported(device: Device): boolean {
-    return device.features.has('transform-feedback-webgl');
+    return device.info.type === 'webgl';
   }
 
   constructor(device: Device, props: BufferTransformProps = Model.defaultProps) {
-    assert(device.features.has('transform-feedback-webgl'), 'Device must support transform feedback');
+    assert(BufferTransform.isSupported(), 'BufferTransform not yet implemented on WebGPU');
 
     this.device = device;
 

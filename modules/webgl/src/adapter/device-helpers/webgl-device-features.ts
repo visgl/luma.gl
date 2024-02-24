@@ -55,16 +55,8 @@ function isFeatureSupported(gl: WebGL2RenderingContext, feature: DeviceFeature):
  * when value is 'string' it is the name of the extension that enables this feature
  */
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
-  webgl: true,
-  glsl: true,
-
   // optional WebGPU features
   'depth-clip-control': 'EXT_depth_clamp',
-
-  // WebGL only features
-  'uniforms-webgl': true,
-  'transform-feedback-webgl': true,
-  'constant-attributes-webgl': true,
 
   // optional WebGL features
   'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',

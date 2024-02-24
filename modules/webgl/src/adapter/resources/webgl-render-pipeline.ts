@@ -148,20 +148,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  /** This function is @deprecated, use uniform buffers */
-  setUniforms(uniforms: Record<string, UniformValue>) {
-    const {bindings} = splitUniformsAndBindings(uniforms);
-    Object.keys(bindings).forEach(name => {
-      log.warn(
-        `Unsupported value "${JSON.stringify(
-          bindings[name]
-        )}" used in setUniforms() for key ${name}. Use setBindings() instead?`
-      )();
-    });
-    // TODO - check against layout
-    Object.assign(this.uniforms, uniforms);
-  }
-
   /** @todo needed for portable model
    * @note The WebGL API is offers many ways to draw things
    * This function unifies those ways into a single call using common parameters with sane defaults
@@ -225,31 +211,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this._applyUniforms();
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
-    //     // TODO - Use polyfilled WebGL2RenderingContext instead of ANGLE extension
-    //     if (isIndexed && isInstanced) {
-    //       // ANGLE_instanced_arrays extension
-    //       this.device.gl.drawElementsInstanced(
-    //         drawMode,
-    //         vertexCount || 0, // indexCount?
-    //         indexType,
-    //         firstVertex,
-    //         instanceCount || 0
-    //       );
-    //       // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-    //       //   this.device.gldrawRangeElements(drawMode, start, end, vertexCount, indexType, offset);
-    //     } else if (isIndexed) {
-    //       this.device.gl.drawElements(drawMode, vertexCount || 0, indexType, firstVertex); // indexCount?
-    //     } else if (isInstanced) {
-    //       this.device.gl.drawArraysInstanced(
-    //         drawMode,
-    //         firstVertex,
-    //         vertexCount || 0,
-    //         instanceCount || 0
-    //       );
-    //     } else {
-    //       this.device.gl.drawArrays(drawMode, firstVertex, vertexCount || 0);
-    //     }
-    //   });
 
     withDeviceAndGLParameters(
       this.device,
@@ -257,7 +218,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       webglRenderPass.glParameters,
       () => {
         if (isIndexed && isInstanced) {
-          // ANGLE_instanced_arrays extension
           this.device.gl.drawElementsInstanced(
             glDrawMode,
             vertexCount || 0, // indexCount?
@@ -290,6 +250,21 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     return true;
   }
+
+  // DEPRECATED METHODS
+
+  override setUniformsWebGL(uniforms: Record<string, UniformValue>) {
+    const {bindings} = splitUniformsAndBindings(uniforms);
+    Object.keys(bindings).forEach(name => {
+      log.warn(
+        `Unsupported value "${JSON.stringify(
+          bindings[name]
+        )}" used in setUniforms() for key ${name}. Use setBindings() instead?`
+      )();
+    });
+    // TODO - check against layout
+    Object.assign(this.uniforms, uniforms);
+  }  
 
   // PRIVATE METHODS
 

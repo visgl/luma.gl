@@ -125,23 +125,18 @@ export type WebGPUDeviceFeature =
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
 
-// obsolete...
+// Removed WebGPU features...
 // 'depth-clamping' |
 // 'pipeline-statistics-query' |
 
 export type WebGLDeviceFeature =
-  // webgl standard features
-  | 'transform-feedback-webgl' // device.createTransformFeedback()
-  | 'constant-attributes-webgl' // vertexArray.setConstant()
-  | 'uniforms-webgl' // Supports non-UBO uniforms: renderPipeline.setUniforms()
-
   // webgl extension features
   | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
 
-  // GLSL extension features
+  // GLSL extension feGLatures
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
   | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test 
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
@@ -173,11 +168,7 @@ type WebGLCompressedTextureFeatures =
 export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures
-  | 'webgl'
-  | 'glsl'
-  | 'webgpu'
-  | 'wgsl';
+  | WebGLCompressedTextureFeatures;
 
 /**
  * WebGPU Device/WebGL context abstraction

@@ -509,11 +509,11 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    * so they need to be updated before every render
    * @todo - remember/cache values to avoid setting them unnecessarily?
    */
-  setConstantAttribute(location: number, constant: TypedArray): void {
+  setConstantAttributeWebGL(location: number, constant: TypedArray): void {
     this._constants = this._constants || new Array(this.limits.maxVertexAttributes).fill(null);
     const currentConstant = this._constants[location];
     if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
-      log.info(1, `setConstantAttribute(${location}) could have been skipped, value unchanged`)();
+      log.info(1, `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`)();
     }
     this._constants[location] = constant;
 

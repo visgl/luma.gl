@@ -57,9 +57,14 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   abstract setIndexBuffer(indices: Buffer | null): void;
   /** Set attributes (stored on pipeline and set before each call) */
   abstract setBuffer(bufferSlot: number, buffer: Buffer | null): void;
-  /** Set constant attributes (WebGL only) */
-  abstract setConstant(location: number, value: TypedArray | null): void;
 
   abstract bindBeforeRender(renderPass: RenderPass): void;
   abstract unbindAfterRender(renderPass: RenderPass): void;
+
+  // DEPRECATED METHODS
+  
+  /** @deprecated Set constant attributes (WebGL only) */
+  setConstantWebGL(location: number, value: TypedArray | null): void {
+    throw new Error('constant attributes not supported');
+  }
 }
