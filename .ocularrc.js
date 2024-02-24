@@ -28,6 +28,10 @@ const config = {
     test: testDir
   },
 
+  coverage: {
+    test: 'browser'
+  },
+
   bundle: {
     globalName: 'luma',
     externals: [],
