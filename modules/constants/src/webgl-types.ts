@@ -392,6 +392,18 @@ export type GLExtensions = {
   /** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
   EXT_conservative_depth?: EXT_conservative_depth | null;
 
+  /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
+  EXT_polygon_offset_clamp?: EXT_polygon_offset_clamp | null;
+
+  /** EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/ */
+  EXT_clip_control?: EXT_clip_control | null;
+
+  /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
+  WEBGL_blend_func_extended?: WEBGL_blend_func_extended | null;
+
+  /** OES_draw_buffers_indexed https://registry.khronos.org/webgl/extensions/OES_draw_buffers_indexed/ */
+  OES_draw_buffers_indexed?: OES_draw_buffers_indexed | null;
+
   // WEBGL1 extensions (available as built-in WebGL 2 APIs)
 
   // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
@@ -460,3 +472,51 @@ type NV_shader_noperspective_interpolation = {};
 
 /** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
 type EXT_conservative_depth = {};
+
+/** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
+type EXT_polygon_offset_clamp = {
+  POLYGON_OFFSET_CLAMP_EXT: 0x8E1B;
+
+  polygonOffsetClampEXT(factor: number, units: number, clamp: number): void;
+};
+
+/** EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/ */
+type EXT_clip_control = {
+  LOWER_LEFT_EXT: 0x8CA1;
+  UPPER_LEFT_EXT: 0x8CA2;
+
+  NEGATIVE_ONE_TO_ONE_EXT: 0x935E;
+  ZERO_TO_ONE_EXT: 0x935F;
+
+  CLIP_ORIGIN_EXT: 0x935C;
+  CLIP_DEPTH_MODE_EXT: 0x935D;
+
+  clipControlEXT(origin: GL, depth: GL): void;
+};
+
+/** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
+type WEBGL_blend_func_extended = {
+  SRC1_COLOR_WEBGL: 0x88F9;
+  SRC1_ALPHA_WEBGL: 0x8589;
+  ONE_MINUS_SRC1_COLOR_WEBGL: 0x88FA;
+  ONE_MINUS_SRC1_ALPHA_WEBGL: 0x88FB;
+  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL: 0x88FC;
+};
+
+/** OES_draw_buffers_indexed https://registry.khronos.org/webgl/extensions/OES_draw_buffers_indexed/ */
+type OES_draw_buffers_indexed = {
+  /** Enables blending for an individual draw buffer */
+  enableiOES(target: GL, index: number): void;
+  /** Disables blending for an individual draw buffer */
+  disableiOES(target: GL, index: number): void;
+  /** Modifies blend equation for an individual draw buffer */
+  blendEquationiOES(buf: number, mode: GL): void;
+  /** Modifies blend equation for an individual draw buffer */
+  blendEquationSeparateiOES(buf: number, modeRGB: GL, modeAlpha: GL): void;
+  /** Modifies blend function for an individual draw buffer */
+  blendFunciOES(buf: number, src: GL, dst: GL): void;
+  /** Modifies blend function for an individual draw buffer */
+  blendFuncSeparateiOES(buf: number, srcRGB: GL, dstRGB: GL, srcAlpha: GL, dstAlpha: GL): void;
+  /** Modifies color mask for an individual draw buffer */
+  colorMaskiOES(buf: number, r: boolean, g: boolean, b: boolean, a: boolean): void;
+};
