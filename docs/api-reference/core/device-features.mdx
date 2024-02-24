@@ -50,24 +50,16 @@ be queried on a per-texture basis
 
 | `luma.gl Feature`                          | This<br /> Browser                                | Description                                  |
 | ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- |
-| **Platform**                               |
-| `webgpu`                                   | <F f="webgpu"/>                                   | WebGPU device.                               |
-| `webgl`                                    | <F f="webgl"/>                                    | WebGL2 device.                               |
-| `glsl`                                     | <F f="glsl"/>                                     | GLSL shader language.                        |
-| `wgsl`                                     | <F f="wgsl"/>                                     | WGSL shader language.                        |
 | **Features**                               |
 | `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping `unclippedDepth`      |
 | `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify via GPU buffer                       |
 | `timestamp-query`                          | <F f="timestamp-query"/>                          |                                              |
+| **WebGL-only Features**                    |
 | `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            |
 | `compilation-status-async-webgl`                | <F f="compilation-status-async-webgl"/>                | Non-blocking compile/link status             |
 | `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       |
 | `polygon-mode-webgl`                       | <F f="shader-clip-cull-distance-webgl"/>                 | Wireframe rendering parameters               |
 | `shader-clip-cull-distance-webgl`                 | <F f="polygon-mode-webgl"/>                       | Enable `gl_ClipDistance[]/gl_CullDistance[]` |
-| **WebGL-only Features**                    |
-| `transform-feedback-webgl`                 | <F f="transform-feedback-webgl"/>                 | `TransformFeedback` support                  |
-| `uniforms-webgl`                           | <F f="uniforms-webgl"/>                           | non-UBO uniforms support                     |
-| `constant-attributes-webgl`                | <F f="constant-attributes-webgl"/>                | Constant attributes                          |
 | **Shaders**                                |
 | `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          |
 | `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier |
