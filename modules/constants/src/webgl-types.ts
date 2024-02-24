@@ -131,8 +131,8 @@ export type GLBlendEquation =
   | GL.FUNC_ADD
   | GL.FUNC_SUBTRACT
   | GL.FUNC_REVERSE_SUBTRACT
-  | GL.MIN_EXT
-  | GL.MAX_EXT;
+  | GL.MIN
+  | GL.MAX;
 
 export type GLBlendFunction =
   | GL.ZERO
@@ -411,7 +411,7 @@ type EXT_depth_clamp = {
 type WEBGL_provoking_vertex = {
   // Constants in GL enum
   /** Set the provoking vertex */
-  provokingVertexWEBGL(provokeMode: GL.FIRST_VERTEX_CONVENTION | GL.LAST_VERTEX_CONVENTION): void;
+  provokingVertexWEBGL(provokeMode: GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL): void;
 };
 
 /** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
