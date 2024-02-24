@@ -4,7 +4,7 @@
   "sourceMap": false,
   "instrument": true,
   "extensions": [".js", ".ts"],
-  "include": ["dev-modules", "modules/**/src"],
+  "include": ["modules/**/src"],
   "exclude": [
     "**/deprecated",
     "**/bundle.ts",
