@@ -6,42 +6,41 @@ luma.gl provides a unified API for working with GPU parameters.
 
 All parameters listed in a single table
 
-| Function                     | How to set                     | Description                                                           | Values                            | WebGL counterpart          |
-| ---------------------------- | ------------------------------ | --------------------------------------------------------------------- | --------------------------------- | -------------------------- |
-| **Rasterization Parameters** |
-| `cullMode`                   | `RenderPipeline`               | Which face to cull                                                    | **`'none'`**, `'front'`, `'back'` |
-| `frontFace`                  | `RenderPipeline`               | Which triangle winding order is front                                 | **`ccw`**, `cw`                   |
-| `viewport`                   | `RenderPass.setParameters()`   | Specifying viewport size                                              |
-| `scissor`                    | `RenderPass.setParameters()`   | Specifying scissor rect size                                          |
-| **Depth Buffer Parameters**  |
-| `depthBias`                  | `RenderPipeline`               | Small depth offset for polygons                                       | `float`                           | `gl.polygonOffset`         |
-| `depthBiasSlopeScale`        | `RenderPipeline`               | Small depth factor for polygons                                       | `float`                           | `gl.polygonOffset`         |
-| `depthBiasClamp`             | `RenderPipeline`               | Max depth offset for polygons                                         | `float`                           | N/A                        |
-| **Stencil Buffer**           |
-| `stencilReference`           | `RenderPass.setParameters()`   |
-| `stencilReadMask`            | `RenderPipeline`               | Binary mask for reading stencil values                                | `number` (**`0xffffffff`**)       |
-| `stencilWriteMask`           | `RenderPipeline`               | Binary mask for writing stencil values                                | `number` (**`0xffffffff`**)       | `gl.frontFace`             |
-| `stencilCompare`             | `RenderPipeline`               | How the mask is compared                                              | **`always`**, `not-equal`, ...    | `gl.stencilFunc`           |
-| `stencilPassOperation`       | `RenderPipeline`               |                                                                       | **`'keep'`**                      | `gl.stencilOp`             |
-| `stencilDepthFailOperation`  | `RenderPipeline`               |                                                                       | **`'keep'`**                      | `gl.stencilOp`             |
-| `stencilFailOperation`       | `RenderPipeline`               |                                                                       | **`'keep'`**                      | `gl.stencilOp`             |
-| **Blending**                 |
-| `blendConstant`              |                                | Color used by blend factors `constant`, `one-minus-constant`          |
-| `blendColor`                 | `RenderPass.setParameters()`   |
-| `blendEquation`              | `RenderPipeline(targets})`     |
-| `blendOperation`             | `RenderPipeline(targets).`     |
-| `blendSrcFactor`             | `RenderPipeline(targets).`     |
-| `blendDstFactor`             | `RenderPipeline(targets).`     |
-| **Clear color**              |
-| `clearColor`                 | `RenderPass(colorAttachments)` |
-| **Extension Parameters**     |
-| `unclippedDepth`             | `RenderPipeline`               | Disable depth value clipping . Requires `depth-clip-control`          | `boolean`                         |
-| `provokingVertex`            | `RenderPipeline`               | Vertex used for flat shading. Requires `provoking-vertex-webgl`       | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
-| `polygonMode`                | `RenderPipeline`               | Enable wire frame rendering. Requires `polygon-mode-webgl`            | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
-| `polygonOffsetLine`          | `RenderPipeline`               | Vertex used for flat shading. Requires `polygon-mode-webgl`           | `boolean`                         | `WEBGL_polygon_mode`       |
-| `clipDistance0` (`0-7`)      | `RenderPipeline`               | Enable `gl_ClipDistance, gl_CullDistance`. `shader-clip-cull-distance-webgl` | `boolean`                         | `WEBGL_clip_cull_distance` |
+| Function                    | How to set                     | Description                                                          | Values                            | WebGL counterpart          |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------------- | --------------------------------- | -------------------------- |
+| **Rasterization**           |
+| `cullMode`                  | `RenderPipeline`               | Which face to cull                                                   | **`'none'`**, `'front'`, `'back'` | `gl.cullFace()`            |
+| `frontFace`                 | `RenderPipeline`               | Which triangle winding order is front                                | **`ccw`**, `cw`                   | `gl.frontFace()`           |
+| `viewport`                  | `RenderPass.setParameters()`   | Specifying viewport size                                             |                                   | `gl.viewpot()`             |
+| `scissor`                   | `RenderPass.setParameters()`   | Specifying scissor rect size                                         |                                   | `gl.scissor()`             |
+| `clearColor`                | `RenderPass(colorAttachments)` |                                                                      |                                   | `gl.clearColor()`          |
+| **Blending**                |
+| `blendConstant`             |                                | Color used by blend factors `constant`, `one-minus-constant`         |
+| `blendColor`                | `RenderPass.setParameters()`   |
+| `blendEquation`             | `RenderPipeline(targets})`     |
+| `blendOperation`            | `RenderPipeline(targets).`     |
+| `blendSrcFactor`            | `RenderPipeline(targets).`     |
+| `blendDstFactor`            | `RenderPipeline(targets).`     |
+| **Depth Buffer**            |
+| `depthBias`                 | `RenderPipeline`               | Small depth offset for polygons                                      | `float`                           | `gl.polygonOffset`         |
+| `depthBiasSlopeScale`       | `RenderPipeline`               | Small depth factor for polygons                                      | `float`                           | `gl.polygonOffset`         |
+| `depthBiasClamp`            | `RenderPipeline`               | Max depth offset for polygons                                        | `float`                           | N/A                        |
+| **Stencil Buffer**          |
+| `stencilReference`          | `RenderPass.setParameters()`   |
+| `stencilReadMask`           | `RenderPipeline`               | Binary mask for reading stencil values                               | `number` (**`0xffffffff`**)       |
+| `stencilWriteMask`          | `RenderPipeline`               | Binary mask for writing stencil values                               | `number` (**`0xffffffff`**)       | `gl.frontFace`             |
+| `stencilCompare`            | `RenderPipeline`               | How the mask is compared                                             | **`always`**, `not-equal`, ...    | `gl.stencilFunc`           |
+| `stencilPassOperation`      | `RenderPipeline`               | Operation on stencil buffer when test passes                         | **`'keep'`**                      | `gl.stencilOp`             |
+| `stencilDepthFailOperation` | `RenderPipeline`               | Operation on stencil buffer when depth test fails                    | **`'keep'`**                      | `gl.stencilOp`             |
+| `stencilFailOperation`      | `RenderPipeline`               | Operation on stencil buffer when test fails                          | **`'keep'`**                      | `gl.stencilOp`             |
+| **Extensions**              |
+| `unclippedDepth`            | `RenderPipeline`               | `depth-clip-control`:  Disable depth value clipping.                 | `boolean`                         | `WEBGL_depth_clamp`        |
+| `provokingVertex`           | `RenderPipeline`               | `provoking-vertex-webgl`: Vertex used for flat shading               | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
+| `polygonMode`               | `RenderPipeline`               | `polygon-mode-webgl`: Enable wire frame rendering.                   | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
+| `polygonOffsetLine`         | `RenderPipeline`               | `polygon-mode-webgl`: Vertex used for flat shading. Requires         | `boolean`                         | `WEBGL_polygon_mode`       |
+| `clipDistance0` (`0-7`)     | `RenderPipeline`               | `shader-clip-cull-distance-webgl`: `gl_ClipDistance/gl_CullDistance` | `boolean`                         | `WEBGL_clip_cull_distance` |
 
-## Other types of parameters
+F## Other types of parameters
 
 Note that there are certain types of parameters affecting GPU operation that are not handled by the main parameter system:
 
