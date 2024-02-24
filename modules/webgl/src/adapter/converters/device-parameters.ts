@@ -190,6 +190,33 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     }
   }
 
+  if (device.features.has('clip-cull-distance-webgl')) {
+    if (parameters.clipDistance0) {
+      gl.enable(GL.CLIP_DISTANCE0_WEBGL);
+    }
+    if (parameters.clipDistance1) {
+      gl.enable(GL.CLIP_DISTANCE1_WEBGL);
+    }
+    if (parameters.clipDistance2) {
+      gl.enable(GL.CLIP_DISTANCE2_WEBGL);
+    }
+    if (parameters.clipDistance3) {
+      gl.enable(GL.CLIP_DISTANCE3_WEBGL);
+    }
+    if (parameters.clipDistance4) {
+      gl.enable(GL.CLIP_DISTANCE4_WEBGL);
+    }
+    if (parameters.clipDistance5) {
+      gl.enable(GL.CLIP_DISTANCE5_WEBGL);
+    }
+    if (parameters.clipDistance6) {
+      gl.enable(GL.CLIP_DISTANCE6_WEBGL);
+    }
+    if (parameters.clipDistance7) {
+      gl.enable(GL.CLIP_DISTANCE7_WEBGL);
+    }
+  }
+
   // DEPTH STENCIL
 
   if (parameters.depthWriteEnabled !== undefined) {

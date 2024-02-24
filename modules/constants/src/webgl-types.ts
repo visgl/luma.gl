@@ -383,6 +383,9 @@ export type GLExtensions = {
   /** https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
   WEBGL_polygon_mode?: WEBGL_polygon_mode | null;
 
+  /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
+  WEBGL_clip_cull_distance: WEBGL_clip_cull_distance | null;
+
   // WEBGL1 extensions (available as built-in WebGL 2 APIs)
 
   // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
@@ -413,5 +416,33 @@ type WEBGL_provoking_vertex = {
 
 /** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
 type WEBGL_polygon_mode = {
+  /** Set polygon mode of face to fill or line */
   polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GL.LINE_WEBGL | GL.FILL_WEBGL): void;
+};
+
+/** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
+type WEBGL_clip_cull_distance = {
+  /** Max clip distances */
+  MAX_CLIP_DISTANCES_WEBGL: 0x0D32;
+  /** Max cull distances */
+  MAX_CULL_DISTANCES_WEBGL: 0x82F9;
+  /** Max clip and cull distances */
+  MAX_COMBINED_CLIP_AND_CULL_DISTANCES_WEBGL: 0x82FA;
+
+  /** Enable gl_ClipDistance[0] and gl_CullDistance[0] */
+  CLIP_DISTANCE0_WEBGL: 0x3000;
+  /** Enable gl_ClipDistance[1] and gl_CullDistance[1] */
+  CLIP_DISTANCE1_WEBGL: 0x3001;
+  /** Enable gl_ClipDistance[2] and gl_CullDistance[2] */
+  CLIP_DISTANCE2_WEBGL: 0x3002;
+  /** Enable gl_ClipDistance[3] and gl_CullDistance[3] */
+  CLIP_DISTANCE3_WEBGL: 0x3003;
+  /** Enable gl_ClipDistance[4] and gl_CullDistance[4] */
+  CLIP_DISTANCE4_WEBGL: 0x3004;
+  /** Enable gl_ClipDistance[5] and gl_CullDistance[5] */
+  CLIP_DISTANCE5_WEBGL: 0x3005;
+  /** Enable gl_ClipDistance[6] and gl_CullDistance[6] */
+  CLIP_DISTANCE6_WEBGL: 0x3006;
+  /** Enable gl_ClipDistance[7] and gl_CullDistance[7] */
+  CLIP_DISTANCE7_WEBGL: 0x3007;
 };

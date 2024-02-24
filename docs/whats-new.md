@@ -73,7 +73,6 @@ New features
 - `parameters.provokingVertex: 'first'` controls which primitive vertex is used for flat shading. Check the `provoking-vertex-webgl` feature. 
 - `parameters.polygonMode: 'line'` enables wire frame rendering of polygons. Check the `polygon-mode-webgl` feature. 
 - `parameters.polygonOffsetLine: true` enables depth bias (polygon offset) for lines. Check the `polygon-mode-webgl` feature. 
-
-- Check WebGL 2 extension availability with [WebGL Report](https://webglreport.com/?v=2).
+- `parameters.clipCullDistance0-7: true` enables `gl_ClipDistance[] / gl_CullDistance[]`. Check the `clip-cull-distance-webgl` feature. 
 
 [EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/

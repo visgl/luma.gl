@@ -4,7 +4,7 @@ This is a scratch pad with various notes made during research of the luma.gl API
 
 * Familiar API - Work directly with classes mapping to the familiar OpenGL objects (Buffers, Textures, Programs, Framebuffers etc) and use the standard GL constants just like you always have.
 * Stateless WebGL - Easy to locally override global GL state.
-* Portability - luma.gl simplifies working with WebGL extensions and creating code that works across WebGL versions (WebGL 1 and WebGL 2). And `Capabilities` helps your app determine what features are available.
+* Portability - luma.gl simplifies working with WebGL extensions. `Device.features.has()` helps your app determine what features are available.
 * Boilerplate reduction - luma.gl automatically deduces common parameters and binds/unbinds your resources as needed.
 * No ownership of WebGL context. Use your luma.gl context with other WebGL code, or use luma.gl with WebGL contexts created by other frameworks.
 

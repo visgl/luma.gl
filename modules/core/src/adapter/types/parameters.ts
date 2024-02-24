@@ -46,12 +46,30 @@ type _RenderParameters = {
 
   /** Disable depth clipping. Requires 'depth-clip-control' */
   unclippedDepth?: boolean;
+
   /** Which vertex in primitive to use for flat shading (perf may improve). Requires 'provoking-vertex-webgl' */
   provokingVertex?: 'first' | 'last',
   /** Debug: Set polygon rasterization mode to 'line' for wire frames. Requires: 'polygon-mode-webgl' */
   polygonMode?: 'fill' | 'line';
   /** Debug: Enable polygon offset (`depthBias`) for 'line' primitives: Requires 'polygon-mode-webgl' */
   polygonOffsetLine?: boolean;
+
+  /** Enables gl_ClipDistance[0] and gl_CullDistance[0]. Requires 'clip-cull-distance-webgl' */
+  clipDistance0?: boolean; 
+  /** Enables gl_ClipDistance[1] and gl_CullDistance[1]. Requires 'clip-cull-distance-webgl' */
+  clipDistance1?: boolean;
+  /** Enables gl_ClipDistance[2] and gl_CullDistance[2]. Requires 'clip-cull-distance-webgl' */
+  clipDistance2?: boolean;
+  /** Enables gl_ClipDistance[3] and gl_CullDistance[3]. Requires 'clip-cull-distance-webgl' */
+  clipDistance3?: boolean;
+  /** Enables gl_ClipDistance[4] and gl_CullDistance[4]. Requires 'clip-cull-distance-webgl' */
+  clipDistance4?: boolean;
+  /** Enables gl_ClipDistance[5] and gl_CullDistance[5]. Requires 'clip-cull-distance-webgl' */
+  clipDistance5?: boolean;
+  /** Enables gl_ClipDistance[6] and gl_CullDistance[6]. Requires 'clip-cull-distance-webgl' */
+  clipDistance6?: boolean;
+  /** Enables gl_ClipDistance[7] and gl_CullDistance[7]. Requires 'clip-cull-distance-webgl' */
+  clipDistance7?: boolean;
 }
 
 export type RasterizationParameters = _RenderParameters & {

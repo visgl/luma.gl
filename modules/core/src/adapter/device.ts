@@ -140,6 +140,7 @@ export type WebGLDeviceFeature =
   | 'shader-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
   
   // texture rendering
   | 'float32-renderable-webgl'
