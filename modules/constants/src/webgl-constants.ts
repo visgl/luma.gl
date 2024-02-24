@@ -4,7 +4,7 @@
 
 /* eslint-disable key-spacing, max-len, no-inline-comments, camelcase */
 
-/** 
+/**
  * Standard WebGL, WebGL2 and extension constants (OpenGL constants)
  * @note (Most) of these constants are also defined on the WebGLRenderingContext interface.
  * @see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
@@ -77,9 +77,9 @@ enum GLEnum {
   // Constants passed to blendEquation() or blendEquationSeparate() to control
   // how the blending is calculated (for both, RBG and alpha, or separately).
 
-/** Passed to blendEquation or blendEquationSeparate to set an addition blend function. */
-/** Passed to blendEquation or blendEquationSeparate to specify a subtraction blend function (source - destination). */
-/** Passed to blendEquation or blendEquationSeparate to specify a reverse subtraction blend function (destination - source). */
+  /** Passed to blendEquation or blendEquationSeparate to set an addition blend function. */
+  /** Passed to blendEquation or blendEquationSeparate to specify a subtraction blend function (source - destination). */
+  /** Passed to blendEquation or blendEquationSeparate to specify a reverse subtraction blend function (destination - source). */
   FUNC_ADD = 0x8006,
   FUNC_SUBTRACT = 0x800a,
   FUNC_REVERSE_SUBTRACT = 0x800b,
@@ -149,7 +149,7 @@ enum GLEnum {
   STENCIL_BACK_VALUE_MASK = 0x8ca4,
   STENCIL_BACK_WRITEMASK = 0x8ca5,
 
-  /** An Int32Array with four elements for the current viewport dimensions. */  
+  /** An Int32Array with four elements for the current viewport dimensions. */
   VIEWPORT = 0x0ba2,
   /** An Int32Array with four elements for the current scissor box dimensions. */
   SCISSOR_BOX = 0x0c10,
@@ -272,13 +272,13 @@ enum GLEnum {
   // Hints
   // Constants passed to hint()
 
-  /** There is no preference for this behavior. */	
+  /** There is no preference for this behavior. */
   DONT_CARE = 0x1100,
-  /** The most efficient behavior should be used. */	
+  /** The most efficient behavior should be used. */
   FASTEST = 0x1101,
-  /** The most correct or the highest quality option should be used. */	
+  /** The most correct or the highest quality option should be used. */
   NICEST = 0x1102,
-  /** Hint for the quality of filtering when generating mipmap images with WebGLRenderingContext.generateMipmap(). */	
+  /** Hint for the quality of filtering when generating mipmap images with WebGLRenderingContext.generateMipmap(). */
   GENERATE_MIPMAP_HINT = 0x8192,
 
   // Data types
@@ -335,7 +335,7 @@ enum GLEnum {
   MAX_VARYING_VECTORS = 0x8dfc,
   MAX_COMBINED_TEXTURE_IMAGE_UNITS = 0x8b4d,
   MAX_VERTEX_TEXTURE_IMAGE_UNITS = 0x8b4c,
-  /** Implementation dependent number of maximum texture units. At least 8. */  
+  /** Implementation dependent number of maximum texture units. At least 8. */
   MAX_TEXTURE_IMAGE_UNITS = 0x8872,
   MAX_FRAGMENT_UNIFORM_VECTORS = 0x8dfd,
   SHADER_TYPE = 0x8b4f,
@@ -817,11 +817,6 @@ enum GLEnum {
 
   // Constants defined in WebGL extensions
 
-  // ANGLE_instanced_arrays
-
-  /** Describes the frequency divisor used for instanced rendering. */
-  VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE = 0x88fe,
-
   // WEBGL_debug_renderer_info
 
   /** Passed to getParameter to get the vendor string of the graphics driver. */
@@ -836,27 +831,17 @@ enum GLEnum {
   /** Passed to texParameter to set the desired maximum anisotropy for a texture. */
   TEXTURE_MAX_ANISOTROPY_EXT = 0x84fe,
 
-  // EXT_sRGB
-
-  /** Unsized sRGB format that leaves the precision up to the driver. */
-  SRGB_EXT = 0x8c40,
-  /** Unsized sRGB format with unsized alpha component. */
-  SRGB_ALPHA_EXT = 0x8c42,
-  /** Sized (8-bit) sRGB and alpha formats. */
-  SRGB8_ALPHA8_EXT = 0x8c43,
-  /** Returns the framebuffer color encoding. */
-  FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT = 0x8210,
 
   // EXT_texture_norm16 - https://khronos.org/registry/webgl/extensions/EXT_texture_norm16/
 
-  R16_EXT = 0x822A,
-  RG16_EXT = 0x822C,
+  R16_EXT = 0x822a,
+  RG16_EXT = 0x822c,
   RGB16_EXT = 0x8054,
-  RGBA16_EXT = 0x805B,
-  R16_SNORM_EXT = 0x8F98,
-  RG16_SNORM_EXT = 0x8F99,
-  RGB16_SNORM_EXT = 0x8F9A,
-  RGBA16_SNORM_EXT = 0x8F9B,
+  RGBA16_EXT = 0x805b,
+  R16_SNORM_EXT = 0x8f98,
+  RG16_SNORM_EXT = 0x8f99,
+  RGB16_SNORM_EXT = 0x8f9a,
+  RGBA16_SNORM_EXT = 0x8f9b,
 
   // WEBGL_compressed_texture_s3tc (BC1, BC2, BC3)
 
@@ -966,81 +951,6 @@ enum GLEnum {
   COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR = 0x93dc,
   COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR = 0x93dd,
 
-  // WEBGL_depth_texture
-
-  /** Unsigned integer type for 24-bit depth texture data. */
-  UNSIGNED_INT_24_8_WEBGL = 0x84fa,
-
-  // OES_texture_half_float
-
-  /** Half floating-point type (16-bit). */
-  HALF_FLOAT_OES = 0x8d61,
-
-  // WEBGL_color_buffer_float
-
-  /** RGBA 32-bit floating-point color-renderable format. */
-  RGBA32F_EXT = 0x8814,
-  /** RGB 32-bit floating-point color-renderable format. */
-  RGB32F_EXT = 0x8815,
-  FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE_EXT = 0x8211,
-  UNSIGNED_NORMALIZED_EXT = 0x8c17,
-
-  // EXT_blend_minmax
-
-  /** Produces the minimum color components of the source and destination colors. */
-  MIN_EXT = 0x8007,
-  /** Produces the maximum color components of the source and destination colors. */
-  MAX_EXT = 0x8008,
-
-  // OES_standard_derivatives
-
-  /** Indicates the accuracy of the derivative calculation for the GLSL built-in functions: dFdx, dFdy, and fwidth */
-  FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8b8b,
-
-  // WEBGL_draw_buffers
-
-  COLOR_ATTACHMENT0_WEBGL = 0x8ce0,
-  COLOR_ATTACHMENT1_WEBGL = 0x8ce1,
-  COLOR_ATTACHMENT2_WEBGL = 0x8ce2,
-  COLOR_ATTACHMENT3_WEBGL = 0x8ce3,
-  COLOR_ATTACHMENT4_WEBGL = 0x8ce4,
-  COLOR_ATTACHMENT5_WEBGL = 0x8ce5,
-  COLOR_ATTACHMENT6_WEBGL = 0x8ce6,
-  COLOR_ATTACHMENT7_WEBGL = 0x8ce7,
-  COLOR_ATTACHMENT8_WEBGL = 0x8ce8,
-  COLOR_ATTACHMENT9_WEBGL = 0x8ce9,
-  COLOR_ATTACHMENT10_WEBGL = 0x8cea,
-  COLOR_ATTACHMENT11_WEBGL = 0x8ceb,
-  COLOR_ATTACHMENT12_WEBGL = 0x8cec,
-  COLOR_ATTACHMENT13_WEBGL = 0x8ced,
-  COLOR_ATTACHMENT14_WEBGL = 0x8cee,
-  COLOR_ATTACHMENT15_WEBGL = 0x8cef,
-  DRAW_BUFFER0_WEBGL = 0x8825,
-  DRAW_BUFFER1_WEBGL = 0x8826,
-  DRAW_BUFFER2_WEBGL = 0x8827,
-  DRAW_BUFFER3_WEBGL = 0x8828,
-  DRAW_BUFFER4_WEBGL = 0x8829,
-  DRAW_BUFFER5_WEBGL = 0x882a,
-  DRAW_BUFFER6_WEBGL = 0x882b,
-  DRAW_BUFFER7_WEBGL = 0x882c,
-  DRAW_BUFFER8_WEBGL = 0x882d,
-  DRAW_BUFFER9_WEBGL = 0x882e,
-  DRAW_BUFFER10_WEBGL = 0x882f,
-  DRAW_BUFFER11_WEBGL = 0x8830,
-  DRAW_BUFFER12_WEBGL = 0x8831,
-  DRAW_BUFFER13_WEBGL = 0x8832,
-  DRAW_BUFFER14_WEBGL = 0x8833,
-  DRAW_BUFFER15_WEBGL = 0x8834,
-  /** Maximum number of framebuffer color attachment points */
-  MAX_COLOR_ATTACHMENTS_WEBGL = 0x8cdf,
-  /** Maximum number of draw buffers */
-  MAX_DRAW_BUFFERS_WEBGL = 0x8824,
-
-  // OES_vertex_array_object
-
-  /** The bound vertex array object (VAO). */
-  VERTEX_ARRAY_BINDING_OES = 0x85b5,
-
   // EXT_disjoint_timer_query
 
   /** The number of bits used to hold the query result for the given target. */
@@ -1059,30 +969,56 @@ enum GLEnum {
   GPU_DISJOINT_EXT = 0x8fbb,
 
   // KHR_parallel_shader_compile https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
-  
+
   /** a non-blocking poll operation, so that compile/link status availability can be queried without potentially incurring stalls */
-  COMPLETION_STATUS                = 0x91B1,
+  COMPLETION_STATUS_KHR = 0x91b1,
 
   // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
 
   /** Disables depth clipping */
-  DEPTH_CLAMP = 0x864F,
+  DEPTH_CLAMP_EXT = 0x864f,
 
   // WEBGL_provoking_vertex https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
 
   /** Values of first vertex in primitive are used for flat shading */
-  FIRST_VERTEX_CONVENTION = 0x8E4D,
+  FIRST_VERTEX_CONVENTION_WEBGL = 0x8e4d,
   /** Values of first vertex in primitive are used for flat shading */
-  LAST_VERTEX_CONVENTION  = 0x8E4E, // default
+  LAST_VERTEX_CONVENTION_WEBGL = 0x8e4e, // default
   /** Controls which vertex in primitive is used for flat shading */
-  PROVOKING_VERTEX        = 0x8E4F,
+  PROVOKING_VERTEX_WEBL = 0x8e4f,
 
   // WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/
 
-  POLYGON_MODE_WEBGL = 0x0B40,
-  POLYGON_OFFSET_LINE_WEBGL = 0x2A02,
-  LINE_WEBGL = 0x1B01,
-  FILL_WEBGL = 0x1B02,
+  POLYGON_MODE_WEBGL = 0x0b40,
+  POLYGON_OFFSET_LINE_WEBGL = 0x2a02,
+  LINE_WEBGL = 0x1b01,
+  FILL_WEBGL = 0x1b02,
+
+  // WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/
+
+  /** Max clip distances */
+  MAX_CLIP_DISTANCES_WEBGL = 0x0d32,
+  /** Max cull distances */
+  MAX_CULL_DISTANCES_WEBGL = 0x82f9,
+  /** Max clip and cull distances */
+  MAX_COMBINED_CLIP_AND_CULL_DISTANCES_WEBGL = 0x82fa,
+
+  /** Enable gl_ClipDistance[0] and gl_CullDistance[0] */
+  CLIP_DISTANCE0_WEBGL = 0x3000,
+  /** Enable gl_ClipDistance[1] and gl_CullDistance[1] */
+  CLIP_DISTANCE1_WEBGL = 0x3001,
+  /** Enable gl_ClipDistance[2] and gl_CullDistance[2] */
+  CLIP_DISTANCE2_WEBGL = 0x3002,
+  /** Enable gl_ClipDistance[3] and gl_CullDistance[3] */
+  CLIP_DISTANCE3_WEBGL = 0x3003,
+  /** Enable gl_ClipDistance[4] and gl_CullDistance[4] */
+  CLIP_DISTANCE4_WEBGL = 0x3004,
+  /** Enable gl_ClipDistance[5] and gl_CullDistance[5] */
+  CLIP_DISTANCE5_WEBGL = 0x3005,
+  /** Enable gl_ClipDistance[6] and gl_CullDistance[6] */
+  CLIP_DISTANCE6_WEBGL = 0x3006,
+  /** Enable gl_ClipDistance[7] and gl_CullDistance[7] */
+  CLIP_DISTANCE7_WEBGL = 0x3007
 }
 
 export {GLEnum as GL};

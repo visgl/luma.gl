@@ -145,7 +145,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
   if (parameters.unclippedDepth) {
     if (device.features.has('depth-clip-control')) { // EXT_depth_clamp
-      gl.enable(GL.DEPTH_CLAMP);
+      gl.enable(GL.DEPTH_CLAMP_EXT);
     }
   }
 
@@ -165,8 +165,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
     if (parameters.provokingVertex) {
       const vertex = map('provokingVertex', parameters.provokingVertex, {
-        first: GL.FIRST_VERTEX_CONVENTION,
-        last: GL.LAST_VERTEX_CONVENTION
+        first: GL.FIRST_VERTEX_CONVENTION_WEBGL,
+        last: GL.LAST_VERTEX_CONVENTION_WEBGL
       });
       ext?.provokingVertexWEBGL(vertex);
     }
@@ -187,6 +187,33 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
     if (parameters.polygonOffsetLine) {
       gl.enable(GL.POLYGON_OFFSET_LINE_WEBGL);
+    }
+  }
+
+  if (device.features.has('clip-cull-distance-webgl')) {
+    if (parameters.clipDistance0) {
+      gl.enable(GL.CLIP_DISTANCE0_WEBGL);
+    }
+    if (parameters.clipDistance1) {
+      gl.enable(GL.CLIP_DISTANCE1_WEBGL);
+    }
+    if (parameters.clipDistance2) {
+      gl.enable(GL.CLIP_DISTANCE2_WEBGL);
+    }
+    if (parameters.clipDistance3) {
+      gl.enable(GL.CLIP_DISTANCE3_WEBGL);
+    }
+    if (parameters.clipDistance4) {
+      gl.enable(GL.CLIP_DISTANCE4_WEBGL);
+    }
+    if (parameters.clipDistance5) {
+      gl.enable(GL.CLIP_DISTANCE5_WEBGL);
+    }
+    if (parameters.clipDistance6) {
+      gl.enable(GL.CLIP_DISTANCE6_WEBGL);
+    }
+    if (parameters.clipDistance7) {
+      gl.enable(GL.CLIP_DISTANCE7_WEBGL);
     }
   }
 

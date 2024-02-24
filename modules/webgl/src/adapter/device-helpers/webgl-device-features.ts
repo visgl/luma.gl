@@ -71,6 +71,7 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   'shader-status-async-webgl': 'KHR_parallel_shader_compile',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
+  'clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
 
   // Textures are handled by getTextureFeatures()
 };

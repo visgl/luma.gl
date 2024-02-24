@@ -199,15 +199,38 @@ export const GL_PARAMETER_SETTERS = {
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]: 'stencilOpBack',
   [GL.VIEWPORT]: (gl: WebGL2RenderingContext, value: [number, number, number, number]) => gl.viewport(...value),
 
-  // WEBGL1 PIXEL PACK/UNPACK MODES
+  // WEBGL2 EXTENSIONS
+
+  // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+
+  [GL.DEPTH_CLAMP_EXT]: enable,
+
+  // WEBGL_provoking_vertex https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
+
+  // [GL.PROVOKING_VERTEX_WEBL]: TODO - extension function needed
+
+  // WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/
+
+  // POLYGON_MODE_WEBGL  TODO - extension function needed
+  [GL.POLYGON_OFFSET_LINE_WEBGL]: enable,
+
+  // WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/
+
+  [GL.CLIP_DISTANCE0_WEBGL]: enable,
+  [GL.CLIP_DISTANCE1_WEBGL]: enable,
+  [GL.CLIP_DISTANCE2_WEBGL]: enable,
+  [GL.CLIP_DISTANCE3_WEBGL]: enable,
+  [GL.CLIP_DISTANCE4_WEBGL]: enable,
+  [GL.CLIP_DISTANCE5_WEBGL]: enable,
+  [GL.CLIP_DISTANCE6_WEBGL]: enable,
+  [GL.CLIP_DISTANCE7_WEBGL]: enable,
+
+  // PIXEL PACK/UNPACK MODES
   [GL.PACK_ALIGNMENT]: pixelStorei,
   [GL.UNPACK_ALIGNMENT]: pixelStorei,
   [GL.UNPACK_FLIP_Y_WEBGL]: pixelStorei,
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]: pixelStorei,
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]: pixelStorei,
-
-  // WEBGL2 PIXEL PACK/UNPACK MODES
-  // RASTERIZER_DISCARD ...
   [GL.PACK_ROW_LENGTH]: pixelStorei,
   [GL.PACK_SKIP_PIXELS]: pixelStorei,
   [GL.PACK_SKIP_ROWS]: pixelStorei,

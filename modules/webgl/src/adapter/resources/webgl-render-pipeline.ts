@@ -380,7 +380,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     const {gl} = this.device;
     for (;;) {
-      const complete = gl.getProgramParameter(this.handle, GL.COMPLETION_STATUS);
+      const complete = gl.getProgramParameter(this.handle, GL.COMPLETION_STATUS_KHR);
       if (complete) {
         return;
       }
