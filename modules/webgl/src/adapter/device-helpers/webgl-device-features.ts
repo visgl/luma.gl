@@ -4,10 +4,11 @@
 // Feature detection for WebGL
 // Provides a function that enables simple checking of which WebGL features are
 
-import {DeviceFeature} from '@luma.gl/core';
+import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
 import {GLExtensions} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {isTextureFeature, checkTextureFeature} from '../converters/texture-formats';
+import {TEXTURE_FEATURES} from '../converters/texture-formats';
 
 /**
  * Defines luma.gl "feature" names and semantics
@@ -34,32 +35,13 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // Textures are handled by getTextureFeatures()
 };
 
-/** Extract all WebGL features */
-export function getWebGLFeature(gl: WebGL2RenderingContext, feature: DeviceFeature, extensions: GLExtensions): boolean {
-  const featureInfo = WEBGL_FEATURES[feature];
-  // string value requires checking the corresponding WebGL extension
-  const isSupported =
-    typeof featureInfo === 'string'
-      ? Boolean(getWebGLExtension(gl, featureInfo, extensions))
-      : Boolean(featureInfo);
-
-  return isSupported;
-}
-export class DeviceFeatures {
-  protected features = new Set<DeviceFeature>();
-
-  constructor(features: DeviceFeature[] = []) {
-    for (const feature of features) {
-      this.features.add(feature);
-    }
-  }
-
-  has(feature: DeviceFeature): boolean {
-    return this.features.has(feature);
-  }
-}
-
-export class WebGLFeatures extends DeviceFeatures {
+/**
+ * WebGL extensions exposed as luma.gl features
+ * To minimize GL log noise and improve performance, this class ensures that
+ * - WebGL extensions are not queried until the corresponding feature is checked.
+ * - WebGL extensions are only queried once.
+ */
+export class WebGLDeviceFeatures extends DeviceFeatures {
   protected gl: WebGL2RenderingContext;
   protected extensions: GLExtensions;
   protected testedFeatures = new Set<DeviceFeature>();
@@ -71,6 +53,20 @@ export class WebGLFeatures extends DeviceFeatures {
     // TODO - is this really needed?
     // Enable EXT_float_blend first: https://developer.mozilla.org/en-US/docs/Web/API/EXT_float_blend
     getWebGLExtension(gl, 'EXT_color_buffer_float', extensions);
+  }
+
+  *[Symbol.iterator](): IterableIterator<DeviceFeature> {
+    for (const feature of Object.keys(WEBGL_FEATURES) as DeviceFeature[]) {
+      if (this.has(feature)) {
+        yield feature;
+      }
+    }
+    for (const feature of Object.keys(TEXTURE_FEATURES) as DeviceFeature[]) {
+      if (this.has(feature)) {
+        yield feature;
+      }
+    }
+    return [];
   }
 
   override has(feature: DeviceFeature): boolean {
@@ -86,11 +82,23 @@ export class WebGLFeatures extends DeviceFeatures {
       return true;
     }
 
-    if (getWebGLFeature(this.gl, feature, this.extensions)) {
+    if (this.getWebGLFeature(feature)) {
       this.features.add(feature);
       return true;
     }
 
     return false;
+  }
+
+  /** Extract all WebGL features */
+  protected getWebGLFeature(feature: DeviceFeature): boolean {
+    const featureInfo = WEBGL_FEATURES[feature];
+    // string value requires checking the corresponding WebGL extension
+    const isSupported =
+      typeof featureInfo === 'string'
+        ? Boolean(getWebGLExtension(this.gl, featureInfo, this.extensions))
+        : Boolean(featureInfo);
+
+    return isSupported;
   }
 }

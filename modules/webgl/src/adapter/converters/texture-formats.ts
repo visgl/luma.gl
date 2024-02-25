@@ -39,7 +39,7 @@ const EXT_color_buffer_float = 'EXT_color_buffer_float';
 // const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
 // prettier-ignore
-const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, string[]>> = {
+export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, string[]>> = {
   'float32-renderable-webgl': ['EXT_color_buffer_float'], // [false, 'EXT_color_buffer_float'],
   'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
   'norm16-renderable-webgl': [EXT_texture_norm16],
@@ -67,12 +67,12 @@ const TEXTURE_FEATURE_CHECKS: Partial<Record<DeviceFeature, string[]>> = {
 //   gl: WebGL2RenderingContext,
 //   extensions: GLExtensions
 // ): DeviceFeature[] {
-//   const textureFeatures = Object.keys(TEXTURE_FEATURE_CHECKS) as DeviceFeature[];
+//   const textureFeatures = Object.keys(TEXTURE_FEATURES) as DeviceFeature[];
 //   return textureFeatures.filter(feature => checkTextureFeature(gl, feature, extensions));
 // }
 
 export function isTextureFeature(feature: DeviceFeature): boolean {
-  return feature in  TEXTURE_FEATURE_CHECKS;
+  return feature in  TEXTURE_FEATURES;
 }
 
 /** Checks a texture feature (for Device.features). Mainly compressed texture support */
@@ -81,7 +81,7 @@ export function checkTextureFeature(
   feature: DeviceFeature,
   extensions: GLExtensions
 ): boolean {
-  const textureExtensions = TEXTURE_FEATURE_CHECKS[feature] || [];
+  const textureExtensions = TEXTURE_FEATURES[feature] || [];
   return textureExtensions.every(extension => getWebGLExtension(gl, extension, extensions));
 }
 

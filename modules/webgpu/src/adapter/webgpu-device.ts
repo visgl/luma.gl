@@ -24,7 +24,7 @@ import type {
   TransformFeedback,
   TransformFeedbackProps
 } from '@luma.gl/core';
-import {Device, CanvasContext, log, uid} from '@luma.gl/core';
+import {Device, DeviceFeatures, CanvasContext, log, uid} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
@@ -43,18 +43,21 @@ import {WebGPUCanvasContext} from './webgpu-canvas-context';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
-  readonly handle: GPUDevice;
-  readonly adapter: GPUAdapter;
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-  canvasContext: WebGPUCanvasContext | null = null;
+  static type: string = 'webgpu';
 
-  commandEncoder: GPUCommandEncoder | null = null;
-  renderPass: WebGPURenderPass | null = null;
+  /** The underlying WebGPU device */
+  readonly handle: GPUDevice;
+  /* The underlying WebGPU adapter */
+  readonly adapter: GPUAdapter;
+
+  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  readonly features: DeviceFeatures;
+  canvasContext: WebGPUCanvasContext | null = null;
 
   private _info: DeviceInfo;
   private _isLost: boolean = false;
-
-  static type: string = 'webgpu';
+  commandEncoder: GPUCommandEncoder | null = null;
+  renderPass: WebGPURenderPass | null = null;
 
   /** Check if WebGPU is available */
   static isSupported(): boolean {
@@ -161,8 +164,6 @@ export class WebGPUDevice extends Device {
   get info(): DeviceInfo {
     return this._info;
   }
-
-  features: Set<DeviceFeature>;
 
   get limits(): DeviceLimits {
     return this.handle.limits;
@@ -277,10 +278,9 @@ export class WebGPUDevice extends Device {
     // this.renderPass = null;
   }
 
-  _getFeatures() {
+  _getFeatures(): DeviceFeatures {
     // Initialize with actual WebGPU Features (note that unknown features may not be in DeviceFeature type)
     const features = new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>);
-
     // Fixups for pre-standard names: https://github.com/webgpu-native/webgpu-headers/issues/133
     // @ts-expect-error Chrome Canary v99
     if (features.has('depth-clamping')) {
@@ -308,7 +308,7 @@ export class WebGPUDevice extends Device {
       features.add(feature);
     }
 
-    return features;
+    return new DeviceFeatures(Array.from(features));
   }
 
   copyExternalImageToTexture(options: {

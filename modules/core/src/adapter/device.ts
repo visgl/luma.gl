@@ -41,8 +41,12 @@ export type DeviceProps = {
   // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
   // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
 
+  /** Instrument context (at the expense of performance) */
+  debug?: boolean; 
+  /** Initialize the SpectorJS WebGL debugger */
+  spector?: boolean;
+
   // Unclear if these are still supported
-  debug?: boolean; // Instrument context (at the expense of performance)
   manageState?: boolean; // Set to false to disable WebGL state management instrumentation
   break?: string[]; // TODO: types
 
@@ -170,12 +174,16 @@ export type DeviceFeature =
   | WebGLDeviceFeature
   | WebGLCompressedTextureFeatures;
 
-/** Set-like class for testing features */
+/** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
 export class DeviceFeatures {
   protected features: Set<DeviceFeature>;
 
   constructor(features: DeviceFeature[] = []) {
     this.features = new Set<DeviceFeature>(features);
+  }
+
+  *[Symbol.iterator](): IterableIterator<DeviceFeature> {
+    yield* this.features;
   }
 
   has(feature: DeviceFeature): boolean {
@@ -239,7 +247,7 @@ export abstract class Device {
   abstract info: DeviceInfo;
 
   /** Optional capability discovery */
-  abstract get features(): Set<DeviceFeature>;
+  abstract features: DeviceFeatures;
 
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;

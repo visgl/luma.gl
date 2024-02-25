@@ -5,7 +5,6 @@ import type {
   DeviceProps,
   DeviceInfo,
   DeviceLimits,
-  DeviceFeature,
   CanvasContextProps,
   TextureFormat,
   VertexArray,
@@ -17,7 +16,6 @@ import type {
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
-import {isBrowser} from '@probe.gl/env';
 import {
   popContextState,
   pushContextState,
@@ -90,15 +88,12 @@ export class WebGLDevice extends Device {
     return typeof WebGL2RenderingContext !== 'undefined';
   }
 
+  /** The underlying WebGL context */
+  readonly handle: WebGL2RenderingContext;
+  features: WebGLDeviceFeatures;
+
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
-
-  readonly handle: WebGL2RenderingContext;
-
-  get features(): Set<DeviceFeature> {
-    this._features = this._features || getDeviceFeatures(this.gl, this._extensions);
-    return this._features;
-  }
 
   get limits(): DeviceLimits {
     this._limits = this._limits || getDeviceLimits(this.gl);
@@ -108,7 +103,6 @@ export class WebGLDevice extends Device {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
-  private _features?: Set<DeviceFeature>;
   private _limits?: DeviceLimits;
 
   //
@@ -139,27 +133,31 @@ export class WebGLDevice extends Device {
   static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
     log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
 
-    // Wait for page to load. Only wait when props. canvas is string
-    // to avoid setting page onload callback unless necessary
-    if (typeof props.canvas === 'string') {
-      await CanvasContext.pageLoaded;
-    }
+    const promises: Promise<unknown>[] = [];
 
     // Load webgl and spector debug scripts from CDN if requested
     if (log.get('debug') || props.debug) {
-      await loadWebGLDeveloperTools();
+      promises.push(loadWebGLDeveloperTools()) ;
     }
 
-    // @ts-expect-error spector not on props
-    const {spector} = props;
-    if (log.get('spector') || spector) {
-      await loadSpectorJS();
+    if (log.get('spector') || props.spector) {
+      promises.push(loadSpectorJS());
     }
+
+    // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
+    // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
+    if (typeof props.canvas === 'string') {
+      promises.push(CanvasContext.pageLoaded);
+    }
+
+    // Wait for all the loads to settle before creating the context.
+    // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
+    await Promise.all(promises);
 
     log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
 
     // @ts-expect-error
-    if (props.gl && props.gl.device) {
+    if (props.gl?.device) {
       return WebGLDevice.attach(props.gl);
     }
 
@@ -192,41 +190,40 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     }
 
     // Create and instrument context
-    const canvas = props.canvas || props.gl?.canvas;
+    const canvas = props.gl?.canvas || props.canvas;
     this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
     });
 
-    const onContextLost = (event: Event) =>
-      this._resolveContextLost?.({
-        reason: 'destroyed',
-        message: 'Computer entered sleep mode, or too many apps or browser tabs are using the GPU.'
-      });
-
     let gl: WebGL2RenderingContext | null = props.gl || null;
-    gl =
-      gl ||
-      (isBrowser()
-        ? createBrowserContext(this.canvasContext.canvas, {...props, onContextLost})
-        : null);
-    
+    gl ||= createBrowserContext(this.canvasContext.canvas, {
+      ...props,
+      onContextLost: (event: Event) =>
+        this._resolveContextLost?.({
+          reason: 'destroyed',
+          message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+        })
+    });
+
     if (!gl) {
       throw new Error('WebGL context creation failed');
     }
 
     this.handle = gl;
-    this.gl = this.handle;
+    this.gl = gl;
     this.canvasContext.resize();
 
     // luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
+    this.features = new WebGLDeviceFeatures(this.gl, this._extensions);
 
+    // Update context
     // @ts-expect-error Link webgl context back to device
     this.gl.device = this;
-    // @ts-expect-error Annotate webgl context to handle
-    this.gl._version = this.isWebGL2 ? 2 : 1;
+    // @ts-expect-error Store WebGL version field on gl context (HACK to identify debug contexts)
+    this.gl._version = 2;
 
     // Install context state tracking
     // @ts-expect-error - hidden parameters
@@ -238,17 +235,15 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     });
 
     // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
-    if (isBrowser() && props.debug) {
+    if (props.debug) {
       this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
     }
 
-    // @ts-expect-error spector not on props
-    if (isBrowser() && props.spector) {
-      const canvas = this.handle.canvas || (props.canvas as HTMLCanvasElement);
-      this.spector = initializeSpectorJS({...this.props, canvas});
+    if (props.spector) {
+      this.spector = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
     }
   }
 
@@ -256,8 +251,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    * Destroys the context
    * @note Has no effect for browser contexts, there is no browser API for destroying contexts
    */
-  destroy(): void {
-  }
+  destroy(): void {}
 
   get isLost(): boolean {
     return this.gl.isContextLost();
@@ -362,7 +356,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   //
   // TEMPORARY HACKS - will be removed in v9.1
-  // 
+  //
 
   /** @deprecated - should use command encoder */
   override readPixelsToArrayWebGL(
@@ -412,10 +406,15 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     withGLParameters(this, parameters, func);
   }
 
-  override clearWebGL(options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}): void {
+  override clearWebGL(options?: {
+    framebuffer?: Framebuffer;
+    color?: any;
+    depth?: any;
+    stencil?: any;
+  }): void {
     clear(this, options);
   }
-  
+
   //
   // WebGL-only API (not part of `Device` API)
   //
@@ -514,7 +513,10 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     this._constants = this._constants || new Array(this.limits.maxVertexAttributes).fill(null);
     const currentConstant = this._constants[location];
     if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
-      log.info(1, `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`)();
+      log.info(
+        1,
+        `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`
+      )();
     }
     this._constants[location] = constant;
 

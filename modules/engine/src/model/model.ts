@@ -751,7 +751,7 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,
-    features: device.features
+    features: new Set(device.features)
   };
 }
 
