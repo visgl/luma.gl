@@ -1,50 +1,56 @@
 # What's New
 
-:::info
-This page contains upgrade guides for older luma.gl releases (up through v8.5). For upgrading to luma.gl v9, refer to the  [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page.
-:::
+*This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the  [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page.*
 
-## Version 9.0 (In Development)
+## Version 9.1 (In Development)
 
-Target Date: Jan 2023
+Target Date: Q2 2024
+
+- Production quality (non-experimental) WebGPU backend.
+
+## Version 9.0
+
+Target Date: Feb 2024
 
 :::caution
 luma.gl v9 contains significant API changes and requires existing luma.gl v8 applications to be [upgraded](/docs/upgrade-guide).
 :::
 
-luma.gl v9 API is a major release that adds WebGPU support to the luma.gl API.
+luma.gl v9 is a major release that adds experimental WebGPU support to the luma.gl API.
 
-The key v9 feature is the new WebGL-independent core API with plug-in WebGPU and WebGL backends
+### WebGPU Support
 
-- **Portable GPU API**: `@luma.gl/core` provides a portable GPU resource management API.
-- **WebGPU bindings**: `@luma.gl/webgpu` provides a new WebGPU backend for the core API.
-- **WebGL bindings**: `@luma.gl/webgl` provides a WebGL backend for the core API.
+The biggest change is that the core API is now portable (no longer WebGL-specific), and plug-in backends are provided for WebGL 2 and WebGPU:
 
-Non-API changes
+- **Portable GPU API**: `@luma.gl/core` now provides a portable GPU resource management API.
+- **WebGL bindings**: `@luma.gl/webgl` now provides a WebGL backend for the core API.
+- **WebGPU bindings**: `@luma.gl/webgpu` provides a new experimental WebGPU backend for the core API.
+
+To accelerate WebGPU development, luma.gl v9 drops support for legacy functionality:
+
+- **WebGL1** WebGL 1 support is dropped.
+- **GLSL 1.00** is  no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
+- **headless-gl** The Node.js WebGL 1 integration is no longer supported
+
+### New module structure
+
+| Module                     | Impact            | Description                                                                                                     |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| **`@luma.gl/core`**        | New API           | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
+| **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
+| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
+| **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
+| **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
+| **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
+
+### General improvements
 
 - **TypeScript**: All APIs now rigorously typed.
 - **ES modules** - Modern ES module and CommonJS entry points for maximum interoperability.
 - **Website** - New Docusaurus website with more embedded live examples and improved documentation.
 - **Debugging** - SpectorJS integration. Shader debugger UI.
 
-Legacy Functionality
-
-- **WebGL1** WebGL 1 support is dropped.
-- **GLSL 1.00** is  no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
-- **headless-gl** Node.js integration is no longer supported
-
-New module structure
-
-| Module                     | Impact               | Description                                                                                                      |
-| -------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **`@luma.gl/core`**        | New API              | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                        |
-| **`@luma.gl/engine`**      | Light API updates    | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2.  |
-| **`@luma.gl/gltf`**        | Renamed module       | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                   |
-| **`@luma.gl/shadertools`** | Light API updates    | The shader assembler API and the shader module library.                                                          |
-| **`@luma.gl/webgl`**       | No exported API      | Now an optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s. |
-| **`@luma.gl/webgpu`**      | new, no exported API | A new optional "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.   |
-
-New features
+### New features
 
 **`@luma.gl/core`**
 
