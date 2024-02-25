@@ -165,8 +165,7 @@ export type WebGLDeviceFeature =
   | 'norm16-renderable-webgl'
 
   // texture filtering
-  | 'float32-filterable-linear-webgl'
-  | 'float16-filterable-linear-webgl'
+  | 'float16-filterable-webgl'
   | 'texture-filterable-anisotropic-webgl'
 
   // texture storage bindings

@@ -1,9 +1,4 @@
-import {
-  DeviceTabs,
-  Feature as F,
-  Limit as L,
-  WebGLLimit as WL,
-} from '@site/src/react-luma';
+import {DeviceTabs, Feature as F, Limit as L, WebGLLimit as WL} from '@site/src/react-luma';
 
 # DeviceLimits
 
@@ -26,7 +21,7 @@ if (limits.maxTextureDimension2D > 2048) {
 
 <DeviceTabs />
 
-| Limit                                       | Value                                               | WebGL comments                               |
+| Limit                                       | Value                                               | WebGL parameter                        |
 | ------------------------------------------- | --------------------------------------------------- | -------------------------------------- |
 | `maxTextureDimension1D`                     | <L f="maxTextureDimension1D" />                     | WebGL does not support 1D textures     |
 | `maxTextureDimension2D`                     | <L f="maxTextureDimension2D" />                     | `GL.MAX_TEXTURE_SIZE`                  |

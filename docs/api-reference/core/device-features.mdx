@@ -7,75 +7,55 @@ import {
   WebGLExtensions
 } from '@site/src/react-luma';
 
-# DeviceFeature
+# Device Features
 
-The luma.gl `Device` provides a range of fields and functions to help an application
-determine the capabilities of the underlying platform and API.
+The luma.gl `Device` provides a device "feature" system that allows applications
+to check whether specific advanced capabilities are present on the current browser or GPU.
 
-The tables on this page use luma.gl Device APIs to display the capabilities of your current browser.
-Open this page in different browsers to compare capabilities.
+## Background
 
-## Fields
-
-### Device.info
-
-A `DeviceInfo` object with fields that describe the device.
-
-<DeviceTabs />
-
-| Field                    | This Browser                        | Description                                                |
-| ------------------------ | ----------------------------------- | ---------------------------------------------------------- |
-| `type`                   | <Info f="type" />                   | Device type `webgpu`, `webgl2` or `webgl`                  |
-| `vendor`                 | <Info f="vendor" />                 | GPU vendor                                                 |
-| `renderer`               | <Info f="renderer" />               | GPU Driver                                                 |
-| `version`                | <Info f="version" />                | Driver version                                             |
-| `gpu`                    | <Info f="gpu" />                    | `apple`, `intel`, `nvidia`, `amd`, `software` or `unknown` |
-| `gpuType`                | <Info f="gpuType" />                | `discrete`, `integrated`, `cpu` or `unknown`               |
-| `gpuBackend`             | <Info f="gpuBackend" />             | `metal`, `opengl`, `vulkan`, `d3d12`, ... or `unknown`     |
-| `gpuArchitecture`        | <Info f="gpuArchitecture" />        | `common-3` on Apple                                        |
-| `shadingLanguage`        | <Info f="shadingLanguage" />        | Shanding language `wgsl`, `glsl`                           |
-| `shadingLanguageVersion` | <Info f="shadingLanguageVersion" /> | Shading language version GLSL 3.00 = 300, GLSL 1.00 = 100) |
-
-- Note that the Chrome browser only exposes limited information by default. Set the [chrome://flags/#enable-webgpu-developer-features](chrome://flags/#enable-webgpu-developer-features) flag to see more WebGPU info.
+Both WebGL 2 and WebGPU provide extension mechanisms that allow implementations to
+expose additional capabilities that may not be supported on all browsers and GPUs.
+This allows new GPU features to be provided without waiting for new official versions
+of the WebGL or WebGPU standards to be approved and published.
 
 ### Device.features
 
 luma.gl provides a unified feature detection system across WebGPU, WebGL and GLSL.
 Each device has a `device.features` field that holds a set of strings (`Set<DeviceFeature>`).
 
-A substantial set of features are devoted to texture capabilites, however these can also
-be queried on a per-texture basis
+The table below uses the luma.gl `Device.feature` field to check the capabilities of your current browser.
+You can open this page in different browsers and on different machines to compare capabilities.
 
 <DeviceTabs />
 
-| `luma.gl Feature`                          | This<br /> Browser                                | Description                                  |
-| ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- |
+| luma.gl Feature Name (`DeviceFeature`)     | This<br /> Browser                                | Description                                  | WebGL counterpart                       |
+| ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- | --------------------------------------- |
 | **Features**                               |
-| `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping `unclippedDepth`      |
-| `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify via GPU buffer                       |
-| `timestamp-query`                          | <F f="timestamp-query"/>                          |                                              |
+| `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping `unclippedDepth`      | `WEBGL_depth_texture`                   |
+| `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify via GPU buffer                       | N/A                                     |
+| `timestamp-query`                          | <F f="timestamp-query"/>                          |                                              | N/A                                     |
 | **WebGL-only Features**                    |
-| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            |
-| `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             |
-| `polygon-mode-webgl`                       | <F f="shader-clip-cull-distance-webgl"/>          | Wireframe rendering parameters               |
-| `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       |
+| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            | `EXT_disjoint_timer_query`              |
+| `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             | `KHR_parallel_shader_compile`           |
+| `polygon-mode-webgl`                       | <F f="polygon-mode-webgl"/>                       | Wireframe rendering parameters (debug)       | `WEBGL_polygon_mode`                    |
+| `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       | `WEBGL_provoking_vertex`                |
 | **Shaders**                                |
-| `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          |
-| `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier |
-| `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   |
-| `shader-clip-cull-distance-webgl`          | <F f="polygon-mode-webgl"/>                       | Enable `gl_ClipDistance[]/gl_CullDistance[]` |
+| `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          | N/A                                     |
+| `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier | `NV_shader_noperspective_interpolation` |
+| `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   | `EXT_conservative_depth`                |
+| `shader-clip-cull-distance-webgl`          | <F f="shader-clip-cull-distance-webgl"/>          | Enable`gl_ClipDistance[]/gl_CullDistance[]`  | `WEBGL_clip_cull_distance`              |
 | **Textures**                               |
 | `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    | `UNSIGNED_INT_24_8_WEBGL`                    |
 | `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    | WebGPU only                                  |
-| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              |
-| `float32-filterable-linear-webgl`          | <F f="float32-filterable-linear-webgl"/>          | float32 `linear` filtering                   |
-| `float16-filterable-linear-webgl`          | <F f="float16-filterable-linear-webgl`" />        | float16 `linear` filtering                   |
 | `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            |
-| `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  |
-| `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  |
+| `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  | `EXT_color_buffer_float`                |
+| `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  | `EXT_color_buffer_half_float`           |
+| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              | `OES_texture_float_linear`
+| `float16-filterable-webgl`          | <F f="float16-filterable-linear-webgl`" />        | float16 `linear` filtering                   | `OES_texture_half_float_linear`         |
+| `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                | `EXT_texture_filter_anisotropic`        |
 | `bgra8unorm-storage`                       | <F f="bgra8unorm-storage"/>                       | can be used as storage binding.              |
-| `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                |
-| `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       |
+| `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       | `EXT_float_blend`                       |
 | **Compressed Textures**                    |
 | `texture-compression-bc`                   | <F f="texture-compression-bc"/>                   | DXT (BC1-BC7). Desktops.                     |
 | `texture-compression-bc5-webgl`            | <F f="texture-compression-bc5-webgl"/>            | DXT (BC1-BC5). Desktops.                     |
@@ -100,29 +80,13 @@ if (wwebglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
 }
 ```
 
+A substantial set of features are devoted to texture capabilites, however these can also
+be queried on a per-texture basis.
+
 ## WebGL
 
-If you know that you are running on WebGL, you don't need to go through
-the luma.gl Device APIs. You can access "raw" WebGL extensions and limits directly.
-
-### WebGL extensions
-
-It is easy to get the list of actual WebGL extensions from `WebGLDevice`:
-
-```ts
-const webglDevice = device instanceof WebGLDevice ? (device as WebGLDevice) : null;
-const extensions = webglDevice ? webglDevice.gl.getSupportedExtensions() : [];
-console.log(extensions);
-```
-
-On your current browser, this would yield:
-
-<DeviceTabs />
-
-<WebGLExtensions />
-
 The following table illustrates how luma.gl features map to WebGL 2 extensions.
-This table is mainly included for reference purposes,
+This table is mainly included for reference purposes.
 WebGL extensions are very granular and can be demanding to work with directly.
 
 You can also check WebGL 2 extension availability with [WebGL Report](https://webglreport.com/?v=2).
@@ -145,7 +109,7 @@ You can also check WebGL 2 extension availability with [WebGL Report](https://we
 
 ## Remarks
 
-- Some extensions will not be enabled until they have been queried. 
+- Some extensions will not be enabled until they have been queried.
 - Given that queries to driver and GPU are typically expensive in WebGL, the Device will cache any queried extensions.
 
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/

@@ -299,11 +299,10 @@ export class WebGPUDevice extends Device {
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
       'timer-query-webgl',
-      'float32-filterable-linear-webgl',
-      'float16-filterable-linear-webgl',
-      'texture-filterable-anisotropic-webgl',
       'float32-renderable-webgl',
       'float16-renderable-webgl',
+      'norm16-renderable-webgl',
+      'texture-filterable-anisotropic-webgl',
       'shader-noperspective-interpolation-webgl'
     ];
 
