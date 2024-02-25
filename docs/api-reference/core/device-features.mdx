@@ -145,9 +145,8 @@ You can also check WebGL 2 extension availability with [WebGL Report](https://we
 
 ## Remarks
 
-- Some extensions will not be enabled until they have been queried. luma always queries on startup to enable, app only needs to query again it wants to test platform.
-- The capability detection system works regardless of whether the app is running in a browser or in headless mode under Node.js.
-- Naturally, given that queries to driver and GPU are typically expensive in WebGL, the capabilities system will cache any queries.
+- Some extensions will not be enabled until they have been queried. 
+- Given that queries to driver and GPU are typically expensive in WebGL, the Device will cache any queried extensions.
 
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/
 [texture_compression_bptc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_bptc

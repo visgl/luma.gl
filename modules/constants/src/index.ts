@@ -22,5 +22,6 @@ export type {
   GLValueParameters,
   GLFunctionParameters,
   GLParameters,
+  GLLimits,
   GLExtensions
 } from './webgl-types';

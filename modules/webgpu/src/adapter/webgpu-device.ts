@@ -49,12 +49,16 @@ export class WebGPUDevice extends Device {
   readonly handle: GPUDevice;
   /* The underlying WebGPU adapter */
   readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter's info */
+  readonly adapterInfo: GPUAdapterInfo
+
+  readonly features: DeviceFeatures;
+  readonly info: DeviceInfo;
+  readonly limits: DeviceLimits;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-  readonly features: DeviceFeatures;
   canvasContext: WebGPUCanvasContext | null = null;
 
-  private _info: DeviceInfo;
   private _isLost: boolean = false;
   commandEncoder: GPUCommandEncoder | null = null;
   renderPass: WebGPURenderPass | null = null;
@@ -106,31 +110,11 @@ export class WebGPUDevice extends Device {
     super({...props, id: props.id || uid('webgpu-device')});
     this.handle = device;
     this.adapter = adapter;
+    this.adapterInfo = adapterInfo;
 
-    const [driver, driverVersion] = ((adapterInfo as any).driver || '').split(' Version ');
-
-    // See https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
-    const vendor = adapterInfo.vendor || this.adapter.__brand || 'unknown';
-    const renderer = driver || '';
-    const version = driverVersion || '';
-
-    const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
-    const gpuArchitecture = adapterInfo.architecture || 'unknown';
-    const gpuBackend = (adapterInfo as any).backend || 'unknown';
-    const gpuType = ((adapterInfo as any).type || '').split(' ')[0].toLowerCase()  || 'unknown'
-
-    this._info = {
-      type: 'webgpu',
-      vendor,
-      renderer,
-      version,
-      gpu, 
-      gpuType,
-      gpuBackend,
-      gpuArchitecture,
-      shadingLanguage: 'wgsl',
-      shadingLanguageVersion: 100
-    };
+    this.info = this._getInfo();
+    this.features = this._getFeatures();
+    this.limits = this.handle.limits;
 
     // "Context" loss handling
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(async resolve => {
@@ -148,8 +132,6 @@ export class WebGPUDevice extends Device {
       container: props.container
     });
     // }
-
-    this.features = this._getFeatures();
   }
 
   // TODO
@@ -159,14 +141,6 @@ export class WebGPUDevice extends Device {
 
   destroy(): void {
     this.handle.destroy();
-  }
-
-  get info(): DeviceInfo {
-    return this._info;
-  }
-
-  get limits(): DeviceLimits {
-    return this.handle.limits;
   }
 
   isTextureFormatSupported(format: TextureFormat): boolean {
@@ -278,7 +252,36 @@ export class WebGPUDevice extends Device {
     // this.renderPass = null;
   }
 
-  _getFeatures(): DeviceFeatures {
+  // PRIVATE METHODS
+
+  protected _getInfo(): DeviceInfo {
+    const [driver, driverVersion] = ((this.adapterInfo as any).driver || '').split(' Version ');
+
+    // See https://developer.chrome.com/blog/new-in-webgpu-120#adapter_information_updates
+    const vendor = this.adapterInfo.vendor || this.adapter.__brand || 'unknown';
+    const renderer = driver || '';
+    const version = driverVersion || '';
+
+    const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
+    const gpuArchitecture = this.adapterInfo.architecture || 'unknown';
+    const gpuBackend = (this.adapterInfo as any).backend || 'unknown';
+    const gpuType = ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase()  || 'unknown'
+
+    return {
+      type: 'webgpu',
+      vendor,
+      renderer,
+      version,
+      gpu, 
+      gpuType,
+      gpuBackend,
+      gpuArchitecture,
+      shadingLanguage: 'wgsl',
+      shadingLanguageVersion: 100
+    };
+  }
+
+  protected _getFeatures(): DeviceFeatures {
     // Initialize with actual WebGPU Features (note that unknown features may not be in DeviceFeature type)
     const features = new Set<DeviceFeature>(this.handle.features as Set<DeviceFeature>);
     // Fixups for pre-standard names: https://github.com/webgpu-native/webgpu-headers/issues/133

@@ -14,8 +14,8 @@ export {isTypedArray, isNumberArray} from './utils/is-array';
 // MAIN API ACCESS POINTS
 export {luma} from './lib/luma';
 
-export type {DeviceProps, DeviceLimits, DeviceInfo, DeviceFeature} from './adapter/device';
-export {Device, DeviceFeatures} from './adapter/device';
+export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
+export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 
