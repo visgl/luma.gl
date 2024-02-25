@@ -71,7 +71,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     this._linkShaders();
 
+    log.time(0, `RenderPipeline ${this.id} - shaderLayout introspection`)();
     this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
+    log.timeEnd(0, `RenderPipeline ${this.id} - shaderLayout introspection`)();
+
     // Merge provided layout with introspected layout
     this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
 

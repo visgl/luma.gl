@@ -51,94 +51,61 @@ export type DeviceInfo = {
   shadingLanguageVersion: number;
 };
 
-/** Limits for a device */
-export type DeviceLimits = {
-  readonly maxTextureDimension1D?: number;
-  readonly maxTextureDimension2D?: number;
-  readonly maxTextureDimension3D?: number;
-  readonly maxTextureArrayLayers?: number;
-  readonly maxBindGroups: number;
-  readonly maxDynamicUniformBuffersPerPipelineLayout: number;
-  readonly maxDynamicStorageBuffersPerPipelineLayout: number;
-  readonly maxSampledTexturesPerShaderStage: number;
-  readonly maxSamplersPerShaderStage: number;
-  readonly maxStorageBuffersPerShaderStage: number;
-  readonly maxStorageTexturesPerShaderStage: number;
-  readonly maxUniformBuffersPerShaderStage: number;
-  readonly maxUniformBufferBindingSize: number;
-  readonly maxStorageBufferBindingSize?: number;
-  readonly minUniformBufferOffsetAlignment?: number;
-  readonly minStorageBufferOffsetAlignment?: number;
-  readonly maxVertexBuffers?: number;
-  readonly maxVertexAttributes: number;
-  readonly maxVertexBufferArrayStride?: number;
-  readonly maxInterStageShaderComponents?: number;
-  readonly maxComputeWorkgroupStorageSize?: number;
-  readonly maxComputeInvocationsPerWorkgroup?: number;
-  readonly maxComputeWorkgroupSizeX?: number;
-  readonly maxComputeWorkgroupSizeY?: number;
-  readonly maxComputeWorkgroupSizeZ?: number;
-  readonly maxComputeWorkgroupsPerDimension?: number;
+/** Limits for a device (max supported sizes of resources, max number of bindings etc) */
+export abstract class DeviceLimits {
+  /** max number of TextureDimension1D */
+  abstract maxTextureDimension1D: number;
+  /** max number of TextureDimension2D */
+  abstract maxTextureDimension2D: number;
+  /** max number of TextureDimension3D */
+  abstract maxTextureDimension3D: number;
+  /** max number of TextureArrayLayers */
+  abstract maxTextureArrayLayers: number;
+  /** max number of BindGroups */
+  abstract maxBindGroups: number;
+  /** max number of DynamicUniformBuffers per PipelineLayout */
+  abstract maxDynamicUniformBuffersPerPipelineLayout: number;
+  /** max number of DynamicStorageBuffers per PipelineLayout */
+  abstract maxDynamicStorageBuffersPerPipelineLayout: number;
+  /** max number of SampledTextures per ShaderStage */
+  abstract maxSampledTexturesPerShaderStage: number;
+  /** max number of Samplers per ShaderStage */
+  abstract maxSamplersPerShaderStage: number;
+  /** max number of StorageBuffers per ShaderStage */
+  abstract maxStorageBuffersPerShaderStage: number;
+  /** max number of StorageTextures per ShaderStage */
+  abstract maxStorageTexturesPerShaderStage: number;
+  /** max number of UniformBuffers per ShaderStage */
+  abstract maxUniformBuffersPerShaderStage: number;
+  /** max number of UniformBufferBindingSize */
+  abstract maxUniformBufferBindingSize: number;
+  /** max number of StorageBufferBindingSize */
+  abstract maxStorageBufferBindingSize: number;
+  /** min UniformBufferOffsetAlignment */
+  abstract minUniformBufferOffsetAlignment: number;
+  /** min StorageBufferOffsetAlignment */
+  abstract minStorageBufferOffsetAlignment: number;
+  /** max number of VertexBuffers */
+  abstract maxVertexBuffers: number;
+  /** max number of VertexAttributes */
+  abstract maxVertexAttributes: number;
+  /** max number of VertexBufferArrayStride */
+  abstract maxVertexBufferArrayStride: number;
+  /** max number of InterStageShaderComponents */
+  abstract maxInterStageShaderComponents: number;
+  /** max number of ComputeWorkgroupStorageSize */
+  abstract maxComputeWorkgroupStorageSize: number;
+  /** max number of ComputeInvocations per Workgroup */
+  abstract maxComputeInvocationsPerWorkgroup: number;
+  /** max ComputeWorkgroupSizeX */
+  abstract maxComputeWorkgroupSizeX: number;
+  /** max ComputeWorkgroupSizeY */
+  abstract maxComputeWorkgroupSizeY: number;
+  /** max ComputeWorkgroupSizeZ */
+  abstract maxComputeWorkgroupSizeZ: number;
+  /** max ComputeWorkgroupsPerDimension */
+  abstract maxComputeWorkgroupsPerDimension: number;
 };
-
-export type WebGPUDeviceFeature =
-  | 'depth-clip-control'
-  | 'indirect-first-instance'
-  | 'timestamp-query'
-  | 'shader-f16'
-  | 'depth24unorm-stencil8'
-  | 'depth32float-stencil8'
-  | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
-  | 'float32-filterable' // Is the float32 format filterable?
-  | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
-  | 'texture-compression-bc'
-  | 'texture-compression-etc2'
-  | 'texture-compression-astc';
-
-// WebGPU features that have been removed from the WebGPU spec...
-// 'depth-clamping' |
-// 'pipeline-statistics-query' |
-
-export type WebGLDeviceFeature =
-  // webgl extension features
-  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
-  | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
-  | 'provoking-vertex-webgl' // parameters.provokingVertex
-  | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
-
-  // GLSL extension feGLatures
-  | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test 
-  | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
-
-  // texture rendering
-  | 'float32-renderable-webgl'
-  | 'float16-renderable-webgl'
-  | 'norm16-renderable-webgl'
-
-  // texture filtering
-  | 'float32-filterable-linear-webgl'
-  | 'float16-filterable-linear-webgl'
-  | 'texture-filterable-anisotropic-webgl'
-
-  // texture storage bindings
-  | 'bgra8unorm-storage'
-
-  // texture blending
-  | 'texture-blend-float-webgl';
-
-type WebGLCompressedTextureFeatures =
-  | 'texture-compression-bc5-webgl'
-  | 'texture-compression-bc7-webgl'
-  | 'texture-compression-etc1-webgl'
-  | 'texture-compression-pvrtc-webgl'
-  | 'texture-compression-atc-webgl';
-
-/** Valid feature strings */
-export type DeviceFeature =
-  | WebGPUDeviceFeature
-  | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures;
 
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
 export class DeviceFeatures {
@@ -156,6 +123,63 @@ export class DeviceFeatures {
     return this.features.has(feature);
   }
 }
+
+/** Device feature names */
+export type DeviceFeature =
+  | WebGPUDeviceFeature
+  | WebGLDeviceFeature
+  | WebGLCompressedTextureFeatures;
+
+
+export type WebGPUDeviceFeature =
+  | 'depth-clip-control'
+  | 'indirect-first-instance'
+  | 'timestamp-query'
+  | 'shader-f16'
+  | 'depth24unorm-stencil8'
+  | 'depth32float-stencil8'
+  | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
+  | 'float32-filterable' // Is the float32 format filterable?
+  | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
+  | 'texture-compression-bc'
+  | 'texture-compression-etc2'
+  | 'texture-compression-astc';
+  // | 'depth-clamping' // removed from the WebGPU spec...
+  // | 'pipeline-statistics-query' // removed from the WebGPU spec...
+
+export type WebGLDeviceFeature =
+  // webgl extension features
+  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
+  | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'provoking-vertex-webgl' // parameters.provokingVertex
+  | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+
+  // GLSL extension features
+  | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
+  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test 
+  | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
+
+  // texture rendering
+  | 'float32-renderable-webgl'
+  | 'float16-renderable-webgl'
+  | 'norm16-renderable-webgl'
+
+  // texture filtering
+  | 'float16-filterable-webgl'
+  | 'texture-filterable-anisotropic-webgl'
+
+  // texture storage bindings
+  | 'bgra8unorm-storage'
+
+  // texture blending
+  | 'texture-blend-float-webgl';
+
+type WebGLCompressedTextureFeatures =
+  | 'texture-compression-bc5-webgl'
+  | 'texture-compression-bc7-webgl'
+  | 'texture-compression-etc1-webgl'
+  | 'texture-compression-pvrtc-webgl'
+  | 'texture-compression-atc-webgl';
 
 /** Device properties */
 export type DeviceProps = {
@@ -203,8 +227,8 @@ export abstract class Device {
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
-    debug: false, // Instrument context (at the expense of performance)
-    spector: false, // Initialize the SpectorJS WebGL debugger
+    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
+    spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
     break: [],
 
     // alpha: undefined,

@@ -4,7 +4,6 @@
 import type {
   DeviceProps,
   DeviceInfo,
-  DeviceLimits,
   CanvasContextProps,
   TextureFormat,
   VertexArray,
@@ -24,7 +23,7 @@ import {
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
-import {getDeviceLimits, getWebGLLimits, WebGLLimits} from './device-helpers/webgl-device-limits';
+import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools, makeDebugContext} from '../context/debug/webgl-developer-tools';
@@ -91,19 +90,14 @@ export class WebGLDevice extends Device {
   /** The underlying WebGL context */
   readonly handle: WebGL2RenderingContext;
   features: WebGLDeviceFeatures;
+  limits: WebGLDeviceLimits;
 
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
 
-  get limits(): DeviceLimits {
-    this._limits = this._limits || getDeviceLimits(this.gl);
-    return this._limits;
-  }
-
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
-  private _limits?: DeviceLimits;
 
   //
   // Static methods, expected to be present by `luma.createDevice()`
@@ -136,11 +130,11 @@ export class WebGLDevice extends Device {
     const promises: Promise<unknown>[] = [];
 
     // Load webgl and spector debug scripts from CDN if requested
-    if (log.get('debug') || props.debug) {
-      promises.push(loadWebGLDeveloperTools()) ;
+    if (props.debug) {
+      promises.push(loadWebGLDeveloperTools());
     }
 
-    if (log.get('spector') || props.spector) {
+    if (props.spector) {
       promises.push(loadSpectorJS());
     }
 
@@ -213,17 +207,16 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
     this.handle = gl;
     this.gl = gl;
-    this.canvasContext.resize();
+
+    (this.gl as any).device = this; // Update GL context: Link webgl context back to device
+    (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
     // luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
     this.features = new WebGLDeviceFeatures(this.gl, this._extensions);
+    this.limits = new WebGLDeviceLimits(this.gl);
 
-    // Update context
-    // @ts-expect-error Link webgl context back to device
-    this.gl.device = this;
-    // @ts-expect-error Store WebGL version field on gl context (HACK to identify debug contexts)
-    this.gl._version = 2;
+    this.canvasContext.resize();
 
     // Install context state tracking
     // @ts-expect-error - hidden parameters
@@ -243,13 +236,13 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     }
 
     if (props.spector) {
-      this.spector = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
+      this.spectorJS = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
     }
   }
 
   /**
    * Destroys the context
-   * @note Has no effect for browser contexts, there is no browser API for destroying contexts
+   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
    */
   destroy(): void {}
 
@@ -431,15 +424,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
-  spector;
-
-  private _webglLimits?: WebGLLimits;
-
-  /** Return WebGL specific limits */
-  get webglLimits(): WebGLLimits {
-    this._webglLimits = this._webglLimits || getWebGLLimits(this.gl);
-    return this._webglLimits;
-  }
+  spectorJS: unknown;
 
   /**
    * Triggers device (or WebGL context) loss.
@@ -510,7 +495,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
    * @todo - remember/cache values to avoid setting them unnecessarily?
    */
   setConstantAttributeWebGL(location: number, constant: TypedArray): void {
-    this._constants = this._constants || new Array(this.limits.maxVertexAttributes).fill(null);
+    const maxVertexAttributes = this.limits.maxVertexAttributes;
+    this._constants = this._constants || new Array(maxVertexAttributes).fill(null);
     const currentConstant = this._constants[location];
     if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
       log.info(

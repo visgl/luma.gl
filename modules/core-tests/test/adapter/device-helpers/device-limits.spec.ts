@@ -1,6 +1,6 @@
 import test from 'tape-promise/tape';
 import {GL} from '@luma.gl/constants';
-import {getTestDevices, getWebGLTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 
 const DEVICE_LIMITS = {
   maxTextureDimension1D: true,
@@ -88,23 +88,6 @@ test('WebGLDevice#limits (WebGPU style limits)', async (t) => {
       const actual = testDevice.limits[limit];
       if (numeric) {
         t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
-      } else {
-        t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
-      }
-    }
-  }
-  t.end();
-});
-
-test('WebGLDevice#webglLimits (WebGL style limits)', async (t) => {
-  for (const testDevice of getWebGLTestDevices()) {
-    for (const [limit, numeric] of Object.entries(WEBGL_LIMITS)) {
-      const actual = testDevice.webglLimits[limit];
-      if (numeric) {
-        t.ok(
-          Number.isFinite(actual),
-          `device.limits[${testDevice.getGLKey(limit)}] returns a number: ${actual}`
-        );
       } else {
         t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
       }

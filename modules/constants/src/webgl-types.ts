@@ -343,6 +343,66 @@ export type GLFunctionParameters = {
 /** WebGL style parameters object (with both GL constants and function style fields) */
 export type GLParameters = GLValueParameters & GLFunctionParameters;
 
+/** WebGL context limits */
+export type GLLimits = {
+  [GL.ALIASED_LINE_WIDTH_RANGE]: [number, number];
+  [GL.ALIASED_POINT_SIZE_RANGE]: [number, number];
+  [GL.MAX_TEXTURE_SIZE]: number;
+  [GL.MAX_CUBE_MAP_TEXTURE_SIZE]: number;
+  [GL.MAX_TEXTURE_IMAGE_UNITS]: number;
+  [GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS]: number;
+  [GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS]: number;
+  [GL.MAX_RENDERBUFFER_SIZE]: number;
+  [GL.MAX_VARYING_VECTORS]: number;
+  [GL.MAX_VERTEX_ATTRIBS]: number;
+  [GL.MAX_VERTEX_UNIFORM_VECTORS]: number;
+  [GL.MAX_FRAGMENT_UNIFORM_VECTORS]: number;
+  [GL.MAX_VIEWPORT_DIMS]: [number, number];
+
+  // Extensions
+  [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: number;
+
+  // WebGL2 Limits
+  [GL.MAX_3D_TEXTURE_SIZE]: number;
+  [GL.MAX_ARRAY_TEXTURE_LAYERS]: number;
+  // [GL.MAX_CLIENT_WAIT_TIMEOUT_WEBGL]: number;
+  [GL.MAX_COLOR_ATTACHMENTS]: number;
+  [GL.MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS]: number;
+  [GL.MAX_COMBINED_UNIFORM_BLOCKS]: number;
+  [GL.MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS]: number;
+  [GL.MAX_DRAW_BUFFERS]: number;
+  [GL.MAX_ELEMENT_INDEX]: number;
+  [GL.MAX_ELEMENTS_INDICES]: number;
+  [GL.MAX_ELEMENTS_VERTICES]: number;
+  [GL.MAX_FRAGMENT_INPUT_COMPONENTS]: number;
+  [GL.MAX_FRAGMENT_UNIFORM_BLOCKS]: number;
+  [GL.MAX_FRAGMENT_UNIFORM_COMPONENTS]: number;
+  [GL.MAX_SAMPLES]: number;
+  // [GL.MAX_SERVER_WAIT_TIMEOUT]: number;
+  [GL.MAX_TEXTURE_LOD_BIAS]: number;
+  [GL.MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS]: number;
+  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS]: number;
+  [GL.MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS]: number;
+  [GL.MAX_UNIFORM_BLOCK_SIZE]: number;
+  [GL.MAX_UNIFORM_BUFFER_BINDINGS]: number;
+  [GL.MAX_VARYING_COMPONENTS]: number;
+  [GL.MAX_VERTEX_OUTPUT_COMPONENTS]: number;
+  [GL.MAX_VERTEX_UNIFORM_BLOCKS]: number;
+  [GL.MAX_VERTEX_UNIFORM_COMPONENTS]: number;
+  [GL.MIN_PROGRAM_TEXEL_OFFSET]: number;
+  [GL.MAX_PROGRAM_TEXEL_OFFSET]: number;
+  [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: number;
+
+  // EXTENSIONS
+  /** Max clip distances */
+  MAX_CLIP_DISTANCES_WEBGL: number;
+  /** Max cull distances */
+  MAX_CULL_DISTANCES_WEBGL: number;
+  /** Max clip and cull distances */
+  MAX_COMBINED_CLIP_AND_CULL_DISTANCES_WEBGL: number;
+  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL: number;
+};
+
 /** WebGL2 Extensions */
 export type GLExtensions = {
   /** https://registry.khronos.org/webgl/extensions/EXT_color_buffer_float */

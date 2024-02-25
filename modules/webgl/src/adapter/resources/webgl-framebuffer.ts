@@ -62,7 +62,7 @@ export class WEBGLFramebuffer extends Framebuffer {
       /** Check the status */
       // @ts-expect-error
       if (props.check !== false) {
-        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
         if (status !== GL.FRAMEBUFFER_COMPLETE) {
           throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
         }
