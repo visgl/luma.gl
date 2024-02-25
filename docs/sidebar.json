@@ -78,6 +78,7 @@
         "items": [
           "api-reference/core/README",
           "api-reference/core/device",
+          "api-reference/core/device-info",
           "api-reference/core/device-features",
           "api-reference/core/device-limits",
           "api-reference/core/canvas-context",
