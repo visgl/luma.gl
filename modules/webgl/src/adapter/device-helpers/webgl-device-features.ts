@@ -83,7 +83,6 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
         this.features.add(feature);
       }
     }
-    console.log(feature, this.features.has(feature))
     return this.features.has(feature);
   }
 
