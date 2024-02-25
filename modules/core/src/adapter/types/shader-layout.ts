@@ -5,6 +5,7 @@ import {AccessorObject} from '../types/accessor';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';
 import type {Texture} from '../resources/texture';
+import type {TextureView} from '../resources/texture-view';
 
 /**
  * Describes all shader binding points for a `RenderPipeline` or `ComputePipeline`
@@ -148,7 +149,7 @@ type StorageTextureBindingLayout = {
 // BINDINGS
 
 /** Binding value */
-export type Binding = Texture | Sampler | Buffer | {buffer: Buffer; offset?: number; size?: number};
+export type Binding = TextureView | Texture | Sampler | Buffer | {buffer: Buffer; offset?: number; size?: number};
 
 // SHADER LAYOUTS
 

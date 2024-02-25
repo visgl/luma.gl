@@ -5,13 +5,14 @@ import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from 
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
+import {TextureView} from './texture-view';
 import {log} from '../../utils/log';
 
 export type FramebufferProps = ResourceProps & {
   width?: number;
   height?: number;
-  colorAttachments?: (Texture | ColorTextureFormat)[];
-  depthStencilAttachment?: (Texture | DepthStencilTextureFormat) | null;
+  colorAttachments?: (Texture | TextureView | ColorTextureFormat)[];
+  depthStencilAttachment?: (Texture | TextureView | DepthStencilTextureFormat) | null;
 };
 
 /**
@@ -36,9 +37,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   /** Height of all attachments in this framebuffer */
   height: number;
   /** Color attachments */
-  colorAttachments: Texture[] = [];
+  colorAttachments: (Texture | TextureView)[] = [];
   /** Depth-stencil attachment, if provided */
-  depthStencilAttachment: Texture | null = null;
+  depthStencilAttachment: Texture | TextureView | null = null;
 
   constructor(device: Device, props: FramebufferProps = {}) {
     super(device, props, Framebuffer.defaultProps);
@@ -70,59 +71,8 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     }
   }
 
-  // /** Returns fully populated attachment object. */
-  // protected normalizeColorAttachment(
-  //   attachment: Texture | ColorTextureFormat
-  // ): Required<ColorAttachment> {
-
-  //   const COLOR_ATTACHMENT_DEFAULTS: Required<ColorAttachment> = {
-  //     texture: undefined!,
-  //     format: undefined!,
-  //     clearValue: [0.0, 0.0, 0.0, 0.0],
-  //     loadOp: 'clear',
-  //     storeOp: 'store'
-  //   };
-
-  //   if (attachment instanceof Texture) {
-  //     return {...COLOR_ATTACHMENT_DEFAULTS, texture: attachment};
-  //   }
-  //   if (typeof attachment === 'string') {
-  //     return {...COLOR_ATTACHMENT_DEFAULTS, format: attachment};
-  //   }
-  //   return {...COLOR_ATTACHMENT_DEFAULTS, ...attachment};
-  // }
-
-  // /** Wraps texture inside fully populated attachment object. */
-  // protected normalizeDepthStencilAttachment(
-  //   attachment: DepthStencilAttachment | Texture | DepthStencilTextureFormat
-  // ): Required<DepthStencilAttachment> {
-  //   const DEPTH_STENCIL_ATTACHMENT_DEFAULTS: Required<DepthStencilAttachment> = {
-  //     texture: undefined!,
-  //     format: undefined!,
-
-  //     depthClearValue: 1.0,
-  //     depthLoadOp: 'clear',
-  //     depthStoreOp: 'store',
-  //     depthReadOnly: false,
-
-  //     stencilClearValue: 0,
-  //     stencilLoadOp: 'clear',
-  //     stencilStoreOp: 'store',
-  //     stencilReadOnly: false
-  //   };
-
-  //   if (typeof attachment === 'string') {
-  //     return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, format: attachment};
-  //   }
-  //   // @ts-expect-error attachment instanceof Texture doesn't cover Renderbuffer
-  //   if (attachment.handle || attachment instanceof Texture) {
-  //     return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, texture: attachment as Texture};
-  //   }
-  //   return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, ...attachment};
-  // }
-
   /** Auto creates any textures */
-  protected autoCreateAttachmentTextures(){
+  protected autoCreateAttachmentTextures(): void {
     this.colorAttachments = this.props.colorAttachments.map(attachment => {
       if (typeof attachment === 'string') {
         const texture = this.createColorTexture(attachment);
@@ -195,36 +145,88 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       this.attachResource(resizedTexture);
     }
   }
-
-  /** Create a color attachment for WebGL *
-  protected override createColorTexture(colorAttachment: Required<ColorAttachment>): Required<ColorAttachment> {
-    return this.device._createTexture({
-      id: `${this.id}-color`,
-      data: null, // reserves texture memory, but texels are undefined
-      format,
-      // type: GL.UNSIGNED_BYTE,
-      width: this.width,
-      height: this.height,
-      // Note: Mipmapping can be disabled by texture resource when we resize the texture
-      // to a non-power-of-two dimenstion (NPOT texture) under WebGL1. To have consistant
-      // behavior we always disable mipmaps.
-      mipmaps: false,
-      // Set MIN and MAG filtering parameters so mipmaps are not used in sampling.
-      // Use LINEAR so subpixel algos like fxaa work.
-      // Set WRAP modes that support NPOT textures too.
-      sampler: {
-        minFilter: 'linear',
-        magFilter: 'linear',
-        addressModeU: 'clamp-to-edge',
-        addressModeV: 'clamp-to-edge'
-      }
-      // parameters: {
-      //   [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
-      //   [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
-      //   [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
-      //   [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
-      // }
-    });
-  }
-  */
 }
+
+// TODO - remove if not needed
+
+// Create a color attachment for WebGL *
+// protected override createColorTexture(colorAttachment: Required<ColorAttachment>): Required<ColorAttachment> {
+//   return this.device._createTexture({
+//     id: `${this.id}-color`,
+//     data: null, // reserves texture memory, but texels are undefined
+//     format,
+//     // type: GL.UNSIGNED_BYTE,
+//     width: this.width,
+//     height: this.height,
+//     // Note: Mipmapping can be disabled by texture resource when we resize the texture
+//     // to a non-power-of-two dimenstion (NPOT texture) under WebGL1. To have consistant
+//     // behavior we always disable mipmaps.
+//     mipmaps: false,
+//     // Set MIN and MAG filtering parameters so mipmaps are not used in sampling.
+//     // Use LINEAR so subpixel algos like fxaa work.
+//     // Set WRAP modes that support NPOT textures too.
+//     sampler: {
+//       minFilter: 'linear',
+//       magFilter: 'linear',
+//       addressModeU: 'clamp-to-edge',
+//       addressModeV: 'clamp-to-edge'
+//     }
+//     // parameters: {
+//     //   [GL.TEXTURE_MIN_FILTER]: GL.LINEAR,
+//     //   [GL.TEXTURE_MAG_FILTER]: GL.LINEAR,
+//     //   [GL.TEXTURE_WRAP_S]: GL.CLAMP_TO_EDGE,
+//     //   [GL.TEXTURE_WRAP_T]: GL.CLAMP_TO_EDGE
+//     // }
+//   });
+// }
+
+// /** Returns fully populated attachment object. */
+// protected normalizeColorAttachment(
+//   attachment: Texture | ColorTextureFormat
+// ): Required<ColorAttachment> {
+
+//   const COLOR_ATTACHMENT_DEFAULTS: Required<ColorAttachment> = {
+//     texture: undefined!,
+//     format: undefined!,
+//     clearValue: [0.0, 0.0, 0.0, 0.0],
+//     loadOp: 'clear',
+//     storeOp: 'store'
+//   };
+
+//   if (attachment instanceof Texture) {
+//     return {...COLOR_ATTACHMENT_DEFAULTS, texture: attachment};
+//   }
+//   if (typeof attachment === 'string') {
+//     return {...COLOR_ATTACHMENT_DEFAULTS, format: attachment};
+//   }
+//   return {...COLOR_ATTACHMENT_DEFAULTS, ...attachment};
+// }
+
+// /** Wraps texture inside fully populated attachment object. */
+// protected normalizeDepthStencilAttachment(
+//   attachment: DepthStencilAttachment | Texture | DepthStencilTextureFormat
+// ): Required<DepthStencilAttachment> {
+//   const DEPTH_STENCIL_ATTACHMENT_DEFAULTS: Required<DepthStencilAttachment> = {
+//     texture: undefined!,
+//     format: undefined!,
+
+//     depthClearValue: 1.0,
+//     depthLoadOp: 'clear',
+//     depthStoreOp: 'store',
+//     depthReadOnly: false,
+
+//     stencilClearValue: 0,
+//     stencilLoadOp: 'clear',
+//     stencilStoreOp: 'store',
+//     stencilReadOnly: false
+//   };
+
+//   if (typeof attachment === 'string') {
+//     return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, format: attachment};
+//   }
+//   // @ts-expect-error attachment instanceof Texture doesn't cover Renderbuffer
+//   if (attachment.handle || attachment instanceof Texture) {
+//     return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, texture: attachment as Texture};
+//   }
+//   return {...DEPTH_STENCIL_ATTACHMENT_DEFAULTS, ...attachment};
+// }
