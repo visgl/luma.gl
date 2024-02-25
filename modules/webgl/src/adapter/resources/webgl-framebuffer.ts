@@ -59,12 +59,16 @@ export class WEBGLFramebuffer extends Framebuffer {
         );
       }
 
-      this.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-    }
+      /** Check the status */
+      // @ts-expect-error
+      if (props.check !== false) {
+        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+        if (status !== GL.FRAMEBUFFER_COMPLETE) {
+          throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+        }
+      }
 
-    // @ts-expect-error
-    if (props.check !== false) {
-      this._checkStatus();
+      this.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
     }
   }
 
@@ -79,18 +83,6 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   // PRIVATE
 
-  /** Check the status */
-  protected _checkStatus(): void {
-    const {gl} = this;
-    // TODO - should we really rely on this trick? 
-    const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle) as unknown as WebGLFramebuffer;
-    const status = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-    gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
-      throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
-    }
-  }
-
   /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
   protected override createDepthStencilTexture(format: TextureFormat): Texture {
     return new WEBGLRenderbuffer(this.device, {
@@ -103,8 +95,8 @@ export class WEBGLFramebuffer extends Framebuffer {
     }) as unknown as WEBGLTexture;
   }
 
-  /** 
-   * Attachment resize is expected to be a noop if size is same 
+  /**
+   * Attachment resize is expected to be a noop if size is same
    */
   protected override resizeAttachments(width: number, height: number): this {
     // for default framebuffer, just update the stored size
@@ -206,7 +198,9 @@ export class WEBGLFramebuffer extends Framebuffer {
 function mapIndexToCubeMapFace(layer: number | GL): GL {
   // TEXTURE_CUBE_MAP_POSITIVE_X is a big value (0x8515)
   // if smaller assume layer is index, otherwise assume it is already a cube map face constant
-  return layer < (GL.TEXTURE_CUBE_MAP_POSITIVE_X as number) ? layer + GL.TEXTURE_CUBE_MAP_POSITIVE_X : layer;
+  return layer < (GL.TEXTURE_CUBE_MAP_POSITIVE_X as number)
+    ? layer + GL.TEXTURE_CUBE_MAP_POSITIVE_X
+    : layer;
 }
 
 // Helper METHODS
