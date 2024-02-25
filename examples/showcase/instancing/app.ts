@@ -329,7 +329,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.cube.draw(renderPass);
     renderPass.end();
-    debugger
   }
 
   onFinalize(animationProps: AnimationProps): void {

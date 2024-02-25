@@ -523,6 +523,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   /** Ensure extensions are only requested once */
   getExtension(name: keyof GLExtensions): GLExtensions {
+    debugger
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
   }

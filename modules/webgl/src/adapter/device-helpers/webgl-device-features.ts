@@ -71,23 +71,20 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
 
   override has(feature: DeviceFeature): boolean {
     // We have already tested this feature
-    if (this.testedFeatures.has(feature)) {
-      return this.features.has(feature);
-    }
+    if (!this.testedFeatures.has(feature)) {
+      this.testedFeatures.add(feature);
 
-    // Check the feature once
-    this.testedFeatures.add(feature);
-    if (isTextureFeature(feature) && checkTextureFeature(this.gl, feature, this.extensions)) {
-      this.features.add(feature);
-      return true;
-    }
+      // Check the feature once
+      if (isTextureFeature(feature) && checkTextureFeature(this.gl, feature, this.extensions)) {
+        this.features.add(feature);
+      }
 
-    if (this.getWebGLFeature(feature)) {
-      this.features.add(feature);
-      return true;
+      if (this.getWebGLFeature(feature)) {
+        this.features.add(feature);
+      }
     }
-
-    return false;
+    console.log(feature, this.features.has(feature))
+    return this.features.has(feature);
   }
 
   /** Extract all WebGL features */

@@ -8,8 +8,9 @@ export function getWebGLExtension(
   gl: WebGL2RenderingContext,
   name: string,
   extensions: GLExtensions
-): void {
+): unknown {
   if (extensions[name] === undefined) {
     extensions[name] = gl.getExtension(name) || null;
   }
+  return extensions[name];
 }
