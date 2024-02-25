@@ -46,13 +46,13 @@ You can open this page in different browsers and on different machines to compar
 | `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   | `EXT_conservative_depth`                |
 | `shader-clip-cull-distance-webgl`          | <F f="shader-clip-cull-distance-webgl"/>          | Enable`gl_ClipDistance[]/gl_CullDistance[]`  | `WEBGL_clip_cull_distance`              |
 | **Textures**                               |
-| `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    | `UNSIGNED_INT_24_8_WEBGL`                    |
-| `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    | WebGPU only                                  |
-| `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            |
+| `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    |                                              | `GL.UNSIGNED_INT_24_8_WEBGL`            |
+| `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    |                                              | N/A                                     |
+| `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            | N/A                                     |
 | `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  | `EXT_color_buffer_float`                |
 | `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  | `EXT_color_buffer_half_float`           |
-| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              | `OES_texture_float_linear`
-| `float16-filterable-webgl`          | <F f="float16-filterable-linear-webgl`" />        | float16 `linear` filtering                   | `OES_texture_half_float_linear`         |
+| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              | `OES_texture_float_linear`              |
+| `float16-filterable-webgl`                 | <F f="float16-filterable-linear-webgl`" />        | float16 `linear` filtering                   | `OES_texture_half_float_linear`         |
 | `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                | `EXT_texture_filter_anisotropic`        |
 | `bgra8unorm-storage`                       | <F f="bgra8unorm-storage"/>                       | can be used as storage binding.              |
 | `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       | `EXT_float_blend`                       |
@@ -91,21 +91,18 @@ WebGL extensions are very granular and can be demanding to work with directly.
 
 You can also check WebGL 2 extension availability with [WebGL Report](https://webglreport.com/?v=2).
 
-| `luma.gl feature`                           | WebGL Extension                                                | Description                                                                                                                     |
-| ------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **General WebGL Features**                  |                                                                |                                                                                                                                 |
-| `webgl`                                     | True for WebGL Context                                         |                                                                                                                                 |
-| `timer-query-webgl`                         | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        |                                                                                                                                 |
-| ** GLSL extensions**                        |                                                                |                                                                                                                                 |
-| **`Texture` and `Framebuffer`**             |                                                                |                                                                                                                                 |
-| `texture-float32-webgl1`                    | [`OES_texture_float`][texture_float]                           | Floating point textures can be created and sampled (filtering/rendering are queried separately)                                 |
-| `texture-float16-webgl1` (Extension 1 of 2) | [`OES_texture_half_float`][texture_half_float]                 | Half float (`Uint16Array`) textures can be created and set as samplers                                                          |
-| `texture-float16-webgl1` (Extension 2 of 2) | [`WEBGL_color_buffer_float`][webgl_color_buffer_float]         | (This feature depends on 2 extensions)                                                                                          |
-| `float32-renderable-webgl`                  | [`EXT_color_buffer_float`][ext_color_buffer_float]             | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`, write in fragment shaders, read with `readPixels`. |
-| `float16-renderable-webgl`                  | [`EXT_color_buffer_half_float`][color_buffer_half_float]       | Half float format `Texture`s are renderable and readable                                                                        |
-| `texture-filter-linear-float`               | [`OES_texture_float_linear`][texture_float_linear]             | Linear texture filtering for floating point textures                                                                            |
-| `texture-filter-linear-half-float-webgl`    | [`OES_texture_half_float_linear`][texture_half_float_linear]   | Linear texture filtering for half float textures                                                                                |
-| `texture_filter-anisotropic-webgl`          | [`EXT_texture_filter_anisotropic`][texture_filter_anisotropic] | Anisotropic texture filtering                                                                                                   |
+| `luma.gl feature`                        | WebGL Extension                                                | Description                                                                                                                     |
+| ---------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **General WebGL Features**               |                                                                |                                                                                                                                 |
+| `webgl`                                  | True for WebGL Context                                         |                                                                                                                                 |
+| `timer-query-webgl`                      | [`EXT_disjoint_timer_query_webgl2`][timer_query_webgl2]        |                                                                                                                                 |
+| ** GLSL extensions**                     |                                                                |                                                                                                                                 |
+| **`Texture` and `Framebuffer`**          |                                                                |                                                                                                                                 |
+| `float32-renderable-webgl`               | [`EXT_color_buffer_float`][ext_color_buffer_float]             | Floating point `Texture`s are renderable/readable, (attach to `Framebuffer`, write in fragment shaders, read with `readPixels`. |
+| `float16-renderable-webgl`               | [`EXT_color_buffer_half_float`][color_buffer_half_float]       | Half float format `Texture`s are renderable and readable                                                                        |
+| `texture-filter-linear-float`            | [`OES_texture_float_linear`][texture_float_linear]             | Linear texture filtering for floating point textures                                                                            |
+| `texture-filter-linear-half-float-webgl` | [`OES_texture_half_float_linear`][texture_half_float_linear]   | Linear texture filtering for half float textures                                                                                |
+| `texture_filter-anisotropic-webgl`       | [`EXT_texture_filter_anisotropic`][texture_filter_anisotropic] | Anisotropic texture filtering                                                                                                   |
 
 ## Remarks
 
