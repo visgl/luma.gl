@@ -20,36 +20,6 @@ import type {CommandEncoder, CommandEncoderProps} from './resources/command-enco
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 
-/** Device properties */
-export type DeviceProps = {
-  id?: string;
-
-  type?: 'webgl' | 'webgpu' | 'best-available';
-
-  // Common parameters
-  canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
-  container?: HTMLElement | string | null;
-  width?: number /** width is only used when creating a new canvas */;
-  height?: number /** height is only used when creating a new canvas */;
-
-  // WebGLContext PARAMETERS - Can only be set on context creation...
-  // alpha?: boolean; // Default render target has an alpha buffer.
-  // depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
-  // stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
-  // antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
-  // premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
-  // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
-  // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
-
-  // Unclear if these are still supported
-  debug?: boolean; // Instrument context (at the expense of performance)
-  manageState?: boolean; // Set to false to disable WebGL state management instrumentation
-  break?: string[]; // TODO: types
-
-  // @deprecated Attach to existing context
-  gl?: WebGL2RenderingContext | null;
-};
-
 /**
  * Identifies the GPU vendor and driver.
  * @note Chrome WebGPU does not provide much information, though more can be enabled with
@@ -125,7 +95,7 @@ export type WebGPUDeviceFeature =
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
 
-// Removed WebGPU features...
+// WebGPU features that have been removed from the WebGPU spec...
 // 'depth-clamping' |
 // 'pipeline-statistics-query' |
 
@@ -170,6 +140,57 @@ export type DeviceFeature =
   | WebGLDeviceFeature
   | WebGLCompressedTextureFeatures;
 
+/** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
+export class DeviceFeatures {
+  protected features: Set<DeviceFeature>;
+
+  constructor(features: DeviceFeature[] = []) {
+    this.features = new Set<DeviceFeature>(features);
+  }
+
+  *[Symbol.iterator](): IterableIterator<DeviceFeature> {
+    yield* this.features;
+  }
+
+  has(feature: DeviceFeature): boolean {
+    return this.features.has(feature);
+  }
+}
+
+/** Device properties */
+export type DeviceProps = {
+  id?: string;
+
+  type?: 'webgl' | 'webgpu' | 'best-available';
+
+  // Common parameters
+  canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
+  container?: HTMLElement | string | null;
+  width?: number /** width is only used when creating a new canvas */;
+  height?: number /** height is only used when creating a new canvas */;
+
+  // WebGLContext PARAMETERS - Can only be set on context creation...
+  // alpha?: boolean; // Default render target has an alpha buffer.
+  // depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
+  // stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
+  // antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
+  // premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
+  // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
+  // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
+
+  /** Instrument context (at the expense of performance) */
+  debug?: boolean; 
+  /** Initialize the SpectorJS WebGL debugger */
+  spector?: boolean;
+
+  // Unclear if these are still supported
+  manageState?: boolean; // Set to false to disable WebGL state management instrumentation
+  break?: string[]; // TODO: types
+
+  // @deprecated Attach to existing context
+  gl?: WebGL2RenderingContext | null;
+};
+
 /**
  * WebGPU Device/WebGL context abstraction
  */
@@ -182,7 +203,8 @@ export abstract class Device {
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
-    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
+    debug: false, // Instrument context (at the expense of performance)
+    spector: false, // Initialize the SpectorJS WebGL debugger
     break: [],
 
     // alpha: undefined,
@@ -226,7 +248,7 @@ export abstract class Device {
   abstract info: DeviceInfo;
 
   /** Optional capability discovery */
-  abstract get features(): Set<DeviceFeature>;
+  abstract features: DeviceFeatures;
 
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;

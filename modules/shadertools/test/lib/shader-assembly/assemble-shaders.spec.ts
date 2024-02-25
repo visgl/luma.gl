@@ -11,7 +11,7 @@ function getInfo(device: Device): PlatformInfo {
     gpu: device.info.gpu,
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
-    features: device.features
+    features: new Set(device.features)
   };
 }
 

@@ -1,13 +1,10 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import {Resource, assert, uid, stubRemovedMethods} from '@luma.gl/core';
 import type {Device, ResourceProps} from '@luma.gl/core';
+import {Resource, uid, stubRemovedMethods} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
-
-// Requires full GL enum to be bundled... Make these bindings dependent on dynamic import (debug)?
-import {getKeyValue} from './constants-to-keys';
 
 const ERR_RESOURCE_METHOD_UNDEFINED = 'Resource subclass must define virtual methods';
 
@@ -112,122 +109,6 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
 
   unbind() {
     this.bind(null);
-  }
-
-  /**
-   * Query a Resource parameter
-   *
-   * @param name
-   * @return param
-   */
-  getParameter(pname: number, props: any = {}): any {
-    pname = getKeyValue(this.gl, pname);
-    assert(pname);
-
-    // @ts-expect-error
-    const parameters = this.constructor.PARAMETERS || {};
-
-    // Use parameter definitions to handle unsupported parameters
-    const parameter = parameters[pname];
-    if (parameter) {
-      // Check if we can query for this parameter
-      const parameterAvailable =
-        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-
-      if (!parameterAvailable) {
-        return parameter.webgl2;
-      }
-    }
-
-    // If unknown parameter - Could be a valid parameter not covered by PARAMS
-    // Attempt to query for it and let WebGL report errors
-    return this._getParameter(pname, props);
-  }
-
-  // Many resources support a getParameter call -
-  // getParameters will get all parameters - slow but useful for debugging
-  // eslint-disable-next-line complexity
-  getParameters(options: {parameters?: any, keys?: any} = {}) {
-    const {parameters, keys} = options;
-
-    // Get parameter definitions for this Resource
-    // @ts-expect-error
-    const PARAMETERS = this.constructor.PARAMETERS || {};
-
-    const values: Record<string, any> = {};
-
-    // Query all parameters if no list provided
-    const parameterKeys = parameters || Object.keys(PARAMETERS);
-
-    // WEBGL limits
-    for (const pname of parameterKeys) {
-      const parameter = PARAMETERS[pname];
-
-      // Check if this parameter is available on this platform
-      const parameterAvailable =
-        parameter &&
-        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-
-      if (parameterAvailable) {
-        const key = keys ? this.device.getGLKey(pname) : pname;
-        values[key] = this.getParameter(pname, options);
-        if (keys && parameter.type === 'GLenum') {
-          values[key] = this.device.getGLKey(values[key]);
-        }
-      }
-    }
-
-    return values;
-  }
-
-  /**
-   * Update a Resource setting
-   *
-   * @todo - cache parameter to avoid issuing WebGL calls?
-   *
-   * @param pname - parameter (GL constant, value or key)
-   * @param value {GLint|GLfloat|GLenum} 
-   * @return returns self to enable chaining
-   */
-  setParameter(pname: GL | string, value: any): this {
-    pname = getKeyValue(this.gl, pname);
-    assert(pname);
-
-    // @ts-expect-error
-    const parameters = this.constructor.PARAMETERS || {};
-
-    const parameter = parameters[pname];
-    if (parameter) {
-      // Check if this parameter is available on this platform
-      const parameterAvailable =
-        (!('extension' in parameter) || this.gl.getExtension(parameter.extension));
-
-      if (!parameterAvailable) {
-        throw new Error('Parameter not available on this platform');
-      }
-
-      // Handle string keys
-      if (parameter.type === 'GLenum') {
-        // @ts-expect-error
-        value = getKeyValue(value);
-      }
-    }
-
-    // If unknown parameter - Could be a valid parameter not covered by PARAMS
-    // attempt to set it and let WebGL report errors
-    this._setParameter(pname, value);
-    return this;
-  }
-
-  /*
-   * Batch update resource parameters
-   * Assumes the subclass supports a setParameter call
-   */
-  setParameters(parameters: Record<GL, any>) {
-    for (const pname in parameters) {
-      this.setParameter(pname, parameters[pname]);
-    }
-    return this;
   }
 
   // Install stubs for removed methods

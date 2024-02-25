@@ -345,37 +345,59 @@ export type GLParameters = GLValueParameters & GLFunctionParameters;
 
 /** WebGL2 Extensions */
 export type GLExtensions = {
+  /** https://registry.khronos.org/webgl/extensions/EXT_color_buffer_float */
   EXT_color_buffer_float?: EXT_color_buffer_float | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_color_buffer_half_float */
   EXT_color_buffer_half_float?: EXT_color_buffer_half_float | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_texture_compression_bptc */
   EXT_texture_compression_bptc?: EXT_texture_compression_bptc | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_texture_compression_rgtc */
   EXT_texture_compression_rgtc?: EXT_texture_compression_rgtc | null;
   /** https://registry.khronos.org/webgl/extensions/EXT_texture_filter_anisotropic */
   EXT_texture_filter_anisotropic?: EXT_texture_filter_anisotropic | null;
   /** https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile */
   KHR_parallel_shader_compile?: KHR_parallel_shader_compile | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_fbo_render_mipmap */
   OES_fbo_render_mipmap?: OES_fbo_render_mipmap | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_texture_float */
   OES_texture_float?: OES_texture_float | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_texture_float_linear */
   OES_texture_float_linear?: OES_texture_float_linear | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_texture_half_float */
   OES_texture_half_float?: OES_texture_half_float | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_texture_half_float_linear */
   OES_texture_half_float_linear?: OES_texture_half_float_linear | null;
+  /** https://registry.khronos.org/webgl/extensions/OES_vertex_array_object */
   OES_vertex_array_object?: OES_vertex_array_object | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_float_blend */
+  EXT_float_blend?: EXT_float_blend | null;
+  /** https://registry.khronos.org/webgl/extensions/OVR_multiview2 */
   OVR_multiview2?: OVR_multiview2 | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_astc */
   WEBGL_compressed_texture_astc?: WEBGL_compressed_texture_astc | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_etc */
   WEBGL_compressed_texture_etc?: WEBGL_compressed_texture_etc | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_etc1 */
   WEBGL_compressed_texture_etc1?: WEBGL_compressed_texture_etc1 | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_pvrtc */
   WEBGL_compressed_texture_pvrtc?: WEBGL_compressed_texture_pvrtc | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_s3tc */
   WEBGL_compressed_texture_s3tc?: WEBGL_compressed_texture_s3tc | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_compressed_texture_s3tc_srgb */
   WEBGL_compressed_texture_s3tc_srgb?: WEBGL_compressed_texture_s3tc_srgb | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_debug_renderer_info */
   WEBGL_debug_renderer_info?: WEBGL_debug_renderer_info | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_debug_shaders */
   WEBGL_debug_shaders?: WEBGL_debug_shaders | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_lose_context */
   WEBGL_lose_context?: WEBGL_lose_context | null;
+
+  // Predefined typescript types not available for the following extensions
 
   /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
   EXT_depth_clamp?: EXT_depth_clamp | null;
-
   /** https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/ */
   WEBGL_provoking_vertex?: WEBGL_provoking_vertex | null;
-
   /** https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
   WEBGL_polygon_mode?: WEBGL_polygon_mode | null;
 
@@ -404,7 +426,6 @@ export type GLExtensions = {
 
   // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
   // EXT_blend_minmax?: EXT_blend_minmax | null;
-  // EXT_float_blend?: EXT_float_blend | null;
   // EXT_frag_depth?: EXT_frag_depth | null;
   // EXT_sRGB?: EXT_sRGB | null;
   // EXT_shader_texture_lod?: EXT_shader_texture_lod | null;

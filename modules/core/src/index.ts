@@ -15,7 +15,7 @@ export {isTypedArray, isNumberArray} from './utils/is-array';
 export {luma} from './lib/luma';
 
 export type {DeviceProps, DeviceLimits, DeviceInfo, DeviceFeature} from './adapter/device';
-export {Device} from './adapter/device';
+export {Device, DeviceFeatures} from './adapter/device';
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 

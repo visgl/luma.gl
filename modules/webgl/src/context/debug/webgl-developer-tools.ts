@@ -27,7 +27,7 @@ type ContextData = {
 }
 
 // Helper to get shared context data
-function getContextData(gl: any): ContextData {
+function getWebGLContextData(gl: any): ContextData {
   gl.luma = gl.luma || {};
   return gl.luma;
 }
@@ -65,7 +65,7 @@ export function makeDebugContext(gl: WebGL2RenderingContext, props: DebugContext
 
 // Returns the real context from either of the real/debug contexts
 function getRealContext(gl: WebGL2RenderingContext): WebGL2RenderingContext {
-  const data = getContextData(gl);
+  const data = getWebGLContextData(gl);
   // If the context has a realContext member, it is a debug context so return the realContext
   return data.realContext ? data.realContext : gl;
 }
@@ -77,7 +77,7 @@ function getDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps): 
     return gl;
   }
 
-  const data = getContextData(gl);
+  const data = getWebGLContextData(gl);
 
   // If this already has a debug context, return it.
   if (data.debugContext) {
