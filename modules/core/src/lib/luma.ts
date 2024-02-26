@@ -36,10 +36,13 @@ export class luma {
   }
 
   static getSupportedDevices(): string[] {
-    // @ts-expect-error
-    return Array.from(deviceList)
-      .filter(Device => Device.isSupported())
-      .map(Device => Device.type);
+    return (
+      Array.from(deviceList)
+        // @ts-expect-error
+        .filter(Device => Device.isSupported())
+        // @ts-expect-error
+        .map(Device => Device.type)
+    );
   }
 
   static setDefaultDeviceProps(props: DeviceProps): void {
