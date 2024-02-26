@@ -57,6 +57,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   attributes?: Record<string, Buffer>;
   /**   */
   constantAttributes?: Record<string, TypedArray>;
+  /** Some applications intentionally supply unused attributes */
+  ignoreUnknownAttributes?: boolean;
 
   /** @internal For use with {@link TransformFeedback}, WebGL only. */
   varyings?: string[];
@@ -102,7 +104,8 @@ export class Model {
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
 
-    debugShaders: undefined
+    debugShaders: undefined,
+    ignoreUnknownAttributes: undefined
   };
 
   readonly device: Device;
@@ -256,7 +259,7 @@ export class Model {
       this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
-      this.setAttributes(props.attributes);
+      this.setAttributes(props.attributes, {ignoreUnknownAttributes: props.ignoreUnknownAttributes});
     }
     if (props.constantAttributes) {
       this.setConstantAttributes(props.constantAttributes);
@@ -364,8 +367,8 @@ export class Model {
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
     this.setIndexBuffer(gpuGeometry.indices);
-    this.setAttributes(gpuGeometry.attributes, 'ignore-unknown');
-    this.setAttributes(attributes);
+    this.setAttributes(gpuGeometry.attributes, {ignoreUnknownAttributes: true});
+    this.setAttributes(attributes, {ignoreUnknownAttributes: this.props.ignoreUnknownAttributes});
   }
 
   /**
@@ -514,7 +517,7 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(buffers: Record<string, Buffer>, _option?: 'ignore-unknown'): void {
+  setAttributes(buffers: Record<string, Buffer>, options?: {ignoreUnknownAttributes?: boolean}): void {
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
@@ -539,7 +542,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && _option !== 'ignore-unknown') {
+      if (!set && (options?.ignoreUnknownAttributes || this.props.ignoreUnknownAttributes)) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
