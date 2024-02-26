@@ -26,6 +26,7 @@ import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters'
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLSampler} from './webgl-sampler';
+import {WEBGLTextureView} from './webgl-texture-view';
 
 export type WEBGLTextureProps = TextureProps & {
   /** @deprecated use props.sampler */
@@ -151,8 +152,10 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
   readonly gl: WebGL2RenderingContext;
   readonly handle: WebGLTexture;
 
-  /** Sampler object (currently unused) */
+  // (TODO - currently unused in WebGL, but WebGL 2 does support sampler objects) */
   sampler: WEBGLSampler = undefined;
+
+  view: WEBGLTextureView = undefined;
 
   // data;
 
@@ -313,6 +316,9 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     // Set texture sampler parameters
     this.setSampler(props.sampler);
     this._setSamplerParameters(parameters);
+
+    // @ts-ignore
+    this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
 
     if (mipmaps) {
       this.generateMipmap();

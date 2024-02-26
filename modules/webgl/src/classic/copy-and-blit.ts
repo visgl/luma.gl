@@ -4,7 +4,7 @@
 import {assert, Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {WEBGLTexture} from '../adapter/resources/webgl-texture';
+import {WEBGLTextureView} from '../adapter/resources/webgl-texture-view';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
@@ -66,7 +66,7 @@ export function readPixelsToArray(
   // Deduce the type from color attachment if not provided.
   sourceType =
     sourceType ||
-    (framebuffer.colorAttachments[attachment] as WEBGLTexture)?.type ||
+    (framebuffer.colorAttachments[attachment] as WEBGLTextureView)?.texture?.type ||
     GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed

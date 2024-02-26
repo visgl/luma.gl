@@ -4,6 +4,7 @@ import type {TypedArray} from '../../types';
 import type {TextureFormat} from '../types/texture-formats';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
+import {TextureView, TextureViewProps} from './texture-view';
 
 // required GPUExtent3D size;
 // GPUIntegerCoordinate mipLevelCount = 1;
@@ -35,12 +36,14 @@ export type TextureProps = ResourceProps & {
 
   data?: TextureData | Promise<TextureData> | CubeTextureData | string | HTMLVideoElement | null;
   mipmaps?: boolean;
-  sampler?: Sampler | SamplerProps;
 
   mipLevels?: number;
   samples?: number;
   type?: number;
   compressed?: boolean;
+
+  sampler?: Sampler | SamplerProps;
+  view?: TextureViewProps;
 };
 
 export type WebGPUTextureProps = ResourceProps & {
@@ -49,16 +52,6 @@ export type WebGPUTextureProps = ResourceProps & {
   depth?: number;
   mipLevels?: number;
   format?: string;
-};
-
-export type TextureViewProps = {
-  format: string;
-  dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  aspect?: 'all' | 'stencil-only' | 'depth-only';
-  arrayLayerCount: number;
-  baseArrayLayer?: number;
-  mipLevels?: number;
-  baseMipLevel?: number;
 };
 
 /** 
@@ -97,7 +90,6 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     height: undefined!,
     depth: 1,
     mipmaps: true,
-    sampler: {},
     // type: undefined,
     compressed: false,
     // mipLevels: 1,
@@ -105,7 +97,9 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     // usage: GPUTextureUsage.COPY_DST
     mipLevels: undefined!,
     samples: undefined!,
-    type: undefined!
+    type: undefined!,
+    sampler: {},
+    view: undefined!
   };
   
   static COPY_SRC = 0x01;
@@ -126,8 +120,12 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   height: number;
   /** depth of this texture */
   readonly depth: number;
+
   /** Default sampler for this texture */
   abstract sampler: Sampler;
+
+  /** Default view for this texture */
+  abstract view: TextureView;
 
   constructor(device: Device, props: Props, defaultProps = Texture.defaultProps as Required<Props>) {
     super(device, props, defaultProps);

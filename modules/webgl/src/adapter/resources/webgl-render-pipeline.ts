@@ -19,7 +19,7 @@ import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLShader} from './webgl-shader';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLTexture} from './webgl-texture';
-// import {WEBGLVertexArray} from './webgl-vertex-array';
+import {WEBGLTextureView} from './webgl-texture-view';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {getGLDrawMode} from '../helpers/webgl-topology-utils';
@@ -136,7 +136,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           }
           break;
         case 'texture':
-          if (!(value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
+          if (!(value instanceof WEBGLTextureView || value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
             throw new Error('texture value');
           }
           break;
@@ -431,11 +431,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           break;
 
         case 'texture':
-          if (!(value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
+          if (!(value instanceof WEBGLTextureView || value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
             throw new Error('texture');
           }
           let texture: WEBGLTexture;
-          if (value instanceof WEBGLTexture) {
+          if (value instanceof WEBGLTextureView) {
+            texture = value.texture;
+          } else if (value instanceof WEBGLTexture) {
             texture = value;
           } else if (
             value instanceof WEBGLFramebuffer &&

@@ -2,7 +2,7 @@ import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '
 import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
-import {WebGPUTexture} from './webgpu-texture';
+import {WebGPUTextureView} from './webgpu-texture-view';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 
@@ -149,12 +149,12 @@ export class WebGPURenderPass extends RenderPass {
       colorClearValue: this.props.clearColor || [0, 0, 0, 0],
       storeOp: this.props.discard? 'discard': 'store',
       // ...colorAttachment,
-      view: (colorAttachment as WebGPUTexture).createView()
+      view: (colorAttachment as WebGPUTextureView).handle
     }));
 
     if (framebuffer.depthStencilAttachment) {
       renderPassDescriptor.depthStencilAttachment = {
-        view: (framebuffer.depthStencilAttachment as WebGPUTexture).createView()
+        view: (framebuffer.depthStencilAttachment as WebGPUTextureView).handle
       };
       const {depthStencilAttachment} = renderPassDescriptor;
 

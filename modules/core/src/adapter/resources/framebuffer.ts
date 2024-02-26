@@ -11,8 +11,8 @@ import {log} from '../../utils/log';
 export type FramebufferProps = ResourceProps & {
   width?: number;
   height?: number;
-  colorAttachments?: (Texture | TextureView | ColorTextureFormat)[];
-  depthStencilAttachment?: (Texture | TextureView | DepthStencilTextureFormat) | null;
+  colorAttachments?: (TextureView | Texture | ColorTextureFormat)[];
+  depthStencilAttachment?: (TextureView | Texture | DepthStencilTextureFormat) | null;
 };
 
 /**
@@ -37,9 +37,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   /** Height of all attachments in this framebuffer */
   height: number;
   /** Color attachments */
-  colorAttachments: (Texture | TextureView)[] = [];
+  colorAttachments: TextureView[] = [];
   /** Depth-stencil attachment, if provided */
-  depthStencilAttachment: Texture | TextureView | null = null;
+  depthStencilAttachment: TextureView | null = null;
 
   constructor(device: Device, props: FramebufferProps = {}) {
     super(device, props, Framebuffer.defaultProps);
@@ -77,18 +77,24 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       if (typeof attachment === 'string') {
         const texture = this.createColorTexture(attachment);
         this.attachResource(texture);
-        return texture;
+        return texture.view;
+      }
+      if (attachment instanceof Texture) {
+        return attachment.view;
       }
       return attachment;
     });
 
-    if (this.props.depthStencilAttachment) {
-      if (typeof this.props.depthStencilAttachment === 'string') {
-        const texture = this.createDepthStencilTexture(this.props.depthStencilAttachment);
+    const attachment = this.props.depthStencilAttachment;
+    if (attachment) {
+      if (typeof attachment === 'string') {
+        const texture = this.createDepthStencilTexture(attachment);
         this.attachResource(texture);
-        this.depthStencilAttachment = texture;
+        this.depthStencilAttachment = texture.view;
+      } else if (attachment instanceof Texture) {
+        this.depthStencilAttachment = attachment.view;
       } else {
-        this.depthStencilAttachment = this.props.depthStencilAttachment;
+        this.depthStencilAttachment = attachment;
       }
     }
   }
@@ -129,8 +135,8 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
           height
         });
         this.destroyAttachedResource(this.colorAttachments[i]);
-        this.colorAttachments[i] = resizedTexture;
-        this.attachResource(resizedTexture);
+        this.colorAttachments[i] = resizedTexture.view;
+        this.attachResource(resizedTexture.view);
       }
     }
 
@@ -141,7 +147,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
         height
       });
       this.destroyAttachedResource(this.depthStencilAttachment);
-      this.depthStencilAttachment = resizedTexture;
+      this.depthStencilAttachment = resizedTexture.view;
       this.attachResource(resizedTexture);
     }
   }
