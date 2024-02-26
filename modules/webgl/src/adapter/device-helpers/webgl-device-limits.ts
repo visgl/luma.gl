@@ -21,8 +21,8 @@ export class WebGLDeviceLimits extends DeviceLimits {
   get maxUniformBufferBindingSize() { return this.getParameter(GL.MAX_UNIFORM_BLOCK_SIZE); }
   get maxStorageBufferBindingSize() { return 0; }
   get minUniformBufferOffsetAlignment() { return this.getParameter(GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT); }
-  get minStorageBufferOffsetAlignment() { return 0; } // TBD
-  get maxVertexBuffers() { return 0; }
+  get minStorageBufferOffsetAlignment() { return 0; } 
+  get maxVertexBuffers() { return 16; } // WebGL 2 supports 16 buffers, see https://github.com/gpuweb/gpuweb/issues/4284
   get maxVertexAttributes() { return this.getParameter(GL.MAX_VERTEX_ATTRIBS); }
   get maxVertexBufferArrayStride() { return 2048; } // TBD, this is just the default value from WebGPU
   get maxInterStageShaderComponents() { return this.getParameter(GL.MAX_VARYING_COMPONENTS); }

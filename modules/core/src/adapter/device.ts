@@ -194,6 +194,9 @@ export type DeviceProps = {
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
 
+  /** Request a Device with the highest limits supported by platform. */
+  requestMaximalLimits?: boolean;
+
   // WebGLContext PARAMETERS - Can only be set on context creation...
   // alpha?: boolean; // Default render target has an alpha buffer.
   // depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
@@ -229,6 +232,8 @@ export abstract class Device {
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
+
+    requestMaximalLimits: true,
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
     spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
     break: [],
