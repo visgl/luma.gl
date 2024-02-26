@@ -6,11 +6,11 @@ import {Framebuffer, Texture, assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
+import {WEBGLTextureView} from './webgl-texture-view';
 import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';
 import {getDepthStencilAttachmentWebGL} from '../converters/texture-formats';
 
-export type TextureAttachment = [Texture, number?, number?];
-export type Attachment = WEBGLTexture | WEBGLRenderbuffer | TextureAttachment;
+export type Attachment = WEBGLTextureView | WEBGLTexture | WEBGLRenderbuffer;
 
 /** luma.gl Framebuffer, WebGL implementation  */
 export class WEBGLFramebuffer extends Framebuffer {
@@ -54,7 +54,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 
       if (this.depthStencilAttachment) {
         this._attachOne(
-          getDepthStencilAttachmentWebGL(this.depthStencilAttachment.format),
+          getDepthStencilAttachmentWebGL(this.depthStencilAttachment.props.format),
           this.depthStencilAttachment as WEBGLTexture
         );
       }
@@ -140,6 +140,10 @@ export class WEBGLFramebuffer extends Framebuffer {
     } else if (attachment instanceof WEBGLTexture) {
       this._attachTexture(attachmentPoint, attachment, 0, 0);
       return attachment;
+    } else if (attachment instanceof WEBGLTextureView) {
+      const textureView = attachment;
+      this._attachTexture(attachmentPoint, textureView.texture, textureView.props.baseMipLevel, textureView.props.baseArrayLayer);
+      return attachment.texture;
     }
     throw new Error('attach');
   }

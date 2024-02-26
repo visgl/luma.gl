@@ -26,6 +26,8 @@ export type {BufferProps} from './adapter/resources/buffer';
 export {Buffer} from './adapter/resources/buffer';
 export type {TextureProps, TextureData} from './adapter/resources/texture';
 export {Texture} from './adapter/resources/texture';
+export type {TextureViewProps} from './adapter/resources/texture-view';
+export {TextureView} from './adapter/resources/texture-view';
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {ExternalTexture} from './adapter/resources/external-texture';
 export type {ShaderProps} from './adapter/resources/shader';
