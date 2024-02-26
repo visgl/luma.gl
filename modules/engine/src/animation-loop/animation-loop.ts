@@ -486,13 +486,16 @@ export class AnimationLoop {
 
   /** Default viewport setup */
   _resizeViewport(): void {
+    // TODO can we use canvas context to code this in a portable way?
     // @ts-expect-error Expose on canvasContext
     if (this.props.autoResizeViewport && this.device.gl) {
       // @ts-expect-error Expose canvasContext
       this.device.gl.viewport(
         0,
         0,
+        // @ts-expect-error Expose canvasContext
         this.device.gl.drawingBufferWidth,
+        // @ts-expect-error Expose canvasContext
         this.device.gl.drawingBufferHeight
       );
     }
