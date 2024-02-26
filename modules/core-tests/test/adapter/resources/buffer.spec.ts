@@ -150,7 +150,7 @@ test('Buffer#readAsync', async t => {
     receivedData = await buffer.readAsync(Float32Array.BYTES_PER_ELEMENT);
     f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([2, 3]);
-    t.deepEqual(f32Data, expectedData, "Buffer.readAsync: with 'dstData' parameter successful");
+    t.deepEqual(f32Data, expectedData, 'Buffer.readAsync: with dstData parameter successful');
 
     // receivedData = await buffer.readAsync({
     //   Float32Array.BYTES_PER_ELEMENT,
