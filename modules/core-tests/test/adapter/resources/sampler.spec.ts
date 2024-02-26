@@ -8,7 +8,7 @@ import {Device, Sampler} from '@luma.gl/core';
 export const SAMPLER_PARAMETERS = {
   minFilter: {
     linear: 'interpolated texel',
-    nearest: 'nearest texel',
+    nearest: 'nearest texel'
   },
 
   magFilter: {
@@ -22,21 +22,24 @@ export const SAMPLER_PARAMETERS = {
   },
 
   addressModeU: {
-    'repeat': 'use fractional part of texture coordinates',
+    repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat':
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
 
   addressModeV: {
-    'repeat': 'use fractional part of texture coordinates',
+    repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat':
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
 
   addressModeW: {
-    'repeat': 'use fractional part of texture coordinates',
+    repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat':
+      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   }
 
   /*
@@ -68,13 +71,15 @@ test('WebGL#Sampler setParameters', t => {
 
 function testSampler(t: Test, device: Device): void {
   for (const pname in SAMPLER_PARAMETERS) {
-
     const parameter = Number(pname);
     const values = SAMPLER_PARAMETERS[parameter];
     for (const valueString in values) {
       const value = Number(valueString);
       const sampler = device.createSampler({[parameter]: value});
-      t.ok(sampler instanceof Sampler, `${device.info.type} new Sampler({${pname}: ${valueString}}) constructed.`);
+      t.ok(
+        sampler instanceof Sampler,
+        `${device.info.type} new Sampler({${pname}: ${valueString}}) constructed.`
+      );
       sampler.destroy();
     }
   }

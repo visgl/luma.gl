@@ -9,7 +9,7 @@ const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
   '1d': '1d',
   '2d': '2d',
   '2d-array': '2d',
-  'cube': '2d',
+  cube: '2d',
   'cube-array': '2d',
   '3d': '3d'
 };
@@ -69,7 +69,10 @@ export class WebGPUTexture extends Texture {
 
     // Create a default sampler. This mimics the WebGL1 API where sampler props are stored on the texture
     // this.setSampler(props.sampler);
-    this.sampler = props.sampler instanceof WebGPUSampler ? props.sampler : new WebGPUSampler(this.device, props.sampler);
+    this.sampler =
+      props.sampler instanceof WebGPUSampler
+        ? props.sampler
+        : new WebGPUSampler(this.device, props.sampler);
 
     // TODO - To support texture arrays we need to create custom views...
     // But we are not ready to expose TextureViews to the public API.
@@ -116,13 +119,12 @@ export class WebGPUTexture extends Texture {
    * Accept a sampler instance or set of props;
    */
   setSampler(sampler: Sampler | SamplerProps): this {
-    this.sampler = sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
+    this.sampler =
+      sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
     return this;
   }
 
-  setData(options: {
-    data: any;
-  }) {
+  setData(options: {data: any}) {
     return this.setImage({source: options.data});
   }
 
@@ -141,7 +143,7 @@ export class WebGPUTexture extends Texture {
     aspect?: 'all' | 'stencil-only' | 'depth-only';
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
-  }): {width: number, height: number} {
+  }): {width: number; height: number} {
     const {
       source,
       width = options.source.width,
@@ -176,22 +178,18 @@ export class WebGPUTexture extends Texture {
         premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [
-        width,
-        height,
-        depth
-      ]
+      [width, height, depth]
     );
     return {width, height};
   }
 
-  // WebGPU specific 
-  
+  // WebGPU specific
+
   /** TODO - intention is to expose TextureViews in the public API */
   createView(): GPUTextureView {
     return this.handle.createView({label: this.id});
   }
-  
+
   /*
   async readPixels() {
     const readbackBuffer = device.createBuffer({

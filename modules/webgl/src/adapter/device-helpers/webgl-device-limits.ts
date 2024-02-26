@@ -49,4 +49,4 @@ export class WebGLDeviceLimits extends DeviceLimits {
     }
     return this.limits[parameter];
   }
-};
+}

@@ -1,4 +1,4 @@
-// luma.gl, MIT license 
+// luma.gl, MIT license
 
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
 import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
@@ -35,7 +35,7 @@ const examples = {
   helloTriangle,
   helloInstancing,
   shaderModules,
-  shaderHooks,
+  shaderHooks
   // transformFeedback,
 
   // API
@@ -56,14 +56,14 @@ const examples = {
 /**
  * Wraps the imported AnimationLoopTemplates from the examples into SnapshotTestRunner test cases
  * We don't start the loops but manually trigger their lifecycle methods
- * 
+ *
  * @returns a list of test cases for the SnapshotTestRunner
  */
 function getTestCases(): SnapshotTestRunnerTestCase[] {
   const testCases: SnapshotTestRunnerTestCase[] = [];
 
   for (const [name, ExampleAnimationLoopTemplate] of Object.entries(examples)) {
-    let animationLoopTemplate: AnimationLoopTemplate | null = null;  
+    let animationLoopTemplate: AnimationLoopTemplate | null = null;
     testCases.push({
       name,
 

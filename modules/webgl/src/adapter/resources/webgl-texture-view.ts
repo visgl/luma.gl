@@ -15,7 +15,7 @@ export class WEBGLTextureView extends TextureView {
 
   readonly texture: WEBGLTexture;
 
-  constructor(device: Device, props: TextureViewProps & {texture: WEBGLTexture}) {    
+  constructor(device: Device, props: TextureViewProps & {texture: WEBGLTexture}) {
     super(device, {...Texture.defaultProps, ...props});
 
     this.device = device as WebGLDevice;

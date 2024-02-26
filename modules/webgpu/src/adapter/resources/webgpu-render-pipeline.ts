@@ -43,7 +43,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
-      this.handle = this.device.handle.createRenderPipeline(descriptor);  
+      this.handle = this.device.handle.createRenderPipeline(descriptor);
     }
     this.handle.label = this.props.id;
 
@@ -113,7 +113,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
       webgpuRenderPass.handle.setBindGroup(0, bindGroup);
     }
 
-
     // Set attributes
     // Note: Rebinds constant attributes before each draw call
     options.vertexArray.bindBeforeRender(options.renderPass);
@@ -149,18 +148,20 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
     // Set up the bindings
-    this._bindGroup = this._bindGroup || getBindGroup(
-      this.device.handle,
-      this._bindGroupLayout,
-      this.props.shaderLayout,
-      this.props.bindings
-    );
+    this._bindGroup =
+      this._bindGroup ||
+      getBindGroup(
+        this.device.handle,
+        this._bindGroupLayout,
+        this.props.shaderLayout,
+        this.props.bindings
+      );
 
     return this._bindGroup;
   }
 
-  /** 
-   * Populate the complex WebGPU GPURenderPipelineDescriptor 
+  /**
+   * Populate the complex WebGPU GPURenderPipelineDescriptor
    */
   protected _getRenderPipelineDescriptor() {
     // Set up the vertex stage

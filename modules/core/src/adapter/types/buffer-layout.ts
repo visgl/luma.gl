@@ -1,15 +1,15 @@
 import type {VertexFormat} from './vertex-formats';
 
-/** 
- * Provides specific details about the memory layout of the actual buffers 
+/**
+ * Provides specific details about the memory layout of the actual buffers
  * that will be provided to a `RenderPipeline`.
- *  
+ *
  * BufferLayout lets the application describe whether
- * - A single buffer can be used for multiple attributes (using interleaving or offsets), 
+ * - A single buffer can be used for multiple attributes (using interleaving or offsets),
  * - The data format of the memory being supplied to a specific shader attribute.
- * 
- * `BufferLayout` complements the "static" attribute declarations in a ShaderLayout 
- * with information about the "dynamic" memory layout of each buffer that will be bound 
+ *
+ * `BufferLayout` complements the "static" attribute declarations in a ShaderLayout
+ * with information about the "dynamic" memory layout of each buffer that will be bound
  * to the render pipeline.
  */
 
@@ -59,4 +59,3 @@ export type BufferAttributeLayout = {
   /** Sum up any the "global" offset (or 0) and the offset each stride (for interleaved data). */
   byteOffset: number;
 };
-

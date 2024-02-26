@@ -4,7 +4,7 @@ import test from 'tape-promise/tape';
 // NOTE(Tarek): This is for the x * CHANNEL1_RATE
 // lines, which are important for clarity.
 /* eslint-disable no-implicit-coercion */
-test('Animation#Timeline', (t) => {
+test('Animation#Timeline', t => {
   const timeline = new Timeline();
   timeline.pause();
   timeline.reset();

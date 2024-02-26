@@ -225,19 +225,18 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     origin = [0, 0],
 
     /** Texture to copy to/from. */
-    destination,
+    destination
     /**  Mip-map level of the texture to copy to/from. (Default 0) */
     // destinationMipLevel = options.mipLevel,
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
     // destinationOrigin = [0, 0],
     /** Defines which aspects of the texture to copy to/from. */
     // destinationAspect = options.aspect,
-
   } = options;
 
   let {
     width = options.destination.width,
-    height = options.destination.width,
+    height = options.destination.width
     // depthOrArrayLayers = 0
   } = options;
 

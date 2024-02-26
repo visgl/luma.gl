@@ -12,7 +12,7 @@ export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32A
 // BINDINGS
 
 /** Buffer bindings */
-export type Binding = Texture | Buffer | {buffer: Buffer,  offset?: number, size?: number};
+export type Binding = Texture | Buffer | {buffer: Buffer; offset?: number; size?: number};
 
 // BINDING LAYOUTS
 
@@ -25,7 +25,7 @@ type BufferBindingLayout = {
   type: 'uniform' | 'storage' | 'read-only-storage';
   hasDynamicOffset?: boolean;
   minBindingSize?: number;
-}
+};
 
 /** Describes a texture binding */
 type TextureBindingLayout = {
@@ -47,7 +47,10 @@ type StorageTextureBindingLayout = {
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
 };
 
-export type BindingDeclaration = BufferBindingLayout | TextureBindingLayout | StorageTextureBindingLayout;
+export type BindingDeclaration =
+  | BufferBindingLayout
+  | TextureBindingLayout
+  | StorageTextureBindingLayout;
 
 // TEXTURE VIEWS
 
@@ -60,7 +63,7 @@ export type TextureView = {
 // ATTACHMENTS (See Framebuffer)
 
 /**
- * Framebuffer attachments lets the user specify the textures that will be used for a RenderPass, 
+ * Framebuffer attachments lets the user specify the textures that will be used for a RenderPass,
  * together with some additional options for how to clear.
  */
 export type ColorAttachment = {
@@ -80,7 +83,7 @@ export type ColorAttachment = {
 };
 
 /**
- * Framebuffer attachments lets the user specify the depth stencil texture that will be used for a RenderPass, 
+ * Framebuffer attachments lets the user specify the depth stencil texture that will be used for a RenderPass,
  * together with some additional options for how to clear.
  */
 export type DepthStencilAttachment = {

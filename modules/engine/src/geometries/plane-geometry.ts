@@ -5,7 +5,7 @@ import {unpackIndexedGeometry} from '../geometry/geometry-utils';
 export type PlaneGeometryProps = {
   id?: string;
   radius?: number;
-  attributes?: any
+  attributes?: any;
 };
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,

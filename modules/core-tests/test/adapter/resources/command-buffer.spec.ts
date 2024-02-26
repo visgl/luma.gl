@@ -70,7 +70,7 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
     format: 'rgba8unorm',
     srcPixel: new Uint8Array([255, 128, 64, 32]),
     dstPixel: new Uint8Array([255, 128, 64, 32]),
-    dstOffset: 4,
+    dstOffset: 4
   },
   // {
   //   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
@@ -82,7 +82,7 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
     title: 'rgba32',
     format: 'rgba32float',
     srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
-    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847])
   },
   {
     title: 'rgba32 + offset',
@@ -102,21 +102,25 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
     title: 'rg32',
     format: 'rg32float',
     srcPixel: new Float32Array([-0.214, 32.23]),
-    dstPixel: new Float32Array([-0.214, 32.23, 0, 0]),
+    dstPixel: new Float32Array([-0.214, 32.23, 0, 0])
   },
   {
     title: 'r32',
     format: 'r32float',
     srcPixel: new Float32Array([0.124]),
-    dstPixel: new Float32Array([0.124, 0, 0, 0]),
-  },
+    dstPixel: new Float32Array([0.124, 0, 0, 0])
+  }
 ];
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
   for (const device of getWebGLTestDevices()) {
     for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
       await testCopyTextureToBuffer(t, device, {...fixture});
-      await testCopyTextureToBuffer(t, device, {...fixture, useFramebuffer: true, title: `${fixture.title} + framebuffer`});
+      await testCopyTextureToBuffer(t, device, {
+        ...fixture,
+        useFramebuffer: true,
+        title: `${fixture.title} + framebuffer`
+      });
     }
   }
   t.end();
@@ -163,9 +167,10 @@ async function testCopyTextureToBuffer(
   commandEncoder.finish();
   commandEncoder.destroy();
 
-  const color = srcPixel instanceof Uint8Array
-    ? await readAsyncU8(destination)
-    : await readAsyncF32(destination);
+  const color =
+    srcPixel instanceof Uint8Array
+      ? await readAsyncU8(destination)
+      : await readAsyncF32(destination);
 
   t.ok(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON, `reads "R" channel (${title})`);
   t.ok(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON, `reads "G" channel (${title})`);

@@ -1,5 +1,11 @@
 import {glsl, NumberArray, loadImage} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, _ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  CubeGeometry,
+  _ShaderInputs
+} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -90,7 +96,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     phongMaterial: typeof phongMaterial.props;
   }>({app, lighting, phongMaterial});
 
-  
   modelMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   mvpMatrix = new Matrix4();
@@ -146,7 +151,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // This updates the "app" uniform buffer, which is already bound
     this.shaderInputs.setProps({
       app: {
-        mvpMatrix: this.mvpMatrix, 
+        mvpMatrix: this.mvpMatrix,
         modelMatrix: this.modelMatrix
       }
     });

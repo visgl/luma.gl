@@ -6,17 +6,17 @@ import {webglDevice, getWebGLTestDevices} from '@luma.gl/test-utils';
 const TEST_CASES = [
   {
     title: 'Default attachments',
-    getOpts: (device) => ({}),
+    getOpts: device => ({}),
     pass: false
   },
   {
     title: 'No attachments',
-    getOpts: (device) => ({attachments: {}}),
+    getOpts: device => ({attachments: {}}),
     pass: false
   },
   {
     title: 'Autocreated Depth Renderbuffer + Color Texture',
-    getOpts: (device) => ({
+    getOpts: device => ({
       colorAttachments: ['rgba8unorm-unsized'],
       depthStencilAttachment: 'depth16unorm'
     }),
@@ -65,7 +65,7 @@ const TEST_CASES = [
   // }
 ];
 
-test('WebGLDevice.createFramebuffer()', async (t) => {
+test('WebGLDevice.createFramebuffer()', async t => {
   for (const testDevice of getWebGLTestDevices()) {
     t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
 
@@ -84,7 +84,7 @@ test('WebGLDevice.createFramebuffer()', async (t) => {
   t.end();
 });
 
-test('WebGLFramebuffer create and resize attachments', async (t) => {
+test('WebGLFramebuffer create and resize attachments', async t => {
   for (const testDevice of getWebGLTestDevices()) {
     for (const tc of TEST_CASES) {
       let props;
@@ -123,7 +123,7 @@ test('WebGLFramebuffer create and resize attachments', async (t) => {
   t.end();
 });
 
-test.skip('WebGLFramebuffer resize', (t) => {
+test.skip('WebGLFramebuffer resize', t => {
   const frameBufferOptions = {
     colorAttachments: [webglDevice.createTexture({})]
     // depthStencilAttachment: webglDevice.createRenderbuffer({format: GL.DEPTH_STENCIL})
@@ -131,7 +131,7 @@ test.skip('WebGLFramebuffer resize', (t) => {
 
   const framebuffer = webglDevice.createFramebuffer(frameBufferOptions);
 
-  framebuffer.resize({width: 1000,height:  1000});
+  framebuffer.resize({width: 1000, height: 1000});
   t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
   t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
 

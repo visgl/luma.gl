@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {pbrMaterial} from '@luma.gl/shadertools';
 
-test('shadertools#pbrMaterial', (t) => {
+test('shadertools#pbrMaterial', t => {
   const uniforms = pbrMaterial.getUniforms({});
   t.ok(uniforms, 'Default pbr lighting uniforms ok');
   t.end();

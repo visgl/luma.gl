@@ -8,4 +8,3 @@ export {loadPBREnvironment} from './pbr/pbr-environment';
 // glTF Scenegraph Instantiator
 export {createScenegraphsFromGLTF} from './gltf/create-gltf-objects';
 export {GLTFAnimator} from './gltf/gltf-animator';
-

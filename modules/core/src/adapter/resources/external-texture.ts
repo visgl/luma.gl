@@ -4,7 +4,7 @@ import {Resource, ResourceProps} from './resource';
 export type ExternalTextureProps = ResourceProps & {
   source: HTMLVideoElement | null;
   colorSpace?: 'srgb';
-}
+};
 export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
   static override defaultProps: Required<ExternalTextureProps> = {
     ...Resource.defaultProps,
@@ -12,7 +12,9 @@ export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
     colorSpace: 'srgb'
   };
 
-  override get [Symbol.toStringTag](): string { return 'ExternalTexture'; }
+  override get [Symbol.toStringTag](): string {
+    return 'ExternalTexture';
+  }
 
   constructor(device: Device, props: ExternalTextureProps) {
     super(device, props, ExternalTexture.defaultProps);

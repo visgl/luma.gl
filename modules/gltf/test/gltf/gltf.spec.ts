@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/gltf';
 import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
-test('gltf#loading', async (t) => {
+test('gltf#loading', async t => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
@@ -20,7 +20,7 @@ test('gltf#loading', async (t) => {
   t.end();
 });
 
-test.skip('gltf#environment', (t) => {
+test.skip('gltf#environment', t => {
   const environment = loadPBREnvironment(webglDevice, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
@@ -28,14 +28,8 @@ test.skip('gltf#environment', (t) => {
   });
 
   t.ok(environment.brdfLutTexture instanceof Texture, 'BRDF lookup texture created');
-  t.ok(
-    environment.diffuseEnvSampler instanceof Texture,
-    'Diffuse environment map created'
-  );
-  t.ok(
-    environment.specularEnvSampler instanceof Texture,
-    'Specular environment map created'
-  );
+  t.ok(environment.diffuseEnvSampler instanceof Texture, 'Diffuse environment map created');
+  t.ok(environment.specularEnvSampler instanceof Texture, 'Specular environment map created');
 
   t.end();
 });

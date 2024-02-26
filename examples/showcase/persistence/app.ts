@@ -278,10 +278,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: PERSISTENCE_FS,
       geometry: quadGeometry,
       bindings: {
-        persistenceQuad: this.uniformStore.getManagedUniformBuffer(
-          device,
-          'persistenceQuad'
-        )
+        persistenceQuad: this.uniformStore.getManagedUniformBuffer(device, 'persistenceQuad')
       },
       parameters: {
         depthWriteEnabled: true,
@@ -397,7 +394,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const currentFramebuffer = this.pingpongFramebuffers[ppi];
     const nextFramebuffer = this.pingpongFramebuffers[1 - ppi];
 
-    
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,

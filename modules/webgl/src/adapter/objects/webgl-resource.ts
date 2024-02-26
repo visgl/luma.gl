@@ -27,10 +27,10 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     this.device = WebGLDevice.attach(device);
     const gl = this.device.gl;
 
-    // extends 
+    // extends
     const {id} = props || {};
     this.gl = gl;
-    this.gl2 = gl ;
+    this.gl2 = gl;
     this.id = id || uid(this.constructor.name);
 
     // Set the handle
@@ -78,7 +78,7 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     // @ts-expect-error
     if (children && deleteChildren) {
       // @ts-expect-error
-      children.filter(Boolean).forEach((child) => child.destroy());
+      children.filter(Boolean).forEach(child => child.destroy());
     }
 
     return this;

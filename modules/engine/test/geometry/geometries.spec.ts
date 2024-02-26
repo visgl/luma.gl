@@ -43,13 +43,13 @@ function checkAttribute(attribute, type: TypedArrayConstructor[] = [Float32Array
   return (
     attribute &&
     attribute.value &&
-    type.some((t) => attribute.value instanceof t) &&
+    type.some(t => attribute.value instanceof t) &&
     attribute.value.length > 0 &&
     attribute.value.every(Number.isFinite)
   );
 }
 
-test('Object#Geometries', (t) => {
+test('Object#Geometries', t => {
   for (const geometryTest of GEOMETRY_TESTS) {
     const {name, Geometry} = geometryTest;
     // `undefined` tests the default props

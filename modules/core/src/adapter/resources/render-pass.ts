@@ -1,6 +1,6 @@
 // luma.gl, MIT license
-import type {Device} from '../device'
-import type { RenderPassParameters } from '../types/parameters';
+import type {Device} from '../device';
+import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 // import {Buffer} from './buffer';
@@ -28,19 +28,18 @@ export type RenderPassProps = ResourceProps & {
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
   /** Whether to disable / discard the output of the rasterizer */
-  discard?: boolean; 
+  discard?: boolean;
 };
 
 /**
  * A RenderPass instance is a required parameter to all draw calls.
- * 
- * It holds a combination of 
+ *
+ * It holds a combination of
  * - render targets (specified via a framebuffer)
  * - clear colors, read/write, discard information for the framebuffer attachments
  * - a couple of mutable parameters ()
  */
 export abstract class RenderPass extends Resource<RenderPassProps> {
-
   /** Default properties for RenderPass */
   static override defaultProps: Required<RenderPassProps> = {
     ...Resource.defaultProps,
@@ -65,9 +64,9 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** Call when rendering is done in this pass. */
   abstract end(): void;
 
-  /** 
-   * A small set of parameters can be changed between every draw call 
-   * (viewport, scissorRect, blendColor, stencilReference) 
+  /**
+   * A small set of parameters can be changed between every draw call
+   * (viewport, scissorRect, blendColor, stencilReference)
    */
   abstract setParameters(parameters: RenderPassParameters): void;
 

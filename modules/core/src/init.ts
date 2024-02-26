@@ -4,10 +4,10 @@ import {lumaStats} from './utils/stats-manager';
 
 declare global {
   // eslint-disable-next-line no-var
-  var luma: any
+  var luma: any;
 }
 
-/** 
+/**
  * By adding the result of init() to Device.VERSION we guarantee it will be called
  * @returns version
  */
@@ -22,7 +22,9 @@ function initializeLuma(): string {
   // luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
 
   if (globalThis.luma && globalThis.luma.VERSION !== VERSION) {
-    throw new Error(`luma.gl - multiple VERSIONs detected: ${globalThis.luma.VERSION} vs ${VERSION}`);
+    throw new Error(
+      `luma.gl - multiple VERSIONs detected: ${globalThis.luma.VERSION} vs ${VERSION}`
+    );
   }
 
   if (!globalThis.luma) {
@@ -37,7 +39,7 @@ function initializeLuma(): string {
 
       // A global stats object that various components can add information to
       // E.g. see webgl/resource.js
-      stats: lumaStats,
+      stats: lumaStats
     };
   }
 

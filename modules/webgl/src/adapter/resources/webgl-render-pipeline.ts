@@ -136,7 +136,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           }
           break;
         case 'texture':
-          if (!(value instanceof WEBGLTextureView || value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
+          if (
+            !(
+              value instanceof WEBGLTextureView ||
+              value instanceof WEBGLTexture ||
+              value instanceof WEBGLFramebuffer
+            )
+          ) {
             throw new Error('texture value');
           }
           break;
@@ -267,7 +273,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     });
     // TODO - check against layout
     Object.assign(this.uniforms, uniforms);
-  }  
+  }
 
   // PRIVATE METHODS
 
@@ -431,7 +437,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           break;
 
         case 'texture':
-          if (!(value instanceof WEBGLTextureView || value instanceof WEBGLTexture || value instanceof WEBGLFramebuffer)) {
+          if (
+            !(
+              value instanceof WEBGLTextureView ||
+              value instanceof WEBGLTexture ||
+              value instanceof WEBGLFramebuffer
+            )
+          ) {
             throw new Error('texture');
           }
           let texture: WEBGLTexture;

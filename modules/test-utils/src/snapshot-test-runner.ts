@@ -6,8 +6,8 @@ export type SnapshotTestRunnerTestCase = TestRunnerTestCase & {
   /** URL to golden image */
   goldenImage: string;
   /** Diff options */
-  imageDiffOptions?: {[key: string]: any}; 
-}
+  imageDiffOptions?: {[key: string]: any};
+};
 
 export type SnapshotTestRunnerProps = TestRunnerProps;
 

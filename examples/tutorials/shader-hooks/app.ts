@@ -78,7 +78,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-
     this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'app', {
       app: {
         color: [1, 0, 0]
@@ -99,9 +98,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs,
       shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetLeftModule],
-      bufferLayout: [
-        {name: 'position', format: 'float32x2'},
-      ],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
         position: this.positionBuffer
       },
@@ -116,9 +113,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs,
       shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetRightModule],
-      bufferLayout: [
-        {name: 'position', format: 'float32x2'},
-      ],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
       vertexCount: 3,
       attributes: {
         position: this.positionBuffer

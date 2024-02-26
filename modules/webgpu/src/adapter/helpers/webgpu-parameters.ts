@@ -33,17 +33,29 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
 
   // DEPTH
 
-  depthWriteEnabled: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  depthWriteEnabled: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.depthWriteEnabled = value;
   },
 
-  depthCompare: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  depthCompare: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.depthCompare = value;
   },
 
-  depthFormat: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  depthFormat: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.format = value;
   },
@@ -53,47 +65,79 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     depthStencil.depthBias = value;
   },
 
-  depthBiasSlopeScale: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  depthBiasSlopeScale: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.depthBiasSlopeScale = value;
   },
 
-  depthBiasClamp: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  depthBiasClamp: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.depthBiasClamp = value;
   },
 
   // STENCIL
 
-  stencilReadMask: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilReadMask: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilReadMask = value;
   },
 
-  stencilWriteMask: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilWriteMask: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilWriteMask = value;
   },
 
-  stencilCompare: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilCompare: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilFront.compare = value;
     depthStencil.stencilBack.compare = value;
   },
 
-  stencilPassOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilPassOperation: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilFront.passOp = value;
     depthStencil.stencilBack.passOp = value;
   },
 
-  stencilFailOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilFailOperation: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilFront.failOp = value;
     depthStencil.stencilBack.failOp = value;
   },
 
-  stencilDepthFailOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  stencilDepthFailOperation: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.stencilFront.depthFailOp = value;
     depthStencil.stencilBack.depthFailOp = value;
@@ -101,17 +145,29 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
 
   // MULTISAMPLE
 
-  sampleCount: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  sampleCount: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     descriptor.multisample = descriptor.multisample || {};
     descriptor.multisample.count = value;
   },
 
-  sampleMask: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  sampleMask: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     descriptor.multisample = descriptor.multisample || {};
     descriptor.multisample.mask = value;
   },
 
-  sampleAlphaToCoverageEnabled: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  sampleAlphaToCoverageEnabled: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     descriptor.multisample = descriptor.multisample || {};
     descriptor.multisample.alphaToCoverageEnabled = value;
   },
@@ -123,7 +179,11 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     targets[0].writeMask = value;
   },
 
-  blendColorOperation: (parameter: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
+  blendColorOperation: (
+    parameter: keyof Parameters,
+    value: any,
+    descriptor: GPURenderPipelineDescriptor
+  ) => {
     addColorState(descriptor);
     // const targets = addColorState(descriptor);
     // const target = targets[0];

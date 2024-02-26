@@ -108,12 +108,7 @@ export function flipRows(options: {
   }
 }
 
-
-export function scalePixels(options: {
-  data: TypedArray;
-  width: number;
-  height: number;
-}): {
+export function scalePixels(options: {data: TypedArray; width: number; height: number}): {
   data: Uint8Array;
   width: number;
   height: number;

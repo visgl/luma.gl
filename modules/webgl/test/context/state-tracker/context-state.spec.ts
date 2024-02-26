@@ -353,9 +353,9 @@ test('WebGLState#BlendEquationMinMax', t => {
       t.equal(
         value,
         expected[state],
-        `WebGL : expected value, ${webglDevice.getGLKey(
-          value
-        )} received for ${webglDevice.getGLKey(state)}`
+        `WebGL : expected value, ${webglDevice.getGLKey(value)} received for ${webglDevice.getGLKey(
+          state
+        )}`
       );
     }
   }

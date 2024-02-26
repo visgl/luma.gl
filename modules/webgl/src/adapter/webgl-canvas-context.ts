@@ -6,8 +6,8 @@ import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 
-/** 
- * A WebGL Canvas Context which manages the canvas and handles drawing buffer resizing etc 
+/**
+ * A WebGL Canvas Context which manages the canvas and handles drawing buffer resizing etc
  */
 export class WebGLCanvasContext extends CanvasContext {
   readonly device: WebGLDevice;
@@ -33,7 +33,8 @@ export class WebGLCanvasContext extends CanvasContext {
   /** Resizes and updates render targets if necessary */
   update() {
     const size = this.getPixelSize();
-    const sizeChanged = size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
+    const sizeChanged =
+      size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
     if (sizeChanged) {
       this.presentationSize = size;
       this.resize();

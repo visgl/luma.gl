@@ -9,7 +9,6 @@ import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {assert} from '../utils/assert';
 
-
 const deviceList = new Map<string, typeof Device>();
 
 /**
@@ -37,8 +36,13 @@ export class luma {
   }
 
   static getSupportedDevices(): string[] {
-    // @ts-expect-error
-    return Array.from(deviceList).filter(Device => Device.isSupported()).map(Device => Device.type);
+    return (
+      Array.from(deviceList)
+        // @ts-expect-error
+        .filter(Device => Device.isSupported())
+        // @ts-expect-error
+        .map(Device => Device.type)
+    );
   }
 
   static setDefaultDeviceProps(props: DeviceProps): void {
@@ -47,7 +51,7 @@ export class luma {
 
   /** Creates a device. Asynchronously. */
   static async createDevice(props: DeviceProps = {}): Promise<Device> {
-    props = {...Device.defaultProps, ...props}
+    props = {...Device.defaultProps, ...props};
     if (props.gl) {
       props.type = 'webgl';
     }
@@ -77,6 +81,8 @@ export class luma {
         }
         break;
     }
-    throw new Error('No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.');
+    throw new Error(
+      'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.'
+    );
   }
 }

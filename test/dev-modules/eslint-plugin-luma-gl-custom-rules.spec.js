@@ -6,7 +6,7 @@ const ruleTester = new RuleTester();
 const {rules} = customRulesPlugin;
 
 // TODO - RESTORE
-test.skip('EslintCustomRules#check-log-call', (t) => {
+test.skip('EslintCustomRules#check-log-call', t => {
   ruleTester.run('check-log-call', rules['check-log-call'], {
     valid: ['log.log(1, "initialized")();', 'log.assert(gl, "error");', 'someObject.method();'],
     invalid: [

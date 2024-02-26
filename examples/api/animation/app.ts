@@ -170,7 +170,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       new KeyFrames(this.keyFrameData),
       new KeyFrames(this.keyFrameData)
     ];
-  
 
     for (let i = 0; i < 4; ++i) {
       this.timeline.attachAnimation(keyFrames[i], channels[i]);
@@ -205,10 +204,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           },
           bindings: {
             app: cubeUniformStore.getManagedUniformBuffer(device, 'app'),
-            dirlight: this.globalUniformStore.getManagedUniformBuffer(
-              device,
-              'dirlight'
-            )
+            dirlight: this.globalUniformStore.getManagedUniformBuffer(device, 'dirlight')
           }
         })
       };
@@ -252,7 +248,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 1]
       // clearDepth: true
     });
     for (const cube of this.cubes) {

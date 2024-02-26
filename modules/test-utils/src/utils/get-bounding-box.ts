@@ -1,5 +1,10 @@
 // Get the bounding box of a DOMElement relative to the page
-export function getBoundingBoxInPage(domElement: HTMLElement): {x: number; y: number; width: number; height: number;} {
+export function getBoundingBoxInPage(domElement: HTMLElement): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
   const bbox = domElement.getBoundingClientRect();
   return {
     x: window.scrollX + bbox.x,

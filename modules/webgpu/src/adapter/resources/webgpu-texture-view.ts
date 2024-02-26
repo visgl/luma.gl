@@ -7,10 +7,10 @@ import type {WebGPUTexture} from './webgpu-texture';
 
 export type WebGPUTextureViewProps = TextureViewProps & {
   handle?: GPUTextureView;
-}
+};
 
 /**
- * 
+ *
  */
 export class WebGPUTextureView extends TextureView {
   readonly device: WebGPUDevice;
@@ -22,15 +22,17 @@ export class WebGPUTextureView extends TextureView {
     this.device = device;
     this.texture = props.texture;
 
-    this.handle = this.handle || this.texture.handle.createView({
-      format: (props.format || this.texture.format) as GPUTextureFormat,
-      dimension: props.dimension || this.texture.dimension,
-      aspect: props.aspect,
-      baseMipLevel: props.baseMipLevel,
-      mipLevelCount: props.mipLevelCount, // GPUIntegerCoordinate;
-      baseArrayLayer: props.baseArrayLayer, // GPUIntegerCoordinate;
-      arrayLayerCount: props.arrayLayerCount, // GPUIntegerCoordinate;
-    });
+    this.handle =
+      this.handle ||
+      this.texture.handle.createView({
+        format: (props.format || this.texture.format) as GPUTextureFormat,
+        dimension: props.dimension || this.texture.dimension,
+        aspect: props.aspect,
+        baseMipLevel: props.baseMipLevel,
+        mipLevelCount: props.mipLevelCount, // GPUIntegerCoordinate;
+        baseArrayLayer: props.baseArrayLayer, // GPUIntegerCoordinate;
+        arrayLayerCount: props.arrayLayerCount // GPUIntegerCoordinate;
+      });
     this.handle.label = this.props.id;
   }
 

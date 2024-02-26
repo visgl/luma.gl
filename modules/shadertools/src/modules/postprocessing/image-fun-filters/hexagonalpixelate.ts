@@ -51,7 +51,7 @@ vec4 hexagonalPixelate_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord
 
 /**
  * Hexagonal Pixelate
- * Renders the image using a pattern of hexagonal tiles. 
+ * Renders the image using a pattern of hexagonal tiles.
  * Tile colors are nearest-neighbor sampled from the centers of the tiles.
  */
 export type HexagonalPixelateProps = {

@@ -62,8 +62,8 @@ function clean(code) {
   return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
 }
 
-test('InlineGLSLConstants Babel Plugin', (t) => {
-  TEST_CASES.forEach((testCase) => {
+test('InlineGLSLConstants Babel Plugin', t => {
+  TEST_CASES.forEach(testCase => {
     const transform = () =>
       babel.transform(testCase.input, {
         presets: [['@babel/env', ES6_ENV]],

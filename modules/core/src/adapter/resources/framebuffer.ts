@@ -1,7 +1,11 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from '../types/texture-formats';
+import type {
+  ColorTextureFormat,
+  DepthStencilTextureFormat,
+  TextureFormat
+} from '../types/texture-formats';
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
@@ -26,7 +30,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     height: 1,
     colorAttachments: [], // ['rgba8unorm-unsized'],
     depthStencilAttachment: null // 'depth24plus-stencil8'
-  };  
+  };
 
   override get [Symbol.toStringTag](): string {
     return 'Framebuffer';
@@ -54,7 +58,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
    * Resizes all attachments
    * @note resize() destroys existing textures (if size has changed).
    */
-  resize(size: {width: number; height: number;}): void;
+  resize(size: {width: number; height: number}): void;
   resize(size: [width: number, height: number]): void;
   resize(): void;
   resize(size?: {width: number; height: number} | [width: number, height: number]): void {
@@ -106,7 +110,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
-      height: this.height,
+      height: this.height
     });
   }
 

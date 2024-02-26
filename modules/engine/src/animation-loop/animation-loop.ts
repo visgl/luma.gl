@@ -32,23 +32,25 @@ export type MutableAnimationLoopProps = {
   autoResizeViewport?: boolean;
   autoResizeDrawingBuffer?: boolean;
   useDevicePixels?: number | boolean;
-}
+};
 
 const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
   device: null!,
 
   onAddHTML: () => '',
-  onInitialize: async () => { return null; },
+  onInitialize: async () => {
+    return null;
+  },
   onRender: () => {},
   onFinalize: () => {},
-  onError: (error) => console.error(error), // eslint-disable-line no-console
+  onError: error => console.error(error), // eslint-disable-line no-console
 
   stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
 
   // view parameters
   useDevicePixels: true,
   autoResizeViewport: false,
-  autoResizeDrawingBuffer: false,
+  autoResizeDrawingBuffer: false
 };
 
 /** Convenient animation loop */
@@ -148,7 +150,6 @@ export class AnimationLoop {
     this._running = true;
 
     try {
-
       let appContext;
       if (!this._initialized) {
         this._initialized = true;
@@ -174,7 +175,7 @@ export class AnimationLoop {
 
       return this;
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error('Unknown error')
+      const error = err instanceof Error ? err : new Error('Unknown error');
       this.props.onError(error);
       // this._running = false; // TODO
       throw error;
@@ -242,7 +243,7 @@ export class AnimationLoop {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
-      this._nextFramePromise = new Promise((resolve) => {
+      this._nextFramePromise = new Promise(resolve => {
         this._resolveNextFrame = resolve;
       });
     }
@@ -461,7 +462,7 @@ export class AnimationLoop {
     }
   }
 
-  _getSizeAndAspect(): {width: number; height: number; aspect: number}  {
+  _getSizeAndAspect(): {width: number; height: number; aspect: number} {
     if (!this.device) {
       return {width: 1, height: 1, aspect: 1};
     }
@@ -485,10 +486,18 @@ export class AnimationLoop {
 
   /** Default viewport setup */
   _resizeViewport(): void {
+    // TODO can we use canvas context to code this in a portable way?
     // @ts-expect-error Expose on canvasContext
     if (this.props.autoResizeViewport && this.device.gl) {
       // @ts-expect-error Expose canvasContext
-      this.device.gl.viewport(0, 0, this.device.gl.drawingBufferWidth, this.device.gl.drawingBufferHeight);
+      this.device.gl.viewport(
+        0,
+        0,
+        // @ts-expect-error Expose canvasContext
+        this.device.gl.drawingBufferWidth,
+        // @ts-expect-error Expose canvasContext
+        this.device.gl.drawingBufferHeight
+      );
     }
   }
 

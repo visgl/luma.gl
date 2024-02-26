@@ -7,4 +7,4 @@ export type CompilerMessage = {
   message: string;
   lineNum: number;
   linePos: number;
-}
+};

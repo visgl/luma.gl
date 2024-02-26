@@ -58,7 +58,7 @@ export class Accessor implements AccessorObject {
   }
 
   constructor(...accessors: AccessorObject[]) {
-    accessors.forEach((accessor) => this._assign(accessor)); // Merge in sequence
+    accessors.forEach(accessor => this._assign(accessor)); // Merge in sequence
     Object.freeze(this);
   }
 
@@ -151,10 +151,10 @@ export class Accessor implements AccessorObject {
     if (this.divisor === undefined) delete this.divisor;
     if (this.normalized === undefined) delete this.normalized;
     if (this.integer === undefined) delete this.integer;
-  
+
     if (this.buffer === undefined) delete this.buffer;
     if (this.index === undefined) delete this.index;
-  
+
     return this;
   }
 }

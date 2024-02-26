@@ -7,7 +7,7 @@ import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
 
-test('GroupNode#construction', (t) => {
+test('GroupNode#construction', t => {
   const grandChild = new ScenegraphNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -26,7 +26,7 @@ test('GroupNode#construction', (t) => {
   t.end();
 });
 
-test('GroupNode#add', (t) => {
+test('GroupNode#add', t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -39,7 +39,7 @@ test('GroupNode#add', (t) => {
   t.end();
 });
 
-test('GroupNode#remove', (t) => {
+test('GroupNode#remove', t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -55,7 +55,7 @@ test('GroupNode#remove', (t) => {
   t.end();
 });
 
-test('GroupNode#removeAll', (t) => {
+test('GroupNode#removeAll', t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -68,7 +68,7 @@ test('GroupNode#removeAll', (t) => {
   t.end();
 });
 
-test('GroupNode#destroy', (t) => {
+test('GroupNode#destroy', t => {
   const grandChild = new GroupNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -81,7 +81,7 @@ test('GroupNode#destroy', (t) => {
   t.end();
 });
 
-test('GroupNode#traverse', (t) => {
+test('GroupNode#traverse', t => {
   const modelMatrices = {};
   const matrix = new Matrix4().identity().scale(2);
 
@@ -106,7 +106,7 @@ test('GroupNode#traverse', (t) => {
   t.end();
 });
 
-test('GroupNode#getBounds', (t) => {
+test('GroupNode#getBounds', t => {
   for (const device of getWebGLTestDevices()) {
     const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 

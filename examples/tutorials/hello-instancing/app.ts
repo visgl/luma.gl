@@ -35,8 +35,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
-    this.colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
-    this.offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
+    this.colorBuffer = device.createBuffer(
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
+    );
+    this.offsetBuffer = device.createBuffer(
+      new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5])
+    );
 
     this.model = new Model(device, {
       vs: glsl`\
@@ -61,12 +65,12 @@ void main() {
       bufferLayout: [
         {name: 'position', format: 'float32x2'},
         {name: 'instanceColor', format: 'float32x3', stepMode: 'instance'},
-        {name: 'instanceOffset', format: 'float32x2', stepMode: 'instance'},
+        {name: 'instanceOffset', format: 'float32x2', stepMode: 'instance'}
       ],
       attributes: {
         position: this.positionBuffer,
         instanceColor: this.colorBuffer,
-        instanceOffset:this.offsetBuffer
+        instanceOffset: this.offsetBuffer
       },
       vertexCount: 3,
       instanceCount: 4

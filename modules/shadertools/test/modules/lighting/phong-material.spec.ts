@@ -4,11 +4,16 @@
 import test from 'tape-promise/tape';
 import {phongMaterial} from '@luma.gl/shadertools';
 
-test('shadertools#phongMaterial', (t) => {
+test('shadertools#phongMaterial', t => {
   let uniforms = phongMaterial.getUniforms({});
   t.deepEqual(uniforms, phongMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
-  uniforms = phongMaterial.getUniforms({ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]});
+  uniforms = phongMaterial.getUniforms({
+    ambient: 0.0,
+    diffuse: 0.0,
+    shininess: 0.0,
+    specularColor: [255, 0, 0]
+  });
   // t.equal(
   //   uniforms.enabled,
   //   undefined,

@@ -9,14 +9,14 @@ const module: ShaderModule = {
   uniformTypes: {
     uProjectMatrix: 'mat4x4<f32>',
     uViewMatrix: 'mat4x4<f32>',
-    uClipped: 'f32',
-  },
+    uClipped: 'f32'
+  }
 };
 
-const TEST_CASES: {module: ShaderModule; options: ShaderGenerationOptions, result: string}[] = [
+const TEST_CASES: {module: ShaderModule; options: ShaderGenerationOptions; result: string}[] = [
   {
-    module, 
-    options: {shaderLanguage: 'glsl', uniforms: 'uniforms'}, 
+    module,
+    options: {shaderLanguage: 'glsl', uniforms: 'uniforms'},
     result: `\
 uniform mat4 test_uProjectMatrix;
 uniform mat4 test_uViewMatrix;
@@ -24,8 +24,8 @@ uniform float test_uClipped;
 `
   },
   {
-    module, 
-    options: {shaderLanguage: 'glsl', uniforms: 'unscoped-interface-blocks'}, 
+    module,
+    options: {shaderLanguage: 'glsl', uniforms: 'unscoped-interface-blocks'},
     result: `\
 uniform Test {
   mat4 test_uProjectMatrix;
@@ -35,8 +35,8 @@ uniform Test {
 `
   },
   {
-    module, 
-    options: {shaderLanguage: 'glsl', uniforms: 'scoped-interface-blocks'}, 
+    module,
+    options: {shaderLanguage: 'glsl', uniforms: 'scoped-interface-blocks'},
     result: `\
 uniform Test {
   mat4 uProjectMatrix;
@@ -44,10 +44,10 @@ uniform Test {
   float uClipped;
 } test;
 `
-  },
+  }
 ];
 
-test('shadertools#generateGLSLForModule', (t) => {
+test('shadertools#generateGLSLForModule', t => {
   for (const tc of TEST_CASES) {
     const glsl = generateShaderForModule(tc.module, tc.options);
     t.equal(glsl, tc.result, JSON.stringify(tc.options));

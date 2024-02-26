@@ -12,7 +12,7 @@ import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
-import { getShaderInfo } from '../glsl-utils/get-shader-info';
+import {getShaderInfo} from '../glsl-utils/get-shader-info';
 
 /** Define map */
 export type ShaderDefine = string | number | boolean;
@@ -31,7 +31,7 @@ export type HookFunction = {hook: string; header: string; footer: string; signat
 
 export type AssembleShaderOptions = {
   /** information about the platform (which shader language & version, extensions etc.) */
-  platformInfo: PlatformInfo,
+  platformInfo: PlatformInfo;
   /** Inject shader id #defines */
   id?: string;
   /** Vertex shader */
@@ -82,9 +82,7 @@ export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>
 /**
  * Inject a list of shader modules into shader sources
  */
-export function assembleShaders(
-  options: AssembleShaderOptions
-): {
+export function assembleShaders(options: AssembleShaderOptions): {
   vs: string;
   fs: string;
   getUniforms: GetUniformsFunc;
@@ -95,15 +93,35 @@ export function assembleShaders(
   switch (options.platformInfo.shaderLanguage) {
     case 'glsl':
       return {
-        vs: assembleGLSLShader(options.platformInfo, {...options, source: vs, stage: 'vertex', modules}),
-        fs: assembleGLSLShader(options.platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        vs: assembleGLSLShader(options.platformInfo, {
+          ...options,
+          source: vs,
+          stage: 'vertex',
+          modules
+        }),
+        fs: assembleGLSLShader(options.platformInfo, {
+          ...options,
+          source: fs,
+          stage: 'fragment',
+          modules
+        }),
         getUniforms: assembleGetUniforms(modules)
       };
 
     case 'wgsl':
       return {
-        vs: assembleWGSLShader(options.platformInfo, {...options, source: vs, stage: 'vertex', modules}),
-        fs: assembleWGSLShader(options.platformInfo, {...options, source: fs, stage: 'fragment', modules}),
+        vs: assembleWGSLShader(options.platformInfo, {
+          ...options,
+          source: vs,
+          stage: 'vertex',
+          modules
+        }),
+        fs: assembleWGSLShader(options.platformInfo, {
+          ...options,
+          source: fs,
+          stage: 'fragment',
+          modules
+        }),
         getUniforms: assembleGetUniforms(modules)
       };
   }
@@ -265,7 +283,7 @@ function assembleGLSLShader(
 
   assert(typeof source === 'string', 'shader source must be a string');
 
-  const sourceVersion = language === 'glsl' ?  getShaderInfo(source).version : -1;
+  const sourceVersion = language === 'glsl' ? getShaderInfo(source).version : -1;
   const targetVersion = platformInfo.shaderLanguageVersion;
 
   const sourceVersionDirective = sourceVersion === 100 ? '#version 100' : '#version 300 es';
@@ -377,7 +395,7 @@ ${getApplicationDefines(allDefines)}
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, stage, mainInjections);
-  
+
   if (language === 'glsl' && sourceVersion !== targetVersion) {
     assembledSource = transpileGLSLShader(assembledSource, stage);
   }

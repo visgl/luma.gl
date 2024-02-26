@@ -8,7 +8,7 @@ import {flipRows, scalePixels} from './pixel-data-utils';
  * @todo - support gl.readBuffer
  */
 export type CopyTextureToImageOptions = {
-  sourceAttachment?: number; 
+  sourceAttachment?: number;
   targetMaxHeight?: number;
   targetImage?: HTMLImageElement;
 };
@@ -16,15 +16,14 @@ export type CopyTextureToImageOptions = {
 /**
  * Reads pixels from a Framebuffer or Texture object into an HTML Image
  * @todo - can we move this to @luma.gl/core?
- * @param source 
+ * @param source
  * @param options options passed to copyToDataUrl
- * @returns 
+ * @returns
  */
 export function copyTextureToImage(
   source: Texture | Framebuffer,
   options?: CopyTextureToImageOptions
 ): HTMLImageElement {
-
   const dataUrl = copyTextureToDataUrl(source, options);
   const targetImage: HTMLImageElement = options?.targetImage || new Image();
   targetImage.src = dataUrl;
@@ -36,7 +35,7 @@ export function copyTextureToImage(
  * Reads pixels from a Framebuffer or Texture object to a dataUrl
  * @todo - can we move this to @luma.gl/core?
  * @param source texture or framebuffer to read from
- * @param options 
+ * @param options
  */
 export function copyTextureToDataUrl(
   source: Texture | Framebuffer,

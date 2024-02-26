@@ -1,8 +1,8 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-/** 
- * PlatformInfo 
+/**
+ * PlatformInfo
  * @note Designed so that it can be easily created from a luma.gl Device instance
  * Without having any actual dependency on `@luma.gl/core`
  */

@@ -16,7 +16,7 @@ const TEST_CASES: {format: TextureFormat, result: any}[] = [
   {format: 'r16float', result: { format: 'r', components: 1, dataType: 'float16', byteLength: 2, integer: false, signed: false, normalized: false, srgb: false, webgl: false, unsized: false  }}
 ];
 
-test('api#decodeTextureFormat', (t) => {
+test('api#decodeTextureFormat', t => {
   for (const tc of TEST_CASES) {
     const decoded = decodeTextureFormat(tc.format);
     t.deepEqual(

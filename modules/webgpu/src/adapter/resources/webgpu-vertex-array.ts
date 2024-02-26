@@ -30,7 +30,7 @@ export class WebGPUVertexArray extends VertexArray {
 
   /**
    * Set an elements buffer, for indexed rendering.
-   * Must be a Buffer bound to buffer with usage bit Buffer.INDEX set. 
+   * Must be a Buffer bound to buffer with usage bit Buffer.INDEX set.
    */
   setIndexBuffer(buffer: Buffer | null): void {
     // assert(!elementBuffer || elementBuffer.glTarget === GL.ELEMENT_ARRAY_BUFFER, ERR_ELEMENTS);
@@ -47,18 +47,25 @@ export class WebGPUVertexArray extends VertexArray {
     this.attributes[bufferSlot] = buffer;
   }
 
-  override bindBeforeRender(renderPass: RenderPass, firstIndex?: number, indexCount?: number): void {
+  override bindBeforeRender(
+    renderPass: RenderPass,
+    firstIndex?: number,
+    indexCount?: number
+  ): void {
     const webgpuRenderPass = renderPass as WebGPURenderPass;
     const webgpuIndexBuffer = this.indexBuffer as WebGPUBuffer;
     if (webgpuIndexBuffer?.handle) {
       // Note we can't unset an index buffer
       log.warn('setting index buffer', webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType)();
-      webgpuRenderPass.handle.setIndexBuffer(webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType);
+      webgpuRenderPass.handle.setIndexBuffer(
+        webgpuIndexBuffer?.handle,
+        webgpuIndexBuffer?.indexType
+      );
     }
     for (let location = 0; location < this.maxVertexAttributes; location++) {
       const webgpuBuffer = this.attributes[location] as WebGPUBuffer;
       if (webgpuBuffer?.handle) {
-        log.warn(`setting vertex buffer ${location}`,webgpuBuffer?.handle)();
+        log.warn(`setting vertex buffer ${location}`, webgpuBuffer?.handle)();
         webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer?.handle);
       }
     }
@@ -66,19 +73,18 @@ export class WebGPUVertexArray extends VertexArray {
   }
 
   override unbindAfterRender(renderPass: RenderPass): void {
-    // On WebGPU we don't need to unbind. 
+    // On WebGPU we don't need to unbind.
     // In fact we can't easily do it. setIndexBuffer/setVertexBuffer don't accept null.
     // Unbinding presumably happens automatically when the render pass is ended.
   }
 
   // DEPRECATED METHODS
 
-  /** 
-   * @deprecated is this even an issue for WebGPU? 
-   * Attribute 0 can not be disable on most desktop OpenGL based browsers 
+  /**
+   * @deprecated is this even an issue for WebGPU?
+   * Attribute 0 can not be disable on most desktop OpenGL based browsers
    */
   static isConstantAttributeZeroSupported(device: Device): boolean {
     return getBrowser() === 'Chrome';
   }
-
 }

@@ -8,7 +8,7 @@ export type ComputePassProps = ResourceProps & {};
 export abstract class ComputePass extends Resource<ComputePassProps> {
   static override defaultProps: Required<ComputePassProps> = {
     ...Resource.defaultProps
-  }
+  };
 
   override get [Symbol.toStringTag](): string {
     return 'ComputePass';

@@ -105,7 +105,7 @@ function readAttributeDeclarations(
     if (location >= 0) {
       const {attributeType} = decodeGLAttributeType(compositeType);
 
-      // Whether an attribute is instanced is essentially fixed by the structure of the shader code, 
+      // Whether an attribute is instanced is essentially fixed by the structure of the shader code,
       // so it is arguably a static property of the shader.
       // There is no hint in the shader declarations
       // Heuristic: Any attribute name containing the word "instance" will be assumed to be instanced
@@ -115,7 +115,7 @@ function readAttributeDeclarations(
         name,
         location,
         stepMode,
-        type: attributeType,
+        type: attributeType
         // size - for arrays, size is the number of elements in the array
       });
     }

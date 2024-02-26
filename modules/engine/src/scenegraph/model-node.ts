@@ -6,7 +6,7 @@ export type ModelNodeProps = ScenegraphNodeProps & {
   model: Model;
   managedResources?: any[];
   bounds?: [number[], number[]];
-}
+};
 
 export class ModelNode extends ScenegraphNode {
   readonly model: Model;
@@ -38,7 +38,7 @@ export class ModelNode extends ScenegraphNode {
       // @ts-expect-error
       this.model = null;
     }
-    this.managedResources.forEach((resource) => resource.destroy());
+    this.managedResources.forEach(resource => resource.destroy());
     this.managedResources = [];
   }
 

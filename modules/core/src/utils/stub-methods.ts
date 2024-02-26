@@ -1,7 +1,12 @@
 import {log} from './log';
 
 // Install stubs for removed methods
-export function stubRemovedMethods(instance: any, className: string, version: string, methodNames: string[]) {
+export function stubRemovedMethods(
+  instance: any,
+  className: string,
+  version: string,
+  methodNames: string[]
+) {
   const upgradeMessage = `See luma.gl ${version} Upgrade Guide at \
 https://luma.gl/docs/upgrade-guide`;
 

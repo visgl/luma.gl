@@ -36,7 +36,7 @@ enum GLEnum {
   TEXTURE_MIN_FILTER = 0x2801,
   LINEAR = 0x2601,
   LINEAR_MIPMAP_NEAREST = 0x2701,
-  UNPACK_FLIP_Y_WEBGL = 0x9240,
+  UNPACK_FLIP_Y_WEBGL = 0x9240
 }
 
 /**
@@ -62,7 +62,7 @@ export function parsePBRMaterial(
       u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
     },
     parameters: {},
-    glParameters: {}, 
+    glParameters: {},
     generatedTextures: []
   };
 
@@ -71,10 +71,8 @@ export function parsePBRMaterial(
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
-    parsedMaterial.bindings.u_DiffuseEnvSampler =
-      imageBasedLightingEnvironment.diffuseEnvSampler;
-    parsedMaterial.bindings.u_SpecularEnvSampler =
-      imageBasedLightingEnvironment.specularEnvSampler;
+    parsedMaterial.bindings.u_DiffuseEnvSampler = imageBasedLightingEnvironment.diffuseEnvSampler;
+    parsedMaterial.bindings.u_SpecularEnvSampler = imageBasedLightingEnvironment.specularEnvSampler;
     parsedMaterial.bindings.u_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture;
     parsedMaterial.uniforms.u_ScaleIBLAmbient = [1, 1];
   }
@@ -149,7 +147,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
       parsedMaterial.parameters.blendColorOperation = 'add';
       parsedMaterial.parameters.blendColorSrcFactor = 'src-alpha';
       parsedMaterial.parameters.blendColorDstFactor = 'one-minus-src-alpha';
-      
+
       parsedMaterial.parameters.blendAlphaOperation = 'add';
       parsedMaterial.parameters.blendAlphaSrcFactor = 'one';
       parsedMaterial.parameters.blendAlphaDstFactor = 'one-minus-src-alpha';
@@ -157,7 +155,12 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
       // GL parameters
       parsedMaterial.glParameters.blend = true;
       parsedMaterial.glParameters.blendEquation = GLEnum.FUNC_ADD;
-      parsedMaterial.glParameters.blendFunc = [GLEnum.SRC_ALPHA, GLEnum.ONE_MINUS_SRC_ALPHA, GLEnum.ONE, GLEnum.ONE_MINUS_SRC_ALPHA];
+      parsedMaterial.glParameters.blendFunc = [
+        GLEnum.SRC_ALPHA,
+        GLEnum.ONE_MINUS_SRC_ALPHA,
+        GLEnum.ONE,
+        GLEnum.ONE_MINUS_SRC_ALPHA
+      ];
 
       break;
   }
@@ -209,7 +212,8 @@ function addTexture(
   if (image.compressed) {
     textureOptions = image;
     specialTextureParameters = {
-      [GLEnum.TEXTURE_MIN_FILTER]: image.data.length > 1 ? GLEnum.LINEAR_MIPMAP_NEAREST : GLEnum.LINEAR
+      [GLEnum.TEXTURE_MIN_FILTER]:
+        image.data.length > 1 ? GLEnum.LINEAR_MIPMAP_NEAREST : GLEnum.LINEAR
     };
   } else {
     // Texture2D accepts a promise that returns an image as data (Async Textures)

@@ -27,7 +27,7 @@ type GLTFAnimationProps = {
   playing?: boolean;
   speed?: number;
   channels?: any;
-}
+};
 
 class GLTFAnimation {
   name: string;
@@ -81,7 +81,7 @@ export class GLTFAnimator {
   }
 
   setTime(time: number): void {
-    this.animations.forEach((animation) => animation.animate(time));
+    this.animations.forEach(animation => animation.animate(time));
   }
 
   getAnimations() {
@@ -173,7 +173,7 @@ function interpolate(time, {input, interpolation, output}, target, path) {
   const maxTime = input[input.length - 1];
   const animationTime = time % maxTime;
 
-  const nextIndex = input.findIndex((t) => t >= animationTime);
+  const nextIndex = input.findIndex(t => t >= animationTime);
   const previousIndex = Math.max(0, nextIndex - 1);
 
   if (!Array.isArray(target[path])) {

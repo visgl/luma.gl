@@ -1,9 +1,9 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import { Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture } from '@luma.gl/core';
-import { Model, ModelProps } from '../model/model';
-import { getPassthroughFS } from '@luma.gl/shadertools';
+import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
+import {Model, ModelProps} from '../model/model';
+import {getPassthroughFS} from '@luma.gl/shadertools';
 
 /**
  * Properties for creating a {@link TextureTransform}
@@ -24,7 +24,6 @@ export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
   targetTextureVarying: string;
 };
 
-
 type TextureBinding = {
   sourceBuffers: Record<string, Buffer>;
   sourceTextures: Record<string, Texture>;
@@ -42,7 +41,7 @@ export class TextureTransform {
   readonly device: Device;
   readonly model: Model;
   readonly sampler: Sampler;
-  
+
   currentIndex = 0;
   samplerTextureMap: Record<string, any> | null = null;
   bindings: TextureBinding[] = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
@@ -57,16 +56,18 @@ export class TextureTransform {
       addressModeV: 'clamp-to-edge',
       minFilter: 'nearest',
       magFilter: 'nearest',
-      mipmapFilter: 'nearest',
+      mipmapFilter: 'nearest'
     });
 
     this.model = new Model(this.device, {
       id: props.id || 'texture-transform-model',
-      fs: props.fs || getPassthroughFS({
-        input: props.targetTextureVarying,
-        inputChannels: props.targetTextureChannels,
-        output: FS_OUTPUT_VARIABLE
-      }),
+      fs:
+        props.fs ||
+        getPassthroughFS({
+          input: props.targetTextureVarying,
+          inputChannels: props.targetTextureChannels,
+          output: FS_OUTPUT_VARIABLE
+        }),
       vertexCount: props.vertexCount, // TODO(donmccurdy): Naming?
       ...props
     });
@@ -108,7 +109,6 @@ export class TextureTransform {
     const {targetTexture} = this.bindings[this.currentIndex];
     return targetTexture;
   }
-
 
   getFramebuffer(): Framebuffer {
     const currentResources = this.bindings[this.currentIndex];

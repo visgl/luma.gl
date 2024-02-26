@@ -5,7 +5,7 @@ import {lighting, ShaderModule} from '@luma.gl/shadertools';
 
 checkType<ShaderModule>(lighting);
 
-test('shadertools#lighting', (t) => {
+test('shadertools#lighting', t => {
   let uniforms = lighting.getUniforms({});
   t.ok(uniforms, 'Generated default uniforms');
 

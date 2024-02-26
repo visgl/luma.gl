@@ -4,10 +4,12 @@
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
-/** 
+/**
  * Instantiate shader modules and esolve any dependencies
- */ 
-export function resolveModules(modules: (ShaderModule | ShaderModuleInstance)[]): ShaderModuleInstance[] {
+ */
+export function resolveModules(
+  modules: (ShaderModule | ShaderModuleInstance)[]
+): ShaderModuleInstance[] {
   const instances = ShaderModuleInstance.instantiateModules(modules);
   return getShaderDependencies(instances);
 }
@@ -32,7 +34,7 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
   // Return a reverse sort so that dependencies come before the modules that use them
   return Object.keys(moduleDepth)
     .sort((a, b) => moduleDepth[b] - moduleDepth[a])
-    .map((name) => moduleMap[name]);
+    .map(name => moduleMap[name]);
 }
 
 /**
@@ -46,8 +48,8 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
  */
 // Adds another level of dependencies to the result map
 export function getDependencyGraph(options: {
-  modules: ShaderModuleInstance[],
-  level: number,
+  modules: ShaderModuleInstance[];
+  level: number;
   moduleMap: Record<string, ShaderModuleInstance>;
   moduleDepth: Record<string, number>;
 }) {

@@ -56,7 +56,7 @@ const TEST_CASES = [
   }
 ];
 
-test('picking#getUniforms', (t) => {
+test('picking#getUniforms', t => {
   t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
@@ -69,7 +69,9 @@ test('picking#getUniforms', (t) => {
       isActive: true,
       isAttribute: false,
       highlightColor: [1, 0, 0, 1]
-    }, 'Undefined input (no change to highlighted object)');
+    },
+    'Undefined input (no change to highlighted object)'
+  );
 
   t.deepEqual(
     picking.getUniforms({
@@ -82,7 +84,9 @@ test('picking#getUniforms', (t) => {
       isAttribute: false,
       isHighlightActive: false,
       highlightColor: [1, 0, 0, 1]
-    }, 'Null input (clear highlighted object)');
+    },
+    'Null input (clear highlighted object)'
+  );
 
   t.deepEqual(
     picking.getUniforms({
@@ -93,7 +97,8 @@ test('picking#getUniforms', (t) => {
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [0.4, 0, 0, 0.2]
-    }, 'Picked input (set highlighted object)'
+    },
+    'Picked input (set highlighted object)'
   );
 
   t.deepEqual(
@@ -106,15 +111,16 @@ test('picking#getUniforms', (t) => {
       useFloatColors: false,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
-      highlightColor: [0.4, 0, 0, 0.2],
-    }, 'Override useFloatColors'
+      highlightColor: [0.4, 0, 0, 0.2]
+    },
+    'Override useFloatColors'
   );
 
   t.end();
 });
 
 // TODO(v9): Restore picking tests.
-test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) => {
+test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
   if (!BufferTransform.isSupported(webglDevice)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -150,26 +156,28 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async (t) =>
     vertexCount
   });
 
-  await Promise.all(TEST_CASES.map(async (testCase) => {
-    const uniforms = picking.getUniforms({
-      highlightedObjectColor: testCase.highlightedObjectColor
-    });
+  await Promise.all(
+    TEST_CASES.map(async testCase => {
+      const uniforms = picking.getUniforms({
+        highlightedObjectColor: testCase.highlightedObjectColor
+      });
 
-    transform.model.setUniforms(uniforms);
-    transform.run();
+      transform.model.setUniforms(uniforms);
+      transform.run();
 
-    const expectedData = testCase.isPicked;
-    const outData = await transform.readAsync('isPicked');
+      const expectedData = testCase.isPicked;
+      const outData = await transform.readAsync('isPicked');
 
-    t.deepEqual(outData, expectedData, 'Vertex should correctly get picked');
-  }));
+      t.deepEqual(outData, expectedData, 'Vertex should correctly get picked');
+    })
+  );
 
   t.end();
 });
 
 // TODO(v9): Restore picking tests.
 /* eslint-disable max-nested-callbacks */
-test.skip('picking#picking_setPickingColor', async (t) => {
+test.skip('picking#picking_setPickingColor', async t => {
   if (!BufferTransform.isSupported(webglDevice)) {
     t.comment('Transform not available, skipping tests');
     t.end();
@@ -202,20 +210,22 @@ test.skip('picking#picking_setPickingColor', async (t) => {
     vertexCount
   });
 
-  await Promise.all(TEST_CASES.map(async (testCase) => {
-    const uniforms = picking.getUniforms({
-      highlightedObjectColor: testCase.highlightedObjectColor,
-      // @ts-expect-error
-      pickingThreshold: testCase.pickingThreshold
-    });
+  await Promise.all(
+    TEST_CASES.map(async testCase => {
+      const uniforms = picking.getUniforms({
+        highlightedObjectColor: testCase.highlightedObjectColor,
+        // @ts-expect-error
+        pickingThreshold: testCase.pickingThreshold
+      });
 
-    transform.model.setUniforms(uniforms);
-    transform.run();
+      transform.model.setUniforms(uniforms);
+      transform.run();
 
-    const outData = await transform.readAsync('rgbColorASelected');
+      const outData = await transform.readAsync('rgbColorASelected');
 
-    t.deepEqual(outData, testCase.isPicked, 'Vertex should correctly get picked');
-  }));
+      t.deepEqual(outData, testCase.isPicked, 'Vertex should correctly get picked');
+    })
+  );
   t.ok(true, 'picking_setPickingColor successful');
 
   t.end();

@@ -10,14 +10,14 @@ export type ScenegraphNodeProps = {
   position?: NumberArray;
   rotation?: NumberArray;
   scale?: NumberArray;
-  update?: boolean
+  update?: boolean;
 };
 
 export class ScenegraphNode {
   readonly id: string;
   matrix: Matrix4 = new Matrix4();
 
-  display = true; 
+  display = true;
   position = new Vector3();
   rotation = new Vector3();
   scale = new Vector3(1, 1, 1);

@@ -12,7 +12,9 @@ import {arrayEqual, arrayCopy} from '../../utils/array-equal';
  * A uniform block holds values of the of uniform values for one uniform block / buffer.
  * It also does some book keeping on what has changed, to minimize unnecessary writes to uniform buffers.
  */
-export class UniformBlock<TUniforms extends Record<string, UniformValue> = Record<string, UniformValue>> {
+export class UniformBlock<
+  TUniforms extends Record<string, UniformValue> = Record<string, UniformValue>
+> {
   name: string;
 
   uniforms: Record<keyof TUniforms, UniformValue> = {} as Record<keyof TUniforms, UniformValue>;

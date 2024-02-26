@@ -4,9 +4,9 @@ import type {UniformValue} from '../../adapter/types/types';
 import {decodeShaderUniformType, alignTo} from '../../adapter/type-utils/decode-shader-types';
 import {getScratchArrayBuffer} from '../../utils/array-utils-flat';
 import {isNumberArray} from '../../utils/is-array';
-import { log } from '../../utils/log';
+import {log} from '../../utils/log';
 
-/** 
+/**
  * Smallest buffer size that can be used for uniform buffers.
  * TODO - does this depend on device?
  */
@@ -17,11 +17,10 @@ const minBufferSize: number = 1024;
  * Supports manual listing of uniforms
  */
 export class UniformBufferLayout {
-  readonly layout: Record<string, {offset: number, size: number, type: ShaderDataType}> = {};
+  readonly layout: Record<string, {offset: number; size: number; type: ShaderDataType}> = {};
 
   /** number of bytes needed for buffer allocation */
   readonly byteLength: number;
-
 
   /** Create a new UniformBufferLayout given a map of attributes. */
   constructor(uniformTypes: Record<string, ShaderUniformType>) {
@@ -61,7 +60,7 @@ export class UniformBufferLayout {
     };
     // TODO is this needed?
     // typedArrays.i32.fill(0);
-    
+
     for (const [name, value] of Object.entries(uniformValues)) {
       const uniformLayout = this.layout[name];
       if (!uniformLayout) {
@@ -74,7 +73,9 @@ export class UniformBufferLayout {
       const typedArray = typedArrays[type];
       if (size === 1) {
         if (typeof value !== 'number' && typeof value !== 'boolean') {
-          log.warn(`Supplied value for single component uniform ${name} is not a number: ${value}`)();
+          log.warn(
+            `Supplied value for single component uniform ${name} is not a number: ${value}`
+          )();
           // eslint-disable-next-line no-continue
           continue;
         }
@@ -83,7 +84,9 @@ export class UniformBufferLayout {
       } else {
         const numericArray = isNumberArray(value);
         if (!numericArray) {
-          log.warn(`Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`)();
+          log.warn(
+            `Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`
+          )();
           // eslint-disable-next-line no-continue
           continue;
         }
@@ -94,7 +97,7 @@ export class UniformBufferLayout {
     }
 
     return new Uint8Array(arrayBuffer);
-  }  
+  }
 
   /** Does this layout have a field with specified name */
   has(name: string) {
@@ -102,7 +105,7 @@ export class UniformBufferLayout {
   }
 
   /** Get offset and size for a field with specified name */
-  get(name: string): {offset: number, size: number} | undefined {
+  get(name: string): {offset: number; size: number} | undefined {
     const layout = this.layout[name];
     return layout;
   }

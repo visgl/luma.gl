@@ -6,7 +6,10 @@ import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WebGLResource} from './webgl-resource';
 import {isRenderbufferFormatSupported} from '../converters/texture-formats';
-import {convertTextureFormatToGL, getTextureFormatBytesPerPixel} from '../converters/texture-formats';
+import {
+  convertTextureFormatToGL,
+  getTextureFormatBytesPerPixel
+} from '../converters/texture-formats';
 
 export type RenderbufferProps = ResourceProps & {
   format: TextureFormat;
@@ -32,17 +35,29 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
     userData: undefined,
     format: undefined, // 'depth16unorm'
     width: 1,
-    height: 1, 
+    height: 1,
     samples: 0
-  };  
+  };
 
-  override get [Symbol.toStringTag](): string { return 'Renderbuffer'; }
+  override get [Symbol.toStringTag](): string {
+    return 'Renderbuffer';
+  }
 
-  get width(): number { return this.props.width; }
-  get height(): number { return this.props.height; }
-  get format(): TextureFormat { return this.props.format; }
-  get samples(): number { return this.props.samples; }
-  get attachment() { return  }
+  get width(): number {
+    return this.props.width;
+  }
+  get height(): number {
+    return this.props.height;
+  }
+  get format(): TextureFormat {
+    return this.props.format;
+  }
+  get samples(): number {
+    return this.props.samples;
+  }
+  get attachment() {
+    return;
+  }
 
   /** WebGL format constant */
   glFormat: GL;
@@ -61,7 +76,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
     this._initialize(this.props);
   }
 
-  resize(size: {width: number, height: number}): void {
+  resize(size: {width: number; height: number}): void {
     // Don't resize if width/height haven't changed
     if (size.width !== this.width || size.height !== this.height) {
       Object.assign(this.props, {...size, format: this.format, samples: this.samples});
@@ -81,7 +96,13 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, this.handle);
 
     if (samples !== 0) {
-      this.gl.renderbufferStorageMultisample(GL.RENDERBUFFER, samples, this.glFormat, width, height);
+      this.gl.renderbufferStorageMultisample(
+        GL.RENDERBUFFER,
+        samples,
+        this.glFormat,
+        width,
+        height
+      );
     } else {
       this.gl.renderbufferStorage(GL.RENDERBUFFER, this.glFormat, width, height);
     }

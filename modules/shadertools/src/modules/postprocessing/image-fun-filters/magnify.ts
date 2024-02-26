@@ -27,8 +27,8 @@ vec4 magnify_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
 }
 `;
 
-/** 
- * Magnify - display a circle with magnify effect applied to surrounding the pixels given position 
+/**
+ * Magnify - display a circle with magnify effect applied to surrounding the pixels given position
  */
 export type MagnifyProps = {
   /** x, y position in screen coords, both x and y is normalized and in range `[0, 1]`. `[0, 0]` is the up left corner, `[1, 1]` is the bottom right corner. Default value is `[0, 0]`. */
@@ -53,7 +53,7 @@ export const magnify: ShaderPass<MagnifyProps, MagnifyProps> = {
     radiusPixels: 'f32',
     zoom: 'f32',
     borderWidthPixels: 'f32',
-    borderColor: 'vec4<f32>',
+    borderColor: 'vec4<f32>'
   },
   uniformPropTypes: {
     // range 0 to 1

@@ -29,14 +29,14 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 const device = createTestDevice({debug: true}) as WebGLDevice;
 
-test('WebGLState#imports', (t) => {
+test('WebGLState#imports', t => {
   t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
   t.ok(typeof pushContextState === 'function', 'trackContextState imported OK');
   t.ok(typeof popContextState === 'function', 'trackContextState imported OK');
   t.end();
 });
 
-test('WebGLState#trackContextState', (t) => {
+test('WebGLState#trackContextState', t => {
   const {gl} = device;
   t.doesNotThrow(
     () => trackContextState(gl, {copyState: false}),
@@ -45,7 +45,7 @@ test('WebGLState#trackContextState', (t) => {
   t.end();
 });
 
-test('WebGLState#push & pop', (t) => {
+test('WebGLState#push & pop', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -116,7 +116,7 @@ test('WebGLState#push & pop', (t) => {
   t.end();
 });
 
-test('WebGLState#gl API', (t) => {
+test('WebGLState#gl API', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -172,7 +172,7 @@ test('WebGLState#gl API', (t) => {
   t.end();
 });
 
-test('WebGLState#intercept gl calls', (t) => {
+test('WebGLState#intercept gl calls', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -215,7 +215,7 @@ test('WebGLState#intercept gl calls', (t) => {
   t.end();
 });
 
-test('WebGLState#not cached parameters', (t) => {
+test('WebGLState#not cached parameters', t => {
   const {gl} = device;
 
   resetGLParameters(gl);

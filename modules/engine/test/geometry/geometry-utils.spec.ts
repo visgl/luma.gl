@@ -41,7 +41,7 @@ const TEST_CASES = [
   }
 ];
 
-test('unpackIndexedGeometry', (t) => {
+test('unpackIndexedGeometry', t => {
   for (const testCase of TEST_CASES) {
     const {attributes} = unpackIndexedGeometry(testCase.input);
     for (const name in testCase.output.attributes) {

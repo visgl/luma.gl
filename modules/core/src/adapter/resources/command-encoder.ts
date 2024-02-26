@@ -5,11 +5,11 @@ import {Buffer} from './buffer';
 import {Texture} from './texture';
 
 export type WriteBufferOptions = {
-  buffer: Buffer,
-  bufferOffset?: number,
-  data: BufferSource,
-  dataOffset?: number,
-  size?: number
+  buffer: Buffer;
+  bufferOffset?: number;
+  data: BufferSource;
+  dataOffset?: number;
+  size?: number;
 };
 
 export type WriteTextureOptions = {
@@ -23,7 +23,7 @@ export type WriteTextureOptions = {
   bytesPerRow: number;
   rowsPerImage: number;
   size: [number, number, number] | number[];
-}
+};
 
 export type CopyBufferToBufferOptions = {
   source: Buffer;
@@ -37,7 +37,7 @@ export type CopyBufferToTextureOptions = {
   source: Buffer;
   byteOffset?: number;
   destination: Texture;
-  mipLevel?: number //  = 0;
+  mipLevel?: number; //  = 0;
   origin?: [number, number, number] | number[];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   bytesPerRow: number;
@@ -131,7 +131,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     ...Resource.defaultProps,
     measureExecutionTime: undefined
   };
-  
+
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
@@ -139,7 +139,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   constructor(device: Device, props: CommandEncoderProps) {
     super(device, props, CommandEncoder.defaultProps);
   }
-  
+
   abstract finish(): void; // TODO - return the CommandBuffer?
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;

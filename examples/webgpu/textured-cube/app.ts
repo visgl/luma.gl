@@ -111,7 +111,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         minFilter: 'linear',
         addressModeU: 'clamp-to-edge',
         addressModeV: 'clamp-to-edge'
-      }, 
+      }
     });
 
     this.uniformBuffer = device.createBuffer({
@@ -132,10 +132,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       parameters: {
         depthWriteEnabled: true, // Fragment closest to the camera is rendered in front.
-        depthCompare: 'less', 
-        // depthFormat: 'depth24plus',        
+        depthCompare: 'less'
+        // depthFormat: 'depth24plus',
         // cullMode: 'back' // Faces pointing away will be occluded by faces pointing toward the camera.
-      },
+      }
     });
   }
 

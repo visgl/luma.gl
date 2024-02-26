@@ -2,8 +2,7 @@
 import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
-import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools'
-
+import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools';
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
@@ -40,8 +39,8 @@ export class ShaderInputs<
     Record<string, Record<string, unknown>>
   >
 > {
-  /** 
-   * The map of modules 
+  /**
+   * The map of modules
    * @todo should should this include the resolved dependencies?
    */
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}>;
@@ -59,8 +58,12 @@ export class ShaderInputs<
    */
   constructor(modules: {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}) {
     // TODO - get all dependencies from modules
-    const allModules =_resolveModules(Object.values(modules));
-    log.log(1, 'Creating ShaderInputs with modules', allModules.map(m => m.name))();
+    const allModules = _resolveModules(Object.values(modules));
+    log.log(
+      1,
+      'Creating ShaderInputs with modules',
+      allModules.map(m => m.name)
+    )();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
     this.modules = modules;
@@ -94,8 +97,9 @@ export class ShaderInputs<
         continue; // eslint-disable-line no-continue
       }
 
-      const oldUniforms = this.moduleUniforms[moduleName];  
-      const uniforms = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || moduleProps as any;
+      const oldUniforms = this.moduleUniforms[moduleName];
+      const uniforms =
+        module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
       // console.error(uniforms)
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
       // this.moduleUniformsChanged ||= moduleName;
@@ -113,8 +117,8 @@ export class ShaderInputs<
   //   return this.moduleUniforms;
   // }
 
-  /** 
-   * Return the map of modules 
+  /**
+   * Return the map of modules
    * @todo should should this include the resolved dependencies?
    */
   getModules(): ShaderModuleInstance[] {
@@ -136,7 +140,7 @@ export class ShaderInputs<
   }
 
   getDebugTable(): Record<string, Record<string, unknown>> {
-    const table: Record<string,Record<string, unknown>> = {};
+    const table: Record<string, Record<string, unknown>> = {};
     for (const [moduleName, module] of Object.entries(this.moduleUniforms)) {
       for (const [key, value] of Object.entries(module)) {
         table[`${moduleName}.${key}`] = {

@@ -6,9 +6,9 @@ import {picking} from '../../shadertools/src/index';
 // import {_ShaderInputs as ShaderInputs} from '@luma.gl/engine';
 import {ShaderInputs} from '../src/shader-inputs';
 
-test('ShaderInputs#picking', (t) => {
+test('ShaderInputs#picking', t => {
   const shaderInputsUntyped = new ShaderInputs({picking});
-  // Add 
+  // Add
   shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   t.ok(shaderInputsUntyped, 'untyped');
 
@@ -22,7 +22,7 @@ test('ShaderInputs#picking', (t) => {
   t.end();
 });
 
-test('ShaderInputs#picking', (t) => {
+test('ShaderInputs#picking', t => {
   const shaderInputsUntyped = new ShaderInputs({picking});
   shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   t.ok(shaderInputsUntyped, 'untyped');
@@ -40,7 +40,7 @@ test('ShaderInputs#picking', (t) => {
   t.end();
 });
 
-test('ShaderInputs#picking prop merge', (t) => {
+test('ShaderInputs#picking prop merge', t => {
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
   const expected = {...picking.defaultUniforms};
   t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'defaults set');
@@ -53,7 +53,11 @@ test('ShaderInputs#picking prop merge', (t) => {
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   expected.highlightedObjectColor = [255, 255, 255];
   expected.isHighlightActive = true;
-  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'Only highlight object and highlight active updated');
+  t.deepEqual(
+    shaderInputs.moduleUniforms.picking,
+    expected,
+    'Only highlight object and highlight active updated'
+  );
 
   t.end();
 });

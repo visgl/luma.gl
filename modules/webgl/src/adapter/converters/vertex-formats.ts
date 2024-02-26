@@ -4,7 +4,7 @@
 import {GL} from '@luma.gl/constants';
 import {VertexFormat, VertexType} from '@luma.gl/core';
 
-type GLDataType = 
+type GLDataType =
   | GL.UNSIGNED_BYTE
   | GL.BYTE
   | GL.UNSIGNED_SHORT
@@ -13,7 +13,6 @@ type GLDataType =
   | GL.INT
   | GL.HALF_FLOAT
   | GL.FLOAT;
-
 
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {

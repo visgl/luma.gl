@@ -14,7 +14,10 @@ export function generateGLSLForModule(module: ShaderModule, options: GLSLGenerat
   return generateGLSLUniformDeclarations(module, options);
 }
 
-function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGenerationOptions): string {
+function generateGLSLUniformDeclarations(
+  module: ShaderModule,
+  options: GLSLGenerationOptions
+): string {
   const glsl: string[] = [];
 
   // => uniform UniformBlockName {
@@ -24,18 +27,18 @@ function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGene
       glsl.push(`uniform ${capitalize(module.name)} {`);
       break;
     case 'uniforms':
-      // ignore
+    // ignore
   }
 
   for (const [uniformName, uniformFormat] of Object.entries(module.uniformTypes || {})) {
     const glslUniformType = getGLSLUniformType(uniformFormat);
     switch (options.uniforms) {
       case 'scoped-interface-blocks':
-      // => uniform UniformBlockName {
+        // => uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${uniformName};`);
         break;
       case 'unscoped-interface-blocks':
-      // => uniform UniformBlockName {
+        // => uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${module.name}_${uniformName};`);
         break;
       case 'uniforms':
@@ -51,7 +54,7 @@ function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGene
       glsl.push('};');
       break;
     case 'uniforms':
-      // ignore
+    // ignore
   }
 
   // final new line
@@ -60,13 +63,12 @@ function generateGLSLUniformDeclarations(module: ShaderModule, options: GLSLGene
   return glsl.join('\n');
 }
 
-
 /** Map a luma.gl WebGPU style uniform type to GLSL */
 function getGLSLUniformType(uniformFormat: UniformFormat): string {
   const UNIFORM_TYPE_TO_GLSL: Record<UniformFormat, string> = {
-    'f32': 'float',
-    'i32': 'int',
-    'u32': 'uint',
+    f32: 'float',
+    i32: 'int',
+    u32: 'uint',
     'vec2<f32>': 'vec2',
     'vec3<f32>': 'vec3',
     'vec4<f32>': 'vec4',
@@ -84,10 +86,9 @@ function getGLSLUniformType(uniformFormat: UniformFormat): string {
     'mat3x4<f32>': 'mat3x4',
     'mat4x2<f32>': 'mat4x2',
     'mat4x3<f32>': 'mat4x3',
-    'mat4x4<f32>': 'mat4',
+    'mat4x4<f32>': 'mat4'
   };
-  
+
   const glsl = UNIFORM_TYPE_TO_GLSL[uniformFormat];
   return glsl;
 }
-

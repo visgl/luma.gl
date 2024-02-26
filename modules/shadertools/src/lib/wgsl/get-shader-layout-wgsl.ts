@@ -7,10 +7,9 @@ import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
 /**
  * Parse a ShaderLayout from WGSL shader source code.
  * @param source WGSL source code (can contain both @vertex and @fragment entry points)
- * @returns 
+ * @returns
  */
 export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
-
   const shaderLayout: ShaderLayout = {attributes: [], bindings: []};
 
   const parsedWGSL = parseWGSL(source);

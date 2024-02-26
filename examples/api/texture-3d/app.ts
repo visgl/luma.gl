@@ -53,7 +53,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device}: AnimationProps) {
     super();
-    
+
     const noise = perlin({
       interpolation: lerp,
       permutation: shuffle(range(0, 255), random)
@@ -148,11 +148,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
-    this.mvpMat.perspective({fovy: radians(75), aspect, near: NEAR, far: FAR}).multiplyRight(this.viewMat);
+    this.mvpMat
+      .perspective({fovy: radians(75), aspect, near: NEAR, far: FAR})
+      .multiplyRight(this.viewMat);
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1], 
+      clearColor: [0, 0, 0, 1]
       // clearDepth: true
     });
     this.cloud.setUniforms({

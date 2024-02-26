@@ -17,7 +17,7 @@ function compareStrings(t: Test, string1: string, string2: string, message?: str
     if (lines1[i] !== lines2[i]) {
       t.comment(`line ${i + 1}: '${lines1[i]}' --> '${lines2[i]}'`);
       return;
-    } 
+    }
   }
 
   t.equal(string1, string2, message);

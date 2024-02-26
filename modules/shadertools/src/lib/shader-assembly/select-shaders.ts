@@ -1,7 +1,6 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-
 import type {PlatformInfo} from './platform-info';
 import type {AssembleShaderOptions} from './assemble-shaders';
 
@@ -13,18 +12,16 @@ export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
   /** Vertex shader source. Can be GLSL or WGSL or both */
   vs?: {glsl?: string; wgsl?: string} | string | null;
   /** Fragment shader source. Can be GLSL or WGSL or both */
-  fs?: {glsl?: string; wgsl?: string} | string | null;  
+  fs?: {glsl?: string; wgsl?: string} | string | null;
 };
 
 /**
- * Shader selection 
+ * Shader selection
  * @param device
  * @param props
  * @returns
  */
-export function selectShaders(
-  props: AssembleShaderProps
-): AssembleShaderOptions {
+export function selectShaders(props: AssembleShaderProps): AssembleShaderOptions {
   if (!props.vs) {
     throw new Error('no vertex shader');
   }
@@ -40,7 +37,10 @@ export function selectShaders(
 }
 
 /** Create a shader from the different overloads */
-function getShaderSource(platformInfo: PlatformInfo, shader: string | {glsl?: string; wgsl?: string}): string {
+function getShaderSource(
+  platformInfo: PlatformInfo,
+  shader: string | {glsl?: string; wgsl?: string}
+): string {
   // TODO - detect WGSL/GLSL and throw an error if not supported
   if (typeof shader === 'string') {
     return shader;

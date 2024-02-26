@@ -4,7 +4,7 @@
 import test from 'tape-promise/tape';
 import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
 
-test('parseShaderCompilerLog', (t) => {
+test('parseShaderCompilerLog', t => {
   const {ERROR_LOG, EXPECTED_MESSAGES} = getFixtures();
   const messages = parseShaderCompilerLog(ERROR_LOG); // SHADER_SOURCE, SHADER_TYPE;
   t.deepEqual(messages, EXPECTED_MESSAGES, 'parseShaderCompilerLog generated correct messages');
@@ -36,121 +36,121 @@ ERROR: 0:994: 'project_scale' : no matching overloaded function found
 
 const EXPECTED_MESSAGES = [
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 264,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 264,
     linePos: 0
   },
   {
-    message: '\'/\' : Divide by zero during constant folding',
+    message: "'/' : Divide by zero during constant folding",
     type: 'warning',
     lineNum: 294,
     linePos: 0
   },
   {
-    message: '\'/\' : Divide by zero during constant folding',
+    message: "'/' : Divide by zero during constant folding",
     type: 'warning',
     lineNum: 294,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 344,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 344,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 447,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 447,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 470,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 470,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 557,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 557,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 580,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 580,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 669,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 669,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 681,
     linePos: 0
   },
   {
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN',
+    message: "'/' : Zero divided by zero during constant folding generated NaN",
     type: 'warning',
     lineNum: 681,
     linePos: 0
   },
   {
-    message: '\'project_scale\' : no matching overloaded function found',
+    message: "'project_scale' : no matching overloaded function found",
     type: 'error',
     lineNum: 967,
     linePos: 0
   },
   {
-    message: '\'project_scale\' : no matching overloaded function found',
+    message: "'project_scale' : no matching overloaded function found",
     type: 'error',
     lineNum: 994,
     linePos: 0

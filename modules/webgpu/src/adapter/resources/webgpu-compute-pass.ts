@@ -13,10 +13,12 @@ export class WebGPUComputePass extends ComputePass {
     super(device, props);
     this.device = device;
 
-    this.handle = this.props.handle || device.commandEncoder?.beginComputePass({
-      label: this.props.id,
-      // timestampWrites?: GPUComputePassTimestampWrites;
-    });
+    this.handle =
+      this.props.handle ||
+      device.commandEncoder?.beginComputePass({
+        label: this.props.id
+        // timestampWrites?: GPUComputePassTimestampWrites;
+      });
   }
 
   /** @note no WebGPU destroy method, just gc */

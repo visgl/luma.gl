@@ -259,7 +259,9 @@ export class Model {
       this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
-      this.setAttributes(props.attributes, {ignoreUnknownAttributes: props.ignoreUnknownAttributes});
+      this.setAttributes(props.attributes, {
+        ignoreUnknownAttributes: props.ignoreUnknownAttributes
+      });
     }
     if (props.constantAttributes) {
       this.setConstantAttributes(props.constantAttributes);
@@ -517,7 +519,10 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(buffers: Record<string, Buffer>, options?: {ignoreUnknownAttributes?: boolean}): void {
+  setAttributes(
+    buffers: Record<string, Buffer>,
+    options?: {ignoreUnknownAttributes?: boolean}
+  ): void {
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`

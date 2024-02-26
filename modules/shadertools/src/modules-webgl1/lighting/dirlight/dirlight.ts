@@ -7,8 +7,8 @@ import {project} from '../../project/project';
 /* eslint-disable camelcase */
 
 export type DirlightOptions = {
-  lightDirection?: NumberArray
-}
+  lightDirection?: NumberArray;
+};
 
 const DEFAULT_MODULE_OPTIONS: Required<DirlightOptions> = {
   lightDirection: new Float32Array([1, 1, 2])

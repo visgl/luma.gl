@@ -17,7 +17,7 @@ const fragments: string[] = [];
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
 /**
- * 
+ *
  */
 export type ShaderInjection = {
   injection: string;
@@ -33,9 +33,11 @@ export type ShaderInjections = {
 };
 
 /**
- * 
+ *
  */
-export function normalizeInjections(injections: Record<string, string | ShaderInjection>): ShaderInjections {
+export function normalizeInjections(
+  injections: Record<string, string | ShaderInjection>
+): ShaderInjections {
   const result: ShaderInjections = {vertex: {}, fragment: {}};
 
   for (const hook in injections) {
@@ -57,8 +59,10 @@ export function normalizeInjections(injections: Record<string, string | ShaderIn
 function getHookStage(hook: string): 'vertex' | 'fragment' {
   const type = hook.slice(0, 2);
   switch (type) {
-    case 'vs': return 'vertex';
-    case 'fs': return 'fragment';
+    case 'vs':
+      return 'vertex';
+    case 'fs':
+      return 'fragment';
     default:
       throw new Error(type);
   }
@@ -75,9 +79,9 @@ function getHookStage(hook: string): 'vertex' | 'fragment' {
  */
 // eslint-disable-next-line complexity
 export function injectShader(
-  source: string, 
-  stage: 'vertex' | 'fragment', 
-  inject: Record<string, ShaderInjection[]>, 
+  source: string,
+  stage: 'vertex' | 'fragment',
+  inject: Record<string, ShaderInjection[]>,
   injectStandardStubs = false
 ): string {
   const isVertex = stage === 'vertex';
@@ -151,7 +155,7 @@ export function injectShader(
 export function combineInjects(injects: any[]): Record<string, string> {
   const result: Record<string, string> = {};
   assert(Array.isArray(injects) && injects.length > 1);
-  injects.forEach((inject) => {
+  injects.forEach(inject => {
     for (const key in inject) {
       result[key] = result[key] ? `${result[key]}\n${inject[key]}` : inject[key];
     }

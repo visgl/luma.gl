@@ -129,7 +129,6 @@ export {fxaa} from './modules/postprocessing/fxaa/fxaa';
 export type {WarpProps} from './modules/postprocessing/image-warp-filters/warp';
 export {warp as _warp} from './modules/postprocessing/image-warp-filters/warp';
 
-
 // DEPRECATED - v8 legacy shader modules (non-uniform buffer)
 
 // math libraries

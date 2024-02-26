@@ -50,7 +50,7 @@ export class WebGPUDevice extends Device {
   /* The underlying WebGPU adapter */
   readonly adapter: GPUAdapter;
   /* The underlying WebGPU adapter's info */
-  readonly adapterInfo: GPUAdapterInfo
+  readonly adapterInfo: GPUAdapterInfo;
 
   readonly features: DeviceFeatures;
   readonly info: DeviceInfo;
@@ -100,13 +100,21 @@ export class WebGPUDevice extends Device {
 
     const device = new WebGPUDevice(gpuDevice, adapter, adapterInfo, props);
 
-    log.probe(1, 'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features')();
+    log.probe(
+      1,
+      'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
+    )();
     log.table(1, device.info)();
     log.groupEnd(1)();
     return device;
   }
 
-  constructor(device: GPUDevice, adapter: GPUAdapter, adapterInfo: GPUAdapterInfo, props: DeviceProps) {
+  constructor(
+    device: GPUDevice,
+    adapter: GPUAdapter,
+    adapterInfo: GPUAdapterInfo,
+    props: DeviceProps
+  ) {
     super({...props, id: props.id || uid('webgpu-device')});
     this.handle = device;
     this.adapter = adapter;
@@ -265,14 +273,14 @@ export class WebGPUDevice extends Device {
     const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
     const gpuArchitecture = this.adapterInfo.architecture || 'unknown';
     const gpuBackend = (this.adapterInfo as any).backend || 'unknown';
-    const gpuType = ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase()  || 'unknown'
+    const gpuType = ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() || 'unknown';
 
     return {
       type: 'webgpu',
       vendor,
       renderer,
       version,
-      gpu, 
+      gpu,
       gpuType,
       gpuBackend,
       gpuArchitecture,

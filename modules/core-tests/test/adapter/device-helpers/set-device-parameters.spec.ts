@@ -17,9 +17,9 @@ const {gl} = webglDevice;
 const getGLParameter = (parameter: keyof GLParameters): any => {
   const parameters = getGLParameters(gl, [parameter]);
   return parameters[parameter];
-}
+};
 
-test('setDeviceParameters#cullMode', (t) => {
+test('setDeviceParameters#cullMode', t => {
   resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
@@ -38,7 +38,7 @@ test('setDeviceParameters#cullMode', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#frontFace', (t) => {
+test('setDeviceParameters#frontFace', t => {
   resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
@@ -52,7 +52,7 @@ test('setDeviceParameters#frontFace', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#depthWriteEnabled', (t) => {
+test('setDeviceParameters#depthWriteEnabled', t => {
   resetGLParameters(gl);
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
@@ -66,20 +66,19 @@ test('setDeviceParameters#depthWriteEnabled', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#depthWriteEnabled', (t) => {
+test('setDeviceParameters#depthWriteEnabled', t => {
   testClauses(t, 'depthWriteEnabled', [
     {check: {[GL.DEPTH_WRITEMASK]: true}},
     {set: {depthWriteEnabled: false}},
     {check: {[GL.DEPTH_WRITEMASK]: false}},
     {set: {depthWriteEnabled: true}},
-    {check: {[GL.DEPTH_WRITEMASK]: true}},
+    {check: {[GL.DEPTH_WRITEMASK]: true}}
   ]);
 
   t.end();
 });
 
-
-test.skip('setDeviceParameters#depthClearValue', (t) => {
+test.skip('setDeviceParameters#depthClearValue', t => {
   // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   // t.is(value, 1, `got expected value ${stringify(value)}`);
 
@@ -96,7 +95,7 @@ test.skip('setDeviceParameters#depthClearValue', (t) => {
 // HELPERS
 
 // type TestClause = {check: GLParameters} | {set: Parameters};
-type TestClause = {check?: GLParameters, set?: Parameters};
+type TestClause = {check?: GLParameters; set?: Parameters};
 
 function testClauses(t: Test, name: string, clauses: TestClause[]): void {
   resetGLParameters(gl);

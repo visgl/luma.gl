@@ -34,8 +34,8 @@ export async function loadSpectorJS(props?: SpectorProps) {
   if (!globalThis.SPECTOR) {
     try {
       await loadScript(SPECTOR_CDN_URL);
-    } catch(error) {
-      log.warn(String(error))
+    } catch (error) {
+      log.warn(String(error));
     }
   }
 }
@@ -64,14 +64,16 @@ export function initializeSpectorJS(props?: SpectorProps) {
     // enables recording some extra information merged in the capture like texture memory sizes and formats
     spector.spyCanvases();
     // A callback when results are ready
-    spector?.onCaptureStarted.add((capture: unknown) => log.info('Spector capture started:', capture)());
+    spector?.onCaptureStarted.add((capture: unknown) =>
+      log.info('Spector capture started:', capture)()
+    );
     spector?.onCapture.add((capture: unknown) => {
       log.info('Spector capture complete:', capture)();
       // Use undocumented Spector API to open the UI with our capture
       // See https://github.com/BabylonJS/Spector.js/blob/767ad1195a25b85a85c381f400eb50a979239eca/src/spector.ts#L124
-      spector?.getResultUI()
+      spector?.getResultUI();
       spector?.resultView.display();
-      spector?.resultView.addCapture(capture)
+      spector?.resultView.addCapture(capture);
     });
   }
 

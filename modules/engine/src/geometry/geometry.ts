@@ -98,7 +98,7 @@ export class Geometry {
     return this.vertexCount;
   }
 
-  /** 
+  /**
    * Return an object with all attributes plus indices added as a field.
    * TODO Geometry types are a mess
    */
@@ -118,10 +118,10 @@ export class Geometry {
    * type: indices, vertices, uvs
    * size: elements per vertex
    * target: WebGL buffer type (string or constant)
-   * 
-   * @param attributes 
-   * @param indices 
-   * @returns 
+   *
+   * @param attributes
+   * @param indices
+   * @returns
    */
   _setAttributes(attributes: Record<string, GeometryAttribute>, indices: any): this {
     return this;

@@ -15,10 +15,12 @@ export class WebGPUExternalTexture extends ExternalTexture {
   constructor(device: WebGPUDevice, props: ExternalTextureProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.props.handle || this.device.handle.importExternalTexture({
-      source: props.source,
-      colorSpace: props.colorSpace
-    });
+    this.handle =
+      this.props.handle ||
+      this.device.handle.importExternalTexture({
+        source: props.source,
+        colorSpace: props.colorSpace
+      });
     this.sampler = null;
   }
 
@@ -31,7 +33,8 @@ export class WebGPUExternalTexture extends ExternalTexture {
   /** Set default sampler */
   setSampler(sampler: Sampler | SamplerProps): this {
     // We can accept a sampler instance or set of props;
-    this.sampler = sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
+    this.sampler =
+      sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
     return this;
   }
 }

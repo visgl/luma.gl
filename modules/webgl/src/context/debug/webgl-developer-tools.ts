@@ -4,7 +4,7 @@
 import {log, loadScript} from '@luma.gl/core';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
 import {GL as GLEnum} from '@luma.gl/constants';
-import {isBrowser} from '@probe.gl/env'
+import {isBrowser} from '@probe.gl/env';
 
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 
@@ -24,7 +24,7 @@ type DebugContextProps = {
 type ContextData = {
   realContext?: WebGL2RenderingContext;
   debugContext?: WebGL2RenderingContext;
-}
+};
 
 // Helper to get shared context data
 function getWebGLContextData(gl: any): ContextData {
@@ -38,7 +38,7 @@ declare global {
 }
 
 /**
- * Loads Khronos WebGLDeveloperTools from CDN if not already installed 
+ * Loads Khronos WebGLDeveloperTools from CDN if not already installed
  * const WebGLDebugUtils = require('webgl-debug');
  * @see https://github.com/KhronosGroup/WebGLDeveloperTools
  * @see https://github.com/vorg/webgl-debug
@@ -54,7 +54,10 @@ export async function loadWebGLDeveloperTools(): Promise<void> {
 
 // Returns (a potentially new) context with debug instrumentation turned off or on.
 // Note that this actually returns a new context
-export function makeDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps = {}): WebGL2RenderingContext | null {
+export function makeDebugContext(
+  gl: WebGL2RenderingContext,
+  props: DebugContextProps = {}
+): WebGL2RenderingContext | null {
   // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
   if (!gl) {
     return null;
@@ -71,7 +74,10 @@ function getRealContext(gl: WebGL2RenderingContext): WebGL2RenderingContext {
 }
 
 // Returns the debug context from either of the real/debug contexts
-function getDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps): WebGL2RenderingContext {
+function getDebugContext(
+  gl: WebGL2RenderingContext,
+  props: DebugContextProps
+): WebGL2RenderingContext {
   if (!globalThis.WebGLDebugUtils) {
     log.warn('webgl-debug not loaded')();
     return gl;
@@ -98,7 +104,7 @@ function getDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps): 
       glDebug[key] = GLEnum[key];
     }
   }
-  
+
   // Ensure we have a clean prototype on the instrumented object
   // Note: setPrototypeOf does come with perf warnings, but we already take a bigger perf reduction
   // by synchronizing the WebGL errors after each WebGL call.
@@ -119,7 +125,7 @@ function getDebugContext(gl: WebGL2RenderingContext, props: DebugContextProps): 
 
 function getFunctionString(functionName: string, functionArgs): string {
   // Cover bug in webgl-debug-tools
-  functionArgs = Array.from(functionArgs).map(arg => arg === undefined ? 'undefined' : arg);
+  functionArgs = Array.from(functionArgs).map(arg => (arg === undefined ? 'undefined' : arg));
   let args = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, functionArgs);
   args = `${args.slice(0, 100)}${args.length > 100 ? '...' : ''}`;
   return `gl.${functionName}(${args})`;
@@ -127,7 +133,7 @@ function getFunctionString(functionName: string, functionArgs): string {
 
 function onGLError(props: DebugContextProps, err, functionName: string, args: any[]): void {
   // Cover bug in webgl-debug-tools
-  args = Array.from(args).map(arg => arg === undefined ? 'undefined' : arg);
+  args = Array.from(args).map(arg => (arg === undefined ? 'undefined' : arg));
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
@@ -139,7 +145,11 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
 }
 
 // Don't generate function string until it is needed
-function onValidateGLFunc(props: DebugContextProps, functionName: string, functionArgs: any[]): void {
+function onValidateGLFunc(
+  props: DebugContextProps,
+  functionName: string,
+  functionArgs: any[]
+): void {
   let functionString: string = '';
   if (log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
@@ -149,7 +159,9 @@ function onValidateGLFunc(props: DebugContextProps, functionName: string, functi
   // If array of breakpoint strings supplied, check if any of them is contained in current GLEnum function
   if (props.break && props.break.length > 0) {
     functionString = functionString || getFunctionString(functionName, functionArgs);
-    const isBreakpoint = props.break.every((breakOn: string) => functionString.indexOf(breakOn) !== -1);
+    const isBreakpoint = props.break.every(
+      (breakOn: string) => functionString.indexOf(breakOn) !== -1
+    );
     if (isBreakpoint) {
       debugger; // eslint-disable-line
     }

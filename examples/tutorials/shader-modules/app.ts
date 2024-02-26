@@ -88,7 +88,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   positionBuffer: Buffer;
 
-
   constructor({device}: AnimationProps) {
     super();
 

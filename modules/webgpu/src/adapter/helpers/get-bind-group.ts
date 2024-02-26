@@ -41,7 +41,10 @@ export function getShaderLayoutBinding(
   shaderLayout: ShaderLayout,
   bindingName: string
 ): BindingDeclaration {
-  const bindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase());
+  const bindingLayout = shaderLayout.bindings.find(
+    binding =>
+      binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase()
+  );
   if (!bindingLayout) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }

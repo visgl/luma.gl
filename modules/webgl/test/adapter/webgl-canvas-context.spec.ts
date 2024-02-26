@@ -2,7 +2,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {createTestDevice} from '@luma.gl/test-utils'
+import {createTestDevice} from '@luma.gl/test-utils';
 import {WebGLCanvasContext} from '@luma.gl/webgl';
 import {CanvasContext} from '@luma.gl/core';
 
@@ -10,7 +10,7 @@ import {CanvasContext} from '@luma.gl/core';
 const canvasContextDevice = createTestDevice();
 const canvasContext = canvasContextDevice?.canvasContext;
 
-test('WebGLDevice#headless context creation', (t) => {
+test('WebGLDevice#headless context creation', t => {
   t.ok(WebGLCanvasContext, 'WebGLCanvasContext defined');
   // t.ok(new WEBGLCanvasContext()), 'Context creation ok');
   t.end();
@@ -296,17 +296,19 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('WebGLCanvasContext#cssToDevicePixels', (t) => {
-  MAP_TEST_CASES.forEach((tc) => {
+test('WebGLCanvasContext#cssToDevicePixels', t => {
+  MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
       configureCanvasContext(canvasContext, tc);
     }
     tc.windowPositions.forEach((wPos, i) => {
       // by default yInvert is true
       t.deepEqual(
-        canvasContext?.cssToDevicePixels( tc.windowPositions[i]),
+        canvasContext?.cssToDevicePixels(tc.windowPositions[i]),
         tc.devicePositionsInverted[i],
-        `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(tc.devicePositionsInverted[i])} for window position ${tc.windowPositions[i]}`
+        `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(
+          tc.devicePositionsInverted[i]
+        )} for window position ${tc.windowPositions[i]}`
       );
       t.deepEqual(
         canvasContext?.cssToDevicePixels(tc.windowPositions[i], false),
@@ -318,12 +320,16 @@ test('WebGLCanvasContext#cssToDevicePixels', (t) => {
   t.end();
 });
 
-test('WebGLCanvasContext#cssToDeviceRatio', (t) => {
-  MAP_TEST_CASES.forEach((tc) => {
+test('WebGLCanvasContext#cssToDeviceRatio', t => {
+  MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
       configureCanvasContext(canvasContext, tc);
     }
-    t.equal(canvasContext?.cssToDeviceRatio(), tc.ratio, 'cssToDeviceRatio should return correct value');
+    t.equal(
+      canvasContext?.cssToDeviceRatio(),
+      tc.ratio,
+      'cssToDeviceRatio should return correct value'
+    );
   });
 
   // TODO - this is no longer how we emulate node contexts...

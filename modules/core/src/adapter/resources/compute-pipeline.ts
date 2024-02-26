@@ -25,7 +25,7 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
     csEntryPoint: undefined,
     csConstants: {},
     shaderLayout: []
-  };  
+  };
 
   override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';

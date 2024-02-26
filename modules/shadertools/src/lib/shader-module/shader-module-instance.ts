@@ -4,7 +4,7 @@
 import {assert} from '../utils/assert';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
 import {ShaderModule, ShaderModuleDeprecation} from './shader-module';
-import { ShaderInjection, normalizeInjections } from '../shader-assembly/shader-injections';
+import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 let index = 1;
 
@@ -34,7 +34,9 @@ export class ShaderModuleInstance {
 
       assert(
         typeof module !== 'string',
-        `Shader module use by name is deprecated. Import shader module '${JSON.stringify(module)}' and use it directly.`
+        `Shader module use by name is deprecated. Import shader module '${JSON.stringify(
+          module
+        )}' and use it directly.`
       );
       if (!module.name) {
         // eslint-disable-next-line no-console
@@ -43,7 +45,9 @@ export class ShaderModuleInstance {
       }
 
       const moduleObject = new ShaderModuleInstance(module);
-      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(module.dependencies || []);
+      moduleObject.dependencies = ShaderModuleInstance.instantiateModules(
+        module.dependencies || []
+      );
 
       return moduleObject;
     });

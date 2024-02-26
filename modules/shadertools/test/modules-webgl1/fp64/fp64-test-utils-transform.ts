@@ -74,7 +74,10 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
     vs,
     modules: [fp64],
     attributes: {a: bufferA, b: bufferB},
-    bufferLayout: [{name: 'a', format: 'float32x2'}, {name: 'b', format: 'float32x2'}],
+    bufferLayout: [
+      {name: 'a', format: 'float32x2'},
+      {name: 'b', format: 'float32x2'}
+    ],
     feedbackBuffers: {result: bufferResult},
     varyings: ['result'],
     vertexCount: testCases.length
@@ -82,7 +85,10 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
   return {a, b, expected, a_fp64, b_fp64, expected_fp64, transform};
 }
 
-export async function runTests(device: Device, {glslFunc, binary = false, op, limit = 256, testCases, t}) {
+export async function runTests(
+  device: Device,
+  {glslFunc, binary = false, op, limit = 256, testCases, t}
+) {
   if (!BufferTransform.isSupported(device)) {
     t.comment('Transform not supported, skipping tests');
     t.end();
@@ -101,7 +107,11 @@ export async function runTests(device: Device, {glslFunc, binary = false, op, li
   transform.run();
 
   const {buffer, byteOffset, byteLength} = await transform.readAsync('result');
-  const gpuResult = new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
+  const gpuResult = new Float32Array(
+    buffer,
+    byteOffset,
+    byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
   for (let idx = 0; idx < testCases.length; idx++) {
     const reference64 = expected_fp64[2 * idx] + expected_fp64[2 * idx + 1];
     const result64 = gpuResult[2 * idx] + gpuResult[2 * idx + 1];

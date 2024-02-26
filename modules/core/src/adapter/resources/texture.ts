@@ -14,14 +14,9 @@ import {TextureView, TextureViewProps} from './texture-view';
 // required GPUTextureUsageFlags usage;
 
 /** Data types that can be used to initialize textures */
-export type TextureData = 
-  TypedArray | ArrayBuffer | Buffer | ImageBitmap | HTMLImageElement
-  ;
+export type TextureData = TypedArray | ArrayBuffer | Buffer | ImageBitmap | HTMLImageElement;
 
-export type CubeTextureData = 
-  Record<string, TextureData> |
-  Record<string, Promise<TextureData>>
-  ;
+export type CubeTextureData = Record<string, TextureData> | Record<string, Promise<TextureData>>;
 
 export type ExternalTextureData = HTMLVideoElement;
 
@@ -54,7 +49,7 @@ export type WebGPUTextureProps = ResourceProps & {
   format?: string;
 };
 
-/** 
+/**
  * @deprecated
  * @todo remove, are these even used anymore?
  */
@@ -101,14 +96,16 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     sampler: {},
     view: undefined!
   };
-  
+
   static COPY_SRC = 0x01;
   static COPY_DST = 0x02;
   static TEXTURE_BINDING = 0x04;
   static STORAGE_BINDING = 0x08;
   static RENDER_ATTACHMENT = 0x10;
 
-  override get [Symbol.toStringTag](): string { return 'Texture'; }
+  override get [Symbol.toStringTag](): string {
+    return 'Texture';
+  }
 
   /** dimension of this texture */
   readonly dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -127,10 +124,14 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   /** Default view for this texture */
   abstract view: TextureView;
 
-  constructor(device: Device, props: Props, defaultProps = Texture.defaultProps as Required<Props>) {
+  constructor(
+    device: Device,
+    props: Props,
+    defaultProps = Texture.defaultProps as Required<Props>
+  ) {
     super(device, props, defaultProps);
     this.dimension = this.props.dimension;
-    this.format = this.props.format ;
+    this.format = this.props.format;
     this.width = this.props.width;
     this.height = this.props.height;
     this.depth = this.props.depth;

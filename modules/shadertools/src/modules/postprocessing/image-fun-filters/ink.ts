@@ -41,11 +41,11 @@ vec4 ink_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  * copies of the image, each blurred using a blur of a different radius.
  */
 export type InkProps = {
-  /** The multiplicative scale of the ink edges. 
-   * Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges. 
+  /** The multiplicative scale of the ink edges.
+   * Values in the range 0 to 1 are usually sufficient, where 0 doesn't change the image and 1 adds lots of black edges.
    * Negative strength values will create white ink edges instead of black ones.
    */
-   strength?: number;
+  strength?: number;
 };
 
 /**

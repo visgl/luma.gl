@@ -31,9 +31,11 @@ const INITIAL_MODULE_OPTIONS: Required<LightsOptions> = {
 };
 
 // Take color 0-255 and intensity as input and output 0.0-1.0 range
-function convertColor(colorDef: {color?: Readonly<NumberArray>, intensity?: number} = {}): NumberArray {
+function convertColor(
+  colorDef: {color?: Readonly<NumberArray>; intensity?: number} = {}
+): NumberArray {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
-  return color.map((component) => (component * intensity) / 255.0);
+  return color.map(component => (component * intensity) / 255.0);
 }
 
 function getLightSourceUniforms({

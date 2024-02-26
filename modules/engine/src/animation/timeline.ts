@@ -9,30 +9,30 @@
  * @param repeat = 1
  */
 export type ChannelOptions = {
-  delay?: number
-  duration?: number
-  rate?: number
-  repeat?: number
-}
+  delay?: number;
+  duration?: number;
+  rate?: number;
+  repeat?: number;
+};
 
 export type AnimationOptions = {
-  setTime: (time: number) => void
-}
+  setTime: (time: number) => void;
+};
 
- type Channel = {
-  time: number
-  delay: number
-  duration: number
-  rate: number
-  repeat: number
-}
+type Channel = {
+  time: number;
+  delay: number;
+  duration: number;
+  rate: number;
+  repeat: number;
+};
 
 type Animation = {
   channel?: number;
   animation: {
-    setTime: (time: number) => void
-  }
-}
+    setTime: (time: number) => void;
+  };
+};
 
 let channelHandles = 1;
 let animationHandles = 1;
@@ -44,8 +44,7 @@ export class Timeline {
   playing: boolean = false;
   lastEngineTime: number = -1;
 
-  constructor() {
-  }
+  constructor() {}
 
   addChannel(props: ChannelOptions): number {
     const {delay = 0, duration = Number.POSITIVE_INFINITY, rate = 1, repeat = 1} = props;

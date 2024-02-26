@@ -84,7 +84,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const options = {pbrDebug: false, imageBasedLightingEnvironment: null, lights: true};
     const {scenes} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
-    this.scenes = scenes ;
+    this.scenes = scenes;
 
     // Calculate nice camera view
     // TODO move to utility in gltf module

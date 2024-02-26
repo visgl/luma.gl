@@ -13,7 +13,7 @@ test('TextureTransform#constructor', async t => {
       data: new Float32Array([201, 202, 203, 1.0]),
       width: 1,
       height: 1,
-      format: 'rgba32float',
+      format: 'rgba32float'
     });
     const transform = new TextureTransform(device, {
       vs: BASIC_VS,
@@ -21,7 +21,7 @@ test('TextureTransform#constructor', async t => {
       targetTexture,
       targetTextureChannels: 1,
       targetTextureVarying: 'vSrc',
-      vertexCount: 1,
+      vertexCount: 1
     });
     t.ok(transform, 'creates transform');
   }
@@ -36,7 +36,7 @@ test('TextureTransform#attribute', async t => {
       data: new Float32Array([201, 202, 203, 1.0]),
       width: 1,
       height: 1,
-      format: 'rgba32float',
+      format: 'rgba32float'
     });
     const transform = new TextureTransform(device, {
       vs: SUM_VS,
@@ -51,11 +51,11 @@ test('TextureTransform#attribute', async t => {
         depthCompare: 'always',
         blendColorOperation: 'add',
         blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one',
-      },
+        blendColorDstFactor: 'one'
+      }
     });
     const source = transform.getTargetTexture();
-  
+
     // TODO(donmccurdy): Consider having Transform inherit from Model, or at
     // least mimic its API by accepting a RenderPass in .run().
     transform.run({clearColor: [0, 0, 0, 0]});
@@ -79,13 +79,13 @@ test('TextureTransform#texture', async t => {
       data: srcData,
       width: 1,
       height: 1,
-      format: 'rgba8unorm',
+      format: 'rgba8unorm'
     });
     const targetTexture = device.createTexture({
       data: new Uint8Array([0, 0, 0, 1]),
       width: 1,
       height: 1,
-      format: 'rgba8unorm',
+      format: 'rgba8unorm'
     });
     const transform = new TextureTransform(device, {
       vs: BLEND_VS,
@@ -100,8 +100,8 @@ test('TextureTransform#texture', async t => {
         depthCompare: 'always',
         blendColorOperation: 'add',
         blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one',
-      },
+        blendColorDstFactor: 'one'
+      }
     });
 
     // TODO(donmccurdy): Consider having Transform inherit from Model, or at

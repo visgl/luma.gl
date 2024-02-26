@@ -15,7 +15,7 @@ void main() {
   gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
 }
 `,
-    wgsl: /* WGSL */`\
+    wgsl: /* WGSL */ `\
 @vertex
 fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
   var pos = array<vec2<f32>, 3>(
@@ -37,7 +37,7 @@ void main() {
     outColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 `,
-    wgsl: /* WGSL */`\
+    wgsl: /* WGSL */ `\
 @fragment
 fn main() -> @location(0) vec4<f32> {
   return vec4<f32>(1.0, 0.0, 0.0, 1.0);
@@ -61,7 +61,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         bindings: []
       },
       parameters: {
-        depthFormat: 'depth24plus',
+        depthFormat: 'depth24plus'
       }
     });
   }
@@ -71,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}: AnimationProps) {
-    const renderPass = device.beginRenderPass({clearColor: [1,1,1,1]});
+    const renderPass = device.beginRenderPass({clearColor: [1, 1, 1, 1]});
     this.model.draw(renderPass);
     renderPass.end();
   }

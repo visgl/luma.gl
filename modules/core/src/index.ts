@@ -115,7 +115,11 @@ export {UniformStore} from './lib/uniforms/uniform-store';
 // TYPE UTILS
 export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
-export {getDataTypeFromTypedArray, getTypedArrayFromDataType, getVertexFormatFromAttribute} from './adapter/type-utils/vertex-format-from-attribute';
+export {
+  getDataTypeFromTypedArray,
+  getTypedArrayFromDataType,
+  getVertexFormatFromAttribute
+} from './adapter/type-utils/vertex-format-from-attribute';
 
 // SHADER TYPE UTILS
 export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
@@ -143,13 +147,7 @@ export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
 export {formatValue} from './utils/format-value';
 export {stubRemovedMethods} from './utils/stub-methods';
 export {checkProps} from './utils/check-props';
-export {
-  setPathPrefix,
-  loadFile,
-  loadImage,
-  loadImageBitmap,
-  loadScript
-} from './utils/load-file';
+export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
 export {deepEqual} from './utils/deep-equal';

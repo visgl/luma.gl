@@ -106,7 +106,8 @@ test('ShaderAssembler#hooks', t => {
     'injection code not included in fragment shader without module'
   );
 
-  const modulesProgram = shaderAssembler.assembleShaders({platformInfo, 
+  const modulesProgram = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     modules: [pickingInjection]
@@ -137,7 +138,8 @@ test('ShaderAssembler#hooks', t => {
     'hook footer injected after injection code'
   );
 
-  const injectedShaders = shaderAssembler.assembleShaders({platformInfo, 
+  const injectedShaders = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     inject: {
@@ -151,7 +153,8 @@ test('ShaderAssembler#hooks', t => {
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
 
-  const injectDefineProgram1 = shaderAssembler.assembleShaders({platformInfo, 
+  const injectDefineProgram1 = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     inject: {
@@ -159,7 +162,8 @@ test('ShaderAssembler#hooks', t => {
     }
   });
 
-  const injectDefineProgram2 = shaderAssembler.assembleShaders({platformInfo, 
+  const injectDefineProgram2 = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     defines: {
@@ -177,7 +181,8 @@ test('ShaderAssembler#defaultModules', t => {
 
   const program = shaderAssembler.assembleShaders({platformInfo, vs, fs});
 
-  const preDefaultModuleProgram = shaderAssembler.assembleShaders({platformInfo, 
+  const preDefaultModuleProgram = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     modules: [dirlight]
@@ -188,7 +193,8 @@ test('ShaderAssembler#defaultModules', t => {
   shaderAssembler.addDefaultModule(dirlight);
 
   const defaultModuleProgram = shaderAssembler.assembleShaders({platformInfo, vs, fs});
-  const moduleProgram = shaderAssembler.assembleShaders({platformInfo, 
+  const moduleProgram = shaderAssembler.assembleShaders({
+    platformInfo,
     vs,
     fs,
     modules: [dirlight]

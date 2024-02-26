@@ -1,5 +1,11 @@
 import {Device, loadImage, glsl} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  CubeGeometry,
+  Model,
+  ModelProps
+} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -131,14 +137,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       },
       parameters: {
         depthWriteEnabled: true,
-        depthCompare: 'less-equal'  
+        depthCompare: 'less-equal'
       }
     });
 
     this.prism = new Prism(device, {
       bindings: {
         uTexture: texture,
-        uTextureCube: cubemap,
+        uTextureCube: cubemap
       },
       parameters: {
         depthWriteEnabled: true,
@@ -149,7 +155,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize(): void {
     this.prism.destroy();
-    this.cube.destroy();  
+    this.cube.destroy();
   }
 
   onRender({device, aspect, tick}: AnimationProps): void {

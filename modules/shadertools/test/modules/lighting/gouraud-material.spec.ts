@@ -5,13 +5,18 @@ import test from 'tape-promise/tape';
 import type {UniformValue} from '@luma.gl/core';
 import {gouraudMaterial} from '@luma.gl/shadertools';
 
-test('shadertools#gouraudMaterial', (t) => {
+test('shadertools#gouraudMaterial', t => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   let uniforms: Record<string, UniformValue> = gouraudMaterial.getUniforms?.({})!;
   t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  uniforms = gouraudMaterial.getUniforms?.({ambient: 0.0, diffuse: 0.0, shininess: 0.0, specularColor: [255, 0, 0]})!;
+  uniforms = gouraudMaterial.getUniforms?.({
+    ambient: 0.0,
+    diffuse: 0.0,
+    shininess: 0.0,
+    specularColor: [255, 0, 0]
+  })!;
   // t.equal(
   //   uniforms.enabled,
   //   undefined,

@@ -1,4 +1,3 @@
-
 // ClipSpace
 import {Device, glsl} from '@luma.gl/core';
 import {Model, ModelProps} from '../model/model';
@@ -30,24 +29,21 @@ const POSITIONS = [-1, -1, 1, -1, -1, 1, 1, 1];
  */
 export class ClipSpace extends Model {
   constructor(device: Device, opts: Omit<ModelProps, 'vs' | 'vertexCount' | 'geometry'>) {
-    const TEX_COORDS = POSITIONS.map((coord) => (coord === -1 ? 0 : coord));
+    const TEX_COORDS = POSITIONS.map(coord => (coord === -1 ? 0 : coord));
 
-    super(
-      device,
-      {
-        ...opts,
-        vs: CLIPSPACE_VERTEX_SHADER,
+    super(device, {
+      ...opts,
+      vs: CLIPSPACE_VERTEX_SHADER,
+      vertexCount: 4,
+      geometry: new Geometry({
+        topology: 'triangle-strip',
         vertexCount: 4,
-        geometry: new Geometry({
-          topology: 'triangle-strip',
-          vertexCount: 4,
-          attributes: {
-            aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
-            aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
-            aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
-          }
-        })
-      }
-    );
+        attributes: {
+          aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
+          aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
+          aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
+        }
+      })
+    });
   }
 }

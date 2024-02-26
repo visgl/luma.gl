@@ -1,7 +1,7 @@
 import {Stats} from '@probe.gl/stats';
 
-/** 
- * Helper class managing a collection of probe.gl stats objects 
+/**
+ * Helper class managing a collection of probe.gl stats objects
  */
 export class StatsManager {
   stats = new Map();

@@ -1,7 +1,7 @@
 /** Recursively copies objects */
 export function deepCopy(object: Record<string, any>) {
   if (Array.isArray(object)) {
-    return object.map((element) => deepCopy(element));
+    return object.map(element => deepCopy(element));
   }
 
   if (object !== null && typeof object === 'object') {

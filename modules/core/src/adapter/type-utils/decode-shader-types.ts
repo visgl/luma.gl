@@ -4,10 +4,10 @@
 import {assert} from '../../utils/assert';
 import {ShaderUniformType, ShaderDataType} from '../types/shader-types';
 
-const UNIFORM_FORMATS: Record<ShaderUniformType, {type: ShaderDataType, components: number}> = {
-  'f32': {type: 'f32', components: 1},
-  'i32': {type: 'i32', components: 1},
-  'u32': {type: 'u32', components: 1},
+const UNIFORM_FORMATS: Record<ShaderUniformType, {type: ShaderDataType; components: number}> = {
+  f32: {type: 'f32', components: 1},
+  i32: {type: 'i32', components: 1},
+  u32: {type: 'u32', components: 1},
   // 'bool-webgl': {type: 'bool-webgl', components: 1},
   'vec2<f32>': {type: 'f32', components: 2},
   'vec3<f32>': {type: 'f32', components: 3},
@@ -26,15 +26,18 @@ const UNIFORM_FORMATS: Record<ShaderUniformType, {type: ShaderDataType, componen
   'mat3x4<f32>': {type: 'f32', components: 12},
   'mat4x2<f32>': {type: 'f32', components: 8},
   'mat4x3<f32>': {type: 'f32', components: 12},
-  'mat4x4<f32>': {type: 'f32', components: 16},
+  'mat4x4<f32>': {type: 'f32', components: 16}
 };
 
 /** Split a uniform type string into type and components */
-export function decodeShaderUniformType(format: ShaderUniformType): {type: ShaderDataType, components: number} {
+export function decodeShaderUniformType(format: ShaderUniformType): {
+  type: ShaderDataType;
+  components: number;
+} {
   const decoded = UNIFORM_FORMATS[format];
   assert(format);
   return decoded;
-} 
+}
 
 /** Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes) */
 export function alignTo(size: number, count: number): number {
@@ -45,4 +48,3 @@ export function alignTo(size: number, count: number): number {
     default: return size + ((4 - (size % 4)) % 4); // Pad upwards to even multiple of 4
   }
 }
-

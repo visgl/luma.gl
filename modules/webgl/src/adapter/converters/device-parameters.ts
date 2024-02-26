@@ -144,7 +144,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.unclippedDepth) {
-    if (device.features.has('depth-clip-control')) { // EXT_depth_clamp
+    if (device.features.has('depth-clip-control')) {
+      // EXT_depth_clamp
       gl.enable(GL.DEPTH_CLAMP_EXT);
     }
   }

@@ -6,7 +6,7 @@ const INFO_HTML = `
 Animation via transform feedback.
 `;
 
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const transformVs = glsl`\
 #version 300 es
@@ -67,9 +67,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error(ALT_TEXT);
     }
 
-    this.prevPositionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
+    this.prevPositionBuffer = device.createBuffer(
+      new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5])
+    );
     this.nextPositionBuffer = device.createBuffer(new Float32Array(6));
-    this.colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
+    this.colorBuffer = device.createBuffer(
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
+    );
 
     this.transform = new BufferTransform(device, {
       vs: transformVs,

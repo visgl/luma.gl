@@ -11,7 +11,7 @@ export type IcoSphereGeometryProps = {
   id?: string;
   radius?: number;
   iterations?: number;
-  attributes?: any
+  attributes?: any;
 };
 
 export class IcoSphereGeometry extends Geometry {
