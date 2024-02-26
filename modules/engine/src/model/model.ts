@@ -1,24 +1,13 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {
-  TypedArray,
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  Shader
-} from '@luma.gl/core';
-import type {BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
+import type {TypedArray} from '@luma.gl/core';
+import type {DeviceFeature, RenderPipelineProps, RenderPipelineParameters,} from '@luma.gl/core';
+import type {Shader, Buffer, BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {
-  Device,
-  Buffer,
-  RenderPipeline,
-  RenderPass,
-  UniformStore,
-  getTypedArrayFromDataType
-} from '@luma.gl/core';
+import { Device, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
-import {getAttributeInfosFromLayouts} from '@luma.gl/core';
+import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
@@ -751,7 +740,8 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,
-    features: new Set(device.features)
+    // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
+    features: device.features as unknown as Set<DeviceFeature>
   };
 }
 
