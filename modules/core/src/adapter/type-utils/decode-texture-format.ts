@@ -2,6 +2,12 @@ import {TextureFormat} from '../types/texture-formats';
 import {VertexType} from '../types/vertex-formats';
 import {decodeVertexType} from './decode-data-type';
 
+
+// prettier-ignore
+const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
+  'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
+];
+
 const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
 
 export type DecodedTextureFormat = {
@@ -15,6 +21,13 @@ export type DecodedTextureFormat = {
   integer: boolean;
   signed: boolean;
   normalized: boolean;
+}
+
+/** 
+ * Returns true if a texture format is GPU compressed 
+ */
+export function isTextureFormatCompressed(textureFormat: TextureFormat): boolean {
+  return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => textureFormat.startsWith(prefix));
 }
 
 /**

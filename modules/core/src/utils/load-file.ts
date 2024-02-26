@@ -49,7 +49,7 @@ export async function loadImage(
   url: string,
   opts?: {crossOrigin?: string}
 ): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     try {
       const image = new Image();
       image.onload = () => resolve(image);

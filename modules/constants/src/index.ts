@@ -7,6 +7,8 @@ export {GL} from './webgl-constants';
 
 // WebGL types
 export type {
+  GLTextureTarget,
+  GLTextureCubeMapTarget,
   GLPrimitiveTopology,
   GLPrimitive,
   GLDataType,

@@ -1,4 +1,4 @@
-import {glsl, NumberArray} from '@luma.gl/core';
+import {glsl, NumberArray, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, _ShaderInputs} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -75,6 +75,53 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   }
 };
 
+// const vs = glsl`\
+// #version 300 es
+//   attribute vec3 positions;
+//   attribute vec3 normals;
+//   attribute vec2 texCoords;
+
+//   varying vec3 vPosition;
+//   varying vec3 vNormal;
+//   varying vec2 vUV;
+
+//   uniform appUniforms {
+//     mat4 modelMatrix;
+//     mat4 mvpMatrix;
+//     vec3 eyePosition;
+//   } app;
+
+//   void main(void) {
+//     vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
+//     vNormal = mat3(app.modelMatrix) * normals;
+//     vUV = texCoords;
+//     gl_Position = app.mvpMatrix * vec4(positions, 1.0);
+//   }
+// `;
+
+// const fs = glsl`\
+// #version 300 es
+//   precision highp float;
+
+//   varying vec3 vPosition;
+//   varying vec3 vNormal;
+//   varying vec2 vUV;
+
+//   uniform sampler2D uTexture;
+
+//   uniform appUniforms {
+//     mat4 modelMatrix;
+//     mat4 mvpMatrix;
+//     vec3 eyePosition;
+//   } app;
+
+//   void main(void) {
+//     vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
+//     vec3 surfaceColor = lighting_getLightColor(materialColor, app.eyePosition, vPosition, normalize(vNormal));
+
+//     gl_FragColor = vec4(surfaceColor, 1.0);
+//   }
+// `;
 
 // APPLICATION
 
@@ -112,7 +159,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = device.createTexture({data: 'vis-logo.png'});
+    const texture = device.createTexture({data: loadImage('vis-logo.png')});
 
     this.model = new Model(device, {
       vs,

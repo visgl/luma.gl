@@ -105,6 +105,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
+      // @ts-ignore
       data: textureData,
       format: 'r8unorm',
       mipmaps: true,
