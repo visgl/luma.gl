@@ -29,7 +29,8 @@ module.exports = getESLintConfig({
       'default-case': ['warn'],
       'no-eq-null': ['warn'],
       eqeqeq: ['warn'],
-      radix: 0
+      radix: 0,
+      'spaced-comment': ["error", "always", { "exceptions": ["/ <"] }]
       // 'accessor-pairs': ['error', {getWithoutSet: false, setWithoutGet: false}]
     },
 

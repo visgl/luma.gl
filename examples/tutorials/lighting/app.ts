@@ -1,4 +1,4 @@
-import {glsl, NumberArray} from '@luma.gl/core';
+import {glsl, NumberArray, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry, _ShaderInputs} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -75,7 +75,6 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   }
 };
 
-
 // APPLICATION
 
 const eyePosition = [0, 0, 5];
@@ -112,7 +111,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = device.createTexture({data: 'vis-logo.png'});
+    const texture = device.createTexture({data: loadImage('vis-logo.png')});
 
     this.model = new Model(device, {
       vs,

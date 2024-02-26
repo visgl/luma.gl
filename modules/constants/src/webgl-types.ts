@@ -11,6 +11,7 @@ export type NumberArray = number[] | TypedArray;
 export type NumericArray = TypedArray | number[];
 
 /** TypeScript type covering all typed arrays */
+
 export type TypedArray =
   | Int8Array
   | Uint8Array
@@ -26,6 +27,22 @@ export type TypedArray =
 
 /** We don't know the type of Framebuffer at this stage */
 type Framebuffer = unknown;
+
+/** All possible texture targets */
+export type GLTextureTarget =
+  | GL.TEXTURE_2D
+  | GL.TEXTURE_CUBE_MAP
+  | GL.TEXTURE_2D_ARRAY
+  | GL.TEXTURE_3D;
+
+/** All possible cube face targets for textImage2D */
+export type GLTextureCubeMapTarget =
+  | GL.TEXTURE_CUBE_MAP_POSITIVE_X
+  | GL.TEXTURE_CUBE_MAP_NEGATIVE_X
+  | GL.TEXTURE_CUBE_MAP_POSITIVE_Y
+  | GL.TEXTURE_CUBE_MAP_NEGATIVE_Y
+  | GL.TEXTURE_CUBE_MAP_POSITIVE_Z
+  | GL.TEXTURE_CUBE_MAP_NEGATIVE_Z;
 
 /** Rendering primitives. Constants passed to drawElements() or drawArrays() to specify what kind of primitive to render. */
 export type GLPrimitiveTopology =
@@ -50,9 +67,9 @@ export type GLDataType =
   | GL.SHORT
   | GL.INT;
 
-/** Pixel Type */
+/** Pixel Data Type */
 export type GLPixelType =
-  | GL.UNSIGNED_BYTE
+  | GLDataType
   | GL.UNSIGNED_SHORT_5_6_5
   | GL.UNSIGNED_SHORT_4_4_4_4
   | GL.UNSIGNED_SHORT_5_5_5_1;

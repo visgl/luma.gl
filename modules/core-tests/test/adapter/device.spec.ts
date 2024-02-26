@@ -1,6 +1,6 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {getWebGLTestDevices, getTestDevices} from '@luma.gl/test-utils';
 
 // import {luma} from '@luma.gl/core';
 
@@ -9,6 +9,16 @@ test('WebGLDevice#info', (t) => {
     // TODO
     t.ok(typeof device.info.vendor === 'string', 'info.vendor ok');
     t.ok(typeof device.info.renderer === 'string', 'info.renderer ok');
+  }
+  t.end();
+});
+
+// Minimal test, extensive test in texture-formats.spec
+test('WebGLDevice#isTextureFormatCompressed', async (t) => {
+  for (const device of await getTestDevices()) {
+    // Just sanity check two types
+    t.equal(device.isTextureFormatCompressed('rgba8unorm'), false);
+    t.equal(device.isTextureFormatCompressed('bc3-rgba-unorm'), true)
   }
   t.end();
 });

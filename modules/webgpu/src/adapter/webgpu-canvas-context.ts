@@ -15,8 +15,7 @@ export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly gpuCanvasContext: GPUCanvasContext;
   /** Format of returned textures: "bgra8unorm", "rgba8unorm", "rgba16float". */
-  // @ts-ignore - TODO - fix this
-  readonly format: TextureFormat = navigator.gpu.getPreferredCanvasFormat();
+  readonly format: TextureFormat = navigator.gpu.getPreferredCanvasFormat() as TextureFormat;
   /** Default stencil format for depth textures */
   depthStencilFormat: TextureFormat = 'depth24plus';
 

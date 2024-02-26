@@ -20,6 +20,8 @@ import type {CommandEncoder, CommandEncoderProps} from './resources/command-enco
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 
+import {isTextureFormatCompressed} from './type-utils/decode-texture-format';
+
 /**
  * Identifies the GPU vendor and driver.
  * @note Chrome WebGPU does not provide much information, though more can be enabled with
@@ -105,7 +107,7 @@ export abstract class DeviceLimits {
   abstract maxComputeWorkgroupSizeZ: number;
   /** max ComputeWorkgroupsPerDimension */
   abstract maxComputeWorkgroupsPerDimension: number;
-};
+}
 
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
 export class DeviceFeatures {
@@ -130,7 +132,6 @@ export type DeviceFeature =
   | WebGLDeviceFeature
   | WebGLCompressedTextureFeatures;
 
-
 export type WebGPUDeviceFeature =
   | 'depth-clip-control'
   | 'indirect-first-instance'
@@ -144,8 +145,8 @@ export type WebGPUDeviceFeature =
   | 'texture-compression-bc'
   | 'texture-compression-etc2'
   | 'texture-compression-astc';
-  // | 'depth-clamping' // removed from the WebGPU spec...
-  // | 'pipeline-statistics-query' // removed from the WebGPU spec...
+// | 'depth-clamping' // removed from the WebGPU spec...
+// | 'pipeline-statistics-query' // removed from the WebGPU spec...
 
 export type WebGLDeviceFeature =
   // webgl extension features
@@ -156,7 +157,7 @@ export type WebGLDeviceFeature =
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test 
+  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
 
   // texture rendering
@@ -202,8 +203,9 @@ export type DeviceProps = {
   // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
   // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
 
+  onError?: (error: Error) => unknown;
   /** Instrument context (at the expense of performance) */
-  debug?: boolean; 
+  debug?: boolean;
   /** Initialize the SpectorJS WebGL debugger */
   spector?: boolean;
 
@@ -239,7 +241,10 @@ export abstract class Device {
     // preserveDrawingBuffer: undefined,
     // failIfMajorPerformanceCaveat: undefined
 
-    gl: null
+    gl: null,
+
+    // Callbacks
+    onError: (error: Error) => log.error(error.message)
   };
 
   get [Symbol.toStringTag](): string {
@@ -285,6 +290,11 @@ export abstract class Device {
 
   /** Check if device supports rendering to a specific texture format */
   abstract isTextureFormatRenderable(format: TextureFormat): boolean;
+
+  /** Check if a specific texture format is GPU compressed */
+  isTextureFormatCompressed(format: TextureFormat): boolean {
+    return isTextureFormatCompressed(format);
+  }
 
   // Device loss
 
@@ -437,7 +447,14 @@ export abstract class Device {
     throw new Error('not implemented');
   }
 
-  // Implementation
+  // IMPLEMENTATION
+
+  // Error Handling
+
+  /** Report unhandled device errors */
+  onError(error: Error) {
+    this.props.onError(error);
+  }
 
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {

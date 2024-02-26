@@ -1,6 +1,5 @@
 import {Device, loadImage, glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, CubeGeometry, Model, ModelProps} from '@luma.gl/engine';
-import {GL} from '@luma.gl/constants';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -102,18 +101,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const cubemap = device.createTexture({
       dimension: 'cube',
       mipmaps: true,
+      // @ts-ignore
       data: {
-        [GL.TEXTURE_CUBE_MAP_POSITIVE_X]: loadImage('sky-posx.png'),
-        [GL.TEXTURE_CUBE_MAP_NEGATIVE_X]: loadImage('sky-negx.png'),
-        [GL.TEXTURE_CUBE_MAP_POSITIVE_Y]: loadImage('sky-posy.png'),
-        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Y]: loadImage('sky-negy.png'),
-        [GL.TEXTURE_CUBE_MAP_POSITIVE_Z]: loadImage('sky-posz.png'),
-        [GL.TEXTURE_CUBE_MAP_NEGATIVE_Z]: loadImage('sky-negz.png')
+        '+X': loadImage('sky-posx.png'),
+        '-X': loadImage('sky-negx.png'),
+        '+Y': loadImage('sky-posy.png'),
+        '-Y': loadImage('sky-negy.png'),
+        '+Z': loadImage('sky-posz.png'),
+        '-Z': loadImage('sky-negz.png')
       }
     });
 
     const texture = device.createTexture({
-      data: 'vis-logo.png',
+      data: loadImage('vis-logo.png'),
       mipmaps: true,
       sampler: {
         magFilter: 'linear',

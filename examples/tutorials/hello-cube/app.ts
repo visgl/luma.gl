@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import {glsl, UniformStore, NumberArray, ShaderUniformType} from '@luma.gl/core';
+import {glsl, UniformStore, NumberArray, ShaderUniformType, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -70,7 +70,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     const texture = device.createTexture({
-      data: 'vis-logo.png',
+      data: loadImage('vis-logo.png'),
       mipmaps: true,
       sampler: device.createSampler({
         minFilter: 'linear',
