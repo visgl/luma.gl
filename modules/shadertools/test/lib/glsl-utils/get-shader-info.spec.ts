@@ -92,7 +92,7 @@ const versionTests = {
   [SHADER7]: 300
 };
 
-test('WebGL#getShaderInfo()', (t) => {
+test('WebGL#getShaderInfo()', t => {
   t.equal(
     getShaderInfo(SHADER_1).name,
     'name-of-shader',
@@ -113,29 +113,13 @@ test('WebGL#getShaderInfo()', (t) => {
     'getShaderInfo().name extracted correct name'
   );
 
-  t.equal(
-    getShaderInfo(SHADER_5).name,
-    'unnamed',
-    'getShaderInfo().name extracted default name'
-  );
+  t.equal(getShaderInfo(SHADER_5).name, 'unnamed', 'getShaderInfo().name extracted default name');
 
-  t.equal(
-    getShaderInfo(SHADER_6).name,
-    'unnamed',
-    'getShaderInfo().name extracted default name'
-  );
+  t.equal(getShaderInfo(SHADER_6).name, 'unnamed', 'getShaderInfo().name extracted default name');
 
-  t.equal(
-    getShaderInfo(SHADER_7).name,
-    'unnamed',
-    'getShaderInfo().name extracted default name'
-  );
+  t.equal(getShaderInfo(SHADER_7).name, 'unnamed', 'getShaderInfo().name extracted default name');
 
-  t.equal(
-    getShaderInfo(SHADER_8).name,
-    'unnamed',
-    'getShaderInfo().name extracted default name'
-  );
+  t.equal(getShaderInfo(SHADER_8).name, 'unnamed', 'getShaderInfo().name extracted default name');
 
   for (const string in versionTests) {
     t.equal(getShaderInfo(string).version, versionTests[string], 'Version should match');

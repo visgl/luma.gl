@@ -29,7 +29,7 @@ export class WebGPUShader extends Shader {
   }
 
   async _checkCompilationError(errorScope: Promise<GPUError | null>): Promise<void> {
-    const error = await errorScope as GPUValidationError;
+    const error = (await errorScope) as GPUValidationError;
     if (error) {
       // The `Shader` base class will determine if debug window should be opened based on props
       this.debugShader();
@@ -65,14 +65,14 @@ export class WebGPUShader extends Shader {
       language = source.includes('->') ? 'wgsl' : 'glsl';
     }
 
-    switch(language) {
+    switch (language) {
       case 'wgsl':
         return this.device.handle.createShaderModule({code: source});
       case 'glsl':
         return this.device.handle.createShaderModule({
           code: source,
           // @ts-expect-error
-          transform: (glsl) => this.device.glslang.compileGLSL(glsl, stage)
+          transform: glsl => this.device.glslang.compileGLSL(glsl, stage)
         });
       default:
         throw new Error(language);

@@ -110,8 +110,8 @@ function clean(code) {
 }
 
 // TODO - RESTORE
-test.skip('RemoveGLSLComments Babel Plugin', (t) => {
-  TEST_CASES.forEach((testCase) => {
+test.skip('RemoveGLSLComments Babel Plugin', t => {
+  TEST_CASES.forEach(testCase => {
     const {code} = babel.transform(testCase.input, {
       comments: true,
       presets: [['@babel/env', testCase.env]],

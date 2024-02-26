@@ -35,7 +35,7 @@ export type SamplerProps = ResourceProps & {
   /** Affects the mipmap image selection */
   lodMaxClamp?: number;
   /** Maximum number of samples that can be taken of the texture during any one texture fetch */
-  maxAnisotropy?: number;  
+  maxAnisotropy?: number;
   /** How to compare reference values provided in shader shadow sampler calls with those pulled from the texture */
   compare?: CompareFunction;
 };
@@ -58,7 +58,7 @@ export abstract class Sampler extends Resource<SamplerProps> {
     compare: 'less-equal',
     maxAnisotropy: 1
   };
-  
+
   override get [Symbol.toStringTag](): string {
     return 'Sampler';
   }

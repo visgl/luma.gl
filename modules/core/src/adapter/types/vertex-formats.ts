@@ -28,8 +28,7 @@ export type NormalizedDataType =
   // | 'unorm32'
   // | 'snorm32'
   | 'float32'
-  | 'float16'
-  ;
+  | 'float16';
 
 /** Describes the type (without number of components) of a vertex format */
 export type VertexType = NormalizedDataType;
@@ -87,5 +86,4 @@ export type VertexFormat =
   | 'float32'
   | 'float32x2'
   | 'float32x3'
-  | 'float32x4'
-  ;
+  | 'float32x4';

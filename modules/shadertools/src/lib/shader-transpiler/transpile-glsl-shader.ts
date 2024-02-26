@@ -10,10 +10,7 @@
  * @note For texture sampling transpilation, apps need to use non-standard texture* calls in GLSL 3.00 source
  * RFC: https://github.com/visgl/luma.gl/blob/7.0-release/dev-docs/RFCs/v6.0/portable-glsl-300-rfc.md
  */
-export function transpileGLSLShader(
-  source: string,
-  stage: 'vertex' | 'fragment'
-): string {
+export function transpileGLSLShader(source: string, stage: 'vertex' | 'fragment'): string {
   const sourceGLSLVersion = Number(source.match(/^#version[ \t]+(\d+)/m)?.[1] || 100);
   if (sourceGLSLVersion !== 300) {
     // TODO - we splurge on a longer error message to help deck.gl custom layer developers

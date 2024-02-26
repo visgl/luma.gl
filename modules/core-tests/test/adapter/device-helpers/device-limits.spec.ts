@@ -82,7 +82,7 @@ export const WEBGL_LIMITS = {
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: true
 };
 
-test('WebGLDevice#limits (WebGPU style limits)', async (t) => {
+test('WebGLDevice#limits (WebGPU style limits)', async t => {
   for (const testDevice of await getTestDevices()) {
     for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
       const actual = testDevice.limits[limit];

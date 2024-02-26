@@ -63,7 +63,7 @@ const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = 
   }
 ];
 
-test('Geometry#constructor', (t) => {
+test('Geometry#constructor', t => {
   for (const testCase of TEST_CASES) {
     if (testCase.shouldThrow) {
       t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);

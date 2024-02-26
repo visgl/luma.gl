@@ -166,9 +166,9 @@ export class WEBGLBuffer extends Buffer {
  * static STORAGE = 0x0080;
  * static INDIRECT = 0x0100;
  * static QUERY_RESOLVE = 0x0200;
- * 
+ *
  * @returns WebGL buffer targe
- * 
+ *
  * Buffer bind points in WebGL2
  * gl.COPY_READ_BUFFER: Buffer for copying from one buffer object to another.
  * gl.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another.

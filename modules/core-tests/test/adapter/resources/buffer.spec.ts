@@ -21,7 +21,7 @@ test('Buffer#constructor/delete', t => {
   t.end();
 });
 
-test('Buffer#constructor offset and size', async (t) => {
+test('Buffer#constructor offset and size', async t => {
   const data = new Float32Array([1, 2, 3]);
 
   for (const device of getWebGLTestDevices()) {
@@ -108,7 +108,7 @@ test('Buffer#construction', t => {
   t.end();
 });
 
-test('Buffer#write', async (t) => {
+test('Buffer#write', async t => {
   const expectedData = new Float32Array([1, 2, 3]);
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
@@ -137,7 +137,7 @@ test('Buffer#write', async (t) => {
   t.end();
 });
 
-test('Buffer#readAsync', async (t) => {
+test('Buffer#readAsync', async t => {
   for (const device of getWebGLTestDevices()) {
     let data: TypedArray = new Float32Array([1, 2, 3]);
     let buffer = device.createBuffer({data});
@@ -150,7 +150,7 @@ test('Buffer#readAsync', async (t) => {
     receivedData = await buffer.readAsync(Float32Array.BYTES_PER_ELEMENT);
     f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([2, 3]);
-    t.deepEqual(f32Data, expectedData, 'Buffer.readAsync: with \'dstData\' parameter successful');
+    t.deepEqual(f32Data, expectedData, "Buffer.readAsync: with 'dstData' parameter successful");
 
     // receivedData = await buffer.readAsync({
     //   Float32Array.BYTES_PER_ELEMENT,
@@ -182,7 +182,7 @@ test('Buffer#readAsync', async (t) => {
   t.end();
 });
 
-test('Buffer#debugData', async (t) => {
+test('Buffer#debugData', async t => {
   for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 24});
     t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is not null before write');
@@ -201,4 +201,3 @@ test('Buffer#debugData', async (t) => {
 
   t.end();
 });
-

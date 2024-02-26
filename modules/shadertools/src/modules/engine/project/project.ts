@@ -35,7 +35,10 @@ const DEFAULT_MODULE_OPTIONS: Required<ProjectionUniforms> = {
   cameraPositionWorld: [0, 0, 0]
 };
 
-function getUniforms(opts: ProjectionProps = DEFAULT_MODULE_OPTIONS, prevUniforms: ProjectionUniforms = {}): ProjectionUniforms {
+function getUniforms(
+  opts: ProjectionProps = DEFAULT_MODULE_OPTIONS,
+  prevUniforms: ProjectionUniforms = {}
+): ProjectionUniforms {
   // const viewProjectionInverse = viewProjection.invert();
   // viewInverseMatrix: view.invert(),
   // viewProjectionInverseMatrix: viewProjectionInverse

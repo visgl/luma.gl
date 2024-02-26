@@ -48,8 +48,10 @@ const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
 
   // test lifecycle callback
   onTestStart: (testCase: TestRunnerTestCase) => console.log(`# ${testCase.name}`),
-  onTestPass: (testCase: TestRunnerTestCase, result?: unknown) => console.log(`ok ${testCase.name} passed`),
-  onTestFail: (testCase: TestRunnerTestCase, error?: unknown) => console.log(`not ok ${testCase.name} failed`),
+  onTestPass: (testCase: TestRunnerTestCase, result?: unknown) =>
+    console.log(`ok ${testCase.name} passed`),
+  onTestFail: (testCase: TestRunnerTestCase, error?: unknown) =>
+    console.log(`not ok ${testCase.name} failed`),
 
   // milliseconds to wait for each test case before aborting
   timeout: 2000,
@@ -99,9 +101,9 @@ export class TestRunner {
   }
 
   /**
-    * Returns a promise that resolves when all the test cases are done
-    */
-  run(options: object = {}): Promise<void>  {
+   * Returns a promise that resolves when all the test cases are done
+   */
+  run(options: object = {}): Promise<void> {
     this.testOptions = {...this.testOptions, ...options};
 
     return new Promise<void>((resolve, reject) => {
@@ -119,7 +121,7 @@ export class TestRunner {
       this.isRunning = true;
       this.isDiffing = false;
       this._currentTestCase = null;
-    }).catch (error => {
+    }).catch(error => {
       this._fail({error: error.message});
       // reject(error);
     });
@@ -178,7 +180,7 @@ export class TestRunner {
 
     let isDone = false;
     const testCaseAnimationProps: AnimationProps = {
-      ...animationProps, 
+      ...animationProps,
       ...this._testCaseData,
       // tick/time starts from 0 for each test case
       startTime: this._currentTestCaseStartTime,
@@ -255,7 +257,7 @@ export class TestRunner {
 
       // aligned with the behavior of AnimationLoop.onInitialized
       // onInitialized could return a plain object or a promise
-      Promise.resolve(testCase.onInitialize(initProps)).then((userData) => {
+      Promise.resolve(testCase.onInitialize(initProps)).then(userData => {
         this._testCaseData = userData || {};
       });
 

@@ -20,14 +20,14 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test('BufferTransform#constructor', async (t) => {
+test('BufferTransform#constructor', async t => {
   for (const device of getWebGLTestDevices()) {
     t.ok(createBufferTransform(device), 'WebGL succeeds');
   }
   t.end();
 });
 
-test('BufferTransform#run', async (t) => {
+test('BufferTransform#run', async t => {
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
   const DST_ARRAY = new Float32Array([0, 1, 4, 9, 16, 25]);
 
@@ -46,7 +46,12 @@ test('BufferTransform#run', async (t) => {
   t.end();
 });
 
-function createBufferTransform(device: Device, src?: Buffer, dst?: Buffer, vertexCount?: number): BufferTransform {
+function createBufferTransform(
+  device: Device,
+  src?: Buffer,
+  dst?: Buffer,
+  vertexCount?: number
+): BufferTransform {
   return new BufferTransform(device, {
     vs: VS,
     fs: FS,
@@ -55,6 +60,6 @@ function createBufferTransform(device: Device, src?: Buffer, dst?: Buffer, verte
     bufferLayout: [{name: 'src', format: 'float32'}],
     feedbackBuffers: dst ? {dst} : undefined,
     varyings: ['dst'],
-    topology: 'point-list',
+    topology: 'point-list'
   });
 }

@@ -93,7 +93,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     depthCompare: 'less',
     depthFormat: 'depth24plus',
     cullMode: 'back'
-  }
+  };
 
   const modelProps: ModelProps = {
     id,
@@ -109,10 +109,10 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     defines: {...parsedMaterial.defines, ...modelOptions.defines},
     parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
     uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
-  }
+  };
 
   const model = new Model(device, modelProps);
-  return new ModelNode({ managedResources, model});
+  return new ModelNode({managedResources, model});
 }
 
 function addVersionToShader(device: Device, source: string): string {

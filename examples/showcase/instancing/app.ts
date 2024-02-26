@@ -20,7 +20,7 @@ const random = makeRandomNumberGenerator();
 
 // WGSL
 
-// const VS_WGSL = /* WGSL */`\  
+// const VS_WGSL = /* WGSL */`\
 // void dirlight_setNormal(normal: vec3<f32>) {
 //   dirlight_vNormal = normalize(normal);
 // }
@@ -82,7 +82,7 @@ fn main(inputs: VertexInputs) -> FragmentInputs {
 }
 `;
 
-const FS_WGSL = /* WGSL */`\
+const FS_WGSL = /* WGSL */ `\
 
 struct DirlightUniforms {
   lightDirection: vec3<f32>,
@@ -345,7 +345,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.shaderInputs.setProps({picking: {highlightedObjectColor: null}});
       return;
     }
-    
+
     // use the center pixel location in device pixel range
     const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
@@ -373,8 +373,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     // console.log(color255);
 
-    let highlightedObjectColor = new Float32Array(color255).map((x) => x / 255);
-    const isHighlightActive =  highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
+    let highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
+    const isHighlightActive =
+      highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
     if (!isHighlightActive) {
       highlightedObjectColor = null;
     }

@@ -1,17 +1,16 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils'
+import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
 import {CanvasContext} from '@luma.gl/core';
 
-test('CanvasContext#defined', (t) => {
+test('CanvasContext#defined', t => {
   t.ok(CanvasContext, 'CanvasContext defined');
   // t.ok(new WEBGLCanvasContext()), 'Context creation ok');
   t.end();
 });
 
-
-test('CanvasContext#getDevicePixelRatio', (t) => {
+test('CanvasContext#getDevicePixelRatio', t => {
   const windowPixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const TEST_CASES = [
     {
@@ -47,7 +46,7 @@ test('CanvasContext#getDevicePixelRatio', (t) => {
   ];
 
   for (const device of getWebGLTestDevices()) {
-    TEST_CASES.forEach((tc) => {
+    TEST_CASES.forEach(tc => {
       const result = device.canvasContext?.getDevicePixelRatio(tc.useDevicePixels);
       t.equal(result, tc.expected, tc.name);
     });

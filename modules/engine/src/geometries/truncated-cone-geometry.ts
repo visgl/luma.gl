@@ -36,7 +36,8 @@ export class TruncatedConeGeometry extends Geometry {
         POSITION: {size: 3, value: attributes.POSITION},
         NORMAL: {size: 3, value: attributes.NORMAL},
         TEXCOORD_0: {size: 2, value: attributes.TEXCOORD_0},
-        ...props.attributes}
+        ...props.attributes
+      }
     });
   }
 }

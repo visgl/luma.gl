@@ -8,10 +8,9 @@ export type PhongLightingProps = {
   diffuse?: number;
   shininess?: number;
   specularColor?: [number, number, number];
-}
+};
 
 const INITIAL_MODULE_OPTIONS: {material?: PhongLightingProps} = {};
-
 
 function getMaterialUniforms(material: PhongLightingProps) {
   const {ambient = 0.35, diffuse = 0.6, shininess = 32, specularColor = [30, 30, 30]} = material;
@@ -20,11 +19,13 @@ function getMaterialUniforms(material: PhongLightingProps) {
     lighting_uAmbient: ambient,
     lighting_uDiffuse: diffuse,
     lighting_uShininess: shininess,
-    lighting_uSpecularColor: specularColor.map((x) => x / 255)
+    lighting_uSpecularColor: specularColor.map(x => x / 255)
   };
 }
 
-function getUniforms(opts: {material?: PhongLightingProps} = INITIAL_MODULE_OPTIONS): Record<string, any> {
+function getUniforms(
+  opts: {material?: PhongLightingProps} = INITIAL_MODULE_OPTIONS
+): Record<string, any> {
   if (!('material' in opts)) {
     return {};
   }

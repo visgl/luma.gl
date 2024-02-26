@@ -1,20 +1,26 @@
 // luma.gl, MIT license
 import {luma} from '@luma.gl/core';
-import {AnimationLoopTemplate} from './animation-loop-template'
-import {AnimationLoop, AnimationLoopProps} from './animation-loop'
+import {AnimationLoopTemplate} from './animation-loop-template';
+import {AnimationLoop, AnimationLoopProps} from './animation-loop';
 import type {AnimationProps} from './animation-props';
 
-export type MakeAnimationLoopProps = Omit<AnimationLoopProps, 'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'>;
+export type MakeAnimationLoopProps = Omit<
+  AnimationLoopProps,
+  'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
+>;
 
 /** Instantiates and runs the render loop */
-export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoopTemplate, props?: MakeAnimationLoopProps): AnimationLoop {
+export function makeAnimationLoop(
+  AnimationLoopTemplateCtor: typeof AnimationLoopTemplate,
+  props?: MakeAnimationLoopProps
+): AnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
   const device = props?.device || luma.createDevice();
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({
-    ... props,
+    ...props,
 
     device,
 
@@ -26,7 +32,7 @@ export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoo
     },
 
     onRender: (animationProps: AnimationProps) => renderLoop?.onRender(animationProps),
-    
+
     onFinalize: (animationProps: AnimationProps) => renderLoop?.onFinalize(animationProps)
   });
 
@@ -35,7 +41,7 @@ export function makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoo
     // @ts-ignore
     // eslint-disable-next-line no-invalid-this
     return this.AnimationLoopTemplateCtor.info;
-  }
+  };
 
   // Start the loop automatically
   // animationLoop.start();

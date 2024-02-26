@@ -142,7 +142,12 @@ export class WEBGLFramebuffer extends Framebuffer {
       return attachment;
     } else if (attachment instanceof WEBGLTextureView) {
       const textureView = attachment;
-      this._attachTexture(attachmentPoint, textureView.texture, textureView.props.baseMipLevel, textureView.props.baseArrayLayer);
+      this._attachTexture(
+        attachmentPoint,
+        textureView.texture,
+        textureView.props.baseMipLevel,
+        textureView.props.baseArrayLayer
+      );
       return attachment.texture;
     }
     throw new Error('attach');

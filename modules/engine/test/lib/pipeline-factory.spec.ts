@@ -4,7 +4,6 @@ import {webglDevice} from '@luma.gl/test-utils';
 import {glsl} from '@luma.gl/core';
 import {PipelineFactory} from '@luma.gl/engine';
 
-
 // TODO - this doesn't test that parameters etc are properly cached
 
 const vsSource = glsl`\
@@ -22,12 +21,12 @@ void main(void) {
 }
 `;
 
-test('PipelineFactory#import', (t) => {
+test('PipelineFactory#import', t => {
   t.ok(PipelineFactory !== undefined, 'PipelineFactory import successful');
   t.end();
 });
 
-test('PipelineFactory#getDefaultPipelineFactory', (t) => {
+test('PipelineFactory#getDefaultPipelineFactory', t => {
   const pm1 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const pm2 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
 
@@ -37,7 +36,7 @@ test('PipelineFactory#getDefaultPipelineFactory', (t) => {
   t.end();
 });
 
-test('PipelineFactory#release', (t) => {
+test('PipelineFactory#release', t => {
   const pipelineFactory = new PipelineFactory(webglDevice);
 
   const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});

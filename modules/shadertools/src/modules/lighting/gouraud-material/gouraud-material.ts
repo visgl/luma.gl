@@ -13,7 +13,7 @@ export type GouraudMaterialUniforms = {
   /** Specularity exponent */
   shininess?: number;
   specularColor?: [number, number, number];
-}
+};
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
 export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterialUniforms> = {
@@ -26,15 +26,15 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterial
   },
   dependencies: [lighting],
   uniformTypes: {
-    ambient: 'f32', 
-    diffuse: 'f32', 
-    shininess: 'f32', 
+    ambient: 'f32',
+    diffuse: 'f32',
+    shininess: 'f32',
     specularColor: 'vec3<f32>'
   },
   defaultUniforms: {
-    ambient: 0.35, 
-    diffuse: 0.6, 
-    shininess: 32, 
+    ambient: 0.35,
+    diffuse: 0.6,
+    shininess: 32,
     specularColor: [0.15, 0.15, 0.15]
   },
   getUniforms(props: GouraudMaterialProps): GouraudMaterialUniforms {

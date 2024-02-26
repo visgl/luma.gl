@@ -19,7 +19,7 @@ export type TextureViewProps = ResourceProps & {
   /** How many mipmap levels, starting with baseMipLevel, are accessible to the texture view. */
   mipLevelCount: number;
   /** The index of the first array layer accessible to the texture view. default 0 */
-  baseArrayLayer?: number; 
+  baseArrayLayer?: number;
   /** How many array layers, starting with baseArrayLayer, are accessible to the texture view. */
   arrayLayerCount: number;
 };

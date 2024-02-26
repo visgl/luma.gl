@@ -2,7 +2,7 @@ import {DataType, NormalizedDataType} from '../types/vertex-formats';
 
 export type DecodedVertexType = {
   /** WebGPU data type */
-  dataType: DataType,
+  dataType: DataType;
   /** Length in bytes of the data for one vertex */
   byteLength: number;
   /** Whether this is for integer or float vert */

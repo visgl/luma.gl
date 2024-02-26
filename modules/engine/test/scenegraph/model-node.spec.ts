@@ -18,7 +18,7 @@ out vec4 fragmentColor;
 void main() { fragmentColor = vec4(1.0); }
 `;
 
-test('ModelNode#constructor', (t) => {
+test('ModelNode#constructor', t => {
   for (const device of getWebGLTestDevices()) {
     const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
 

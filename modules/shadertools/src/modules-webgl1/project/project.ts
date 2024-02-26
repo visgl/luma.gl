@@ -3,10 +3,10 @@ import {glsl} from '../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../..';
 
 type ProjectionProps = {
-  modelMatrix?: readonly number[],
-  viewMatrix?: readonly number[],
-  projectionMatrix?: readonly number[],
-  cameraPositionWorld?: readonly number[]
+  modelMatrix?: readonly number[];
+  viewMatrix?: readonly number[];
+  projectionMatrix?: readonly number[];
+  cameraPositionWorld?: readonly number[];
 };
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

@@ -1,5 +1,5 @@
 // luma.gl, MIT license
-import { Device } from '../device';
+import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 
 // interface Queue {
@@ -17,8 +17,7 @@ import {Resource, ResourceProps} from './resource';
 //   // ): void;
 // }
 
-export type CommandBufferProps = ResourceProps & {
-};
+export type CommandBufferProps = ResourceProps & {};
 
 /**
  * Encodes commands to queue that can be executed later
@@ -27,7 +26,7 @@ export abstract class CommandBuffer extends Resource<CommandBufferProps> {
   static override defaultProps: Required<CommandBufferProps> = {
     ...Resource.defaultProps
   };
-  
+
   override get [Symbol.toStringTag](): string {
     return 'CommandBuffer';
   }

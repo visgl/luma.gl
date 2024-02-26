@@ -36,7 +36,7 @@ fn main(
 }
 `;
 
-const FS_WGSL = /* WGSL */`\
+const FS_WGSL = /* WGSL */ `\
 @fragment
 fn main(
   @location(0) fragUV: vec2<f32>,
@@ -100,7 +100,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformBuffer = device.createBuffer({
       id: 'uniforms',
       usage: Buffer.UNIFORM | Buffer.COPY_DST,
-      byteLength: UNIFORM_BUFFER_SIZE,
+      byteLength: UNIFORM_BUFFER_SIZE
     });
 
     this.cubeModel = new Model(device, {
@@ -111,13 +111,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       instanceCount: NUMBER_OF_INSTANCES,
       parameters: {
         depthWriteEnabled: true, // Fragment closest to the camera is rendered in front.
-        depthCompare: 'less', 
-        depthFormat: 'depth24plus',        
+        depthCompare: 'less',
+        depthFormat: 'depth24plus',
         cullMode: 'back' // Faces pointing away will be occluded by faces pointing toward the camera.
       },
       bindings: {
         app: this.uniformBuffer
-      },
+      }
     });
   }
 
@@ -148,7 +148,9 @@ const STEP = 4.0;
 
 for (let x = 0; x < X_COUNT; x++) {
   for (let y = 0; y < Y_COUNT; y++) {
-    modelMatrices.push(new Matrix4().translate([STEP * (x - X_COUNT / 2 + 0.5), STEP * (y - Y_COUNT / 2 + 0.5), 0]));
+    modelMatrices.push(
+      new Matrix4().translate([STEP * (x - X_COUNT / 2 + 0.5), STEP * (y - Y_COUNT / 2 + 0.5), 0])
+    );
   }
 }
 
@@ -164,8 +166,11 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
   let offset = 0;
   for (let x = 0; x < X_COUNT; x++) {
     for (let y = 0; y < Y_COUNT; y++) {
-      tmpMat4.copy(modelMatrices[i]).rotateAxis(1, [Math.sin((x + 0.5) * now), Math.cos((y + 0.5) * now), 0])
-        .multiplyLeft(viewMatrix).multiplyLeft(projectionMatrix);
+      tmpMat4
+        .copy(modelMatrices[i])
+        .rotateAxis(1, [Math.sin((x + 0.5) * now), Math.cos((y + 0.5) * now), 0])
+        .multiplyLeft(viewMatrix)
+        .multiplyLeft(projectionMatrix);
 
       mvpMatricesData.set(tmpMat4, offset);
 
@@ -175,4 +180,3 @@ function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array
   }
   return mvpMatricesData;
 }
-

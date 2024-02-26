@@ -2,9 +2,4 @@
 workers/
 *.min.js
 wip/
-encoding.js
-encoding-indexes.js
-examples
-modules
-test
-.ocularrc.js
+libs/

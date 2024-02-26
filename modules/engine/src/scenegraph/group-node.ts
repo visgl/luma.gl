@@ -4,7 +4,7 @@ import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 
 export type GroupNodeProps = ScenegraphNodeProps & {
   children?: ScenegraphNode[];
-}
+};
 
 export class GroupNode extends ScenegraphNode {
   children: ScenegraphNode[];
@@ -16,7 +16,7 @@ export class GroupNode extends ScenegraphNode {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
     log.assert(
-      children.every((child) => child instanceof ScenegraphNode),
+      children.every(child => child instanceof ScenegraphNode),
       'every child must an instance of ScenegraphNode'
     );
     super(props);
@@ -24,7 +24,10 @@ export class GroupNode extends ScenegraphNode {
   }
 
   override getBounds(): [number[], number[]] | null {
-    const result: [number[], number[]] = [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]];
+    const result: [number[], number[]] = [
+      [Infinity, Infinity, Infinity],
+      [-Infinity, -Infinity, -Infinity]
+    ];
 
     this.traverse((node, {worldMatrix}) => {
       const bounds = node.getBounds();
@@ -39,11 +42,9 @@ export class GroupNode extends ScenegraphNode {
 
       for (let v = 0; v < 8; v++) {
         // Test all 8 corners of the box
-        const position = new Vector3(
-          v & 0b001 ? -1 : 1,
-          v & 0b010 ? -1 : 1,
-          v & 0b100 ? -1 : 1
-        ).multiply(halfSize).add(center);
+        const position = new Vector3(v & 0b001 ? -1 : 1, v & 0b010 ? -1 : 1, v & 0b100 ? -1 : 1)
+          .multiply(halfSize)
+          .add(center);
 
         for (let i = 0; i < 3; i++) {
           result[0][i] = Math.min(result[0][i], position[i]);
@@ -58,7 +59,7 @@ export class GroupNode extends ScenegraphNode {
   }
 
   override destroy(): void {
-    this.children.forEach((child) => child.destroy());
+    this.children.forEach(child => child.destroy());
     this.removeAll();
     super.destroy();
   }
@@ -89,7 +90,10 @@ export class GroupNode extends ScenegraphNode {
     return this;
   }
 
-  traverse(visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void, {worldMatrix = new Matrix4()} = {}) {
+  traverse(
+    visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void,
+    {worldMatrix = new Matrix4()} = {}
+  ) {
     const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
 
     for (const child of this.children) {

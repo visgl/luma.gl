@@ -14,9 +14,9 @@ import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/
 const getGLParameter = (parameter: keyof GLParameters): any => {
   const parameters = getGLParameters(webglDevice, [parameter]);
   return parameters[parameter];
-}
+};
 
-test('setDeviceParameters#cullMode', (t) => {
+test('setDeviceParameters#cullMode', t => {
   resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
@@ -35,7 +35,7 @@ test('setDeviceParameters#cullMode', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#frontFace', (t) => {
+test('setDeviceParameters#frontFace', t => {
   resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
@@ -49,7 +49,7 @@ test('setDeviceParameters#frontFace', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#depthWriteEnabled', (t) => {
+test('setDeviceParameters#depthWriteEnabled', t => {
   resetGLParameters(webglDevice);
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
@@ -63,7 +63,7 @@ test('setDeviceParameters#depthWriteEnabled', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#blending', (t) => {
+test('setDeviceParameters#blending', t => {
   resetGLParameters(webglDevice);
 
   t.equal(getGLParameter(GL.BLEND), false, 'blending disabled');
@@ -71,8 +71,16 @@ test('setDeviceParameters#blending', (t) => {
   setDeviceParameters(webglDevice, {blendColorOperation: 'add', blendAlphaOperation: 'subtract'});
 
   t.equal(getGLParameter(GL.BLEND), true, 'GL.BLEND = true');
-  t.equal(getGLParameter(GL.BLEND_EQUATION_RGB), GL.FUNC_ADD, 'GL.BLEND_EQUATION_RGB = GL.FUNC_ADD');
-  t.equal(getGLParameter(GL.BLEND_EQUATION_ALPHA), GL.FUNC_SUBTRACT, 'GL.BLEND_EQUATION_ALPHA = GL.FUNC_SUBTRACT');
+  t.equal(
+    getGLParameter(GL.BLEND_EQUATION_RGB),
+    GL.FUNC_ADD,
+    'GL.BLEND_EQUATION_RGB = GL.FUNC_ADD'
+  );
+  t.equal(
+    getGLParameter(GL.BLEND_EQUATION_ALPHA),
+    GL.FUNC_SUBTRACT,
+    'GL.BLEND_EQUATION_ALPHA = GL.FUNC_SUBTRACT'
+  );
   t.equal(getGLParameter(GL.BLEND_SRC_RGB), GL.ONE, 'GL.BLEND_SRC_RGB = GL.ONE');
   t.equal(getGLParameter(GL.BLEND_DST_RGB), GL.ZERO, 'GL.BLEND_DST_RGB = GL.ZERO');
   t.equal(getGLParameter(GL.BLEND_SRC_ALPHA), GL.ONE, 'GL.BLEND_SRC_ALPHA = GL.ONE');
@@ -84,7 +92,7 @@ test('setDeviceParameters#blending', (t) => {
     blendColorSrcFactor: 'src-alpha',
     blendColorDstFactor: 'dst-alpha',
     blendAlphaSrcFactor: 'zero',
-    blendAlphaDstFactor: 'one',
+    blendAlphaDstFactor: 'one'
   });
 
   t.equal(getGLParameter(GL.BLEND), true, 'GL.BLEND = true');
@@ -98,7 +106,7 @@ test('setDeviceParameters#blending', (t) => {
   t.end();
 });
 
-test('setDeviceParameters#depthCompare', (t) => {
+test('setDeviceParameters#depthCompare', t => {
   resetGLParameters(webglDevice);
 
   t.equal(getGLParameter(GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
@@ -114,7 +122,7 @@ test('setDeviceParameters#depthCompare', (t) => {
   t.end();
 });
 
-test.skip('setDeviceParameters#depthClearValue', (t) => {
+test.skip('setDeviceParameters#depthClearValue', t => {
   // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
   // t.is(value, 1, `got expected value ${stringify(value)}`);
 

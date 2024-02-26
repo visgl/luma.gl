@@ -12,7 +12,7 @@ import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 
 export const name = 'Compute Boids';
 export const description =
-      'A GPU compute particle simulation that mimics \
+  'A GPU compute particle simulation that mimics \
 the flocking behavior of birds. A compute shader updates \
 two ping-pong buffers which store particle data. The data \
 is used to draw instanced particles.';
@@ -47,10 +47,7 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
       bindings: []
     },
     bufferLayout: [
-      {name: 'particles', attributes: [
-        {name: 'instancePositions'},
-        {name: 'instanceVelocities'}
-      ]}
+      {name: 'particles', attributes: [{name: 'instancePositions'}, {name: 'instanceVelocities'}]}
     ],
     // targets: [
     //   {
@@ -67,15 +64,23 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
       // Backface culling since the cube is solid piece of geometry.
       // Faces pointing away from the camera will be occluded by faces
       // pointing toward the camera.
-      cullMode: 'back',
+      cullMode: 'back'
     },
     topology: 'triangle-list',
     vertexCount: 6,
     instanceCount: NUM_PARTICLES
   });
 
-  const cs = device.createShader({id: 'sprites', stage: 'compute', source: SHADERS.wgsl.updateSprites});
-  const computePipeline = device.createComputePipeline({id: 'updateSprites', cs, csEntryPoint: 'main'});
+  const cs = device.createShader({
+    id: 'sprites',
+    stage: 'compute',
+    source: SHADERS.wgsl.updateSprites
+  });
+  const computePipeline = device.createComputePipeline({
+    id: 'updateSprites',
+    cs,
+    csEntryPoint: 'main'
+  });
 
   const vertexBufferData = new Float32Array([-0.01, -0.02, 0.01, -0.02, 0.0, 0.02]);
   const spriteVertexBuffer = device.createBuffer({id: 'boid-geometry', data: vertexBufferData});
@@ -87,26 +92,28 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
     rule3Distance: 0.025,
     rule1Scale: 0.02,
     rule2Scale: 0.05,
-    rule3Scale: 0.005,
+    rule3Scale: 0.005
   };
 
   const simParamBufferSize = 7 * Float32Array.BYTES_PER_ELEMENT;
   const simParamBuffer = device.createBuffer({
     id: 'simParams',
     byteLength: simParamBufferSize,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
   });
 
   function updateSimParams() {
-    simParamBuffer.write(new Float32Array([
-      simParams.deltaT,
-      simParams.rule1Distance,
-      simParams.rule2Distance,
-      simParams.rule3Distance,
-      simParams.rule1Scale,
-      simParams.rule2Scale,
-      simParams.rule3Scale,
-    ]));
+    simParamBuffer.write(
+      new Float32Array([
+        simParams.deltaT,
+        simParams.rule1Distance,
+        simParams.rule2Distance,
+        simParams.rule3Distance,
+        simParams.rule1Scale,
+        simParams.rule2Scale,
+        simParams.rule3Scale
+      ])
+    );
   }
 
   updateSimParams();
@@ -124,8 +131,16 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   }
 
   const particleBuffers = [
-    device.createBuffer({id: 'particles1', data: initialParticleData, usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_SRC}),
-    device.createBuffer({id: 'particles2', data: initialParticleData, usage: Buffer.VERTEX | Buffer.STORAGE})
+    device.createBuffer({
+      id: 'particles1',
+      data: initialParticleData,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_SRC
+    }),
+    device.createBuffer({
+      id: 'particles2',
+      data: initialParticleData,
+      usage: Buffer.VERTEX | Buffer.STORAGE
+    })
   ];
 
   const particleBindings = [
@@ -148,7 +163,6 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
 
     const arrayBuffer = await particleBuffers[0].readAsync();
     console.log(new Float32Array(arrayBuffer));
-
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     model.setAttributes({

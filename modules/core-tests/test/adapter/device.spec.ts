@@ -4,7 +4,7 @@ import {getWebGLTestDevices, getTestDevices} from '@luma.gl/test-utils';
 
 // import {luma} from '@luma.gl/core';
 
-test('WebGLDevice#info', (t) => {
+test('WebGLDevice#info', t => {
   for (const device of getWebGLTestDevices()) {
     // TODO
     t.ok(typeof device.info.vendor === 'string', 'info.vendor ok');
@@ -14,16 +14,16 @@ test('WebGLDevice#info', (t) => {
 });
 
 // Minimal test, extensive test in texture-formats.spec
-test('WebGLDevice#isTextureFormatCompressed', async (t) => {
+test('WebGLDevice#isTextureFormatCompressed', async t => {
   for (const device of await getTestDevices()) {
     // Just sanity check two types
     t.equal(device.isTextureFormatCompressed('rgba8unorm'), false);
-    t.equal(device.isTextureFormatCompressed('bc3-rgba-unorm'), true)
+    t.equal(device.isTextureFormatCompressed('bc3-rgba-unorm'), true);
   }
   t.end();
 });
 
-test('WebGLDevice#lost (Promise)', async (t) => {
+test('WebGLDevice#lost (Promise)', async t => {
   // const device = await luma.createDevice({webgl2: false});
 
   // // Wrap in a promise to make sure tape waits for us
@@ -41,7 +41,7 @@ test('WebGLDevice#lost (Promise)', async (t) => {
   t.end();
 });
 
-test.skip('WebGLDevice#resize', (t) => {
+test.skip('WebGLDevice#resize', t => {
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate webglDevice context
   // webglDevice.canvasContext.resize({width: 10, height: 20, useDevicePixels: 1});

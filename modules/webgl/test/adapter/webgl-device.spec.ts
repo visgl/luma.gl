@@ -5,11 +5,11 @@ import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-test('WebGLDevice#lost (Promise)', async (t) => {
+test('WebGLDevice#lost (Promise)', async t => {
   const device = await WebGLDevice.create();
 
   // Wrap in a promise to make sure tape waits for us
-  await new Promise<void>(async (resolve) => {
+  await new Promise<void>(async resolve => {
     setTimeout(async () => {
       const cause = await device.lost;
       t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
@@ -22,7 +22,7 @@ test('WebGLDevice#lost (Promise)', async (t) => {
   device.destroy();
 });
 
-test.skip('WebGLDevice#resize', (t) => {
+test.skip('WebGLDevice#resize', t => {
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate webglDevice context
   webglDevice.canvasContext.resize({width: 10, height: 20, useDevicePixels: 1});

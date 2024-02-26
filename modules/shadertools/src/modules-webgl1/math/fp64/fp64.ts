@@ -26,8 +26,8 @@ export const fp64arithmetic = {
 };
 
 /**
-* Full 64 bit math library
-*/
+ * Full 64 bit math library
+ */
 export const fp64 = {
   name: 'fp64',
   vs: fp64functionShader,

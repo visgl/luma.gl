@@ -4,7 +4,7 @@ import test from 'tape-promise/tape';
 import {normalizeShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
 // import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
 
-test('ShaderModuleInstance', (t) => {
+test('ShaderModuleInstance', t => {
   let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module', uniformTypes: {}});
 
   t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
@@ -31,7 +31,7 @@ varying float vClipped;
   t.end();
 });
 
-test('ShaderModuleInstance#checkDeprecations', (t) => {
+test('ShaderModuleInstance#checkDeprecations', t => {
   const shaderModule = new ShaderModuleInstance({
     name: 'test-shader-module',
     uniformTypes: {},
@@ -75,7 +75,7 @@ void main() {
   t.end();
 });
 
-test('normalizeShaderModule', (t) => {
+test('normalizeShaderModule', t => {
   const moduleDef = {
     name: 'test-shader-module',
     uniformPropTypes: {
@@ -86,7 +86,7 @@ test('normalizeShaderModule', (t) => {
       range: {value: new Float32Array([0, 1]), private: true}
     }
   };
-  
+
   // @ts-expect-error
   const module = normalizeShaderModule(moduleDef);
 

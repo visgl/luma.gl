@@ -87,7 +87,7 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
-  onError: (error) => console.error(error), // eslint-disable-line no-console
+  onError: error => console.error(error), // eslint-disable-line no-console
 
   device: null,
   // debug: true,
@@ -313,7 +313,7 @@ export class ClassicAnimationLoop {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
-      this._nextFramePromise = new Promise((resolve) => {
+      this._nextFramePromise = new Promise(resolve => {
         this._resolveNextFrame = resolve;
       });
     }
@@ -388,14 +388,14 @@ export class ClassicAnimationLoop {
     if (!this._pageLoadPromise) {
       this._pageLoadPromise = isPage
         ? new Promise((resolve, reject) => {
-          if (isPage && document.readyState === 'complete') {
-            resolve(document);
-            return;
-          }
-          window.addEventListener('load', () => {
-            resolve(document);
-          });
-        })
+            if (isPage && document.readyState === 'complete') {
+              resolve(document);
+              return;
+            }
+            window.addEventListener('load', () => {
+              resolve(document);
+            });
+          })
         : Promise.resolve({});
     }
     return this._pageLoadPromise;
@@ -582,7 +582,7 @@ export class ClassicAnimationLoop {
   }
 
   _createInfoDiv() {
-    const canvas = getHTMLCanvasElement(this.gl.canvas)
+    const canvas = getHTMLCanvasElement(this.gl.canvas);
     if (canvas && this.props.onAddHTML) {
       const wrapperDiv = document.createElement('div');
       document.body.appendChild(wrapperDiv);

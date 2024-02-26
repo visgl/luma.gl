@@ -21,13 +21,15 @@ export class WebGPUBuffer extends Buffer {
     // WebGPU buffers must be aligned to 4 bytes
     const size = Math.ceil(this.byteLength / 4) * 4;
 
-    this.handle = this.props.handle || this.device.handle.createBuffer({
-      size,
-      // usage defaults to vertex
-      usage: this.props.usage || (GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST),
-      mappedAtCreation: this.props.mappedAtCreation || mapBuffer,
-      label: this.props.id
-    });
+    this.handle =
+      this.props.handle ||
+      this.device.handle.createBuffer({
+        size,
+        // usage defaults to vertex
+        usage: this.props.usage || GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: this.props.mappedAtCreation || mapBuffer,
+        label: this.props.id
+      });
 
     if (props.data) {
       this._writeMapped(props.data);
@@ -54,9 +56,15 @@ export class WebGPUBuffer extends Buffer {
     );
   }
 
-  override async readAsync(byteOffset: number = 0, byteLength: number = this.byteLength): Promise<Uint8Array> {
+  override async readAsync(
+    byteOffset: number = 0,
+    byteLength: number = this.byteLength
+  ): Promise<Uint8Array> {
     // We need MAP_READ flag, but only COPY_DST buffers can have MAP_READ flag, so we need to create a temp buffer
-    const tempBuffer = new WebGPUBuffer(this.device, {usage: Buffer.MAP_READ | Buffer.COPY_DST, byteLength});
+    const tempBuffer = new WebGPUBuffer(this.device, {
+      usage: Buffer.MAP_READ | Buffer.COPY_DST,
+      byteLength
+    });
 
     // Now do a GPU-side copy into the temp buffer we can actually read.
     // TODO - we are spinning up an independent command queue here, what does this mean

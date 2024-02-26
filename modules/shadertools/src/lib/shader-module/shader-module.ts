@@ -8,16 +8,18 @@ import {PropType} from '../filters/prop-types';
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 export type UniformInfo = {
-  format?: UniformFormat; 
+  format?: UniformFormat;
 } & PropType;
 
-
-
-/** 
+/**
  * A shader module definition object
  * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
  */
-export type ShaderModule<PropsT extends Record<string, unknown> = Record<string, unknown>, UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>, BindingsT extends Record<string, unknown> = {}> = {
+export type ShaderModule<
+  PropsT extends Record<string, unknown> = Record<string, unknown>,
+  UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
+  BindingsT extends Record<string, unknown> = {}
+> = {
   /** Used for type inference not for values */
   props?: Required<PropsT>;
   /** Used for type inference, not currently used for values */
@@ -43,7 +45,7 @@ export type ShaderModule<PropsT extends Record<string, unknown> = Record<string,
 
   defines?: Record<string, string | number>;
   /** Injections */
-  inject?: Record<string, string | {injection: string; order: number;}>;
+  inject?: Record<string, string | {injection: string; order: number}>;
   dependencies?: ShaderModule<any, any>[];
   /** Information on deprecated properties */
   deprecations?: ShaderModuleDeprecation[];

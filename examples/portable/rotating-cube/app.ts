@@ -5,7 +5,7 @@ import {Matrix4} from '@math.gl/core';
 export const title = 'Rotating Cube';
 export const description = 'Shows rendering a basic triangle.';
 
-const VS_WGSL = /* WGSL */`\
+const VS_WGSL = /* WGSL */ `\
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
@@ -31,7 +31,7 @@ fn main(
 }
 `;
 
-const FS_WGSL = /* WGSL */`\
+const FS_WGSL = /* WGSL */ `\
 @fragment
 fn main(
   @location(0) fragUV: vec2<f32>,
@@ -95,7 +95,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformBuffer = device.createBuffer({
       id: 'uniforms',
       byteLength: UNIFORM_BUFFER_SIZE,
-      usage: Buffer.UNIFORM | Buffer.COPY_DST,
+      usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
 
     this.model = new Model(device, {
@@ -105,13 +105,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       geometry: new CubeGeometry({indices: false}),
       parameters: {
         depthWriteEnabled: true, // Fragment closest to the camera is rendered in front.
-        depthCompare: 'less', 
-        depthFormat: 'depth24plus',        
+        depthCompare: 'less',
+        depthFormat: 'depth24plus',
         cullMode: 'back' // Faces pointing away will be occluded by faces pointing toward the camera.
       },
       bindings: {
         app: this.uniformBuffer
-      },
+      }
     });
   }
 
@@ -128,11 +128,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const aspect = device.canvasContext?.getAspect();
     const now = Date.now() / 1000;
 
-    viewMatrix.identity().translate([0, 0, -4]).rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
+    viewMatrix
+      .identity()
+      .translate([0, 0, -4])
+      .rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
     projectionMatrix.perspective({fovy: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
     modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
     this.uniformBuffer.write(new Float32Array(modelViewProjectionMatrix));
-  
+
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.setBindings({app: this.uniformBuffer});
     this.model.draw(renderPass);

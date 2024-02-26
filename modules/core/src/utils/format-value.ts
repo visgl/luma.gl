@@ -2,7 +2,7 @@
 import type {NumberArray} from '../types';
 
 /** TODO @deprecated - delete when confident that probe.gl logging implements all opts */
-function formatArrayValue(v: NumberArray, opts: {maxElts?: number, size?: number} = {}): string {
+function formatArrayValue(v: NumberArray, opts: {maxElts?: number; size?: number} = {}): string {
   const {maxElts = 16, size = 1} = opts;
   let string = '[';
   for (let i = 0; i < v.length && i < maxElts; ++i) {
@@ -16,7 +16,10 @@ function formatArrayValue(v: NumberArray, opts: {maxElts?: number, size?: number
 }
 
 /** TODO @deprecated - delete when confident that probe.gl logging implements all opts */
-export function formatValue(v: number | NumberArray | unknown, opts: {isInteger?: boolean, size?: number} = {}): string {
+export function formatValue(
+  v: number | NumberArray | unknown,
+  opts: {isInteger?: boolean; size?: number} = {}
+): string {
   const EPSILON = 1e-16;
   const {isInteger = false} = opts;
   if (Array.isArray(v) || ArrayBuffer.isView(v)) {

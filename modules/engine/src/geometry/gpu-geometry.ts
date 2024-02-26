@@ -101,7 +101,7 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
 export function getAttributeBuffersFromGeometry(
   device: Device,
   geometry: Geometry
-): {attributes: Record<string, Buffer>, bufferLayout: BufferLayout[], vertexCount: number} {
+): {attributes: Record<string, Buffer>; bufferLayout: BufferLayout[]; vertexCount: number} {
   const bufferLayout: BufferLayout[] = [];
 
   const attributes: Record<string, Buffer> = {};
@@ -109,17 +109,25 @@ export function getAttributeBuffersFromGeometry(
     let name: string = attributeName;
     // TODO Map some GLTF attribute names (is this still needed?)
     switch (attributeName) {
-      case 'POSITION': name = 'positions'; break;
-      case 'NORMAL': name = 'normals'; break;
-      case 'TEXCOORD_0': name = 'texCoords'; break;
-      case 'COLOR_0': name = 'colors'; break;
+      case 'POSITION':
+        name = 'positions';
+        break;
+      case 'NORMAL':
+        name = 'normals';
+        break;
+      case 'TEXCOORD_0':
+        name = 'texCoords';
+        break;
+      case 'COLOR_0':
+        name = 'colors';
+        break;
     }
     attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
     const {value, size, normalized} = attribute;
     bufferLayout.push({name, format: getVertexFormatFromAttribute(value, size, normalized)});
   }
 
-  const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices)
+  const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices);
 
   return {attributes, bufferLayout, vertexCount};
 }

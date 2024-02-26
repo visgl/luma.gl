@@ -32,7 +32,7 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
 }
 
 /** A WebGL 2 Device intended for testing */
-export const webglDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device'}) ;
+export const webglDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device'});
 
 /** Only available after getTestDevices() has completed */
 export let webgpuDevice: WebGPUDevice;
@@ -47,11 +47,14 @@ export function getWebGLTestDevices(): WebGLDevice[] {
 }
 
 /** Includes WebGPU device if available */
-export async function getTestDevices() : Promise<Device[]> {
+export async function getTestDevices(): Promise<Device[]> {
   if (!webgpuCreated) {
     webgpuCreated = true;
     try {
-      webgpuDevice = await luma.createDevice({id: 'webgpu-test-device', type: 'webgpu'}) as WebGPUDevice;
+      webgpuDevice = (await luma.createDevice({
+        id: 'webgpu-test-device',
+        type: 'webgpu'
+      })) as WebGPUDevice;
     } catch {
       // ignore (assume WebGPU was not available)
     }

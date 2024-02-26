@@ -10,7 +10,6 @@ import {lighting} from '../lights/lighting-uniforms';
 import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
 
-
 export type PBRMaterialProps = PBRMaterialBindings & {
   unlit: boolean;
 
@@ -18,7 +17,7 @@ export type PBRMaterialProps = PBRMaterialBindings & {
   baseColorMapEnabled: boolean;
   baseColorFactor: Readonly<Vector4 | NumberArray>;
 
-  normalMapEnabled: boolean;  
+  normalMapEnabled: boolean;
   normalScale: number; // #ifdef HAS_NORMALMAP
 
   emissiveMapEnabled: boolean;
@@ -56,7 +55,7 @@ type PBRMaterialBindings = {
   diffuseEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
   specularEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
   brdfLUT?: Texture | null; // #ifdef USE_IBL
-}
+};
 
 export type PBRMaterialUniforms = {
   unlit: boolean;
@@ -65,7 +64,7 @@ export type PBRMaterialUniforms = {
   baseColorMapEnabled: boolean;
   baseColorFactor: Readonly<Vector4 | NumberArray>;
 
-  normalMapEnabled: boolean;  
+  normalMapEnabled: boolean;
   normalScale: number; // #ifdef HAS_NORMALMAP
 
   emissiveMapEnabled: boolean;
@@ -88,7 +87,7 @@ export type PBRMaterialUniforms = {
   // #ifdef PBR_DEBUG
   scaleDiffBaseMR: Readonly<Vector4 | NumberArray>;
   scaleFGDSpec: Readonly<Vector4 | NumberArray>;
-}
+};
 
 /**
  * An implementation of PBR (Physically-Based Rendering).
@@ -117,7 +116,7 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     baseColorMapEnabled: 'i32',
     baseColorFactor: 'vec4<f32>',
 
-    normalMapEnabled: 'i32',  
+    normalMapEnabled: 'i32',
     normalScale: 'f32', // #ifdef HAS_NORMALMAP
 
     emissiveMapEnabled: 'i32',
@@ -128,29 +127,29 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
 
     occlusionMapEnabled: 'i32',
     occlusionStrength: 'f32', // #ifdef HAS_OCCLUSIONMAP
-    
+
     alphaCutoffEnabled: 'i32',
     alphaCutoff: 'f32', // #ifdef ALPHA_CUTOFF
-    
+
     // IBL
     IBLenabled: 'i32',
     scaleIBLAmbient: 'vec2<f32>', // #ifdef USE_IBL
-    
+
     // debugging flags used for shader output of intermediate PBR variables
     // #ifdef PBR_DEBUG
     scaleDiffBaseMR: 'vec4<f32>',
-    scaleFGDSpec: 'vec4<f32>',
+    scaleFGDSpec: 'vec4<f32>'
   },
   bindings: {
     baseColorSampler: {type: 'texture', location: 8}, // #ifdef HAS_BASECOLORMAP
     normalSampler: {type: 'texture', location: 9}, // #ifdef HAS_NORMALMAP
     emissiveSampler: {type: 'texture', location: 10}, // #ifdef HAS_EMISSIVEMAP
     metallicRoughnessSampler: {type: 'texture', location: 11}, // #ifdef HAS_METALROUGHNESSMAP
-    occlusionSampler: {type: 'texture', location: 12}, // #ifdef HAS_OCCLUSIONMAP  
+    occlusionSampler: {type: 'texture', location: 12}, // #ifdef HAS_OCCLUSIONMAP
     // IBL Samplers
     diffuseEnvSampler: {type: 'texture', location: 13}, // #ifdef USE_IBL (samplerCube)
-    specularEnvSampler: {type: 'texture', location: 14 }, // #ifdef USE_IBL (samplerCube)
-    brdfLUT: {type: 'texture', location: 15}, // #ifdef USE_IBL
+    specularEnvSampler: {type: 'texture', location: 14}, // #ifdef USE_IBL (samplerCube)
+    brdfLUT: {type: 'texture', location: 15} // #ifdef USE_IBL
   },
   dependencies: [lighting]
 };

@@ -53,8 +53,8 @@ type BufferAttributeInfo = {
   byteStride: number;
 };
 
-/** 
- * Map from "attribute names" to "resolved attribute infos" 
+/**
+ * Map from "attribute names" to "resolved attribute infos"
  * containing information about both buffer layouts and shader attribute declarations
  */
 export function getAttributeInfosFromLayouts(
@@ -72,8 +72,8 @@ export function getAttributeInfosFromLayouts(
   return attributeInfos;
 }
 
-/** 
- * Array indexed by "location" holding "resolved attribute infos" 
+/**
+ * Array indexed by "location" holding "resolved attribute infos"
  */
 export function getAttributeInfosByLocation(
   shaderLayout: ShaderLayout,

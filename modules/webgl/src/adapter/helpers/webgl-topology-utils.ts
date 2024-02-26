@@ -27,7 +27,10 @@ export function getPrimitiveDrawMode(drawMode: GLPrimitiveTopology): GLPrimitive
 }
 
 // Counts the number of complete "primitives" given a number of vertices and a drawMode
-export function getPrimitiveCount(options: {drawMode: GLPrimitiveTopology, vertexCount: number}): number {
+export function getPrimitiveCount(options: {
+  drawMode: GLPrimitiveTopology;
+  vertexCount: number;
+}): number {
   const {drawMode, vertexCount} = options;
   switch (drawMode) {
     case GL.POINTS:
@@ -48,7 +51,10 @@ export function getPrimitiveCount(options: {drawMode: GLPrimitiveTopology, verte
 }
 
 // Counts the number of vertices after splitting the vertex stream into separate "primitives"
-export function getVertexCount(options: {drawMode: GLPrimitiveTopology, vertexCount: number}): number {
+export function getVertexCount(options: {
+  drawMode: GLPrimitiveTopology;
+  vertexCount: number;
+}): number {
   const {drawMode, vertexCount} = options;
   const primitiveCount = getPrimitiveCount({drawMode, vertexCount});
   switch (getPrimitiveDrawMode(drawMode)) {

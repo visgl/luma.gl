@@ -8,10 +8,10 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 // cyan color
 const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
 
-/** 
+/**
  * Props for the picking module, which depending on mode renders picking colors or highlighted item.
- * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
- * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
+ * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer.
+ * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight
  */
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
@@ -26,15 +26,15 @@ export type PickingProps = {
   useFloatColors?: boolean;
 };
 
-/** 
- * Uniforms for the picking module, which renders picking colors and highlighted item. 
- * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
- * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
+/**
+ * Uniforms for the picking module, which renders picking colors and highlighted item.
+ * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer.
+ * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight
  */
 export type PickingUniforms = {
-  /** 
-   * When true, renders picking colors. Set when rendering to off-screen "picking" buffer. 
-   * When false, renders normal colors, with the exception of selected object which is rendered with highlight 
+  /**
+   * When true, renders picking colors. Set when rendering to off-screen "picking" buffer.
+   * When false, renders normal colors, with the exception of selected object which is rendered with highlight
    */
   isActive?: boolean;
   /** Set to true when picking an attribute value instead of object index */
@@ -226,7 +226,7 @@ function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): P
   }
 
   if (opts.highlightColor) {
-    const color = Array.from(opts.highlightColor, (x) => x / 255);
+    const color = Array.from(opts.highlightColor, x => x / 255);
     if (!Number.isFinite(color[3])) {
       color[3] = 1;
     }

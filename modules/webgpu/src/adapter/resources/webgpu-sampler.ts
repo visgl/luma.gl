@@ -3,7 +3,7 @@ import type {WebGPUDevice} from '../webgpu-device';
 
 export type WebGPUSamplerProps = SamplerProps & {
   handle?: GPUSampler;
-}
+};
 
 /**
  *

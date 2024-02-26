@@ -4,7 +4,11 @@
 // Support for listening to context state changes and intercepting state queries
 // NOTE: this system does not handle buffer bindings
 import {assert} from '@luma.gl/core';
-import {GL_PARAMETER_DEFAULTS, GL_HOOKED_SETTERS, NON_CACHE_PARAMETERS} from '../parameters/webgl-parameter-tables';
+import {
+  GL_PARAMETER_DEFAULTS,
+  GL_HOOKED_SETTERS,
+  NON_CACHE_PARAMETERS
+} from '../parameters/webgl-parameter-tables';
 import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
 
@@ -57,7 +61,8 @@ class GLState {
     let valueChanged = false;
     let oldValue; // = undefined
 
-    const oldValues: {[key: number | string]: any} | null = this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1] : null;
+    const oldValues: {[key: number | string]: any} | null =
+      this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1] : null;
 
     for (const key in values) {
       assert(key !== undefined);
@@ -152,7 +157,6 @@ export function pushContextState(gl: WebGL2RenderingContext): void {
   glState.push();
 }
 
-
 /**
  * Restores previously saved WebGL context state
  */
@@ -190,9 +194,9 @@ function installGetterOverride(gl: WebGL2RenderingContext, functionName: string)
     // Optionally call the original function to do a "hard" query from the WebGL2RenderingContext
     return glState.enable
       ? // Call the getter the params so that it can e.g. serve from a cache
-      glState.cache[pname]
+        glState.cache[pname]
       : // Optionally call the original function to do a "hard" query from the WebGL2RenderingContext
-      originalGetterFunc(pname);
+        originalGetterFunc(pname);
   };
 
   // Set the name of this anonymous function to help in debugging and profiling

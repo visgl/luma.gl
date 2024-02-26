@@ -9,12 +9,12 @@ import {createGLTFModel} from './create-gltf-model';
 import type {PBREnvironment} from '../pbr/pbr-environment';
 
 export type GLTFInstantiatorOptions = {
-  modelOptions?: Partial<ModelProps>,
-  pbrDebug?: boolean,
-  imageBasedLightingEnvironment?: PBREnvironment,
-  lights?: boolean,
-  useTangents?: boolean
-}
+  modelOptions?: Partial<ModelProps>;
+  pbrDebug?: boolean;
+  imageBasedLightingEnvironment?: PBREnvironment;
+  lights?: boolean;
+  useTangents?: boolean;
+};
 
 const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
   modelOptions: {},
@@ -41,7 +41,7 @@ export class GLTFInstantiator {
 
   instantiate(gltf: any): GroupNode[] {
     this.gltf = gltf;
-    const scenes = (gltf.scenes || []).map((scene) => this.createScene(scene));
+    const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
 
@@ -55,7 +55,7 @@ export class GLTFInstantiator {
 
   createScene(gltfScene: any): GroupNode {
     const gltfNodes = gltfScene.nodes || [];
-    const nodes = gltfNodes.map((node) => this.createNode(node));
+    const nodes = gltfNodes.map(node => this.createNode(node));
     const scene = new GroupNode({
       id: gltfScene.name || gltfScene.id,
       children: nodes
@@ -66,7 +66,7 @@ export class GLTFInstantiator {
   createNode(gltfNode) {
     if (!gltfNode._node) {
       const gltfChildren = gltfNode.children || [];
-      const children = gltfChildren.map((child) => this.createNode(child));
+      const children = gltfChildren.map(child => this.createNode(child));
 
       // Node can have children nodes and meshes at the same time
       if (gltfNode.mesh) {
@@ -128,14 +128,17 @@ export class GLTFInstantiator {
 
     const modelNode = createGLTFModel(this.device, {
       id,
-      geometry: this.createGeometry(id, gltfPrimitive, topology), 
+      geometry: this.createGeometry(id, gltfPrimitive, topology),
       material: gltfPrimitive.material,
       materialOptions: this.options,
       modelOptions: this.options.modelOptions,
       vertexCount
     });
 
-    modelNode.bounds = [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max];
+    modelNode.bounds = [
+      gltfPrimitive.attributes.POSITION.min,
+      gltfPrimitive.attributes.POSITION.max
+    ];
     // TODO this holds on to all the CPU side texture and attribute data
     // modelNode.material =  gltfPrimitive.material;
 
@@ -147,12 +150,12 @@ export class GLTFInstantiator {
   }
 
   createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
-    const attributes = {}
+    const attributes = {};
     for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
       const {components, size, value} = attribute as GeometryAttribute;
 
       attributes[attributeName] = {size: size ?? components, value};
-    };
+    }
 
     return new Geometry({
       id,
@@ -177,7 +180,7 @@ export class GLTFInstantiator {
       bufferView.lumaBuffers[usage] = this.device.createBuffer({
         id: `from-${bufferView.id}`,
         // Draco decoded files have attribute.value
-        data: bufferView.data || attribute.value,
+        data: bufferView.data || attribute.value
       });
     }
 
@@ -214,16 +217,31 @@ enum GLEnum {
 }
 
 export function convertGLDrawModeToTopology(
-  drawMode: GLEnum.POINTS | GLEnum.LINES | GLEnum.LINE_STRIP | GLEnum.LINE_LOOP | GLEnum.TRIANGLES | GLEnum.TRIANGLE_STRIP | GLEnum.TRIANGLE_FAN,
-): PrimitiveTopology  {
+  drawMode:
+    | GLEnum.POINTS
+    | GLEnum.LINES
+    | GLEnum.LINE_STRIP
+    | GLEnum.LINE_LOOP
+    | GLEnum.TRIANGLES
+    | GLEnum.TRIANGLE_STRIP
+    | GLEnum.TRIANGLE_FAN
+): PrimitiveTopology {
   switch (drawMode) {
-    case GLEnum.POINTS: return 'point-list';
-    case GLEnum.LINES: return 'line-list';
-    case GLEnum.LINE_STRIP: return 'line-strip';
-    case GLEnum.LINE_LOOP: return 'line-loop-webgl';
-    case GLEnum.TRIANGLES: return 'triangle-list';
-    case GLEnum.TRIANGLE_STRIP: return 'triangle-strip';
-    case GLEnum.TRIANGLE_FAN: return 'triangle-fan-webgl';
-    default: throw new Error(drawMode);
+    case GLEnum.POINTS:
+      return 'point-list';
+    case GLEnum.LINES:
+      return 'line-list';
+    case GLEnum.LINE_STRIP:
+      return 'line-strip';
+    case GLEnum.LINE_LOOP:
+      return 'line-loop-webgl';
+    case GLEnum.TRIANGLES:
+      return 'triangle-list';
+    case GLEnum.TRIANGLE_STRIP:
+      return 'triangle-strip';
+    case GLEnum.TRIANGLE_FAN:
+      return 'triangle-fan-webgl';
+    default:
+      throw new Error(drawMode);
   }
 }

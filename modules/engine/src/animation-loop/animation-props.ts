@@ -1,5 +1,5 @@
 import {Device} from '@luma.gl/core';
-import {Timeline} from '../animation/timeline'
+import {Timeline} from '../animation/timeline';
 import type {AnimationLoop} from './animation-loop';
 
 /** Properties passed to every render frame  */

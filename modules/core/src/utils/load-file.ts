@@ -83,7 +83,8 @@ export async function loadScript(scriptUrl: string, scriptId?: string): Promise<
 
   return new Promise((resolve, reject) => {
     script.onload = resolve;
-    script.onerror = (error) => reject(new Error(`Unable to load script '${scriptUrl}': ${error as string}`));
+    script.onerror = error =>
+      reject(new Error(`Unable to load script '${scriptUrl}': ${error as string}`));
     head.appendChild(script);
   });
 }

@@ -2,7 +2,6 @@ import {TextureFormat} from '../types/texture-formats';
 import {VertexType} from '../types/vertex-formats';
 import {decodeVertexType} from './decode-data-type';
 
-
 // prettier-ignore
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
@@ -21,10 +20,10 @@ export type DecodedTextureFormat = {
   integer: boolean;
   signed: boolean;
   normalized: boolean;
-}
+};
 
-/** 
- * Returns true if a texture format is GPU compressed 
+/**
+ * Returns true if a texture format is GPU compressed
  */
 export function isTextureFormatCompressed(textureFormat: TextureFormat): boolean {
   return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => textureFormat.startsWith(prefix));
@@ -34,7 +33,7 @@ export function isTextureFormatCompressed(textureFormat: TextureFormat): boolean
  * Decodes a vertex format, returning type, components, byte length and flags (integer, signed, normalized)
  */
 export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat {
-  const matches = REGEX.exec((format as string));
+  const matches = REGEX.exec(format as string);
   if (matches) {
     const [, format, length, type, srgb, suffix] = matches;
     if (format) {
@@ -59,19 +58,19 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
 
 const EXCEPTIONS: Partial<Record<TextureFormat, any>> = {
   // Packed 16 bit formats
-  'rgba4unorm-webgl': {format: 'rgba', bpp: 2}, 
+  'rgba4unorm-webgl': {format: 'rgba', bpp: 2},
   'rgb565unorm-webgl': {format: 'rgb', bpp: 2},
-  'rgb5a1unorm-webgl': {format: 'rgba', bbp: 2}, 
+  'rgb5a1unorm-webgl': {format: 'rgba', bbp: 2},
   // Packed 32 bit formats
-  'rgb9e5ufloat': {format: 'rgb', bbp: 4},
-  'rg11b10ufloat': {format: 'rgb', bbp: 4},
-  'rgb10a2unorm': {format: 'rgba', bbp: 4},
+  rgb9e5ufloat: {format: 'rgb', bbp: 4},
+  rg11b10ufloat: {format: 'rgb', bbp: 4},
+  rgb10a2unorm: {format: 'rgba', bbp: 4},
   'rgb10a2unorm-webgl': {format: 'rgba', bbp: 4},
   // Depth/stencil
-  'stencil8': {components: 1, bpp: 1, a: 'stencil'},
-  'depth16unorm': {components: 1, bpp: 2, a: 'depth'},
-  'depth24plus': {components: 1, bpp: 3, a: 'depth'},
-  'depth32float': {components: 1, bpp: 4, a: 'depth'},
+  stencil8: {components: 1, bpp: 1, a: 'stencil'},
+  depth16unorm: {components: 1, bpp: 2, a: 'depth'},
+  depth24plus: {components: 1, bpp: 3, a: 'depth'},
+  depth32float: {components: 1, bpp: 4, a: 'depth'},
   'depth24plus-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
@@ -89,7 +88,7 @@ function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
     components: data.components || data.format?.length || 1,
     byteLength: data.bpp || 1,
     srgb: false,
-    unsized: false    
+    unsized: false
   } as DecodedTextureFormat;
 }
 

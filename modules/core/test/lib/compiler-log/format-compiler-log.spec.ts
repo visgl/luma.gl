@@ -7,121 +7,121 @@ const ERROR_LOG: CompilerMessage[] = [
     type: 'warning',
     linePos: 0,
     lineNum: 264,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 264,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 294,
-    message: '\'/\' : Divide by zero during constant folding'
+    message: "'/' : Divide by zero during constant folding"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 294,
-    message: '\'/\' : Divide by zero during constant folding'
+    message: "'/' : Divide by zero during constant folding"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 344,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 344,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 447,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 447,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 470,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 470,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 557,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 557,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 580,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 580,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 669,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 669,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 681,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'warning',
     linePos: 0,
     lineNum: 681,
-    message: '\'/\' : Zero divided by zero during constant folding generated NaN'
+    message: "'/' : Zero divided by zero during constant folding generated NaN"
   },
   {
     type: 'error',
     linePos: 0,
     lineNum: 967,
-    message: '\'project_scale\' : no matching overloaded function found'
+    message: "'project_scale' : no matching overloaded function found"
   },
   {
     type: 'error',
     linePos: 0,
     lineNum: 994,
-    message: '\'project_scale\' : no matching overloaded function found'
+    message: "'project_scale' : no matching overloaded function found"
   }
 ];
 
@@ -1255,7 +1255,7 @@ ERROR: \'project_scale\' : no matching overloaded function found
 
 `;
 
-test('formatGLSLError', (t) => {
+test('formatGLSLError', t => {
   let formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues'});
   compareStrings(t, formattedLog, EXPECTED, 'formatGLSLError generated correct error');
   t.equal(formattedLog, EXPECTED, 'formatGLSLError generated correct error');
@@ -1263,7 +1263,10 @@ test('formatGLSLError', (t) => {
   // Run with various options to ensure we don't crash
   // TODO - add output checks
   formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'all'});
-  formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues', html: true});
+  formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {
+    showSourceCode: 'issues',
+    html: true
+  });
   formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'all', html: true});
 
   t.end();
@@ -1278,6 +1281,6 @@ function compareStrings(t: Test, string1: string, string2: string, message?: str
     if (lines1[i] !== lines2[i]) {
       t.comment(`line ${i + 1}: '${lines1[i]}' --> '${lines2[i]}'`);
       return;
-    } 
+    }
   }
 }

@@ -9,7 +9,7 @@ export type ResourceProps = {
   handle?: any;
   /** User provided data stored on this resource  */
   userData?: {[key: string]: any};
-}
+};
 
 /**
  * Base class for GPU (WebGPU/WebGL) Resources
@@ -19,9 +19,9 @@ export abstract class Resource<Props extends ResourceProps> {
   static defaultProps: Required<ResourceProps> = {
     id: 'undefined',
     handle: undefined,
-    userData: undefined,
+    userData: undefined
   };
-  
+
   abstract get [Symbol.toStringTag](): string;
 
   /** props.id, for debugging. */
@@ -38,7 +38,6 @@ export abstract class Resource<Props extends ResourceProps> {
   /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
   private _attachedResources = new Set<Resource<unknown>>();
 
-
   /**
    * Create a new Resource. Called from Subclass
    */
@@ -49,7 +48,8 @@ export abstract class Resource<Props extends ResourceProps> {
     this._device = device;
     this.props = selectivelyMerge<Props>(props, defaultProps);
 
-    const id = this.props.id !== 'undefined' ? this.props.id as string : uid(this[Symbol.toStringTag]);
+    const id =
+      this.props.id !== 'undefined' ? (this.props.id as string) : uid(this[Symbol.toStringTag]);
     this.props.id = id;
     this.id = id;
     this.userData = this.props.userData || {};
@@ -84,7 +84,7 @@ export abstract class Resource<Props extends ResourceProps> {
 
   // ATTACHED RESOURCES
 
-  /** 
+  /**
    * Attaches a resource. Attached resources are auto destroyed when this resource is destroyed
    * Called automatically when sub resources are auto created but can be called by application
    */
@@ -92,14 +92,14 @@ export abstract class Resource<Props extends ResourceProps> {
     this._attachedResources.add(resource);
   }
 
-  /** 
+  /**
    * Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
    */
   detachResource(resource: Resource<unknown>): void {
     this._attachedResources.delete(resource);
   }
-  
-  /** 
+
+  /**
    * Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
    */
   destroyAttachedResource(resource: Resource<unknown>): void {

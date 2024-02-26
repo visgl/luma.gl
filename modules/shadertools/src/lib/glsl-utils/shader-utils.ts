@@ -14,10 +14,13 @@ type QualifierInfo = {
   qualifier: string;
   type: string;
   name: string;
-}
+};
 
 // Prase given glsl line and return qualifier details or null
-export function getQualifierDetails(line: string, qualifiers: string | string[]): QualifierInfo | null {
+export function getQualifierDetails(
+  line: string,
+  qualifiers: string | string[]
+): QualifierInfo | null {
   qualifiers = Array.isArray(qualifiers) ? qualifiers : [qualifiers];
   const words = line.replace(/^\s+/, '').split(/\s+/);
   // TODO add support for precession qualifiers (highp, mediump and lowp)
@@ -58,7 +61,7 @@ void main() {
 }
 
 /** convert glsl type to suffix */
-export function typeToChannelSuffix(type: string):  'x' | 'xy' | 'xyz' | 'xyzw' {
+export function typeToChannelSuffix(type: string): 'x' | 'xy' | 'xyz' | 'xyzw' {
   // prettier-ignore
   switch (type) {
     case 'float': return 'x';
@@ -82,7 +85,7 @@ export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
       throw new Error(type);
   }
 }
-function channelCountToType(channels: 1 | 2 | 3 |4): 'float' | 'vec2' | 'vec3' | 'vec4' {
+function channelCountToType(channels: 1 | 2 | 3 | 4): 'float' | 'vec2' | 'vec3' | 'vec4' {
   // prettier-ignore
   switch (channels) {
     case 1: return 'float';

@@ -54,33 +54,22 @@ async function init(canvas: HTMLCanvasElement) {
 
   // First Matrix
 
-  const firstMatrix = new Float32Array([
-    2 /* rows */, 4 /* columns */,
-    1, 2, 3, 4,
-    5, 6, 7, 8
-  ]);
+  const firstMatrix = new Float32Array([2 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8]);
 
   // Second Matrix
 
-  const secondMatrix = new Float32Array([
-    4 /* rows */, 2 /* columns */,
-    1, 2,
-    3, 4,
-    5, 6,
-    7, 8
-  ]);
+  const secondMatrix = new Float32Array([4 /* rows */, 2 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8]);
 
   const gpuBufferFirstMatrix = device.createBuffer({usage: Buffer.STORAGE, data: firstMatrix});
   const gpuBufferSecondMatrix = device.createBuffer({usage: Buffer.STORAGE, data: secondMatrix});
 
-
   // Result Matrix
-  const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
+  const resultMatrixBufferSize =
+    Float32Array.BYTES_PER_ELEMENT * (2 + firstMatrix[0] * secondMatrix[1]);
   const resultMatrixBuffer = device.createBuffer({
     size: resultMatrixBufferSize,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
-
 
   // Compute shader code
 
@@ -97,7 +86,7 @@ async function init(canvas: HTMLCanvasElement) {
       firstMatrix,
       secondMatrix,
       resultMatrix
-    },
+    }
   });
 
   // Commands submission
@@ -130,7 +119,6 @@ async function init(canvas: HTMLCanvasElement) {
   // Submit GPU commands.
   const gpuCommands = commandEncoder.finish();
   device.queue.submit([gpuCommands]);
-
 
   // Read buffer.
   await gpuReadBuffer.mapAsync(GPUMapMode.READ);

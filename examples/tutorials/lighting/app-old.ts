@@ -179,7 +179,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // This updates the "app" uniform buffer, which is already bound
     this.uniformStore.setUniforms({
       app: {
-        mvpMatrix: this.mvpMatrix, 
+        mvpMatrix: this.mvpMatrix,
         modelMatrix: this.modelMatrix
       }
     });

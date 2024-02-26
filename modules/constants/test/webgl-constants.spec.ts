@@ -7,12 +7,12 @@ import {webglDevice} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 
-test('@luma.gl/constants', (t) => {
+test('@luma.gl/constants', t => {
   t.equal(typeof GL, 'object', '@luma.gl/constants is an object');
   t.end();
 });
 
-test('@luma.gl/constants#WebGL2 context', (t) => {
+test('@luma.gl/constants#WebGL2 context', t => {
   const count = checkConstants(webglDevice.gl, t);
   t.comment(`Checked ${count} GL constants against platform WebGL2 context`);
   t.end();

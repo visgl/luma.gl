@@ -25,9 +25,9 @@ export interface ConstructorOf<T> {
   new (...args: unknown[]): T;
 }
 
-/** 
- * Make specific fields in a type optional. Granular version of `Partial<T>` 
- * @example 
+/**
+ * Make specific fields in a type optional. Granular version of `Partial<T>`
+ * @example
  *  type PartialProps = PartialBy<Required<DeviceProps>, 'device' | 'canvas'>
  */
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

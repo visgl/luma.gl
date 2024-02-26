@@ -67,9 +67,5 @@ test('WEBGLBuffer#write', async t => {
 
 async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   const {buffer, byteOffset, byteLength} = await source.readAsync();
-  return new Float32Array(
-    buffer,
-    byteOffset,
-    byteLength / Float32Array.BYTES_PER_ELEMENT
-  );
+  return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }

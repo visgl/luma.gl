@@ -6,20 +6,20 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
-  lightDirection?: NumberArray | [number, number, number]
-}
+  lightDirection?: NumberArray | [number, number, number];
+};
 
 export type DirlightUniforms = DirlightProps;
 
 // TODO
-export const VS_WGSL = /* WGSL */`\  
+export const VS_WGSL = /* WGSL */ `\  
 void dirlight_setNormal(normal: vec3<f32>) {
   dirlight_vNormal = normalize(normal);
 }
 `;
 
 // TODO
-export const FS_WGSL = /* WGSL */`\
+export const FS_WGSL = /* WGSL */ `\
 uniform dirlightUniforms {
   vec3 lightDirection;
 } dirlight;

@@ -120,7 +120,7 @@ export abstract class CanvasContext {
 
     // React to size changes
     if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {
-      this.resizeObserver = new ResizeObserver((entries) => {
+      this.resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
           if (entry.target === this.canvas) {
             this.update();
@@ -145,7 +145,7 @@ export abstract class CanvasContext {
 
     useDevicePixels = useDevicePixels === undefined ? this.props.useDevicePixels : useDevicePixels;
 
-    if (!useDevicePixels || useDevicePixels as number <= 0) {
+    if (!useDevicePixels || (useDevicePixels as number) <= 0) {
       return 1;
     }
 
@@ -320,7 +320,7 @@ function getPageLoadPromise(): Promise<void> {
   if (isPageLoaded() || typeof window === 'undefined') {
     return Promise.resolve();
   }
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     window.addEventListener('load', () => resolve());
   });
 }
@@ -387,7 +387,7 @@ function scalePixels(
   height: number;
 } {
   const point = pixel as [number, number];
-  
+
   const x = scaleX(point[0], ratio, width);
   let y = scaleY(point[1], ratio, height, yInvert);
 

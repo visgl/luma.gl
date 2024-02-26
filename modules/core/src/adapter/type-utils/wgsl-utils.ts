@@ -1,4 +1,4 @@
-import { ShaderAttributeType } from '../types/shader-types';
+import {ShaderAttributeType} from '../types/shader-types';
 
 /**  Predeclared aliases @see https://www.w3.org/TR/WGSL/#vector-types */
 export const WGSL_TYPE_ALIAS_MAP: Record<string, ShaderAttributeType> = {
@@ -14,5 +14,5 @@ export const WGSL_TYPE_ALIAS_MAP: Record<string, ShaderAttributeType> = {
   // Requires the f16 extension.
   vec2h: 'vec2<f16>',
   vec3h: 'vec3<f16>',
-  vec4h: 'vec4<f16>',
+  vec4h: 'vec4<f16>'
 };

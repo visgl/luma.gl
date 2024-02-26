@@ -63,8 +63,8 @@ export function getShaderHooks(
   return result;
 }
 
-/** 
- * Parse string based hook functions 
+/**
+ * Parse string based hook functions
  * And split per shader
  */
 export function normalizeShaderHooks(hookFunctions: (string | ShaderHook)[]): ShaderHooks {

@@ -149,7 +149,12 @@ type StorageTextureBindingLayout = {
 // BINDINGS
 
 /** Binding value */
-export type Binding = TextureView | Texture | Sampler | Buffer | {buffer: Buffer; offset?: number; size?: number};
+export type Binding =
+  | TextureView
+  | Texture
+  | Sampler
+  | Buffer
+  | {buffer: Buffer; offset?: number; size?: number};
 
 // SHADER LAYOUTS
 

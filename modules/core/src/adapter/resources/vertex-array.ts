@@ -62,7 +62,7 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   abstract unbindAfterRender(renderPass: RenderPass): void;
 
   // DEPRECATED METHODS
-  
+
   /** @deprecated Set constant attributes (WebGL only) */
   setConstantWebGL(location: number, value: TypedArray | null): void {
     throw new Error('constant attributes not supported');

@@ -5,7 +5,7 @@ import {VertexFormat, VertexType} from '../types/vertex-formats';
 /** Information extracted from a ShaderAttributeInfo constant */
 export type ShaderAttributeTypeInfo = {
   /** WGSL-style primitive data type, f32, i32, u32 */
-  dataType: ShaderDataType,
+  dataType: ShaderDataType;
   /** Whether this is a normalized integer (that must be used as float) */
   components: 1 | 2 | 3 | 4;
   /** Length in bytes of the data for one vertex */
@@ -19,7 +19,9 @@ export type ShaderAttributeTypeInfo = {
 };
 
 /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
-export function decodeShaderAttributeType(attributeType: ShaderAttributeType): ShaderAttributeTypeInfo {
+export function decodeShaderAttributeType(
+  attributeType: ShaderAttributeType
+): ShaderAttributeTypeInfo {
   const [dataType, components] = TYPE_INFO[attributeType];
   const integer: boolean = dataType === 'i32' || dataType === 'u32';
   const signed: boolean = dataType !== 'u32';
@@ -37,13 +39,22 @@ export function decodeShaderAttributeType(attributeType: ShaderAttributeType): S
 }
 
 /** Get the "default" vertex format for a certain shader data type */
-function getCompatibleVertexFormat(dataType: ShaderDataType, components: 1 | 2 | 3 | 4): VertexFormat {
+function getCompatibleVertexFormat(
+  dataType: ShaderDataType,
+  components: 1 | 2 | 3 | 4
+): VertexFormat {
   let vertexType: VertexType;
   switch (dataType) {
-    case 'f32': vertexType = 'float32'; break;
-    case 'i32': vertexType = 'sint32'; break;
-    case 'u32': vertexType = 'uint32'; break;
-    case 'f16': 
+    case 'f32':
+      vertexType = 'float32';
+      break;
+    case 'i32':
+      vertexType = 'sint32';
+      break;
+    case 'u32':
+      vertexType = 'uint32';
+      break;
+    case 'f16':
       return components <= 2 ? 'float16x2' : 'float16x4';
   }
   // TODO logic does not work for float16
@@ -77,6 +88,6 @@ const TYPE_SIZES: Record<ShaderDataType, number> = {
   f32: 4,
   f16: 2,
   i32: 4,
-  u32: 4,
-  // 'bool-webgl': 4,  
+  u32: 4
+  // 'bool-webgl': 4,
 };

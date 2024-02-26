@@ -64,7 +64,7 @@ export function createBrowserContext(
   // Software GPU
 
   // props.failIfMajorPerformanceCaveat = false;
-  
+
   // if (!gl && props.webgl1) {
   //   gl = canvas.getContext('webgl', props);
   // }

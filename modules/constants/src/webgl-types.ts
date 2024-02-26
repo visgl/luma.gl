@@ -569,32 +569,32 @@ type EXT_conservative_depth = {};
 
 /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
 type EXT_polygon_offset_clamp = {
-  POLYGON_OFFSET_CLAMP_EXT: 0x8E1B;
+  POLYGON_OFFSET_CLAMP_EXT: 0x8e1b;
 
   polygonOffsetClampEXT(factor: number, units: number, clamp: number): void;
 };
 
 /** EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/ */
 type EXT_clip_control = {
-  LOWER_LEFT_EXT: 0x8CA1;
-  UPPER_LEFT_EXT: 0x8CA2;
+  LOWER_LEFT_EXT: 0x8ca1;
+  UPPER_LEFT_EXT: 0x8ca2;
 
-  NEGATIVE_ONE_TO_ONE_EXT: 0x935E;
-  ZERO_TO_ONE_EXT: 0x935F;
+  NEGATIVE_ONE_TO_ONE_EXT: 0x935e;
+  ZERO_TO_ONE_EXT: 0x935f;
 
-  CLIP_ORIGIN_EXT: 0x935C;
-  CLIP_DEPTH_MODE_EXT: 0x935D;
+  CLIP_ORIGIN_EXT: 0x935c;
+  CLIP_DEPTH_MODE_EXT: 0x935d;
 
   clipControlEXT(origin: GL, depth: GL): void;
 };
 
 /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
 type WEBGL_blend_func_extended = {
-  SRC1_COLOR_WEBGL: 0x88F9;
+  SRC1_COLOR_WEBGL: 0x88f9;
   SRC1_ALPHA_WEBGL: 0x8589;
-  ONE_MINUS_SRC1_COLOR_WEBGL: 0x88FA;
-  ONE_MINUS_SRC1_ALPHA_WEBGL: 0x88FB;
-  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL: 0x88FC;
+  ONE_MINUS_SRC1_COLOR_WEBGL: 0x88fa;
+  ONE_MINUS_SRC1_ALPHA_WEBGL: 0x88fb;
+  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL: 0x88fc;
 };
 
 /** OES_draw_buffers_indexed https://registry.khronos.org/webgl/extensions/OES_draw_buffers_indexed/ */

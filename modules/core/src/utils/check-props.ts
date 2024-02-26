@@ -36,7 +36,11 @@ export type PropChecks = {
   deprecatedProps?: Record<string, string>;
 };
 
-export function checkProps(className: string, props: Record<string, any>, propChecks: PropChecks): Record<string, unknown> {
+export function checkProps(
+  className: string,
+  props: Record<string, any>,
+  propChecks: PropChecks
+): Record<string, unknown> {
   const {removedProps = {}, deprecatedProps = {}, replacedProps = {}} = propChecks;
 
   // removedProps: Removed props no longer supported

@@ -11,19 +11,23 @@ export type CubeGeometryProps = {
 export class CubeGeometry extends Geometry {
   constructor(props: CubeGeometryProps = {}) {
     const {id = uid('cube-geometry'), indices = true} = props;
-    super(indices ? {
-      ...props,
-      id,
-      topology: 'triangle-list',
-      indices: {size: 1, value: CUBE_INDICES},
-      attributes: {...ATTRIBUTES, ...props.attributes}
-    } : {
-      ...props,
-      id,
-      topology: 'triangle-list',
-      indices: undefined,
-      attributes: {...NON_INDEXED_ATTRIBUTES, ...props.attributes}
-    });
+    super(
+      indices
+        ? {
+            ...props,
+            id,
+            topology: 'triangle-list',
+            indices: {size: 1, value: CUBE_INDICES},
+            attributes: {...ATTRIBUTES, ...props.attributes}
+          }
+        : {
+            ...props,
+            id,
+            topology: 'triangle-list',
+            indices: undefined,
+            attributes: {...NON_INDEXED_ATTRIBUTES, ...props.attributes}
+          }
+    );
   }
 }
 

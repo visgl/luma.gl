@@ -14,7 +14,11 @@ import {pushContextState, popContextState} from './track-context-state';
  * - Restores parameters
  * - Returns the return value of the supplied function
  */
-export function withGLParameters(device: Device | WebGL2RenderingContext, parameters: GLParameters & {nocatch?: boolean}, func: any): any {
+export function withGLParameters(
+  device: Device | WebGL2RenderingContext,
+  parameters: GLParameters & {nocatch?: boolean},
+  func: any
+): any {
   const webglDevice = WebGLDevice.attach(device);
   const gl = webglDevice.gl;
 

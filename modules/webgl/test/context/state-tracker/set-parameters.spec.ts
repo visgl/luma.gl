@@ -12,7 +12,7 @@ import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-par
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
-test('WebGL#set and get', (t) => {
+test('WebGL#set and get', t => {
   resetGLParameters(webglDevice);
 
   let cullFace = getGLParameters(webglDevice, [GL.CULL_FACE])[GL.CULL_FACE];
@@ -35,7 +35,7 @@ test('WebGL#set and get', (t) => {
   t.end();
 });
 
-test('WebGL#composite setter', (t) => {
+test('WebGL#composite setter', t => {
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
 
   resetGLParameters(webglDevice);
@@ -71,8 +71,7 @@ test('WebGL#composite setter', (t) => {
   t.end();
 });
 
-test('WebGLState#get all parameters', (t) => {
-
+test('WebGLState#get all parameters', t => {
   resetGLParameters(webglDevice);
 
   // Set custom values.
@@ -83,7 +82,9 @@ test('WebGLState#get all parameters', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setGLParameters for ${webglDevice.getGLKey(key)}`
+      `got expected value ${stringifyTypedArray(
+        value
+      )} after setGLParameters for ${webglDevice.getGLKey(key)}`
     );
   }
 
@@ -93,15 +94,16 @@ test('WebGLState#get all parameters', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after getGLParameters for ${webglDevice.getGLKey(key)}`
+      `got expected value ${stringifyTypedArray(
+        value
+      )} after getGLParameters for ${webglDevice.getGLKey(key)}`
     );
   }
 
   t.end();
 });
 
-test('WebGL#reset', (t) => {
-
+test('WebGL#reset', t => {
   // Set custom values and verify.
   setGLParameters(webglDevice, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
@@ -110,7 +112,9 @@ test('WebGL#reset', (t) => {
     t.deepEqual(
       value,
       ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
-      `got expected value ${stringifyTypedArray(value)} after setGLParameters for ${webglDevice.getGLKey(key)}`
+      `got expected value ${stringifyTypedArray(
+        value
+      )} after setGLParameters for ${webglDevice.getGLKey(key)}`
     );
   }
 
@@ -124,17 +128,16 @@ test('WebGL#reset', (t) => {
     t.deepEqual(
       value,
       GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)} after resetGLParameters for ${webglDevice.getGLKey(
-        key
-      )}`
+      `got expected value ${stringifyTypedArray(
+        value
+      )} after resetGLParameters for ${webglDevice.getGLKey(key)}`
     );
   }
 
   t.end();
 });
 
-test('WebGLState#setGLParameters framebuffer', (t) => {
-
+test('WebGLState#setGLParameters framebuffer', t => {
   resetGLParameters(webglDevice);
 
   let fbHandle = getGLParameters(webglDevice, [GL.FRAMEBUFFER_BINDING])[GL.FRAMEBUFFER_BINDING];
@@ -157,12 +160,13 @@ test('WebGLState#setGLParameters framebuffer', (t) => {
   t.end();
 });
 
-test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', (t) => {
+test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', t => {
   // const webglDevice = createTestContext({webgl2: true, webgl1: false});
   resetGLParameters(webglDevice);
 
-
-  let fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
+  let fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
   // t.equal(fbHandle, null, 'Initial read-frambuffer binding should be null');
   const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
@@ -170,7 +174,9 @@ test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', (t) => {
     [GL.READ_FRAMEBUFFER_BINDING]: framebuffer.handle
   });
 
-  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
+  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
   t.equal(fbHandle, framebuffer.handle, 'setGLParameters should set read-framebuffer binding');
 
   // verify setting null value
@@ -178,7 +184,9 @@ test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', (t) => {
     [GL.READ_FRAMEBUFFER_BINDING]: null
   });
 
-  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[GL.READ_FRAMEBUFFER_BINDING];
+  fbHandle = getGLParameters(webglDevice, [GL.READ_FRAMEBUFFER_BINDING])[
+    GL.READ_FRAMEBUFFER_BINDING
+  ];
   t.equal(fbHandle, null, 'setGLParameters should set read-framebuffer binding');
   t.end();
 });

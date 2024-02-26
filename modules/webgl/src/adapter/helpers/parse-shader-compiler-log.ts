@@ -8,7 +8,7 @@ import type {CompilerMessage} from '@luma.gl/core';
  * This follows documented WebGL conventions for compilation logs.
  * Based on https://github.com/wwwtyro/gl-format-compiler-error (public domain)
  */
-export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessage[] {
+export function parseShaderCompilerLog(errLog: string): readonly CompilerMessage[] {
   // Parse the error - note: browser and driver dependent
   const lines = errLog.split(/\r?\n/);
 
@@ -30,7 +30,7 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
         lineNum: 0,
         linePos: 0
       });
-      continue; // eslint-disable-line no-continue  
+      continue; // eslint-disable-line no-continue
     }
 
     const [messageType, linePosition, lineNumber, ...rest] = segments;
@@ -50,15 +50,18 @@ export function parseShaderCompilerLog(errLog: string) : readonly CompilerMessag
       type: getMessageType(messageType),
       lineNum,
       linePos // TODO
-    })
+    });
   }
 
   return messages;
 }
 
 /** Ensure supported type */
-function getMessageType(messageType: string): 'warning' | 'error' | 'info' {    
+function getMessageType(messageType: string): 'warning' | 'error' | 'info' {
   const MESSAGE_TYPES = ['warning', 'error', 'info'];
   const lowerCaseType = messageType.toLowerCase();
-  return (MESSAGE_TYPES.includes(lowerCaseType) ? lowerCaseType : 'info') as 'warning' | 'error' | 'info';
+  return (MESSAGE_TYPES.includes(lowerCaseType) ? lowerCaseType : 'info') as
+    | 'warning'
+    | 'error'
+    | 'info';
 }

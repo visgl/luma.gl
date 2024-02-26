@@ -10,7 +10,21 @@ let ctx: CanvasRenderingContext2D | null = null;
 // eslint-disable-next-line
 export function debugFramebuffer(
   fbo: Framebuffer | Texture,
-  {id, minimap, opaque, top = '0', left = '0', rgbaScale = 1}: {id: string, minimap?: boolean; opaque?: boolean, top?: string, left?: string, rgbaScale?: number}
+  {
+    id,
+    minimap,
+    opaque,
+    top = '0',
+    left = '0',
+    rgbaScale = 1
+  }: {
+    id: string;
+    minimap?: boolean;
+    opaque?: boolean;
+    top?: string;
+    left?: string;
+    rgbaScale?: number;
+  }
 ) {
   if (!canvas) {
     canvas = document.createElement('canvas');
@@ -34,7 +48,6 @@ export function debugFramebuffer(
     canvas.height = fbo.height / 2;
     canvas.style.width = '400px';
     canvas.style.height = '400px';
-
   }
 
   // const image = copyTextureToImage(fbo, {targetMaxHeight: 100, targetImage});
@@ -54,4 +67,4 @@ export function debugFramebuffer(
     imageData.data[offset + i + 3] = opaque ? 255 : color[i + 3] * rgbaScale;
   }
   ctx.putImageData(imageData, 0, 0);
-};
+}

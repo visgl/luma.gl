@@ -36,10 +36,10 @@ vec4 denoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
  * weighted by color intensity, similar to a bilateral filter.
  */
 export type DenoiseProps = {
-  /** 
+  /**
    * The exponent of the color intensity difference, should be greater
    * than zero. A value of zero just gives an 9x9 box blur and high values
-   * give the original image, but ideal values are usually around 10-20. 
+   * give the original image, but ideal values are usually around 10-20.
    */
   strength?: number;
 };

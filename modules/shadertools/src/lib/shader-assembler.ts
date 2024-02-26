@@ -20,15 +20,16 @@ export class ShaderAssembler {
 
   /**
    * A default shader assembler instance - the natural place to register default modules and hooks
-   * @returns 
+   * @returns
    */
   static getDefaultShaderAssembler(): ShaderAssembler {
-    ShaderAssembler.defaultShaderAssembler = ShaderAssembler.defaultShaderAssembler || new ShaderAssembler();
+    ShaderAssembler.defaultShaderAssembler =
+      ShaderAssembler.defaultShaderAssembler || new ShaderAssembler();
     return ShaderAssembler.defaultShaderAssembler;
   }
 
-  /** 
-   * Add a default module that does not have to be provided with every call to assembleShaders() 
+  /**
+   * Add a default module that does not have to be provided with every call to assembleShaders()
    */
   addDefaultModule(module: ShaderModule): void {
     if (
@@ -40,7 +41,7 @@ export class ShaderAssembler {
     }
   }
 
-  /** 
+  /**
    * Remove a default module
    */
   removeDefaultModule(module: ShaderModule): void {
@@ -50,8 +51,8 @@ export class ShaderAssembler {
 
   /**
    * Register a shader hook
-   * @param hook 
-   * @param opts 
+   * @param hook
+   * @param opts
    */
   addShaderHook(hook: string, opts?: any): void {
     if (opts) {
@@ -62,28 +63,35 @@ export class ShaderAssembler {
 
   /**
    * Assemble a pair of shaders into a single shader program
-   * @param platformInfo 
-   * @param props 
-   * @returns 
+   * @param platformInfo
+   * @param props
+   * @returns
    */
   assembleShaders(props: AssembleShaderProps): {
     vs: string;
     fs: string;
     getUniforms: GetUniformsFunc;
-    modules:ShaderModuleInstance[];
+    modules: ShaderModuleInstance[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const options = selectShaders(props);
-    const assembled = assembleShaders({platformInfo: props.platformInfo, ...options, modules, hookFunctions}); 
+    const assembled = assembleShaders({
+      platformInfo: props.platformInfo,
+      ...options,
+      modules,
+      hookFunctions
+    });
     return {...assembled, modules};
   }
 
-  /** 
+  /**
    * Dedupe and combine with default modules
    */
   _getModuleList(appModules: (ShaderModule | ShaderModuleInstance)[] = []): ShaderModuleInstance[] {
-    const modules = new Array<ShaderModule | ShaderModuleInstance>(this._defaultModules.length + appModules.length);
+    const modules = new Array<ShaderModule | ShaderModuleInstance>(
+      this._defaultModules.length + appModules.length
+    );
     const seen: Record<string, boolean> = {};
     let count = 0;
 

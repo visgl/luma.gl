@@ -185,7 +185,11 @@ const resolvedLayout = {
 test('getAttributeInfosFromLayouts', t => {
   const result = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
   for (const key of Object.keys(resolvedLayout)) {
-    t.deepEqual(result[key], resolvedLayout[key], `Interleaved attribute info for ${key} are correct`);
+    t.deepEqual(
+      result[key],
+      resolvedLayout[key],
+      `Interleaved attribute info for ${key} are correct`
+    );
     // t.comment(JSON.stringify(result[key], null, 2));
   }
   t.end();

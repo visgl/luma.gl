@@ -12,12 +12,12 @@ const FILL_ARRAY_TEST_CASES = [
   }
 ];
 
-test('flatten#import', (t) => {
+test('flatten#import', t => {
   t.ok(typeof fillArray === 'function', 'fillArray imported OK');
   t.end();
 });
 
-test('fillArray#tests', (t) => {
+test('fillArray#tests', t => {
   for (const tc of FILL_ARRAY_TEST_CASES) {
     const result = fillArray(tc.arguments);
     t.deepEqual(result, tc.result, `fillArray ${tc.title} returned expected result`);

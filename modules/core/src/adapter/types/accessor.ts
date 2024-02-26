@@ -14,7 +14,7 @@ export interface AccessorObject {
   offset?: number;
   // can now be described with single WebGPU-style `format` string
 
-  // 
+  //
   stride?: number;
 
   /** @deprecated - Use accessor.stepMode */

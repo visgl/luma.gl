@@ -25,7 +25,7 @@ export type AmbientLight = {
   type: 'ambient';
   color?: Readonly<NumberArray>;
   intensity?: number;
-}
+};
 
 export type PointLight = {
   type: 'point';
@@ -33,7 +33,7 @@ export type PointLight = {
   color?: Readonly<NumberArray>;
   intensity?: number;
   attenuation?: number;
-}
+};
 
 export type DirectionalLight = {
   type: 'directional';
@@ -41,7 +41,7 @@ export type DirectionalLight = {
   direction: Readonly<NumberArray>;
   color?: Readonly<NumberArray>;
   intensity?: number;
-}
+};
 
 export type LightingProps = {
   enabled?: boolean;
@@ -91,7 +91,7 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
     lightAttenuation: 'vec3<f32>' // , array: MAX_LIGHTS},
   },
 
-  defaultUniforms: { 
+  defaultUniforms: {
     enabled: 1,
     ambientLightColor: [0.1, 0.1, 0.1],
     numberOfLights: 0,
@@ -100,12 +100,15 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
     lightPosition: [1, 1, 2],
     // TODO - could combine direction and attenuation
     lightDirection: [1, 1, 1],
-    lightAttenuation: [1, 1, 1],
+    lightAttenuation: [1, 1, 1]
   }
 };
 
-function getUniforms(props?: LightingProps, prevUniforms: Partial<LightingUniforms> = {}): LightingUniforms {
-  // Copy props so we can modify 
+function getUniforms(
+  props?: LightingProps,
+  prevUniforms: Partial<LightingUniforms> = {}
+): LightingUniforms {
+  // Copy props so we can modify
   props = props ? {...props} : props;
 
   // TODO legacy
@@ -132,7 +135,7 @@ function getUniforms(props?: LightingProps, prevUniforms: Partial<LightingUnifor
   const uniforms = {
     ...lighting.defaultUniforms,
     ...prevUniforms,
-    ...getLightSourceUniforms({ambientLight, pointLights, directionalLights}),
+    ...getLightSourceUniforms({ambientLight, pointLights, directionalLights})
   };
 
   if (props.enabled !== undefined) {
@@ -212,7 +215,9 @@ function extractLightTypes(lights: Light[]): LightingProps {
 }
 
 /** Take color 0-255 and intensity as input and output 0.0-1.0 range */
-function convertColor(colorDef: {color?: Readonly<NumberArray>, intensity?: number} = {}): NumberArray {
+function convertColor(
+  colorDef: {color?: Readonly<NumberArray>; intensity?: number} = {}
+): NumberArray {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
-  return color.map((component) => (component * intensity) / COLOR_FACTOR);
+  return color.map(component => (component * intensity) / COLOR_FACTOR);
 }

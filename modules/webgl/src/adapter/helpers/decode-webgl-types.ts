@@ -67,9 +67,11 @@ const COMPOSITE_GL_TYPES: Record<
 };
 
 /** Decomposes a composite type (GL.VEC3) into a basic type (GL.FLOAT) and components (3) */
-export function decodeGLUniformType(
-  glUniformType: GL
-): {format: ShaderUniformType; components: number; glType: GLDataType} {
+export function decodeGLUniformType(glUniformType: GL): {
+  format: ShaderUniformType;
+  components: number;
+  glType: GLDataType;
+} {
   const typeAndSize = COMPOSITE_GL_TYPES[glUniformType];
   if (!typeAndSize) {
     throw new Error('uniform');
@@ -87,11 +89,11 @@ export function decodeGLAttributeType(glAttributeType: GL): {
 } {
   const typeAndSize = COMPOSITE_GL_TYPES[glAttributeType];
   if (!typeAndSize) {
-    throw new Error('attribute')
+    throw new Error('attribute');
   }
   const [, components, , shaderType, vertexFormat] = typeAndSize;
   // TODO sanity - if (shaderType.startsWith('mat' ...))
-  const attributeType = shaderType as unknown as ShaderAttributeType
+  const attributeType = shaderType as unknown as ShaderAttributeType;
   return {attributeType, vertexFormat, components}; // , glType};
 }
 
@@ -107,7 +109,10 @@ export function decomposeCompositeGLDataType(
   return {type, components};
 }
 
-export function getCompositeGLDataType(type: GL, components): {glType: GLDataType; name: string} | null {
+export function getCompositeGLDataType(
+  type: GL,
+  components
+): {glType: GLDataType; name: string} | null {
   switch (type) {
     case GL.BYTE:
     case GL.UNSIGNED_BYTE:

@@ -1,9 +1,20 @@
 // luma.gl, MIT license
 import test from 'tape-promise/tape';
-import {VertexFormat, getDataTypeFromTypedArray, getTypedArrayFromDataType, getVertexFormatFromAttribute} from '@luma.gl/core';
+import {
+  VertexFormat,
+  getDataTypeFromTypedArray,
+  getTypedArrayFromDataType,
+  getVertexFormatFromAttribute
+} from '@luma.gl/core';
 import type {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
 
-const TEST_CASES: {typedArray: TypedArray, size?: number, normalized?: boolean, result?: VertexFormat, error?: string}[] = [
+const TEST_CASES: {
+  typedArray: TypedArray;
+  size?: number;
+  normalized?: boolean;
+  result?: VertexFormat;
+  error?: string;
+}[] = [
   {typedArray: new Uint8Array(), size: 4, result: 'uint8x4'},
   {typedArray: new Uint8ClampedArray(), size: 2, result: 'uint8x2'},
   {typedArray: new Int8Array(), size: 4, result: 'sint8x4'},
@@ -25,7 +36,7 @@ const TEST_CASES: {typedArray: TypedArray, size?: number, normalized?: boolean, 
   {typedArray: new Int32Array(), error: 'Missing attribute size'},
   {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
   {typedArray: new Int16Array(), size: 3, error: 'Bad 32 bit alignment'},
-  {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'},
+  {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
 ];
 
 test('api#getVertexFormatFromAttribute', t => {
@@ -54,7 +65,7 @@ const ARRAY_TEST_CASES: {typedArray: TypedArrayConstructor}[] = [
   {typedArray: Uint32Array},
   {typedArray: Int32Array},
   {typedArray: Float32Array}
-]
+];
 
 test('api#getDataTypeFromTypedArray', t => {
   for (const {typedArray} of ARRAY_TEST_CASES) {

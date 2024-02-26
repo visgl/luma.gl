@@ -9,11 +9,13 @@ import {isBrowser} from '@probe.gl/env';
 class TestCanvasContext extends CanvasContext {
   // @ts-expect-error
   readonly device = {};
-  getCurrentFramebuffer(): Framebuffer { throw new Error('test'); }
+  getCurrentFramebuffer(): Framebuffer {
+    throw new Error('test');
+  }
   update() {}
 }
 
-test('CanvasContext', (t) => {
+test('CanvasContext', t => {
   if (isBrowser()) {
     let canvasContext = new TestCanvasContext();
     t.ok(canvasContext);

@@ -16,7 +16,7 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer() ;
+    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
     log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
     log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
@@ -134,9 +134,9 @@ export class WebGPURenderPass extends RenderPass {
 
   // INTERNAL
 
-  /** 
+  /**
    * Partial render pass descriptor. Used by WebGPURenderPass.
-   * @returns attachments fields of a renderpass descriptor. 
+   * @returns attachments fields of a renderpass descriptor.
    */
   protected getRenderPassDescriptor(framebuffer: Framebuffer): GPURenderPassDescriptor {
     const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -147,7 +147,7 @@ export class WebGPURenderPass extends RenderPass {
       // clear values
       loadOp: this.props.clearColor !== false ? 'clear' : 'load',
       colorClearValue: this.props.clearColor || [0, 0, 0, 0],
-      storeOp: this.props.discard? 'discard': 'store',
+      storeOp: this.props.discard ? 'discard' : 'store',
       // ...colorAttachment,
       view: (colorAttachment as WebGPUTextureView).handle
     }));

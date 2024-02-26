@@ -259,12 +259,12 @@ void main(void) {
 }
 `;
 
-test('assembleShaders#import', (t) => {
+test('assembleShaders#import', t => {
   t.ok(assembleShaders !== undefined, 'assembleShaders import successful');
   t.end();
 });
 
-test('assembleShaders#version_directive', (t) => {
+test('assembleShaders#version_directive', t => {
   const assembleResult = assembleShaders({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -285,7 +285,7 @@ test('assembleShaders#version_directive', (t) => {
   t.end();
 });
 
-test('assembleShaders#getUniforms', (t) => {
+test('assembleShaders#getUniforms', t => {
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -327,7 +327,7 @@ test('assembleShaders#getUniforms', (t) => {
   t.end();
 });
 
-test('assembleShaders#defines', (t) => {
+test('assembleShaders#defines', t => {
   const assembleResult = assembleShaders({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -341,7 +341,7 @@ test('assembleShaders#defines', (t) => {
   t.end();
 });
 
-test('assembleShaders#shaderhooks', (t) => {
+test('assembleShaders#shaderhooks', t => {
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
     {
@@ -502,7 +502,7 @@ test('assembleShaders#shaderhooks', (t) => {
   t.end();
 });
 
-test('assembleShaders#injection order', (t) => {
+test('assembleShaders#injection order', t => {
   let assembleResult = assembleShaders({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
@@ -541,7 +541,7 @@ test('assembleShaders#injection order', (t) => {
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleShaders#transpilation', (t) => {
+test.skip('assembleShaders#transpilation', t => {
   let assembleResult = assembleShaders({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -550,12 +550,15 @@ test.skip('assembleShaders#transpilation', (t) => {
   });
 
   t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!(/\bin vec4\b/.exec(assembleResult.vs)), '"in" keyword removed');
+  t.ok(!/\bin vec4\b/.exec(assembleResult.vs), '"in" keyword removed');
 
   t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!(/\bout vec4\b/.exec(assembleResult.fs)), '"out" keyword removed');
+  t.ok(!/\bout vec4\b/.exec(assembleResult.fs), '"out" keyword removed');
 
-  t.ok(compileAndLinkShaders(t, webglDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
+  t.ok(
+    compileAndLinkShaders(t, webglDevice, assembleResult),
+    'assemble GLSL300 + picking and transpile to GLSL100'
+  );
 
   assembleResult = assembleShaders({
     platformInfo: getInfo(webglDevice),
@@ -564,7 +567,10 @@ test.skip('assembleShaders#transpilation', (t) => {
     modules: [picking]
   });
 
-  t.ok(compileAndLinkShaders(t, webglDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100');
+  t.ok(
+    compileAndLinkShaders(t, webglDevice, assembleResult),
+    'assemble GLSL300 + picking and transpile to GLSL100'
+  );
 
   const extension = webglDevice.gl.getExtension('OES_standard_derivatives');
   // TODO - this doesn't work in headless gl
@@ -580,7 +586,6 @@ test.skip('assembleShaders#transpilation', (t) => {
       compileAndLinkShaders(t, webglDevice, assembleResult),
       'Deck shaders transpile 300 to 100 valid program'
     );
-
   }
 
   assembleResult = assembleShaders({
@@ -613,7 +618,7 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     return false;
   }
 
-  const fShader = gl.createShader(gl.FRAGMENT_SHADER) ;
+  const fShader = gl.createShader(gl.FRAGMENT_SHADER);
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
   compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
@@ -623,7 +628,7 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     return false;
   }
 
-  const program = gl.createProgram() ;
+  const program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);

@@ -133,13 +133,13 @@ export class WEBGLRenderPass extends RenderPass {
 
       // TODO - clear multiple color attachments
       // for (attachment of this.framebuffer.colorAttachments) {
-      //   this.clearColorBuffer  
+      //   this.clearColorBuffer
       // }
     }
   }
 
-  /** 
-   * WebGL2 - clear a specific color buffer 
+  /**
+   * WebGL2 - clear a specific color buffer
    */
   protected clearColorBuffer(drawBuffer: number = 0, value: NumberArray = [0, 0, 0, 0]) {
     withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
@@ -182,4 +182,3 @@ export class WEBGLRenderPass extends RenderPass {
   //   }
   // });
 }
-

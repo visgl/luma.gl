@@ -13,7 +13,7 @@ for (const [name, value] of Object.entries(imports)) {
   }
 }
 
-test('shadertools#module imports are defined', (t) => {
+test('shadertools#module imports are defined', t => {
   for (const name in shaderModules) {
     verifyShaderModule(t, shaderModules[name]);
   }

@@ -12,7 +12,10 @@ export function generateWGSLForModule(module: ShaderModule, options: WGSLGenerat
   return generateWGSLUniformDeclarations(module, options);
 }
 
-export function generateWGSLUniformDeclarations(module: ShaderModule, options: WGSLGenerationOptions) {
+export function generateWGSLUniformDeclarations(
+  module: ShaderModule,
+  options: WGSLGenerationOptions
+) {
   const wgsl: string[] = [];
 
   // => uniform UniformBlockName {

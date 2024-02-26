@@ -353,8 +353,6 @@ test('Model#getBuffersFromGeometry', (t) => {
 });
 */
 
-
-
 /*
 test.skip('PipelineFactory#basic', (t) => {
   const pipelineFactory = new PipelineFactory(webglDevice);

@@ -6,7 +6,7 @@ export type SphereGeometryProps = {
   radius?: number;
   nlat?: number;
   nlong?: number;
-  attributes?: any
+  attributes?: any;
 };
 
 // Primitives inspired by TDL http://code.google.com/p/webglsamples/,

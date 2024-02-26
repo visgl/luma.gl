@@ -174,12 +174,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     }
   }
 
-  protected _bindBuffer(
-    index: number,
-    buffer: Buffer,
-    byteOffset = 0,
-    byteLength?: number
-  ): void {
+  protected _bindBuffer(index: number, buffer: Buffer, byteOffset = 0, byteLength?: number): void {
     const handle = buffer && (buffer as WEBGLBuffer).handle;
     if (!handle || byteLength === undefined) {
       this.gl.bindBufferBase(GL.TRANSFORM_FEEDBACK_BUFFER, index, handle);

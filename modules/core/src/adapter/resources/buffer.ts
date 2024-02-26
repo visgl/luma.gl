@@ -19,7 +19,7 @@ export type BufferProps = ResourceProps & {
 
   // TBD
   mappedAtCreation?: boolean;
-}
+};
 
 /** Abstract GPU buffer */
 export abstract class Buffer extends Resource<BufferProps> {
@@ -49,7 +49,9 @@ export abstract class Buffer extends Resource<BufferProps> {
   static INDIRECT = 0x0100;
   static QUERY_RESOLVE = 0x0200;
 
-  override get [Symbol.toStringTag](): string { return 'Buffer'; }
+  override get [Symbol.toStringTag](): string {
+    return 'Buffer';
+  }
 
   /** The usage with which this buffer was created */
   readonly usage: number;
@@ -82,7 +84,9 @@ export abstract class Buffer extends Resource<BufferProps> {
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
   /** Read data synchronously. @note WebGL2 only */
-  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array  { throw new Error('not implemented'); }
+  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array {
+    throw new Error('not implemented');
+  }
 
   // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 
@@ -92,9 +96,16 @@ export abstract class Buffer extends Resource<BufferProps> {
   debugData: ArrayBuffer = new ArrayBuffer(0);
 
   /** This doesn't handle partial non-zero offset updates correctly */
-  protected _setDebugData(data: ArrayBufferView | ArrayBuffer | null, byteOffset: number, byteLength: number): void {
+  protected _setDebugData(
+    data: ArrayBufferView | ArrayBuffer | null,
+    byteOffset: number,
+    byteLength: number
+  ): void {
     const buffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
-    const debugDataLength = Math.min(data ? data.byteLength : byteLength, Buffer.DEBUG_DATA_MAX_LENGTH);
+    const debugDataLength = Math.min(
+      data ? data.byteLength : byteLength,
+      Buffer.DEBUG_DATA_MAX_LENGTH
+    );
     if (data === null) {
       this.debugData = new ArrayBuffer(debugDataLength);
     } else if (byteOffset === 0 && byteLength === data.byteLength) {

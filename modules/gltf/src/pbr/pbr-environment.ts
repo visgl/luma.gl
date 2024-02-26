@@ -15,7 +15,7 @@ export type PBREnvironmentProps = {
   brdfLutUrl: string;
   getTexUrl: (name: string, dir: number, level: number) => string;
   specularMipLevels?: number;
-}
+};
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
@@ -33,13 +33,13 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: (dir) => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
+    getTextureForFace: dir => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
     sampler: {
       wrapS: 'clamp-to-edge',
       wrapT: 'clamp-to-edge',
       minFilter: 'linear',
       maxFilter: 'linear'
-    } as SamplerProps,
+    } as SamplerProps
   });
 
   const specularEnvSampler = makeCube(device, {
@@ -56,26 +56,33 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       wrapT: 'clamp-to-edge',
       minFilter: 'linear', // [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
       maxFilter: 'linear'
-    } as SamplerProps,
+    } as SamplerProps
   });
 
   return {
     brdfLutTexture,
     diffuseEnvSampler,
     specularEnvSampler
-  }
+  };
 }
 
 // TODO put somewhere common
 const FACES = [0, 1, 2, 3, 4, 5];
 
-function makeCube(device: Device, {id, getTextureForFace, sampler}: {
-  id: string, 
-  getTextureForFace: (dir: number) => Promise<any> | Promise<any>[], 
-  sampler: SamplerProps
-}): TextureCube {
+function makeCube(
+  device: Device,
+  {
+    id,
+    getTextureForFace,
+    sampler
+  }: {
+    id: string;
+    getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
+    sampler: SamplerProps;
+  }
+): TextureCube {
   const data = {};
-  FACES.forEach((face) => {
+  FACES.forEach(face => {
     data[String(face)] = getTextureForFace(face);
   });
   return device.createTexture({

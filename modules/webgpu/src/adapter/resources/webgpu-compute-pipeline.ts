@@ -16,15 +16,17 @@ export class WebGPUComputePipeline extends ComputePipeline {
     this.device = device;
 
     const webgpuShader = this.props.cs as WebGPUShader;
-    this.handle = this.props.handle || this.device.handle.createComputePipeline({
-      label: this.props.id,
-      compute: {
-        module: webgpuShader.handle,
-        entryPoint: this.props.csEntryPoint,
-        // constants: this.props.csConstants
-      },
-      layout: 'auto'
-    });
+    this.handle =
+      this.props.handle ||
+      this.device.handle.createComputePipeline({
+        label: this.props.id,
+        compute: {
+          module: webgpuShader.handle,
+          entryPoint: this.props.csEntryPoint
+          // constants: this.props.csConstants
+        },
+        layout: 'auto'
+      });
   }
 
   /** For internal use in render passes */

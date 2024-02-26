@@ -51,7 +51,7 @@ export class WEBGLShader extends Shader {
   override getTranslatedSource(): string | null {
     const extensions = this.device.getExtension('WEBGL_debug_shaders');
     const ext = extensions.WEBGL_debug_shaders;
-    return  ext?.getTranslatedShaderSource(this.handle);
+    return ext?.getTranslatedShaderSource(this.handle);
   }
 
   // PRIVATE METHODS
@@ -118,7 +118,7 @@ export class WEBGLShader extends Shader {
    * Get the shader compilation status
    * TODO - Load log even when no error reported, to catch warnings?
    * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-  */
+   */
   protected _getCompilationStatus() {
     this.compilationStatus = this.device.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS)
       ? 'success'

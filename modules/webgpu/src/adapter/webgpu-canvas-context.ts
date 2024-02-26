@@ -6,7 +6,7 @@ import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 
-/** 
+/**
  * Holds a WebGPU Canvas Context
  * The primary job of the CanvasContext is to generate textures for rendering into the current canvas
  * It also manages canvas sizing calculations and resizing.
@@ -55,7 +55,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     //   height: this.height
     // });
 
-    // Wrap the current canvas context texture in a luma.gl texture 
+    // Wrap the current canvas context texture in a luma.gl texture
     const currentColorAttachment = this.getCurrentTexture();
     this.width = currentColorAttachment.width;
     this.height = currentColorAttachment.height;

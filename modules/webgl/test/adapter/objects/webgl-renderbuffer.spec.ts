@@ -7,31 +7,34 @@ import {getWebGLTestDevices} from '@luma.gl/test-utils';
 import {TextureFormat} from '@luma.gl/core';
 import {WEBGLRenderbuffer, _TEXTURE_FORMATS} from '@luma.gl/webgl';
 
-test('WebGL#WEBGLRenderbuffer construct/delete', (t) => {
+test('WebGL#WEBGLRenderbuffer construct/delete', t => {
   for (const device of getWebGLTestDevices()) {
     t.throws(
       // @ts-ignore
       () => new WEBGLRenderbuffer(),
       'WEBGLRenderbuffer throws on missing gl context'
     );
-  
-    const renderbuffer = new WEBGLRenderbuffer(device, {format: 'depth16unorm', width: 1, height: 1});
+
+    const renderbuffer = new WEBGLRenderbuffer(device, {
+      format: 'depth16unorm',
+      width: 1,
+      height: 1
+    });
     t.ok(renderbuffer instanceof WEBGLRenderbuffer, 'WEBGLRenderbuffer construction successful');
-  
+
     renderbuffer.destroy();
     t.ok(renderbuffer instanceof WEBGLRenderbuffer, 'WEBGLRenderbuffer delete successful');
-  
+
     renderbuffer.destroy();
-    t.ok(renderbuffer instanceof WEBGLRenderbuffer, 'WEBGLRenderbuffer repeated delete successful');  
+    t.ok(renderbuffer instanceof WEBGLRenderbuffer, 'WEBGLRenderbuffer repeated delete successful');
   }
 
   t.end();
 });
 
-test('WebGL#WEBGLRenderbuffer format creation', (t) => {
+test('WebGL#WEBGLRenderbuffer format creation', t => {
   for (const device of getWebGLTestDevices()) {
-
-    for (const formatName of Object.keys(_TEXTURE_FORMATS) ) {
+    for (const formatName of Object.keys(_TEXTURE_FORMATS)) {
       const format = formatName as TextureFormat;
       if (WEBGLRenderbuffer.isTextureFormatSupported(device, format)) {
         t.comment(format);
