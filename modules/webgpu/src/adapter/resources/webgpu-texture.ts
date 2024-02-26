@@ -3,6 +3,7 @@ import {Texture, TextureProps, Sampler, SamplerProps} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
+import {WebGPUTextureView} from './webgpu-texture-view';
 
 const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
   '1d': '1d',
@@ -16,11 +17,12 @@ const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
 export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
-  readonly view: GPUTextureView;
-  sampler: WebGPUSampler;
 
   override height: number = 1;
   override width: number = 1;
+
+  sampler: WebGPUSampler;
+  view: WebGPUTextureView;
 
   // static async createFromImageURL(src, usage = 0) {
   //   const img = document.createElement('img');
@@ -72,7 +74,8 @@ export class WebGPUTexture extends Texture {
     // TODO - To support texture arrays we need to create custom views...
     // But we are not ready to expose TextureViews to the public API.
     // @ts-expect-error
-    this.view = this.createView();
+
+    this.view = new WebGPUTextureView(this.device, {...this.props, texture: this});
     // format: this.props.format,
     // dimension: this.props.dimension,
     // aspect = "all";

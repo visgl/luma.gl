@@ -45,17 +45,17 @@ export class WEBGLFramebuffer extends Framebuffer {
 
       // Walk the attachments
       for (let i = 0; i < this.colorAttachments.length; ++i) {
-        const attachment = this.colorAttachments[i];
+        const attachment = this.colorAttachments[i] as WEBGLTextureView;
         const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
         if (attachment) {
-          this._attachOne(attachmentPoint, attachment as WEBGLTexture);
+          this._attachOne(attachmentPoint, attachment);
         }
       }
 
       if (this.depthStencilAttachment) {
         this._attachOne(
           getDepthStencilAttachmentWebGL(this.depthStencilAttachment.props.format),
-          this.depthStencilAttachment as WEBGLTexture
+          this.depthStencilAttachment as WEBGLTextureView
         );
       }
 
@@ -117,10 +117,10 @@ export class WEBGLFramebuffer extends Framebuffer {
     // TODO Not clear that this is better than default destroy/create implementation
 
     for (const colorAttachment of this.colorAttachments) {
-      (colorAttachment as WEBGLTexture).resize({width, height});
+      (colorAttachment.texture as WEBGLTexture).resize({width, height});
     }
     if (this.depthStencilAttachment) {
-      (this.depthStencilAttachment as WEBGLTexture).resize({width, height});
+      (this.depthStencilAttachment.texture as WEBGLTexture).resize({width, height});
     }
     return this;
   }
@@ -170,6 +170,7 @@ export class WEBGLFramebuffer extends Framebuffer {
     level: number
   ): void {
     const {gl} = this.device;
+
     gl.bindTexture(texture.target, texture.handle);
 
     switch (texture.target) {
