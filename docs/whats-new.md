@@ -10,7 +10,11 @@ Target Date: Q2 2024
 
 **@luma.gl/core**
 
-- new [`luma.attachDevice()`](/docs/api-reference/core/luma#attachdevice) API - A `Device` can now be [attached to `WebGL2RenderingContext` or `GPUDevice`] without importing `WebGLDevice`.
+- `Texture` class has been refactored. Textures no longer accept promises, use `AsyncTexture` class instead.
+- New [`luma.attachDevice()`](/docs/api-reference/core/luma#attachdevice) method - A `Device` can now be attached to a `WebGL2RenderingContext` without calling `WebGLDevice.attach()`.
+
+**@luma.gl/engine**
+- New `AsyncTexture` class allows applications to create textures from a URL or Promise.
 
 ## Version 9.0
 

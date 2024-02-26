@@ -14,7 +14,7 @@ import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipel
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {Sampler, SamplerProps} from './resources/sampler';
 import type {Shader, ShaderProps} from './resources/shader';
-import type {Texture, TextureProps, TextureData} from './resources/texture';
+import type {Texture, TextureProps} from './resources/texture';
 import type {ExternalTexture, ExternalTextureProps} from './resources/external-texture';
 import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
@@ -343,6 +343,11 @@ export abstract class Device {
     return false;
   }
 
+  /** Report error (normally for unhandled device errors) */
+  error(error: Error): void {
+    this.props.onError(error);
+  }
+
   // Canvas context
 
   /** Default / primary canvas context. Can be null as WebGPU devices can be created without a CanvasContext */
@@ -370,14 +375,9 @@ export abstract class Device {
   /** Create a texture */
   abstract _createTexture(props: TextureProps): Texture;
   createTexture(props: TextureProps): Texture;
-  createTexture(data: Promise<TextureData>): Texture;
-  createTexture(url: string): Texture;
+  // createTexture(data: Promise<TextureData>): Texture;
 
-  createTexture(props: TextureProps | Promise<TextureData> | string): Texture {
-    // Signature: new Texture2D(gl, url | Promise)
-    if (props instanceof Promise || typeof props === 'string') {
-      props = {data: props};
-    }
+  createTexture(props: TextureProps): Texture {
     return this._createTexture(props);
   }
 

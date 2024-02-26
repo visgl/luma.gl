@@ -2,12 +2,57 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {NumberArray} from '../../types';
 import type {
   ColorTextureFormat,
-  DepthStencilTextureFormat
+  DepthStencilTextureFormat,
+  TextureFormat
 } from '../../gpu-type-utils/texture-formats';
 import type {Texture} from '../resources/texture'; // TextureView...
 import type {TextureView} from '../resources/texture-view'; // TextureView...
+
+// UNIFORMS
+
+/** Valid values for uniforms. @note boolean values get converted to 0 or 1 before setting */
+export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
+
+// BINDING LAYOUTS
+
+/** Describes a buffer binding layout */
+type BufferBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
+  location?: number;
+  visibility: number;
+  /** type of buffer */
+  type: 'uniform' | 'storage' | 'read-only-storage';
+  hasDynamicOffset?: boolean;
+  minBindingSize?: number;
+};
+
+/** Describes a texture binding */
+type TextureBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
+  location?: number;
+  visibility: number;
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  multisampled?: boolean;
+};
+
+/** Describes a storage texture binding */
+type StorageTextureBindingLayout = {
+  /** The index of the binding point in the compiled and linked shader */
+  location?: number;
+  visibility: number;
+  access?: 'write-only';
+  format: TextureFormat;
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+};
+
+export type BindingDeclaration =
+  | BufferBindingLayout
+  | TextureBindingLayout
+  | StorageTextureBindingLayout;
 
 // ATTACHMENTS (See Framebuffer)
 

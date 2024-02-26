@@ -15,7 +15,6 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
-
 import {getTextureFormatWebGL} from '../converters/texture-formats';
 
 type CopyBufferToBufferCommand = {

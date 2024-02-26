@@ -5,7 +5,8 @@ import {
   CubeGeometry,
   Model,
   ModelProps,
-  loadImage
+  loadImage,
+  AsyncTexture
 } from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -119,7 +120,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = device.createTexture({
+    const texture = new AsyncTexture(device, {
       data: loadImage('vis-logo.png'),
       mipmaps: true,
       sampler: {

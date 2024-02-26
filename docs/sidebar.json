@@ -102,15 +102,14 @@
         "type": "category",
         "label": "@luma.gl/engine",
         "items": [
+          "api-reference/engine/model",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
-          "api-reference/engine/animation/key-frames",
-          "api-reference/engine/animation/timeline",
+          "api-reference/engine/async-texture",
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
-          "api-reference/engine/model",
-          "api-reference/engine/pipeline-factory",
-          "api-reference/engine/shader-factory",
+          "api-reference/engine/animation/key-frames",
+          "api-reference/engine/animation/timeline",
           "api-reference/engine/computation",
           "api-reference/engine/transform",
           "api-reference/engine/transform/buffer-transform",
@@ -119,7 +118,9 @@
           "api-reference/engine/scenegraph/model-node",
           "api-reference/engine/scenegraph/scenegraph-node",
           "api-reference/engine/gpgpu/gpu-point-in-polygon",
-          "api-reference/engine/gpgpu/histopyramid"
+          "api-reference/engine/gpgpu/histopyramid",
+          "api-reference/engine/pipeline-factory",
+          "api-reference/engine/shader-factory"
         ]
       },
       {

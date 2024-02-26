@@ -145,6 +145,14 @@ export class WebGPUDevice extends Device {
     this.features = this._getFeatures();
     this.limits = this.handle.limits;
 
+    // Listen for uncaptured WebGPU errors
+    device.addEventListener('uncapturederror', (event: Event) => {
+      // TODO is this the right way to make sure the error is an Error instance?
+      const errorMessage =
+        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown error';
+      this.error(new Error(errorMessage));
+    });
+
     // "Context" loss handling
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(async resolve => {
       const lostInfo = await this.handle.lost;

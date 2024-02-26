@@ -5,80 +5,137 @@
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
 import type {TextureFormat} from '../../gpu-type-utils/texture-formats';
+import type {TextureView, TextureViewProps} from './texture-view';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
-import {TextureView, TextureViewProps} from './texture-view';
 
-// required GPUExtent3D size;
-// GPUIntegerCoordinate mipLevelCount = 1;
-// GPUSize32 sampleCount = 1;
-// GPUTextureDimension dimension = "2d";
-// required GPUTextureFormat format;
-// required GPUTextureUsageFlags usage;
+/**
+ * These represent the main compressed texture formats
+ * Each format typically has a number of more specific subformats
+ */
+export type TextureCompressionFormat =
+  | 'dxt'
+  | 'dxt-srgb'
+  | 'etc1'
+  | 'etc2'
+  | 'pvrtc'
+  | 'atc'
+  | 'astc'
+  | 'rgtc';
 
-/** Data types that can be used to initialize textures */
-export type TextureData = TypedArray | ArrayBuffer | Buffer | ImageBitmap | HTMLImageElement;
+/** Names of cube texture faces */
+export type TextureCubeFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
 
-export type CubeTextureData = Record<string, TextureData> | Record<string, Promise<TextureData>>;
-
-export type ExternalTextureData = HTMLVideoElement;
-
-/** Abstract Texture interface */
-export type TextureProps = ResourceProps & {
+/**
+ * One mip level
+ * Basic data structure is similar to `ImageData`
+ * additional optional fields can describe compressed texture data.
+ */
+export type TextureLevelData = {
+  /** WebGPU style format string. Defaults to 'rgba8unorm' */
   format?: TextureFormat;
-  dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  width?: number | undefined;
-  height?: number | undefined;
-  depth?: number;
-  usage?: number;
-
-  data?: TextureData | Promise<TextureData> | CubeTextureData | string | HTMLVideoElement | null;
-  mipmaps?: boolean;
-
-  mipLevels?: number;
-  samples?: number;
-  type?: number;
-  compressed?: boolean;
-
-  sampler?: Sampler | SamplerProps;
-  view?: TextureViewProps;
-};
-
-export type WebGPUTextureProps = ResourceProps & {
+  data: TypedArray;
   width: number;
   height: number;
-  depth?: number;
-  mipLevels?: number;
-  format?: string;
+
+  compressed?: boolean;
+  byteLength?: number;
+  hasAlpha?: boolean;
 };
 
 /**
- * @deprecated
- * @todo remove, are these even used anymore?
+ * Built-in data types that can be used to initialize textures
+ * @note WebGL supports OffscreenCanvas but seems WebGPU does not?
  */
-export type DeprecatedWebGLTextureProps = {
-  /** @deprecated use props.sampler */
-  parameters?: Record<number, number>;
-  /** @deprecated use props.data */
-  pixels?: any;
-  /** @deprecated use props.format */
-  dataFormat?: number | null;
-  /** @deprecated rarely supported */
-  border?: number;
-  /** @deprecated WebGL only. */
-  pixelStore?: object;
-  /** @deprecated WebGL only. */
-  textureUnit?: number;
-  /** @deprecated WebGL only. Use dimension. */
-  target?: number;
-};
+export type ExternalImage =
+  | ImageData
+  | ImageBitmap
+  | HTMLImageElement
+  | HTMLVideoElement
+  | HTMLCanvasElement;
+
+export type TextureLevelSource = TextureLevelData | ExternalImage;
+
+/** Texture data can be one or more mip levels */
+export type TextureData = TextureLevelData | ExternalImage | (TextureLevelData | ExternalImage)[];
+
+/** @todo - define what data type is supported for 1D textures */
+export type Texture1DData = TypedArray | TextureLevelData;
+
+/** Texture data can be one or more mip levels */
+export type Texture2DData =
+  | TypedArray
+  | TextureLevelData
+  | ExternalImage
+  | (TextureLevelData | ExternalImage)[];
+
+/** Array of textures */
+export type Texture3DData = TypedArray | TextureData[];
+
+/** 6 face textures */
+export type TextureCubeData = Record<TextureCubeFace, Texture2DData>;
+
+/** Array of textures */
+export type TextureArrayData = TextureData[];
+
+/** Array of 6 face textures */
+export type TextureCubeArrayData = Record<TextureCubeFace, TextureData>[];
+
+type TextureDataProps =
+  | Texture1DProps
+  | Texture2DProps
+  | Texture3DProps
+  | TextureArrayProps
+  | TextureCubeProps
+  | TextureCubeArrayProps;
+
+type Texture1DProps = {dimension: '1d'; data?: Texture1DData | null};
+type Texture2DProps = {dimension?: '2d'; data?: Texture2DData | null};
+type Texture3DProps = {dimension: '3d'; data?: Texture3DData | null};
+type TextureArrayProps = {dimension: '2d-array'; data?: TextureArrayData | null};
+type TextureCubeProps = {dimension: 'cube'; data?: TextureCubeData | null};
+type TextureCubeArrayProps = {dimension: 'cube-array'; data: TextureCubeArrayData | null};
+
+/** Texture properties */
+export type TextureProps = ResourceProps &
+  TextureDataProps & {
+    format?: TextureFormat;
+    width?: number | undefined;
+    height?: number | undefined;
+    depth?: number;
+    usage?: number;
+
+    /** How many mip levels */
+    mipLevels?: number | 'pyramid';
+    /** Multi sampling */
+    samples?: number;
+
+    /** Specifying mipmaps will default mipLevels to 'pyramid' and attempt to generate mipmaps */
+    mipmaps?: boolean;
+
+    /** Sampler (or SamplerProps) for the default sampler for this texture. Used if no sampler provided. Note that other samplers can still be used. */
+    sampler?: Sampler | SamplerProps;
+    /** Props for the default TextureView for this texture. Note that other views can still be created and used. */
+    view?: TextureViewProps;
+
+    /** @deprecated - this is implicit from format */
+    compressed?: boolean;
+  };
 
 /**
  * Abstract Texture interface
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
-export abstract class Texture<Props extends TextureProps = TextureProps> extends Resource<Props> {
+export abstract class Texture extends Resource<TextureProps> {
+  static COPY_SRC = 0x01;
+  static COPY_DST = 0x02;
+  static TEXTURE = 0x04;
+  static STORAGE = 0x08;
+  static RENDER_ATTACHMENT = 0x10;
+
+  static CubeFaces: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
+
   static override defaultProps: Required<TextureProps> = {
     ...Resource.defaultProps,
     data: null,
@@ -88,23 +145,13 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     height: undefined!,
     depth: 1,
     mipmaps: true,
-    // type: undefined,
     compressed: false,
-    // mipLevels: 1,
     usage: 0,
-    // usage: GPUTextureUsage.COPY_DST
     mipLevels: undefined!,
     samples: undefined!,
-    type: undefined!,
     sampler: {},
     view: undefined!
   };
-
-  static COPY_SRC = 0x01;
-  static COPY_DST = 0x02;
-  static TEXTURE = 0x04;
-  static STORAGE = 0x08;
-  static RENDER_ATTACHMENT = 0x10;
 
   override get [Symbol.toStringTag](): string {
     return 'Texture';
@@ -119,34 +166,195 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   /** height in pixels of this texture */
   height: number;
   /** depth of this texture */
-  readonly depth: number;
+  depth: number;
+  /** mip levels in this texture */
+  mipLevels: number;
 
   /** Default sampler for this texture */
   abstract sampler: Sampler;
-
   /** Default view for this texture */
   abstract view: TextureView;
 
   /** "Time" of last update. Monotonically increasing timestamp */
   updateTimestamp: number;
 
+  /**
+   * Set to true as soon as texture has been initialized.
+   * RenderPipeline.draw() checks the loaded flag of all textures.
+   * Textures that are still loading from promises have not been initialized with valid data
+   */
+  loaded: boolean = false;
+
+  /** Check if data is an external image */
+  static isExternalImage(data: unknown): ExternalImage | null {
+    return isExternalImage(data);
+  }
+
+  /** Check if texture data is a typed array */
+  static isTextureLevelData(image: TextureData): TextureLevelData | null {
+    const data = (image as TextureLevelData)?.data;
+    return ArrayBuffer.isView(data) ? (image as TextureLevelData) : null;
+  }
+
+  /** Determine size (width and height) of provided image data */
+  static getExternalImageSize(data: ExternalImage): {width: number; height: number} {
+    return getExternalImageSize(data);
+  }
+
+  /** Get the size of the texture described by the provided TextureData */
+  static getTextureDataSize(
+    data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
+  ): {width: number; height: number} | null {
+    return getTextureDataSize(data);
+  }
+
+  /** Calculate the number of mip levels for a texture of width and height */
+  static getMipLevelCount(width: number, height: number): number {
+    return Math.floor(Math.log2(Math.max(width, height))) + 1;
+  }
+
+  /** Convert luma.gl cubemap face constants to depth index */
+  static getCubeFaceDepth(face: TextureCubeFace): number {
+    // prettier-ignore
+    switch (face) {
+        case '+X': return  0;
+        case '-X': return  1;
+        case '+Y': return  2;
+        case '-Y': return  3;
+        case '+Z': return  4;
+        case '-Z': return  5;
+        default: throw new Error(face);
+      }
+  }
+
   /** Do not use directly. Create with device.createTexture() */
-  constructor(
-    device: Device,
-    props: Props,
-    defaultProps = Texture.defaultProps as Required<Props>
-  ) {
-    super(device, props, defaultProps);
+  constructor(device: Device, props: TextureProps) {
+    super(device, props, Texture.defaultProps);
     this.dimension = this.props.dimension;
     this.format = this.props.format;
+
+    // Size
     this.width = this.props.width;
     this.height = this.props.height;
     this.depth = this.props.depth;
+
+    // Calculate size, if not provided
+    if (this.props.width === undefined || this.props.height === undefined) {
+      const size = Texture.getTextureDataSize(this.props.data);
+      this.width = size?.width || 1;
+      this.height = size?.height || 1;
+    }
+
+    // mipLevels
+
+    // If mipmap generation is requested and mipLevels is not provided, initialize a full pyramid
+    if (this.props.mipmaps && this.props.mipLevels === undefined) {
+      this.props.mipLevels = 'pyramid';
+    }
+
+    // Auto-calculate the number of mip levels as a convenience
+    // TODO - Should we clamp to 1-getMipLevelCount?
+    this.mipLevels =
+      this.props.mipLevels === 'pyramid'
+        ? Texture.getMipLevelCount(this.width, this.height)
+        : this.props.mipLevels || 1;
 
     // TODO - perhaps this should be set on async write completion?
     this.updateTimestamp = device.incrementTimestamp();
   }
 
   /** Create a texture view for this texture */
-  abstract createView(props?: TextureViewProps): TextureView;
+  abstract createView(props: TextureViewProps): TextureView;
+
+  /** Set sampler props associated with this texture */
+  abstract setSampler(sampler?: Sampler | SamplerProps): void;
+
+  /**  */
+  abstract setTexture1DData(data: Texture1DData): void;
+  abstract setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void;
+  abstract setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void;
+  abstract setTextureCubeData(data: TextureCubeData, depth?: number): void;
+  abstract setTextureArrayData(data: TextureArrayData): void;
+  abstract setTextureCubeArrayData(data: TextureCubeArrayData): void;
+
+  /**
+   * @param {*} pixels, data -
+   *  null - create empty texture of specified format
+   *  Typed array - init from image data in typed array
+   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+   *  HTMLVideoElement - Creates video texture. Auto width/height
+   *
+   * @param  x - xOffset from where texture to be updated
+   * @param  y - yOffset from where texture to be updated
+   * @param  width - width of the sub image to be updated
+   * @param  height - height of the sub image to be updated
+   * @param  level - mip level to be updated
+   * @param {GLenum} format - internal format of image data.
+   * @param {GLenum} type
+   *  - format of array (autodetect from type) or
+   *  - (WEBGL2) format of buffer or ArrayBufferView
+   * @param {GLenum} dataFormat - format of image data.
+   * @param {Number} offset - (WEBGL2) offset from start of buffer
+   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+   */
+}
+
+// HELPER METHODS
+
+/** Check if data is an external image */
+function isExternalImage(data: unknown): ExternalImage | null {
+  const isExternalImage =
+    (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
+    (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+    (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
+    (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
+    (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement);
+  return isExternalImage ? (data as ExternalImage) : null;
+}
+
+/** Determine size (width and height) of provided image data */
+function getExternalImageSize(data: ExternalImage): {width: number; height: number} | null {
+  if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
+    return {width: data.width, height: data.height};
+  }
+  if (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) {
+    return {width: data.width, height: data.height};
+  }
+  if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
+    return {width: data.naturalWidth, height: data.naturalHeight};
+  }
+  if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
+    return {width: data.width, height: data.height};
+  }
+  if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
+    return {width: data.videoWidth, height: data.videoHeight};
+  }
+  return null;
+}
+
+/** Get the size of the texture described by the provided TextureData */
+function getTextureDataSize(
+  data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
+): {width: number; height: number} | null {
+  if (!data) {
+    return null;
+  }
+  if (ArrayBuffer.isView(data)) {
+    return null;
+  }
+  // Recurse into arrays (array of miplevels)
+  if (Array.isArray(data)) {
+    return Texture.getTextureDataSize(data[0]);
+  }
+  const externalImage = Texture.isExternalImage(data);
+  if (externalImage) {
+    return Texture.getExternalImageSize(externalImage);
+  }
+  if (data && typeof data === 'object' && data.constructor === Object) {
+    const untypedData = data as unknown as Record<string, number>;
+    return {width: untypedData.width, height: untypedData.height};
+  }
+  throw new Error('texture size deduction failed');
 }

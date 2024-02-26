@@ -65,7 +65,7 @@ export function readPixelsToArray(
 
   // Deduce the type from color attachment if not provided.
   sourceType =
-    sourceType || framebuffer.colorAttachments[attachment]?.texture?.type || GL.UNSIGNED_BYTE;
+    sourceType || framebuffer.colorAttachments[attachment]?.texture?.glType || GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);

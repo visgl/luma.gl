@@ -73,3 +73,6 @@ export {
   requestAnimationFrame,
   cancelAnimationFrame
 } from './animation-loop/request-animation-frame';
+
+export type {AsyncTextureProps} from './async-texture/async-texture';
+export {AsyncTexture} from './async-texture/async-texture';

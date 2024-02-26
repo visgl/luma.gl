@@ -1,6 +1,12 @@
-import {Buffer, Texture, glsl} from '@luma.gl/core';
+import {Buffer, glsl} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {Model, CubeGeometry, AnimationLoopTemplate, loadImageBitmap} from '@luma.gl/engine';
+import {
+  Model,
+  CubeGeometry,
+  AnimationLoopTemplate,
+  loadImageBitmap,
+  AsyncTexture
+} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Rotating Cube';
@@ -95,8 +101,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     // Fetch the image and upload it into a GPUTexture.
-    const texture = device.createTexture({
-      usage: Texture.TEXTURE & Texture.COPY_DST,
+    const texture = new AsyncTexture(device, {
       data: loadImageBitmap(TEXTURE_URL),
       // usage: Texture.TEXTURE | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
       mipmaps: true, // Create mipmaps

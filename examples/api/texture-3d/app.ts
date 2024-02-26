@@ -103,10 +103,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const texture = device.createTexture({
       dimension: '3d',
+      data: textureData as any,
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
-      data: textureData,
       format: 'r8unorm',
       mipmaps: true,
       sampler: {

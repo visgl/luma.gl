@@ -21,7 +21,7 @@ export {Resource} from './adapter/resources/resource';
 export type {BufferProps} from './adapter/resources/buffer';
 export {Buffer} from './adapter/resources/buffer';
 
-export type {TextureProps, TextureData} from './adapter/resources/texture';
+export type {TextureProps} from './adapter/resources/texture';
 export {Texture} from './adapter/resources/texture';
 
 export type {TextureViewProps} from './adapter/resources/texture-view';
@@ -70,9 +70,24 @@ export {QuerySet} from './adapter/resources/query-set';
 export {UniformBufferLayout} from './portable/uniform-buffer-layout';
 export {UniformBlock} from './portable/uniform-block';
 export {UniformStore} from './portable/uniform-store';
+// TEXTURE TYPES
 
 // API TYPES
 export type {CompilerMessage} from './adapter/types/compiler-message';
+
+export type {
+  TextureCompressionFormat,
+  TextureCubeFace,
+  TextureLevelData,
+  ExternalImage,
+  TextureData,
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
 

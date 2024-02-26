@@ -138,7 +138,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     for (let i = 0; i < this.colorAttachments.length; ++i) {
       if (this.colorAttachments[i]) {
         const resizedTexture = this.device._createTexture({
-          ...this.colorAttachments[i].props,
+          ...this.colorAttachments[i].texture.props,
           width,
           height
         });
@@ -150,7 +150,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
 
     if (this.depthStencilAttachment) {
       const resizedTexture = this.device._createTexture({
-        ...this.depthStencilAttachment.props,
+        ...this.depthStencilAttachment.texture.props,
         width,
         height
       });

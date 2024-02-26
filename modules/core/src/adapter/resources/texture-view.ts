@@ -25,6 +25,21 @@ export type TextureViewProps = ResourceProps & {
   arrayLayerCount: number;
 };
 
+/*
+  // type = sampler
+  samplerType?: 'filtering' | 'non-filtering' | 'comparison';
+
+  // type = texture
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  multisampled?: boolean;
+
+  // type = storage
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  access: 'read-only' | 'write-only';
+  format: string;
+*/
+
 /** Immutable TextureView object */
 export abstract class TextureView extends Resource<TextureViewProps> {
   static override defaultProps: Required<TextureViewProps> = {

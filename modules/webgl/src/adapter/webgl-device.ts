@@ -3,17 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
-import type {
-  DeviceProps,
-  DeviceInfo,
-  CanvasContextProps,
-  TextureFormat,
-  VertexArray,
-  VertexArrayProps,
-  Framebuffer,
-  Buffer,
-  Texture
-} from '@luma.gl/core';
+import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@luma.gl/core';
+import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {
@@ -294,7 +285,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     return new WEBGLBuffer(this, newProps);
   }
 
-  _createTexture(props: TextureProps): WEBGLTexture {
+  // _createTexture(props: TextureProps): WEBGLTexture {
+  _createTexture(props: TextureProps): Texture {
     return new WEBGLTexture(this, props);
   }
 
