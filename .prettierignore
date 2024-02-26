@@ -1,4 +1,4 @@
-**/dist*/**/*.js
+**/dist
 workers/
 *.min.js
 wip/
@@ -8,20 +8,3 @@ examples
 modules
 test
 .ocularrc.js
-
-# TODO(v9): Restore formatting on remainder of the codebase.
-!modules/core/src/adapter/device.ts
-!modules/core/src/adapter/resources/render-pipeline.ts
-!modules/core/src/adapter/resources/transform-feedback.ts
-!modules/core/src/adapter/types/shader-layout.ts
-!modules/core/src/index.ts
-!modules/engine/src/model/model.ts
-!modules/engine/src/lib/shader-factory.ts
-!modules/webgl/src/adapter/resources/webgl-buffer.ts
-!modules/webgl/src/adapter/resources/webgl-render-pipeline.ts
-!modules/webgl/src/adapter/resources/webgl-transform-feedback.ts
-!modules/webgl/src/adapter/webgl-device.ts
-!modules/webgl/src/index.ts
-!modules/webgl/test/adapter/resources/webgl-transform-feedback.spec.ts
-!modules/webgl/test/index.ts
-!modules/webgpu/src/adapter/webgpu-device.ts
