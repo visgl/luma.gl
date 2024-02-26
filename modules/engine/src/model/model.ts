@@ -2,10 +2,10 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@luma.gl/core';
-import type {DeviceFeature, RenderPipelineProps, RenderPipelineParameters,} from '@luma.gl/core';
-import type {Shader, Buffer, BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
+import type {DeviceFeature, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {Shader, BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import { Device, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -226,8 +226,7 @@ export class Model {
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
-    this.shaderFactory =
-      props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
+    this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
     // Create the pipeline
     // @note order is important
@@ -597,11 +596,11 @@ export class Model {
 
       const fs = this.fs
         ? this.shaderFactory.createShader({
-          id: `${this.id}-fragment`,
-          stage: 'fragment',
-          source: this.fs,
-          debug: this.props.debugShaders
-        })
+            id: `${this.id}-fragment`,
+            stage: 'fragment',
+            source: this.fs,
+            debug: this.props.debugShaders
+          })
         : null;
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
