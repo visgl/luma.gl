@@ -75,24 +75,25 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 
 **`@luma.gl/webgl`** 
 
-- Asynchronous shader compilation and linking significantly speeds up applications that create many `RenderPipelines`. 
-- Supported when the [KHR_parallel_shader_compile][KHR_parallel_shader_compile] WebGL extension is available.
+WebGL is not dead yet! Browsers (Chrome in particular) are still adding extensions to WebGL 2, and luma.gl
+is adding support for many of the new features through the [`DeviceFeatures`](/docs/api-reference/core/device-features) API.
 
-New `Device.features` exposing new GPU parameters:
+New `Device.features` that improve WebGL application performance:
+- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically when available and speeds up applications that create many `RenderPipelines`. 
+
+New `Device.features` that expose new WebGL GPU parameters:
 - `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled if the  feature is available.
 - `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading. 
 - `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons. Check the  feature. 
 - `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines. 
 - `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7` - enables `gl_ClipDistance[] / gl_CullDistance[]`.
 
-New `Device.features` enable new GLSL syntax
+New `Device.features` that enable new GLSL syntax
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 
-New `Device.features` enable additional color format support:
+New `Device.features` that enable additional WebGL color format support:
 - `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` are renderable.
 - `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
 - `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable. 
 - `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
-  
-[KHR_parallel_shader_compile]: https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/
