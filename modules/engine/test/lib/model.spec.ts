@@ -1,135 +1,102 @@
-/*
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
-
-import {GL} from '@luma.gl/constants';
 import {luma} from '@luma.gl/core';
-// TODO - Model test should not depend on Cube
-import {Model, ProgramManager} from '@luma.gl/engine';
-import {Buffer} from '@luma.gl/webgl';
-import {CubeGeometry} from '@luma.gl/engine';
-import {picking} from '@luma.gl/shadertools';
+import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
+import {webglDevice} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('Resource Counts');
 
-const DUMMY_VS = `
+const DUMMY_VS = `#version 300 es
   void main() { gl_Position = vec4(1.0); }
 `;
 
-const DUMMY_FS = `
+const DUMMY_FS = `#version 300 es
   precision highp float;
-  void main() { gl_FragColor = vec4(1.0); }
-`;
-
-const VS_300 = `#version 300 es
-
-  in vec4 positions;
-  in vec2 uvs;
-
-  out vec2 vUV;
-
-  void main() {
-    vUV = uvs;
-    gl_Position = positions;
-  }
-`;
-
-const FS_300 = `#version 300 es
-  precision highp float;
-
-  in vec2 vUV;
-
-  uniform sampler2D tex;
-
   out vec4 fragColor;
-  void main() {
-    fragColor = texture(tex, vUV);
-  }
+  void main() { fragColor = vec4(1.0); }
 `;
 
-test('Model#construct/destruct', (t) => {
-  // Avoid re-using program from ProgramManager
-  const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
-  const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
+const mockModule = {
+  name: 'test-module',
+  vs: '',
+  fs: '',
+  getUniforms: (opts, context) => ({}),
+  dependencies: []
+};
 
+test('Model#construct/destruct', t => {
   const model = new Model(webglDevice, {
-    drawMode: GL.POINTS,
+    topology: 'point-list',
     vertexCount: 0,
-    vs,
-    fs
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
   });
 
   t.ok(model, 'Model constructor does not throw errors');
   t.ok(model.id, 'Model has an id');
-  t.ok(model.getProgram().handle, 'Created new program');
+  t.ok(model.pipeline, 'Created pipeline');
 
   model.destroy();
-  t.notOk(model.vertexArray.handle, 'Deleted vertexArray');
-  t.notOk(model.program.handle, 'Deleted program');
+  t.true(model.pipeline.destroyed, 'Deleted pipeline');
 
   t.end();
 });
 
-test('Model#multiple delete', (t) => {
-  // Avoid re-using program from ProgramManager
-  const vs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_Position = vec4(0.0);}';
-  const fs = '/* DO_NOT_CACHE Model#construct/destruct * void main() {gl_FragColor = vec4(0.0);}';
-
+test('Model#multiple delete', t => {
   const model1 = new Model(webglDevice, {
-    drawMode: GL.POINTS,
+    topology: 'point-list',
     vertexCount: 0,
-    vs,
-    fs
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
   });
 
   const model2 = new Model(webglDevice, {
-    drawMode: GL.POINTS,
+    topology: 'point-list',
     vertexCount: 0,
-    vs,
-    fs
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
   });
 
   model1.destroy();
-  t.ok(model2.program.handle, 'program still in use');
+  t.ok(model2.pipeline.destroyed === false, 'program still in use');
   model1.destroy();
-  t.ok(model2.program.handle, 'program still in use');
+  t.ok(model2.pipeline.destroyed === false, 'program still in use');
   model2.destroy();
-  t.notOk(model2.program.handle, 'program is released');
+  t.ok(model2.pipeline.destroyed === true, 'program is released');
 
   t.end();
 });
 
-test('Model#setAttribute', (t) => {
-  const buffer1 = webglDevice.createBuffer({
-    accessor: {size: 2},
-    data: new Float32Array(4).fill(1)
-  });
-  const buffer2 = webglDevice.createBuffer({data: new Float32Array(8)});
+test('Model#setAttributes', t => {
+  const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
+  const buffer2 = webglDevice.createBuffer({data: new Float32Array(9).fill(1)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
   const model = new Model(webglDevice, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    geometry: new CubeGeometry()
+    attributes: {
+      positions: webglDevice.createBuffer({data: new Float32Array(12).fill(2)}),
+      normals: webglDevice.createBuffer({data: new Float32Array(12).fill(3)})
+    },
+    bufferLayout: [
+      {name: 'positions', format: 'float32x3'},
+      {name: 'normals', format: 'float32x3'},
+      {name: 'texCoords', format: 'float32x2'}
+    ]
   });
 
   t.is(
     stats.get('Buffers Active').count - initialActiveBuffers,
-    4,
+    2,
     'Created new buffers for attributes'
   );
 
-  model.setAttributes({
-    instanceSizes: [buffer1, {size: 1}],
-    instancePositions: buffer2,
-    instanceWeight: new Float32Array([10]),
-    instanceColors: {getValue: () => new Float32Array([0, 0, 0, 1])}
-  });
+  model.setAttributes({positions: buffer1, normals: buffer2});
 
-  t.deepEqual(model.getAttributes(), {}, 'no longer stores local attributes');
+  t.deepEqual(model.bufferAttributes, {}, 'no longer stores local attributes');
 
-  t.is(stats.get('Buffers Active').count - initialActiveBuffers, 4, 'Did not create new buffers');
+  t.is(stats.get('Buffers Active').count - initialActiveBuffers, 2, 'Did not create new buffers');
 
   model.destroy();
 
@@ -139,305 +106,189 @@ test('Model#setAttribute', (t) => {
   t.end();
 });
 
-test('Model#setters, getters', (t) => {
-  const model = new Model(webglDevice, {vs: DUMMY_VS, fs: DUMMY_FS});
+test('Model#setters, getters', t => {
+  const model = new Model(webglDevice, {topology: 'point-list', vs: DUMMY_VS, fs: DUMMY_FS});
 
-  model.setUniforms({
-    isPickingActive: 1
-  });
-  t.deepEqual(model.getUniforms(), {isPickingActive: 1}, 'uniforms are set');
+  model.setVertexCount(12);
+  t.is(model.vertexCount, 12, 'set vertex count');
 
   model.setInstanceCount(4);
-  t.is(model.getInstanceCount(), 4, 'instance count is set');
+  t.is(model.instanceCount, 4, 'set instance count');
 
-  model.setDrawMode(1);
-  t.is(model.getDrawMode(), 1, 'draw mode is set');
+  model.setTopology('triangle-list');
+  t.is(model.topology, 'triangle-list', 'set topology');
 
   model.destroy();
 
   t.end();
 });
 
-test('Model#draw', (t) => {
+test('Model#draw', t => {
   const model = new Model(webglDevice, {
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    geometry: new CubeGeometry(),
-    timerQueryEnabled: true
+    attributes: {
+      positions: webglDevice.createBuffer({data: new Float32Array(12).fill(2)}),
+      normals: webglDevice.createBuffer({data: new Float32Array(12).fill(3)})
+    },
+    bufferLayout: [
+      {name: 'positions', format: 'float32x3'},
+      {name: 'normals', format: 'float32x3'}
+    ]
   });
 
-  model.draw();
+  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  model.render({
-    isPickingActive: 1
-  });
-  t.deepEqual(model.getUniforms(), {isPickingActive: 1}, 'uniforms are set');
+  model.draw(renderPass);
+
+  renderPass.destroy();
+
+  model.destroy();
 
   t.end();
 });
 
-test('Model#program management', (t) => {
-  const pm = new ProgramManager(webglDevice);
-
-  const vs = `
-    uniform float x;
-
-    void main() {
-      gl_Position = vec4(x);
-    }
-  `;
-
-  const fs = `
-    void main() {
-      gl_FragColor = vec4(1.0);
-    }
-  `;
+test('Model#pipeline caching', t => {
+  const pipelineFactory = new PipelineFactory(webglDevice);
+  const shaderFactory = new ShaderFactory(webglDevice);
 
   const model1 = new Model(webglDevice, {
-    programManager: pm,
-    vs,
-    fs,
-    uniforms: {
-      x: 0.5
-    }
+    pipelineFactory,
+    shaderFactory,
+    topology: 'point-list',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    uniforms: {x: 0.5}
   });
 
   const model2 = new Model(webglDevice, {
-    programManager: pm,
-    vs,
-    fs,
-    uniforms: {
-      x: -0.5
-    }
+    pipelineFactory,
+    shaderFactory,
+    topology: 'point-list',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    uniforms: {x: -0.5}
   });
 
-  t.ok(model1.program === model2.program, 'Programs are shared.');
+  t.ok(model1.pipeline === model2.pipeline, 'Pipelines are shared.');
 
-  model1.draw();
-  t.deepEqual(model1.getUniforms(), model1.program.uniforms, 'Program uniforms set');
+  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  model2.draw();
-  t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
+  let uniforms: Record<string, unknown> = {};
+  const setUniformsSpy = _uniforms => (uniforms = _uniforms);
 
-  model2.setProgram({
-    vs,
-    fs,
-    defines: {
-      MY_DEFINE: true
-    }
-  });
+  model1.pipeline.setUniformsWebGL = setUniformsSpy;
 
-  t.ok(model1.program === model2.program, 'Program not updated before draw.');
+  model1.draw(renderPass);
+  t.deepEqual(uniforms, {x: 0.5}, 'Pipeline uniforms set');
 
-  model2.draw();
-  t.ok(model1.program !== model2.program, 'Program updated after draw.');
-  t.deepEqual(model2.getUniforms(), model2.program.uniforms, 'Program uniforms set');
+  model2.draw(renderPass);
+  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
 
-  // This part is checking that the use counts
-  // don't get bloated by multiple checks.
-  const model3 = new Model(webglDevice, {
-    programManager: pm,
-    vs,
-    fs,
-    defines: {
-      MODEL3_DEFINE1: true
-    }
-  });
+  model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
+  t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
-  const oldProgram = model3.program;
+  model2.pipeline.setUniformsWebGL = setUniformsSpy;
+  model2.draw(renderPass);
+  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
 
-  // Check for program updates a few times
-  model3.draw();
-  model3.draw();
+  renderPass.destroy();
 
-  model3.setProgram({
-    vs,
-    fs,
-    defines: {
-      MODEL3_DEFINE2: true
-    }
-  });
-
-  model3.draw();
-  t.ok(model3.program !== oldProgram, 'Program updated after draw.');
-  t.ok(oldProgram.handle === null, 'Old program released after update');
+  model1.destroy();
+  model2.destroy();
 
   t.end();
 });
 
-test('Model#program management - getModuleUniforms', (t) => {
-  const pm = new ProgramManager(webglDevice);
-
-  const vs = 'void main() {}';
-  const fs = 'void main() {}';
-
-  const model = new Model(webglDevice, {
-    programManager: pm,
-    vs,
-    fs
+test('Model#pipeline caching with defines and modules', t => {
+  const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(webglDevice);
+  const shaderFactory = ShaderFactory.getDefaultShaderFactory(webglDevice);
+  const model1 = new Model(webglDevice, {
+    topology: 'triangle-list',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
   });
 
-  t.deepEqual(model.getModuleUniforms(), {}, 'Module uniforms empty with no modules');
+  t.ok(model1.pipeline, 'Got a pipeline');
 
-  model.setProgram({
-    vs,
-    fs,
-    modules: [picking]
-  });
-
-  t.deepEqual(
-    model.getModuleUniforms(),
-    picking.getUniforms(),
-    'Module uniforms correct after update'
-  );
-
-  t.end();
-});
-
-test('Model#getBuffersFromGeometry', (t) => {
-  let buffers = getBuffersFromGeometry(webglDevice.gl, {
-    indices: new Uint16Array([0, 1, 2, 3]),
-    attributes: {
-      positions: {size: 3, value: new Float32Array(12)},
-      colors: {constant: true, value: [255, 255, 255, 255]},
-      uvs: {size: 2, value: new Float32Array(8)}
-    }
-  });
-
-  t.deepEqual(buffers.colors, [255, 255, 255, 255], 'colors mapped');
-  t.ok(buffers.positions[0] instanceof Buffer, 'positions mapped');
-  t.is(buffers.positions[1].size, 3, 'positions mapped');
-  t.ok(buffers.uvs[0] instanceof Buffer, 'uvs mapped');
-  t.is(buffers.uvs[1].size, 2, 'uvs mapped');
-  t.ok(buffers.indices[0] instanceof Buffer, 'indices mapped');
-
-  buffers.positions[0].destroy();
-  buffers.uvs[0].destroy();
-  buffers.indices[0].destroy();
-
-  // Inferring attribute size
-  buffers = getBuffersFromGeometry(webglDevice.gl, {
-    attributes: {
-      indices: {value: new Uint16Array([0, 1, 2, 3])},
-      normals: {value: new Float32Array(12)},
-      texCoords: {value: new Float32Array(8)}
-    }
-  });
-  t.is(buffers.indices[1].size, 1, 'texCoords size');
-  t.is(buffers.normals[1].size, 3, 'normals size');
-  t.is(buffers.texCoords[1].size, 2, 'texCoords size');
-
-  buffers.indices[0].destroy();
-  buffers.normals[0].destroy();
-  buffers.texCoords[0].destroy();
-
-  t.throws(
-    () =>
-      getBuffersFromGeometry(webglDevice.gl, {
-        indices: [0, 1, 2, 3]
-      }),
-    'invalid indices'
-  );
-
-  t.throws(
-    () =>
-      getBuffersFromGeometry(webglDevice.gl, {
-        attributes: {
-          heights: {value: new Float32Array([0, 1, 2, 3])}
-        }
-      }),
-    'invalid size'
-  );
-
-  t.end();
-});
-*/
-
-/*
-test.skip('PipelineFactory#basic', (t) => {
-  const pipelineFactory = new PipelineFactory(webglDevice);
-
-  const program1 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-
-  t.ok(program1, 'Got a pipeline');
+  // reuse assembled shaders; this cache is already tested in shader-factory.spec.ts.
+  const vs = shaderFactory.createShader({stage: 'vertex', source: model1.vs});
+  const fs = shaderFactory.createShader({stage: 'fragment', source: model1.fs});
 
   const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
-  t.ok(program1 === pipeline2, 'Got cached pipeline');
+  t.ok(model1.pipeline === pipeline2, 'Got cached pipeline');
 
-  const definePipeline1 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const defineModel1 = new Model(webglDevice, {
     topology: 'triangle-list',
-    defines: {
-      MY_DEFINE: true
-    }
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    defines: {MY_DEFINE: true}
   });
 
-  t.ok(program1 !== definePipeline1, 'Define triggers new pipeline');
+  t.ok(model1.pipeline !== defineModel1.pipeline, 'Define triggers new pipeline');
 
-  const definePipeline2 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const defineModel2 = new Model(webglDevice, {
     topology: 'triangle-list',
-    defines: {
-      MY_DEFINE: true
-    }
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    defines: {MY_DEFINE: true}
   });
 
-  t.ok(definePipeline1 === definePipeline2, 'Got cached pipeline with defines');
+  t.ok(defineModel1.pipeline === defineModel2.pipeline, 'Got cached pipeline with defines');
 
-  const modulePipeline1 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const moduleModel1 = new Model(webglDevice, {
     topology: 'triangle-list',
-    modules: [picking]
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    modules: [mockModule]
   });
 
-  t.ok(program1 !== modulePipeline1, 'Module triggers new pipeline');
-  t.ok(definePipeline1 !== modulePipeline1, 'Module triggers new pipeline');
+  t.ok(model1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
+  t.ok(defineModel1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
 
-  const modulePipeline2 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const moduleModel2 = new Model(webglDevice, {
     topology: 'triangle-list',
-    modules: [picking]
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    modules: [mockModule]
   });
 
-  t.ok(modulePipeline1 === modulePipeline2, 'Got cached pipeline with modules');
+  t.ok(moduleModel1.pipeline === moduleModel2.pipeline, 'Got cached pipeline with modules');
 
-  const defineModulePipeline1 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const defineModuleModel1 = new Model(webglDevice, {
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
     topology: 'triangle-list',
-    modules: [picking],
-    defines: {
-      MY_DEFINE: true
-    }
+    modules: [mockModule],
+    defines: {MY_DEFINE: true}
   });
 
-  t.ok(program1 !== defineModulePipeline1, 'Module and define triggers new pipeline');
-  t.ok(definePipeline1 !== defineModulePipeline1, 'Module and define triggers new pipeline');
-  t.ok(modulePipeline1 !== defineModulePipeline1, 'Module and define triggers new pipeline');
+  t.ok(pipeline2 !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline');
+  t.ok(
+    defineModel1.pipeline !== defineModuleModel1.pipeline,
+    'Module and define triggers new pipeline'
+  );
+  t.ok(
+    moduleModel1.pipeline !== defineModuleModel1.pipeline,
+    'Module and define triggers new pipeline'
+  );
 
-  const defineModulePipeline2 = pipelineFactory.createRenderPipeline({
-    vs,
-    fs,
+  const defineModuleModel2 = new Model(webglDevice, {
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
     topology: 'triangle-list',
-    modules: [picking],
-    defines: {
-      MY_DEFINE: true
-    }
+    modules: [mockModule],
+    defines: {MY_DEFINE: true}
   });
 
   t.ok(
-    defineModulePipeline1 === defineModulePipeline2,
+    defineModuleModel1.pipeline === defineModuleModel2.pipeline,
     'Got cached pipeline with modules and defines'
   );
 
   t.end();
 });
-*/
 
 /*
 import {dirlight, picking} from '@luma.gl/shadertools';
@@ -591,7 +442,7 @@ test('PipelineFactory#hooks', (t) => {
 });
 
 // TODO - Move to model: transpilation functionality was moved to model
-test.skip('PipelineFactory#defaultModules', (t) => {
+test('PipelineFactory#defaultModules', (t) => {
   const pipelineFactory = new PipelineFactory(webglDevice);
 
   const {pipeline} = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
@@ -651,4 +502,5 @@ test.skip('PipelineFactory#defaultModules', (t) => {
 
   t.end();
 });
+
 */
