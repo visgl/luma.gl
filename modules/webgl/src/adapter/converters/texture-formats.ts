@@ -200,7 +200,7 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'r32float': {gl: GL.R32F, bpp: 4, b: 4, c: 1, render: float32_renderable, filter: float32_filterable},
 
   // Packed 32-bit formats
-  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5ufloat_renderable}; // , filter: true},
+  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5ufloat_renderable}, // , filter: true},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: float32_renderable, renderbuffer: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, renderbuffer: true},
   'rgb10a2uint-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},

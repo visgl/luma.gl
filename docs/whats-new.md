@@ -70,27 +70,29 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 **`@luma.gl/shadertools`**
 
 - All shader modules now use uniform buffers.
-- NEW: `ShaderAssember` class that provides a clean entry point to the shader module system.
+- NEW: `ShaderAssembler` class that provides a clean entry point to the shader module system.
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 
 **`@luma.gl/webgl`** 
 
-- Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
+- Asynchronous shader compilation and linking significantly speeds up applications that create many `RenderPipelines`. 
+- Supported when the [KHR_parallel_shader_compile][KHR_parallel_shader_compile] WebGL extension is available.
 
-New features exposing new GPU parameters under WebGL
+New `Device.features` exposing new GPU parameters:
 - `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled if the  feature is available.
 - `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading. 
 - `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons. Check the  feature. 
 - `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines. 
 - `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7` - enables `gl_ClipDistance[] / gl_CullDistance[]`.
 
-New features enabling new GLSL syntax
+New `Device.features` enable new GLSL syntax
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 
-New features enabling additional color format support under WebGL:
+New `Device.features` enable additional color format support:
 - `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` are renderable.
 - `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
 - `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable. 
 - `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
   
+[KHR_parallel_shader_compile]: https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/

@@ -388,14 +388,14 @@ export class ClassicAnimationLoop {
     if (!this._pageLoadPromise) {
       this._pageLoadPromise = isPage
         ? new Promise((resolve, reject) => {
-          if (isPage && document.readyState === 'complete') {
-            resolve(document);
-            return;
-          }
-          window.addEventListener('load', () => {
-            resolve(document);
-          });
-        })
+            if (isPage && document.readyState === 'complete') {
+              resolve(document);
+              return;
+            }
+            window.addEventListener('load', () => {
+              resolve(document);
+            });
+          })
         : Promise.resolve({});
     }
     return this._pageLoadPromise;

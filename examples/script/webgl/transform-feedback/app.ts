@@ -6,7 +6,7 @@ const INFO_HTML = `
 Animation via transform feedback.
 `;
 
-const ALT_TEXT = 'THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN\'T SUPPORT IT';
+const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
 const transformVs = glsl`\
 #version 300 es

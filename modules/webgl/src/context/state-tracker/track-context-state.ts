@@ -194,9 +194,9 @@ function installGetterOverride(gl: WebGL2RenderingContext, functionName: string)
     // Optionally call the original function to do a "hard" query from the WebGL2RenderingContext
     return glState.enable
       ? // Call the getter the params so that it can e.g. serve from a cache
-      glState.cache[pname]
+        glState.cache[pname]
       : // Optionally call the original function to do a "hard" query from the WebGL2RenderingContext
-      originalGetterFunc(pname);
+        originalGetterFunc(pname);
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
