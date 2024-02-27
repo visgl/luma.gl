@@ -1,8 +1,22 @@
 import {DeviceTabs, Info} from '@site/src/react-luma';
 
-### Device.info
+# DeviceInfo
 
-Holds a `DeviceInfo` object that describes the device, providing information about the driver, GPU, shading language etc.
+The `device.info` field holds a small `DeviceInfo` object that provides information about the device, such as driver, GPU, shading language etc.
+
+## Usage
+
+```typescript
+import {Device} from '@luma.gl/core';
+
+const device: Device = ...;
+console.log(device.info);
+if (device.info.gpu === 'nvidia') {
+   ...
+}
+```
+
+## Device
 
 <DeviceTabs />
 

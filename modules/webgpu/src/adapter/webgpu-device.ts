@@ -86,11 +86,23 @@ export class WebGPUDevice extends Device {
     const adapterInfo = await adapter.requestAdapterInfo();
     log.probe(2, 'Adapter available', adapterInfo)();
 
+    const requiredFeatures: GPUFeatureName[] = [];
+    const requiredLimits: Record<string, number> = {};
+
+    if (props.requestMaximalLimits) {
+      requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
+      for (const key in adapter.limits) {
+        requiredLimits[key] = adapter.limits[key];
+      }
+      delete requiredLimits.minSubgroupSize;
+      delete requiredLimits.maxSubgroupSize;
+    }
+
     const gpuDevice = await adapter.requestDevice({
-      requiredFeatures: adapter.features as ReadonlySet<GPUFeatureName>
-      // TODO ensure we obtain best limits
-      // requiredLimits: adapter.limits
+      requiredFeatures,
+      requiredLimits
     });
+
     log.probe(1, 'GPUDevice available')();
 
     if (typeof props.canvas === 'string') {
