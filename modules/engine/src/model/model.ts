@@ -168,6 +168,8 @@ export class Model {
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
+  private _destroyed = false;
+
   constructor(device: Device, props: ModelProps) {
     this.props = {...Model.defaultProps, ...props};
     props = this.props;
@@ -285,10 +287,12 @@ export class Model {
   }
 
   destroy(): void {
+    if (this._destroyed) return;
     this.pipelineFactory.release(this.pipeline);
     this.shaderFactory.release(this.pipeline.vs);
     this.shaderFactory.release(this.pipeline.fs);
     this._uniformStore.destroy();
+    this._destroyed = true;
   }
 
   // Draw call
@@ -386,7 +390,7 @@ export class Model {
 
   /**
    * Updates the buffer layout.
-   * @note Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
+   * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
     this.bufferLayout = this._gpuGeometry

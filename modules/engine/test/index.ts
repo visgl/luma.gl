@@ -1,4 +1,4 @@
-// import './lib/model.spec';
+import './lib/model.spec';
 import './lib/animation-loop.spec';
 import './lib/pipeline-factory.spec';
 import './lib/shader-factory.spec';
