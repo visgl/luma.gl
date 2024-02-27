@@ -76,12 +76,23 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 **`@luma.gl/webgl`** 
 
 - Asynchronous shader compilation and linking is now supported on systems that support the [KHR_parallel_shader_compile](https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile/) WebGL extension. This should speed up initialization for applications that create a lot of `RenderPipelines`.
+
+Extension parameters
 - `parameters.unclippedDepth` - depth clipping can now be disabled if the `depth-clip-control` feature is available. See [`EXT_depth_clamp`][EXT_depth_clamp].
 - `parameters.provokingVertex: 'first'` controls which primitive vertex is used for flat shading. Check the `provoking-vertex-webgl` feature. 
 - `parameters.polygonMode: 'line'` enables wire frame rendering of polygons. Check the `polygon-mode-webgl` feature. 
 - `parameters.polygonOffsetLine: true` enables depth bias (polygon offset) for lines. Check the `polygon-mode-webgl` feature. 
 - `parameters.clipCullDistance0-7: true` enables `gl_ClipDistance[] / gl_CullDistance[]`. Check the `shader-clip-cull-distance-webgl` feature. 
+
+GLSL extensions
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: New GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
+
+New color formats
+- 'rgb9e5_renderable-webgl': ['WEBGL_render_shared_exponent'],
+- 'snorm8-renderable-webgl': [EXT_render_snorm],
+- 'norm16-renderable-webgl': [EXT_texture_norm16],
+- 'snorm16-renderable-webgl': [EXT_texture_norm16, EXT_render_snorm],
+
 
 [EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
