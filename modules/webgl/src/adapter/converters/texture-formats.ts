@@ -19,8 +19,15 @@ const texture_compression_etc1_webgl: DeviceFeature = 'texture-compression-etc1-
 const texture_compression_pvrtc_webgl: DeviceFeature = 'texture-compression-pvrtc-webgl';
 const texture_compression_atc_webgl: DeviceFeature = 'texture-compression-atc-webgl';
 
-// const float32_renderable_webgl: DeviceFeature = 'float32-renderable-webgl';
-// const float16_renderable_webgl: DeviceFeature = 'float16-renderable-webgl';
+const float32_renderable: DeviceFeature = 'float32-renderable-webgl';
+const float16_renderable: DeviceFeature = 'float16-renderable-webgl';
+const rgb9e5ufloat_renderable: DeviceFeature = 'rgb9e5ufloat_renderable-webgl';
+const snorm8_renderable: DeviceFeature = 'snorm8-renderable-webgl';
+const norm16_renderable: DeviceFeature = 'norm16-renderable-webgl';
+const snorm16_renderable: DeviceFeature = 'snorm16-renderable-webgl';
+
+const float32_filterable: DeviceFeature = 'float32-filterable';
+const float16_filterable: DeviceFeature = 'float16-filterable-webgl';
 
 // Define local webgl extension strings to optimize minification
 const X_S3TC = 'WEBGL_compressed_texture_s3tc'; // BC1, BC2, BC3
@@ -35,14 +42,17 @@ const X_ATC = 'WEBGL_compressed_texture_atc';
 
 // Define local webgl extension strings to optimize minification
 const EXT_texture_norm16 = 'EXT_texture_norm16';
+const EXT_render_snorm = 'EXT_render_snorm';
 const EXT_color_buffer_float = 'EXT_color_buffer_float';
-// const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
 // prettier-ignore
 export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, string[]>> = {
-  'float32-renderable-webgl': ['EXT_color_buffer_float'], // [false, 'EXT_color_buffer_float'],
+  'float32-renderable-webgl': ['EXT_color_buffer_float'],
   'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
+  'rgb9e5ufloat_renderable-webgl': ['WEBGL_render_shared_exponent'],
+  'snorm8-renderable-webgl': [EXT_render_snorm],
   'norm16-renderable-webgl': [EXT_texture_norm16],
+  'snorm16-renderable-webgl': [EXT_texture_norm16, EXT_render_snorm],
 
   'float32-filterable': ['OES_texture_float_linear'],
   'float16-filterable-webgl': ['OES_texture_half_float_linear'],
@@ -143,21 +153,21 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
 
   // 8-bit formats
   'r8unorm': {gl: GL.R8, b: 1, c: 1, renderbuffer: true},
-  'r8snorm': {gl: GL.R8_SNORM, b: 1, c: 1},
+  'r8snorm': {gl: GL.R8_SNORM, b: 1, c: 1, render: snorm8_renderable},
   'r8uint': {gl: GL.R8UI, b: 1, c: 1, renderbuffer: true},
   'r8sint': {gl: GL.R8I, b: 1, c: 1, renderbuffer: true},
 
   // 16-bit formats
   'rg8unorm': {gl: GL.RG8, b: 2, c: 2, renderbuffer: true},
-  'rg8snorm': {gl: GL.RG8_SNORM, b: 2, c: 2},
+  'rg8snorm': {gl: GL.RG8_SNORM, b: 2, c: 2, render: snorm8_renderable},
   'rg8uint': {gl: GL.RG8UI, b: 2, c: 2, renderbuffer: true},
   'rg8sint': {gl: GL.RG8I, b: 2, c: 2, renderbuffer: true},
 
   'r16uint': {gl: GL.R16UI, b: 2, c: 1, renderbuffer: true},
   'r16sint': {gl: GL.R16I, b: 2, c: 1, renderbuffer: true},
-  'r16float': {gl: GL.R16F, b: 2, c: 1, render: 'float16-renderable-webgl', filter: 'float16-filterable-webgl', renderbuffer: true},
-  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_texture_norm16},
-  'r16snorm-webgl': {gl: GL.R16_SNORM_EXT, b:2, c:1, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'r16float': {gl: GL.R16F, b: 2, c: 1, render: float16_renderable, filter: 'float16-filterable-webgl', renderbuffer: true},
+  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: norm16_renderable, renderbuffer: true},
+  'r16snorm-webgl': {gl: GL.R16_SNORM_EXT, b:2, c:1, f: snorm16_renderable},
 
   // Packed 16-bit formats
   'rgba4unorm-webgl': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false, renderbuffer: true},
@@ -171,7 +181,7 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // 32-bit formats  
   'rgba8unorm': {gl: GL.RGBA8, b: 4, c: 2, bpp: 4},
   'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8, b: 4, c: 4, bpp: 4},
-  'rgba8snorm': {gl: GL.RGBA8_SNORM, b: 4, c: 4},
+  'rgba8snorm': {gl: GL.RGBA8_SNORM, b: 4, c: 4, render: snorm8_renderable},
   'rgba8uint': {gl: GL.RGBA8UI, b: 4, c: 4, bpp: 4},
   'rgba8sint': {gl: GL.RGBA8I, b: 4, c: 4, bpp: 4},
   // reverse colors, webgpu only
@@ -181,42 +191,42 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rg16uint': {gl: GL.RG16UI, b: 4, c: 1, bpp: 4},
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, bpp: 4},
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
-  'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: 'float16-renderable-webgl', filter: 'float16-filterable-webgl', renderbuffer: true},
-  'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
-  'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: float16_renderable, filter: float16_filterable, renderbuffer: true},
+  'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, render: norm16_renderable},
+  'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, render: snorm16_renderable},
 
   'r32uint': {gl: GL.R32UI, b: 4, c: 1, bpp: 4, renderbuffer: true},
   'r32sint': {gl: GL.R32I, b: 4, c: 1, bpp: 4, renderbuffer: true},
-  'r32float': {gl: GL.R32F, bpp: 4, b: 4, c: 1, render: 'float32-renderable-webgl', filter: 'float32-filterable'},
+  'r32float': {gl: GL.R32F, bpp: 4, b: 4, c: 1, render: float32_renderable, filter: float32_filterable},
 
   // Packed 32-bit formats
-  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: 'float16-renderable-webgl', filter: 'float16-filterable-webgl'},
-  'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: 'float32-renderable-webgl', renderbuffer: true},
+  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5ufloat_renderable}, // , filter: true},
+  'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: float32_renderable, renderbuffer: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, renderbuffer: true},
-  'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
+  'rgb10a2uint-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
 
   // 48-bit formats
-  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
-  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, b:2, c:3, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: norm16_renderable}, // rgb not renderable
+  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, b:2, c:3, f: norm16_renderable}, // rgb not renderable
 
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, renderbuffer: true},
   'rg32sint': {gl: GL.RG32I, b: 8, c: 2, renderbuffer: true},
-  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: 'float32-renderable-webgl', filter: 'float32-filterable', renderbuffer: true},
+  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: float32_renderable, filter: float32_filterable, renderbuffer: true},
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, renderbuffer: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, renderbuffer: true},
-  'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: 'float16-renderable-webgl', filter: 'float16-filterable-webgl'},
-  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, f: 'norm16-renderable-webgl', renderbuffer: true, x: EXT_texture_norm16},
-  'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, f: 'norm16-renderable-webgl', x: EXT_texture_norm16},
+  'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: float16_renderable, filter: float16_filterable},
+  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, render: norm16_renderable, renderbuffer: true},
+  'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, render: snorm16_renderable},
 
   // 96-bit formats (deprecated!)
-  'rgb32float-webgl': {gl: GL.RGB32F, render: 'float32-renderable-webgl', filter: 'float32-filterable',
+  'rgb32float-webgl': {gl: GL.RGB32F, render: float32_renderable, filter: float32_filterable,
     gl2ext: EXT_color_buffer_float, dataFormat: GL.RGB, types: [GL.FLOAT]},
   
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, renderbuffer: true},
   'rgba32sint': {gl: GL.RGBA32I, b: 16, c: 4, renderbuffer: true},
-  'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, render: 'float32-renderable-webgl', filter: 'float32-filterable', renderbuffer: true},
+  'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, render: float32_renderable, filter: float32_filterable, renderbuffer: true},
 
   // Depth and stencil formats
   'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT, renderbuffer: true}, // 8 stencil bits

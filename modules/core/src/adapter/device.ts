@@ -163,7 +163,10 @@ export type WebGLDeviceFeature =
   // texture rendering
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'
+  | 'rgb9e5ufloat_renderable-webgl'
+  | 'snorm8-renderable-webgl'
   | 'norm16-renderable-webgl'
+  | 'snorm16-renderable-webgl'
 
   // texture filtering
   | 'float16-filterable-webgl'

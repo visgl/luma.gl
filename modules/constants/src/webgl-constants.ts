@@ -1037,7 +1037,10 @@ enum GLEnum {
   SRC1_ALPHA_WEBGL = 0x8589,
   ONE_MINUS_SRC1_COLOR_WEBGL = 0x88fa,
   ONE_MINUS_SRC1_ALPHA_WEBGL = 0x88fb,
-  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL = 0x88fc
+  MAX_DUAL_SOURCE_DRAW_BUFFERS_WEBGL = 0x88fc,
+
+  /** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
+  MIRROR_CLAMP_TO_EDGE_EXT = 0x8743
 }
 
 export {GLEnum as GL};

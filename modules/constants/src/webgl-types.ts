@@ -471,6 +471,13 @@ export type GLExtensions = {
 
   // Predefined typescript types not available for the following extensions
 
+  /** https://registry.khronos.org/webgl/extensions/EXT_norm16/ */
+  EXT_norm16?: EXT_norm16 | null;
+  /** https://registry.khronos.org/webgl/extensions/EXT_snorm/ */
+  EXT_snorm?: EXT_snorm | null;
+  /** https://registry.khronos.org/webgl/extensions/WEBGL_render_shared_exponent/ */
+  WEBGL_render_shared_exponent?: WEBGL_render_shared_exponent | null;
+
   /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
   EXT_depth_clamp?: EXT_depth_clamp | null;
   /** https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/ */
@@ -487,11 +494,19 @@ export type GLExtensions = {
   /** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
   EXT_conservative_depth?: EXT_conservative_depth | null;
 
+  /** OES_sample_variables https://registry.khronos.org/webgl/extensions/OES_sample_variables/ */
+  OES_sample_variables?: OES_sample_variables | null;
+
   /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
   EXT_polygon_offset_clamp?: EXT_polygon_offset_clamp | null;
 
   /** EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/ */
   EXT_clip_control?: EXT_clip_control | null;
+
+  /** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
+  EXT_texture_mirror_clamp_to_edge?: EXT_texture_mirror_clamp_to_edge | null;
+  /** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
+  WEBGL_stencil_texturing?: WEBGL_stencil_texturing | null;
 
   /** WEBGL_blend_func_extended https://registry.khronos.org/webgl/extensions/WEBGL_blend_func_extended/ */
   WEBGL_blend_func_extended?: WEBGL_blend_func_extended | null;
@@ -499,8 +514,16 @@ export type GLExtensions = {
   /** OES_draw_buffers_indexed https://registry.khronos.org/webgl/extensions/OES_draw_buffers_indexed/ */
   OES_draw_buffers_indexed?: OES_draw_buffers_indexed | null;
 
-  // WEBGL1 extensions (available as built-in WebGL 2 APIs)
+  /** WEBGL_draw_instanced_base_vertex_base_instance https://registry.khronos.org/webgl/extensions/WEBGL_draw_instanced_base_vertex_base_instance/ */
+  WEBGL_draw_instanced_base_vertex_base_instance?: WEBGL_draw_instanced_base_vertex_base_instance | null;
+  /** WEBGL_multi_draw https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw/ */
+  WEBGL_multi_draw?: WEBGL_multi_draw | null;
+  /** WEBGL_multi_draw_instanced_base_vertex_base_instance https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw_instanced_base_vertex_base_instance/ */
+  WEBGL_multi_draw_instanced_base_vertex_base_instance?: WEBGL_multi_draw_instanced_base_vertex_base_instance | null;
+  /** WEBGL_shader_pixel_local_storage https://registry.khronos.org/webgl/extensions/WEBGL_shader_pixel_local_storage/ */
+  WEBGL_shader_pixel_local_storage?: WEBGL_shader_pixel_local_storage | null;
 
+  // WEBGL1 extensions (available as built-in WebGL 2 APIs)
   // ANGLE_instanced_arrays?: ANGLE_instanced_arrays | null;
   // EXT_blend_minmax?: EXT_blend_minmax | null;
   // EXT_frag_depth?: EXT_frag_depth | null;
@@ -512,6 +535,21 @@ export type GLExtensions = {
   // WEBGL_depth_texture?: WEBGL_depth_texture | null;
   // WEBGL_draw_buffers?: WEBGL_draw_buffers | null;
   // WEBGL_multi_draw?: WEBGL_multi_draw | null;
+};
+
+/** https://registry.khronos.org/webgl/extensions/EXT_norm16/ */
+type EXT_norm16 = {
+  // Constants in GL enum
+};
+
+/** https://registry.khronos.org/webgl/extensions/EXT_snorm/ */
+type EXT_snorm = {
+  // Constants in GL enum
+};
+
+/** https://registry.khronos.org/webgl/extensions/WEBGL_render_shared_exponent/ */
+type WEBGL_render_shared_exponent = {
+  // Constants in GL enum
 };
 
 /** https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/ */
@@ -567,6 +605,9 @@ type NV_shader_noperspective_interpolation = {};
 /** EXT_conservative_depth https://registry.khronos.org/webgl/extensions/EXT_conservative_depth/ */
 type EXT_conservative_depth = {};
 
+/** OES_sample_variables https://registry.khronos.org/webgl/extensions/OES_sample_variables/ */
+type OES_sample_variables = {};
+
 /** EXT_polygon_offset_clamp https://registry.khronos.org/webgl/extensions/EXT_polygon_offset_clamp/ */
 type EXT_polygon_offset_clamp = {
   POLYGON_OFFSET_CLAMP_EXT: 0x8e1b;
@@ -613,4 +654,114 @@ type OES_draw_buffers_indexed = {
   blendFuncSeparateiOES(buf: number, srcRGB: GL, dstRGB: GL, srcAlpha: GL, dstAlpha: GL): void;
   /** Modifies color mask for an individual draw buffer */
   colorMaskiOES(buf: number, r: boolean, g: boolean, b: boolean, a: boolean): void;
+};
+
+/** EXT_texture_mirror_clamp_to_edge https://registry.khronos.org/webgl/extensions/EXT_texture_mirror_clamp_to_edge/ */
+type EXT_texture_mirror_clamp_to_edge = {
+  MIRROR_CLAMP_TO_EDGE_EXT: 0x8743;
+};
+
+/** WEBGL_stencil_texturing https://registry.khronos.org/webgl/extensions/WEBGL_stencil_texturing/ */
+type WEBGL_stencil_texturing = {
+  DEPTH_STENCIL_TEXTURE_MODE_WEBGL: 0x90ea;
+  STENCIL_INDEX_WEBGL: 0x1901;
+};
+
+/** WEBGL_draw_instanced_base_vertex_base_instance https://registry.khronos.org/webgl/extensions/WEBGL_draw_instanced_base_vertex_base_instance/ */
+type WEBGL_draw_instanced_base_vertex_base_instance = {
+  //   drawArraysInstancedBaseInstanceWEBGL(
+  //       GLenum mode, GLint first, GLsizei count,
+  //       GLsizei instanceCount, GLuint baseInstance);
+  //   drawElementsInstancedBaseVertexBaseInstanceWEBGL(
+  //       GLenum mode, GLsizei count, GLenum type, GLintptr offset,
+  //       GLsizei instanceCount, GLint baseVertex, GLuint baseInstance);
+};
+
+/** WEBGL_multi_draw https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw/ */
+type WEBGL_multi_draw = {
+  //   multiDrawArraysWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLint>) firstsList, unsigned long long firstsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       GLsizei drawcount);
+  //   multiDrawElementsWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       GLenum type,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) offsetsList, unsigned long long offsetsOffset,
+  //       GLsizei drawcount);
+  //   multiDrawArraysInstancedWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLint>) firstsList, unsigned long long firstsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
+  //       GLsizei drawcount);
+  //   multiDrawElementsInstancedWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       GLenum type,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) offsetsList, unsigned long long offsetsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
+  //       GLsizei drawcount);
+};
+
+/** WEBGL_multi_draw_instanced_base_vertex_base_instance https://registry.khronos.org/webgl/extensions/WEBGL_multi_draw_instanced_base_vertex_base_instance/ */
+type WEBGL_multi_draw_instanced_base_vertex_base_instance = {
+  //   multiDrawArraysInstancedBaseInstanceWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLint>) firstsList, unsigned long long firstsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
+  //       ([AllowShared] Uint32Array or sequence<GLuint>) baseInstancesList, unsigned long long baseInstancesOffset,
+  //       GLsizei drawcount
+  //   );
+  //   multiDrawElementsInstancedBaseVertexBaseInstanceWEBGL(
+  //       GLenum mode,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) countsList, unsigned long long countsOffset,
+  //       GLenum type,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) offsetsList, unsigned long long offsetsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLsizei>) instanceCountsList, unsigned long long instanceCountsOffset,
+  //       ([AllowShared] Int32Array or sequence<GLint>) baseVerticesList, unsigned long long baseVerticesOffset,
+  //       ([AllowShared] Uint32Array or sequence<GLuint>) baseInstancesList, unsigned long long baseInstancesOffset,
+  //       GLsizei drawcount
+  //   );
+};
+
+/** WEBGL_shader_pixel_local_storage https://registry.khronos.org/webgl/extensions/WEBGL_shader_pixel_local_storage/ */
+type WEBGL_shader_pixel_local_storage = {
+  MAX_PIXEL_LOCAL_STORAGE_PLANES_WEBGL: 0x96e0;
+  MAX_COLOR_ATTACHMENTS_WITH_ACTIVE_PIXEL_LOCAL_STORAGE_WEBGL: 0x96e1;
+  MAX_COMBINED_DRAW_BUFFERS_AND_PIXEL_LOCAL_STORAGE_PLANES_WEBGL: 0x96e2;
+  PIXEL_LOCAL_STORAGE_ACTIVE_PLANES_WEBGL: 0x96e3;
+  LOAD_OP_ZERO_WEBGL: 0x96e4;
+  LOAD_OP_CLEAR_WEBGL: 0x96e5;
+  LOAD_OP_LOAD_WEBGL: 0x96e6;
+  STORE_OP_STORE_WEBGL: 0x96e7;
+  PIXEL_LOCAL_FORMAT_WEBGL: 0x96e8;
+  PIXEL_LOCAL_TEXTURE_NAME_WEBGL: 0x96e9;
+  PIXEL_LOCAL_TEXTURE_LEVEL_WEBGL: 0x96ea;
+  PIXEL_LOCAL_TEXTURE_LAYER_WEBGL: 0x96eb;
+  PIXEL_LOCAL_CLEAR_VALUE_FLOAT_WEBGL: 0x96ec;
+  PIXEL_LOCAL_CLEAR_VALUE_INT_WEBGL: 0x96ed;
+  PIXEL_LOCAL_CLEAR_VALUE_UNSIGNED_INT_WEBGL: 0x96ee;
+  isCoherent(): boolean;
+  framebufferTexturePixelLocalStorageWEBGL(
+    plane: number,
+    texture: WebGLTexture,
+    level: number,
+    layer: number
+  ): void;
+  // framebufferPixelLocalClearValuefvWEBGL(plane: number,
+  //                                                  Float32List value,
+  //                                                  optional unsigned long long srcOffset = 0): void;
+  // framebufferPixelLocalClearValueivWEBGL(plane: number,
+  //                                                  Int32List value,
+  //                                                  optional unsigned long long srcOffset = 0): void;
+  // framebufferPixelLocalClearValueuivWEBGL(plane: number,
+  //                                                   Uint32List value,
+  //                                                   optional unsigned long long srcOffset = 0): void;
+  beginPixelLocalStorageWEBGL(loadops: GL[]): void;
+  endPixelLocalStorageWEBGL(storeops: GL[]): void;
+  pixelLocalStorageBarrierWEBGL(): void;
+  getFramebufferPixelLocalStorageParameterWEBGL(plane: number, pname: GL): any;
 };

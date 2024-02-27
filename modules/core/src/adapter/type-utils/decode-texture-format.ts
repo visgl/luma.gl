@@ -65,7 +65,7 @@ const EXCEPTIONS: Partial<Record<TextureFormat, any>> = {
   rgb9e5ufloat: {format: 'rgb', bbp: 4},
   rg11b10ufloat: {format: 'rgb', bbp: 4},
   rgb10a2unorm: {format: 'rgba', bbp: 4},
-  'rgb10a2unorm-webgl': {format: 'rgba', bbp: 4},
+  'rgb10a2uint-webgl': {format: 'rgba', bbp: 4},
   // Depth/stencil
   stencil8: {components: 1, bpp: 1, a: 'stencil'},
   depth16unorm: {components: 1, bpp: 2, a: 'depth'},
