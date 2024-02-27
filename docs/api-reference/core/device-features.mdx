@@ -26,33 +26,37 @@ Each device has a `device.features` field that holds a `DeviceFeatures` object w
 
 <DeviceTabs />
 
-| Feature Name                               | This<br /> Browser                                | Description                                  | WebGL counterpart                       |
-| ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- | --------------------------------------- |
+| Feature Name                               | This<br /> Browser                                | Description                                  | WebGL counterpart                                                              |
+| ------------------------------------------ | ------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
 | **WebGPU Extensions**                      |
-| `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping via `unclippedDepth`  | `WEBGL_depth_texture`                   |
-| `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify instance index via GPU buffer        | N/A                                     |
-| `timestamp-query`                          | <F f="timestamp-query"/>                          | GPU timer query support                      | N/A                                     |
+| `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping via `unclippedDepth`  | `WEBGL_depth_texture`                                                          |
+| `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify instance index via GPU buffer        | N/A                                                                            |
+| `timestamp-query`                          | <F f="timestamp-query"/>                          | GPU timer query support                      | N/A                                                                            |
 | **WebGL Extensions**                       |
-| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            | `EXT_disjoint_timer_query`              |
-| `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             | `KHR_parallel_shader_compile`           |
-| `polygon-mode-webgl`                       | <F f="polygon-mode-webgl"/>                       | Wireframe rendering parameters (debug only)  | `WEBGL_polygon_mode`                    |
-| `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       | `WEBGL_provoking_vertex`                |
+| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            | `EXT_disjoint_timer_query`                                                     |
+| `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             | `KHR_parallel_shader_compile`                                                  |
+| `polygon-mode-webgl`                       | <F f="polygon-mode-webgl"/>                       | Wireframe rendering parameters (debug only)  | `WEBGL_polygon_mode`                                                           |
+| `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       | `WEBGL_provoking_vertex`                                                       |
 | **Shader Extensions**                      |
-| `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          | N/A                                     |
-| `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier | `NV_shader_noperspective_interpolation` |
-| `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   | `EXT_conservative_depth`                |
-| `shader-clip-cull-distance-webgl`          | <F f="shader-clip-cull-distance-webgl"/>          | GLSL `gl_ClipDistance[]/gl_CullDistance[]`   | `WEBGL_clip_cull_distance`              |
+| `shader-f16`                               | <F f="shader-f16"/>                               | WGSL supports `f16`                          | N/A                                                                            |
+| `shader-noperspective-interpolation-webgl` | <F f="shader-noperspective-interpolation-webgl"/> | GLSL `noperspective` interpolation qualifier | `NV_shader_noperspective_interpolation`                                        |
+| `shader-conservative-depth-webgl`          | <F f="shader-conservative-depth-webgl"/>          | GLSL enable early depth test optimizations   | `EXT_conservative_depth`                                                       |
+| `shader-clip-cull-distance-webgl`          | <F f="shader-clip-cull-distance-webgl"/>          | GLSL `gl_ClipDistance[]/gl_CullDistance[]`   | `WEBGL_clip_cull_distance`                                                     |
 | **Texture Extensions**                     |
-| `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    |                                              | `GL.UNSIGNED_INT_24_8_WEBGL`            |
-| `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    |                                              | N/A                                     |
-| `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            | N/A                                     |
-| `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  | `EXT_color_buffer_float`                |
-| `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  | `EXT_color_buffer_half_float`           |
-| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              | `OES_texture_float_linear`              |
-| `float16-filterable-webgl`                 | <F f="float16-filterable-webgl`" />               | float16 `linear` filtering                   | `OES_texture_half_float_linear`         |
-| `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                | `EXT_texture_filter_anisotropic`        |
+| `depth24unorm-stencil8`                    | <F f="depth24unorm-stencil8"/>                    |                                              | `GL.UNSIGNED_INT_24_8_WEBGL`                                                   |
+| `depth32float-stencil8`                    | <F f="depth32float-stencil8"/>                    |                                              | N/A                                                                            |
+| `rg11b10ufloat-renderable`                 | <F f="rg11b10ufloat-renderable"/>                 | rg11b10ufloat textures renderable            | N/A                                                                            |
+| `float32-renderable-webgl`                 | <F f="float32-renderable-webgl"/>                 | float32 textures renderable                  | `EXT_color_buffer_float`                                                       |
+| `float16-renderable-webgl`                 | <F f="float16-renderable-webgl"/>                 | float16 textures renderable                  | `EXT_color_buffer_half_float`                                                  |
+| `rgb9e5ufloat-renderable-webgl`            | <F f="rgb9e5ufloat-renderable-webgl"/>            | `rgb9e5ufloat` renderable                    | ['WEBGL_render_shared_exponent'][WEBGL_render_shared_exponent]                 |
+| `snorm8-renderable-webgl`                  | <F f="snorm8-renderable-webgl"/>                  | `r,rg,rgba8snorm` renderable                 | [EXT_render_snorm][EXT_render_snorm]                                           |
+| `norm16-renderable-webgl`                  | <F f="norm16-renderable-webgl"/>                  | `r,rg,rgba16norm` renderable                 | [EXT_texture_norm16][EXT_texture_norm16]                                       |
+| `snorm16-renderable-webgl`                 | <F f="snorm16-renderable-webgl"/>                 | `r,rg,rgba16snorm` renderable                | [EXT_texture_norm16][EXT_texture_norm16], [EXT_render_snorm][EXT_render_snorm] |
+| `float32-filterable`                       | <F f="float32-filterable"/>                       | float32 textures are filterable              | `OES_texture_float_linear`                                                     |
+| `float16-filterable-webgl`                 | <F f="float16-filterable-webgl`" />               | float16 textures are filterable              | `OES_texture_half_float_linear`                                                |
+| `texture-filterable-anisotropic-webgl`     | <F f="texture-filterable-anisotropic-webgl"/>     | anisotropic filtering, common                | `EXT_texture_filter_anisotropic`                                               |
 | `bgra8unorm-storage`                       | <F f="bgra8unorm-storage"/>                       | can be used as storage binding.              |
-| `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       | `EXT_float_blend`                       |
+| `texture-blend-float-webgl`                | <F f="texture-blend-float-webgl"/>                | float texture blending                       | `EXT_float_blend`                                                              |
 | **Compressed Texture Support**             |
 | `texture-compression-bc`                   | <F f="texture-compression-bc"/>                   | DXT (BC1-BC7). Desktops.                     |
 | `texture-compression-bc5-webgl`            | <F f="texture-compression-bc5-webgl"/>            | DXT (BC1-BC5). Desktops.                     |
@@ -92,6 +96,10 @@ if (webglDevice.gl.getExtension('EXT_disjoint_timer_query_webgl2')) {
 - [WebGL Report](https://webglreport.com/?v=2)
 - [WebGPU Report](https://webgpureport.org/)
 
+[EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+[EXT_render_snorm]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+[EXT_depth_clamp]: https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
+[WEBGL_render_shared_exponent]: https://www.khronos.org/registry/webgl/extensions/WEBGL_render_shared_exponent/
 [timer_query_webgl2]: https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/
 [texture_compression_bptc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_bptc
 [texture_compression_rgtc]: https://developer.mozilla.org/en-US/docs/Web/API/EXT_texture_compression_rgtc

@@ -66,8 +66,8 @@ ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.mes
   }
   return options?.html
     ? `<div class='luma-compiler-log-error' style="color:red;"><b> ${message.type.toUpperCase()}: ${
-        message.message
-      }</b></div>`
+      message.message
+    }</b></div>`
     : `${message.type.toUpperCase()}: ${message.message}`;
 }
 
@@ -111,5 +111,5 @@ function escapeHTML(unsafe: string): string {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+    .replaceAll('\'', '&#039;');
 }

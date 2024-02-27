@@ -21,7 +21,7 @@ const texture_compression_atc_webgl: DeviceFeature = 'texture-compression-atc-we
 
 const float32_renderable: DeviceFeature = 'float32-renderable-webgl';
 const float16_renderable: DeviceFeature = 'float16-renderable-webgl';
-const rgb9e5_renderable: DeviceFeature = 'rgb9e5_renderable-webgl';
+const rgb9e5ufloat_renderable: DeviceFeature = 'rgb9e5ufloat_renderable-webgl';
 const snorm8_renderable: DeviceFeature = 'snorm8-renderable-webgl';
 const norm16_renderable: DeviceFeature = 'norm16-renderable-webgl';
 const snorm16_renderable: DeviceFeature = 'snorm16-renderable-webgl';
@@ -44,13 +44,12 @@ const X_ATC = 'WEBGL_compressed_texture_atc';
 const EXT_texture_norm16 = 'EXT_texture_norm16';
 const EXT_render_snorm = 'EXT_render_snorm';
 const EXT_color_buffer_float = 'EXT_color_buffer_float';
-// const EXT_HALF_FLOAT_WEBGL1 = 'EXT_color_buffer_half_float';
 
 // prettier-ignore
 export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, string[]>> = {
   'float32-renderable-webgl': ['EXT_color_buffer_float'],
   'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
-  'rgb9e5_renderable-webgl': ['WEBGL_render_shared_exponent'],
+  'rgb9e5ufloat_renderable-webgl': ['WEBGL_render_shared_exponent'],
   'snorm8-renderable-webgl': [EXT_render_snorm],
   'norm16-renderable-webgl': [EXT_texture_norm16],
   'snorm16-renderable-webgl': [EXT_texture_norm16, EXT_render_snorm],
@@ -201,10 +200,10 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'r32float': {gl: GL.R32F, bpp: 4, b: 4, c: 1, render: float32_renderable, filter: float32_filterable},
 
   // Packed 32-bit formats
-  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5_renderable},
+  'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5ufloat_renderable}; // , filter: true},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: float32_renderable, renderbuffer: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, renderbuffer: true},
-  'rgb10a2unorm-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
+  'rgb10a2uint-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
 
   // 48-bit formats
   'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: norm16_renderable}, // rgb not renderable
