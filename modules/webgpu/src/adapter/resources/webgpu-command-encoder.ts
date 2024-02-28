@@ -7,6 +7,7 @@ import type {CopyTextureToTextureOptions, CopyTextureToBufferOptions} from '@lum
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTexture} from './webgpu-texture';
+import {WebGPUQuerySet} from './webgpu-query-set';
 
 export class WebGPUCommandEncoder extends CommandEncoder {
   readonly device: WebGPUDevice;
@@ -122,5 +123,25 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
   override insertDebugMarker(markerLabel: string): void {
     this.handle.insertDebugMarker(markerLabel);
+  }
+
+  override resolveQuerySet(
+    querySet: WebGPUQuerySet,
+    destination: Buffer,
+    options?: {
+      firstQuery?: number;
+      queryCount?: number;
+      destinationOffset?: number;
+    }
+  ): void {
+    const webgpuQuerySet = querySet as WebGPUQuerySet;
+    const webgpuBuffer = destination as WebGPUBuffer;
+    this.handle.resolveQuerySet(
+      webgpuQuerySet.handle,
+      options.firstQuery || 0,
+      options.queryCount || querySet.props.count - (options.firstQuery || 0),
+      webgpuBuffer.handle,
+      options.destinationOffset || 0
+    );
   }
 }

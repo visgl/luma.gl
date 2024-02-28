@@ -9,6 +9,7 @@ import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTextureView} from './webgpu-texture-view';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
+import {WebGPUQuerySet} from './webgpu-query-set';
 
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
@@ -22,6 +23,20 @@ export class WebGPURenderPass extends RenderPass {
     this.device = device;
     const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
+
+    const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+    if (webgpuQuerySet) {
+      renderPassDescriptor.occlusionQuerySet = webgpuQuerySet.handle;
+    }
+
+    if (device.features.has('timestamp-query')) {
+      const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+      renderPassDescriptor.timestampWrites = webgpuQuerySet ? {
+        querySet: webgpuQuerySet.handle,
+        beginningOfPassWriteIndex: props.beginTimestampIndex,
+        endOfPassWriteIndex: props.endTimestampIndex
+      } as GPUComputePassTimestampWrites : undefined;
+    }
 
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
     this.handle.label = this.props.id;

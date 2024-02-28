@@ -69,6 +69,9 @@ export {VertexArray} from './adapter/resources/vertex-array';
 export type {TransformFeedbackProps, BufferRange} from './adapter/resources/transform-feedback';
 export {TransformFeedback} from './adapter/resources/transform-feedback';
 
+export type {QuerySetProps} from './adapter/resources/query-set';
+export {QuerySet} from './adapter/resources/query-set';
+
 // API TYPES
 export type {AccessorObject} from './adapter/types/accessor';
 export type {

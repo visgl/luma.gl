@@ -7,6 +7,7 @@ import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPUComputePipeline} from './webgpu-compute-pipeline';
+import {WebGPUQuerySet} from './webgpu-query-set';
 
 export class WebGPUComputePass extends ComputePass {
   readonly device: WebGPUDevice;
@@ -17,10 +18,24 @@ export class WebGPUComputePass extends ComputePass {
     super(device, props);
     this.device = device;
 
+    // Set up queries
+    let timestampWrites: GPUComputePassTimestampWrites | undefined;
+    if (device.features.has('timestamp-query')) {
+      const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+      if (webgpuQuerySet) {
+        timestampWrites = {
+          querySet: webgpuQuerySet.handle,
+          beginningOfPassWriteIndex: props.beginTimestampIndex,
+          endOfPassWriteIndex: props.endTimestampIndex
+        };
+      }
+    }
+
     this.handle =
       this.props.handle ||
       device.commandEncoder?.beginComputePass({
-        label: this.props.id
+        label: this.props.id,
+        timestampWrites
       });
   }
 

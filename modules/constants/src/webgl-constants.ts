@@ -620,7 +620,7 @@ enum GLEnum {
   INT_2_10_10_10_REV = 0x8d9f,
 
   // Queries
-
+  
   CURRENT_QUERY = 0x8865,
   /** Returns a GLuint containing the query result. */
   QUERY_RESULT = 0x8866,
@@ -969,8 +969,8 @@ enum GLEnum {
   /** The current time. */
   TIMESTAMP_EXT = 0x8e28,
   /** A Boolean indicating whether or not the GPU performed any disjoint operation (lost context) */
-  GPU_DISJOINT_EXT = 0x8fbb,
-
+  GPU_DISJOINT_EXT = 0x8fbb,  
+  
   // KHR_parallel_shader_compile https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile
 
   /** a non-blocking poll operation, so that compile/link status availability can be queried without potentially incurring stalls */

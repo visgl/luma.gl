@@ -26,7 +26,9 @@ import type {
   // CommandEncoderProps,
   VertexArrayProps,
   TransformFeedback,
-  TransformFeedbackProps
+  TransformFeedbackProps,
+  QuerySet,
+  QuerySetProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures, CanvasContext, log, uid} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -43,6 +45,7 @@ import {WebGPUComputePass} from './resources/webgpu-compute-pass';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
+import {WebGPUQuerySet} from './resources/webgpu-query-set';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -243,6 +246,10 @@ export class WebGPUDevice extends Device {
 
   createTransformFeedback(props: TransformFeedbackProps): TransformFeedback {
     throw new Error('Transform feedback not supported in WebGPU');
+  }
+
+  override createQuerySet(props: QuerySetProps): QuerySet {
+   return new WebGPUQuerySet(this, props);
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
