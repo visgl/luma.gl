@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Buffer} from '../resources/buffer';
 // import type {VertexFormat} from './data-formats';
 

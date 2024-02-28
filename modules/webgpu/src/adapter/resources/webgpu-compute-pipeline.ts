@@ -1,4 +1,7 @@
-// prettier-ignore
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {ComputePipeline, ComputePipelineProps} from '@luma.gl/core';
 
 import {WebGPUDevice} from '../webgpu-device';

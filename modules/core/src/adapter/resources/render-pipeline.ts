@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Device} from '../device';
 import type {UniformValue} from '../types/types';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';

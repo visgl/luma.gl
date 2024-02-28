@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/core';
 import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
@@ -18,11 +22,12 @@ export class WebGPURenderPass extends RenderPass {
     this.device = device;
     const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
+
+    this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
+    this.handle.label = this.props.id;
     log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
     log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
     log.groupEnd(3)();
-    this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
-    this.handle.label = this.props.id;
   }
 
   override destroy(): void {}
@@ -124,11 +129,12 @@ export class WebGPURenderPass extends RenderPass {
     this.handle.insertDebugMarker(markerLabel);
   }
 
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
-  // beginOcclusionQuery(queryIndex: number): void;
-  // endOcclusionQuery(): void;
-  // beginPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
-  // endPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
+  beginOcclusionQuery(queryIndex: number): void {
+    this.handle.beginOcclusionQuery(queryIndex);
+  }
+  endOcclusionQuery(): void {
+    this.handle.endOcclusionQuery();
+  }
 
   // executeBundles(bundles: Iterable<GPURenderBundle>): void;
 

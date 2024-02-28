@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {TextureFormat} from '@luma.gl/core';
 
 /** Ensure a texture format is WebGPU compatible */

@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Buffer} from './buffer';
@@ -159,14 +162,4 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   popDebugGroup() {}
 
   insertDebugMarker(markerLabel: string): void {}
-
-  // writeTimestamp(querySet: Query, queryIndex: number): void;
-
-  // resolveQuerySet(options: {
-  //   querySet: GPUQuerySet,
-  //   firstQuery: number,
-  //   queryCount: number,
-  //   destination: Buffer,
-  //   destinationOffset?: number;
-  // }): void;
 }

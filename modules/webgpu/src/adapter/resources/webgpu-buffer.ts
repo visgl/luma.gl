@@ -1,4 +1,7 @@
-// WEBGPU Buffer implementation
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Buffer, BufferProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 

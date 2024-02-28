@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 /** Basic data types signed and unsigned integers, and floats, of varying sizes */

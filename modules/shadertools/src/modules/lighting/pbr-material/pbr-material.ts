@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable camelcase */
 
 import type {NumberArray, Texture} from '@luma.gl/core';

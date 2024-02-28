@@ -1,7 +1,11 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Resource, ResourceProps} from './resource';
 import {ComputePipeline} from './compute-pipeline';
-import {Buffer} from './buffer';
 import type {Device} from '../device';
+import {Buffer} from './buffer';
 
 export type ComputePassProps = ResourceProps & {};
 
@@ -15,7 +19,7 @@ export abstract class ComputePass extends Resource<ComputePassProps> {
   }
 
   constructor(device: Device, props: ComputePassProps) {
-    super(device, props, Resource.defaultProps);
+    super(device, props, ComputePass.defaultProps);
   }
 
   abstract override destroy(): void;
@@ -45,8 +49,4 @@ export abstract class ComputePass extends Resource<ComputePassProps> {
   abstract pushDebugGroup(groupLabel: string): void;
   abstract popDebugGroup(): void;
   abstract insertDebugMarker(markerLabel: string): void;
-
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
-  // beginPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
-  // endPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
 }

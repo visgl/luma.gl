@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {UniformValue} from '../../adapter/types/types';
 import type {Binding} from '../../adapter/types/shader-layout';
 import {isNumberArray} from '../../utils/is-array';

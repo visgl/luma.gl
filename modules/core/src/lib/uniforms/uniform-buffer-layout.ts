@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {ShaderUniformType, ShaderDataType} from '../../adapter/types/shader-types';
 import type {UniformValue} from '../../adapter/types/types';
 import {decodeShaderUniformType, alignTo} from '../../adapter/type-utils/decode-shader-types';

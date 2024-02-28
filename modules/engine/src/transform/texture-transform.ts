@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';

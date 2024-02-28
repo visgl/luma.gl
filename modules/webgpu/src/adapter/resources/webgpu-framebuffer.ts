@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {FramebufferProps} from '@luma.gl/core';
 import {Framebuffer} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';

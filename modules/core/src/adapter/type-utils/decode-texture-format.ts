@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {TextureFormat} from '../types/texture-formats';
 import {VertexType} from '../types/vertex-formats';
 import {decodeVertexType} from './decode-data-type';

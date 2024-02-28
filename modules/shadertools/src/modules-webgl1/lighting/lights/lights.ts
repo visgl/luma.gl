@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {NumberArray} from '../../../types';
 import {lightingShader} from './lights-glsl';
 

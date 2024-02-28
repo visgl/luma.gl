@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {DataType, NormalizedDataType} from '../types/vertex-formats';
 
 export type DecodedVertexType = {

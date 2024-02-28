@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {ShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
 import {Buffer, Sampler, Texture, log, cast} from '@luma.gl/core';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';

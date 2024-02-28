@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
 import type {TextureFormat} from '../types/texture-formats';

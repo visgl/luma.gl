@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 export const fp64functionShader = glsl`\

@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Buffer, NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, _ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';

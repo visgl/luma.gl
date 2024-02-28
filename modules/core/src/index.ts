@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 export {VERSION} from './init';
@@ -22,39 +23,50 @@ export {CanvasContext} from './adapter/canvas-context';
 // GPU RESOURCES
 export type {ResourceProps} from './adapter/resources/resource';
 export {Resource} from './adapter/resources/resource';
+
 export type {BufferProps} from './adapter/resources/buffer';
 export {Buffer} from './adapter/resources/buffer';
+
 export type {TextureProps, TextureData} from './adapter/resources/texture';
 export {Texture} from './adapter/resources/texture';
+
 export type {TextureViewProps} from './adapter/resources/texture-view';
 export {TextureView} from './adapter/resources/texture-view';
+
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {ExternalTexture} from './adapter/resources/external-texture';
+
 export type {ShaderProps} from './adapter/resources/shader';
 export {Shader} from './adapter/resources/shader';
+
 export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
 export {Sampler} from './adapter/resources/sampler';
+
 export type {FramebufferProps} from './adapter/resources/framebuffer';
 export {Framebuffer} from './adapter/resources/framebuffer';
 
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
 export {RenderPipeline} from './adapter/resources/render-pipeline';
 
-export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
-export {ComputePipeline} from './adapter/resources/compute-pipeline';
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';
+
+export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
+export {ComputePipeline} from './adapter/resources/compute-pipeline';
+
 export type {ComputePassProps} from './adapter/resources/compute-pass';
 export {ComputePass} from './adapter/resources/compute-pass';
+
 export type {CommandEncoderProps} from './adapter/resources/command-encoder';
 export {CommandEncoder} from './adapter/resources/command-encoder';
+
 export type {CommandBufferProps} from './adapter/resources/command-buffer';
 export {CommandBuffer} from './adapter/resources/command-buffer';
 
 export type {VertexArrayProps} from './adapter/resources/vertex-array';
 export {VertexArray} from './adapter/resources/vertex-array';
 
-export type {BufferRange, TransformFeedbackProps} from './adapter/resources/transform-feedback';
+export type {TransformFeedbackProps, BufferRange} from './adapter/resources/transform-feedback';
 export {TransformFeedback} from './adapter/resources/transform-feedback';
 
 // API TYPES

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {ShaderAttributeType} from '../types/shader-types';
 
 /**  Predeclared aliases @see https://www.w3.org/TR/WGSL/#vector-types */

@@ -1,11 +1,11 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
-// import {Buffer} from './buffer';
-// import {RenderPipeline} from './render-pipeline';
-// import {CommandEncoder} from './command-encoder';
 import {Framebuffer} from './framebuffer';
 import {NumberArray} from '../..';
 
@@ -74,43 +74,35 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   abstract popDebugGroup(): void;
   abstract insertDebugMarker(markerLabel: string): void;
 
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
-
-  // beginOcclusionQuery(queryIndex: number): void;
-  // endOcclusionQuery(): void;
-
   // executeBundles(bundles: Iterable<GPURenderBundle>): void;
 
-  // In WebGPU the following methods are on the renderpass.
+  // TODO - In WebGPU the following methods are on the renderpass.
   // luma.gl keeps them on the pipeline for now
+  // setPipeline(pipeline: RenderPipeline): void {}
 
-  /*
-  setPipeline(pipeline: RenderPipeline): void {}
+  // setIndexBuffer(
+  //   buffer: Buffer,
+  //   indexFormat: 'uint16' | 'uint32',
+  //   offset?: number,
+  //   size?: number
+  // ): void {}
 
-  setIndexBuffer(
-    buffer: Buffer,
-    indexFormat: 'uint16' | 'uint32',
-    offset?: number,
-    size?: number
-  ): void {}
+  // abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
 
-  abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
+  // abstract setBindings(bindings: Record<string, Binding>): void;
 
-  abstract setBindings(bindings: Record<string, Binding>): void;
+  // abstract setParameters(parameters: RenderPassParameters);
 
-  abstract setParameters(parameters: RenderPassParameters);
+  // draw(options: {
+  //   vertexCount?: number; // Either vertexCount or indexCount must be provided
+  //   indexCount?: number;  // Activates indexed drawing (call setIndexBuffer())
+  //   instanceCount?: number; //
+  //   firstVertex?: number;
+  //   firstIndex?: number; // requires device.features.has('indirect-first-instance')?
+  //   firstInstance?: number;
+  //   baseVertex?: number;
+  // }): void {}
 
-  draw(options: {
-    vertexCount?: number; // Either vertexCount or indexCount must be provided
-    indexCount?: number;  // Activates indexed drawing (call setIndexBuffer())
-    instanceCount?: number; //
-    firstVertex?: number;
-    firstIndex?: number; // requires device.features.has('indirect-first-instance')?
-    firstInstance?: number;
-    baseVertex?: number;
-  }): void {}
-
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  */
+  // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
 }
