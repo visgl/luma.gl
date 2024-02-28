@@ -163,7 +163,8 @@ module.exports = getESLintConfig({
           "GPUTextureFormat": true,
           "GPUBufferUsage": true,
           "GPUVertexFormat": true,
-          "GPURenderPassDescriptor": true
+          "GPURenderPassDescriptor": true,
+          "GPUComputePassTimestampWrites": true
         }
       }
     ],

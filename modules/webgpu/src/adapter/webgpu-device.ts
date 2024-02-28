@@ -249,7 +249,7 @@ export class WebGPUDevice extends Device {
   }
 
   override createQuerySet(props: QuerySetProps): QuerySet {
-   return new WebGPUQuerySet(this, props);
+    return new WebGPUQuerySet(this, props);
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {

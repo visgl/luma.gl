@@ -134,7 +134,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       destinationOffset?: number;
     }
   ): void {
-    const webgpuQuerySet = querySet as WebGPUQuerySet;
+    const webgpuQuerySet = querySet;
     const webgpuBuffer = destination as WebGPUBuffer;
     this.handle.resolveQuerySet(
       webgpuQuerySet.handle,

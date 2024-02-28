@@ -109,7 +109,7 @@ export class WEBGLRenderPass extends RenderPass {
 
   override endOcclusionQuery(): void {
     const webglQuerySet = this.props.occlusionQuerySet as WEBGLQuerySet;
-    webglQuerySet?.endOcclusionQuery();    
+    webglQuerySet?.endOcclusionQuery();
   }
 
   // PRIVATE

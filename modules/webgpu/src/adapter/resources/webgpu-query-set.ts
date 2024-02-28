@@ -5,7 +5,7 @@
 import {QuerySet, QuerySetProps} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
-export type QuerySetProps2 =  {
+export type QuerySetProps2 = {
   type: 'occlusion' | 'timestamp';
   count: number;
 };
@@ -20,10 +20,12 @@ export class WebGPUQuerySet extends QuerySet {
   constructor(device: WebGPUDevice, props: QuerySetProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.props.handle || this.device.handle.createQuerySet({
-      type: this.props.type,
-      count: this.props.count,
-    });
+    this.handle =
+      this.props.handle ||
+      this.device.handle.createQuerySet({
+        type: this.props.type,
+        count: this.props.count
+      });
     this.handle.label = this.props.id;
   }
 

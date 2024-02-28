@@ -31,11 +31,13 @@ export class WebGPURenderPass extends RenderPass {
 
     if (device.features.has('timestamp-query')) {
       const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
-      renderPassDescriptor.timestampWrites = webgpuQuerySet ? {
-        querySet: webgpuQuerySet.handle,
-        beginningOfPassWriteIndex: props.beginTimestampIndex,
-        endOfPassWriteIndex: props.endTimestampIndex
-      } as GPUComputePassTimestampWrites : undefined;
+      renderPassDescriptor.timestampWrites = webgpuQuerySet
+        ? ({
+            querySet: webgpuQuerySet.handle,
+            beginningOfPassWriteIndex: props.beginTimestampIndex,
+            endOfPassWriteIndex: props.endTimestampIndex
+          } as GPUComputePassTimestampWrites)
+        : undefined;
     }
 
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);

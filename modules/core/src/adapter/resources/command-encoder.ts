@@ -164,8 +164,9 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     querySet: QuerySet,
     destination: Buffer,
     options?: {
-      firstQuery: number;
-      queryCount: number;
+      firstQuery?: number;
+      queryCount?: number;
+      destinationOffset?: number;
     }
   ): void;
 
@@ -179,4 +180,4 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   // TODO - luma.gl has these on the device, should we align with WebGPU API?
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
-  }  
+}
