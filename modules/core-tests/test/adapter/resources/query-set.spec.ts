@@ -6,8 +6,7 @@ import test from 'tape-promise/tape';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
-
-test('QuerySet construct/delete', async (t) => {
+test('QuerySet construct/delete', async t => {
   for (const device of await getTestDevices()) {
     const querySet = device.createQuerySet({type: 'occlusion', count: 1});
     t.ok(querySet instanceof QuerySet, 'QuerySet construction successful');
