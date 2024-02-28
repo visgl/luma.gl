@@ -1,7 +1,7 @@
 # Profiling
 
 GPU programming is all about performance, so having tools to systematically
-measure the performance impact of code changes are critical. luma.gl offers
+measure the performance impact of code changes is critical. luma.gl offers
 several built-in facilities.
 
 ## probe.gl Stats
@@ -31,4 +31,12 @@ however tracking allocations can help spot resource leaks or unnecessary work be
 
 ## Performance Profiling
 
-Queries are supported if available.
+`device.createQuerySet()` can be used to create GPU queries that 
+
+- Occlusion Queries always supported.
+- Timestamp Queries are supported if the `timestamp-query` feature is available, check with `device.features.has('timestamp-query')`.
+
+`QuerySet` instances can be supplied when creating `RenderPass` and `ComputePass` instances.
+
+Results are available through
+`commandEncoder.resolveQuerySet()`

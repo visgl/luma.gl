@@ -6,6 +6,7 @@ import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
+import {QuerySet} from './query-set';
 
 export type WriteBufferOptions = {
   buffer: Buffer;
@@ -143,23 +144,40 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     super(device, props, CommandEncoder.defaultProps);
   }
 
+  /** Completes recording of the commands sequence */
   abstract finish(): void; // TODO - return the CommandBuffer?
 
-  // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
-  // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
-  // finish(options?: {id?: string}): GPUCommandBuffer;
-
+  /** Add a command that that copies data from a sub-region of a Buffer to a sub-region of another Buffer. */
   abstract copyBufferToBuffer(options: CopyBufferToBufferOptions): void;
 
+  /** Add a command that copies data from a sub-region of a GPUBuffer to a sub-region of one or multiple continuous texture subresources. */
   abstract copyBufferToTexture(options: CopyBufferToTextureOptions): void;
 
+  /** Add a command that copies data from a sub-region of one or multiple continuous texture subresources to a sub-region of a Buffer. */
   abstract copyTextureToBuffer(options: CopyTextureToBufferOptions): void;
 
+  /** Add a command that copies data from a sub-region of one or multiple contiguous texture subresources to another sub-region of one or multiple continuous texture subresources. */
   abstract copyTextureToTexture(options: CopyTextureToTextureOptions): void;
 
-  pushDebugGroup(groupLabel: string): void {}
+  /** Reads results from a query set into a GPU buffer. Values are 64 bits so byteLength must be querySet.props.count * 8 */
+  abstract resolveQuerySet(
+    querySet: QuerySet,
+    destination: Buffer,
+    options?: {
+      firstQuery?: number;
+      queryCount?: number;
+      destinationOffset?: number;
+    }
+  ): void;
 
-  popDebugGroup() {}
+  /** Begins a labeled debug group containing subsequent commands */
+  abstract pushDebugGroup(groupLabel: string): void;
+  /** Ends the labeled debug group most recently started by pushDebugGroup() */
+  abstract popDebugGroup(): void;
+  /** Marks a point in a stream of commands with a label */
+  abstract insertDebugMarker(markerLabel: string): void;
 
-  insertDebugMarker(markerLabel: string): void {}
+  // TODO - luma.gl has these on the device, should we align with WebGPU API?
+  // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
+  // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
 }

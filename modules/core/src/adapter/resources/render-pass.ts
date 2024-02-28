@@ -8,6 +8,7 @@ import type {RenderPassParameters} from '../types/parameters';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
 import {NumberArray} from '../..';
+import {QuerySet} from './query-set';
 
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
@@ -29,6 +30,15 @@ export type RenderPassProps = ResourceProps & {
   stencilReadOnly?: boolean;
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
+
+  /** QuerySet to write begin/end timestamps to */
+  occlusionQuerySet?: QuerySet;
+  /** QuerySet to write begin/end timestamps to */
+  timestampQuerySet?: QuerySet;
+  /** QuerySet index to write begin timestamp to. No timestamp is written if not provided. */
+  beginTimestampIndex?: number;
+  /** QuerySet index to write end timestamp to. No timestamp is written if not provided. */
+  endTimestampIndex?: number;
 };
 
 /**
@@ -50,7 +60,12 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     clearStencil: 0,
     depthReadOnly: false,
     stencilReadOnly: false,
-    discard: false
+    discard: false,
+
+    occlusionQuerySet: undefined,
+    timestampQuerySet: undefined,
+    beginTimestampIndex: undefined,
+    endTimestampIndex: undefined
   };
 
   override get [Symbol.toStringTag](): string {
@@ -64,45 +79,33 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** Call when rendering is done in this pass. */
   abstract end(): void;
 
-  /**
-   * A small set of parameters can be changed between every draw call
-   * (viewport, scissorRect, blendColor, stencilReference)
-   */
+  /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
-
-  abstract pushDebugGroup(groupLabel: string): void;
-  abstract popDebugGroup(): void;
-  abstract insertDebugMarker(markerLabel: string): void;
 
   // executeBundles(bundles: Iterable<GPURenderBundle>): void;
 
-  // TODO - In WebGPU the following methods are on the renderpass.
-  // luma.gl keeps them on the pipeline for now
-  // setPipeline(pipeline: RenderPipeline): void {}
+  /** Being an occlusion query. Value will be stored in the occlusionQuerySet at the index. Occlusion queries cannot be nested. */
+  abstract beginOcclusionQuery(queryIndex: number): void;
+  /** End an occlusion query. Stores result in the index specified in beginOcclusionQuery. */
+  abstract endOcclusionQuery(): void;
 
-  // setIndexBuffer(
-  //   buffer: Buffer,
-  //   indexFormat: 'uint16' | 'uint32',
-  //   offset?: number,
-  //   size?: number
-  // ): void {}
+  /** Begins a labeled debug group containing subsequent commands */
+  abstract pushDebugGroup(groupLabel: string): void;
+  /** Ends the labeled debug group most recently started by pushDebugGroup() */
+  abstract popDebugGroup(): void;
+  /** Marks a point in a stream of commands with a label */
+  abstract insertDebugMarker(markerLabel: string): void;
 
+  // In WebGPU the following methods are on the renderpass instead of the renderpipeline
+  // luma.gl keeps them on the pipeline for now.
+  // TODO - Can we align WebGL implementation with WebGPU API?
+
+  // abstract setPipeline(pipeline: RenderPipeline): void {}
+  // abstract setIndexBuffer()
   // abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
-
   // abstract setBindings(bindings: Record<string, Binding>): void;
-
   // abstract setParameters(parameters: RenderPassParameters);
-
-  // draw(options: {
-  //   vertexCount?: number; // Either vertexCount or indexCount must be provided
-  //   indexCount?: number;  // Activates indexed drawing (call setIndexBuffer())
-  //   instanceCount?: number; //
-  //   firstVertex?: number;
-  //   firstIndex?: number; // requires device.features.has('indirect-first-instance')?
-  //   firstInstance?: number;
-  //   baseVertex?: number;
-  // }): void {}
-
-  // drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  // drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  // abstract draw(options: {
+  // abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  // abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
 }

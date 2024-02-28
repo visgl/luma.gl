@@ -94,7 +94,8 @@
           "api-reference/core/resources/shader",
           "api-reference/core/shader-logs",
           "api-reference/core/resources/texture",
-          "api-reference/core/resources/vertex-array"
+          "api-reference/core/resources/vertex-array",
+          "api-reference/core/resources/query-set"
         ]
       },
       {

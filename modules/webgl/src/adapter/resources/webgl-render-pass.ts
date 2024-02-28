@@ -8,6 +8,7 @@ import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
+import {WEBGLQuerySet} from './webgl-query-set';
 
 // Should collapse during minification
 const GL_DEPTH_BUFFER_BIT = 0x00000100;
@@ -99,6 +100,16 @@ export class WEBGLRenderPass extends RenderPass {
     this.glParameters = glParameters;
 
     setGLParameters(this.device, glParameters);
+  }
+
+  beginOcclusionQuery(queryIndex: number): void {
+    const webglQuerySet = this.props.occlusionQuerySet as WEBGLQuerySet;
+    webglQuerySet?.beginOcclusionQuery();
+  }
+
+  override endOcclusionQuery(): void {
+    const webglQuerySet = this.props.occlusionQuerySet as WEBGLQuerySet;
+    webglQuerySet?.endOcclusionQuery();
   }
 
   // PRIVATE

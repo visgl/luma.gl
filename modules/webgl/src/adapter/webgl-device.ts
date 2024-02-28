@@ -54,7 +54,8 @@ import type {
   ComputePassProps,
   // CommandEncoder,
   CommandEncoderProps,
-  TransformFeedbackProps
+  TransformFeedbackProps,
+  QuerySetProps
 } from '@luma.gl/core';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
@@ -67,6 +68,7 @@ import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
+import {WEBGLQuerySet} from './resources/webgl-query-set';
 
 import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
 import {setGLParameters, getGLParameters} from '../context/parameters/unified-parameter-api';
@@ -304,6 +306,10 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   createTransformFeedback(props: TransformFeedbackProps): WEBGLTransformFeedback {
     return new WEBGLTransformFeedback(this, props);
+  }
+
+  createQuerySet(props: QuerySetProps): WEBGLQuerySet {
+    return new WEBGLQuerySet(this, props);
   }
 
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {

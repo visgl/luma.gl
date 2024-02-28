@@ -7,7 +7,9 @@ import type {
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions
+  CopyTextureToTextureOptions,
+  QuerySet,
+  Buffer
 } from '@luma.gl/core';
 
 import {WEBGLCommandBuffer} from './webgl-command-buffer';
@@ -54,4 +56,14 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   override popDebugGroup() {}
 
   override insertDebugMarker(markerLabel: string): void {}
+
+  override resolveQuerySet(
+    querySet: QuerySet,
+    destination: Buffer,
+    options?: {
+      firstQuery?: number;
+      queryCount?: number;
+      destinationOffset?: number;
+    }
+  ): void {}
 }

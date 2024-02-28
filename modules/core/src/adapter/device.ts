@@ -22,6 +22,7 @@ import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
+import type {QuerySet, QuerySetProps} from './resources/query-set';
 
 import {isTextureFormatCompressed} from './type-utils/decode-texture-format';
 
@@ -394,6 +395,8 @@ export abstract class Device {
 
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
+
+  abstract createQuerySet(props: QuerySetProps): QuerySet;
 
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
     throw new Error('not implemented');
