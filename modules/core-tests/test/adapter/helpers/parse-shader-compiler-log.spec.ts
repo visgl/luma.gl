@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+/* eslint-disable quotes */
+
 import test from 'tape-promise/tape';
 import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
 

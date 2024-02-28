@@ -38,6 +38,9 @@ module.exports = getESLintConfig({
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
+          'quotes': 0, // handled by prettier
+          'indent': 0, // handled by prettier
+
           // typescript-eslint 6.0
           '@typescript-eslint/no-unsafe-argument': 0,
           '@typescript-eslint/no-redundant-type-constituents': 0,
