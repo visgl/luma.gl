@@ -50,6 +50,7 @@ const TYPE_MAP: Record<NormalizedDataType, DataType> = {
   snorm16: 'sint16',
   float16: 'float16',
   float32: 'float32',
+  float64: 'float64',
   uint32: 'uint32',
   sint32: 'sint32'
 };
@@ -61,6 +62,7 @@ const TYPE_SIZES: Record<DataType, number> = {
   sint16: 2,
   float16: 2,
   float32: 4,
+  float64: 8,
   uint32: 4,
   sint32: 4
 };

@@ -11,7 +11,8 @@ export type DataType =
   | 'uint32'
   | 'sint32'
   | 'float16'
-  | 'float32';
+  | 'float32'
+  | 'float64';
 
 /** Vertex and Pixel data types. Include normalized integers */
 export type NormalizedDataType =
@@ -28,8 +29,9 @@ export type NormalizedDataType =
   // WebGPU does not support normalized 32 bit integer attributes...
   // | 'unorm32'
   // | 'snorm32'
+  | 'float16'
   | 'float32'
-  | 'float16';
+  | 'float64';
 
 /** Describes the type (without number of components) of a vertex format */
 export type VertexType = NormalizedDataType;
@@ -87,4 +89,8 @@ export type VertexFormat =
   | 'float32'
   | 'float32x2'
   | 'float32x3'
-  | 'float32x4';
+  | 'float32x4'
+  | 'float64'
+  | 'float64x2'
+  | 'float64x3'
+  | 'float64x4';

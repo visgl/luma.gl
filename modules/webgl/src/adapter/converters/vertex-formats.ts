@@ -13,7 +13,8 @@ type GLDataType =
   | GL.UNSIGNED_INT
   | GL.INT
   | GL.HALF_FLOAT
-  | GL.FLOAT;
+  | GL.FLOAT
+  | GL.DOUBLE;
 
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
@@ -42,6 +43,7 @@ export function getVertexTypeFromGL(type: GLDataType, normalized = false): Verte
     case GL.UNSIGNED_SHORT: return normalized ? 'uint16' : 'unorm16';
     case GL.BYTE: return normalized ? 'sint8' : 'snorm16';
     case GL.UNSIGNED_BYTE: return normalized ? 'uint8' : 'unorm8';
+    case GL.DOUBLE: return 'float64';
     case GL.FLOAT: return 'float32';
     case GL.HALF_FLOAT: return 'float16';
   }
@@ -59,7 +61,8 @@ export function getGLFromVertexType(
   | GL.UNSIGNED_INT
   | GL.INT
   | GL.HALF_FLOAT
-  | GL.FLOAT {
+  | GL.FLOAT
+  | GL.DOUBLE {
   // prettier-ignore
   switch (dataType) {
     case 'uint8': return GL.UNSIGNED_BYTE;
@@ -77,6 +80,7 @@ export function getGLFromVertexType(
     // case 'snorm32': return GL.INT;
     case 'float16': return GL.HALF_FLOAT;
     case 'float32': return GL.FLOAT;
+    case 'float64': return GL.DOUBLE;
   }
   // @ts-ignore unreachable
   throw new Error(String(dataType));
