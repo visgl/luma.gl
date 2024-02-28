@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 // Note: This was the only dependency that made @luma.gl/webgl depend on @luma.gl/shadertools

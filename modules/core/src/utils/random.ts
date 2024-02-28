@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /** Creates a deterministic pseudorandom number generator */
 export function makeRandomNumberGenerator(): () => number {
   let s = 1;

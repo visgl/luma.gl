@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {RenderPipelineProps} from '@luma.gl/core';
 import {Device, RenderPipeline} from '@luma.gl/core';
 

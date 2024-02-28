@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {CommandEncoder, CommandEncoderProps, Buffer, Texture} from '@luma.gl/core';
 import type {CopyTextureToTextureOptions, CopyTextureToBufferOptions} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
@@ -119,14 +123,4 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   override insertDebugMarker(markerLabel: string): void {
     this.handle.insertDebugMarker(markerLabel);
   }
-
-  // writeTimestamp(querySet: Query, queryIndex: number): void {}
-
-  // resolveQuerySet(options: {
-  //   querySet: GPUQuerySet,
-  //   firstQuery: number,
-  //   queryCount: number,
-  //   destination: Buffer,
-  //   destinationOffset?: number;
-  // }): void;
 }

@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
@@ -53,14 +54,4 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   override popDebugGroup() {}
 
   override insertDebugMarker(markerLabel: string): void {}
-
-  // writeTimestamp(querySet: Query, queryIndex: number): void {}
-
-  // resolveQuerySet(options: {
-  //   querySet: GPUQuerySet,
-  //   firstQuery: number,
-  //   queryCount: number,
-  //   destination: Buffer,
-  //   destinationOffset?: number;
-  // }): void;
 }

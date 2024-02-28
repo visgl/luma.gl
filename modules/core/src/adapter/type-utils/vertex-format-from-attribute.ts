@@ -1,4 +1,7 @@
-// luma.gl, MIT licese
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {TypedArray, TypedArrayConstructor} from '../..';
 import {VertexFormat} from '../types/vertex-formats';
 

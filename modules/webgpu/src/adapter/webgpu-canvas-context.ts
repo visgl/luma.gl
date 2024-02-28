@@ -1,4 +1,9 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // / <reference types="@webgpu/types" />
+
 import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';

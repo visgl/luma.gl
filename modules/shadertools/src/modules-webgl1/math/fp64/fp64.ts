@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 
 import {fp64arithmeticShader} from './fp64-arithmetic-glsl';

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License
+// Copyright (c) vis.gl contributors
+
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {

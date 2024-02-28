@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Texture, Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {flipRows, scalePixels} from './pixel-data-utils';

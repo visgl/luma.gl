@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import {MODULE_INJECTORS_VS, MODULE_INJECTORS_FS} from '../../module-injectors';

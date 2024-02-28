@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import {RenderPass, RenderPassProps, NumberArray, RenderPassParameters} from '@luma.gl/core';
@@ -44,8 +45,6 @@ export class WEBGLRenderPass extends RenderPass {
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup(): void {}
   insertDebugMarker(markerLabel: string): void {}
-
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
 
   // beginOcclusionQuery(queryIndex: number): void;
   // endOcclusionQuery(): void;
@@ -102,7 +101,7 @@ export class WEBGLRenderPass extends RenderPass {
     setGLParameters(this.device, glParameters);
   }
 
-  // Internal
+  // PRIVATE
 
   /**
    * Optionally clears depth, color and stencil buffers based on parameters

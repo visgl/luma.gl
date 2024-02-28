@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // prettier-ignore
 // / <reference types="@webgpu/types" />
 
@@ -39,7 +43,6 @@ import {WebGPUComputePass} from './resources/webgpu-compute-pass';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
-// import {loadGlslangModule} from '../glsl/glslang';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {

@@ -1,4 +1,7 @@
-// luma.gl, MIT licese
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {ShaderDataType, ShaderAttributeType} from '../types/shader-types';
 import {VertexFormat, VertexType} from '../types/vertex-formats';
 

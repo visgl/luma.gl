@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // Node.js polyfills for requestAnimationFrame and cancelAnimationFrame
 /* global window, setTimeout, clearTimeout */
 

@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Device} from '../device';
 import {PrimitiveTopology} from '../types/parameters';
 import {ShaderLayout} from '../types/shader-layout';

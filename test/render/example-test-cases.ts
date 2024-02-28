@@ -1,4 +1,6 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
 import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';

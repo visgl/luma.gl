@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import type {
@@ -297,12 +298,16 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     return new WEBGLFramebuffer(this, props);
   }
 
-  createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
-    return new WEBGLRenderPipeline(this, props);
+  createVertexArray(props: VertexArrayProps): VertexArray {
+    return new WEBGLVertexArray(this, props);
   }
 
-  override createVertexArray(props: VertexArrayProps): VertexArray {
-    return new WEBGLVertexArray(this, props);
+  createTransformFeedback(props: TransformFeedbackProps): WEBGLTransformFeedback {
+    return new WEBGLTransformFeedback(this, props);
+  }
+
+  createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
+    return new WEBGLRenderPipeline(this, props);
   }
 
   beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
@@ -315,10 +320,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   beginComputePass(props: ComputePassProps): ComputePass {
     throw new Error('ComputePass not supported in WebGL');
-  }
-
-  createTransformFeedback(props: TransformFeedbackProps): WEBGLTransformFeedback {
-    return new WEBGLTransformFeedback(this, props);
   }
 
   private renderPass: WEBGLRenderPass | null = null;

@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
 import {log, decodeVertexFormat} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';

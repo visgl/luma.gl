@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {TextureFormat} from '../types/texture-formats';
 import type {ShaderUniformType, ShaderAttributeType} from './shader-types';
 import {AccessorObject} from '../types/accessor';

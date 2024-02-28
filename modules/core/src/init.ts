@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {isBrowser} from '@probe.gl/env';
 import {log} from './utils/log';
 import {lumaStats} from './utils/stats-manager';

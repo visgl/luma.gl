@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {PrimitiveTopology, TypedArray} from '@luma.gl/core';
 import {uid, assert} from '@luma.gl/core';
 

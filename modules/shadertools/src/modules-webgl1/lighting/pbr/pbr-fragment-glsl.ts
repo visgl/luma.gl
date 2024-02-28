@@ -1,8 +1,13 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+// Attribution:
+// MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
+
 // This fragment shader defines a reference implementation for Physically Based Shading of
 // a microfacet surface material defined by a glTF model.
 //
-// Attribution:
-// MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
 
 // TODO - better do the checks outside of shader
 import {glsl} from '../../../lib/glsl-utils/highlight';

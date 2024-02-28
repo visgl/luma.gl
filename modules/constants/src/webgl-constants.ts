@@ -622,9 +622,13 @@ enum GLEnum {
   // Queries
 
   CURRENT_QUERY = 0x8865,
+  /** Returns a GLuint containing the query result. */
   QUERY_RESULT = 0x8866,
+  /** Whether query result is available. */
   QUERY_RESULT_AVAILABLE = 0x8867,
+  /** Occlusion query (if drawing passed depth test)  */
   ANY_SAMPLES_PASSED = 0x8c2f,
+  /** Occlusion query less accurate/faster version */
   ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8d6a,
 
   // Draw buffers
@@ -964,7 +968,7 @@ enum GLEnum {
   TIME_ELAPSED_EXT = 0x88bf,
   /** The current time. */
   TIMESTAMP_EXT = 0x8e28,
-  /** A Boolean indicating whether or not the GPU performed any disjoint operation. */
+  /** A Boolean indicating whether or not the GPU performed any disjoint operation (lost context) */
   GPU_DISJOINT_EXT = 0x8fbb,
 
   // KHR_parallel_shader_compile https://registry.khronos.org/webgl/extensions/KHR_parallel_shader_compile

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';
 import {getBoundingBoxInPage} from './utils/get-bounding-box';
 

@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {NumberArray} from '../../types';
 import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from './texture-formats';
 import type {Buffer} from '../resources/buffer';

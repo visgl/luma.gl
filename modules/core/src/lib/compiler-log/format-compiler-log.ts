@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {CompilerMessage} from './compiler-message';
 
 /** @returns annotated errors or warnings */

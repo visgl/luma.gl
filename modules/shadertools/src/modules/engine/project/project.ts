@@ -1,4 +1,5 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import {NumericArray as NumberArray, Matrix4, Vector3} from '@math.gl/core';

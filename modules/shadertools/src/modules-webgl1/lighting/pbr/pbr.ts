@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {lights} from '../lights/lights';
 
 import {vs} from './pbr-vertex-glsl';

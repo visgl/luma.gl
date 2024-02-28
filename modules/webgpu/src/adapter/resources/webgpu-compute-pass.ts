@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
@@ -17,7 +21,6 @@ export class WebGPUComputePass extends ComputePass {
       this.props.handle ||
       device.commandEncoder?.beginComputePass({
         label: this.props.id
-        // timestampWrites?: GPUComputePassTimestampWrites;
       });
   }
 
@@ -64,14 +67,12 @@ export class WebGPUComputePass extends ComputePass {
   pushDebugGroup(groupLabel: string): void {
     this.handle.pushDebugGroup(groupLabel);
   }
+
   popDebugGroup(): void {
     this.handle.popDebugGroup();
   }
+
   insertDebugMarker(markerLabel: string): void {
     this.handle.insertDebugMarker(markerLabel);
   }
-
-  // writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
-  // beginPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
-  // endPipelineStatisticsQuery(querySet: GPUQuerySet, queryIndex: number): void;
 }

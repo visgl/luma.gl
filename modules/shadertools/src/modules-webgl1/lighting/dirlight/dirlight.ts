@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {ShaderModule} from '@luma.gl/shadertools/lib/shader-module/shader-module';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import type {NumberArray} from '../../../types';

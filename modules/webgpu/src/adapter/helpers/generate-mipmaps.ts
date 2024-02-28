@@ -1,4 +1,7 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // Forked from Kangz/mipmapper.js under MIT license Copyright 2020 Brandon Jones
 // https://gist.github.com/Kangz/782d5f1ae502daf53910a13f55db2f83
 
