@@ -16,8 +16,8 @@ import './adapter/device-helpers/device-features.spec';
 import './adapter/device-helpers/device-limits.spec';
 import './adapter/device-helpers/set-device-parameters.spec';
 
-// import './adapter/webgl-device.spec';
-// import './adapter/webgl-canvas-context.spec';
+// import './adapter/device.spec';
+// import './adapter/canvas-context.spec';
 
 // Resources
 import './adapter/texture-formats.spec';
@@ -30,4 +30,5 @@ import './adapter/resources/render-pipeline.spec';
 import './adapter/resources/shader.spec';
 import './adapter/resources/sampler.spec';
 import './adapter/resources/texture.spec';
-// import './adapter/resources/vertex-array.spec';
+import './adapter/resources/vertex-array.spec';
+import './adapter/resources/query.spec';
