@@ -31,7 +31,7 @@ test.skip('ComputePipeline construct/delete', async t => {
   t.end();
 });
 
-test.only('ComputePipeline compute', async t => {
+test('ComputePipeline compute', async t => {
   await getTestDevices();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {
@@ -61,6 +61,8 @@ test.only('ComputePipeline compute', async t => {
 
     const computedData = new Int32Array(await workBuffer.readAsync());
     t.equal(computedData[0], 4, 'Computed data is correct');
+
+    computation.destroy();
   }
   t.end();
 });
