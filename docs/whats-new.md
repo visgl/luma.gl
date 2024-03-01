@@ -26,11 +26,15 @@ The biggest change is that the core API is now portable (no longer WebGL-specifi
 - **WebGL bindings**: `@luma.gl/webgl` now provides a WebGL backend for the core API.
 - **WebGPU bindings**: `@luma.gl/webgpu` provides a new experimental WebGPU backend for the core API.
 
-To accelerate WebGPU development, luma.gl v9 drops support for legacy functionality:
+### WebGL Support
+
+luma.gl v9 drops support for WebGL 1 functionality.
 
 - **WebGL1** WebGL 1 support is dropped.
 - **GLSL 1.00** is  no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
 - **headless-gl** The Node.js WebGL 1 integration is no longer supported
+
+On the upside this means that all features requiring WebGL 2 are now available and luma.gl also brings support for a range of new WebGL 2 extensions, see more below.
 
 ### New module structure
 
@@ -58,10 +62,11 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 
 **`@luma.gl/engine`**
 
-- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`. (Moved from `@luma.gl/experimental`).
+- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/experimental`.
 - NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
 - NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
-- NEW: `AnimationLoopTemplate` - Small helper class that can help write cleaner demos and applications in TypeScript.
+- NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
+- New `Computation` - Class that manages a `ComputePipeline` similar to `Model` and `Transform`.
 
 **`@luma.gl/gltf`**
 
@@ -76,11 +81,15 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 
 **`@luma.gl/webgl`** 
 
-WebGL is not dead yet! Browsers (Chrome in particular) are still adding extensions to WebGL 2, and luma.gl
-is adding support for many of the new features through the [`DeviceFeatures`](/docs/api-reference/core/device-features) API.
+- The new bindings API now supports WebGL 2 Uniform Buffers.
+
+WebGL 2 Extension support: WebGL is not dead yet! Browsers (Chrome in particular) 
+are actively developing "extensions" for WebGL 2, 
+and luma.gl is exposing support for many of the new WebGL extensions through the 
+[`DeviceFeatures`](/docs/api-reference/core/device-features) API.
 
 New `Device.features` that improve application performance in WebGL:
-- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically when available and speeds up applications that create many `RenderPipelines`. 
+- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`. 
 
 New `Device.features` that enable additional color format support in WebGL:
 - `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` is renderable.
@@ -89,13 +98,14 @@ New `Device.features` that enable additional color format support in WebGL:
 - `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
 
 New `Device.features` that expose new GPU parameters in WebGL:
-- `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled if the  feature is available.
+- `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled.
 - `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading. 
-- `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons. Check the  feature. 
+- `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons.
 - `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines. 
-- `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7` - enables `gl_ClipDistance[] / gl_CullDistance[]`.
+- `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7`, also see GLSL effects below.
 
 New `Device.features` that enable new GLSL syntax
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
+- `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
 

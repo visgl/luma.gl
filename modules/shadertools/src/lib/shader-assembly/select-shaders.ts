@@ -25,6 +25,12 @@ export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
  * @returns
  */
 export function selectShaders(props: AssembleShaderProps): AssembleShaderOptions {
+  // If we have a source field, we have a single unified shader source
+  if (props.source) {
+    const propsCopy: AssembleShaderOptions = {...props, vs: undefined, fs: undefined};
+    return propsCopy;
+  }
+
   if (!props.vs) {
     throw new Error('no vertex shader');
   }

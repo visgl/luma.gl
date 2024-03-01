@@ -35,12 +35,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
-  /** Factory used to create a {@link RenderPipeline}. Defaults to {@link Device} default factory. */
-  pipelineFactory?: PipelineFactory;
-  /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
-  shaderFactory?: ShaderFactory;
-  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
-  shaderAssembler?: ShaderAssembler;
 
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
@@ -71,6 +65,13 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Show shader source in browser? */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
+
+  /** Factory used to create a {@link RenderPipeline}. Defaults to {@link Device} default factory. */
+  pipelineFactory?: PipelineFactory;
+  /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
+  shaderFactory?: ShaderFactory;
+  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
+  shaderAssembler?: ShaderAssembler;
 };
 
 /**
