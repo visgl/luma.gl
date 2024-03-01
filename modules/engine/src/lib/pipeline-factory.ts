@@ -52,6 +52,7 @@ export class PipelineFactory {
       this._renderPipelineCache[hash] = {pipeline, useCount: 0};
     }
 
+    this._renderPipelineCache[hash].useCount++;
     return this._renderPipelineCache[hash].pipeline;
   }
 
@@ -69,6 +70,7 @@ export class PipelineFactory {
       this._computePipelineCache[hash] = {pipeline, useCount: 0};
     }
 
+    this._computePipelineCache[hash].useCount++;
     return this._computePipelineCache[hash].pipeline;
   }
 
