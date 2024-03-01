@@ -42,9 +42,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   /** Height of all attachments in this framebuffer */
   height: number;
   /** Color attachments */
-  colorAttachments: TextureView[] = [];
+  colorAttachments: (TextureView | Texture)[] = [];
   /** Depth-stencil attachment, if provided */
-  depthStencilAttachment: TextureView | null = null;
+  depthStencilAttachment: TextureView | Texture | null = null;
 
   constructor(device: Device, props: FramebufferProps = {}) {
     super(device, props, Framebuffer.defaultProps);

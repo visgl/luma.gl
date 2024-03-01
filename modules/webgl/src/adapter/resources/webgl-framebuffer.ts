@@ -118,10 +118,15 @@ export class WEBGLFramebuffer extends Framebuffer {
     // TODO Not clear that this is better than default destroy/create implementation
 
     for (const colorAttachment of this.colorAttachments) {
-      (colorAttachment.texture as WEBGLTexture).resize({width, height});
+      const texture = 'texture' in colorAttachment ? colorAttachment.texture : colorAttachment;
+      (texture as WEBGLTexture).resize({width, height});
     }
     if (this.depthStencilAttachment) {
-      (this.depthStencilAttachment.texture as WEBGLTexture).resize({width, height});
+      const texture =
+        'texture' in this.depthStencilAttachment
+          ? this.depthStencilAttachment.texture
+          : this.depthStencilAttachment;
+      (texture as WEBGLTexture).resize({width, height});
     }
     return this;
   }
