@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Resource, ResourceProps} from './resource';
-import type {ComputeShaderLayout} from '../types/shader-layout';
+import type {ComputeShaderLayout, Binding} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
@@ -43,4 +43,10 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   constructor(device: Device, props: ComputePipelineProps) {
     super(device, props, ComputePipeline.defaultProps);
   }
+
+  /**
+   * @todo Use renderpass.setBindings() ?
+   * @todo Do we want to expose BindGroups in the API and remove this?
+   */
+  abstract setBindings(bindings: Record<string, Binding>): void;
 }

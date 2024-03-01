@@ -111,6 +111,7 @@
           "api-reference/engine/model",
           "api-reference/engine/pipeline-factory",
           "api-reference/engine/shader-factory",
+          "api-reference/engine/computation",
           "api-reference/engine/transform",
           "api-reference/engine/transform/buffer-transform",
           "api-reference/engine/transform/texture-transform",

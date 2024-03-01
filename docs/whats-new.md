@@ -58,10 +58,11 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 
 **`@luma.gl/engine`**
 
-- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`. (Moved from `@luma.gl/experimental`).
+- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/experimental`.
 - NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
 - NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
-- NEW: `AnimationLoopTemplate` - Small helper class that can help write cleaner demos and applications in TypeScript.
+- NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
+- New `Computation` - Class that manages a `ComputePipeline` similar to `Model` and `Transform`.
 
 **`@luma.gl/gltf`**
 

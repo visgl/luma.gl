@@ -102,7 +102,7 @@ export class Computation {
   private _destroyed = false;
 
   constructor(device: Device, props: ComputationProps) {
-    if (this.device.info.type !== 'webgpu') {
+    if (device.info.type !== 'webgpu') {
       throw new Error('Computation is only supported in WebGPU');
     }
 
@@ -160,7 +160,7 @@ export class Computation {
   destroy(): void {
     if (this._destroyed) return;
     this.pipelineFactory.release(this.pipeline);
-    this.shaderFactory.release(this.pipeline.shader);
+    this.shaderFactory.release(this.shader);
     this._uniformStore.destroy();
     this._destroyed = true;
   }
@@ -182,7 +182,9 @@ export class Computation {
 
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
-      // this.pipeline.setBindings(this.bindings);
+      this.pipeline.setBindings(this.bindings);
+      computePass.setPipeline(this.pipeline);
+      // @ts-expect-error
       computePass.setBindings([]);
 
       computePass.dispatch(x, y, z);
@@ -263,23 +265,21 @@ export class Computation {
           1,
           `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
         )();
-        prevShader = this.pipeline.shader;
+        prevShader = this.shader;
       }
 
       this._pipelineNeedsUpdate = false;
 
-      const shader = this.shader
-        ? this.shaderFactory.createShader({
-            id: `${this.id}-fragment`,
-            stage: 'compute',
-            source: this.source,
-            debug: this.props.debugShaders
-          })
-        : null;
+      this.shader = this.shaderFactory.createShader({
+        id: `${this.id}-fragment`,
+        stage: 'compute',
+        source: this.source,
+        debug: this.props.debugShaders
+      });
 
       this.pipeline = this.pipelineFactory.createComputePipeline({
         ...this.props,
-        shader
+        shader: this.shader
       });
 
       if (prevShader) {
