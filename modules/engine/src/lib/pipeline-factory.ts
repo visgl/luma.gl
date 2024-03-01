@@ -17,8 +17,14 @@ export class PipelineFactory {
 
   private _hashCounter: number = 0;
   private readonly _hashes: Record<string, number> = {};
-  private readonly _renderPipelineCache: Record<string, {pipeline: RenderPipeline, useCount: number}> = {};
-  private readonly _computePipelineCache: Record<string, {pipeline: ComputePipeline, useCount: number}> = {};
+  private readonly _renderPipelineCache: Record<
+    string,
+    {pipeline: RenderPipeline; useCount: number}
+  > = {};
+  private readonly _computePipelineCache: Record<
+    string,
+    {pipeline: ComputePipeline; useCount: number}
+  > = {};
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
@@ -38,7 +44,10 @@ export class PipelineFactory {
     const hash = this._hashRenderPipeline(allProps);
 
     if (!this._renderPipelineCache[hash]) {
-      const pipeline = this.device.createRenderPipeline({...allProps, id: allProps.id ? `${allProps.id}-cached` : undefined});
+      const pipeline = this.device.createRenderPipeline({
+        ...allProps,
+        id: allProps.id ? `${allProps.id}-cached` : undefined
+      });
       pipeline.hash = hash;
       this._renderPipelineCache[hash] = {pipeline, useCount: 0};
     }
@@ -52,7 +61,10 @@ export class PipelineFactory {
     const hash = this._hashComputePipeline(allProps);
 
     if (!this._computePipelineCache[hash]) {
-      const pipeline = this.device.createComputePipeline({...allProps, id: allProps.id ? `${allProps.id}-cached` : undefined});
+      const pipeline = this.device.createComputePipeline({
+        ...allProps,
+        id: allProps.id ? `${allProps.id}-cached` : undefined
+      });
       pipeline.hash = hash;
       this._computePipelineCache[hash] = {pipeline, useCount: 0};
     }
@@ -62,11 +74,12 @@ export class PipelineFactory {
 
   release(pipeline: RenderPipeline | ComputePipeline): void {
     const hash = pipeline.hash;
-    const cache = pipeline instanceof ComputePipeline ? this._computePipelineCache : this._renderPipelineCache;
+    const cache =
+      pipeline instanceof ComputePipeline ? this._computePipelineCache : this._renderPipelineCache;
     cache[hash].useCount--;
     if (cache[hash].useCount === 0) {
       cache[hash].pipeline.destroy();
-      cache[hash];
+      delete cache[hash];
     }
   }
 

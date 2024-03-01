@@ -50,9 +50,13 @@ export class WebGPUComputePass extends ComputePass {
     const wgpuPipeline = pipeline as WebGPUComputePipeline;
     this.handle.setPipeline(wgpuPipeline.handle);
     this._webgpuPipeline = wgpuPipeline;
+    this.setBindings([]);
   }
 
-  /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
+  /**
+   * Sets an array of bindings (uniform buffers, samplers, textures, ...)
+   * TODO - still some API confusion - does this method go here or on the pipeline?
+   */
   setBindings(bindings: Binding[]): void {
     const bindGroup = this._webgpuPipeline._getBindGroup();
     this.handle.setBindGroup(0, bindGroup);
@@ -70,9 +74,9 @@ export class WebGPUComputePass extends ComputePass {
 
   /**
    * Dispatch work to be performed with the current ComputePipeline.
-   * 
+   *
    * Buffer must be a tightly packed block of three 32-bit unsigned integer values (12 bytes total), given in the same order as the arguments for dispatch()
-   * @param indirectBuffer 
+   * @param indirectBuffer
    * @param indirectOffset offset in buffer to the beginning of the dispatch data.
    */
   dispatchIndirect(indirectBuffer: Buffer, indirectByteOffset: number = 0): void {

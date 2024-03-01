@@ -62,7 +62,7 @@ export class WebGPUBuffer extends Buffer {
   override async readAsync(
     byteOffset: number = 0,
     byteLength: number = this.byteLength
-  ): Promise<Uint8Array> {
+  ): Promise<ArrayBuffer> {
     // We need MAP_READ flag, but only COPY_DST buffers can have MAP_READ flag, so we need to create a temp buffer
     const tempBuffer = new WebGPUBuffer(this.device, {
       usage: Buffer.MAP_READ | Buffer.COPY_DST,
@@ -81,7 +81,7 @@ export class WebGPUBuffer extends Buffer {
     tempBuffer.handle.unmap();
     tempBuffer.destroy();
 
-    return new Uint8Array(arrayBuffer);
+    return arrayBuffer;
   }
 
   _writeMapped<TypedArray>(typedArray: TypedArray): void {

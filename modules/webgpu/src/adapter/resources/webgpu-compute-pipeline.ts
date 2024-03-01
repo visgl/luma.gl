@@ -18,7 +18,7 @@ export class WebGPUComputePipeline extends ComputePipeline {
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   /** For internal use to create BindGroups */
-  private _bindings: Record<string, Binding>;
+  private _bindings: Record<string, Binding> = {};
 
   constructor(device: WebGPUDevice, props: ComputePipelineProps) {
     super(device, props);
@@ -39,15 +39,14 @@ export class WebGPUComputePipeline extends ComputePipeline {
       });
   }
 
-    /** 
+  /**
    * @todo Use renderpass.setBindings() ?
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
-    setBindings(bindings: Record<string, Binding>): void {
-      Object.assign(this._bindings, bindings);
-    }
-  
-  
+  setBindings(bindings: Record<string, Binding>): void {
+    Object.assign(this._bindings, bindings);
+  }
+
   /** Return a bind group created by setBindings */
   _getBindGroup() {
     // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group

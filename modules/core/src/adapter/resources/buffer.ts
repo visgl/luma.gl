@@ -82,8 +82,8 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   /** Write data to buffer */
   abstract write(data: ArrayBufferView, byteOffset?: number): void;
-  /** Read data asynchronoursly */
-  abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
+  /** Read data asynchronously */
+  abstract readAsync(byteOffset?: number, byteLength?: number): Promise<ArrayBuffer>;
 
   /** Read data synchronously. @note WebGL2 only */
   readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array {

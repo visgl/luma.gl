@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Resource, ResourceProps} from './resource';
-import type {ShaderLayout} from '../types/shader-layout';
+import type {ComputeShaderLayout} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
@@ -17,9 +17,9 @@ export type ComputePipelineProps = ResourceProps & {
   /** The entry point, defaults to main */
   entryPoint?: string;
   /** These are WGSL constant values - different from GLSL defines in that shader does not need to be recompiled */
-  constants?: Record<string, number>; 
+  constants?: Record<string, number>;
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
-  shaderLayout?: ShaderLayout | null;
+  shaderLayout?: ComputeShaderLayout | null;
 };
 
 /**

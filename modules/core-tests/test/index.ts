@@ -22,10 +22,11 @@ import './adapter/texture-formats.spec';
 // Resources - TODO these tests only depend on Device and could move to API...
 import './adapter/resources/buffer.spec';
 import './adapter/resources/command-buffer.spec';
-import './adapter/resources/framebuffer.spec';
-import './adapter/resources/render-pipeline.spec';
 import './adapter/resources/shader.spec';
+import './adapter/resources/render-pipeline.spec';
+import './adapter/resources/compute-pipeline.spec';
 import './adapter/resources/sampler.spec';
 import './adapter/resources/texture.spec';
+import './adapter/resources/framebuffer.spec';
 import './adapter/resources/vertex-array.spec';
 import './adapter/resources/query-set.spec';
