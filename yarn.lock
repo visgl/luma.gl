@@ -10336,7 +10336,7 @@ __metadata:
     eslint-plugin-tree-shaking: "npm:^1.9.2"
     math.gl: "npm:^3.0.0"
     nyc: "npm:^15.1.0"
-    ocular-dev-tools: "npm:2.0.0-alpha.26"
+    ocular-dev-tools: "npm:2.0.0-alpha.28"
     pre-commit: "npm:^1.2.2"
     pre-push: "npm:^0.1.1"
     puppeteer: "npm:^22.0.0"
@@ -11527,9 +11527,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ocular-dev-tools@npm:2.0.0-alpha.26":
-  version: 2.0.0-alpha.26
-  resolution: "ocular-dev-tools@npm:2.0.0-alpha.26"
+"ocular-dev-tools@npm:2.0.0-alpha.28":
+  version: 2.0.0-alpha.28
+  resolution: "ocular-dev-tools@npm:2.0.0-alpha.28"
   dependencies:
     "@babel/cli": "npm:^7.14.5"
     "@babel/core": "npm:^7.14.5"
@@ -11581,7 +11581,7 @@ __metadata:
     ocular-metrics: scripts/metrics.js
     ocular-publish: scripts/publish.js
     ocular-test: scripts/test.js
-  checksum: 10c0/db0096a1b8838249bc4ae5c38629f3da42fae823d861eaaf093ca48bf8fed5fd030b56c87090c18df1f3b012daba2a083dd68eab7a005fd6c949d9722b36c7d7
+  checksum: 10c0/248138f2359dd86daaf717e129acca8dcd611731820f1167c4082fc30c0f866b062a8a434d8555b280c0fffb9e3a94ff75742a974421680a4756f23b95f35c90
   languageName: node
   linkType: hard
 
