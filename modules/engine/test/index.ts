@@ -17,10 +17,11 @@ import './scenegraph/group-node.spec';
 import './scenegraph/scenegraph-node.spec';
 import './scenegraph/model-node.spec';
 
+// debug
+import './debug/get-debug-table-from-shader-layout.spec';
+
 // Experimental
 import './shader-inputs.spec';
 import './transform/buffer-transform.spec';
 import './transform/texture-transform.spec';
-
-// debug
-import './debug/get-debug-table-from-shader-layout.spec';
+import './computation.spec';
