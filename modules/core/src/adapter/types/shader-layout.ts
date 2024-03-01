@@ -35,12 +35,17 @@ import type {TextureView} from '../resources/texture-view';
 export type ShaderLayout = {
   /** All attributes, their locations, and basic type information. Also an auto-deduced step mode */
   attributes: AttributeDeclaration[];
-  /** All bidning points (textures, samplers, uniform buffers) with their locations and type */
+  /** All binding points (textures, samplers, uniform buffers) with their locations and type */
   bindings: BindingDeclaration[];
   /** WebGL only (WebGPU use bindings and uniform buffers) */
   uniforms?: any[];
   /** WebGL2 only (WebGPU use compute shaders) */
   varyings?: VaryingBinding[];
+};
+
+export type ComputeShaderLayout = {
+  /** All binding points (textures, samplers, uniform buffers) with their locations and type */
+  bindings: BindingDeclaration[];
 };
 
 /**
@@ -88,7 +93,7 @@ type Binding = {
 /** ShaderLayout for bindings */
 export type BindingDeclaration =
   | UniformBufferBindingLayout
-  | BufferBindingLayout
+  | StorageBufferBindingLayout
   | TextureBindingLayout
   | SamplerBindingLayout
   | StorageTextureBindingLayout;
@@ -112,8 +117,8 @@ export type UniformInfo = {
   byteStride: number;
 };
 
-export type BufferBindingLayout = {
-  type: 'uniform' | 'storage' | 'read-only-storage';
+export type StorageBufferBindingLayout = {
+  type: 'storage' | 'read-only-storage';
   name: string;
   location: number;
   visibility?: number;

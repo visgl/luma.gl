@@ -82,7 +82,7 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   /** Write data to buffer */
   abstract write(data: ArrayBufferView, byteOffset?: number): void;
-  /** Read data asynchronoursly */
+  /** Read data asynchronously */
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
   /** Read data synchronously. @note WebGL2 only */

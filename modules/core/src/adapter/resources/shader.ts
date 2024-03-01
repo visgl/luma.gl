@@ -16,8 +16,8 @@ import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';
 export type ShaderProps = ResourceProps & {
   /** Shader language (defaults to auto) */
   language?: 'glsl' | 'wgsl' | 'auto';
-  /** Which stage are we compiling? Required by WebGL and GLSL transpiler */
-  stage: 'vertex' | 'fragment' | 'compute';
+  /** Which stage are we compiling? Required for GLSL. Ignored for WGSL. */
+  stage?: 'vertex' | 'fragment' | 'compute';
   /** Shader source code */
   source: string;
   /** Optional shader source map (WebGPU only) */
@@ -36,7 +36,7 @@ export abstract class Shader extends Resource<ShaderProps> {
   static override defaultProps: Required<ShaderProps> = {
     ...Resource.defaultProps,
     language: 'auto',
-    stage: 'vertex',
+    stage: undefined,
     source: '',
     sourceMap: null,
     entryPoint: 'main',

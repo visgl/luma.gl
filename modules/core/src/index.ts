@@ -109,6 +109,7 @@ export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/type
 
 export type {
   ShaderLayout,
+  ComputeShaderLayout,
   AttributeDeclaration,
   BindingDeclaration,
   Binding

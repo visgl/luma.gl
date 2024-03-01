@@ -6,10 +6,6 @@ import type {ShaderProps, CompilerMessage} from '@luma.gl/core';
 import {Shader, log} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 
-export type WebGPUShaderProps = ShaderProps & {
-  handle?: GPUShaderModule;
-};
-
 /**
  * Immutable shader
  */
@@ -17,7 +13,7 @@ export class WebGPUShader extends Shader {
   readonly device: WebGPUDevice;
   readonly handle: GPUShaderModule;
 
-  constructor(device: WebGPUDevice, props: WebGPUShaderProps) {
+  constructor(device: WebGPUDevice, props: ShaderProps) {
     super(device, props);
     this.device = device;
 
@@ -57,26 +53,13 @@ export class WebGPUShader extends Shader {
   // PRIVATE METHODS
 
   protected createHandle(): GPUShaderModule {
-    const {source, stage} = this.props;
+    const {source} = this.props;
 
-    let language = this.props.language;
-    // Compile from src
-    if (language === 'auto') {
-      // wgsl uses C++ "auto" style arrow notation
-      language = source.includes('->') ? 'wgsl' : 'glsl';
+    const isGLSL = source.includes('#version');
+    if (this.props.language === 'glsl' || isGLSL) {
+      throw new Error('GLSL shaders are not supported in WebGPU');
     }
 
-    switch (language) {
-      case 'wgsl':
-        return this.device.handle.createShaderModule({code: source});
-      case 'glsl':
-        return this.device.handle.createShaderModule({
-          code: source,
-          // @ts-expect-error
-          transform: glsl => this.device.glslang.compileGLSL(glsl, stage)
-        });
-      default:
-        throw new Error(language);
-    }
+    return this.device.handle.createShaderModule({code: source});
   }
 }
