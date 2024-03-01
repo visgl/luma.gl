@@ -31,7 +31,7 @@ test.skip('ComputePipeline construct/delete', async t => {
   t.end();
 });
 
-test.skip('ComputePipeline compute', async t => {
+test('ComputePipeline compute', async t => {
   await getTestDevices();
   if (webgpuDevice) {
     const shader = webgpuDevice.createShader({source});
@@ -63,6 +63,9 @@ test.skip('ComputePipeline compute', async t => {
 
     const computedData = new Int32Array(await workBuffer.readAsync());
     t.equal(computedData[0], 4, 'Computed data is correct');
+
+    computePipeline.destroy();
+    shader.destroy();
   }
   t.end();
 });
