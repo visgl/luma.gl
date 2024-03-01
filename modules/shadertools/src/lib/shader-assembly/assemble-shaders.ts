@@ -83,7 +83,7 @@ export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>
 /**
  * Inject a list of shader modules into a single shader source for WGSL
  */
-export function assembleSingleShaderWGSL(options: AssembleShaderOptions): {
+export function assembleShaderWGSL(options: AssembleShaderOptions): {
   source: string;
   getUniforms: GetUniformsFunc;
 } {

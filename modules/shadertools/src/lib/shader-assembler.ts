@@ -7,7 +7,7 @@ import {ShaderModuleInstance} from './shader-module/shader-module-instance';
 import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
 import {
   GetUniformsFunc,
-  assembleSingleShaderWGSL,
+  assembleShaderWGSL,
   assembleShaderPairWGSL,
   assembleShaderPairGLSL
 } from './shader-assembly/assemble-shaders';
@@ -73,7 +73,7 @@ export class ShaderAssembler {
    * @param props
    * @returns
    */
-  assembleSingleShader(props: AssembleShaderProps): {
+  assembleShader(props: AssembleShaderProps): {
     source: string;
     getUniforms: GetUniformsFunc;
     modules: ShaderModuleInstance[];
@@ -81,7 +81,7 @@ export class ShaderAssembler {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const options = selectShaders(props);
-    const assembled = assembleSingleShaderWGSL({
+    const assembled = assembleShaderWGSL({
       platformInfo: props.platformInfo,
       ...options,
       modules,
