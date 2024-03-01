@@ -70,8 +70,9 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 **`@luma.gl/shadertools`**
 
 - All shader modules now use uniform buffers.
-- NEW: `ShaderAssembler` class that provides a clean entry point to the shader module system.
+- New `ShaderAssembler` class that provides a clean entry point to the shader module system.
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
+- Shader assembly now supports WGSL and single shader source (compute or single vertex+fragment WGSL shaders)
 
 **`@luma.gl/webgl`** 
 
