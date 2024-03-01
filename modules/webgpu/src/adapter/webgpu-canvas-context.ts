@@ -112,7 +112,8 @@ export class WebGPUCanvasContext extends CanvasContext {
   getCurrentTexture(): WebGPUTexture {
     return this.device._createTexture({
       id: `${this.id}#color-texture`,
-      handle: this.gpuCanvasContext.getCurrentTexture()
+      handle: this.gpuCanvasContext.getCurrentTexture(),
+      format: this.format
     });
   }
 

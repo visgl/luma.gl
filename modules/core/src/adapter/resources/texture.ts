@@ -127,6 +127,7 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   /** Default view for this texture */
   abstract view: TextureView;
 
+  /** Do not use directly. Create with device.createTexture() */
   constructor(
     device: Device,
     props: Props,
@@ -139,4 +140,7 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     this.height = this.props.height;
     this.depth = this.props.depth;
   }
+
+  /** Create a texture view for this texture */
+  abstract createView(props?: TextureViewProps): TextureView;
 }

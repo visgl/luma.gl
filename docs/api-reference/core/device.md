@@ -334,6 +334,8 @@ beginRenderPass(props: RenderPassProps): RenderPass
 
 Creates a [`RenderPass`](./resources/render-pass).
 
+- `props.framebuffer` If omitted, renders into the default canvas context's default framebuffer.
+
 ### beginComputePass
 
 ```typescript
@@ -341,17 +343,6 @@ beginComputePass(props?: ComputePassProps): ComputePass
 ```
 
 Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
-
-### getDefaultRenderPass
-
-```typescript
-getDefaultRenderPass(): RenderPass
-```
-
-A default `RenderPass` is provided for applications that don't need to create
-multiple or specially configured render passes.
-
-Note that a new default `RenderPass` is returned every animation frame.
 
 ### loseDevice
 

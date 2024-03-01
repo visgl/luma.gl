@@ -2,6 +2,7 @@
   "name": "luma.gl-examples-instancing",
   "version": "9.0.0-beta.6",
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",

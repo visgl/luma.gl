@@ -10,6 +10,7 @@
 import {
   Device,
   TextureProps,
+  TextureViewProps,
   Sampler,
   SamplerProps,
   SamplerParameters,
@@ -227,6 +228,10 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     return `Texture(${this.id},${this.width}x${this.height})`;
   }
 
+  createView(props: TextureViewProps): WEBGLTextureView {
+    return new WEBGLTextureView(this.device, {...props, texture: this});
+  }
+
   // eslint-disable-next-line max-statements
   initialize(props: WEBGLTextureProps = {}): this {
     // Cube textures
@@ -318,8 +323,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     this.setSampler(props.sampler);
     this._setSamplerParameters(parameters);
 
-    // @ts-ignore
-    this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
+    this.view = this.createView({...this.props, mipLevelCount: 1, arrayLayerCount: 1});
 
     if (mipmaps) {
       this.generateMipmap();

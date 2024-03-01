@@ -330,15 +330,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   private renderPass: WEBGLRenderPass | null = null;
 
-  getDefaultRenderPass(): WEBGLRenderPass {
-    this.renderPass =
-      this.renderPass ||
-      this.beginRenderPass({
-        framebuffer: this.canvasContext.getCurrentFramebuffer()
-      });
-    return this.renderPass;
-  }
-
   override createCommandEncoder(props?: CommandEncoderProps): WEBGLCommandEncoder {
     return new WEBGLCommandEncoder(this, props);
   }
