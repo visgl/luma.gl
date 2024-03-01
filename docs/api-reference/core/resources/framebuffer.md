@@ -70,7 +70,7 @@ offScreenRenderPass.endPass();
 // Textures attached offscreenFramebuffer now contain the results of the first renderpass, 
 // and those textures can be used as input for a second to-screen render pass
 
-const screenRenderPass = device.getDefaultRenderPass();
+const screenRenderPass = device.beginRenderPass();
 model2.draw({renderPass: screenRenderPass, ...});
 ```
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Texture, TextureProps, Sampler, SamplerProps} from '@luma.gl/core';
+import {Texture, TextureProps, TextureViewProps, Sampler, SamplerProps} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
@@ -49,6 +49,14 @@ export class WebGPUTexture extends Texture {
     }
 
     this.initialize(props);
+  }
+
+  override destroy(): void {
+    this.handle.destroy();
+  }
+
+  createView(props: TextureViewProps): WebGPUTextureView {
+    return new WebGPUTextureView(this.device, {...props, texture: this});
   }
 
   protected initialize(props: TextureProps): void {
@@ -111,10 +119,6 @@ export class WebGPUTexture extends Texture {
       mipLevelCount: this.props.mipLevels,
       sampleCount: this.props.samples
     });
-  }
-
-  override destroy(): void {
-    this.handle.destroy();
   }
 
   /**
@@ -187,11 +191,6 @@ export class WebGPUTexture extends Texture {
   }
 
   // WebGPU specific
-
-  /** TODO - intention is to expose TextureViews in the public API */
-  createView(): GPUTextureView {
-    return this.handle.createView({label: this.id});
-  }
 
   /*
   async readPixels() {

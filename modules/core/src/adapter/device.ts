@@ -390,9 +390,6 @@ export abstract class Device {
   /** Create a ComputePass */
   abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
-  /** Get a renderpass that is set up to render to the primary CanvasContext */
-  abstract getDefaultRenderPass(): RenderPass;
-
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 

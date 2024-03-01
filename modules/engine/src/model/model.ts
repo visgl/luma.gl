@@ -6,7 +6,14 @@ import type {TypedArray} from '@luma.gl/core';
 import type {DeviceFeature, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
 import type {Shader, BufferLayout, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {
+  Device,
+  Buffer,
+  RenderPipeline,
+  RenderPass,
+  UniformStore,
+  isObjectEmpty
+} from '@luma.gl/core';
 import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -317,7 +324,9 @@ export class Model {
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
       this.pipeline.setBindings(this.bindings);
-      this.pipeline.setUniformsWebGL(this.uniforms);
+      if (!isObjectEmpty(this.uniforms)) {
+        this.pipeline.setUniformsWebGL(this.uniforms);
+      }
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -502,8 +511,10 @@ export class Model {
    * @returns self for chaining
    */
   setUniforms(uniforms: Record<string, UniformValue>): void {
-    this.pipeline.setUniformsWebGL(uniforms);
-    Object.assign(this.uniforms, uniforms);
+    if (!isObjectEmpty(uniforms)) {
+      this.pipeline.setUniformsWebGL(uniforms);
+      Object.assign(this.uniforms, uniforms);
+    }
   }
 
   /**

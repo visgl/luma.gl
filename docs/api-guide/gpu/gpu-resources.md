@@ -33,4 +33,3 @@ luma.gl provides a consistent API
 | `device.createComputePipeline(props: ComputePipelineProps)`           | Create a [`ComputePipeline`](/docs/api-reference/core/resources/compute-pipeline) (aka program)                                                              |
 | `beginRenderPass(props: RenderPassProps)`                                  | Create a [`RenderPass`](/docs/api-reference/core/resources/render-pass).                                                                                     |
 | `beginComputePass(props?: ComputePassProps)`                              | Create a [`ComputePass`](/docs/api-reference/core/resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. |
-| `getDefaultRenderPass()`                                                   | A default `RenderPass` is provided for applications that don't need to create multiple or specially configured render passes.         |
