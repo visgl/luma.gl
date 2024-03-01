@@ -79,10 +79,16 @@ To accelerate WebGPU development, luma.gl v9 drops support for legacy functional
 WebGL is not dead yet! Browsers (Chrome in particular) are still adding extensions to WebGL 2, and luma.gl
 is adding support for many of the new features through the [`DeviceFeatures`](/docs/api-reference/core/device-features) API.
 
-New `Device.features` that improve WebGL application performance:
+New `Device.features` that improve application performance in WebGL:
 - `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically when available and speeds up applications that create many `RenderPipelines`. 
 
-New `Device.features` that expose new WebGL GPU parameters:
+New `Device.features` that enable additional color format support in WebGL:
+- `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` is renderable.
+- `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
+- `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable. 
+- `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
+
+New `Device.features` that expose new GPU parameters in WebGL:
 - `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled if the  feature is available.
 - `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading. 
 - `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons. Check the  feature. 
@@ -93,8 +99,3 @@ New `Device.features` that enable new GLSL syntax
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 
-New `Device.features` that enable additional WebGL color format support:
-- `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` are renderable.
-- `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
-- `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable. 
-- `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
