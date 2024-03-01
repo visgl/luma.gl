@@ -10,6 +10,8 @@ import type {AssembleShaderOptions} from './assemble-shaders';
  */
 export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
   platformInfo: PlatformInfo;
+  /** Single shader source. Always WGSL */
+  source?: string | null;
   /** Vertex shader source. Can be GLSL or WGSL or both */
   vs?: {glsl?: string; wgsl?: string} | string | null;
   /** Fragment shader source. Can be GLSL or WGSL or both */

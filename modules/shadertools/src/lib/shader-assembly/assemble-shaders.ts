@@ -35,12 +35,12 @@ export type AssembleShaderOptions = {
   platformInfo: PlatformInfo;
   /** Inject shader id #defines */
   id?: string;
+  /** Single WGSL shader */
+  source?: string;
   /** Vertex shader */
-  vs: string;
+  vs?: string;
   /** Fragment shader */
-  fs: string;
-  /** Shader type @deprecated do we still need this */
-  // type?: any;
+  fs?: string;
   /** Modules to be injected */
   modules?: (ShaderModule | ShaderModuleInstance)[];
   /** Defines to be injected */
@@ -81,9 +81,55 @@ type AssembleStageOptions = {
 export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>;
 
 /**
- * Inject a list of shader modules into shader sources
+ * Inject a list of shader modules into a single shader source for WGSL
  */
-export function assembleShaders(options: AssembleShaderOptions): {
+export function assembleSingleShaderWGSL(options: AssembleShaderOptions): {
+  source: string;
+  getUniforms: GetUniformsFunc;
+} {
+  const modules = resolveModules(options.modules || []);
+  return {
+    source: assembleWGSLShader(options.platformInfo, {
+      ...options,
+      source: options.source,
+      stage: 'vertex',
+      modules
+    }),
+    getUniforms: assembleGetUniforms(modules)
+  };
+}
+
+/**
+ * Injects dependent shader module sources into pair of main vertex/fragment shader sources for WGSL
+ */
+export function assembleShaderPairWGSL(options: AssembleShaderOptions): {
+  vs: string;
+  fs: string;
+  getUniforms: GetUniformsFunc;
+} {
+  const modules = resolveModules(options.modules || []);
+
+  return {
+    vs: assembleWGSLShader(options.platformInfo, {
+      ...options,
+      source: options.vs,
+      stage: 'vertex',
+      modules
+    }),
+    fs: assembleWGSLShader(options.platformInfo, {
+      ...options,
+      source: options.fs,
+      stage: 'fragment',
+      modules
+    }),
+    getUniforms: assembleGetUniforms(modules)
+  };
+}
+
+/**
+ * Injects dependent shader module sources into pair of main vertex/fragment shader sources for GLSL
+ */
+export function assembleShaderPairGLSL(options: AssembleShaderOptions): {
   vs: string;
   fs: string;
   getUniforms: GetUniformsFunc;
@@ -91,41 +137,21 @@ export function assembleShaders(options: AssembleShaderOptions): {
   const {vs, fs} = options;
   const modules = resolveModules(options.modules || []);
 
-  switch (options.platformInfo.shaderLanguage) {
-    case 'glsl':
-      return {
-        vs: assembleGLSLShader(options.platformInfo, {
-          ...options,
-          source: vs,
-          stage: 'vertex',
-          modules
-        }),
-        fs: assembleGLSLShader(options.platformInfo, {
-          ...options,
-          source: fs,
-          stage: 'fragment',
-          modules
-        }),
-        getUniforms: assembleGetUniforms(modules)
-      };
-
-    case 'wgsl':
-      return {
-        vs: assembleWGSLShader(options.platformInfo, {
-          ...options,
-          source: vs,
-          stage: 'vertex',
-          modules
-        }),
-        fs: assembleWGSLShader(options.platformInfo, {
-          ...options,
-          source: fs,
-          stage: 'fragment',
-          modules
-        }),
-        getUniforms: assembleGetUniforms(modules)
-      };
-  }
+  return {
+    vs: assembleGLSLShader(options.platformInfo, {
+      ...options,
+      source: vs,
+      stage: 'vertex',
+      modules
+    }),
+    fs: assembleGLSLShader(options.platformInfo, {
+      ...options,
+      source: fs,
+      stage: 'fragment',
+      modules
+    }),
+    getUniforms: assembleGetUniforms(modules)
+  };
 }
 
 /**
@@ -135,7 +161,7 @@ export function assembleShaders(options: AssembleShaderOptions): {
  * @param options
  * @returns
  */
-function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOptions) {
+export function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOptions) {
   const {
     // id,
     source,
@@ -412,7 +438,7 @@ ${getApplicationDefines(allDefines)}
  * @param modules
  * @returns
  */
-function assembleGetUniforms(modules: ShaderModuleInstance[]) {
+export function assembleGetUniforms(modules: ShaderModuleInstance[]) {
   return function getUniforms(opts: Record<string, any>): Record<string, any> {
     const uniforms = {};
     for (const module of modules) {

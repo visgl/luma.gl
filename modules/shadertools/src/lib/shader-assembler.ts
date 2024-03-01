@@ -4,8 +4,13 @@
 
 import type {ShaderModule} from './shader-module/shader-module';
 import {ShaderModuleInstance} from './shader-module/shader-module-instance';
-import {GetUniformsFunc, assembleShaders} from './shader-assembly/assemble-shaders';
 import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
+import {
+  GetUniformsFunc,
+  assembleSingleShaderWGSL,
+  assembleShaderPairWGSL,
+  assembleShaderPairGLSL
+} from './shader-assembly/assemble-shaders';
 
 /**
  * A stateful version of `assembleShaders` that can be used to assemble shaders.
@@ -68,21 +73,44 @@ export class ShaderAssembler {
    * @param props
    * @returns
    */
-  assembleShaders(props: AssembleShaderProps): {
-    vs: string;
-    fs: string;
+  assembleSingleShader(props: AssembleShaderProps): {
+    source: string;
     getUniforms: GetUniformsFunc;
     modules: ShaderModuleInstance[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const options = selectShaders(props);
-    const assembled = assembleShaders({
+    const assembled = assembleSingleShaderWGSL({
       platformInfo: props.platformInfo,
       ...options,
       modules,
       hookFunctions
     });
+    return {...assembled, modules};
+  }
+
+  /**
+   * Assemble a pair of shaders into a single shader program
+   * @param platformInfo
+   * @param props
+   * @returns
+   */
+  assembleShaderPair(props: AssembleShaderProps): {
+    vs: string;
+    fs: string;
+    getUniforms: GetUniformsFunc;
+    modules: ShaderModuleInstance[];
+  } {
+    const options = selectShaders(props);
+    const modules = this._getModuleList(props.modules); // Combine with default modules
+    const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const {platformInfo} = props;
+    const isWGSL = props.platformInfo.shaderLanguage === 'wgsl';
+    const assembled = isWGSL
+      ? assembleShaderPairWGSL({platformInfo, ...options, modules, hookFunctions})
+      : assembleShaderPairGLSL({platformInfo, ...options, modules, hookFunctions});
+
     return {...assembled, modules};
   }
 
