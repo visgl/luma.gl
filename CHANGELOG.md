@@ -1,5 +1,29 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.6
+
+- feat: Add QuerySet resource (#1975)
+- chore(engine): Restore tests for Model class (#1973)
+- feat(webgl): Additional texture format extensions (snorm, rgb9e5ufloat) (#1972)
+- feat(webgpu): Request Device with max limits (30 vertex attributes) (#1971)
+- chore: Enable prettier (#1970)
+- feat(engine): Model.props.ignoreUnknownAttributes (#1963)
+- feat(core): Support TextureViews (#1969)
+- chore: Prep for Texture refactor (#1968)
+- chore: TextureView  plumbing (#1967)
+- docs: Mark WebGPU support in 9.0 as experimental (#1966)
+- chore(webgl): query and cache each WebGL limit only when requested (#1965)
+- chore(webgl): Consolidate WebGL extension handling (#1964)
+- chore: Cleanup WebGL specific apis and features (#1962)
+- fix: build setup (#1959)
+- feat(webgl): Add `shader-noperspective-webgl` and `shader-conservative-depth` features
+- feat(webgl): clip-cull-distance-webgl feature WEBGL_clip_cull_distance (#1958)
+- feat(engine): Add ShaderFactory utility and caching (#1950)
+- feat(webgl): RenderParameters.unclippedDepth (#1955)
+- feat(webgl): RenderParameters.polygonMode: `line` (WEBGL_polygon_mode) (#1957)
+- feat(webgl): Show translated shader source
+- feat(webgl): RenderParameters.provokingVertex (WEBGL_provoking_vertex) (#1956)
+
 ### v9.0.0-beta.5
 
 - feat(webgl): async shader compilation (#1952)
