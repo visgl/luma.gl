@@ -9,12 +9,42 @@ via the `ShaderAssembler` class.
 - and injections 
 to generate the final vertex and fragment shader source that can be used to create a program.
 
+## Types
+
+## `AssembleShaderOptions`
+
+For single shader compilation
+- `source` - single shader source (always WGSL)
+
+For shader pair compilation
+- `vs` - vertex shader source
+- `fs` - fragment shader source code
+
+Common options
+- `prologue`=`true` (Boolean) - Will inject platform prologue (see below)
+- `defines`=`{}` (Object) - a map of key/value pairs representing custom `#define`s to be injected into the shader source
+- `modules`=`[]` (Array) - list of shader modules (either objects defining the module, or names of previously registered modules)
+- `inject`=`{}` (Object) - map of substituions,
+- `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function.
+
+Example of hook function
+
+```typescript
+[
+  'vs:MY_HOOK_FUNCTION1(inout vec4 color)',
+  {
+    hook: 'fs:MY_HOOK_FUNCTION2(inout vec4 color)',
+    header: 'if (color.a == 0.0) discard;\n',
+    footer: 'color.a *= 1.2;\n'
+  }
+];
+```
+
 ## Static Methods
 
 ### `getDefaultShaderAssembler()`
 
 Most applications that register default modules and hooks will want to use a single `Shader`
-
 
 ## Methods
 
@@ -35,41 +65,34 @@ Creates a shader hook function that shader modules can injection code into. Shad
 - `opts.header` (optional): code always included at the beginning of a hook function
 - `opts.footer` (optional): code always included at the end of a hook function
 
-### `assembleShaders`
+### `assembleShader(options: AssembleShaderOptions)`
 
-`ahaderAssebler.assembleShaders()` composes base vertex and fragment shader source with shader modules, 
-hook functions and injections to generate the final vertex and 
-fragment shader source that can be used to create a program.
+generate the shader source that can be used to create a shader and then a pipeline.
 
+- composes a single shader source (compute or unified vertex/fragment WGSL shader) with source from shader modules, 
+- resolving hook functions and injections to 
 
-Takes the source code of a vertex shader and a fragment shader, and a list of modules, defines, etc. Outputs resolved source code for both shaders, after adding prologue, adding defines, importing and transpiling modules, and injecting any shader fragments).
-
-- `vs` - vertex shader source
-- `fs` - fragment shader source code
-- `id` - `id` for the shader, will be used to inject shader names (using `#define SHADER_NAME`) if not already present in the source.
-- `prologue`=`true` (Boolean) - Will inject platform prologue (see below)
-- `defines`=`{}` (Object) - a map of key/value pairs representing custom `#define`s to be injected into the shader source
-- `modules`=`[]` (Array) - list of shader modules (either objects defining the module, or names of previously registered modules)
-- `inject`=`{}` (Object) - map of substituions,
-- `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function. For example:
-
-```typescript
-[
-  'vs:MY_HOOK_FUNCTION1(inout vec4 color)',
-  {
-    hook: 'fs:MY_HOOK_FUNCTION2(inout vec4 color)',
-    header: 'if (color.a == 0.0) discard;\n',
-    footer: 'color.a *= 1.2;\n'
-  }
-];
-```
 
 Returns:
 
 - `vs` - the resolved vertex shader
 - `fs` - the resolved fragment shader
 - `getUniforms` - a combined `getUniforms` function covering all modules.
-- `moduleMap` - a map with all resolved modules, keyed by name
+
+### `assembleShaderPair(options: AssembleShaderOptions)`
+
+Generate the final vertex and fragment shader source that can be compiled to create two shaders and then link them into a pipeline.
+
+- composes base vertex and fragment shader source with source from shader modules
+- resolves hook functions and injections
+
+Takes the source code of a vertex shader and a fragment shader, and a list of modules, defines, etc. Outputs resolved source code for both shaders, after adding prologue, adding defines, importing and transpiling modules, and injecting any shader fragments).
+
+Returns:
+
+- `vs` - the resolved vertex shader
+- `fs` - the resolved fragment shader
+- `getUniforms` - a combined `getUniforms` function covering all modules.
 
 ## Shader Module Assembly
 
@@ -115,6 +138,7 @@ void MY_HOOK_FUNCTION(inout vec4 color) {
 ```
 
 The hook function now changes the color from white to red.
+
 
 ## Constants and Values
 

@@ -2,7 +2,7 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {webglDevice} from '@luma.gl/test-utils';
-import {assembleShaders, glsl, PlatformInfo} from '@luma.gl/shadertools';
+import {assembleShaderPairGLSL, glsl, PlatformInfo} from '@luma.gl/shadertools';
 import {
   injectShader,
   combineInjects,
@@ -136,8 +136,8 @@ test('injectShader#injectShader', t => {
   t.end();
 });
 
-test('injectShader#assembleShaders', t => {
-  const assembleResult = assembleShaders({
+test('injectShader#assembleShaderPairGLSL', t => {
+  const assembleResult = assembleShaderPairGLSL({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_TEMPLATE,
     fs: FS_GLSL_TEMPLATE,

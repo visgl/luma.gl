@@ -208,7 +208,7 @@ export class Model {
     const modules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
-    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaders({
+    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
       platformInfo,
       ...this.props,
       modules
