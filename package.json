@@ -26,7 +26,7 @@
     "postinstall": "echo postinstall",
     "start": "open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
-    "build": "ocular-build",
+    "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
     "cover": "ocular-test cover",
     "lint": "ocular-lint",
     "publish": "ocular-publish",
@@ -52,7 +52,7 @@
     "eslint-plugin-tree-shaking": "^1.9.2",
     "math.gl": "^3.0.0",
     "nyc": "^15.1.0",
-    "ocular-dev-tools": "2.0.0-alpha.26",
+    "ocular-dev-tools": "2.0.0-alpha.28",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1",
     "puppeteer": "^22.0.0"

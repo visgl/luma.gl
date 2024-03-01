@@ -35,6 +35,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "pre-build": "npx esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.cjs",
     "build-minified-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.dev.js -- --env=dev",
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
