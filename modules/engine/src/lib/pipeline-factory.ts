@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPipelineProps} from '@luma.gl/core';
-import {Device, RenderPipeline} from '@luma.gl/core';
+import type {RenderPipelineProps, ComputePipelineProps} from '@luma.gl/core';
+import {Device, RenderPipeline, ComputePipeline} from '@luma.gl/core';
 
 export type PipelineFactoryProps = RenderPipelineProps;
 
@@ -17,9 +17,10 @@ export class PipelineFactory {
 
   private _hashCounter: number = 0;
   private readonly _hashes: Record<string, number> = {};
-  private readonly _useCounts: Record<string, number> = {};
-  private readonly _pipelineCache: Record<string, RenderPipeline> = {};
+  private readonly _renderPipelineCache: Record<string, {pipeline: RenderPipeline, useCount: number}> = {};
+  private readonly _computePipelineCache: Record<string, {pipeline: ComputePipeline, useCount: number}> = {};
 
+  /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
     device._lumaData.defaultPipelineFactory =
       device._lumaData.defaultPipelineFactory || new PipelineFactory(device);
@@ -30,38 +31,53 @@ export class PipelineFactory {
     this.device = device;
   }
 
-  createRenderPipeline(options: PipelineFactoryProps): RenderPipeline {
-    const props: Required<PipelineFactoryProps> = {...PipelineFactory.defaultProps, ...options};
+  /** Return a RenderPipeline matching props. Reuses a similar pipeline if already created. */
+  createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
+    const allProps: Required<RenderPipelineProps> = {...RenderPipeline.defaultProps, ...props};
 
-    const hash = this._hashRenderPipeline({...props});
+    const hash = this._hashRenderPipeline(allProps);
 
-    if (!this._pipelineCache[hash]) {
-      const pipeline = this.device.createRenderPipeline({...props});
-
+    if (!this._renderPipelineCache[hash]) {
+      const pipeline = this.device.createRenderPipeline({...allProps, id: allProps.id ? `${allProps.id}-cached` : undefined});
       pipeline.hash = hash;
-      this._pipelineCache[hash] = pipeline;
-      this._useCounts[hash] = 0;
+      this._renderPipelineCache[hash] = {pipeline, useCount: 0};
     }
 
-    this._useCounts[hash]++;
-
-    return this._pipelineCache[hash];
+    return this._renderPipelineCache[hash].pipeline;
   }
 
-  release(pipeline: RenderPipeline): void {
+  createComputePipeline(props: ComputePipelineProps): ComputePipeline {
+    const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
+
+    const hash = this._hashComputePipeline(allProps);
+
+    if (!this._computePipelineCache[hash]) {
+      const pipeline = this.device.createComputePipeline({...allProps, id: allProps.id ? `${allProps.id}-cached` : undefined});
+      pipeline.hash = hash;
+      this._computePipelineCache[hash] = {pipeline, useCount: 0};
+    }
+
+    return this._computePipelineCache[hash].pipeline;
+  }
+
+  release(pipeline: RenderPipeline | ComputePipeline): void {
     const hash = pipeline.hash;
-    this._useCounts[hash]--;
-    if (this._useCounts[hash] === 0) {
-      this._pipelineCache[hash].destroy();
-      delete this._pipelineCache[hash];
-      delete this._useCounts[hash];
+    const cache = pipeline instanceof ComputePipeline ? this._computePipelineCache : this._renderPipelineCache;
+    cache[hash].useCount--;
+    if (cache[hash].useCount === 0) {
+      cache[hash].pipeline.destroy();
+      cache[hash];
     }
   }
 
   // PRIVATE
+  private _hashComputePipeline(props: ComputePipelineProps): string {
+    const shaderHash = this._getHash(props.shader.source);
+    return `${shaderHash}`;
+  }
 
   /** Calculate a hash based on all the inputs for a render pipeline */
-  private _hashRenderPipeline(props: PipelineFactoryProps): string {
+  private _hashRenderPipeline(props: RenderPipelineProps): string {
     const vsHash = this._getHash(props.vs.source);
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
 

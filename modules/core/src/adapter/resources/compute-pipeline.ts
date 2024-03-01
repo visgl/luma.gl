@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Resource, ResourceProps} from './resource';
-import {BindingDeclaration} from '../types/shader-layout';
+import type {ShaderLayout} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
@@ -12,10 +12,14 @@ import type {Shader} from './shader';
  */
 export type ComputePipelineProps = ResourceProps & {
   handle?: unknown;
-  cs: Shader;
-  csEntryPoint?: string;
-  csConstants?: Record<string, number>; // WGSL only
-  shaderLayout?: BindingDeclaration[];
+  /** Compiled shader object */
+  shader: Shader;
+  /** The entry point, defaults to main */
+  entryPoint?: string;
+  /** These are WGSL constant values - different from GLSL defines in that shader does not need to be recompiled */
+  constants?: Record<string, number>; 
+  /** Describes the attributes and bindings exposed by the pipeline shader(s). */
+  shaderLayout?: ShaderLayout | null;
 };
 
 /**
@@ -24,10 +28,10 @@ export type ComputePipelineProps = ResourceProps & {
 export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   static override defaultProps: Required<ComputePipelineProps> = {
     ...Resource.defaultProps,
-    cs: undefined,
-    csEntryPoint: undefined,
-    csConstants: {},
-    shaderLayout: []
+    shader: undefined,
+    entryPoint: undefined,
+    constants: {},
+    shaderLayout: undefined
   };
 
   override get [Symbol.toStringTag](): string {

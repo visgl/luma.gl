@@ -25,12 +25,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
   vs: WebGPUShader;
   fs: WebGPUShader | null = null;
 
-  // private _bufferSlots: Record<string, number>;
-  // private _buffers: Buffer[];
-  // private _firstIndex: number;
-  // private _lastIndex: number;
-
   /** For internal use to create BindGroups */
+  private _bindings: Record<string, Binding>;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
@@ -50,46 +46,22 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.vs = cast<WebGPUShader>(props.vs);
     this.fs = cast<WebGPUShader>(props.fs);
 
-    // this._bufferSlots = getBufferSlots(this.props.shaderLayout, this.props.bufferLayout);
-    // this._buffers = new Array<Buffer>(Object.keys(this._bufferSlots).length).fill(null);
+    this._bindings = {...this.props.bindings};
   }
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
   }
 
-  // setIndexBuffer(indexBuffer: Buffer): void {
-  //   this._indexBuffer = cast<WebGPUBuffer>(indexBuffer);
-  // }
-
-  // setAttributes(attributes: Record<string, Buffer>): void {
-  //   for (const [name, buffer] of Object.entries(attributes)) {
-  //     const bufferIndex = this._bufferSlots[name];
-  //     if (bufferIndex >= 0) {
-  //       this._buffers[bufferIndex] = buffer;
-  //     } else {
-  //       throw new Error(
-  //         `Setting attribute '${name}' not listed in shader layout for program ${this.id}`
-  //       );
-  //     }
-  //   }
-  //   // for (let i = 0; i < this._bufferSlots.length; ++i) {
-  //   //   const bufferName = this._bufferSlots[i];
-  //   //   if (attributes[bufferName]) {
-  //   //     this.handle
-  //   //   }
-  //   // }
-  // }
-
+  /**
+   * @todo Use renderpass.setBindings() ?
+   * @todo Do we want to expose BindGroups in the API and remove this?
+   */
   setBindings(bindings: Record<string, Binding>): void {
-    // if (isObjectEmpty(bindings)) {
-    //   return;
-    // }
-
-    // Do we want to save things on CPU side?
-    Object.assign(this.props.bindings, bindings);
+    Object.assign(this._bindings, bindings);
   }
 
+  /** @todo - should this be moved to renderpass? */
   draw(options: {
     renderPass: RenderPass;
     vertexArray: VertexArray;
@@ -138,23 +110,20 @@ export class WebGPURenderPipeline extends RenderPipeline {
     options.vertexArray.unbindAfterRender(options.renderPass);
   }
 
-  // _getBuffers() {
-  //   return this._buffers;
-  // }
-
   /** Return a bind group created by setBindings */
   _getBindGroup() {
     // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
     // Set up the bindings
+    // TODO what if bindings change? We need to rebuild the bind group!
     this._bindGroup =
       this._bindGroup ||
       getBindGroup(
         this.device.handle,
         this._bindGroupLayout,
         this.props.shaderLayout,
-        this.props.bindings
+        this._bindings
       );
 
     return this._bindGroup;
@@ -209,47 +178,46 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     return descriptor;
   }
-
-  /**
-  _setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
-    if (this._indexBuffer) {
-      webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
-    }
-
-    const buffers = this._getBuffers();
-    for (let i = 0; i < buffers.length; ++i) {
-      const buffer = cast<WebGPUBuffer>(buffers[i]);
-      if (!buffer) {
-        const attribute = this.props.shaderLayout.attributes.find(
-          (attribute) => attribute.location === i
-        );
-        throw new Error(
-          `No buffer provided for attribute '${attribute?.name || ''}' in Model '${this.props.id}'`
-        );
-      }
-      webgpuRenderPass.handle.setVertexBuffer(i, buffer.handle);
-    }
-
-    // TODO - HANDLE buffer maps
-    /*
-    for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferLayout)) {
-      const buffer = cast<WebGPUBuffer>(this.props.attributes[bufferName]);
-      if (!buffer) {
-        log.warn(`Missing buffer for buffer map ${bufferName}`)();
-        continue;
-      }
-
-      if ('location' in attributeMapping) {
-        // @ts-expect-error TODO model must not depend on webgpu
-        renderPass.handle.setVertexBuffer(layout.location, buffer.handle);
-      } else {
-        for (const [bufferName, mapping] of Object.entries(attributeMapping)) {
-          // @ts-expect-error TODO model must not depend on webgpu
-          renderPass.handle.setVertexBuffer(field.location, buffer.handle);
-        }
-      }
-    }
-    *
-  }
-  */
 }
+/**
+_setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
+  if (this._indexBuffer) {
+    webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
+  }
+
+  const buffers = this._getBuffers();
+  for (let i = 0; i < buffers.length; ++i) {
+    const buffer = cast<WebGPUBuffer>(buffers[i]);
+    if (!buffer) {
+      const attribute = this.props.shaderLayout.attributes.find(
+        (attribute) => attribute.location === i
+      );
+      throw new Error(
+        `No buffer provided for attribute '${attribute?.name || ''}' in Model '${this.props.id}'`
+      );
+    }
+    webgpuRenderPass.handle.setVertexBuffer(i, buffer.handle);
+  }
+
+  // TODO - HANDLE buffer maps
+  /*
+  for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferLayout)) {
+    const buffer = cast<WebGPUBuffer>(this.props.attributes[bufferName]);
+    if (!buffer) {
+      log.warn(`Missing buffer for buffer map ${bufferName}`)();
+      continue;
+    }
+
+    if ('location' in attributeMapping) {
+      // @ts-expect-error TODO model must not depend on webgpu
+      renderPass.handle.setVertexBuffer(layout.location, buffer.handle);
+    } else {
+      for (const [bufferName, mapping] of Object.entries(attributeMapping)) {
+        // @ts-expect-error TODO model must not depend on webgpu
+        renderPass.handle.setVertexBuffer(field.location, buffer.handle);
+      }
+    }
+  }
+  *
+}
+*/
