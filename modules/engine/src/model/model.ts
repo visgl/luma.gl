@@ -235,7 +235,7 @@ export class Model {
 
     // Geometry, if provided, sets topology and vertex cound
     if (props.geometry) {
-      this._gpuGeometry = this.setGeometry(props.geometry);
+      this.setGeometry(props.geometry);
     }
 
     this.pipelineFactory =
@@ -355,14 +355,17 @@ export class Model {
    * Geometry, set topology and bufferLayout
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
-  setGeometry(geometry: GPUGeometry | Geometry): GPUGeometry {
+  setGeometry(geometry: GPUGeometry | Geometry | null) {
+    this._gpuGeometry?.destroy();
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
-    this.setTopology(gpuGeometry.topology || 'triangle-list');
-    this.bufferLayout = mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
-    if (this.vertexArray) {
-      this._setGeometryAttributes(gpuGeometry);
+    if (gpuGeometry) {
+      this.setTopology(gpuGeometry.topology || 'triangle-list');
+      this.bufferLayout = mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
+      if (this.vertexArray) {
+        this._setGeometryAttributes(gpuGeometry);
+      }
     }
-    return gpuGeometry;
+    this._gpuGeometry = gpuGeometry;
   }
 
   /**
