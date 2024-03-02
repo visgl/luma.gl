@@ -301,6 +301,7 @@ export class Model {
     this.shaderFactory.release(this.pipeline.vs);
     this.shaderFactory.release(this.pipeline.fs);
     this._uniformStore.destroy();
+    this._gpuGeometry?.destroy();
     this._destroyed = true;
   }
 
