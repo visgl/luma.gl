@@ -733,6 +733,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
+    debugger
     const parameters = getWebGLTextureParameters(format);
     dataFormat = dataFormat || parameters.dataFormat;
     type = type || parameters.type;

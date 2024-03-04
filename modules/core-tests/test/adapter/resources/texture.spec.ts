@@ -15,22 +15,9 @@ import {SAMPLER_PARAMETERS} from './sampler.spec';
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
-test('WebGL#Texture construct/delete', async t => {
-  for (const device of await getTestDevices()) {
-    const texture = device.createTexture({});
-    t.ok(texture instanceof Texture, 'Texture construction successful');
-    texture.destroy();
-    t.ok(texture instanceof Texture, 'Texture delete successful');
-    texture.destroy();
-    t.ok(texture instanceof Texture, 'Texture repeated delete successful');
-  }
-  t.end();
-});
-
-test('WebGLDevice#isTextureFormatSupported()', async t => {
+test('Device#isTextureFormatSupported()', async t => {
   const FORMATS: Record<string, TextureFormat[]> = {
-    webgl: ['rgba8unorm'],
-    webgl2: ['r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
     webgpu: []
   };
 
@@ -45,6 +32,36 @@ test('WebGLDevice#isTextureFormatSupported()', async t => {
     t.deepEqual(unSupportedFormats, [], `All ${device.info.type} formats are supported`);
   }
 
+  t.end();
+});
+
+test('Texture#construct/delete', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({});
+    t.ok(texture instanceof Texture, 'Texture construction successful');
+    texture.destroy();
+    t.ok(texture instanceof Texture, 'Texture delete successful');
+    texture.destroy();
+    t.ok(texture instanceof Texture, 'Texture repeated delete successful');
+  }
+  t.end();
+});
+
+test.only('Texture#depth/stencil formats', async t => {
+  const DEPTH_STENCIL_FORMATS = [];
+  for (const device of await getTestDevices()) {
+    for (const format in DEPTH_STENCIL_FORMATS) {
+      const texture = device.createTexture({format});
+      t.ok(texture instanceof Texture, `Texture ${format} construction successful`);
+    }
+  }
+  t.end();
+});
+
+test.skip('Texture#format deduction', async t => {
+  for (const device of await getTestDevices()) {
+    testFormatDeduction(t, device);
+  }
   t.end();
 });
 
@@ -132,21 +149,21 @@ function testFormatDeduction(t, device: Device) {
   }
 }
 
-test.skip('WebGL#Texture format deduction', async t => {
+test.skip('Texture#format deduction', async t => {
   for (const device of await getTestDevices()) {
     testFormatDeduction(t, device);
   }
   t.end();
 });
 
-test.skip('WebGL#Texture format creation', async t => {
+test.skip('Texture#format creation', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device);
   }
   t.end();
 });
 
-test.skip('WebGL#Texture format creation with data', async t => {
+test.skip('Texture#format creation with data', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device, true);
   }
@@ -154,7 +171,7 @@ test.skip('WebGL#Texture format creation with data', async t => {
 });
 
 /*
-test.skip('WebGL#Texture WebGL2 format creation', t => {
+test.skip('Texture#WebGL2 format creation', t => {
 
   for (const format in TEXTURE_FORMATS) {
   }
@@ -168,7 +185,7 @@ test.skip('WebGL#Texture WebGL2 format creation', t => {
 });
 */
 
-test.skip('WebGL#Texture setParameters', t => {
+test.skip('Texture#setParameters', t => {
   const texture = webglDevice.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
@@ -204,7 +221,7 @@ test.skip('WebGL2#Texture setParameters', t => {
   t.end();
 });
 
-test.skip('WebGL#Texture NPOT Workaround: texture creation', t => {
+test.skip('Texture#NPOT Workaround: texture creation', t => {
   // Create NPOT texture with no parameters
   let texture = webglDevice.createTexture({data: null, width: 500, height: 512});
   t.ok(texture instanceof Texture, 'Texture construction successful');
@@ -243,7 +260,7 @@ test.skip('WebGL#Texture NPOT Workaround: texture creation', t => {
   t.end();
 });
 
-test.skip('WebGL#Texture NPOT Workaround: setParameters', t => {
+test.skip('Texture#NPOT Workaround: setParameters', t => {
   // Create NPOT texture
   const texture = webglDevice.createTexture({data: null, width: 100, height: 100});
   t.ok(texture instanceof Texture, 'Texture construction successful');
@@ -453,7 +470,7 @@ export function testSamplerParameters({t, texture, parameters}) {
 
 // 2D TEXTURES
 
-test.skip('WebGL#Texture construct/delete', t => {
+test.skip('Texture#construct/delete', t => {
   t.throws(
     // @ts-expect-error
     () => new Texture(),
@@ -475,7 +492,7 @@ test.skip('WebGL#Texture construct/delete', t => {
   t.end();
 });
 
-test.skip('WebGL#Texture async constructor', t => {
+test.skip('Texture#async constructor', t => {
   let texture = webglDevice.createTexture();
   t.ok(texture instanceof Texture, 'Synchronous Texture construction successful');
   t.equal(texture.loaded, true, 'Sync Texture marked as loaded');
@@ -498,7 +515,7 @@ test.skip('WebGL#Texture async constructor', t => {
   loadCompleted(null);
 });
 
-test.skip('WebGL#Texture buffer update', t => {
+test.skip('Texture#buffer update', t => {
   let texture = webglDevice.createTexture();
   t.ok(texture instanceof Texture, 'Texture construction successful');
 

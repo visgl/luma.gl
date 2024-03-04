@@ -130,8 +130,8 @@ type Format = {
   attachment?: GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT;
   /** if depthTexture is set this is a depth/stencil format that can be set to a texture  */
   depthTexture?: boolean;
-
-  renderbuffer?: boolean;
+  /** @deprecated can this format be used with renderbuffers */
+  rb?: boolean;
 };
 
 // TABLES
@@ -152,27 +152,27 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // 'rgba8unorm-srgb-unsized': {gl: GL.SRGB_ALPHA_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
 
   // 8-bit formats
-  'r8unorm': {gl: GL.R8, b: 1, c: 1, renderbuffer: true},
+  'r8unorm': {gl: GL.R8, b: 1, c: 1, rb: true},
   'r8snorm': {gl: GL.R8_SNORM, b: 1, c: 1, render: snorm8_renderable},
-  'r8uint': {gl: GL.R8UI, b: 1, c: 1, renderbuffer: true},
-  'r8sint': {gl: GL.R8I, b: 1, c: 1, renderbuffer: true},
+  'r8uint': {gl: GL.R8UI, b: 1, c: 1, rb: true},
+  'r8sint': {gl: GL.R8I, b: 1, c: 1, rb: true},
 
   // 16-bit formats
-  'rg8unorm': {gl: GL.RG8, b: 2, c: 2, renderbuffer: true},
+  'rg8unorm': {gl: GL.RG8, b: 2, c: 2, rb: true},
   'rg8snorm': {gl: GL.RG8_SNORM, b: 2, c: 2, render: snorm8_renderable},
-  'rg8uint': {gl: GL.RG8UI, b: 2, c: 2, renderbuffer: true},
-  'rg8sint': {gl: GL.RG8I, b: 2, c: 2, renderbuffer: true},
+  'rg8uint': {gl: GL.RG8UI, b: 2, c: 2, rb: true},
+  'rg8sint': {gl: GL.RG8I, b: 2, c: 2, rb: true},
 
-  'r16uint': {gl: GL.R16UI, b: 2, c: 1, renderbuffer: true},
-  'r16sint': {gl: GL.R16I, b: 2, c: 1, renderbuffer: true},
-  'r16float': {gl: GL.R16F, b: 2, c: 1, render: float16_renderable, filter: 'float16-filterable-webgl', renderbuffer: true},
-  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: norm16_renderable, renderbuffer: true},
+  'r16uint': {gl: GL.R16UI, b: 2, c: 1, rb: true},
+  'r16sint': {gl: GL.R16I, b: 2, c: 1, rb: true},
+  'r16float': {gl: GL.R16F, b: 2, c: 1, render: float16_renderable, filter: 'float16-filterable-webgl', rb: true},
+  'r16unorm-webgl': {gl: GL.R16_EXT, b:2, c:1, f: norm16_renderable, rb: true},
   'r16snorm-webgl': {gl: GL.R16_SNORM_EXT, b:2, c:1, f: snorm16_renderable},
 
   // Packed 16-bit formats
-  'rgba4unorm-webgl': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false, renderbuffer: true},
-  'rgb565unorm-webgl': {gl: GL.RGB565, b: 2, c: 4, wgpu: false, renderbuffer: true},
-  'rgb5a1unorm-webgl': {gl: GL.RGB5_A1, b: 2, c: 4, wgpu: false, renderbuffer: true},
+  'rgba4unorm-webgl': {gl: GL.RGBA4, b: 2, c: 4, wgpu: false, rb: true},
+  'rgb565unorm-webgl': {gl: GL.RGB565, b: 2, c: 4, wgpu: false, rb: true},
+  'rgb5a1unorm-webgl': {gl: GL.RGB5_A1, b: 2, c: 4, wgpu: false, rb: true},
 
   // 24-bit formats
   'rgb8unorm-webgl': {gl: GL.RGB8, b: 3, c: 3, wgpu: false},
@@ -191,32 +191,32 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'rg16uint': {gl: GL.RG16UI, b: 4, c: 1, bpp: 4},
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, bpp: 4},
   // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
-  'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: float16_renderable, filter: float16_filterable, renderbuffer: true},
+  'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: float16_renderable, filter: float16_filterable, rb: true},
   'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, render: norm16_renderable},
   'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, render: snorm16_renderable},
 
-  'r32uint': {gl: GL.R32UI, b: 4, c: 1, bpp: 4, renderbuffer: true},
-  'r32sint': {gl: GL.R32I, b: 4, c: 1, bpp: 4, renderbuffer: true},
+  'r32uint': {gl: GL.R32UI, b: 4, c: 1, bpp: 4, rb: true},
+  'r32sint': {gl: GL.R32I, b: 4, c: 1, bpp: 4, rb: true},
   'r32float': {gl: GL.R32F, bpp: 4, b: 4, c: 1, render: float32_renderable, filter: float32_filterable},
 
   // Packed 32-bit formats
   'rgb9e5ufloat': {gl: GL.RGB9_E5, b: 4, c: 3, p: 1, render: rgb9e5ufloat_renderable}, // , filter: true},
-  'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: float32_renderable, renderbuffer: true},
-  'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, renderbuffer: true},
-  'rgb10a2uint-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, renderbuffer: true},
+  'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, b: 4, c: 3, p: 1,render: float32_renderable, rb: true},
+  'rgb10a2unorm': {gl: GL.RGB10_A2, b: 4, c: 4, p: 1, rb: true},
+  'rgb10a2uint-webgl': {b: 4, c: 4, gl: GL.RGB10_A2UI, p: 1, wgpu: false, bpp: 4, rb: true},
 
   // 48-bit formats
   'rgb16unorm-webgl': {gl: GL.RGB16_EXT, b:2, c:3, f: norm16_renderable}, // rgb not renderable
   'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, b:2, c:3, f: norm16_renderable}, // rgb not renderable
 
   // 64-bit formats
-  'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, renderbuffer: true},
-  'rg32sint': {gl: GL.RG32I, b: 8, c: 2, renderbuffer: true},
-  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: float32_renderable, filter: float32_filterable, renderbuffer: true},
-  'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, renderbuffer: true},
-  'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, renderbuffer: true},
+  'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, rb: true},
+  'rg32sint': {gl: GL.RG32I, b: 8, c: 2, rb: true},
+  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: float32_renderable, filter: float32_filterable, rb: true},
+  'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, rb: true},
+  'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, rb: true},
   'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: float16_renderable, filter: float16_filterable},
-  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, render: norm16_renderable, renderbuffer: true},
+  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, b:2, c:4, render: norm16_renderable, rb: true},
   'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT, b:2, c:4, render: snorm16_renderable},
 
   // 96-bit formats (deprecated!)
@@ -224,23 +224,29 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
     gl2ext: EXT_color_buffer_float, dataFormat: GL.RGB, types: [GL.FLOAT]},
   
   // 128-bit formats
-  'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, renderbuffer: true},
-  'rgba32sint': {gl: GL.RGBA32I, b: 16, c: 4, renderbuffer: true},
-  'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, render: float32_renderable, filter: float32_filterable, renderbuffer: true},
+  'rgba32uint': {gl: GL.RGBA32UI, b: 16, c: 4, rb: true},
+  'rgba32sint': {gl: GL.RGBA32I, b: 16, c: 4, rb: true},
+  'rgba32float': {gl: GL.RGBA32F, b: 16, c: 4, render: float32_renderable, filter: float32_filterable, rb: true},
 
   // Depth and stencil formats
-  'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT, renderbuffer: true}, // 8 stencil bits
+  'stencil8': {gl: GL.STENCIL_INDEX8, b: 1, c: 1, attachment: GL.STENCIL_ATTACHMENT, rb: true}, // 8 stencil bits
 
-  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT, renderbuffer: true}, // 16 depth bits
-  'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, attachment: GL.DEPTH_ATTACHMENT},
-  'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, attachment: GL.DEPTH_ATTACHMENT, renderbuffer: true},
+  'depth16unorm': {gl: GL.DEPTH_COMPONENT16, b: 2, c: 1, attachment: GL.DEPTH_ATTACHMENT, 
+    dataFormat: GL.DEPTH_COMPONENT, types: [GL.UNSIGNED_SHORT], rb: true}, // 16 depth bits
+  'depth24plus': {gl: GL.DEPTH_COMPONENT24, b: 3, c: 1, attachment: GL.DEPTH_ATTACHMENT,
+    dataFormat: GL.DEPTH_COMPONENT, types: [GL.UNSIGNED_INT]},
+  'depth32float': {gl: GL.DEPTH_COMPONENT32F, b: 4, c: 1, attachment: GL.DEPTH_ATTACHMENT, 
+    dataFormat: GL.DEPTH_COMPONENT, types: [GL.FLOAT], rb: true},
 
   // The depth component of the "depth24plus" and "depth24plus-stencil8" formats may be implemented as either a 24-bit depth value or a "depth32float" value.
-  'depth24plus-stencil8': {gl: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true, depthTexture: true},
+  'depth24plus-stencil8': {gl: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, rb: true, depthTexture: true,
+    dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT]},
   // "depth24unorm-stencil8" feature
-  'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true},
-  // "depth32float-stencil8" feature
-  'depth32float-stencil8': {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, renderbuffer: true},
+  'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, 
+    dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT_24_8], rb: true},
+  // "depth32float-stencil8" feature - TODO below is render buffer only?
+  'depth32float-stencil8': {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, 
+    dataFormat: GL.DEPTH_STENCIL, types: [GL.FLOAT_32_UNSIGNED_INT_24_8_REV], rb: true},
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 
@@ -454,10 +460,9 @@ const TYPE_SIZES = {
 /** Checks if a texture format is supported */
 export function isTextureFormatSupported(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL,
+  format: TextureFormat,
   extensions: GLExtensions
 ): boolean {
-  const format = convertGLToTextureFormat(formatOrGL);
   const info = TEXTURE_FORMATS[format];
   if (!info) {
     return false;
@@ -480,7 +485,7 @@ export function isRenderbufferFormatSupported(
   extensions: GLExtensions
 ): boolean {
   // Note: Order is important since the function call initializes extensions.
-  return isTextureFormatSupported(gl, format, extensions) && TEXTURE_FORMATS[format]?.renderbuffer;
+  return isTextureFormatSupported(gl, format, extensions) && TEXTURE_FORMATS[format]?.rb;
 }
 
 /**
@@ -512,7 +517,7 @@ export function convertTextureFormatToGL(format: TextureFormat): GL | undefined 
 /** Checks if a texture format is supported */
 export function getTextureFormatSupport(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL,
+  format: TextureFormat,
   extensions: GLExtensions
 ): {
   supported: boolean;
@@ -521,7 +526,6 @@ export function getTextureFormatSupport(
   blendable?: boolean;
   storable?: boolean;
 } {
-  const format = convertGLToTextureFormat(formatOrGL);
   const info = TEXTURE_FORMATS[format];
   if (!info) {
     return {supported: false};
@@ -555,10 +559,9 @@ export function getTextureFormatSupport(
 /** Checks whether linear filtering (interpolated sampling) is available for floating point textures */
 export function isTextureFormatFilterable(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL,
+  format: TextureFormat,
   extensions: GLExtensions
 ): boolean {
-  const format = convertGLToTextureFormat(formatOrGL);
   if (!isTextureFormatSupported(gl, format, extensions)) {
     return false;
   }
@@ -581,10 +584,9 @@ export function isTextureFormatFilterable(
 
 export function isTextureFormatRenderable(
   gl: WebGL2RenderingContext,
-  formatOrGL: TextureFormat | GL,
+  format: TextureFormat,
   extensions: GLExtensions
 ): boolean {
-  const format = convertGLToTextureFormat(formatOrGL);
   if (!isTextureFormatSupported(gl, format, extensions)) {
     return false;
   }
@@ -595,8 +597,8 @@ export function isTextureFormatRenderable(
   return true;
 }
 
-export function getWebGLTextureParameters(formatOrGL: TextureFormat | GL) {
-  const format = convertGLToTextureFormat(formatOrGL);
+/** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
+export function getWebGLTextureParameters(format: TextureFormat) {
   const webglFormat = convertTextureFormatToGL(format);
   const decoded = decodeTextureFormat(format);
   return {
@@ -625,9 +627,8 @@ export function getDepthStencilAttachmentWebGL(
 }
 
 /** TODO - VERY roundabout legacy way of calculating bytes per pixel */
-export function getTextureFormatBytesPerPixel(formatOrGL: TextureFormat | GL): number {
+export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
   // TODO remove webgl1 support
-  const format = convertGLToTextureFormat(formatOrGL);
   const params = getWebGLTextureParameters(format);
   // NOTE(Tarek): Default to RGBA bytes
   const channels = DATA_FORMAT_CHANNELS[params.dataFormat] || 4;

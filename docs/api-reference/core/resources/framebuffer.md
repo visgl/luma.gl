@@ -183,14 +183,15 @@ Resizes all the `Framebuffer`'s current attachments to the new `width` and `heig
 - `width` - the new width of `Framebuffer` in pixels
 - `height` - the new height of `Framebuffer` in pixels
 
-Returns itself to enable chaining
-
 Note the `framebuffer.resize()` method has been designed so that it can be called every frame without performance concerns. While the actual resizing of attachments can be expensive, the `resize()` methods checks if `width` or `height` have changed before actually resizing any attachments.
 
 ## Remarks
 
-- WebGPU: `resize()` will destroy and recreate textures (meaning the the underlying `GPUTexture` / `GPUTextureView` handles are no longer the same after a `resize()`
-- WebGL: `resize()` will erase the current content of any attachments, but not actually create them (The underlying`WebGLTexture` / `WebGLRenderbuffer` handles are not changed).
-- WebGPU: The `Framebuffer` class is a pure luma.gl class as this concept does not exist natively in WebGPU (attachment information has to be provided through the `GPURenderPassDescriptor` `colorAttachments` and the `depthStencilAttachment` fields every frame when a render pass is created).`.
-- WebGL: The `Framebuffer` class wraps the `WebGLFramebuffer` object exists, see e.g. [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)
+WebGPU
+- The `Framebuffer` class is a pure luma.gl class as this concept does not exist natively in WebGPU (attachment information has to be provided through the `GPURenderPassDescriptor` `colorAttachments` and the `depthStencilAttachment` fields every frame when a render pass is created).`.
+- `resize()` will destroy and recreate textures (meaning the the underlying `GPUTexture` / `GPUTextureView` handles are no longer the same after a `resize()`
+
+WebGL
+- The `Framebuffer` class wraps the `WebGLFramebuffer` object exists, see e.g. [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)
   and [Framebuffer Object](https://www.khronos.org/opengl/wiki/Framebuffer_Object) in the OpenGL Wiki.
+- `resize()` will erase the current content of any attachments, but not actually recreate them (The underlying`WebGLTexture` handles are not changed).
