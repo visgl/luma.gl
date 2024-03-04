@@ -21,10 +21,7 @@ export type {GLParameters};
  * @note requires a `cache` object to be set on the context (gl.state.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
-export function setGLParameters(
-  gl: WebGL2RenderingContext,
-  parameters: GLParameters
-): void {
+export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParameters): void {
   if (isObjectEmpty(parameters)) {
     return;
   }

@@ -151,7 +151,7 @@ export class WebGLDevice extends Device {
     // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
     const results = await Promise.allSettled(promises);
     for (const result of results) {
-      if (result.status ==='rejected') {
+      if (result.status === 'rejected') {
         log.error(`Failed to initialize debug libraries ${result.reason}`)();
       }
     }
