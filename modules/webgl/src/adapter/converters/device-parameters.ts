@@ -40,15 +40,14 @@ export function withDeviceAndGLParameters<T = unknown>(
   }
 
   // Wrap in a try-catch to ensure that parameters are restored on exceptions
-  // @ts-expect-error
-  pushContextState(device.gl);
+  const webglDevice = device as WebGLDevice;
+  pushContextState(webglDevice.gl);
   try {
     setDeviceParameters(device, parameters);
-    setGLParameters(device, glParameters);
+    setGLParameters(webglDevice.gl, glParameters);
     return func(device);
   } finally {
-    // @ts-expect-error
-    popContextState(device.gl);
+    popContextState(webglDevice.gl);
   }
 }
 
@@ -72,14 +71,13 @@ export function withGLParameters<T = unknown>(
   }
 
   // Wrap in a try-catch to ensure that parameters are restored on exceptions
-  // @ts-expect-error
-  pushContextState(device.gl);
+  const webglDevice = device as WebGLDevice;
+  pushContextState(webglDevice.gl);
   try {
-    setGLParameters(device, parameters);
+    setGLParameters(webglDevice.gl, parameters);
     return func(device);
   } finally {
-    // @ts-expect-error
-    popContextState(device.gl);
+    popContextState(webglDevice.gl);
   }
 }
 
@@ -115,7 +113,7 @@ export function withDeviceParameters<T = unknown>(
 
 /** Set WebGPU Style Parameters */
 export function setDeviceParameters(device: Device, parameters: Parameters) {
-  const webglDevice = WebGLDevice.attach(device);
+  const webglDevice = device as WebGLDevice;
   const {gl} = webglDevice;
 
   // RASTERIZATION SETTINGS

@@ -5,7 +5,6 @@
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization
 // Provides base functionality for the state caching.
-import {Device} from '@luma.gl/core';
 import type {GLParameters} from '@luma.gl/constants';
 import {
   GL_PARAMETER_DEFAULTS,
@@ -13,8 +12,6 @@ import {
   GL_COMPOSITE_PARAMETER_SETTERS,
   GL_PARAMETER_GETTERS
 } from './webgl-parameter-tables';
-
-import {WebGLDevice} from '../../adapter/webgl-device';
 
 export type {GLParameters};
 
@@ -24,13 +21,7 @@ export type {GLParameters};
  * @note requires a `cache` object to be set on the context (gl.state.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
-export function setGLParameters(
-  device: Device | WebGL2RenderingContext,
-  parameters: GLParameters
-): void {
-  const webglDevice = WebGLDevice.attach(device);
-  const gl = webglDevice.gl;
-
+export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParameters): void {
   if (isObjectEmpty(parameters)) {
     return;
   }
@@ -93,12 +84,9 @@ export function setGLParameters(
  * by external code needs to be synchronized for the first time
  */
 export function getGLParameters(
-  device: Device | WebGL2RenderingContext,
+  gl: WebGL2RenderingContext,
   parameters: keyof GLParameters | (keyof GLParameters)[] | GLParameters = GL_PARAMETER_DEFAULTS
 ): GLParameters {
-  const webglDevice = WebGLDevice.attach(device);
-  const gl = webglDevice.gl;
-
   // support both arrays of parameters and objects (keys represent parameters)
 
   if (typeof parameters === 'number') {
@@ -124,8 +112,8 @@ export function getGLParameters(
  * NOT the canvas size dimensions, so they will have to be properly set after
  * calling this function.
  */
-export function resetGLParameters(device: Device | WebGL2RenderingContext): void {
-  setGLParameters(device, GL_PARAMETER_DEFAULTS);
+export function resetGLParameters(gl: WebGL2RenderingContext): void {
+  setGLParameters(gl, GL_PARAMETER_DEFAULTS);
 }
 
 // Helpers

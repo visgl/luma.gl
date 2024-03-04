@@ -53,12 +53,12 @@ export class WEBGLExternalTexture extends WEBGLTexture {
   }
 
   // eslint-disable-next-line max-statements
-  constructor(device: Device | WebGL2RenderingContext, props: TextureProps) {
-    super(WebGLDevice.attach(device), {id: uid('texture'), ...props});
+  constructor(device: Device , props: TextureProps) {
+    super(device as WebGLDevice, {id: uid('texture'), ...props});
 
     this.glTarget = getWebGLTextureTarget(props);
 
-    this.device = WebGLDevice.attach(device);
+    this.device = device as WebGLDevice;
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();

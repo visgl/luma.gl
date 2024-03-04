@@ -38,7 +38,7 @@ export class WEBGLRenderPass extends RenderPass {
   end(): void {
     popContextState(this.device.gl);
     if (this.props.framebuffer) {
-      setGLParameters(this.device, {framebuffer: null});
+      setGLParameters(this.device.gl, {framebuffer: null});
     }
     // should add commands to CommandEncoder.
   }
@@ -99,7 +99,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     this.glParameters = glParameters;
 
-    setGLParameters(this.device, glParameters);
+    setGLParameters(this.device.gl, glParameters);
   }
 
   beginOcclusionQuery(queryIndex: number): void {
@@ -137,7 +137,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     if (clearMask !== 0) {
       // Temporarily set any clear "colors" and call clear
-      withGLParameters(this.device, glParameters, () => {
+      withGLParameters(this.device.gl, glParameters, () => {
         this.device.gl.clear(clearMask);
       });
 
