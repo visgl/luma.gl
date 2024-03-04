@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+/* eslint-disable no-continue */
+
 import test from 'tape-promise/tape';
 import {getTestDevices, webglDevice} from '@luma.gl/test-utils';
 

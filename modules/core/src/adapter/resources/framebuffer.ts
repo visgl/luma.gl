@@ -81,7 +81,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     if (this.props.colorAttachments.length === 0 && !this.props.depthStencilAttachment) {
       throw new Error('Framebuffer has noattachments');
     }
-    
+
     this.colorAttachments = this.props.colorAttachments.map(attachment => {
       if (typeof attachment === 'string') {
         const texture = this.createColorTexture(attachment);

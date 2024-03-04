@@ -9,12 +9,12 @@ import {WEBGLBuffer} from '@luma.gl/webgl';
 import {webglDevice as device} from '@luma.gl/test-utils';
 
 test('WEBGLBuffer#bind/unbind with index', t => {
-    const buffer = device.createBuffer({usage: Buffer.UNIFORM});
-    device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
-    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
-    device.gl.bindBufferBase(buffer.glTarget, 0, null);
+  const buffer = device.createBuffer({usage: Buffer.UNIFORM});
+  device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
+  t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
+  device.gl.bindBufferBase(buffer.glTarget, 0, null);
 
-    buffer.destroy();
+  buffer.destroy();
 
   t.end();
 });
@@ -23,42 +23,42 @@ test('WEBGLBuffer#write', async t => {
   const initialData = new Float32Array([1, 2, 3]);
   const updateData = new Float32Array([4, 5, 6]);
 
-    let buffer: WEBGLBuffer;
+  let buffer: WEBGLBuffer;
 
-    buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
+  buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
 
-    t.deepEqual(
-      await readAsyncF32(buffer),
-      initialData,
-      `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
-    );
+  t.deepEqual(
+    await readAsyncF32(buffer),
+    initialData,
+    `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
+  );
 
-    buffer.write(updateData);
+  buffer.write(updateData);
 
-    t.deepEquals(
-      await readAsyncF32(buffer),
-      updateData,
-      `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
-    );
+  t.deepEquals(
+    await readAsyncF32(buffer),
+    updateData,
+    `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
+  );
 
-    buffer.destroy();
-    buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
+  buffer.destroy();
+  buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
 
-    t.deepEqual(
-      await readAsyncF32(buffer),
-      initialData,
-      `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
-    );
+  t.deepEqual(
+    await readAsyncF32(buffer),
+    initialData,
+    `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
+  );
 
-    buffer.write(updateData);
+  buffer.write(updateData);
 
-    t.deepEqual(
-      await readAsyncF32(buffer),
-      updateData,
-      `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
-    );
+  t.deepEqual(
+    await readAsyncF32(buffer),
+    updateData,
+    `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
+  );
 
-    buffer.destroy();
+  buffer.destroy();
 
   t.end();
 });
