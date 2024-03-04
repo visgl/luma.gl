@@ -48,11 +48,10 @@ export class GPUGeometry {
   }
 
   destroy(): void {
-    this.indices.destroy();
-    this.attributes.positions.destroy();
-    this.attributes.normals.destroy();
-    this.attributes.texCoords.destroy();
-    this.attributes.colors?.destroy();
+    this.indices?.destroy();
+    for (const attribute of Object.values(this.attributes)) {
+      attribute.destroy();
+    }
   }
 
   getVertexCount(): number {

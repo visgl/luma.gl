@@ -66,7 +66,7 @@ export class UniformStore<
 
   /** Destroy any managed uniform buffers */
   destroy(): void {
-    for (const uniformBuffer of Object.values(this.uniformBuffers)) {
+    for (const uniformBuffer of this.uniformBuffers.values()) {
       uniformBuffer.destroy();
     }
   }
