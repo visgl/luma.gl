@@ -6,7 +6,7 @@ import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
-import {picking} from '@luma.gl/shadertools';
+import {picking, ShaderModuleInstance} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
 
@@ -159,7 +159,8 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
 
   await Promise.all(
     TEST_CASES.map(async testCase => {
-      const uniforms = picking.getUniforms({
+      // @ts-expect-error
+      const uniforms = module.getUniforms({
         highlightedObjectColor: testCase.highlightedObjectColor
       });
 
@@ -211,13 +212,17 @@ test.skip('picking#picking_setPickingColor', async t => {
     vertexCount
   });
 
+  const pickingModule = new ShaderModuleInstance(picking);
   await Promise.all(
     TEST_CASES.map(async testCase => {
-      const uniforms = picking.getUniforms({
-        highlightedObjectColor: testCase.highlightedObjectColor,
-        // @ts-expect-error
-        pickingThreshold: testCase.pickingThreshold
-      });
+      const uniforms = pickingModule.getUniforms(
+        {
+          highlightedObjectColor: testCase.highlightedObjectColor,
+          // @ts-expect-error
+          pickingThreshold: testCase.pickingThreshold
+        },
+        {}
+      );
 
       transform.model.setUniforms(uniforms);
       transform.run();

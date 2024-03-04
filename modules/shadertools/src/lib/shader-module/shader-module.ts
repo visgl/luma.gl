@@ -63,3 +63,17 @@ export type ShaderModuleDeprecation = {
   old: string;
   deprecated?: boolean;
 };
+
+/** Convert module props to uniforms */
+export function getShaderModuleUniforms<
+  ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
+>(module: ShaderModuleT, props: ShaderModuleT['props']): ShaderModuleT['uniforms'] {
+  const uniforms = {...module.defaultUniforms};
+  if (module.getUniforms) {
+    // @ts-expect-error
+    Object.assign(props, module.getUniforms(props));
+  } else {
+    Object.assign(uniforms, props);
+  }
+  return uniforms;
+}

@@ -67,7 +67,7 @@ export type HexagonalPixelateProps = {
  * Renders the image using a pattern of hexagonal tiles. Tile colors
  * are nearest-neighbor sampled from the centers of the tiles.
  */
-export const hexagonalPixelate: ShaderPass<HexagonalPixelateProps, HexagonalPixelateProps> = {
+export const hexagonalPixelate = {
   name: 'hexagonalPixelate',
   uniformTypes: {
     center: 'vec2<f32>',
@@ -79,4 +79,4 @@ export const hexagonalPixelate: ShaderPass<HexagonalPixelateProps, HexagonalPixe
   },
   fs,
   passes: [{sampler: true}]
-};
+} as const satisfies ShaderPass<HexagonalPixelateProps, HexagonalPixelateProps>;

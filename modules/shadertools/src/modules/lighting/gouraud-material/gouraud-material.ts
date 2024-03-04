@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lighting} from '../lights/lighting-uniforms';
+import {lighting} from '../lights/lighting';
 import {GOURAUD_VS, GOURAUD_FS} from './gouraud-shaders-glsl';
 
 export type GouraudMaterialProps = GouraudMaterialUniforms;
@@ -17,7 +17,7 @@ export type GouraudMaterialUniforms = {
 };
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
-export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterialUniforms> = {
+export const gouraudMaterial = {
   name: 'gouraud-lighting',
   // Note these are switched between phong and gouraud
   vs: GOURAUD_VS,
@@ -41,4 +41,4 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterial
   getUniforms(props: GouraudMaterialProps): GouraudMaterialUniforms {
     return {...gouraudMaterial.defaultUniforms, ...props};
   }
-};
+} as const satisfies ShaderModule<GouraudMaterialProps, GouraudMaterialUniforms>;

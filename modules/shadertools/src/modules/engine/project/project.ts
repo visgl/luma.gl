@@ -148,7 +148,7 @@ vec3 project_getNormal_World() {
 /**
  * Projects coordinates
  */
-export const projection: ShaderModule<ProjectionProps, ProjectionUniforms> = {
+export const projection = {
   name: 'projection',
   // Note: order and types MUST match declarations in shader
   uniformTypes: {
@@ -160,4 +160,4 @@ export const projection: ShaderModule<ProjectionProps, ProjectionUniforms> = {
   getUniforms,
   vs,
   fs
-};
+} as const satisfies ShaderModule<ProjectionProps, ProjectionUniforms>;

@@ -93,7 +93,7 @@ export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>
 export function assembleWGSLShader(
   options: AssembleShaderOptions & {
     /** Single WGSL shader */
-    source?: string;
+    source: string;
   }
 ): {
   source: string;
@@ -117,7 +117,7 @@ export function assembleWGSLShader(
 export function assembleGLSLShaderPair(
   options: AssembleShaderOptions & {
     /** Vertex shader */
-    vs?: string;
+    vs: string;
     /** Fragment shader */
     fs?: string;
   }
@@ -138,7 +138,7 @@ export function assembleGLSLShaderPair(
     }),
     fs: assembleShaderGLSL(options.platformInfo, {
       ...options,
-      source: fs,
+      source: fs, // TODO - remove the !
       stage: 'fragment',
       modules
     }),

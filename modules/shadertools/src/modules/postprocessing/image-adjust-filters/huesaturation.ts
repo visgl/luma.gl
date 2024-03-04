@@ -59,7 +59,7 @@ export type HueSaturationProps = {
  * Saturation is implemented by scaling all color channel values either toward
  * or away from the average color channel value.
  */
-export const hueSaturation: ShaderPass<HueSaturationProps> = {
+export const hueSaturation = {
   name: 'hueSaturation',
   uniformTypes: {
     hue: 'f32',
@@ -71,4 +71,4 @@ export const hueSaturation: ShaderPass<HueSaturationProps> = {
   },
   fs,
   passes: [{filter: true}]
-};
+} as const satisfies ShaderPass<HueSaturationProps>;

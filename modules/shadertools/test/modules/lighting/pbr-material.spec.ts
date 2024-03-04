@@ -3,10 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {pbrMaterial} from '@luma.gl/shadertools';
+import {pbrMaterial, ShaderModuleInstance} from '@luma.gl/shadertools';
 
 test('shadertools#pbrMaterial', t => {
-  const uniforms = pbrMaterial.getUniforms({});
+  const pbrMaterialModule = new ShaderModuleInstance(pbrMaterial);
+  const uniforms = pbrMaterialModule.getUniforms({}, {});
   t.ok(uniforms, 'Default pbr lighting uniforms ok');
   t.end();
 });

@@ -685,9 +685,10 @@ export type FXAAUniforms = {};
 /**
  * FXAA - Fast Approximate Anti-aliasing.
  */
-export const fxaa: ShaderPass<FXAAProps, FXAAUniforms> = {
+export const fxaa = {
   name: 'fxaa',
   uniformPropTypes: {},
   fs,
-  passes: [{sampler: true}]
-};
+  passes: [{sampler: true}],
+  getUniforms: props => props
+} as const satisfies ShaderPass<FXAAProps, FXAAUniforms>;

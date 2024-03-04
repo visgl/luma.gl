@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 
 import {ShaderModuleInstance} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
@@ -24,7 +28,7 @@ function verifyShaderModule(t, module) {
   module = new ShaderModuleInstance(module);
   t.ok(module, `${module.name} imported`);
 
-  const uniforms = module.getUniforms();
+  const uniforms = module.getUniforms({}, {});
   let isUniformsVaid = true;
   for (const key in uniforms) {
     if (getUniformType(uniforms[key]) === 'unknown') {

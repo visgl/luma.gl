@@ -190,10 +190,8 @@ vec4 picking_filterColor(vec4 color) {
  * and correspondingly, supports picking and highlighting groups of
  * primitives with the same picking color in non-instanced draw-calls
  */
-export const picking: ShaderModule<PickingProps, PickingUniforms> = {
+export const picking = {
   name: 'picking',
-  vs,
-  fs,
   uniformTypes: {
     isActive: 'f32',
     isAttribute: 'f32',
@@ -210,8 +208,12 @@ export const picking: ShaderModule<PickingProps, PickingUniforms> = {
     highlightedObjectColor: new Float32Array([0, 0, 0]),
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
+  vs,
+  fs,
+  props: {} as Required<PickingProps>,
+  uniforms: {} as PickingUniforms,
   getUniforms
-};
+} as const satisfies ShaderModule<PickingProps, PickingUniforms>;
 
 function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {} as PickingUniforms;

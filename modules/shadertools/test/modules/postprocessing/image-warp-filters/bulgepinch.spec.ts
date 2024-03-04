@@ -1,9 +1,13 @@
-import {bulgePinch, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {bulgePinch, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('bulgePinch#build/uniform', t => {
-  normalizeShaderModule(bulgePinch);
-  const uniforms = bulgePinch.getUniforms();
+  const bulgePinchModule = new ShaderModuleInstance(bulgePinch);
+  const uniforms = bulgePinchModule.getUniforms({}, {});
 
   t.ok(uniforms, 'bulgePinch module build is ok');
   t.deepEqual(uniforms.center, [0.5, 0.5], 'bulgePinch center uniform is ok');

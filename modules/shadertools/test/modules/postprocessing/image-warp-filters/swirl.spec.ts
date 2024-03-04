@@ -1,9 +1,13 @@
-import {swirl, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {swirl, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('swirl#build/uniform', t => {
-  normalizeShaderModule(swirl);
-  const uniforms = swirl.getUniforms();
+  const swirlModule = new ShaderModuleInstance(swirl);
+  const uniforms = swirlModule.getUniforms({}, {});
 
   t.ok(uniforms, 'swirl module build is ok');
   t.deepEqual(uniforms.center, [0.5, 0.5], 'swirl center uniform is ok');

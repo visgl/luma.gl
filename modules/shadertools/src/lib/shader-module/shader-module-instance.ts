@@ -71,7 +71,7 @@ export class ShaderModuleInstance {
     this.name = name;
     this.vs = vs;
     this.fs = fs;
-    this.getModuleUniforms = getUniforms;
+    this.getModuleUniforms = getUniforms!;
     this.dependencies = ShaderModuleInstance.instantiateModules(dependencies);
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
     this.defines = defines;

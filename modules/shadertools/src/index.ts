@@ -69,8 +69,8 @@ export type {PickingProps} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
 
 // // lighting
-export type {LightingProps} from './modules/lighting/lights/lighting-uniforms';
-export {lighting} from './modules/lighting/lights/lighting-uniforms';
+export type {LightingProps} from './modules/lighting/lights/lighting';
+export {lighting} from './modules/lighting/lights/lighting';
 export {dirlight} from './modules/lighting/no-material/dirlight';
 export type {PhongMaterialUniforms as GouraudMaterialUniforms} from './modules/lighting/phong-material/phong-material';
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';

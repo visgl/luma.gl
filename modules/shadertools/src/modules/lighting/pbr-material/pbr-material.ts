@@ -9,7 +9,7 @@ import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lighting} from '../lights/lighting-uniforms';
+import {lighting} from '../lights/lighting';
 
 import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
@@ -97,7 +97,7 @@ export type PBRMaterialUniforms = {
  * An implementation of PBR (Physically-Based Rendering).
  * Physically Based Shading of a microfacet surface defined by a glTF material.
  */
-export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = {
+export const pbrMaterial = {
   name: 'pbr',
   vs,
   fs,
@@ -156,4 +156,4 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     brdfLUT: {type: 'texture', location: 15} // #ifdef USE_IBL
   },
   dependencies: [lighting]
-};
+} as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms>;

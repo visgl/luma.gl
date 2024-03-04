@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lighting} from '../lights/lighting-uniforms';
+import {lighting} from '../lights/lighting';
 import {PHONG_VS, PHONG_FS} from './phong-shaders-glsl';
 
 export type PhongMaterialProps = PhongMaterialUniforms;
@@ -17,7 +17,7 @@ export type PhongMaterialUniforms = {
 };
 
 /** In Phong shading, the normal vector is linearly interpolated across the surface of the polygon from the polygon's vertex normals. */
-export const phongMaterial: ShaderModule<PhongMaterialProps, PhongMaterialUniforms> = {
+export const phongMaterial = {
   name: 'phong-lighting',
   // Note these are switched between phong and gouraud
   vs: PHONG_VS,
@@ -38,7 +38,9 @@ export const phongMaterial: ShaderModule<PhongMaterialProps, PhongMaterialUnifor
     shininess: 32,
     specularColor: [0.15, 0.15, 0.15]
   },
+  props: {} as Required<PhongMaterialProps>,
+  uniforms: {} as PhongMaterialUniforms,
   getUniforms(props?: PhongMaterialProps): PhongMaterialUniforms {
     return {...phongMaterial.defaultUniforms, ...props};
   }
-};
+} as const satisfies ShaderModule<PhongMaterialProps, PhongMaterialUniforms>;

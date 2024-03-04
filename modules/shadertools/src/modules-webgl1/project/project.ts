@@ -42,7 +42,7 @@ function getUniforms(opts: ProjectionProps = DEFAULT_MODULE_OPTIONS, prevUniform
   }
 
   // COMPOSITE UNIFORMS
-  if (opts.projectionMatrix !== undefined || opts.viewMatrix !== undefined) {
+  if (opts.projectionMatrix !== undefined && opts.viewMatrix !== undefined) {
     uniforms.viewProjectionMatrix = new Matrix4(opts.projectionMatrix).multiplyRight(
       opts.viewMatrix
     );
@@ -127,9 +127,9 @@ ${common}\
 /**
  * Projects coordinates
  */
-export const project: ShaderModule<ProjectionProps, ProjectionProps> = {
+export const project = {
   name: 'project',
   getUniforms,
   vs,
   fs
-};
+} as const satisfies ShaderModule<ProjectionProps, ProjectionProps>;

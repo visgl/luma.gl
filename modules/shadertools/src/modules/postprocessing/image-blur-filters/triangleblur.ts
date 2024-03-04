@@ -61,7 +61,7 @@ export type TriangleBlurProps = {
  *               pyramid filter. The pyramid filter is separable and is applied as two
  *               perpendicular triangle filters.
  */
-export const triangleBlur: ShaderPass<TriangleBlurProps, TriangleBlurProps> = {
+export const triangleBlur = {
   name: 'triangleBlur',
   uniformTypes: {
     radius: 'f32',
@@ -77,4 +77,4 @@ export const triangleBlur: ShaderPass<TriangleBlurProps, TriangleBlurProps> = {
     {sampler: true, uniforms: {delta: [1, 0]}},
     {sampler: true, uniforms: {delta: [0, 1]}}
   ]
-};
+} as const satisfies ShaderPass<TriangleBlurProps, TriangleBlurProps>;
