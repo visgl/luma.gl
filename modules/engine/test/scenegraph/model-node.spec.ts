@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 // import {makeSpy} from '@probe.gl/test-utils';
 import {Model, ModelNode} from '@luma.gl/engine';
 
@@ -20,7 +20,7 @@ void main() { fragmentColor = vec4(1.0); }
 `;
 
 test('ModelNode#constructor', t => {
-  for (const device of getWebGLTestDevices()) {
+  for (const device of [webglDevice]) {
     const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
 
     const mNode1 = new ModelNode({model});

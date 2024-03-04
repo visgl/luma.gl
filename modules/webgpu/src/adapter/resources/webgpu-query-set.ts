@@ -30,6 +30,7 @@ export class WebGPUQuerySet extends QuerySet {
   }
 
   override destroy(): void {
-    this.handle.destroy();
+    this.handle?.destroy();
+    this.handle = null;
   }
 }

@@ -9,10 +9,6 @@ import {Parameters} from '@luma.gl/core';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
-// import {createTestDevice} from '@luma.gl/test-utils';
-// const webglDevice = createTestDevice({debug: true, webgl2: false});
-// const webglDevice = createTestDevice({debug: true, webgl2: true, webgl1: false});
-
 // Settings test, could be beneficial to not reuse a context
 const {gl} = webglDevice;
 

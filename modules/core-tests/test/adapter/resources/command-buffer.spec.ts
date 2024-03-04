@@ -4,13 +4,12 @@
 
 import test, {Test} from 'tape-promise/tape';
 import {Buffer, Device, TextureFormat} from '@luma.gl/core';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
-  for (const device of getWebGLTestDevices()) {
     const sourceData = new Float32Array([1, 2, 3]);
     const source = device.createBuffer({data: sourceData});
     const destinationData = new Float32Array([4, 5, 6]);
@@ -47,7 +46,7 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     receivedData = await readAsyncF32(destination);
     expectedData = new Float32Array([1, 2, 2]);
     t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
-  }
+
   t.end();
 });
 
@@ -114,7 +113,6 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
 ];
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
-  for (const device of getWebGLTestDevices()) {
     for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
       await testCopyTextureToBuffer(t, device, {...fixture});
       await testCopyTextureToBuffer(t, device, {
@@ -123,7 +121,7 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
         title: `${fixture.title} + framebuffer`
       });
     }
-  }
+
   t.end();
 });
 

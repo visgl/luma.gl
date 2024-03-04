@@ -6,17 +6,15 @@ import test from 'tape-promise/tape';
 import {Buffer} from '@luma.gl/core';
 import {WEBGLBuffer} from '@luma.gl/webgl';
 
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 
 test('WEBGLBuffer#bind/unbind with index', t => {
-  for (const device of getWebGLTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.UNIFORM});
     device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
     device.gl.bindBufferBase(buffer.glTarget, 0, null);
 
     buffer.destroy();
-  }
 
   t.end();
 });
@@ -25,7 +23,6 @@ test('WEBGLBuffer#write', async t => {
   const initialData = new Float32Array([1, 2, 3]);
   const updateData = new Float32Array([4, 5, 6]);
 
-  for (const device of getWebGLTestDevices()) {
     let buffer: WEBGLBuffer;
 
     buffer = device.createBuffer({usage: Buffer.VERTEX, data: initialData});
@@ -62,7 +59,7 @@ test('WEBGLBuffer#write', async t => {
     );
 
     buffer.destroy();
-  }
+
   t.end();
 });
 

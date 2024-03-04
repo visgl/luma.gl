@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
@@ -108,7 +108,6 @@ test('GroupNode#traverse', t => {
 });
 
 test('GroupNode#getBounds', t => {
-  for (const device of getWebGLTestDevices()) {
     const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 
     const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
@@ -137,6 +136,5 @@ test('GroupNode#getBounds', t => {
       ],
       'bounds calculated'
     );
-  }
   t.end();
 });

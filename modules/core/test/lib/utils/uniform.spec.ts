@@ -1,6 +1,6 @@
 import {isUniformValue, splitUniformsAndBindings} from '@luma.gl/core';
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 
 test('isUniformValue', t => {
@@ -12,14 +12,12 @@ test('isUniformValue', t => {
   t.ok(isUniformValue([1, 2, 3, 4]), 'Number array is uniform value');
   t.ok(isUniformValue(new Float32Array([1, 2, 3, 4])), 'Number array is uniform value');
 
-  const device = getWebGLTestDevices()[0];
   t.notOk(isUniformValue(new WEBGLTexture(device, {})), 'WEBGLTexture is not a uniform value');
   t.notOk(isUniformValue(new WEBGLSampler(device, {})), 'WEBGLSampler is not a uniform value');
   t.end();
 });
 
 test('splitUniformsAndBindings', t => {
-  const device = getWebGLTestDevices()[0];
   const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
     array: [1, 2, 3, 4],
     boolean: true,

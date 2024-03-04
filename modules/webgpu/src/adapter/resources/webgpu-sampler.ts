@@ -28,5 +28,6 @@ export class WebGPUSampler extends Sampler {
 
   override destroy(): void {
     // this.handle.destroy();
+    this.handle = null;
   }
 }

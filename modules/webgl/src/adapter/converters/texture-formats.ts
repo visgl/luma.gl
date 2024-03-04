@@ -142,13 +142,12 @@ type Format = {
  */
 // prettier-ignore
 export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
-  // Unsized formats that leave the precision up to the driver.
-  // TODO - Fix bpp constants
-  // 'r8unorm-unsized': {gl: GL.LUMINANCE, b: 4, c: 2, bpp: 4},
+  // Unsized formats that leave the precision up to the driver. TODO - Fix bpp constants
   'rgb8unorm-unsized': {gl: GL.RGB, b: 4, c: 2, bpp: 4,
     dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
   'rgba8unorm-unsized': {gl: GL.RGBA, b: 4, c: 2, bpp: 4,
     dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
+  // 'r8unorm-unsized': {gl: GL.LUMINANCE, b: 4, c: 2, bpp: 4},
   // 'rgb8unorm-srgb-unsized': {gl: GL.SRGB_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
   // 'rgba8unorm-srgb-unsized': {gl: GL.SRGB_ALPHA_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
 

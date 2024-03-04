@@ -133,10 +133,9 @@ export type WebGPUColorTextureFormat =
   | 'astc-12x12-unorm-srgb';
 
 /** Unsized texture formats (the only formats supported by WebGL1) */
-export type UnsizedColorTextureFormat =
-  // 'r8unorm-unsized' |
-  // 'ra8unorm-unsized' |
-  'rgb8unorm-unsized' | 'rgba8unorm-unsized';
+export type UnsizedColorTextureFormat = 'rgb8unorm-unsized' | 'rgba8unorm-unsized';
+// 'r8unorm-unsized' |
+// 'ra8unorm-unsized' |
 // 'rgb8unorm-srgb-unsized' |
 // 'rgba8unorm-srgb-unsized'
 

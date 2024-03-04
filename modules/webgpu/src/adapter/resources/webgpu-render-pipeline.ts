@@ -51,6 +51,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
+    this.handle = null;
   }
 
   /**

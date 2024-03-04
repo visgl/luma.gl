@@ -45,7 +45,8 @@ export class WebGPUBuffer extends Buffer {
   }
 
   override destroy(): void {
-    this.handle.destroy();
+    this.handle?.destroy();
+    this.handle = null;
   }
 
   // WebGPU provides multiple ways to write a buffer...

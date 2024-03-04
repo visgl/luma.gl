@@ -39,5 +39,6 @@ export class WebGPUTextureView extends TextureView {
 
   override destroy(): void {
     // this.handle.destroy();
+    this.handle = null;
   }
 }

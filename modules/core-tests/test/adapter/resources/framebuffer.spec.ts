@@ -4,8 +4,8 @@
 
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
+import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
-import {webglDevice, getWebGLTestDevices} from '@luma.gl/test-utils';
 
 const TEST_CASES = [
   {
@@ -21,7 +21,7 @@ const TEST_CASES = [
   {
     title: 'Autocreated Depth Renderbuffer + Color Texture',
     getOpts: device => ({
-      colorAttachments: ['rgba8unorm-unsized'],
+      colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth16unorm'
     }),
     pass: true
@@ -70,11 +70,11 @@ const TEST_CASES = [
 ];
 
 test('WebGLDevice.createFramebuffer()', async t => {
-  for (const testDevice of getWebGLTestDevices()) {
+  for (const testDevice of await getTestDevices()) {
     t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
 
     const framebuffer = testDevice.createFramebuffer({
-      colorAttachments: ['rgba8unorm-unsized'],
+      colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth16unorm'
     });
     t.ok(framebuffer instanceof Framebuffer, 'Framebuffer with attachment');
@@ -89,7 +89,7 @@ test('WebGLDevice.createFramebuffer()', async t => {
 });
 
 test('WebGLFramebuffer create and resize attachments', async t => {
-  for (const testDevice of getWebGLTestDevices()) {
+  for (const testDevice of await getTestDevices()) {
     for (const tc of TEST_CASES) {
       let props;
 
