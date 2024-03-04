@@ -567,7 +567,7 @@ export function isTextureFormatFilterable(
   }
   if (format.startsWith('depth') || format.startsWith('stencil')) {
     return false;
-  } 
+  }
   try {
     const decoded = decodeTextureFormat(format);
     if (decoded.signed) {
@@ -607,14 +607,13 @@ export function getWebGLTextureParameters(format: TextureFormat) {
   const decoded = decodeTextureFormat(format);
   return {
     format: webglFormat,
-    dataFormat: formatData?.dataFormat || getWebGLPixelDataFormat(
-      decoded.format,
-      decoded.integer,
-      decoded.normalized,
-      webglFormat
-    ),
+    dataFormat:
+      formatData?.dataFormat ||
+      getWebGLPixelDataFormat(decoded.format, decoded.integer, decoded.normalized, webglFormat),
     // depth formats don't have a type
-    type: decoded.dataType ? getGLFromVertexType(decoded.dataType) : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
+    type: decoded.dataType
+      ? getGLFromVertexType(decoded.dataType)
+      : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
     // @ts-expect-error
     compressed: decoded.compressed
   };

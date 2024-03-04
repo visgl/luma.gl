@@ -52,7 +52,10 @@ test('Texture#depth/stencil formats', async t => {
   for (const device of await getTestDevices()) {
     for (const format of DEPTH_STENCIL_FORMATS) {
       t.ok(device.isTextureFormatSupported(format), `${device.info.type} ${format} is supported`);
-      t.notOk(device.isTextureFormatFilterable(format), `${device.info.type} ${format} is not filterable`);
+      t.notOk(
+        device.isTextureFormatFilterable(format),
+        `${device.info.type} ${format} is not filterable`
+      );
       const texture = device.createTexture({format});
       t.ok(texture instanceof Texture, `Texture ${format} construction successful`);
     }
