@@ -35,7 +35,7 @@ export class GLTFInstantiator {
   gltf: any;
 
   constructor(device: Device, options: GLTFInstantiatorOptions = {}) {
-    this.device = WebGLDevice.attach(device);
+    this.device = device as WebGLDevice;
     this.options = {...DEFAULT_OPTIONS, ...options};
   }
 

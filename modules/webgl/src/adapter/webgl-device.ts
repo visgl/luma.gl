@@ -149,12 +149,18 @@ export class WebGLDevice extends Device {
 
     // Wait for all the loads to settle before creating the context.
     // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
-    await Promise.all(promises);
+    const results = await Promise.allSettled(promises);
+    for (const result of results) {
+      if (result.status ==='rejected') {
+        log.error(`Failed to initialize debug libraries ${result.reason}`)();
+      }
+    }
 
     log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
 
     // @ts-expect-error
     if (props.gl?.device) {
+      log.warn('reattaching existing device')();
       return WebGLDevice.attach(props.gl);
     }
 
@@ -386,15 +392,15 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   override setParametersWebGL(parameters: any): void {
-    setGLParameters(this, parameters);
+    setGLParameters(this.gl, parameters);
   }
 
   override getParametersWebGL(parameters: any): any {
-    return getGLParameters(this, parameters);
+    return getGLParameters(this.gl, parameters);
   }
 
   override withParametersWebGL(parameters: any, func: any): any {
-    withGLParameters(this, parameters, func);
+    withGLParameters(this.gl, parameters, func);
   }
 
   override clearWebGL(options?: {

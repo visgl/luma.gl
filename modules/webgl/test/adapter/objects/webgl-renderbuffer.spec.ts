@@ -6,7 +6,7 @@ import test from 'tape-promise/tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 
 import {TextureFormat} from '@luma.gl/core';
-import {WEBGLRenderbuffer, _TEXTURE_FORMATS} from '@luma.gl/webgl';
+import {_WEBGLRenderbuffer as WEBGLRenderbuffer, _TEXTURE_FORMATS} from '@luma.gl/webgl';
 
 test('WebGL#WEBGLRenderbuffer construct/delete', t => {
   for (const device of getWebGLTestDevices()) {

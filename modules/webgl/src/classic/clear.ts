@@ -60,8 +60,8 @@ export function clear(
   assert(clearFlags !== 0, ERR_ARGUMENTS);
 
   // Temporarily set any clear "colors" and call clear
-  withGLParameters(device, parameters, () => {
-    const gl = (device as WebGLDevice).gl;
+  const gl = (device as WebGLDevice).gl;
+  withGLParameters(gl, parameters, () => {
     gl.clear(clearFlags);
   });
 }

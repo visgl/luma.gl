@@ -13,12 +13,12 @@ import {setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
 const getGLParameter = (parameter: keyof GLParameters): any => {
-  const parameters = getGLParameters(webglDevice, [parameter]);
+  const parameters = getGLParameters(webglDevice.gl, [parameter]);
   return parameters[parameter];
 };
 
 test('setDeviceParameters#cullMode', t => {
-  resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice.gl);
 
   t.deepEqual(getGLParameter(GL.CULL_FACE), false, 'got expected value');
 
@@ -37,7 +37,7 @@ test('setDeviceParameters#cullMode', t => {
 });
 
 test('setDeviceParameters#frontFace', t => {
-  resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice.gl);
 
   t.deepEqual(getGLParameter(GL.FRONT_FACE), GL.CCW, 'got expected value');
 
@@ -51,7 +51,7 @@ test('setDeviceParameters#frontFace', t => {
 });
 
 test('setDeviceParameters#depthWriteEnabled', t => {
-  resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice.gl);
 
   t.deepEqual(getGLParameter(GL.DEPTH_WRITEMASK), true, 'got expected value');
 
@@ -65,7 +65,7 @@ test('setDeviceParameters#depthWriteEnabled', t => {
 });
 
 test('setDeviceParameters#blending', t => {
-  resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice.gl);
 
   t.equal(getGLParameter(GL.BLEND), false, 'blending disabled');
 
@@ -108,7 +108,7 @@ test('setDeviceParameters#blending', t => {
 });
 
 test('setDeviceParameters#depthCompare', t => {
-  resetGLParameters(webglDevice);
+  resetGLParameters(webglDevice.gl);
 
   t.equal(getGLParameter(GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
 

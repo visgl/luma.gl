@@ -31,10 +31,6 @@ export {WEBGLRenderPass} from './adapter/resources/webgl-render-pass';
 // export {WEBGLComputePass} from './adapter/resources/webgl-compute-pass';
 export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 
-// Internal WebGL classes
-export type {RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
-export {WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
-
 // WebGL adapter classes
 export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedback';
 
@@ -49,6 +45,10 @@ export {setDeviceParameters, withDeviceParameters} from './adapter/converters/de
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
 export {convertGLToTextureFormat} from './adapter/converters/texture-formats';
+
+// Internal WebGL classes
+export type {RenderbufferProps as _RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
+export {WEBGLRenderbuffer as _WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';

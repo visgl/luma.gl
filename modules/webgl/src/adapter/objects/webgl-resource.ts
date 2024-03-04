@@ -25,7 +25,7 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
   constructor(device: Device, props: Props, defaultProps: Required<Props>) {
     super(device, props, defaultProps);
 
-    this.device = WebGLDevice.attach(device);
+    this.device = device as WebGLDevice;
     const gl = this.device.gl;
 
     // extends

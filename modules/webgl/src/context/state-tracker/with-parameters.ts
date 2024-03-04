@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
-import {WebGLDevice} from '../../adapter/webgl-device';
 import {GLParameters, setGLParameters} from '../parameters/unified-parameter-api';
 import {pushContextState, popContextState} from './track-context-state';
 
@@ -16,16 +14,13 @@ import {pushContextState, popContextState} from './track-context-state';
  * - Returns the return value of the supplied function
  */
 export function withGLParameters(
-  device: Device | WebGL2RenderingContext,
+  gl: WebGL2RenderingContext,
   parameters: GLParameters & {nocatch?: boolean},
   func: any
 ): any {
-  const webglDevice = WebGLDevice.attach(device);
-  const gl = webglDevice.gl;
-
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
-    return func(device);
+    return func(gl);
   }
 
   const {nocatch = true} = parameters;
