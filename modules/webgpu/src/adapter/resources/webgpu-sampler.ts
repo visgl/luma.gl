@@ -27,6 +27,9 @@ export class WebGPUSampler extends Sampler {
   }
 
   override destroy(): void {
+    // GPUSampler does not have a destroy method
     // this.handle.destroy();
+    // @ts-expect-error readonly
+    this.handle = null;
   }
 }

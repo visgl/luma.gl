@@ -38,6 +38,9 @@ export class WebGPUTextureView extends TextureView {
   }
 
   override destroy(): void {
+    // GPUTextureView does not have a destroy method
     // this.handle.destroy();
+    // @ts-expect-error readonly
+    this.handle = null;
   }
 }

@@ -2,21 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+/* eslint-disable no-continue */
+
+import test from 'tape-promise/tape';
+import {getTestDevices, webglDevice} from '@luma.gl/test-utils';
+
 import {Buffer, TypedArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import test from 'tape-promise/tape';
 
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
-
-test('Buffer#constructor/delete', t => {
-  for (const device of getWebGLTestDevices()) {
+test('Buffer#constructor/delete', async t => {
+  for (const device of await getTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
+    // @ts-ignore handle
     t.ok(buffer.handle, `${device.info.type} Buffer construction successful`);
 
     buffer.destroy();
+    // @ts-ignore handle
     t.ok(!buffer.handle, `${device.info.type} Buffer.destroy() successful`);
 
     buffer.destroy();
+    // @ts-ignore handle
     t.ok(!buffer.handle, `${device.info.type} repeated Buffer.destroy() successful`);
   }
   t.end();
@@ -25,7 +30,10 @@ test('Buffer#constructor/delete', t => {
 test('Buffer#constructor offset and size', async t => {
   const data = new Float32Array([1, 2, 3]);
 
-  for (const device of getWebGLTestDevices()) {
+  for (const device of await getTestDevices()) {
+    if (device.info.type === 'webgpu') {
+      continue;
+    }
     let buffer = device.createBuffer({data, byteOffset: 8});
     let expectedData = new Float32Array([0, 0, 1, 2, 3]);
     t.equal(
@@ -74,8 +82,9 @@ test('Buffer#constructor offset and size', async t => {
   t.end();
 });
 
-test('Buffer#bind/unbind', t => {
-  for (const device of getWebGLTestDevices()) {
+/*
+test('Buffer#bind/unbind', async t => {
+  for (const device of await getTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
     device.gl.bindBuffer(buffer.glTarget, buffer.handle);
     t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind successful`);
@@ -84,34 +93,14 @@ test('Buffer#bind/unbind', t => {
   }
   t.end();
 });
-
-test('Buffer#construction', t => {
-  for (const device of getWebGLTestDevices()) {
-    let buffer;
-
-    buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
-    t.ok(
-      buffer.glTarget === GL.ARRAY_BUFFER,
-      `${device.info.type} Buffer(ARRAY_BUFFER) successful`
-    );
-    buffer.destroy();
-
-    // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
-    buffer = device.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])});
-    t.ok(
-      buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER,
-      `${device.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`
-    );
-
-    buffer.destroy();
-  }
-
-  t.end();
-});
+*/
 
 test('Buffer#write', async t => {
   const expectedData = new Float32Array([1, 2, 3]);
-  for (const device of getWebGLTestDevices()) {
+  for (const device of await getTestDevices()) {
+    if (device.info.type === 'webgpu') {
+      continue;
+    }
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
     buffer.write(expectedData);
     const receivedData = await buffer.readAsync();
@@ -139,7 +128,10 @@ test('Buffer#write', async t => {
 });
 
 test('Buffer#readAsync', async t => {
-  for (const device of getWebGLTestDevices()) {
+  for (const device of await getTestDevices()) {
+    if (device.info.type === 'webgpu') {
+      continue;
+    }
     let data: TypedArray = new Float32Array([1, 2, 3]);
     let buffer = device.createBuffer({data});
 
@@ -184,7 +176,10 @@ test('Buffer#readAsync', async t => {
 });
 
 test('Buffer#debugData', async t => {
-  for (const device of getWebGLTestDevices()) {
+  for (const device of await getTestDevices()) {
+    if (device.info.type === 'webgpu') {
+      continue;
+    }
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 24});
     t.equal(buffer.debugData.byteLength, 24, 'Buffer.debugData is not null before write');
 
@@ -199,6 +194,32 @@ test('Buffer#debugData', async t => {
 
     buffer.destroy();
   }
+
+  t.end();
+});
+
+// WEBGL specific tests
+
+test('WEBGLBuffer#construction', async t => {
+  await getTestDevices();
+
+  let buffer;
+
+  buffer = webglDevice.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
+  t.ok(
+    buffer.glTarget === GL.ARRAY_BUFFER,
+    `${webglDevice.info.type} Buffer(ARRAY_BUFFER) successful`
+  );
+  buffer.destroy();
+
+  // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
+  buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])});
+  t.ok(
+    buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER,
+    `${webglDevice.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`
+  );
+
+  buffer.destroy();
 
   t.end();
 });

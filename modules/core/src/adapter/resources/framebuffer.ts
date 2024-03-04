@@ -29,7 +29,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     ...Resource.defaultProps,
     width: 1,
     height: 1,
-    colorAttachments: [], // ['rgba8unorm-unsized'],
+    colorAttachments: [], // ['rgba8unorm'],
     depthStencilAttachment: null // 'depth24plus-stencil8'
   };
 
@@ -78,6 +78,10 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
 
   /** Auto creates any textures */
   protected autoCreateAttachmentTextures(): void {
+    if (this.props.colorAttachments.length === 0 && !this.props.depthStencilAttachment) {
+      throw new Error('Framebuffer has noattachments');
+    }
+
     this.colorAttachments = this.props.colorAttachments.map(attachment => {
       if (typeof attachment === 'string') {
         const texture = this.createColorTexture(attachment);

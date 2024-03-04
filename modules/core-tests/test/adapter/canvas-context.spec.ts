@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 
 import {CanvasContext} from '@luma.gl/core';
 
@@ -13,7 +13,7 @@ test('CanvasContext#defined', t => {
   t.end();
 });
 
-test('CanvasContext#getDevicePixelRatio', t => {
+test('CanvasContext#getDevicePixelRatio', async t => {
   const windowPixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const TEST_CASES = [
     {
@@ -48,7 +48,7 @@ test('CanvasContext#getDevicePixelRatio', t => {
     }
   ];
 
-  for (const device of getWebGLTestDevices()) {
+  for (const device of await getTestDevices()) {
     TEST_CASES.forEach(tc => {
       const result = device.canvasContext?.getDevicePixelRatio(tc.useDevicePixels);
       t.equal(result, tc.expected, tc.name);

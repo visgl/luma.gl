@@ -4,50 +4,49 @@
 
 import test, {Test} from 'tape-promise/tape';
 import {Buffer, Device, TextureFormat} from '@luma.gl/core';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
-  for (const device of getWebGLTestDevices()) {
-    const sourceData = new Float32Array([1, 2, 3]);
-    const source = device.createBuffer({data: sourceData});
-    const destinationData = new Float32Array([4, 5, 6]);
-    const destination = device.createBuffer({data: destinationData});
+  const sourceData = new Float32Array([1, 2, 3]);
+  const source = device.createBuffer({data: sourceData});
+  const destinationData = new Float32Array([4, 5, 6]);
+  const destination = device.createBuffer({data: destinationData});
 
-    let receivedData = await readAsyncF32(destination);
-    let expectedData = new Float32Array([4, 5, 6]);
-    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
+  let receivedData = await readAsyncF32(destination);
+  let expectedData = new Float32Array([4, 5, 6]);
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
-    let commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer({
-      source,
-      destination,
-      size: 2 * Float32Array.BYTES_PER_ELEMENT
-    });
-    commandEncoder.finish();
-    commandEncoder.destroy();
+  let commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyBufferToBuffer({
+    source,
+    destination,
+    size: 2 * Float32Array.BYTES_PER_ELEMENT
+  });
+  commandEncoder.finish();
+  commandEncoder.destroy();
 
-    receivedData = await readAsyncF32(destination);
-    expectedData = new Float32Array([1, 2, 6]);
-    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
+  receivedData = await readAsyncF32(destination);
+  expectedData = new Float32Array([1, 2, 6]);
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
 
-    commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer({
-      source,
-      sourceOffset: Float32Array.BYTES_PER_ELEMENT,
-      destination,
-      destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
-      size: Float32Array.BYTES_PER_ELEMENT
-    });
-    commandEncoder.finish();
-    commandEncoder.destroy();
+  commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyBufferToBuffer({
+    source,
+    sourceOffset: Float32Array.BYTES_PER_ELEMENT,
+    destination,
+    destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
+    size: Float32Array.BYTES_PER_ELEMENT
+  });
+  commandEncoder.finish();
+  commandEncoder.destroy();
 
-    receivedData = await readAsyncF32(destination);
-    expectedData = new Float32Array([1, 2, 2]);
-    t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
-  }
+  receivedData = await readAsyncF32(destination);
+  expectedData = new Float32Array([1, 2, 2]);
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
+
   t.end();
 });
 
@@ -114,16 +113,15 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
 ];
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
-  for (const device of getWebGLTestDevices()) {
-    for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
-      await testCopyTextureToBuffer(t, device, {...fixture});
-      await testCopyTextureToBuffer(t, device, {
-        ...fixture,
-        useFramebuffer: true,
-        title: `${fixture.title} + framebuffer`
-      });
-    }
+  for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
+    await testCopyTextureToBuffer(t, device, {...fixture});
+    await testCopyTextureToBuffer(t, device, {
+      ...fixture,
+      useFramebuffer: true,
+      title: `${fixture.title} + framebuffer`
+    });
   }
+
   t.end();
 });
 

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
@@ -108,35 +108,33 @@ test('GroupNode#traverse', t => {
 });
 
 test('GroupNode#getBounds', t => {
-  for (const device of getWebGLTestDevices()) {
-    const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
+  const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 
-    const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
-    const model2 = new Model(device, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
-    const childSNode = new ModelNode({model: model1});
-    const grandChildSNode = new ModelNode({model: model2});
-    const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
-    const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
+  const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+  const model2 = new Model(device, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
+  const childSNode = new ModelNode({model: model1});
+  const grandChildSNode = new ModelNode({model: model2});
+  const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
+  const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
 
-    t.deepEqual(groupNode.getBounds(), null, 'child bounds are not defined');
+  t.deepEqual(groupNode.getBounds(), null, 'child bounds are not defined');
 
-    childSNode.bounds = [
-      [0, 0, 0],
-      [1, 1, 1]
-    ];
-    grandChildSNode.bounds = [
-      [-1, -1, -1],
-      [0, 0, 0]
-    ];
+  childSNode.bounds = [
+    [0, 0, 0],
+    [1, 1, 1]
+  ];
+  grandChildSNode.bounds = [
+    [-1, -1, -1],
+    [0, 0, 0]
+  ];
 
-    t.deepEqual(
-      groupNode.getBounds(),
-      [
-        [-4, -4, -1],
-        [2, 2, 3]
-      ],
-      'bounds calculated'
-    );
-  }
+  t.deepEqual(
+    groupNode.getBounds(),
+    [
+      [-4, -4, -1],
+      [2, 2, 3]
+    ],
+    'bounds calculated'
+  );
   t.end();
 });

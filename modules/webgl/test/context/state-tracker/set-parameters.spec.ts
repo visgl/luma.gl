@@ -155,7 +155,6 @@ test('WebGLState#setGLParameters framebuffer', t => {
 });
 
 test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', t => {
-  // const webglDevice = createTestContext({webgl2: true, webgl1: false});
   resetGLParameters(webglDevice.gl);
 
   let fbHandle = getGLParameters(webglDevice.gl, [GL.READ_FRAMEBUFFER_BINDING])[

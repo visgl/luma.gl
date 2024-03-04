@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevices, getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 
 // import {luma} from '@luma.gl/core';
 
-test('WebGLDevice#info', t => {
-  for (const device of getWebGLTestDevices()) {
+test('WebGLDevice#info', async t => {
+  for (const device of await getTestDevices()) {
     // TODO
     t.ok(typeof device.info.vendor === 'string', 'info.vendor ok');
     t.ok(typeof device.info.renderer === 'string', 'info.renderer ok');

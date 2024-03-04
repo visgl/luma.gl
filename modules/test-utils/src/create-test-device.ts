@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, DeviceProps} from '@luma.gl/core';
-import {luma} from '@luma.gl/core';
+import {luma, log} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
 
@@ -32,38 +32,38 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   }
 }
 
-/** A WebGL 2 Device intended for testing */
-export const webglDevice: WebGLDevice = createTestDevice({id: 'webgl2-test-device'});
+/** This WebGL Device can be used directly but will not have WebGL debugging initialized */
+export const webglDevice = createTestDevice();
 
-/** Only available after getTestDevices() has completed */
+/** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
+export let webglDeviceAsync: WebGLDevice;
+
+/** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
 export let webgpuDevice: WebGPUDevice;
 
-let webgpuCreated = false;
-
-/** Synchronously get test devices (only WebGLDevices) */
-export function getWebGLTestDevices(): WebGLDevice[] {
-  const devices: WebGLDevice[] = [];
-  devices.push(webglDevice);
-  return devices;
-}
+let devicesCreated = false;
 
 /** Includes WebGPU device if available */
 export async function getTestDevices(): Promise<Device[]> {
-  if (!webgpuCreated) {
-    webgpuCreated = true;
+  if (!devicesCreated) {
+    devicesCreated = true;
     try {
       webgpuDevice = (await luma.createDevice({
         id: 'webgpu-test-device',
         type: 'webgpu'
       })) as WebGPUDevice;
-    } catch {
-      // ignore (assume WebGPU was not available)
+    } catch (error) {
+      log.error(String(error))();
+    }
+    try {
+      webglDeviceAsync = (await luma.createDevice({
+        id: 'webgl-test-device',
+        type: 'webgl'
+      })) as WebGLDevice;
+    } catch (error) {
+      log.error(String(error))();
     }
   }
 
-  const devices: Device[] = getWebGLTestDevices();
-  if (webgpuDevice) {
-    devices.unshift(webgpuDevice);
-  }
-  return devices;
+  return [webglDeviceAsync, webgpuDevice].filter(Boolean);
 }

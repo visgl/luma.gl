@@ -213,7 +213,7 @@ export class WebGPUDevice extends Device {
   }
 
   createFramebuffer(props: FramebufferProps): WebGPUFramebuffer {
-    throw new Error('Not implemented');
+    return new WebGPUFramebuffer(this, props);
   }
 
   createComputePipeline(props: ComputePipelineProps): WebGPUComputePipeline {
