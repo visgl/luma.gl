@@ -239,8 +239,8 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
     dataFormat: GL.DEPTH_COMPONENT, types: [GL.FLOAT], rb: true},
 
   // The depth component of the "depth24plus" and "depth24plus-stencil8" formats may be implemented as either a 24-bit depth value or a "depth32float" value.
-  'depth24plus-stencil8': {gl: GL.DEPTH_STENCIL, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, rb: true, depthTexture: true,
-    dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT]},
+  'depth24plus-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, rb: true, depthTexture: true,
+    dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT_24_8]},
   // "depth24unorm-stencil8" feature
   'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, 
     dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT_24_8], rb: true},
@@ -565,6 +565,9 @@ export function isTextureFormatFilterable(
   if (!isTextureFormatSupported(gl, format, extensions)) {
     return false;
   }
+  if (format.startsWith('depth') || format.startsWith('stencil')) {
+    return false;
+  } 
   try {
     const decoded = decodeTextureFormat(format);
     if (decoded.signed) {
@@ -599,18 +602,19 @@ export function isTextureFormatRenderable(
 
 /** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
 export function getWebGLTextureParameters(format: TextureFormat) {
+  const formatData = TEXTURE_FORMATS[format];
   const webglFormat = convertTextureFormatToGL(format);
   const decoded = decodeTextureFormat(format);
   return {
     format: webglFormat,
-    dataFormat: getWebGLPixelDataFormat(
+    dataFormat: formatData?.dataFormat || getWebGLPixelDataFormat(
       decoded.format,
       decoded.integer,
       decoded.normalized,
       webglFormat
     ),
     // depth formats don't have a type
-    type: decoded.dataType ? getGLFromVertexType(decoded.dataType) : GL.UNSIGNED_BYTE,
+    type: decoded.dataType ? getGLFromVertexType(decoded.dataType) : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
     // @ts-expect-error
     compressed: decoded.compressed
   };

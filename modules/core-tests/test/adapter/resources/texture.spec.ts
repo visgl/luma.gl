@@ -47,10 +47,12 @@ test('Texture#construct/delete', async t => {
   t.end();
 });
 
-test.only('Texture#depth/stencil formats', async t => {
-  const DEPTH_STENCIL_FORMATS = [];
+test('Texture#depth/stencil formats', async t => {
+  const DEPTH_STENCIL_FORMATS = ['depth16unorm', 'depth24plus', 'depth24plus-stencil8'];
   for (const device of await getTestDevices()) {
-    for (const format in DEPTH_STENCIL_FORMATS) {
+    for (const format of DEPTH_STENCIL_FORMATS) {
+      t.ok(device.isTextureFormatSupported(format), `${device.info.type} ${format} is supported`);
+      t.notOk(device.isTextureFormatFilterable(format), `${device.info.type} ${format} is not filterable`);
       const texture = device.createTexture({format});
       t.ok(texture instanceof Texture, `Texture ${format} construction successful`);
     }

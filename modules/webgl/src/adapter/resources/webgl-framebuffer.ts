@@ -89,7 +89,6 @@ export class WEBGLFramebuffer extends Framebuffer {
   /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
   protected override createDepthStencilTexture(format: TextureFormat): Texture {
     // return new WEBGLRenderbuffer(this.device, {
-    debugger
     return new WEBGLTexture(this.device, {
       id: `${this.id}-depth-stencil`,
       format,

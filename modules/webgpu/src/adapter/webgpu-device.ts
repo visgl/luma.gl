@@ -175,7 +175,11 @@ export class WebGPUDevice extends Device {
 
   /** @todo implement proper check? */
   isTextureFormatFilterable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format);
+    return (
+      this.isTextureFormatSupported(format) &&
+      !format.startsWith('depth') &&
+      !format.startsWith('stencil')
+    );
   }
 
   /** @todo implement proper check? */
