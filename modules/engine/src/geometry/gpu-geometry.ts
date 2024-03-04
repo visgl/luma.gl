@@ -49,8 +49,8 @@ export class GPUGeometry {
 
   destroy(): void {
     this.indices?.destroy();
-    for (const name in this.attributes) {
-      this.attributes[name].destroy();
+    for (const attribute of Object.values(this.attributes)) {
+      attribute.destroy();
     }
   }
 
