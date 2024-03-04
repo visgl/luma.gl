@@ -119,6 +119,7 @@ export class Model {
 
   readonly device: Device;
   readonly id: string;
+  readonly source: string;
   readonly vs: string;
   readonly fs: string;
   readonly pipelineFactory: PipelineFactory;
@@ -193,22 +194,6 @@ export class Model {
     );
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
-    const isWebGPU = this.device.info.type === 'webgpu';
-    // TODO - hack to support unified WGSL shader
-    // TODO - this is wrong, compile a single shader
-    if (this.props.source) {
-      if (isWebGPU) {
-        this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
-      }
-      this.props.fs = this.props.source;
-      this.props.vs = this.props.source;
-    }
-
-    // Support WGSL shader layout introspection
-    if (isWebGPU && typeof this.props.vs !== 'string') {
-      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.vs.wgsl);
-    }
-
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
@@ -216,15 +201,36 @@ export class Model {
     const modules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
-    const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
-      platformInfo,
-      ...this.props,
-      modules
-    });
+    const isWebGPU = this.device.info.type === 'webgpu';
 
-    this.vs = vs;
-    this.fs = fs;
-    this._getModuleUniforms = getUniforms;
+    // WebGPU
+    // TODO - hack to support unified WGSL shader
+    // TODO - this is wrong, compile a single shader
+    if (isWebGPU && this.props.source) {
+      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
+      const {source, getUniforms} = this.props.shaderAssembler.assembleShader({
+        platformInfo,
+        ...this.props,
+        modules
+      });
+      this.source = source;
+      this._getModuleUniforms = getUniforms;
+    } else {
+      // TODO hack remove - Support WGSL shader layout introspection
+      if (isWebGPU && typeof this.props.vs !== 'string') {
+        this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.vs.wgsl);
+      }
+
+      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
+        platformInfo,
+        ...this.props,
+        modules
+      });
+
+      this.vs = vs;
+      this.fs = fs;
+      this._getModuleUniforms = getUniforms;
+    }
 
     this.vertexCount = this.props.vertexCount;
     this.instanceCount = this.props.instanceCount;
@@ -299,7 +305,9 @@ export class Model {
     if (this._destroyed) return;
     this.pipelineFactory.release(this.pipeline);
     this.shaderFactory.release(this.pipeline.vs);
-    this.shaderFactory.release(this.pipeline.fs);
+    if (this.pipeline.fs) {
+      this.shaderFactory.release(this.pipeline.fs);
+    }
     this._uniformStore.destroy();
     // TODO - mark resource as managed and destroyIfManaged() ?
     this._gpuGeometry?.destroy();
@@ -599,7 +607,7 @@ export class Model {
   }
 
   _setPipelineNeedsUpdate(reason: string): void {
-    this._pipelineNeedsUpdate = this._pipelineNeedsUpdate || reason;
+    this._pipelineNeedsUpdate ||= reason;
   }
 
   _updatePipeline(): RenderPipeline {
@@ -620,7 +628,7 @@ export class Model {
       const vs = this.shaderFactory.createShader({
         id: `${this.id}-vertex`,
         stage: 'vertex',
-        source: this.vs,
+        source: this.source || this.vs,
         debug: this.props.debugShaders
       });
 
@@ -628,7 +636,7 @@ export class Model {
         ? this.shaderFactory.createShader({
             id: `${this.id}-fragment`,
             stage: 'fragment',
-            source: this.fs,
+            source: this.source || this.fs,
             debug: this.props.debugShaders
           })
         : null;

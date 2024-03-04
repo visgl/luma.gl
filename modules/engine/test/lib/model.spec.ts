@@ -1,9 +1,19 @@
 import test from 'tape-promise/tape';
 import {luma} from '@luma.gl/core';
 import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
-import {webglDevice} from '@luma.gl/test-utils';
+import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('Resource Counts');
+
+const DUMMY_WGSL = /* WGSL */ `
+@vertex fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
+  return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
+}
+`;
 
 const DUMMY_VS = `#version 300 es
   void main() { gl_Position = vec4(1.0); }
@@ -144,6 +154,34 @@ test('Model#draw', t => {
   renderPass.destroy();
 
   model.destroy();
+
+  t.end();
+});
+
+test('Model#topology', async t => {
+  for (const device of await getTestDevices()) {
+    const model = new Model(device, {
+      vs: DUMMY_VS,
+      fs: DUMMY_FS,
+      source: DUMMY_WGSL,
+      vertexEntryPoint: 'vertexMain',
+      fragmentEntryPoint: 'fragmentMain'
+    });
+
+    t.equal(model.pipeline.props.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+
+    model.setTopology('line-strip');
+
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    model.draw(renderPass);
+
+    t.equal(model.pipeline.props.topology, 'line-strip', 'Pipeline has line-strip topology');
+
+    renderPass.end();
+    device.submit();
+    renderPass.destroy();
+    model.destroy();
+  }
 
   t.end();
 });
