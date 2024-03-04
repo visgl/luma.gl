@@ -111,7 +111,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
     this.gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 
     this.trackAllocatedMemory(
-      width * height * (samples || 1) * getTextureFormatBytesPerPixel(this.glFormat)
+      width * height * (samples || 1) * getTextureFormatBytesPerPixel(this.format)
     );
   }
 

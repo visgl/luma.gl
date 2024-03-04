@@ -325,7 +325,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.view = this.createView({...this.props, mipLevelCount: 1, arrayLayerCount: 1});
 
-    if (mipmaps) {
+    if (mipmaps && this.device.isTextureFormatFilterable(props.format)) {
       this.generateMipmap();
     }
 

@@ -8,10 +8,12 @@ import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
-import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';
 import {getDepthStencilAttachmentWebGL} from '../converters/texture-formats';
 
-export type Attachment = WEBGLTextureView | WEBGLTexture | WEBGLRenderbuffer;
+// TODO - for now we don't see a usage for renderbuffers in WebGL 2.
+// import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';
+
+export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
 /** luma.gl Framebuffer, WebGL implementation  */
 export class WEBGLFramebuffer extends Framebuffer {
@@ -86,14 +88,14 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
   protected override createDepthStencilTexture(format: TextureFormat): Texture {
-    return new WEBGLRenderbuffer(this.device, {
-      id: `${this.id}-depth-stencil`, // TODO misleading if not depth and stencil?
+    // return new WEBGLRenderbuffer(this.device, {
+    return new WEBGLTexture(this.device, {
+      id: `${this.id}-depth-stencil`,
       format,
-      // dataFormat: GL.DEPTH_STENCIL,
-      // type: GL.UNSIGNED_INT_24_8,
       width: this.width,
-      height: this.height
-    }) as unknown as WEBGLTexture;
+      height: this.height,
+      mipmaps: false
+    });
   }
 
   /**
@@ -127,21 +129,21 @@ export class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** Attach one attachment */
-  protected _attachOne(
-    attachmentPoint: GL,
-    attachment: Attachment
-  ): WEBGLTexture | WEBGLRenderbuffer {
-    if (attachment instanceof WEBGLRenderbuffer) {
-      this._attachWEBGLRenderbuffer(attachmentPoint, attachment);
-      return attachment;
-    } else if (Array.isArray(attachment)) {
+  protected _attachOne(attachmentPoint: GL, attachment: Attachment): WEBGLTexture {
+    // if (attachment instanceof WEBGLRenderbuffer) {
+    //   this._attachWEBGLRenderbuffer(attachmentPoint, attachment);
+    //   return attachment;
+    // }
+    if (Array.isArray(attachment)) {
       const [texture, layer = 0, level = 0] = attachment;
       this._attachTexture(attachmentPoint, texture as unknown as WEBGLTexture, layer, level);
       return texture as unknown as WEBGLTexture;
-    } else if (attachment instanceof WEBGLTexture) {
+    }
+    if (attachment instanceof WEBGLTexture) {
       this._attachTexture(attachmentPoint, attachment, 0, 0);
       return attachment;
-    } else if (attachment instanceof WEBGLTextureView) {
+    }
+    if (attachment instanceof WEBGLTextureView) {
       const textureView = attachment;
       this._attachTexture(
         attachmentPoint,
@@ -154,14 +156,15 @@ export class WEBGLFramebuffer extends Framebuffer {
     throw new Error('attach');
   }
 
-  protected _attachWEBGLRenderbuffer(attachment: GL, renderbuffer: WEBGLRenderbuffer): void {
-    this.gl.framebufferRenderbuffer(
-      GL.FRAMEBUFFER,
-      attachment,
-      GL.RENDERBUFFER,
-      renderbuffer.handle
-    );
-  }
+  // TODO - we do not seem to need render buffers in WebGL 2
+  // protected _attachWEBGLRenderbuffer(attachment: GL, renderbuffer: WEBGLRenderbuffer): void {
+  //   this.gl.framebufferRenderbuffer(
+  //     GL.FRAMEBUFFER,
+  //     attachment,
+  //     GL.RENDERBUFFER,
+  //     renderbuffer.handle
+  //   );
+  // }
 
   /**
    * @param attachment
