@@ -31,6 +31,7 @@ export class WebGPUQuerySet extends QuerySet {
 
   override destroy(): void {
     this.handle?.destroy();
+    // @ts-expect-error readonly
     this.handle = null;
   }
 }

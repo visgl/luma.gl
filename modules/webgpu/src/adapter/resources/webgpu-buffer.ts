@@ -46,6 +46,7 @@ export class WebGPUBuffer extends Buffer {
 
   override destroy(): void {
     this.handle?.destroy();
+    // @ts-expect-error readonly
     this.handle = null;
   }
 

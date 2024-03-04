@@ -31,6 +31,7 @@ export class WebGPUExternalTexture extends ExternalTexture {
     // External textures are destroyed automatically,
     // as a microtask, instead of manually or upon garbage collection like other resources.
     // this.handle.destroy();
+    // @ts-expect-error readonly
     this.handle = null;
   }
 
