@@ -88,7 +88,7 @@ export class WebGLDevice extends Device {
   static readonly type: string = 'webgl';
 
   /** type of this device */
-  readonly type: 'webgl';
+  readonly type = 'webgl';
 
   /** The underlying WebGL context */
   readonly handle: WebGL2RenderingContext;
