@@ -8,11 +8,7 @@ rendering is done with the underlying `Renderpipeline`
 
 A major feature of any GPU API is the ability to issue GPU draw calls. luma.gl has been designed to offer developers full control over draw calls as outlined below.
 
-## Tutorials
-
-The luma.gl documentation includes a series of tutorials that show how to render with the luma.gl API.
-
-## Drawing
+Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.
 
 ### Creating a RenderPipeline
 
@@ -33,13 +29,21 @@ pipeline.setUniforms({
 });
 ```
 
-Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
+### Drawing
+
+Once all bindings have been set up, call `pipeline.draw()`
 
 ```typescript
 const pipeline = device.createRenderPipeline({vs, fs});
 
-pipeline.draw({vertexArray, ...});
+// Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
+const vertexArray = device.createVertexArray();
+...
+
+const success = pipeline.draw({vertexArray, ...});
 ```
+
+### Transform Feedback (WebGL)
 
 Creating a pipeline for transform feedback, specifying which varyings to use
 

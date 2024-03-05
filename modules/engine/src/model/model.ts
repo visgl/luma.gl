@@ -167,12 +167,13 @@ export class Model {
 
   _uniformStore: UniformStore;
 
-  _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
+  _pipelineNeedsUpdate: string | false = 'newly created';
+  private _needsRedraw: string | false = 'initializing';
   private _destroyed = false;
 
   constructor(device: Device, props: ModelProps) {
@@ -313,9 +314,10 @@ export class Model {
     this.updateShaderInputs();
   }
 
-  draw(renderPass: RenderPass): void {
+  draw(renderPass: RenderPass): boolean {
     this.predraw();
 
+    let success: boolean;
     try {
       this._logDrawCallStart();
 
@@ -335,7 +337,7 @@ export class Model {
         ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
         : undefined;
 
-      this.pipeline.draw({
+      success = this.pipeline.draw({
         renderPass,
         vertexArray: this.vertexArray,
         vertexCount: this.vertexCount,
@@ -347,6 +349,18 @@ export class Model {
       this._logDrawCallEnd();
     }
     this._logFramebuffer(renderPass);
+
+    if (!success) {
+      this._needsRedraw = 'waiting for resource initialization';
+    } else {
+      this._needsRedraw = false;
+    }
+    return success;
+  }
+
+  /** Mark the model as needing a redraw */
+  setNeedsRedraw(reason: string): void {
+    this._needsRedraw ||= reason;
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -401,6 +415,7 @@ export class Model {
     if (topology !== this.topology) {
       this.topology = topology;
       this._setPipelineNeedsUpdate('topology');
+      this.setNeedsRedraw('topology');
     }
   }
 
@@ -490,6 +505,7 @@ export class Model {
 
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
+    this.setNeedsRedraw('shaderInputs');
   }
 
   /**
@@ -500,6 +516,7 @@ export class Model {
     const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
     Object.assign(this.uniforms, uniforms);
+    this.setNeedsRedraw('moduleSettings');
   }
 
   /**
@@ -507,6 +524,7 @@ export class Model {
    */
   setBindings(bindings: Record<string, Binding>): void {
     Object.assign(this.bindings, bindings);
+    this.setNeedsRedraw('bindings');
   }
 
   /**
@@ -520,6 +538,7 @@ export class Model {
       this.pipeline.setUniformsWebGL(uniforms);
       Object.assign(this.uniforms, uniforms);
     }
+    this.setNeedsRedraw('uniforms');
   }
 
   /**
@@ -528,6 +547,7 @@ export class Model {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     this.vertexArray.setIndexBuffer(indexBuffer);
+    this.setNeedsRedraw('indexBuffer');
   }
 
   /**
@@ -535,6 +555,7 @@ export class Model {
    */
   setTransformFeedback(transformFeedback: TransformFeedback | null): void {
     this.transformFeedback = transformFeedback;
+    this.setNeedsRedraw('transformFeedback');
   }
 
   /**
@@ -575,6 +596,7 @@ export class Model {
         )();
       }
     }
+    this.setNeedsRedraw('attributes');
   }
 
   /**
@@ -596,6 +618,7 @@ export class Model {
         )();
       }
     }
+    this.setNeedsRedraw('constants');
   }
 
   _setPipelineNeedsUpdate(reason: string): void {
