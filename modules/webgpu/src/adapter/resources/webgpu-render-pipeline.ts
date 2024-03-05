@@ -136,7 +136,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Set up the vertex stage
     const vertex: GPUVertexState = {
       module: cast<WebGPUShader>(this.props.vs).handle,
-      entryPoint: this.props.vsEntryPoint || 'main',
+      entryPoint: this.props.vertexEntryPoint || 'main',
       buffers: getVertexBufferLayout(this.props.shaderLayout, this.props.bufferLayout)
     };
 
@@ -145,7 +145,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     if (this.props.fs) {
       fragment = {
         module: cast<WebGPUShader>(this.props.fs).handle,
-        entryPoint: this.props.fsEntryPoint || 'main',
+        entryPoint: this.props.fragmentEntryPoint || 'main',
         targets: [
           {
             // TODO exclamation mark hack!

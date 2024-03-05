@@ -26,7 +26,7 @@ export type AssembleShaderProps = Omit<AssembleShaderOptions, 'vs' | 'fs'> & {
  */
 export function selectShaders(props: AssembleShaderProps): AssembleShaderOptions {
   // If we have a source field, we have a single unified shader source
-  if (props.source) {
+  if (props.source && props.platformInfo.type === 'webgpu') {
     const propsCopy: AssembleShaderOptions = {...props, vs: undefined, fs: undefined};
     return propsCopy;
   }

@@ -80,10 +80,10 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 | ---------------- | -------------------------- | ------- | -------- | ------------------------------------------------------------------------ |
 | Shader           |
 | `vs?`            | `Shader`                   | `null`  | No       | Compiled vertex shader                                                   |
-| `vsEntryPoint?`  | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                |
+| `vertexEntryPoint?`  | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                |
 | `vsConstants?`   | `Record<string, number>`   |         | No       | Constants to apply to compiled vertex shader (WGSL only)                 |
 | `fs?`            | `Shader`                   | `null`  | No       | Compiled fragment shader                                                 |
-| `fsEntryPoint?`  | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only              |
+| `fragmentEntryPoint?`  | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only              |
 | `fsConstants?`   | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)               |
 | ShaderLayout     |
 | `topology?`      | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes            |

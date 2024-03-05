@@ -103,15 +103,15 @@ export class PipelineFactory {
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     switch (this.device.info.type) {
-      case 'webgpu':
+      // case 'webgl':
+      // WebGL is more dynamic
+      // return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
+      default:
         // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
         // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
         // create a deepHash() to deduplicate?
         return `${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}`;
-      default:
-        // WebGL is more dynamic
-        return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
     }
   }
 

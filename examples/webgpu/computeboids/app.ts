@@ -35,9 +35,9 @@ export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl')
   const model = new Model(device, {
     id: 'computeboids',
     vs: spriteShaderModule,
-    vsEntryPoint: 'vert_main',
+    vertexEntryPoint: 'vert_main',
     fs: spriteShaderModule,
-    fsEntryPoint: 'frag_main',
+    fragmentEntryPoint: 'frag_main',
     shaderLayout: {
       attributes: [
         {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
