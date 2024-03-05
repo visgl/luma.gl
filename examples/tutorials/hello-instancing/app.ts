@@ -88,5 +88,6 @@ void main() {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.draw(renderPass);
     renderPass.end();
+    debugger
   }
 }

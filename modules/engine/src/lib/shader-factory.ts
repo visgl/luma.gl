@@ -40,10 +40,12 @@ export class ShaderFactory {
   release(shader: Shader): void {
     const key = this._hashShader(shader);
     const cacheEntry = this._cache[key];
-    cacheEntry.useCount--;
-    if (cacheEntry.useCount === 0) {
-      delete this._cache[key];
-      cacheEntry.shader.destroy();
+    if (cacheEntry) {
+      cacheEntry.useCount--;
+      if (cacheEntry.useCount === 0) {
+        delete this._cache[key];
+        cacheEntry.shader.destroy();
+      }
     }
   }
 

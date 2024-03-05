@@ -145,19 +145,16 @@ export class WebGPURenderPipeline extends RenderPipeline {
     };
 
     // Set up the fragment stage
-    let fragment: GPUFragmentState | undefined;
-    if (this.props.fs) {
-      fragment = {
-        module: cast<WebGPUShader>(this.props.fs).handle,
-        entryPoint: this.props.fragmentEntryPoint || 'main',
-        targets: [
-          {
-            // TODO exclamation mark hack!
-            format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
-          }
-        ]
-      };
-    }
+    const fragment: GPUFragmentState = {
+      module: cast<WebGPUShader>(this.props.fs).handle,
+      entryPoint: this.props.fragmentEntryPoint || 'main',
+      targets: [
+        {
+          // TODO exclamation mark hack!
+          format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
+        }
+      ]
+    };
 
     // WebGPU has more restrictive topology support than WebGL
     switch (this.props.topology) {

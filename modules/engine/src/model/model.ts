@@ -624,14 +624,17 @@ export class Model {
         debug: this.props.debugShaders
       });
 
-      const fs = this.fs
-        ? this.shaderFactory.createShader({
-            id: `${this.id}-fragment`,
-            stage: 'fragment',
-            source: this.source || this.fs,
-            debug: this.props.debugShaders
-          })
-        : null;
+      let fs: Shader | null = null;
+      if (this.source) {
+        fs = vs;
+      } else if (this.fs) {
+        fs = this.shaderFactory.createShader({
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.source || this.fs,
+          debug: this.props.debugShaders
+        });
+      }
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
         ...this.props,
