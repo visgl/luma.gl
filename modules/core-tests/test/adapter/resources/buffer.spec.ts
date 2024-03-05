@@ -14,15 +14,15 @@ test('Buffer#constructor/delete', async t => {
   for (const device of await getTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
     // @ts-ignore handle
-    t.ok(buffer.handle, `${device.info.type} Buffer construction successful`);
+    t.ok(buffer.handle, `${device.type} Buffer construction successful`);
 
     buffer.destroy();
     // @ts-ignore handle
-    t.ok(!buffer.handle, `${device.info.type} Buffer.destroy() successful`);
+    t.ok(!buffer.handle, `${device.type} Buffer.destroy() successful`);
 
     buffer.destroy();
     // @ts-ignore handle
-    t.ok(!buffer.handle, `${device.info.type} repeated Buffer.destroy() successful`);
+    t.ok(!buffer.handle, `${device.type} repeated Buffer.destroy() successful`);
   }
   t.end();
 });
@@ -31,7 +31,7 @@ test('Buffer#constructor offset and size', async t => {
   const data = new Float32Array([1, 2, 3]);
 
   for (const device of await getTestDevices()) {
-    if (device.info.type === 'webgpu') {
+    if (device.type === 'webgpu') {
       continue;
     }
     let buffer = device.createBuffer({data, byteOffset: 8});
@@ -39,14 +39,14 @@ test('Buffer#constructor offset and size', async t => {
     t.equal(
       buffer.byteLength,
       expectedData.byteLength,
-      `${device.info.type} Buffer byteLength set properly`
+      `${device.type} Buffer byteLength set properly`
     );
 
     let receivedData = await buffer.readAsync();
     t.deepEqual(
       new Float32Array(receivedData.buffer),
       expectedData,
-      `${device.info.type} Buffer constructor offsets data`
+      `${device.type} Buffer constructor offsets data`
     );
 
     buffer = device.createBuffer({data, byteLength: data.byteLength + 12});
@@ -54,14 +54,14 @@ test('Buffer#constructor offset and size', async t => {
     t.equal(
       buffer.byteLength,
       expectedData.byteLength,
-      `${device.info.type} Buffer byteLength set properly`
+      `${device.type} Buffer byteLength set properly`
     );
 
     receivedData = await buffer.readAsync();
     t.deepEqual(
       new Float32Array(receivedData.buffer),
       expectedData,
-      `${device.info.type} Buffer constructor sets buffer data`
+      `${device.type} Buffer constructor sets buffer data`
     );
 
     buffer = device.createBuffer({data, byteOffset: 8, byteLength: data.byteLength + 12});
@@ -69,14 +69,14 @@ test('Buffer#constructor offset and size', async t => {
     t.equal(
       buffer.byteLength,
       expectedData.byteLength,
-      `${device.info.type} Buffer byteLength set properly`
+      `${device.type} Buffer byteLength set properly`
     );
 
     receivedData = await buffer.readAsync();
     t.deepEqual(
       new Float32Array(receivedData.buffer),
       expectedData,
-      `${device.info.type} Buffer constructor sets buffer byteLength and offsets data`
+      `${device.type} Buffer constructor sets buffer byteLength and offsets data`
     );
   }
   t.end();
@@ -87,7 +87,7 @@ test('Buffer#bind/unbind', async t => {
   for (const device of await getTestDevices()) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
     device.gl.bindBuffer(buffer.glTarget, buffer.handle);
-    t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind successful`);
+    t.ok(buffer instanceof Buffer, `${device.type} Buffer bind/unbind successful`);
     device.gl.bindBuffer(buffer.glTarget, null);
     buffer.destroy();
   }
@@ -98,7 +98,7 @@ test('Buffer#bind/unbind', async t => {
 test('Buffer#write', async t => {
   const expectedData = new Float32Array([1, 2, 3]);
   for (const device of await getTestDevices()) {
-    if (device.info.type === 'webgpu') {
+    if (device.type === 'webgpu') {
       continue;
     }
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 12});
@@ -107,20 +107,20 @@ test('Buffer#write', async t => {
     t.deepEqual(
       new Float32Array(receivedData.buffer),
       expectedData,
-      `${device.info.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
+      `${device.type} Buffer.subData(ARRAY_BUFFER) stores correct bytes`
     );
     buffer.destroy();
 
     // TODO - this seems to be testing that usage is correctly observed, move up
     // buffer = device.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
     // buffer.write(new Float32Array([1, 2, 3]));
-    // t.ok(buffer instanceof Buffer, `${device.info.type} Buffer.subData(ARRAY_BUFFER) successful`);
+    // t.ok(buffer instanceof Buffer, `${device.type} Buffer.subData(ARRAY_BUFFER) successful`);
     // buffer.destroy();
 
     // buffer = device.createBuffer({usage: Buffer.INDEX}).write(new Float32Array([1, 2, 3]));
     // t.ok(
     //   buffer instanceof Buffer,
-    //   `${device.info.type} buffer.initialize(ELEMENT_ARRAY_BUFFER) successful`
+    //   `${device.type} buffer.initialize(ELEMENT_ARRAY_BUFFER) successful`
     // );
     // buffer.destroy();
   }
@@ -129,7 +129,7 @@ test('Buffer#write', async t => {
 
 test('Buffer#readAsync', async t => {
   for (const device of await getTestDevices()) {
-    if (device.info.type === 'webgpu') {
+    if (device.type === 'webgpu') {
       continue;
     }
     let data: TypedArray = new Float32Array([1, 2, 3]);
@@ -177,7 +177,7 @@ test('Buffer#readAsync', async t => {
 
 test('Buffer#debugData', async t => {
   for (const device of await getTestDevices()) {
-    if (device.info.type === 'webgpu') {
+    if (device.type === 'webgpu') {
       continue;
     }
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 24});

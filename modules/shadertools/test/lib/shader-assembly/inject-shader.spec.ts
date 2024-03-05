@@ -11,7 +11,7 @@ import {
 
 function getInfo(device: Device): PlatformInfo {
   return {
-    type: device.info.type,
+    type: device.type,
     gpu: device.info.gpu,
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,

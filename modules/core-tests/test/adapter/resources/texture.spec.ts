@@ -23,13 +23,13 @@ test('Device#isTextureFormatSupported()', async t => {
 
   for (const device of await getTestDevices()) {
     const unSupportedFormats = [];
-    FORMATS[device.info.type].forEach(format => {
+    FORMATS[device.type].forEach(format => {
       if (!device.isTextureFormatSupported(format)) {
         unSupportedFormats.push(format);
       }
     });
 
-    t.deepEqual(unSupportedFormats, [], `All ${device.info.type} formats are supported`);
+    t.deepEqual(unSupportedFormats, [], `All ${device.type} formats are supported`);
   }
 
   t.end();
@@ -51,10 +51,10 @@ test('Texture#depth/stencil formats', async t => {
   const DEPTH_STENCIL_FORMATS = ['depth16unorm', 'depth24plus', 'depth24plus-stencil8'];
   for (const device of await getTestDevices()) {
     for (const format of DEPTH_STENCIL_FORMATS) {
-      t.ok(device.isTextureFormatSupported(format), `${device.info.type} ${format} is supported`);
+      t.ok(device.isTextureFormatSupported(format), `${device.type} ${format} is supported`);
       t.notOk(
         device.isTextureFormatFilterable(format),
-        `${device.info.type} ${format} is not filterable`
+        `${device.type} ${format} is not filterable`
       );
       const texture = device.createTexture({format});
       t.ok(texture instanceof Texture, `Texture ${format} construction successful`);
@@ -129,7 +129,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
         t.comment(`Texture(${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${format}) not supported in ${device.info.type}`);
+      t.comment(`Texture(${format}) not supported in ${device.type}`);
     }
   }
 }

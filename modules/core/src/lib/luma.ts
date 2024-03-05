@@ -12,6 +12,11 @@ import {assert} from '../utils/assert';
 
 const deviceList = new Map<string, typeof Device>();
 
+export type CreateDeviceProps = DeviceProps & {
+  /** Select type of device */
+  type?: 'webgl' | 'webgpu' | 'best-available';
+};
+
 /**
  * Entry point to the luma.gl GPU abstraction
  * Register WebGPU and/or WebGL devices (controls application bundle size)
@@ -46,12 +51,12 @@ export class luma {
     );
   }
 
-  static setDefaultDeviceProps(props: DeviceProps): void {
+  static setDefaultDeviceProps(props: CreateDeviceProps): void {
     Object.assign(Device.defaultProps, props);
   }
 
   /** Creates a device. Asynchronously. */
-  static async createDevice(props: DeviceProps = {}): Promise<Device> {
+  static async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
     props = {...Device.defaultProps, ...props};
     if (props.gl) {
       props.type = 'webgl';

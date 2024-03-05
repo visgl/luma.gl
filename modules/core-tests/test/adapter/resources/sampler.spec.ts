@@ -82,7 +82,7 @@ function testSampler(t: Test, device: Device): void {
       const sampler = device.createSampler({[parameter]: value});
       t.ok(
         sampler instanceof Sampler,
-        `${device.info.type} new Sampler({${pname}: ${valueString}}) constructed.`
+        `${device.type} new Sampler({${pname}: ${valueString}}) constructed.`
       );
       sampler.destroy();
     }

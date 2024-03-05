@@ -193,8 +193,6 @@ type WebGLCompressedTextureFeatures =
 export type DeviceProps = {
   id?: string;
 
-  type?: 'webgl' | 'webgpu' | 'best-available';
-
   // Common parameters
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
   container?: HTMLElement | string | null;
@@ -233,7 +231,6 @@ export type DeviceProps = {
 export abstract class Device {
   static defaultProps: Required<DeviceProps> = {
     id: null!,
-    type: 'best-available',
     canvas: null,
     container: null,
     manageState: true,
@@ -272,12 +269,15 @@ export abstract class Device {
 
   /** id of this device, primarily for debugging */
   readonly id: string;
-  /** stats */
-  readonly statsManager: StatsManager = lumaStats;
+  /** type of this device */
+  abstract readonly type: 'webgl' | 'webgpu';
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */
   userData: {[key: string]: unknown} = {};
+  /** stats */
+  readonly statsManager: StatsManager = lumaStats;
+
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
@@ -287,10 +287,8 @@ export abstract class Device {
 
   /** Information about the device (vendor, versions etc) */
   abstract info: DeviceInfo;
-
   /** Optional capability discovery */
   abstract features: DeviceFeatures;
-
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 

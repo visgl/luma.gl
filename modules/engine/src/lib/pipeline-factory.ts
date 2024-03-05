@@ -102,7 +102,7 @@ export class PipelineFactory {
     const varyingHash = '-'; // `${varyingHashes.join('/')}B${bufferMode}`
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
-    switch (this.device.info.type) {
+    switch (this.device.type) {
       // case 'webgl':
       // WebGL is more dynamic
       // return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;

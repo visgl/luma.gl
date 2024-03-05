@@ -196,7 +196,7 @@ export class Model {
     const modules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
-    const isWebGPU = this.device.info.type === 'webgpu';
+    const isWebGPU = this.device.type === 'webgpu';
 
     // WebGPU
     // TODO - hack to support unified WGSL shader
@@ -768,7 +768,7 @@ function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]):
 /** Create a shadertools platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
-    type: device.info.type,
+    type: device.type,
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,

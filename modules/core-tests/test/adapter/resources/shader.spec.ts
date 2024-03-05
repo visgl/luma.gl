@@ -19,7 +19,7 @@ test.skip('Shader', async t => {
   for (const device of await getTestDevices()) {
     t.throws(
       () => device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE}),
-      `${device.info.type} device.createShader throws on bad shader source`
+      `${device.type} device.createShader throws on bad shader source`
     );
   }
 });
