@@ -11,7 +11,7 @@ import {webglDevice as device} from '@luma.gl/test-utils';
 test('WEBGLBuffer#bind/unbind with index', t => {
   const buffer = device.createBuffer({usage: Buffer.UNIFORM});
   device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
-  t.ok(buffer instanceof Buffer, `${device.info.type} Buffer bind/unbind with index successful`);
+  t.ok(buffer instanceof Buffer, `${device.type} Buffer bind/unbind with index successful`);
   device.gl.bindBufferBase(buffer.glTarget, 0, null);
 
   buffer.destroy();
@@ -30,7 +30,7 @@ test('WEBGLBuffer#write', async t => {
   t.deepEqual(
     await readAsyncF32(buffer),
     initialData,
-    `${device.info.type} Device.createBuffer(ARRAY_BUFFER) successful`
+    `${device.type} Device.createBuffer(ARRAY_BUFFER) successful`
   );
 
   buffer.write(updateData);
@@ -38,7 +38,7 @@ test('WEBGLBuffer#write', async t => {
   t.deepEquals(
     await readAsyncF32(buffer),
     updateData,
-    `${device.info.type} Buffer.write(ARRAY_BUFFER) successful`
+    `${device.type} Buffer.write(ARRAY_BUFFER) successful`
   );
 
   buffer.destroy();
@@ -47,7 +47,7 @@ test('WEBGLBuffer#write', async t => {
   t.deepEqual(
     await readAsyncF32(buffer),
     initialData,
-    `${device.info.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
+    `${device.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
   );
 
   buffer.write(updateData);
@@ -55,7 +55,7 @@ test('WEBGLBuffer#write', async t => {
   t.deepEqual(
     await readAsyncF32(buffer),
     updateData,
-    `${device.info.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
+    `${device.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
   );
 
   buffer.destroy();

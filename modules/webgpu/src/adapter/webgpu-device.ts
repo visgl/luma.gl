@@ -51,6 +51,9 @@ import {WebGPUQuerySet} from './resources/webgpu-query-set';
 export class WebGPUDevice extends Device {
   static type: string = 'webgpu';
 
+  /** type of this device */
+  readonly type = 'webgpu';
+
   /** The underlying WebGPU device */
   readonly handle: GPUDevice;
   /* The underlying WebGPU adapter */

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderAttributeType, ShaderLayout} from '@luma.gl/core';
+import {ShaderAttributeType, ShaderLayout, log} from '@luma.gl/core';
 import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
 
 /**
@@ -13,7 +13,13 @@ import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
 export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   const shaderLayout: ShaderLayout = {attributes: [], bindings: []};
 
-  const parsedWGSL = parseWGSL(source);
+  let parsedWGSL: WgslReflect;
+  try {
+    parsedWGSL = parseWGSL(source);
+  } catch (error: any) {
+    log.error(error.message)();
+    return shaderLayout;
+  }
 
   for (const uniform of parsedWGSL.uniforms) {
     const members = [];
@@ -37,7 +43,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   const vertex = parsedWGSL.entry.vertex[0]; // "main"
 
   // Vertex shader inputs
-  const attributeCount = vertex.inputs.length; // inputs to "main"
+  const attributeCount = vertex?.inputs.length || 0; // inputs to "main"
   for (let i = 0; i < attributeCount; i++) {
     const wgslAttribute = vertex.inputs[i];
 

@@ -44,7 +44,7 @@ export let webgpuDevice: WebGPUDevice;
 let devicesCreated = false;
 
 /** Includes WebGPU device if available */
-export async function getTestDevices(): Promise<Device[]> {
+export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[]> {
   if (!devicesCreated) {
     devicesCreated = true;
     try {
@@ -65,5 +65,7 @@ export async function getTestDevices(): Promise<Device[]> {
     }
   }
 
-  return [webglDeviceAsync, webgpuDevice].filter(Boolean);
+  return [webglDeviceAsync, webgpuDevice]
+    .filter(Boolean)
+    .filter(device => !type || type === device.type);
 }

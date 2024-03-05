@@ -31,6 +31,48 @@ const sphere: {uniformTypes: Record<keyof SphereUniforms, ShaderUniformType>} = 
   }
 };
 
+const SPHERE_WGSL = /* WGSL */ `\
+#version 300 es
+
+struct VertexInputs {
+  positions: vec3<f32>;
+  normals: vec3<f32>;
+}
+
+struct FragmentInputs {
+  @builtin(position) position: vec4<f32>;
+  normal: vec3<f32>;
+}
+
+uniform sphereUniforms {
+  // fragment shader
+  color: vec3<f32>;
+  lighting: bool;
+  // vertex shader
+  modelViewMatrix: mat4<f32>;
+  projectionMatrix: mat4<f32>;
+} sphere;
+
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  const outputs: VertexOutputs;
+  gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
+  outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)));
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> [[location(0)]] vec4<f32> {
+  let attenuation = 1.0;
+  if (sphere.lighting) {
+    light = normalize(vec3(1,1,2));
+    attenuation = dot(normal, light);
+  }
+  return vec4(sphere.color * attenuation, 1);
+}
+`;
+
 const SPHERE_VS = glsl`\
 #version 300 es
 
@@ -93,6 +135,48 @@ const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUniformT
   }
 };
 
+const SCREEN_QUAD_MODULE_WGSL = /* WGSL */ `\
+fn getQuadVertex(vertexIndex : u32) -> vec2f {
+  // SCREEN QUAD
+  let positions = array(
+    // 1st triangle
+    vec2f( 0.0,  0.0),  // center
+    vec2f( 1.0,  0.0),  // right, center
+    vec2f( 0.0,  1.0),  // center, top
+    // 2st triangle
+    vec2f( 0.0,  1.0),  // center, top
+    vec2f( 1.0,  0.0),  // right, center
+    vec2f( 1.0,  1.0),  // right, top
+  );
+  return positions[vertexIndex];
+}
+`;
+
+const SCREEN_QUAD_WGSL = /* WGSL */ `\
+
+${SCREEN_QUAD_MODULE_WGSL}
+
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) texcoord: vec2f,
+};
+
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  let xy = getQuadVertex(vertexIndex);
+  outputs.position = vec4f(xy, 0.0, 1.0);
+  outputs.texcoord = xy;
+  return outputs;
+}
+
+@group(0) @binding(0) var texture : texture_2d<f32>;
+@group(0) @binding(1) var sampler : sampler;
+
+@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  return textureSample(texture, sampler, inputs.texcoord);
+}
+`;
+
 const SCREEN_QUAD_VS = glsl`\
 #version 300 es
 
@@ -133,6 +217,35 @@ const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, ShaderUni
     resolution: 'vec2<f32>'
   }
 };
+
+const PERSISTENCE_WGSL = /* WGSL */ `\
+
+${SCREEN_QUAD_MODULE_WGSL}
+
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) texcoord: vec2f,
+};
+
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  let xy = getQuadVertex(vertexIndex);
+  outputs.position = vec4f(xy, 0.0, 1.0);
+  outputs.texcoord = xy;
+  return outputs;
+}
+
+@group(0) @binding(0) var sceneTexture : texture_2d<f32>;
+@group(0) @binding(1) var persistenceTexture : texture_2d<f32>;
+@group(0) @binding(2) var sampler : sampler;
+
+@fragment 
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  let sceneColor = textureSample(sceneTexture, sampler, inputs.texcoord);
+  let persistenceColor = textureSample(persistenceTexture, sampler, inputs.texcoord);
+  return mix(sceneColor * 4.0, persistenceColor, 0.9);
+}
+`;
 
 const PERSISTENCE_FS = glsl`\
 #version 300 es
@@ -194,6 +307,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.electron = new Model(device, {
       id: 'electron',
+      source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
@@ -209,6 +323,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.nucleon = new Model(device, {
       id: 'nucleon',
+      source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
       geometry: new SphereGeometry({nlat: 20, nlong: 30}),
@@ -259,6 +374,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.screenQuad = new Model(device, {
       id: 'quad',
+      source: SCREEN_QUAD_WGSL,
       vs: SCREEN_QUAD_VS,
       fs: SCREEN_QUAD_FS,
       geometry: quadGeometry,
@@ -274,6 +390,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.persistenceQuad = new Model(device, {
       id: 'persistence-quad',
+      source: PERSISTENCE_WGSL,
       vs: SCREEN_QUAD_VS,
       fs: PERSISTENCE_FS,
       geometry: quadGeometry,

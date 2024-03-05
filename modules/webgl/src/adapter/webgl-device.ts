@@ -84,11 +84,11 @@ export class WebGLDevice extends Device {
   // Public `Device` API
   //
 
-  static type: string = 'webgl';
+  /** type of this device */
+  static readonly type: string = 'webgl';
 
-  static isSupported(): boolean {
-    return typeof WebGL2RenderingContext !== 'undefined';
-  }
+  /** type of this device */
+  readonly type = 'webgl';
 
   /** The underlying WebGL context */
   readonly handle: WebGL2RenderingContext;
@@ -105,6 +105,11 @@ export class WebGLDevice extends Device {
   //
   // Static methods, expected to be present by `luma.createDevice()`
   //
+
+  /** Check if WebGL 2 is available */
+  static isSupported(): boolean {
+    return typeof WebGL2RenderingContext !== 'undefined';
+  }
 
   /**
    * Get a device instance from a GL context
@@ -168,7 +173,7 @@ export class WebGLDevice extends Device {
 
     // Log some debug info about the newly created context
     const message = `\
-Created ${device.info.type}${device.debug ? ' debug' : ''} context: \
+Created ${device.type}${device.debug ? ' debug' : ''} context: \
 ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContext.id}`;
     log.probe(LOG_LEVEL, message)();
     log.table(LOG_LEVEL, device.info)();

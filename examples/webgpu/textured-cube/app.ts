@@ -11,9 +11,7 @@ export const description = 'Shows rendering a basic triangle.';
 const TEXTURE_URL =
   'https://raw.githubusercontent.com/uber/luma.gl/8.5-release/examples/getting-started/hello-cube/vis-logo.png';
 
-// GLSL
-
-const VS_WGSL = /* WGSL */ `
+const SHADER_WGSL = /* WGSL */ `
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
@@ -26,7 +24,7 @@ struct VertexOutput {
 };
 
 @vertex
-fn main(
+fn vertedMain(
   @location(0) positions : vec4<f32>,
   @location(1) texCoords : vec2<f32>) -> VertexOutput 
 {
@@ -36,14 +34,12 @@ fn main(
   output.fragPosition = 0.5 * (positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return output;
 }
-`;
 
-const FS_WGSL = /* WGSL */ `
 @group(0) @binding(1) var uSampler: sampler;
 @group(0) @binding(2) var uTexture: texture_2d<f32>;
 
 @fragment
-fn main(@location(0) fragUV: vec2<f32>,
+fn fragmentMain(@location(0) fragUV: vec2<f32>,
         @location(1) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
   let flippedUV = vec2<f32>(1.0 - fragUV.x, fragUV.y);
   return textureSample(uTexture, uSampler, flippedUV) * fragPosition;
@@ -122,8 +118,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.model = new Model(device, {
       id: 'cube',
-      vs: {wgsl: VS_WGSL, glsl: VS_GLSL},
-      fs: {wgsl: FS_WGSL, glsl: FS_GLSL},
+      source: SHADER_WGSL,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
       geometry: new CubeGeometry({indices: false}),
       bindings: {
         app: this.uniformBuffer,

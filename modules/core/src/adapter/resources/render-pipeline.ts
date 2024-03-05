@@ -19,15 +19,15 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Compiled vertex shader */
   vs?: Shader | null;
-  /** Vertex shader entry point (defaults to 'main'). WGSL only */
+  /** Name of vertex shader stage main function (defaults to 'main'). WGSL only */
   vertexEntryPoint?: string; //
-  /** Constants to apply to compiled vertex shader (WGSL only) */
+  /** Constant values to apply to compiled vertex shader. Do not require re-compilation. (WGSL only) */
   vsConstants?: Record<string, number>; // WGSL only
   /** Compiled fragment shader */
   fs?: Shader | null;
-  /** Fragment shader entry point (defaults to 'main'). WGSL only */
+  /** Name of fragment shader stage main function (defaults to 'main'). WGSL only */
   fragmentEntryPoint?: string; // WGSL only
-  /** Constants to apply to compiled fragment shader (WGSL only) */
+  /** Constant values to apply to compiled fragment shader. Do not require re-compilation. (WGSL only) */
   fsConstants?: Record<string, number>;
 
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
@@ -65,11 +65,11 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     ...Resource.defaultProps,
 
     vs: null,
-    vertexEntryPoint: '', // main
+    vertexEntryPoint: 'vertexMain',
     vsConstants: {},
 
     fs: null,
-    fragmentEntryPoint: '', // main
+    fragmentEntryPoint: 'fragmentMain',
     fsConstants: {},
 
     shaderLayout: null,

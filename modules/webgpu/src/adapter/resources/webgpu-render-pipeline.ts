@@ -112,6 +112,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Return a bind group created by setBindings */
   _getBindGroup() {
+    if (this.props.shaderLayout.bindings.length === 0) {
+      return null;
+    }
+
     // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
@@ -141,19 +145,16 @@ export class WebGPURenderPipeline extends RenderPipeline {
     };
 
     // Set up the fragment stage
-    let fragment: GPUFragmentState | undefined;
-    if (this.props.fs) {
-      fragment = {
-        module: cast<WebGPUShader>(this.props.fs).handle,
-        entryPoint: this.props.fragmentEntryPoint || 'main',
-        targets: [
-          {
-            // TODO exclamation mark hack!
-            format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
-          }
-        ]
-      };
-    }
+    const fragment: GPUFragmentState = {
+      module: cast<WebGPUShader>(this.props.fs).handle,
+      entryPoint: this.props.fragmentEntryPoint || 'main',
+      targets: [
+        {
+          // TODO exclamation mark hack!
+          format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
+        }
+      ]
+    };
 
     // WebGPU has more restrictive topology support than WebGL
     switch (this.props.topology) {

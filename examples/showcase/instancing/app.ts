@@ -20,25 +20,27 @@ const random = makeRandomNumberGenerator();
 
 // WGSL
 
-// const VS_WGSL = /* WGSL */`\
-// void dirlight_setNormal(normal: vec3<f32>) {
-//   dirlight_vNormal = normalize(normal);
-// }
-// `;
+const DIRLIGHT_WGSL = /* WGSL */ `\
+// MODULE: dirlight
 
-// const FS_WGSL = /* WGSL */`\
-// uniform dirlightUniforms {
-//   vec3 lightDirection;
-// } dirlight;
+struct DirlightUniforms {
+  lightDirection: vec3<f32>,
+}
 
-// // Returns color attenuated by angle from light source
-// fn dirlight_filterColor(color: vec4<f32>, dirlightInputs): vec4<f32> {
-//   const d: float = abs(dot(dirlight_vNormal, normalize(dirlight.lightDirection)));
-//   return vec4<f32>(color.rgb * d, color.a);
-// }
-// `;
+@group(0) @binding(1) var<uniform> dirlight : DirlightUniforms;
 
-const VS_WGSL = /* WGSL */ `\
+fn dirlight_filterColor(color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
+  let d: f32 = abs(dot(normal, normalize(dirlight.lightDirection)));
+  return vec4<f32>(color.rgb * d, color.a);
+}
+`;
+
+const WGSL_SHADER = /* WGSL */ `\
+
+${DIRLIGHT_WGSL}
+
+// APPLICATION
+
 struct AppUniforms {
   modelMatrix: mat4x4<f32>,
   viewMatrix: mat4x4<f32>,
@@ -46,7 +48,7 @@ struct AppUniforms {
   time: f32,
 };
 
-@binding(0) @group(0) var<uniform> app : AppUniforms;
+@group(0) @binding(0) var<uniform> app : AppUniforms;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -60,51 +62,33 @@ struct VertexInputs {
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
-  @location(0) normal: vec3<f32>,
+  @location(0) normal : vec3<f32>,
   @location(1) color : vec4<f32>,
 }
 
 @vertex
-fn main(inputs: VertexInputs) -> FragmentInputs {
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs: FragmentInputs;
-
-  outputs.normal = (app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz;
-  outputs.color = inputs.instanceColors;
-
-  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  // picking_setPickingColor(pickColor.rgb);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   let delta = length(inputs.instanceOffsets);
   let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * inputs.positions + offset);
+  
+  outputs.normal = (app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.color = inputs.instanceColors;
+
+  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
+  // picking_setPickingColor(pickColor.rgb);
+  
   return outputs;
-}
-`;
-
-const FS_WGSL = /* WGSL */ `\
-
-struct DirlightUniforms {
-  lightDirection: vec3<f32>,
-}
-
-// @binding(1) @group(0) var<uniform> dirlight : DirlightUniforms;
-
-fn dirlight_filterColor(color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
-  const dirlight_lightDirection = vec3<f32>(1, 1, 2);
-  let d: f32 = abs(dot(normal, normalize(dirlight_lightDirection)));
-  return vec4<f32>(color.rgb * d, color.a);
-}
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) normal: vec3<f32>,
-  @location(1) color : vec4<f32>,
 }
 
 @fragment
-fn main(inputs: FragmentInputs) -> @location(0) vec4<f32> { 
-  return dirlight_filterColor(inputs.color, inputs.normal); 
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  var color = inputs.color; 
+  color = dirlight_filterColor(color, inputs.normal); 
+  return color;
 }
 `;
 
@@ -199,9 +183,10 @@ class InstancedCube extends Model {
     // Model
     super(device, {
       ...props,
-      vs: {wgsl: VS_WGSL, glsl: VS_GLSL},
-      fs: {wgsl: FS_WGSL, glsl: FS_GLSL},
-      modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [],
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
+      modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [dirlight],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry({indices: true}),
       bufferLayout: [

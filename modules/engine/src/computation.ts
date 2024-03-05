@@ -102,7 +102,7 @@ export class Computation {
   private _destroyed = false;
 
   constructor(device: Device, props: ComputationProps) {
-    if (device.info.type !== 'webgpu') {
+    if (device.type !== 'webgpu') {
       throw new Error('Computation is only supported in WebGPU');
     }
 
@@ -336,7 +336,7 @@ export class Computation {
 /** Create a shadertools platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
-    type: device.info.type,
+    type: device.type,
     shaderLanguage: device.info.shadingLanguage,
     shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
     gpu: device.info.gpu,
