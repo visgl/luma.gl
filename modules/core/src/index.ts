@@ -154,14 +154,14 @@ export {
 
 export {StatsManager} from './utils/stats-manager';
 export {log} from './utils/log';
-export {uid, isObjectEmpty} from './utils/utils';
 export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
-export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
+export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
-export {deepEqual} from './utils/deep-equal';
 
-// SHADER HELPERS../../engine/src/animation-loop/request-animation-frame
+export {uid} from './utils/uid';
+export {isObjectEmpty} from './utils/is-object-empty';
+// export {deepEqual} from './utils/deep-equal';
 
 /**
  * Marks GLSL shaders for syntax highlighting: glsl`...`
