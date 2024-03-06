@@ -256,8 +256,11 @@ export abstract class Device {
     spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
     break: [],
 
-    initalizeFeatures: false,
-    disabledFeatures: {},
+    // TODO - Change these after confirming things work as expected
+    initalizeFeatures: true,
+    disabledFeatures: {
+      'compilation-status-async-webgl': true
+    },
 
     // alpha: undefined,
     // depth: undefined,
