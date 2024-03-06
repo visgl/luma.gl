@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer, VertexArrayProps, TypedArray, NumberArray} from '@luma.gl/core';
-import {VertexArray, getScratchArray, fillArray} from '@luma.gl/core';
+import {VertexArray, getScratchArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
 
@@ -11,6 +11,8 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
 import {getGLFromVertexType} from '../converters/vertex-formats';
+import {fillArray} from '../../utils/fill-array';
+
 // import {AccessorObject} from '../..';
 // import {getGLFromVertexType} from '../converters/vertex-formats';
 
