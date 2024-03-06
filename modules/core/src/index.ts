@@ -13,7 +13,7 @@ export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray
 export {isTypedArray, isNumberArray} from './utils/is-array';
 
 // MAIN API ACCESS POINTS
-export {luma} from './lib/luma';
+export {luma} from './portable/luma';
 
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
@@ -111,9 +111,9 @@ export type {
 } from './adapter/types/shader-layout';
 
 export type {UniformValue} from './adapter/types/types';
-export {UniformBufferLayout} from './lib/uniforms/uniform-buffer-layout';
-export {UniformBlock} from './lib/uniforms/uniform-block';
-export {UniformStore} from './lib/uniforms/uniform-store';
+export {UniformBufferLayout} from './portable/uniforms/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniforms/uniform-block';
+export {UniformStore} from './portable/uniforms/uniform-store';
 
 // TYPE UTILS
 // MEMORY LAYOUT TYPES
@@ -140,8 +140,8 @@ export {decodeShaderUniformType} from './type-utils/decode-shader-types';
 export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 
 // COMPILER LOG
-export type {CompilerMessage} from './lib/compiler-log/compiler-message';
-export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
+export type {CompilerMessage} from './portable/compiler-log/compiler-message';
+export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
 
 //
 export type {AttributeInfo} from './adapter/attribute-utils/get-attribute-from-layouts';
@@ -155,7 +155,7 @@ export {
 export {StatsManager} from './utils/stats-manager';
 export {log} from './utils/log';
 export {uid, isObjectEmpty} from './utils/utils';
-export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
+export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
 export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
