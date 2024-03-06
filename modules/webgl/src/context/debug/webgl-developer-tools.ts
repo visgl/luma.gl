@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log, loadScript} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
 import {GL as GLEnum} from '@luma.gl/constants';
 import {isBrowser} from '@probe.gl/env';
+import {loadScript} from '../../utils/load-script';
 
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 

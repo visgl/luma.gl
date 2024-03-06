@@ -17,6 +17,7 @@ export {luma} from './portable/luma';
 
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
+
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 
@@ -148,10 +149,9 @@ export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
 export {StatsManager} from './utils/stats-manager';
 export {log} from './utils/log';
 export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
-export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
+export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
-export {deepEqual} from './utils/deep-equal';
 
 /**
  * Marks GLSL shaders for syntax highlighting: glsl`...`
@@ -161,7 +161,8 @@ export const glsl = (x: TemplateStringsArray) => `${x}`;
 
 // INTERNAL - for use in other luma.gl modules only
 
-export {uid, isObjectEmpty} from './utils/utils';
+export {uid} from './utils/uid';
+export {isObjectEmpty} from './utils/is-object-empty';
 
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {

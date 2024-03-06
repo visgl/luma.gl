@@ -5,7 +5,7 @@
 import {VERSION} from '../init';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
-import {uid} from '../utils/utils';
+import {uid} from '../utils/uid';
 import type {TextureFormat} from '../type-utils//texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
