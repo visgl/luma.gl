@@ -42,7 +42,7 @@ export class WebGPUTexture extends Texture {
     if (props.data instanceof Promise) {
       props.data.then(resolvedImageData => {
         // @ts-expect-error
-        this.props = {...props, data: resolvedImageData};
+        this.props = {...this.props, data: resolvedImageData};
         this.initialize(this.props);
       });
       return;

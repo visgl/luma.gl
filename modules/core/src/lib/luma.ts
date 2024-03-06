@@ -23,7 +23,10 @@ export type CreateDeviceProps = DeviceProps & {
  * Run-time selection of the first available Device
  */
 export class luma {
-  static defaultProps: Required<CreateDeviceProps> = {...Device.defaultProps, type: 'best-available'};
+  static defaultProps: Required<CreateDeviceProps> = {
+    ...Device.defaultProps,
+    type: 'best-available'
+  };
 
   /** Global stats for all devices */
   static stats: StatsManager = lumaStats;

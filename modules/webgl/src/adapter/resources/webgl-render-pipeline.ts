@@ -209,10 +209,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     // (isInstanced && instanceCount === 0)
-    if (vertexCount === 0) {
-      log.info(2, `RenderPipeline:${this.id}.draw() aborted - no vertices to draw`)();
-      return true;
-    }
+    // if (vertexCount === 0) {
+    //   log.info(2, `RenderPipeline:${this.id}.draw() aborted - no vertices to draw`)();
+    //   return true;
+    // }
 
     this.device.gl.useProgram(this.handle);
 

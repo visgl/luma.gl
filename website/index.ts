@@ -20,7 +20,6 @@ export {
 
   HelloTriangleWebGPUExample,
   InstancedCubesWebGPUExample,
-  RotatingCubeWebGPUExample,
   TexturedCubeWebGPUExample,
   TwoCubesWebGPUExample
 } from './src/examples/templates';
