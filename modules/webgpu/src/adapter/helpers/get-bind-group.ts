@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ComputeShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
-import {Buffer, Sampler, Texture, log, cast} from '@luma.gl/core';
+import {Buffer, Sampler, Texture, log} from '@luma.gl/core';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
@@ -79,19 +79,19 @@ function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
     return {
       binding: index,
       resource: {
-        buffer: cast<WebGPUBuffer>(binding).handle
+        buffer: (binding as WebGPUBuffer).handle
       }
     };
   }
   if (binding instanceof Sampler) {
     return {
       binding: index,
-      resource: cast<WebGPUSampler>(binding).handle
+      resource: (binding as WebGPUSampler).handle
     };
   } else if (binding instanceof Texture) {
     return {
       binding: index,
-      resource: cast<WebGPUTexture>(binding).handle.createView({label: 'bind-group-auto-created'})
+      resource: (binding as WebGPUTexture).handle.createView({label: 'bind-group-auto-created'})
     };
   }
   throw new Error('invalid binding');

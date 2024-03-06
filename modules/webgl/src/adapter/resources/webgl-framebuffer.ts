@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
-import {Framebuffer, Texture, assert} from '@luma.gl/core';
+import {Framebuffer, Texture} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
@@ -199,7 +199,7 @@ export class WEBGLFramebuffer extends Framebuffer {
         break;
 
       default:
-        assert(false, 'Illegal texture type');
+        throw new Error('Illegal texture type');
     }
 
     gl.bindTexture(texture.target, null);

@@ -4,7 +4,7 @@
 
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
-import type {TextureFormat} from '../types/texture-formats';
+import type {TextureFormat} from '../../type-utils/texture-formats';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
 import {TextureView, TextureViewProps} from './texture-view';

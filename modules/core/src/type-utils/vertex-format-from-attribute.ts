@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray, TypedArrayConstructor} from '../..';
-import {VertexFormat} from '../types/vertex-formats';
+import {TypedArray, TypedArrayConstructor} from '../types';
+import {VertexFormat} from './vertex-formats';
 
 // import {DataType} from '../types/vertex-formats';
 // type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance

@@ -8,7 +8,7 @@ import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.g
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';
 import {RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
-import {log, uid, deepEqual, isObjectEmpty, splitUniformsAndBindings} from '@luma.gl/core';
+import {log, uid, isObjectEmpty, splitUniformsAndBindings} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -21,6 +21,7 @@ import {PipelineFactory} from '../lib/pipeline-factory';
 import {ShaderFactory} from '../lib/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
+import {deepEqual} from '../utils/deep-equal';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -422,6 +423,7 @@ export class Model {
     this.bufferLayout = this._gpuGeometry
       ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
+    this._setPipelineNeedsUpdate('bufferLayout');
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
@@ -436,8 +438,6 @@ export class Model {
     if (this._gpuGeometry) {
       this._setGeometryAttributes(this._gpuGeometry);
     }
-
-    this._setPipelineNeedsUpdate('bufferLayout');
   }
 
   /**

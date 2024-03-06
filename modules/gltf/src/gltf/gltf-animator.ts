@@ -1,4 +1,4 @@
-import {assert, log} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 import {Matrix4, Quaternion} from '@math.gl/core';
 
 // TODO: import from loaders.gl?
@@ -195,7 +195,7 @@ function interpolate(time, {input, interpolation, output}, target, path) {
     }
   }
 
-  assert(target[path].length === output[previousIndex].length);
+  // assert(target[path].length === output[previousIndex].length);
   const previousTime = input[previousIndex];
   const nextTime = input[nextIndex];
 

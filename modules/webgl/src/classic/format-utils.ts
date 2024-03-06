@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // Returns number of components in a specific readPixels WebGL format
@@ -23,7 +22,6 @@ export function glFormatToComponents(format) {
       return 4;
     // TODO: Add support for additional WebGL2 formats
     default:
-      assert(false);
       return 0;
   }
 }
@@ -41,7 +39,6 @@ export function glTypeToBytes(type) {
       return 4;
     // TODO: Add support for additional WebGL2 types
     default:
-      assert(false);
       return 0;
   }
 }

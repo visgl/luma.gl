@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log, loadScript} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
+import {loadScript} from '../../utils/load-script';
 
 /** Spector debug initialization options */
 type SpectorProps = {

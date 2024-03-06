@@ -8,7 +8,6 @@ import {Device} from '../adapter/device';
 import {StatsManager} from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
-import {assert} from '../utils/assert';
 
 const deviceList = new Map<string, typeof Device>();
 
@@ -36,7 +35,7 @@ export class luma {
 
   static registerDevices(deviceClasses: any[] /* : typeof Device */): void {
     for (const deviceClass of deviceClasses) {
-      assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
+      // assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
       deviceList.set(deviceClass.type, deviceClass);
     }
   }

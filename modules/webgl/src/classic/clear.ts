@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, Framebuffer, assert} from '@luma.gl/core';
+import {Device, Framebuffer} from '@luma.gl/core';
 import {WebGLDevice} from '../adapter/webgl-device';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 
@@ -15,9 +15,6 @@ const GL_COLOR = 0x1800;
 const GL_DEPTH = 0x1801;
 const GL_STENCIL = 0x1802;
 const GL_DEPTH_STENCIL = 0x84f9;
-
-// Should disappear if asserts are removed
-const ERR_ARGUMENTS = 'clear: bad arguments';
 
 /**
  * Optionally clears depth, color and stencil buffers
@@ -57,7 +54,7 @@ export function clear(
     }
   }
 
-  assert(clearFlags !== 0, ERR_ARGUMENTS);
+  // assert(clearFlags !== 0, ERR_ARGUMENTS);
 
   // Temporarily set any clear "colors" and call clear
   const gl = (device as WebGLDevice).gl;
@@ -112,7 +109,7 @@ export function clearBuffer(
         break;
 
       default:
-        assert(false, ERR_ARGUMENTS);
+      // assert(false, ERR_ARGUMENTS);
     }
   });
 }

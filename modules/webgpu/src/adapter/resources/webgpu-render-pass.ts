@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/core';
-import {Buffer, RenderPass, RenderPipeline, cast, log} from '@luma.gl/core';
+import {Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUTextureView} from './webgpu-texture-view';
@@ -54,7 +54,7 @@ export class WebGPURenderPass extends RenderPass {
   }
 
   setPipeline(pipeline: RenderPipeline): void {
-    this.pipeline = cast<WebGPURenderPipeline>(pipeline);
+    this.pipeline = pipeline as WebGPURenderPipeline;
     this.handle.setPipeline(this.pipeline.handle);
   }
 
@@ -73,11 +73,11 @@ export class WebGPURenderPass extends RenderPass {
     offset: number = 0,
     size?: number
   ): void {
-    this.handle.setIndexBuffer(cast<WebGPUBuffer>(buffer).handle, indexFormat, offset, size);
+    this.handle.setIndexBuffer((buffer as WebGPUBuffer).handle, indexFormat, offset, size);
   }
 
   setVertexBuffer(slot: number, buffer: Buffer, offset: number = 0): void {
-    this.handle.setVertexBuffer(slot, cast<WebGPUBuffer>(buffer).handle, offset);
+    this.handle.setVertexBuffer(slot, (buffer as WebGPUBuffer).handle, offset);
   }
 
   draw(options: {

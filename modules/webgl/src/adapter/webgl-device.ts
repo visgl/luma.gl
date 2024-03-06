@@ -14,7 +14,7 @@ import type {
   Texture,
   TypedArray
 } from '@luma.gl/core';
-import {Device, CanvasContext, log, uid, assert} from '@luma.gl/core';
+import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {
   popContextState,
@@ -529,7 +529,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
         setConstantUintArray(this, location, constant as Uint32Array);
         break;
       default:
-        assert(false);
+        throw new Error('constant');
     }
   }
 
@@ -565,7 +565,7 @@ function setConstantFloatArray(device: WebGLDevice, location: number, array: Flo
       device.gl.vertexAttrib4fv(location, array);
       break;
     default:
-      assert(false);
+    // assert(false);
   }
 }
 

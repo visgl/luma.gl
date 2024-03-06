@@ -5,10 +5,9 @@
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 // import { log } from '../../utils/log';
-import {uid} from '../../utils/utils';
-import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
-import {formatCompilerLog} from '../../lib/compiler-log/format-compiler-log';
-import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';
+import {uid} from '../../utils/uid';
+import {CompilerMessage} from '../../portable/compiler-log/compiler-message';
+import {formatCompilerLog} from '../../portable/compiler-log/format-compiler-log';
 
 /**
  * Properties for a Shader
@@ -108,7 +107,7 @@ export abstract class Shader extends Resource<ShaderProps> {
       return;
     }
 
-    const shaderName: string = getShaderInfo(this.source).name;
+    const shaderName: string = getShaderName(this.source);
     const shaderTitle: string = `${this.stage} ${shaderName}`;
     let htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
     // Show translated source if available
@@ -151,5 +150,12 @@ ${htmlLog}
 
 /** Deduce an id, from shader source, or supplied id, or shader type */
 function getShaderIdFromProps(props: ShaderProps): string {
-  return getShaderInfo(props.source).name || props.id || uid(`unnamed ${props.stage}-shader`);
+  return getShaderName(props.source) || props.id || uid(`unnamed ${props.stage}-shader`);
+}
+
+/** Extracts GLSLIFY style naming of shaders: `#define SHADER_NAME ...` */
+function getShaderName(shader: string, defaultName: string = 'unnamed'): string {
+  const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_-]+)[\s*]/;
+  const match = SHADER_NAME_REGEXP.exec(shader);
+  return match ? match[1] : defaultName;
 }

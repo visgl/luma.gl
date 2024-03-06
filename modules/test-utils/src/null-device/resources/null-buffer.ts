@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {BufferProps} from '@luma.gl/core';
-import {Buffer, assert} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
 
 export class NullBuffer extends Buffer {
@@ -18,7 +18,7 @@ export class NullBuffer extends Buffer {
     const byteOffset = props.byteOffset || 0;
     const byteLength = props.byteLength ?? (props.data ? props.data.byteLength + byteOffset : 0);
 
-    assert(byteLength >= 0);
+    // assert(byteLength >= 0);
 
     this.byteLength = byteLength;
     this.trackAllocatedMemory(byteLength);
@@ -37,6 +37,6 @@ export class NullBuffer extends Buffer {
   }
 
   write(data: ArrayBufferView, byteOffset: number = 0): void {
-    assert(data.byteLength + byteOffset <= this.byteLength);
+    // assert(data.byteLength + byteOffset <= this.byteLength);
   }
 }

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {uid} from '../../utils/utils';
+import {uid} from '../../utils/uid';
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */

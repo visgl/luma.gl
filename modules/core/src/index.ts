@@ -13,7 +13,7 @@ export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray
 export {isTypedArray, isNumberArray} from './utils/is-array';
 
 // MAIN API ACCESS POINTS
-export {luma} from './lib/luma';
+export {luma} from './portable/luma';
 
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
@@ -92,19 +92,6 @@ export type {
   RenderPipelineParameters
 } from './adapter/types/parameters';
 
-// MEMORY LAYOUT TYPES
-export type {VertexFormat, VertexType} from './adapter/types/vertex-formats';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from './adapter/types/texture-formats';
-export type {
-  ShaderDataType,
-  ShaderAttributeType,
-  ShaderUniformType
-} from './adapter/types/shader-types';
-
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
 export type {
@@ -124,26 +111,37 @@ export type {
 } from './adapter/types/shader-layout';
 
 export type {UniformValue} from './adapter/types/types';
-export {UniformBufferLayout} from './lib/uniforms/uniform-buffer-layout';
-export {UniformBlock} from './lib/uniforms/uniform-block';
-export {UniformStore} from './lib/uniforms/uniform-store';
+export {UniformBufferLayout} from './portable/uniforms/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniforms/uniform-block';
+export {UniformStore} from './portable/uniforms/uniform-store';
 
 // TYPE UTILS
-export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
+// MEMORY LAYOUT TYPES
+export type {VertexFormat, VertexType} from './type-utils/vertex-formats';
+export type {
+  TextureFormat,
+  ColorTextureFormat,
+  DepthStencilTextureFormat
+} from './type-utils/texture-formats';
+export type {
+  ShaderDataType,
+  ShaderAttributeType,
+  ShaderUniformType
+} from './type-utils/shader-types';
+
+export {decodeVertexFormat} from './type-utils/decode-vertex-format';
+export {decodeTextureFormat} from './type-utils/decode-texture-format';
 export {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
-} from './adapter/type-utils/vertex-format-from-attribute';
-
-// SHADER TYPE UTILS
-export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
+} from './type-utils/vertex-format-from-attribute';
+export {decodeShaderUniformType} from './type-utils/decode-shader-types';
+export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 
 // COMPILER LOG
-export type {CompilerMessage} from './lib/compiler-log/compiler-message';
-export {formatCompilerLog} from './lib/compiler-log/format-compiler-log';
+export type {CompilerMessage} from './portable/compiler-log/compiler-message';
+export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
 
 //
 export type {AttributeInfo} from './adapter/attribute-utils/get-attribute-from-layouts';
@@ -155,23 +153,15 @@ export {
 // GENERAL UTILS
 
 export {StatsManager} from './utils/stats-manager';
-export {assert} from './utils/assert';
-export {cast} from './utils/cast';
 export {log} from './utils/log';
-export {uid, isObjectEmpty} from './utils/utils';
-export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
-export {formatValue} from './utils/format-value';
-export {stubRemovedMethods} from './utils/stub-methods';
-export {checkProps} from './utils/check-props';
-export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
+export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
+export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
-export {deepEqual} from './utils/deep-equal';
 
-// ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
-export {requestAnimationFrame, cancelAnimationFrame} from './utils/request-animation-frame';
-
-// SHADER HELPERS
+export {uid} from './utils/uid';
+export {isObjectEmpty} from './utils/is-object-empty';
+// export {deepEqual} from './utils/deep-equal';
 
 /**
  * Marks GLSL shaders for syntax highlighting: glsl`...`

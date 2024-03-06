@@ -1,7 +1,7 @@
 // luma.gl MIT license
 
 import type {Binding, RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, RenderPipelineProps, cast, log} from '@luma.gl/core';
+import {RenderPipeline, RenderPipelineProps, log} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';
@@ -43,8 +43,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
     this.handle.label = this.props.id;
 
-    this.vs = cast<WebGPUShader>(props.vs);
-    this.fs = cast<WebGPUShader>(props.fs);
+    this.vs = props.vs as WebGPUShader;
+    this.fs = props.fs as WebGPUShader;
 
     this._bindings = {...this.props.bindings};
   }
@@ -141,14 +141,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
   protected _getRenderPipelineDescriptor() {
     // Set up the vertex stage
     const vertex: GPUVertexState = {
-      module: cast<WebGPUShader>(this.props.vs).handle,
+      module: (this.props.vs as WebGPUShader).handle,
       entryPoint: this.props.vertexEntryPoint || 'main',
       buffers: getVertexBufferLayout(this.props.shaderLayout, this.props.bufferLayout)
     };
 
     // Set up the fragment stage
     const fragment: GPUFragmentState = {
-      module: cast<WebGPUShader>(this.props.fs).handle,
+      module: (this.props.fs as WebGPUShader).handle,
       entryPoint: this.props.fragmentEntryPoint || 'main',
       targets: [
         {

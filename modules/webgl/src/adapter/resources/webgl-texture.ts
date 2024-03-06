@@ -16,7 +16,7 @@ import {
   SamplerParameters,
   TypedArray
 } from '@luma.gl/core';
-import {Texture, log, assert, loadImage, isObjectEmpty} from '@luma.gl/core';
+import {Texture, log, loadImage, isObjectEmpty} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
@@ -568,7 +568,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
           break;
         default:
-          assert(false, 'Unknown image data type');
+          throw new Error('Unknown image data type');
       }
     });
 
@@ -615,7 +615,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       height
     }));
 
-    assert(this.depth === 1, 'texSubImage not supported for 3D textures');
+    // assert(this.depth === 1, 'texSubImage not supported for 3D textures');
 
     // pixels variable is  for API compatibility purpose
     if (!data) {
@@ -763,15 +763,15 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       size = {width, height};
     }
 
-    assert(size, 'Could not deduced texture size');
-    assert(
-      width === undefined || size.width === width,
-      'Deduced texture width does not match supplied width'
-    );
-    assert(
-      height === undefined || size.height === height,
-      'Deduced texture height does not match supplied height'
-    );
+    // assert(size, 'Could not deduced texture size');
+    // assert(
+    //   width === undefined || size.width === width,
+    //   'Deduced texture width does not match supplied width'
+    // );
+    // assert(
+    //   height === undefined || size.height === height,
+    //   'Deduced texture height does not match supplied height'
+    // );
 
     return size;
   }
