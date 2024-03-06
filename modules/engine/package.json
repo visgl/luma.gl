@@ -43,7 +43,7 @@
     "@luma.gl/core": "^9.0.0-beta"
   },
   "dependencies": {
-    "@luma.gl/shadertools": "9.0.0-beta.6",
+    "@luma.gl/shadertools": "9.0.0-beta.7",
     "@math.gl/core": "^4.0.0",
     "@probe.gl/log": "^4.0.2",
     "@probe.gl/stats": "^4.0.2"

@@ -3313,7 +3313,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
-    "@luma.gl/shadertools": "npm:9.0.0-beta.6"
+    "@luma.gl/shadertools": "npm:9.0.0-beta.7"
     "@math.gl/core": "npm:^4.0.0"
     "@probe.gl/log": "npm:^4.0.2"
     "@probe.gl/stats": "npm:^4.0.2"
@@ -3334,18 +3334,6 @@ __metadata:
     "@luma.gl/engine": ^9.0.0-beta
   languageName: unknown
   linkType: soft
-
-"@luma.gl/shadertools@npm:9.0.0-beta.6":
-  version: 9.0.0-beta.6
-  resolution: "@luma.gl/shadertools@npm:9.0.0-beta.6"
-  dependencies:
-    "@math.gl/core": "npm:^4.0.0"
-    "@math.gl/types": "npm:^4.0.0"
-  peerDependencies:
-    "@luma.gl/core": ^9.0.0-beta.4
-  checksum: 10c0/941d59fd62c94ff52654bc4e6348bd014d025e824eb12057a790e413deae0bf1ba22512de09b0ffacf28d3af3758d3340b2ae043645aa96569098b85798dd50d
-  languageName: node
-  linkType: hard
 
 "@luma.gl/shadertools@npm:9.0.0-beta.7, @luma.gl/shadertools@workspace:modules/shadertools":
   version: 0.0.0-use.local
