@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Buffer, VertexArrayProps, TypedArray} from '@luma.gl/core';
+import type {TypedArray} from '@math.gl/types';
+import type {Buffer, VertexArrayProps} from '@luma.gl/core';
 import {VertexArray} from '@luma.gl/core';
 
 import type {NullDevice} from '../null-device';

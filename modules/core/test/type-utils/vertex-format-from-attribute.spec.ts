@@ -9,7 +9,7 @@ import {
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
 } from '@luma.gl/core';
-import type {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 
 const TEST_CASES: {
   typedArray: TypedArray;

@@ -141,6 +141,8 @@ export {
 
 // GENERAL EXTERNAL UTILS - FOR APPLICATIONS
 
+export type {NumberArray} from './types';
+
 /** GLSL syntax highlighting: glsl`...` Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
 

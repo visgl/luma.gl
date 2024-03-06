@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {TypedArray} from '@math.gl/types';
+import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
 import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';

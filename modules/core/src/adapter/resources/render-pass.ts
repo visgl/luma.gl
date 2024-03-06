@@ -7,7 +7,7 @@ import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
-import {NumberArray} from '../..';
+import {NumberArray} from '../../types';
 import {QuerySet} from './query-set';
 
 /**

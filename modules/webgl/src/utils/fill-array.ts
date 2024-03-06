@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@luma.gl/core';
+import type {NumberArray} from '@math.gl/types';
 
 // Uses copyWithin to significantly speed up typed array value filling
 export function fillArray(options: {

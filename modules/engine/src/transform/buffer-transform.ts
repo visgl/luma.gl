@@ -5,7 +5,7 @@
 import {Device, Buffer, BufferRange, TransformFeedback, RenderPassProps} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
 import {Model} from '../model/model';
-import type {ModelProps} from '..';
+import type {ModelProps} from '../model/model';
 
 /**
  * Properties for creating a {@link BufferTransform}

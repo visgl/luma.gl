@@ -7,7 +7,8 @@
 import test from 'tape-promise/tape';
 import {getTestDevices, webglDevice} from '@luma.gl/test-utils';
 
-import {Buffer, TypedArray} from '@luma.gl/core';
+import {TypedArray} from '@math.gl/types';
+import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 test('Buffer#constructor/delete', async t => {

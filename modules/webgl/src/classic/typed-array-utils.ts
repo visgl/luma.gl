@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray, TypedArrayConstructor} from '@luma.gl/core';
+import {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';
 
 const ERR_TYPE_DEDUCTION = 'Failed to deduce GL constant from typed array';
