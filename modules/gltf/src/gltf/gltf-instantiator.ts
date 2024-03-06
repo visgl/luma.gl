@@ -1,7 +1,5 @@
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
-import {Geometry, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
-import {GeometryAttribute} from '@luma.gl/engine/geometry/geometry';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {Geometry, GeometryAttribute, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 import {GLTFAnimator} from './gltf-animator';
@@ -29,13 +27,12 @@ const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
  * Walks the parsed and resolved glTF structure and builds a luma.gl scenegraph
  */
 export class GLTFInstantiator {
-  // TODO - replace with Device
-  device: WebGLDevice;
+  device: Device;
   options: GLTFInstantiatorOptions;
   gltf: any;
 
   constructor(device: Device, options: GLTFInstantiatorOptions = {}) {
-    this.device = device as WebGLDevice;
+    this.device = device;
     this.options = {...DEFAULT_OPTIONS, ...options};
   }
 

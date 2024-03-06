@@ -8,8 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.54",
-    "@luma.gl/webgl": "9.0.0-alpha.54"
+    "@luma.gl/core": "9.0.0-beta.6",
+    "@luma.gl/engine": "9.0.0-beta.6",
+    "@luma.gl/webgl": "9.0.0-beta.6"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
