@@ -16,7 +16,7 @@
 - feat(shadertools): ShaderAssembler support single compute/unified shader (#1980)
 - chore(webgpu): Improve ComputePipeline implementation, add tests (#1979)
 
-### v9.0.0-beta.6
+### v9.0.0-beta.7
 
 - feat: Add QuerySet resource (#1975)
 - chore(engine): Restore tests for Model class (#1973)

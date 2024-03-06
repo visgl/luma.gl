@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {Texture, Framebuffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
 import {flipRows, scalePixels} from './pixel-data-utils';
 
 /**
@@ -44,10 +43,7 @@ export function copyTextureToDataUrl(
   source: Texture | Framebuffer,
   options: CopyTextureToImageOptions = {}
 ): string {
-  const {
-    sourceAttachment = GL.COLOR_ATTACHMENT0, // TODO - support gl.readBuffer
-    targetMaxHeight = Number.MAX_SAFE_INTEGER
-  } = options;
+  const {sourceAttachment, targetMaxHeight = Number.MAX_SAFE_INTEGER} = options;
 
   let data = source.device.readPixelsToArrayWebGL(source, {sourceAttachment});
 

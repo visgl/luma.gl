@@ -37,7 +37,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^9.0.0-beta.4"
+    "@luma.gl/core": "^9.0.0-beta"
   },
   "dependencies": {
     "@probe.gl/env": "^4.0.2",
