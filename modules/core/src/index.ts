@@ -163,11 +163,11 @@ export const glsl = (x: TemplateStringsArray) => `${x}`;
 
 export {uid, isObjectEmpty} from './utils/utils';
 
-export type {AttributeInfo} from './adapter/attribute-utils/get-attribute-from-layouts';
+export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {
   getAttributeInfosFromLayouts,
   mergeShaderLayout
-} from './adapter/attribute-utils/get-attribute-from-layouts';
+} from './adapter-utils/get-attribute-from-layouts';
 
 export type {
   CopyBufferToBufferOptions,

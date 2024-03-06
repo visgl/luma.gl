@@ -6,7 +6,7 @@ import type {TypedArray} from '../../types';
 import {
   AttributeInfo,
   getAttributeInfosByLocation
-} from '../attribute-utils/get-attribute-from-layouts';
+} from '../../adapter-utils/get-attribute-from-layouts';
 import type {Device} from '../device';
 import type {Buffer} from './buffer';
 import type {RenderPass} from './render-pass';
