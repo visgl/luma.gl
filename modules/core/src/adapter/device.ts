@@ -287,7 +287,7 @@ export abstract class Device {
   /** id of this device, primarily for debugging */
   readonly id: string;
   /** type of this device */
-  abstract readonly type: 'webgl' | 'webgpu';
+  abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */
