@@ -1,7 +1,6 @@
 // general utils
 import './lib/utils/array-utils-flat.spec';
 import './lib/utils/utils.spec';
-import './lib/utils/format-value.spec';
 import './lib/utils/deep-equal.spec';
 import './lib/utils/uniform.spec';
 

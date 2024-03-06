@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveTopology, TypedArray} from '@luma.gl/core';
-import {uid, assert} from '@luma.gl/core';
+import {uid} from '@luma.gl/core';
 
 export type GeometryProps = {
   id?: string;
@@ -71,10 +71,9 @@ export class Geometry {
         ? {value: attributeValue}
         : attributeValue;
 
-      assert(
-        ArrayBuffer.isView(attribute.value),
-        `${this._print(attributeName)}: must be typed array or object with value as typed array`
-      );
+      if (!ArrayBuffer.isView(attribute.value)) {
+        throw new Error(`${this._print(attributeName)}: must be typed array or object with value as typed array`);
+      }
 
       if ((attributeName === 'POSITION' || attributeName === 'positions') && !attribute.size) {
         attribute.size = 3;
@@ -82,7 +81,6 @@ export class Geometry {
 
       // Move indices to separate field
       if (attributeName === 'indices') {
-        assert(!this.indices);
         this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;
@@ -142,7 +140,7 @@ export class Geometry {
       }
     }
 
-    assert(Number.isFinite(vertexCount));
+    // assert(Number.isFinite(vertexCount));
     return vertexCount;
   }
 }

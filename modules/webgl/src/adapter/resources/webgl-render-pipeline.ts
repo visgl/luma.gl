@@ -5,7 +5,7 @@
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {ShaderLayout} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, cast, splitUniformsAndBindings, log} from '@luma.gl/core';
+import {RenderPipeline, splitUniformsAndBindings, log} from '@luma.gl/core';
 import {mergeShaderLayout} from '@luma.gl/core';
 // import {mergeShaderLayout, getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
@@ -57,8 +57,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this.device.setSpectorMetadata(this.handle, {id: this.props.id});
 
     // Create shaders if needed
-    this.vs = cast<WEBGLShader>(props.vs);
-    this.fs = cast<WEBGLShader>(props.fs);
+    this.vs = props.vs as WEBGLShader;
+    this.fs = props.fs as WEBGLShader;
     // assert(this.vs.stage === 'vertex');
     // assert(this.fs.stage === 'fragment');
 

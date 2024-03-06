@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {assert, Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
+import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {WEBGLTextureView} from '../adapter/resources/webgl-texture-view';
@@ -51,7 +51,7 @@ export function readPixelsToArray(
   } = options || {};
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
-  assert(framebuffer);
+  // assert(framebuffer);
   const {gl, handle} = framebuffer as WEBGLFramebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
@@ -117,7 +117,7 @@ export function readPixelsToBuffer(
   // following parameters are auto deduced if not provided
   let {sourceWidth, sourceHeight, sourceType} = options || {};
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
-  assert(framebuffer);
+  // assert(framebuffer);
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
@@ -193,7 +193,7 @@ export function copyToTexture(
   } = options || {};
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
-  assert(framebuffer);
+  // assert(framebuffer);
   const webglFramebuffer = framebuffer as WEBGLFramebuffer;
   const {device, handle} = webglFramebuffer;
   const isSubCopy =
@@ -206,7 +206,7 @@ export function copyToTexture(
   const prevHandle = device.gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
-  assert(target);
+  // assert(target);
   let texture = null;
   let textureTarget: GL;
   if (target instanceof Texture) {

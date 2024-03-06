@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {TextureProps, Sampler, SamplerProps, TextureViewProps} from '@luma.gl/core';
-import {Texture, assert, loadImage} from '@luma.gl/core';
+import {Texture, loadImage} from '@luma.gl/core';
 import {NullDevice} from '../null-device';
 import {NullSampler} from './null-sampler';
 import {NullTextureView} from './null-texture-view';
@@ -113,9 +113,9 @@ export class NullTexture extends Texture<TextureProps> {
   }
 
   setSubImageData(options: {data: any; width?: number; height?: number; x?: number; y?: number}) {
-    const {data, x = 0, y = 0} = options;
-    const width = options.width ?? (data as ImageBitmap).width;
-    const height = options.height ?? (data as ImageBitmap).height;
-    assert(width + x <= this.width && height + y <= this.height);
+    // const {data, x = 0, y = 0} = options;
+    // const width = options.width ?? (data as ImageBitmap).width;
+    // const height = options.height ?? (data as ImageBitmap).height;
+    // assert(width + x <= this.width && height + y <= this.height);
   }
 }

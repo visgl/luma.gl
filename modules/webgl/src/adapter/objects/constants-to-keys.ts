@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {assert} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // Resolve a WebGL enumeration name (returns itself if already a number)
@@ -22,6 +21,8 @@ export function getKeyValue(gl: WebGL2RenderingContext, name: string | GL): GL {
   name = name.replace(/^.*\./, '');
   // @ts-ignore expect-error depends on settings
   const value = gl[name];
-  assert(value !== undefined, `Accessing undefined constant GL.${name}`);
+  if (value === undefined){ 
+    throw new Error(`Accessing undefined constant GL.${name}`);
+  }
   return value;
 }

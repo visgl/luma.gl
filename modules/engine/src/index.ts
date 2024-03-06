@@ -61,3 +61,4 @@ export type {ShaderModuleInputs} from './shader-inputs';
 export {ShaderInputs as _ShaderInputs} from './shader-inputs';
 export type {ComputationProps} from './computation';
 export {Computation} from './computation';
+export {requestAnimationFrame, cancelAnimationFrame} from './animation-loop/request-animation-frame';

@@ -1,4 +1,4 @@
-import {assert, uid, NumberArray} from '@luma.gl/core';
+import {uid, NumberArray} from '@luma.gl/core';
 import {Vector3, Matrix4} from '@math.gl/core';
 
 /** Properties for creating a new Scenegraph */
@@ -53,19 +53,19 @@ export class ScenegraphNode {
   }
 
   setPosition(position: any): this {
-    assert(position.length === 3, 'setPosition requires vector argument');
+    // assert(position.length === 3, 'setPosition requires vector argument');
     this.position = position;
     return this;
   }
 
   setRotation(rotation: any): this {
-    assert(rotation.length === 3, 'setRotation requires vector argument');
+    // assert(rotation.length === 3, 'setRotation requires vector argument');
     this.rotation = rotation;
     return this;
   }
 
   setScale(scale: any): this {
-    assert(scale.length === 3, 'setScale requires vector argument');
+    // assert(scale.length === 3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
   }
@@ -140,7 +140,7 @@ export class ScenegraphNode {
   } {
     // TODO - solve multiple class problem
     // assert(viewMatrix instanceof Matrix4);
-    assert(viewMatrix);
+    // assert(viewMatrix);
     modelMatrix = modelMatrix || this.matrix;
     const worldMatrix = new Matrix4(viewMatrix).multiplyRight(modelMatrix);
     const worldInverse = worldMatrix.invert();

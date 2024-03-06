@@ -4,7 +4,6 @@
 
 // Support for listening to context state changes and intercepting state queries
 // NOTE: this system does not handle buffer bindings
-import {assert} from '@luma.gl/core';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
@@ -44,7 +43,7 @@ class GLState {
   }
 
   pop() {
-    assert(this.stateStack.length > 0);
+    // assert(this.stateStack.length > 0);
     // Use the saved values in the state stack to restore parameters
     const oldValues = this.stateStack[this.stateStack.length - 1];
     setGLParameters(this.gl, oldValues);
@@ -66,7 +65,7 @@ class GLState {
       this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1] : null;
 
     for (const key in values) {
-      assert(key !== undefined);
+      // assert(key !== undefined);
       const value = values[key];
       const cached = this.cache[key];
       // Check that value hasn't already been shadowed
@@ -114,7 +113,7 @@ export function trackContextState(
   }
 ): WebGL2RenderingContext {
   const {enable = true, copyState} = options;
-  assert(copyState !== undefined);
+  // assert(copyState !== undefined);
   // @ts-expect-error
   if (!gl.state) {
     // @ts-ignore
@@ -163,7 +162,7 @@ export function pushContextState(gl: WebGL2RenderingContext): void {
  */
 export function popContextState(gl: WebGL2RenderingContext): void {
   const glState = getContextState(gl);
-  assert(glState);
+  // assert(glState);
   glState.pop();
 }
 
