@@ -98,7 +98,7 @@ export class WebGPUDevice extends Device {
     const requiredFeatures: GPUFeatureName[] = [];
     const requiredLimits: Record<string, number> = {};
 
-    if (props.requestMaximalLimits) {
+    if (props.requestMaxLimits) {
       requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
       for (const key in adapter.limits) {
         requiredLimits[key] = adapter.limits[key];
@@ -332,7 +332,7 @@ export class WebGPUDevice extends Device {
       features.add(feature);
     }
 
-    return new DeviceFeatures(Array.from(features));
+    return new DeviceFeatures(Array.from(features), this.props.disabledFeatures);
   }
 
   copyExternalImageToTexture(options: {

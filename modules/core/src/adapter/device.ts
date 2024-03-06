@@ -34,7 +34,7 @@ import {isTextureFormatCompressed} from './type-utils/decode-texture-format';
  */
 export type DeviceInfo = {
   /** Type of device */
-  type: 'webgl' | 'webgpu';
+  type: 'webgl' | 'webgpu' | 'unknown';
   /** Vendor (name of GPU vendor, Apple, nVidia etc */
   vendor: string;
   /** Renderer (usually driver name) */
@@ -116,9 +116,14 @@ export abstract class DeviceLimits {
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
 export class DeviceFeatures {
   protected features: Set<DeviceFeature>;
+  protected disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
 
-  constructor(features: DeviceFeature[] = []) {
+  constructor(
+    features: DeviceFeature[] = [],
+    disabledFeatures: Partial<Record<DeviceFeature, boolean>>
+  ) {
     this.features = new Set<DeviceFeature>(features);
+    this.disabledFeatures = disabledFeatures || {};
   }
 
   *[Symbol.iterator](): IterableIterator<DeviceFeature> {
@@ -126,7 +131,7 @@ export class DeviceFeatures {
   }
 
   has(feature: DeviceFeature): boolean {
-    return this.features.has(feature);
+    return !this.disabledFeatures[feature] && this.features.has(feature);
   }
 }
 
@@ -199,8 +204,8 @@ export type DeviceProps = {
   width?: number /** width is only used when creating a new canvas */;
   height?: number /** height is only used when creating a new canvas */;
 
-  /** Request a Device with the highest limits supported by platform. */
-  requestMaximalLimits?: boolean;
+  /** Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits. */
+  requestMaxLimits?: boolean;
 
   // WebGLContext PARAMETERS - Can only be set on context creation...
   // alpha?: boolean; // Default render target has an alpha buffer.
@@ -211,17 +216,26 @@ export type DeviceProps = {
   // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
   // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
 
+  /** Error handling */
   onError?: (error: Error) => unknown;
-  /** Instrument context (at the expense of performance) */
+
+  // DEBUG SETTINGS
+
+  /** WebGL: Instrument WebGL2RenderingContext (at the expense of performance) */
   debug?: boolean;
-  /** Initialize the SpectorJS WebGL debugger */
+  /** Break on WebGL functions matching these strings */
+  break?: string[];
+  /** WebGL: Initialize the SpectorJS WebGL debugger */
   spector?: boolean;
+  /** Initialize all features on startup */
+  initalizeFeatures?: boolean;
+  /** Disable specific features */
+  disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
 
-  // Unclear if these are still supported
-  manageState?: boolean; // Set to false to disable WebGL state management instrumentation
-  break?: string[]; // TODO: types
+  /** TODO- Unclear if still supported: Set to false to disable WebGL state management instrumentation */
+  manageState?: boolean;
 
-  // @deprecated Attach to existing context
+  // @deprecated Attach to existing context. Rename to handle? Use Device.attach?
   gl?: WebGL2RenderingContext | null;
 };
 
@@ -237,10 +251,16 @@ export abstract class Device {
     width: 800, // width are height are only used by headless gl
     height: 600,
 
-    requestMaximalLimits: true,
+    requestMaxLimits: true,
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
     spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
     break: [],
+
+    // TODO - Change these after confirming things work as expected
+    initalizeFeatures: true,
+    disabledFeatures: {
+      'compilation-status-async-webgl': true
+    },
 
     // alpha: undefined,
     // depth: undefined,
@@ -270,7 +290,7 @@ export abstract class Device {
   /** id of this device, primarily for debugging */
   readonly id: string;
   /** type of this device */
-  abstract readonly type: 'webgl' | 'webgpu';
+  abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */

@@ -47,14 +47,12 @@ import {NullQuerySet} from './resources/null-query-set';
 
 /** Do-nothing device implementation for testing */
 export class NullDevice extends Device {
-  static type: string = 'webgl';
-
   static isSupported(): boolean {
     return true;
   }
-
-  readonly type = 'webgl';
-  features: DeviceFeatures = new DeviceFeatures();
+  static type: string = 'unknown';
+  readonly type = 'unknown';
+  features: DeviceFeatures = new DeviceFeatures([], this.props.disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
 

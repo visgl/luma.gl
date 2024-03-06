@@ -227,8 +227,11 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
     // luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
-    this.features = new WebGLDeviceFeatures(this.gl, this._extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
+    this.features = new WebGLDeviceFeatures(this.gl, this._extensions, this.props.disabledFeatures);
+    if (this.props.initalizeFeatures) {
+      this.features.initializeFeatures();
+    }
 
     this.canvasContext.resize();
 
