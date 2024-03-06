@@ -1,6 +1,5 @@
 import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import '@luma.gl/webgpu';
 
 export const title = 'Hello Triangle';
 export const description = 'Shows rendering a basic triangle.';

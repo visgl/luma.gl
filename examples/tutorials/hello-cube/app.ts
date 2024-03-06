@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl, UniformStore, NumberArray, ShaderUniformType, loadImage} from '@luma.gl/core';
+import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
+import {glsl, Texture, UniformStore, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -119,6 +120,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     const texture = device.createTexture({
+      usage: Texture.TEXTURE & Texture.COPY_DST,
       data: loadImage('vis-logo.png'),
       mipmaps: true,
       sampler: device.createSampler({

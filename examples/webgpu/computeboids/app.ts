@@ -1,13 +1,12 @@
 // Inspired by https://github.com/austinEng/webgpu-samples
 // under MIT license, Copyright 2019 WebGPU Samples Contributors
 // @ts-nocheck
-/* eslint-disable no-console */
+/* eslint-disable */
 
 import updateSprites from './update-sprites.wgsl?raw'; // eslint-disable-line
 import sprites from './sprites.wgsl?raw'; // eslint-disable-line
 import {Buffer} from '@luma.gl/core';
 // import { RenderPipelineParameters} from '@luma.gl/core';
-import {Model, WebGPUDevice} from '@luma.gl/webgpu';
 // import {Matrix4} from '@math.gl/core';
 
 export const name = 'Compute Boids';
@@ -28,8 +27,6 @@ const SHADERS = {
 const NUM_PARTICLES = 150;
 
 export async function init(canvas: HTMLCanvasElement, language: 'glsl' | 'wgsl') {
-  const device = await WebGPUDevice.create({canvas});
-
   const spriteShaderModule = device.createShader({stage: 'vertex', source: SHADERS.wgsl.sprites});
 
   const model = new Model(device, {
