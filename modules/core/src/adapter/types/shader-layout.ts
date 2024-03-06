@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormat} from '../types/texture-formats';
-import type {ShaderUniformType, ShaderAttributeType} from './shader-types';
+import type {TextureFormat} from '../../type-utils/texture-formats';
+import type {ShaderUniformType, ShaderAttributeType} from '../../type-utils/shader-types';
 import {AccessorObject} from '../types/accessor';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';

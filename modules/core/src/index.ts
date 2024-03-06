@@ -92,19 +92,6 @@ export type {
   RenderPipelineParameters
 } from './adapter/types/parameters';
 
-// MEMORY LAYOUT TYPES
-export type {VertexFormat, VertexType} from './adapter/types/vertex-formats';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from './adapter/types/texture-formats';
-export type {
-  ShaderDataType,
-  ShaderAttributeType,
-  ShaderUniformType
-} from './adapter/types/shader-types';
-
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
 
 export type {
@@ -129,17 +116,28 @@ export {UniformBlock} from './lib/uniforms/uniform-block';
 export {UniformStore} from './lib/uniforms/uniform-store';
 
 // TYPE UTILS
-export {decodeVertexFormat} from './adapter/type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './adapter/type-utils/decode-texture-format';
+// MEMORY LAYOUT TYPES
+export type {VertexFormat, VertexType} from './type-utils/vertex-formats';
+export type {
+  TextureFormat,
+  ColorTextureFormat,
+  DepthStencilTextureFormat
+} from './type-utils/texture-formats';
+export type {
+  ShaderDataType,
+  ShaderAttributeType,
+  ShaderUniformType
+} from './type-utils/shader-types';
+
+export {decodeVertexFormat} from './type-utils/decode-vertex-format';
+export {decodeTextureFormat} from './type-utils/decode-texture-format';
 export {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
-} from './adapter/type-utils/vertex-format-from-attribute';
-
-// SHADER TYPE UTILS
-export {decodeShaderUniformType} from './adapter/type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './adapter/type-utils/decode-attribute-type';
+} from './type-utils/vertex-format-from-attribute';
+export {decodeShaderUniformType} from './type-utils/decode-shader-types';
+export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 
 // COMPILER LOG
 export type {CompilerMessage} from './lib/compiler-log/compiler-message';
