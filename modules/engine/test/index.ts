@@ -1,5 +1,5 @@
 // utils
-import './lib/utils/deep-equal.spec';
+import './utils/deep-equal.spec';
 
 // model etc
 import './lib/model.spec';
