@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {DepthStencilTextureFormat} from '../../type-utils/texture-formats';
+import {DepthStencilTextureFormat} from '../../gpu-type-utils/texture-formats';
 
 export type CompareFunction =
   | 'never'

@@ -67,9 +67,9 @@ export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
 // PORTABLE API - UNIFORM BUFFERS
-export {UniformBufferLayout} from './portable/uniforms/uniform-buffer-layout';
-export {UniformBlock} from './portable/uniforms/uniform-block';
-export {UniformStore} from './portable/uniforms/uniform-store';
+export {UniformBufferLayout} from './portable/uniform-buffers/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniform-buffers/uniform-block';
+export {UniformStore} from './portable/uniform-buffers/uniform-store';
 
 // PORTABLE API - COMPILER LOG
 export type {CompilerMessage} from './portable/compiler-log/compiler-message';
@@ -115,29 +115,31 @@ export type {
 
 export type {UniformValue} from './adapter/types/types';
 
-// TYPE UTILS - GPU MEMORY LAYOUT HELPERS
+// GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
-export type {VertexFormat, VertexType} from './type-utils/vertex-formats';
+export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
   DepthStencilTextureFormat
-} from './type-utils/texture-formats';
+} from './gpu-type-utils/texture-formats';
 export type {
   ShaderDataType,
   ShaderAttributeType,
   ShaderUniformType
-} from './type-utils/shader-types';
+} from './gpu-type-utils/shader-types';
 
-export {decodeVertexFormat} from './type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './type-utils/decode-texture-format';
-export {decodeShaderUniformType} from './type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
+// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY INTERNAL
+
+export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
+export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
+export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
+export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
 export {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
-} from './type-utils/vertex-format-from-attribute';
+} from './gpu-type-utils/vertex-format-from-attribute';
 
 // GENERAL EXTERNAL UTILS - FOR APPLICATIONS
 
@@ -151,6 +153,10 @@ export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator} from './utils/random';
 
+//
+// INTERNAL
+//
+
 // GENERAL INTERNAL UTILS - for use in other luma.gl modules only
 
 export {log} from './utils/log';
@@ -159,7 +165,7 @@ export {isObjectEmpty} from './utils/is-object-empty';
 
 // ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
 
-export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
+export {isUniformValue, splitUniformsAndBindings} from './adapter-utils/is-uniform-value';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {
   getAttributeInfosFromLayouts,

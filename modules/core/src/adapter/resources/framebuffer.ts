@@ -6,7 +6,7 @@ import type {
   ColorTextureFormat,
   DepthStencilTextureFormat,
   TextureFormat
-} from '../../type-utils/texture-formats';
+} from '../../gpu-type-utils/texture-formats';
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
