@@ -5,10 +5,10 @@
 import {log} from '../../utils/log';
 import type {ShaderLayout, AttributeDeclaration} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
-import type {ShaderDataType, ShaderAttributeType} from '../types/shader-types';
-import {decodeShaderAttributeType} from '../type-utils/decode-attribute-type';
-import type {VertexFormat, VertexType} from '../types/vertex-formats';
-import {decodeVertexFormat} from '../type-utils/decode-vertex-format';
+import type {ShaderDataType, ShaderAttributeType} from '../../type-utils/shader-types';
+import {decodeShaderAttributeType} from '../../type-utils/decode-attribute-type';
+import type {VertexFormat, VertexType} from '../../type-utils/vertex-formats';
+import {decodeVertexFormat} from '../../type-utils/decode-vertex-format';
 
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {

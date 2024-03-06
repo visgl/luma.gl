@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderUniformType, ShaderDataType} from '../types/shader-types';
+import {ShaderUniformType, ShaderDataType} from './shader-types';
 
 const UNIFORM_FORMATS: Record<ShaderUniformType, {type: ShaderDataType; components: number}> = {
   f32: {type: 'f32', components: 1},
