@@ -6,8 +6,8 @@ import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 // import { log } from '../../utils/log';
 import {uid} from '../../utils/uid';
-import {CompilerMessage} from '../../portable/compiler-log/compiler-message';
-import {formatCompilerLog} from '../../portable/compiler-log/format-compiler-log';
+import {CompilerMessage} from '../types/compiler-message';
+import {formatCompilerLog} from '../../adapter-utils/format-compiler-log';
 
 /**
  * Properties for a Shader

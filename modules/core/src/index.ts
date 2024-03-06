@@ -5,7 +5,7 @@
 export {VERSION} from './init';
 
 // MAIN API ACCESS POINT
-export {luma} from './portable/luma';
+export {luma} from './adapter/luma';
 
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
@@ -66,14 +66,13 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
-// PORTABLE API - UNIFORM BUFFERS
-export {UniformBufferLayout} from './portable/uniform-buffers/uniform-buffer-layout';
-export {UniformBlock} from './portable/uniform-buffers/uniform-block';
-export {UniformStore} from './portable/uniform-buffers/uniform-store';
-
 // PORTABLE API - COMPILER LOG
-export type {CompilerMessage} from './portable/compiler-log/compiler-message';
-export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
+export type {CompilerMessage} from './adapter/types/compiler-message';
+
+// PORTABLE API - UNIFORM BUFFERS
+export {UniformBufferLayout} from './portable/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniform-block';
+export {UniformStore} from './portable/uniform-store';
 
 // API TYPES
 // export type {AccessorObject} from './adapter/types/accessor';

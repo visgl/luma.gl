@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test, {Test} from 'tape-promise/tape';
-import {formatCompilerLog, CompilerMessage} from '@luma.gl/core';
+import {CompilerMessage} from '@luma.gl/core';
+import {formatCompilerLog} from '@luma.gl/core/adapter-utils/format-compiler-log';
 
 const ERROR_LOG: CompilerMessage[] = [
   {

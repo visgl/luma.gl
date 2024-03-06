@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType} from '../../gpu-type-utils/shader-types';
-import type {UniformValue} from '../../adapter/types/types';
-import type {Device} from '../../adapter/device';
-import {Buffer} from '../../adapter/resources/buffer';
+import type {ShaderUniformType} from '../gpu-type-utils/shader-types';
+import type {UniformValue} from '../adapter/types/types';
+import type {Device} from '../adapter/device';
+import {Buffer} from '../adapter/resources/buffer';
+import {log} from '../utils/log';
 import {UniformBlock} from './uniform-block';
 import {UniformBufferLayout} from './uniform-buffer-layout';
-import {log} from '../../utils/log';
 
 export type ShaderModuleInputs = {
   uniformTypes?: Record<string, ShaderUniformType>;

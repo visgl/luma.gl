@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType, ShaderDataType} from '../../gpu-type-utils/shader-types';
-import {decodeShaderUniformType, alignTo} from '../../gpu-type-utils/decode-shader-types';
+import type {ShaderUniformType, ShaderDataType} from '../gpu-type-utils/shader-types';
+import {decodeShaderUniformType, alignTo} from '../gpu-type-utils/decode-shader-types';
 
-import type {UniformValue} from '../../adapter/types/types';
-import {getScratchArrayBuffer} from '../../utils/array-utils-flat';
-import {isNumberArray} from '../../utils/is-array';
-import {log} from '../../utils/log';
+import type {UniformValue} from '../adapter/types/types';
+import {getScratchArrayBuffer} from '../utils/array-utils-flat';
+import {isNumberArray} from '../utils/is-array';
+import {log} from '../utils/log';
 
 /**
  * Smallest buffer size that can be used for uniform buffers.

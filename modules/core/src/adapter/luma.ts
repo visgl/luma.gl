@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Log} from '@probe.gl/log';
-import type {DeviceProps} from '../adapter/device';
-import {Device} from '../adapter/device';
+import type {DeviceProps} from './device';
+import {Device} from './device';
 import {StatsManager} from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
