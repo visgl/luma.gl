@@ -11,18 +11,7 @@ export function setPathPrefix(prefix: string) {
   pathPrefix = prefix;
 }
 
-/**
- * Reads raw file data. Respects setPathPrefix.
- */
-export async function loadFile(
-  url: string,
-  options?: {dataType?: 'text' | 'arrayBuffer'} & RequestInit
-): Promise<any> {
-  url = url.startsWith('http') ? url : pathPrefix + url;
-  const dataType = options?.dataType || 'text';
-  const response = await fetch(url, options);
-  return await response[dataType]();
-}
+// TODO - keep only loadImageBitmap
 
 /**
  * Loads ImageBitmap asynchronously. Respects setPathPrefix.
@@ -60,32 +49,5 @@ export async function loadImage(
     } catch (error) {
       reject(error);
     }
-  });
-}
-
-/**
- * Load a script (identified by an url). When the url returns, the
- * content of this file is added into a new script element, attached to the DOM (body element)
- * @param scriptUrl defines the url of the script to laod
- * @param scriptId defines the id of the script element
- */
-export async function loadScript(scriptUrl: string, scriptId?: string): Promise<Event> {
-  const head = document.getElementsByTagName('head')[0];
-  if (!head) {
-    throw new Error('loadScript');
-  }
-
-  const script = document.createElement('script');
-  script.setAttribute('type', 'text/javascript');
-  script.setAttribute('src', scriptUrl);
-  if (scriptId) {
-    script.id = scriptId;
-  }
-
-  return new Promise((resolve, reject) => {
-    script.onload = resolve;
-    script.onerror = error =>
-      reject(new Error(`Unable to load script '${scriptUrl}': ${error as string}`));
-    head.appendChild(script);
   });
 }

@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {deepEqual} from '@luma.gl/core';
+import {deepEqual} from '@luma.gl/engine/utils/deep-equal';
 
 const obj = {longitude: -70, latitude: 40.7, zoom: 12};
 const TEST_CASES = [
