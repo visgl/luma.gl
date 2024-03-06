@@ -21,7 +21,7 @@ export function getKeyValue(gl: WebGL2RenderingContext, name: string | GL): GL {
   name = name.replace(/^.*\./, '');
   // @ts-ignore expect-error depends on settings
   const value = gl[name];
-  if (value === undefined){ 
+  if (value === undefined) {
     throw new Error(`Accessing undefined constant GL.${name}`);
   }
   return value;

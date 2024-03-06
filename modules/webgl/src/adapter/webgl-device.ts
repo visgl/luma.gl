@@ -565,7 +565,7 @@ function setConstantFloatArray(device: WebGLDevice, location: number, array: Flo
       device.gl.vertexAttrib4fv(location, array);
       break;
     default:
-      // assert(false);
+    // assert(false);
   }
 }
 

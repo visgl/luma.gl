@@ -72,7 +72,9 @@ export class Geometry {
         : attributeValue;
 
       if (!ArrayBuffer.isView(attribute.value)) {
-        throw new Error(`${this._print(attributeName)}: must be typed array or object with value as typed array`);
+        throw new Error(
+          `${this._print(attributeName)}: must be typed array or object with value as typed array`
+        );
       }
 
       if ((attributeName === 'POSITION' || attributeName === 'positions') && !attribute.size) {

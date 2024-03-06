@@ -109,7 +109,7 @@ export function clearBuffer(
         break;
 
       default:
-        // assert(false, ERR_ARGUMENTS);
+      // assert(false, ERR_ARGUMENTS);
     }
   });
 }
