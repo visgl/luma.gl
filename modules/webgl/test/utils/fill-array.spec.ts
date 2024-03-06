@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {fillArray} from '@luma.gl/core';
+import {fillArray} from '@luma.gl/webgl/utils/fill-array';
 
 const FILL_ARRAY_TEST_CASES = [
   {
@@ -13,7 +13,7 @@ const FILL_ARRAY_TEST_CASES = [
   }
 ];
 
-test('flatten#import', t => {
+test('fillArray#import', t => {
   t.ok(typeof fillArray === 'function', 'fillArray imported OK');
   t.end();
 });

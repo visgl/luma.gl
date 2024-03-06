@@ -2,9 +2,38 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, AccessorObject} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
+
+/**
+ * Attribute descriptor object
+ * @deprecated Use ShaderLayout
+ */
+export interface AccessorObject {
+  buffer?: Buffer;
+  // format: VertexFormat;
+  offset?: number;
+  // can now be described with single WebGPU-style `format` string
+
+  //
+  stride?: number;
+
+  /** @deprecated - Use accessor.stepMode */
+  divisor?: number;
+
+  /** @deprecated - Infer from format */
+  type?: number;
+  /** @deprecated - Infer from format */
+  size?: number;
+  /** @deprecated - Infer from format */
+  normalized?: boolean;
+  /** @deprecated - Infer from format */
+  integer?: boolean;
+
+  /** @deprecated */
+  index?: number;
+}
 
 const DEFAULT_ACCESSOR_VALUES = {
   offset: 0,

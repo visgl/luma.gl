@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log} from '../../utils/log';
-import type {ShaderLayout, AttributeDeclaration} from '../types/shader-layout';
-import type {BufferLayout} from '../types/buffer-layout';
-import type {ShaderDataType, ShaderAttributeType} from '../../type-utils/shader-types';
-import {decodeShaderAttributeType} from '../../type-utils/decode-attribute-type';
-import type {VertexFormat, VertexType} from '../../type-utils/vertex-formats';
-import {decodeVertexFormat} from '../../type-utils/decode-vertex-format';
+import {log} from '../utils/log';
+import type {ShaderLayout, AttributeDeclaration} from '../adapter/types/shader-layout';
+import type {BufferLayout} from '../adapter/types/buffer-layout';
+import type {ShaderDataType, ShaderAttributeType} from '../type-utils/shader-types';
+import {decodeShaderAttributeType} from '../type-utils/decode-attribute-type';
+import type {VertexFormat, VertexType} from '../type-utils/vertex-formats';
+import {decodeVertexFormat} from '../type-utils/decode-vertex-format';
 
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {

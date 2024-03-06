@@ -10,13 +10,14 @@ export type {ConstructorOf, PartialBy} from './types';
 // NUMERIC TYPES - TODO: could be imported from @math.gl/types
 export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray} from './types';
 
-export {isTypedArray, isNumberArray} from './utils/is-array';
+export {isNumberArray} from './utils/is-array';
 
 // MAIN API ACCESS POINTS
 export {luma} from './portable/luma';
 
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
+
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 
@@ -73,7 +74,7 @@ export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
 // API TYPES
-export type {AccessorObject} from './adapter/types/accessor';
+// export type {AccessorObject} from './adapter/types/accessor';
 export type {
   Parameters,
   PrimitiveTopology,
@@ -143,25 +144,14 @@ export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 export type {CompilerMessage} from './portable/compiler-log/compiler-message';
 export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
 
-//
-export type {AttributeInfo} from './adapter/attribute-utils/get-attribute-from-layouts';
-export {
-  getAttributeInfosFromLayouts,
-  mergeShaderLayout
-} from './adapter/attribute-utils/get-attribute-from-layouts';
-
 // GENERAL UTILS
 
 export {StatsManager} from './utils/stats-manager';
 export {log} from './utils/log';
-export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
-export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
-export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
-export {makeRandomNumberGenerator, random} from './utils/random';
 
-export {uid} from './utils/uid';
-export {isObjectEmpty} from './utils/is-object-empty';
-// export {deepEqual} from './utils/deep-equal';
+export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
+export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
+export {makeRandomNumberGenerator, random} from './utils/random';
 
 /**
  * Marks GLSL shaders for syntax highlighting: glsl`...`
@@ -169,7 +159,17 @@ export {isObjectEmpty} from './utils/is-object-empty';
  */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
 
-// INTERNAL
+// INTERNAL - for use in other luma.gl modules only
+
+export {uid} from './utils/uid';
+export {isObjectEmpty} from './utils/is-object-empty';
+
+export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
+export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
+export {
+  getAttributeInfosFromLayouts,
+  mergeShaderLayout
+} from './adapter-utils/get-attribute-from-layouts';
 
 export type {
   CopyBufferToBufferOptions,
