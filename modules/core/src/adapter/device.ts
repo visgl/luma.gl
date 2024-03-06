@@ -456,7 +456,12 @@ export abstract class Device {
     throw new Error('not implemented');
   }
 
-  // IMPLEMENTATION
+  timestamp: number = 0;
+
+  /** A monotonic counter for tracking buffer and texture updates */
+  incrementTimestamp(): number {
+    return this.timestamp++;
+  }
 
   // Error Handling
 
@@ -464,6 +469,8 @@ export abstract class Device {
   onError(error: Error) {
     this.props.onError(error);
   }
+
+  // IMPLEMENTATION
 
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
