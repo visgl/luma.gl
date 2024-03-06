@@ -9,3 +9,4 @@ picogl/
 .docusaurus
 
 test/apps/
+bundle.ts
