@@ -6,9 +6,9 @@ import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 // import { log } from '../../utils/log';
 import {uid} from '../../utils/utils';
-import {CompilerMessage} from '../../lib/compiler-log/compiler-message';
-import {formatCompilerLog} from '../../lib/compiler-log/format-compiler-log';
-import {getShaderInfo} from '../../lib/compiler-log/get-shader-info';
+import {CompilerMessage} from '../../portable/compiler-log/compiler-message';
+import {formatCompilerLog} from '../../portable/compiler-log/format-compiler-log';
+import {getShaderInfo} from '../../portable/compiler-log/get-shader-info';
 
 /**
  * Properties for a Shader
