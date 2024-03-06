@@ -422,6 +422,7 @@ export class Model {
     this.bufferLayout = this._gpuGeometry
       ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
+    this._setPipelineNeedsUpdate('bufferLayout');
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
@@ -436,8 +437,6 @@ export class Model {
     if (this._gpuGeometry) {
       this._setGeometryAttributes(this._gpuGeometry);
     }
-
-    this._setPipelineNeedsUpdate('bufferLayout');
   }
 
   /**
