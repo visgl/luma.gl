@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderAttributeType} from '../types/shader-types';
+import {ShaderAttributeType} from './shader-types';
 
 /**  Predeclared aliases @see https://www.w3.org/TR/WGSL/#vector-types */
 export const WGSL_TYPE_ALIAS_MAP: Record<string, ShaderAttributeType> = {

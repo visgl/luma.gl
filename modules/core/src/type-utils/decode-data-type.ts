@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {DataType, NormalizedDataType} from '../types/vertex-formats';
+import {DataType, NormalizedDataType} from './vertex-formats';
 
 export type DecodedVertexType = {
   /** WebGPU data type */

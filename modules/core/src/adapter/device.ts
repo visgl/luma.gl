@@ -6,7 +6,7 @@ import {VERSION} from '../init';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/utils';
-import type {TextureFormat} from './types/texture-formats';
+import type {TextureFormat} from '../type-utils//texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -24,7 +24,7 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
-import {isTextureFormatCompressed} from './type-utils/decode-texture-format';
+import {isTextureFormatCompressed} from '../type-utils/decode-texture-format';
 
 /**
  * Identifies the GPU vendor and driver.

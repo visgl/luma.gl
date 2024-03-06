@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderDataType, ShaderAttributeType} from '../types/shader-types';
-import {VertexFormat, VertexType} from '../types/vertex-formats';
+import {ShaderDataType, ShaderAttributeType} from './shader-types';
+import {VertexFormat, VertexType} from './vertex-formats';
 
 /** Information extracted from a ShaderAttributeInfo constant */
 export type ShaderAttributeTypeInfo = {

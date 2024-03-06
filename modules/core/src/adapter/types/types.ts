@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray} from '../../types';
-import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from './texture-formats';
+import type {ColorTextureFormat, DepthStencilTextureFormat, TextureFormat} from '../../type-utils/texture-formats';
 import type {Buffer} from '../resources/buffer';
 import type {Texture} from '../resources/texture'; // TextureView...
 
