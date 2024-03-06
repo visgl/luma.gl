@@ -224,6 +224,7 @@ test('Model#pipeline caching', t => {
   t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
+  model2.predraw(); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
   model2.pipeline.setUniformsWebGL = setUniformsSpy;

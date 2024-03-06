@@ -127,6 +127,9 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
   /** Default view for this texture */
   abstract view: TextureView;
 
+  /** "Time" of last update. Monotonically increasing timestamp */
+  updateTimestamp: number;
+
   /** Do not use directly. Create with device.createTexture() */
   constructor(
     device: Device,
@@ -139,6 +142,9 @@ export abstract class Texture<Props extends TextureProps = TextureProps> extends
     this.width = this.props.width;
     this.height = this.props.height;
     this.depth = this.props.depth;
+
+    // TODO - perhaps this should be set on async write completion?
+    this.updateTimestamp = device.incrementTimestamp();
   }
 
   /** Create a texture view for this texture */

@@ -61,6 +61,8 @@ export abstract class Buffer extends Resource<BufferProps> {
   readonly indexType?: 'uint16' | 'uint32';
   /** Length of buffer in bytes */
   abstract byteLength: number;
+  /** "Time" of last update */
+  updateTimestamp: number;
 
   constructor(device: Device, props: BufferProps) {
     const deducedProps = {...props};
@@ -78,6 +80,8 @@ export abstract class Buffer extends Resource<BufferProps> {
 
     this.usage = props.usage || 0;
     this.indexType = deducedProps.indexType;
+    // TODO - perhaps this should be set on async write completion?
+    this.updateTimestamp = device.incrementTimestamp();
   }
 
   /** Write data to buffer */

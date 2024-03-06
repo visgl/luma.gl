@@ -1,5 +1,21 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.7
+
+- feat(webgl): Fine-grained extension control (#1993)
+- feat(engine): Add draw() call success tracking, needsRedraw flag. (#1992)
+- feat(test-utils): add NullDevice (#1991)
+- fix(engine): Add topology to cache on WebGL (#1989)
+- chore(webgl): Remove Renderbuffer usage (#1987)
+- chore(test-utils); Make webgl test device creation async to ensure debuggability (#1986)
+- Fix Model memory leak (#1983)
+- chore(webgl): Clean parameters (#1985)
+- fix(webgpu): Screen texture view type (#1982)
+- chore(engine): Add Computation class (#1981)
+- chore(build): size optimization (#1978)
+- feat(shadertools): ShaderAssembler support single compute/unified shader (#1980)
+- chore(webgpu): Improve ComputePipeline implementation, add tests (#1979)
+
 ### v9.0.0-beta.6
 
 - feat: Add QuerySet resource (#1975)

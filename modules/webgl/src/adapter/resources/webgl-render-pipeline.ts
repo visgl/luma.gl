@@ -175,11 +175,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
   }): boolean {
-    // If we are using async linking, we need to wait until linking completes
-    if (this.linkStatus !== 'success') {
-      return false;
-    }
-
     const {
       renderPass,
       vertexArray,
@@ -198,13 +193,25 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
     const isInstanced: boolean = Number(instanceCount) > 0;
 
+    // If we are using async linking, we need to wait until linking completes
+    if (this.linkStatus !== 'success') {
+      log.info(2, `RenderPipeline:${this.id}.draw() aborted - waiting for shader linking`)();
+      return false;
+    }
+
     // Avoid WebGL draw call when not rendering any data or values are incomplete
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
     if (!this._areTexturesRenderable() || vertexCount === 0) {
-      // (isInstanced && instanceCount === 0)
+      log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
       return false;
+    }
+
+    // (isInstanced && instanceCount === 0)
+    if (vertexCount === 0) {
+      log.info(2, `RenderPipeline:${this.id}.draw() aborted - no vertices to draw`)();
+      return true;
     }
 
     this.device.gl.useProgram(this.handle);

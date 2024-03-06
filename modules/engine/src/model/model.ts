@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// A lot of imports, but then Model is where it all comes together...
 import type {TypedArray, RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
 import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.gl/core';
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, Buffer, RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
-import {log, uid, deepEqual, splitUniformsAndBindings, isNumberArray} from '@luma.gl/core';
+import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';
+import {RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
+import {log, uid, deepEqual, isObjectEmpty, splitUniformsAndBindings} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
-import {DeviceFeature, isObjectEmpty} from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 
-import {ShaderInputs} from '../shader-inputs';
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
+import {ShaderInputs} from '../shader-inputs';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {ShaderFactory} from '../lib/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
@@ -167,13 +168,17 @@ export class Model {
 
   _uniformStore: UniformStore;
 
-  _pipelineNeedsUpdate: string | false = 'newly created';
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
   private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
+  _pipelineNeedsUpdate: string | false = 'newly created';
+  private _needsRedraw: string | false = 'initializing';
   private _destroyed = false;
+
+  /** "Time" of last draw. Monotonically increasing timestamp */
+  _lastDrawTimestamp: number = -1;
 
   constructor(device: Device, props: ModelProps) {
     this.props = {...Model.defaultProps, ...props};
@@ -308,19 +313,39 @@ export class Model {
 
   // Draw call
 
+  /** Query redraw status. Clears the status. */
+  needsRedraw(): false | string {
+    // Catch any writes to already bound resources
+    if (this._getBindingsUpdateTimestamp() > this._lastDrawTimestamp) {
+      this.setNeedsRedraw('contents of bound textures or buffers updated');
+    }
+    const needsRedraw = this._needsRedraw;
+    this._needsRedraw = false;
+    return needsRedraw;
+  }
+
+  /** Mark the model as needing a redraw */
+  setNeedsRedraw(reason: string): void {
+    this._needsRedraw ||= reason;
+  }
+
   predraw() {
     // Update uniform buffers if needed
     this.updateShaderInputs();
+    // Check if the pipeline is invalidated
+    this.pipeline = this._updatePipeline();
   }
 
-  draw(renderPass: RenderPass): void {
+  draw(renderPass: RenderPass): boolean {
     this.predraw();
 
+    let drawSuccess: boolean;
     try {
       this._logDrawCallStart();
 
-      // Check if the pipeline is invalidated
-      // TODO - this is likely the worst place to do this from performance perspective. Perhaps add a predraw()?
+      // Update the pipeline if invalidated
+      // TODO - inside RenderPass is likely the worst place to do this from performance perspective.
+      // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
 
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
@@ -335,7 +360,7 @@ export class Model {
         ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
         : undefined;
 
-      this.pipeline.draw({
+      drawSuccess = this.pipeline.draw({
         renderPass,
         vertexArray: this.vertexArray,
         vertexCount: this.vertexCount,
@@ -347,6 +372,15 @@ export class Model {
       this._logDrawCallEnd();
     }
     this._logFramebuffer(renderPass);
+
+    // Update needsRedraw flag
+    if (drawSuccess) {
+      this._lastDrawTimestamp = this.device.timestamp;
+      this._needsRedraw = false;
+    } else {
+      this._needsRedraw = 'waiting for resource initialization';
+    }
+    return drawSuccess;
   }
 
   // Update fixed fields (can trigger pipeline rebuild)
@@ -356,7 +390,7 @@ export class Model {
    * Geometry, set topology and bufferLayout
    * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
    */
-  setGeometry(geometry: GPUGeometry | Geometry | null) {
+  setGeometry(geometry: GPUGeometry | Geometry | null): void {
     this._gpuGeometry?.destroy();
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
@@ -367,30 +401,6 @@ export class Model {
       }
     }
     this._gpuGeometry = gpuGeometry;
-  }
-
-  /**
-   * Updates the optional geometry attributes
-   * Geometry, sets several attributes, indexBuffer, and also vertex count
-   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
-   */
-  _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
-    // Filter geometry attribute so that we don't issue warnings for unused attributes
-    const attributes = {...gpuGeometry.attributes};
-    for (const [attributeName] of Object.entries(attributes)) {
-      if (
-        !this.pipeline.shaderLayout.attributes.find(layout => layout.name === attributeName) &&
-        attributeName !== 'positions'
-      ) {
-        delete attributes[attributeName];
-      }
-    }
-
-    // TODO - delete previous geometry?
-    this.vertexCount = gpuGeometry.vertexCount;
-    this.setIndexBuffer(gpuGeometry.indices);
-    this.setAttributes(gpuGeometry.attributes, {ignoreUnknownAttributes: true});
-    this.setAttributes(attributes, {ignoreUnknownAttributes: this.props.ignoreUnknownAttributes});
   }
 
   /**
@@ -412,7 +422,6 @@ export class Model {
     this.bufferLayout = this._gpuGeometry
       ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
-    this._setPipelineNeedsUpdate('bufferLayout');
 
     // Recreate the pipeline
     this.pipeline = this._updatePipeline();
@@ -427,6 +436,8 @@ export class Model {
     if (this._gpuGeometry) {
       this._setGeometryAttributes(this._gpuGeometry);
     }
+
+    this._setPipelineNeedsUpdate('bufferLayout');
   }
 
   /**
@@ -449,6 +460,7 @@ export class Model {
    */
   setVertexCount(vertexCount: number): void {
     this.vertexCount = vertexCount;
+    this.setNeedsRedraw('vertexCount');
   }
 
   /**
@@ -457,6 +469,7 @@ export class Model {
    */
   setInstanceCount(instanceCount: number): void {
     this.instanceCount = instanceCount;
+    this.setNeedsRedraw('instanceCount');
   }
 
   setShaderInputs(shaderInputs: ShaderInputs): void {
@@ -467,39 +480,13 @@ export class Model {
       const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
       this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
     }
-  }
-
-  /**
-   * Updates shader module settings (which results in uniforms being set)
-   */
-  setShaderModuleProps(props: Record<string, any>): void {
-    const uniforms = this._getModuleUniforms(props);
-
-    // Extract textures & framebuffers set by the modules
-    // TODO better way to extract bindings
-    const keys = Object.keys(uniforms).filter(k => {
-      const uniform = uniforms[k];
-      return !isNumberArray(uniform) && typeof uniform !== 'number' && typeof uniform !== 'boolean';
-    });
-    const bindings: Record<string, Binding> = {};
-    for (const k of keys) {
-      bindings[k] = uniforms[k];
-      delete uniforms[k];
-    }
+    this.setNeedsRedraw('shaderInputs');
   }
 
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
-  }
-
-  /**
-   * @deprecated Updates shader module settings (which results in uniforms being set)
-   */
-  updateModuleSettings(props: Record<string, any>): void {
-    log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
+    // TODO - this is already tracked through buffer/texture update times?
+    this.setNeedsRedraw('shaderInputs');
   }
 
   /**
@@ -507,19 +494,15 @@ export class Model {
    */
   setBindings(bindings: Record<string, Binding>): void {
     Object.assign(this.bindings, bindings);
+    this.setNeedsRedraw('bindings');
   }
 
   /**
-   * Sets individual uniforms
-   * @deprecated WebGL only, use uniform buffers for portability
-   * @param uniforms
-   * @returns self for chaining
+   * Updates optional transform feedback. WebGL only.
    */
-  setUniforms(uniforms: Record<string, UniformValue>): void {
-    if (!isObjectEmpty(uniforms)) {
-      this.pipeline.setUniformsWebGL(uniforms);
-      Object.assign(this.uniforms, uniforms);
-    }
+  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
+    this.transformFeedback = transformFeedback;
+    this.setNeedsRedraw('transformFeedback');
   }
 
   /**
@@ -528,13 +511,7 @@ export class Model {
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     this.vertexArray.setIndexBuffer(indexBuffer);
-  }
-
-  /**
-   * Updates optional transform feedback. WebGL only.
-   */
-  setTransformFeedback(transformFeedback: TransformFeedback | null): void {
-    this.transformFeedback = transformFeedback;
+    this.setNeedsRedraw('indexBuffer');
   }
 
   /**
@@ -575,6 +552,7 @@ export class Model {
         )();
       }
     }
+    this.setNeedsRedraw('attributes');
   }
 
   /**
@@ -596,12 +574,85 @@ export class Model {
         )();
       }
     }
+    this.setNeedsRedraw('constants');
   }
 
+  // DEPRECATED METHODS
+
+  /**
+   * Sets individual uniforms
+   * @deprecated WebGL only, use uniform buffers for portability
+   * @param uniforms
+   */
+  setUniforms(uniforms: Record<string, UniformValue>): void {
+    if (!isObjectEmpty(uniforms)) {
+      this.pipeline.setUniformsWebGL(uniforms);
+      Object.assign(this.uniforms, uniforms);
+    }
+    this.setNeedsRedraw('uniforms');
+  }
+
+  /**
+   * @deprecated Updates shader module settings (which results in uniforms being set)
+   */
+  updateModuleSettings(props: Record<string, any>): void {
+    log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
+    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
+    Object.assign(this.bindings, bindings);
+    Object.assign(this.uniforms, uniforms);
+    this.setNeedsRedraw('moduleSettings');
+  }
+
+  // Internal methods
+
+  /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
+  _getBindingsUpdateTimestamp(): number {
+    let timestamp = 0;
+    for (const binding of Object.values(this.bindings)) {
+      if (binding instanceof TextureView) {
+        timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
+      } else if (binding instanceof Buffer || binding instanceof Texture) {
+        timestamp = Math.max(timestamp, binding.updateTimestamp);
+      } else if (!(binding instanceof Sampler)) {
+        timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
+      }
+    }
+    return timestamp;
+  }
+
+  /**
+   * Updates the optional geometry attributes
+   * Geometry, sets several attributes, indexBuffer, and also vertex count
+   * @note Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU
+   */
+  _setGeometryAttributes(gpuGeometry: GPUGeometry): void {
+    // Filter geometry attribute so that we don't issue warnings for unused attributes
+    const attributes = {...gpuGeometry.attributes};
+    for (const [attributeName] of Object.entries(attributes)) {
+      if (
+        !this.pipeline.shaderLayout.attributes.find(layout => layout.name === attributeName) &&
+        attributeName !== 'positions'
+      ) {
+        delete attributes[attributeName];
+      }
+    }
+
+    // TODO - delete previous geometry?
+    this.vertexCount = gpuGeometry.vertexCount;
+    this.setIndexBuffer(gpuGeometry.indices);
+    this.setAttributes(gpuGeometry.attributes, {ignoreUnknownAttributes: true});
+    this.setAttributes(attributes, {ignoreUnknownAttributes: this.props.ignoreUnknownAttributes});
+
+    this.setNeedsRedraw('geometry attributes');
+  }
+
+  /** Mark pipeline as needing update */
   _setPipelineNeedsUpdate(reason: string): void {
     this._pipelineNeedsUpdate ||= reason;
+    this.setNeedsRedraw(reason);
   }
 
+  /** Update pipeline if needed */
   _updatePipeline(): RenderPipeline {
     if (this._pipelineNeedsUpdate) {
       let prevShaderVs: Shader | null = null;

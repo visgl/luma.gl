@@ -73,7 +73,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     firstIndex?: number;
     firstInstance?: number;
     baseVertex?: number;
-  }): void {
+  }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
 
     // Set pipeline
@@ -108,6 +108,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Note: Rebinds constant attributes before each draw call
     options.vertexArray.unbindAfterRender(options.renderPass);
+
+    return true;
   }
 
   /** Return a bind group created by setBindings */
