@@ -39,8 +39,8 @@
   },
   "scripts": {
     "pre-build": "npx esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.cjs",
-    "build-minified-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.min.js",
-    "build-dev-bundle": "ocular-bundle ./src/bundle.ts -output=dist/dist.dev.js -- --env=dev",
+    "build-minified-bundle": "ocular-bundle ./src/index.ts --output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./src/index.ts --output=dist/dist.dev.js --env=dev",
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
