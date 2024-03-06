@@ -17,10 +17,6 @@ import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {getWebGLTextureParameters} from '../converters/texture-formats';
 
-function cast<T>(value: unknown): T {
-  return value as T;
-}
-
 type CopyBufferToBufferCommand = {
   name: 'copy-buffer-to-buffer';
   options: CopyBufferToBufferOptions;
@@ -77,8 +73,8 @@ export class WEBGLCommandBuffer extends CommandBuffer {
 }
 
 function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOptions): void {
-  const source = cast<WEBGLBuffer>(options.source);
-  const destination = cast<WEBGLBuffer>(options.destination);
+  const source = options.source as WEBGLBuffer;
+  const destination = options.destination as WEBGLBuffer;
 
   // {In WebGL2 we can p}erform the copy on the GPU
   // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type

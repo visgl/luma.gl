@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {assert, checkProps, Buffer, AccessorObject} from '@luma.gl/core';
+import {Buffer, AccessorObject} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getTypedArrayFromGLType} from './typed-array-utils';
 
@@ -14,13 +14,6 @@ const DEFAULT_ACCESSOR_VALUES = {
   divisor: 0,
   normalized: false,
   integer: false
-};
-
-const PROP_CHECKS = {
-  deprecatedProps: {
-    instanced: 'divisor',
-    isInstanced: 'divisor'
-  }
 };
 
 export class Accessor implements AccessorObject {
@@ -43,7 +36,7 @@ export class Accessor implements AccessorObject {
   }
 
   static getBytesPerVertex(accessor: AccessorObject): number {
-    assert(accessor.size);
+    // assert(accessor.size);
     // TODO: using `FLOAT` when type is not specified,
     // ensure this assumption is valid or force API to specify type.
     const ArrayType = getTypedArrayFromGLType(accessor.type || GL.FLOAT);
@@ -82,8 +75,6 @@ export class Accessor implements AccessorObject {
 
   // eslint-disable-next-line complexity, max-statements
   _assign(props: AccessorObject = {}): this {
-    props = checkProps('Accessor', props, PROP_CHECKS);
-
     if (props.type !== undefined) {
       this.type = props.type;
 

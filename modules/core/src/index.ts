@@ -153,23 +153,15 @@ export {
 // GENERAL UTILS
 
 export {StatsManager} from './utils/stats-manager';
-export {assert} from './utils/assert';
-export {cast} from './utils/cast';
 export {log} from './utils/log';
 export {uid, isObjectEmpty} from './utils/utils';
 export {isUniformValue, splitUniformsAndBindings} from './lib/uniforms/uniform';
-export {formatValue} from './utils/format-value';
-export {stubRemovedMethods} from './utils/stub-methods';
-export {checkProps} from './utils/check-props';
 export {setPathPrefix, loadFile, loadImage, loadImageBitmap, loadScript} from './utils/load-file';
 export {getScratchArrayBuffer, getScratchArray, fillArray} from './utils/array-utils-flat';
 export {makeRandomNumberGenerator, random} from './utils/random';
 export {deepEqual} from './utils/deep-equal';
 
-// ENGINE - TODO/move to @luma.gl/engine once that module is webgl-independent?
-export {requestAnimationFrame, cancelAnimationFrame} from './utils/request-animation-frame';
-
-// SHADER HELPERS
+// SHADER HELPERS../../engine/src/animation-loop/request-animation-frame
 
 /**
  * Marks GLSL shaders for syntax highlighting: glsl`...`

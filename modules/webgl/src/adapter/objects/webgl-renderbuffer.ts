@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {assert, ResourceProps, TextureFormat} from '@luma.gl/core';
+import {ResourceProps, TextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WebGLResource} from './webgl-resource';
@@ -89,8 +89,7 @@ export class WEBGLRenderbuffer extends WebGLResource<RenderbufferProps> {
 
   /** Creates and initializes a renderbuffer object's data store */
   protected _initialize(props: Required<RenderbufferProps>): void {
-    const {format, width, height, samples} = props;
-    assert(format, 'Needs format');
+    const {width, height, samples} = props;
 
     this.trackDeallocatedMemory();
 

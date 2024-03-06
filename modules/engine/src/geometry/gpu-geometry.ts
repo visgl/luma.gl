@@ -1,5 +1,5 @@
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
-import {Device, Buffer, uid, assert, getVertexFormatFromAttribute} from '@luma.gl/core';
+import {Device, Buffer, uid, getVertexFormatFromAttribute} from '@luma.gl/core';
 import type {Geometry} from '../geometry/geometry';
 
 export type GPUGeometryProps = {
@@ -43,7 +43,9 @@ export class GPUGeometry {
     this.bufferLayout = props.bufferLayout || [];
 
     if (this.indices) {
-      assert(this.indices.usage === Buffer.INDEX);
+      if (!(this.indices.usage & Buffer.INDEX)) {
+        throw new Error('Index buffer must have INDEX usage');
+      }
     }
   }
 

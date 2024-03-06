@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {BufferProps} from '@luma.gl/core';
-import {Buffer, assert} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 
@@ -74,7 +74,7 @@ export class WEBGLBuffer extends Buffer {
 
   // Allocate a GPU buffer of specified size.
   _initWithByteLength(byteLength: number): this {
-    assert(byteLength >= 0);
+    // assert(byteLength >= 0);
 
     // Workaround needed for Safari (#291):
     // gl.bufferData with size equal to 0 crashes. Instead create zero sized array.

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, ResourceProps} from '@luma.gl/core';
-import {Resource, uid, stubRemovedMethods} from '@luma.gl/core';
+import {Resource, uid} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 
@@ -110,11 +110,6 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
 
   unbind() {
     this.bind(null);
-  }
-
-  // Install stubs for removed methods
-  stubRemovedMethods(className: string, version: string, methodNames: string[]) {
-    return stubRemovedMethods(this, className, version, methodNames);
   }
 
   // PUBLIC VIRTUAL METHODS

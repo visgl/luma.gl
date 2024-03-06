@@ -4,7 +4,7 @@
 
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, cast} from '@luma.gl/core';
+import {RenderPipeline} from '@luma.gl/core';
 
 import type {NullDevice} from '../null-device';
 import {NullShader} from './null-shader';
@@ -22,8 +22,8 @@ export class NullRenderPipeline extends RenderPipeline {
     super(device, props);
     this.device = device;
 
-    this.vs = cast<NullShader>(props.vs);
-    this.fs = cast<NullShader>(props.fs);
+    this.vs = props.vs as NullShader;
+    this.fs = props.fs as NullShader;
 
     this.shaderLayout = props.shaderLayout || {
       attributes: [],

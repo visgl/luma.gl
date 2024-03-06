@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {luma, Device} from '@luma.gl/core';
-import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/core';
+import {requestAnimationFrame, cancelAnimationFrame} from './request-animation-frame';
 import {Timeline} from '../animation/timeline';
 import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
