@@ -16,6 +16,3 @@ export function makeRandomNumberGenerator(): () => number {
 function fract(n: number): number {
   return n - Math.floor(n);
 }
-
-/** Generates a deterministic pseudorandom number */
-export const random = makeRandomNumberGenerator();

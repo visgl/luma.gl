@@ -4,17 +4,10 @@
 
 export {VERSION} from './init';
 
-// GENERAL TYPES
-export type {ConstructorOf, PartialBy} from './types';
-
-// NUMERIC TYPES - TODO: could be imported from @math.gl/types
-export type {TypedArray, TypedArrayConstructor, NumberArray, BigIntOrNumberArray} from './types';
-
-export {isNumberArray} from './utils/is-array';
-
-// MAIN API ACCESS POINTS
+// MAIN API ACCESS POINT
 export {luma} from './portable/luma';
 
+// ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
 export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
@@ -73,6 +66,15 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
+// PORTABLE API - UNIFORM BUFFERS
+export {UniformBufferLayout} from './portable/uniforms/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniforms/uniform-block';
+export {UniformStore} from './portable/uniforms/uniform-store';
+
+// PORTABLE API - COMPILER LOG
+export type {CompilerMessage} from './portable/compiler-log/compiler-message';
+export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
+
 // API TYPES
 // export type {AccessorObject} from './adapter/types/accessor';
 export type {
@@ -112,12 +114,9 @@ export type {
 } from './adapter/types/shader-layout';
 
 export type {UniformValue} from './adapter/types/types';
-export {UniformBufferLayout} from './portable/uniforms/uniform-buffer-layout';
-export {UniformBlock} from './portable/uniforms/uniform-block';
-export {UniformStore} from './portable/uniforms/uniform-store';
 
-// TYPE UTILS
-// MEMORY LAYOUT TYPES
+// TYPE UTILS - GPU MEMORY LAYOUT HELPERS
+
 export type {VertexFormat, VertexType} from './type-utils/vertex-formats';
 export type {
   TextureFormat,
@@ -132,37 +131,31 @@ export type {
 
 export {decodeVertexFormat} from './type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './type-utils/decode-texture-format';
+export {decodeShaderUniformType} from './type-utils/decode-shader-types';
+export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 export {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
 } from './type-utils/vertex-format-from-attribute';
-export {decodeShaderUniformType} from './type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './type-utils/decode-attribute-type';
 
-// COMPILER LOG
-export type {CompilerMessage} from './portable/compiler-log/compiler-message';
-export {formatCompilerLog} from './portable/compiler-log/format-compiler-log';
+// GENERAL EXTERNAL UTILS - FOR APPLICATIONS
 
-// GENERAL UTILS
-
-export {StatsManager} from './utils/stats-manager';
-export {log} from './utils/log';
-
-export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
-export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
-export {makeRandomNumberGenerator, random} from './utils/random';
-
-/**
- * Marks GLSL shaders for syntax highlighting: glsl`...`
- * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
- */
+/** GLSL syntax highlighting: glsl`...` Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
 
-// INTERNAL - for use in other luma.gl modules only
+export {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?
+export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
+export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
+export {makeRandomNumberGenerator} from './utils/random';
 
+// GENERAL INTERNAL UTILS - for use in other luma.gl modules only
+
+export {log} from './utils/log';
 export {uid} from './utils/uid';
 export {isObjectEmpty} from './utils/is-object-empty';
+
+// ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
 
 export {isUniformValue, splitUniformsAndBindings} from './portable/uniforms/uniform';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';

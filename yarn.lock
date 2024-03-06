@@ -3315,6 +3315,7 @@ __metadata:
   dependencies:
     "@luma.gl/shadertools": "npm:9.0.0-beta.7"
     "@math.gl/core": "npm:^4.0.0"
+    "@math.gl/types": "npm:^4.0.0"
     "@probe.gl/log": "npm:^4.0.2"
     "@probe.gl/stats": "npm:^4.0.2"
   peerDependencies:
