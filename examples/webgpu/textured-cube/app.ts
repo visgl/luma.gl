@@ -1,8 +1,5 @@
-import {Buffer, loadImageBitmap, glsl} from '@luma.gl/core';
+import {Buffer, Texture, loadImageBitmap, glsl} from '@luma.gl/core';
 import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-// import {luma, Device, Buffer, Texture, loadImageBitmap, ShaderLayout} from '@luma.gl/core';
-// import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Rotating Cube';
@@ -98,8 +95,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     // Fetch the image and upload it into a GPUTexture.
     const texture = device.createTexture({
+      usage: Texture.TEXTURE & Texture.COPY_DST,
       data: loadImageBitmap(TEXTURE_URL),
-      // usage: Texture.TEXTURE_BINDING | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
+      // usage: Texture.TEXTURE | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
       mipmaps: true, // Create mipmaps
       sampler: {
         // linear filtering for smooth interpolation.

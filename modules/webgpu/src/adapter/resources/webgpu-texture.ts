@@ -42,7 +42,7 @@ export class WebGPUTexture extends Texture {
     if (props.data instanceof Promise) {
       props.data.then(resolvedImageData => {
         // @ts-expect-error
-        this.props = {...props, data: resolvedImageData};
+        this.props = {...this.props, data: resolvedImageData};
         this.initialize(this.props);
       });
       return;
@@ -115,9 +115,9 @@ export class WebGPUTexture extends Texture {
         height,
         depthOrArrayLayers: this.props.depth
       },
+      usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
       dimension: BASE_DIMENSIONS[this.props.dimension],
       format: getWebGPUTextureFormat(this.props.format),
-      usage: this.props.usage,
       mipLevelCount: this.props.mipLevels,
       sampleCount: this.props.samples
     });

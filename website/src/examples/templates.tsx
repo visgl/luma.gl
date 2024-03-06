@@ -18,7 +18,7 @@ import PersistenceApp from '../../../examples/showcase/persistence/app';
 
 import HelloCubeApp from '../../../examples/tutorials/hello-cube/app';
 import HelloInstancingApp from '../../../examples/tutorials/hello-instancing/app';
-import HelloTriangleApp from '../../../examples/tutorials/hello-triangle/app';
+import HelloTriangleApp from '../../../examples/tutorials/hello-triangle-geometry/app';
 import LightingApp from '../../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../../examples/tutorials/shader-hooks/app';
 import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
@@ -27,11 +27,10 @@ import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
 
 // import AnimationLoop from '../../../examples/webgl/external-webgl-context/app';
 
-import HelloTriangleWebGPUApp from '../../../examples/portable/triangle/app';
-import InstancedCubesWebGPUApp from '../../../examples/portable/instanced-cubes/app';
-import RotatingCubeWebGPUApp from '../../../examples/portable/rotating-cube/app';
+import HelloTriangleWebGPUApp from '../../../examples/tutorials/hello-triangle/app';
+import InstancedCubesWebGPUApp from '../../../examples/tutorials/hello-instanced-cubes/app';
 import TexturedCubeWebGPUApp from '../../../examples/webgpu/textured-cube/app';
-import TwoCubesWebGPUApp from '../../../examples/portable/two-cubes/app';
+import TwoCubesWebGPUApp from '../../../examples/tutorials/hello-two-cubes/app';
 
 const exampleConfig = {};
 
@@ -232,15 +231,6 @@ export const InstancedCubesWebGPUExample: React.FC = () => (
     id="instanced-cubes-webgpu"
     directory="webgpu"
     template={InstancedCubesWebGPUApp}
-    config={exampleConfig}
-  />
-);
-
-export const RotatingCubeWebGPUExample: React.FC = () => (
-  <LumaExample
-    id="rotating-cube-webgpu"
-    directory="webgpu"
-    template={RotatingCubeWebGPUApp}
     config={exampleConfig}
   />
 );

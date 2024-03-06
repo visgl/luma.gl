@@ -22,6 +22,11 @@ export type CreateDeviceProps = DeviceProps & {
  * Run-time selection of the first available Device
  */
 export class luma {
+  static defaultProps: Required<CreateDeviceProps> = {
+    ...Device.defaultProps,
+    type: 'best-available'
+  };
+
   /** Global stats for all devices */
   static stats: StatsManager = lumaStats;
 
@@ -51,12 +56,12 @@ export class luma {
   }
 
   static setDefaultDeviceProps(props: CreateDeviceProps): void {
-    Object.assign(Device.defaultProps, props);
+    Object.assign(luma.defaultProps, props);
   }
 
   /** Creates a device. Asynchronously. */
   static async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
-    props = {...Device.defaultProps, ...props};
+    props = {...luma.defaultProps, ...props};
     if (props.gl) {
       props.type = 'webgl';
     }

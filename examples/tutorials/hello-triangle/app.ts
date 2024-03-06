@@ -1,106 +1,67 @@
-import {glsl, Buffer} from '@luma.gl/core';
+import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
-const INFO_HTML = `
-Have to start somewhere...
-`;
+export const title = 'Hello Triangle';
+export const description = 'Shows rendering a basic triangle.';
 
-const vs = `\
-#version 300 es
+const WGSL_SHADER = /* WGSL */ `\
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+  return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+}
 
-in vec2 position;
-in vec3 color;
-
-out vec3 vColor;
-
-void main() {
-  vColor = color;
-  gl_Position = vec4(position, 0.0, 1.0);
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }
 `;
 
-const fs = glsl`\
+/** Provide both GLSL and WGSL shaders */
+const VS_GLSL = glsl`\
 #version 300 es
-
-in vec3 vColor;
-out vec4 fragColor;
+const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 void main() {
-  fragColor = vec4(vColor, 1.0);
+  gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
 }
 `;
 
-// export const vs_wgsl = /* WGSL */`\
-// struct VertexOutput {
-// @builtin(position) Position : vec4<f32>;
-// @location(0) fragColor : vec3<f32>;
-// };
-
-// @vertex
-// fn main(@location(0) position : vec2<f32>, @location(1) color : vec3<f32>) -> VertexOutput {
-//   var output : VertexOutput;
-//   output.Position = uniforms.modelViewProjectionMatrix * position;
-//   output.fragColor = color;
-//   return output;
-// }
-// `;
-
-// export const fs_wgsl = /* WGSL */`\
-// @fragment
-// fn main(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
-//   return vec4<f32>(fragColor, 1.0);
-// }
-// `;
+const FS_GLSL = glsl`\
+#version 300 es
+precision highp float;
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+`;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
-
   model: Model;
-  interleavedBuffer: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
-
-    // prettier-ignore
-    const interleavedData = new Float32Array([
-      // Offset
-      0, 0,
-      // vertex 1: 2D positions XY,  colors RGB
-      -0.5, -0.5,  1, 0, 0,
-      // vertex 2: 2D positions XY,  colors RGB
-      0.5, -0.5,  0, 1, 0,
-      // vertex 3: 2D positions XY,  colors RGB
-      0.0, 0.5,  0, 0, 1
-    ])
-    this.interleavedBuffer = device.createBuffer(interleavedData);
-
     this.model = new Model(device, {
-      id: 'triangle',
-      vs,
-      fs,
-      bufferLayout: [
-        {
-          name: 'vertexData',
-          byteStride: 20,
-          attributes: [
-            {attribute: 'position', format: 'float32x2', byteOffset: 8 + 0},
-            {attribute: 'color', format: 'float32x3', byteOffset: 8 + 8}
-          ]
-        }
-      ],
-      attributes: {
-        vertexData: this.interleavedBuffer
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
+      topology: 'triangle-list',
+      vertexCount: 3,
+      shaderLayout: {
+        attributes: [],
+        bindings: []
       },
-      vertexCount: 3
+      parameters: {
+        depthFormat: 'depth24plus'
+      }
     });
   }
 
   onFinalize() {
     this.model.destroy();
-    this.interleavedBuffer.destroy();
   }
 
-  onRender({device}: AnimationProps): void {
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [1, 1, 1, 1]});
     this.model.draw(renderPass);
     renderPass.end();
   }

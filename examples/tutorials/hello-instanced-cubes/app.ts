@@ -1,33 +1,25 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
 import {Buffer, glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
-import '@luma.gl/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Two Cubes';
 export const description = 'Shows usage of multiple uniform buffers.';
 
-// type AppUniforms = {
-//   modelViewProjectionMatrix: number[];
-// };
-
-// const app = {
-//   uniformTypes: {'modelViewProjectionMatrix': 'mat4x4<f32>'}
-// }
+// WGSL
 
 const WGSL_SHADER = /* WGSL */ `\
 struct Uniforms {
-  modelViewProjectionMatrix : mat4x4<f32>,
+  modelViewProjectionMatrix : array<mat4x4<f32>, 16>,
 };
+
 @binding(0) @group(0) var<uniform> app : Uniforms;
 
 struct VertexInputs {
+  @builtin(instance_index) instanceIdx : u32,
+  // CUBE GEOMETRY
   @location(0) positions : vec4<f32>,
   @location(1) texCoords : vec2<f32>
-};
+}
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
@@ -38,9 +30,9 @@ struct FragmentInputs {
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix * inputs.positions;
+  outputs.Position = app.modelViewProjectionMatrix[inputs.instanceIdx] * inputs.positions;
   outputs.fragUV = inputs.texCoords;
-  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4<f32>(1.0, 1.0, 1.0, 1.0));
   return outputs;
 }
 
@@ -57,9 +49,10 @@ const VS_GLSL = glsl`\
 #define SHADER_NAME cube-vs
 
 uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
+  mat4 modelViewProjectionMatrix[16];
 } app;
 
+// CUBE GEOMETRY
 layout(location=0) in vec3 positions;
 layout(location=1) in vec2 texCoords;
 
@@ -67,7 +60,7 @@ out vec2 fragUV;
 out vec4 fragPosition;
 
 void main() {
-  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  gl_Position = app.modelViewProjectionMatrix[gl_InstanceID] * vec4(positions, 1.0);
   fragUV = texCoords;
   fragPosition = vec4(positions, 1.);
 }
@@ -77,11 +70,6 @@ const FS_GLSL = glsl`\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-} app;
-
 in vec2 fragUV;
 in vec4 fragPosition;
 
@@ -92,26 +80,21 @@ void main() {
 }
 `;
 
-const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
+const X_COUNT = 4;
+const Y_COUNT = 4;
+const NUMBER_OF_INSTANCES = X_COUNT * Y_COUNT;
+const MATRIX_SIZE = 4 * 4 * 4; // 4x4 (x4 bytes) matrix
+const UNIFORM_BUFFER_SIZE = NUMBER_OF_INSTANCES * MATRIX_SIZE; // 4x4 (x4 bytes) matrix
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cubeModel: Model;
-  uniformBuffer1: Buffer;
-  uniformBuffer2: Buffer;
-
-  // uniformStore = new UniformStore<{app: AppUniforms}>({app});
+  uniformBuffer: Buffer;
 
   constructor({device}: AnimationProps) {
     super();
 
-    this.uniformBuffer1 = device.createBuffer({
-      id: 'uniforms-1',
-      usage: Buffer.UNIFORM | Buffer.COPY_DST,
-      byteLength: UNIFORM_BUFFER_SIZE
-    });
-
-    this.uniformBuffer2 = device.createBuffer({
-      id: 'uniforms-2',
+    this.uniformBuffer = device.createBuffer({
+      id: 'uniforms',
       usage: Buffer.UNIFORM | Buffer.COPY_DST,
       byteLength: UNIFORM_BUFFER_SIZE
     });
@@ -122,54 +105,75 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs: VS_GLSL,
       fs: FS_GLSL,
       geometry: new CubeGeometry({indices: false}),
+      instanceCount: NUMBER_OF_INSTANCES,
       parameters: {
         depthWriteEnabled: true, // Fragment closest to the camera is rendered in front.
         depthCompare: 'less',
         depthFormat: 'depth24plus',
         cullMode: 'back' // Faces pointing away will be occluded by faces pointing toward the camera.
       },
-      // TODO - bindings should not be needed here, as they are set later
       bindings: {
-        app: this.uniformBuffer1
+        app: this.uniformBuffer
       }
     });
   }
 
-  override onFinalize() {
+  onFinalize(animationProps: AnimationProps): void {
+    this.uniformBuffer.destroy();
     this.cubeModel.destroy();
-    this.uniformBuffer1.destroy();
-    this.uniformBuffer2.destroy();
   }
 
-  override onRender({device}: AnimationProps): void {
+  onRender({device}: AnimationProps) {
     const projectionMatrix = new Matrix4();
-    const viewMatrix = new Matrix4();
-    const modelViewProjectionMatrix = new Matrix4();
-
     const aspect = device.canvasContext?.getAspect();
     const now = Date.now() / 1000;
 
     projectionMatrix.perspective({fovy: (2 * Math.PI) / 5, aspect, near: 1, far: 100.0});
 
-    viewMatrix
-      .identity()
-      .translate([-2, 0, -7])
-      .rotateAxis(1, [Math.sin(now), Math.cos(now), 0]);
-    modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
-    this.uniformBuffer1.write(new Float32Array(modelViewProjectionMatrix));
+    const mvpMatrices = getMVPMatrixArray(projectionMatrix, now);
+    this.uniformBuffer.write(mvpMatrices);
 
-    viewMatrix
-      .identity()
-      .translate([2, 0, -7])
-      .rotateAxis(1, [Math.cos(now), Math.sin(now), 0]);
-    modelViewProjectionMatrix.copy(viewMatrix).multiplyLeft(projectionMatrix);
-    this.uniformBuffer2.write(new Float32Array(modelViewProjectionMatrix));
-
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-    this.cubeModel.setBindings({app: this.uniformBuffer1});
-    this.cubeModel.draw(renderPass);
-    this.cubeModel.setBindings({app: this.uniformBuffer2});
+    const renderPass = device.beginRenderPass();
     this.cubeModel.draw(renderPass);
     renderPass.end();
   }
+}
+
+// Initialize the matrix data for every instance.
+const modelMatrices = [];
+const STEP = 4.0;
+
+for (let x = 0; x < X_COUNT; x++) {
+  for (let y = 0; y < Y_COUNT; y++) {
+    modelMatrices.push(
+      new Matrix4().translate([STEP * (x - X_COUNT / 2 + 0.5), STEP * (y - Y_COUNT / 2 + 0.5), 0])
+    );
+  }
+}
+
+const mvpMatricesData = new Float32Array(NUMBER_OF_INSTANCES * 16);
+
+// Update the transformation matrix data for each instance.
+function getMVPMatrixArray(projectionMatrix: Matrix4, now: number): Float32Array {
+  const viewMatrix = new Matrix4().translate([0, 0, -12]);
+
+  const tmpMat4 = new Matrix4();
+
+  let i = 0;
+  let offset = 0;
+  for (let x = 0; x < X_COUNT; x++) {
+    for (let y = 0; y < Y_COUNT; y++) {
+      tmpMat4
+        .copy(modelMatrices[i])
+        .rotateAxis(1, [Math.sin((x + 0.5) * now), Math.cos((y + 0.5) * now), 0])
+        .multiplyLeft(viewMatrix)
+        .multiplyLeft(projectionMatrix);
+
+      mvpMatricesData.set(tmpMat4, offset);
+
+      i++;
+      offset += 16;
+    }
+  }
+  return mvpMatricesData;
 }

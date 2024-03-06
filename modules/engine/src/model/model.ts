@@ -546,7 +546,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && (options?.ignoreUnknownAttributes || this.props.ignoreUnknownAttributes)) {
+      if (!set && !(options?.ignoreUnknownAttributes || this.props.ignoreUnknownAttributes)) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();

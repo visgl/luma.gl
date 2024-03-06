@@ -58,7 +58,7 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 | --------------------------- | ----- | ----------- |
 | `Texture.COPY_SRC`          | 0x01  |             |
 | `Texture.COPY_DST`          | 0x02  |             |
-| `Texture.TEXTURE_BINDING`   | 0x04  |             |
+| `Texture.TEXTURE`   | 0x04  |             |
 | `Texture.STORAGE_BINDING`   | 0x08  |             |
 | `Texture.RENDER_ATTACHMENT` | 0x10  |             |
 

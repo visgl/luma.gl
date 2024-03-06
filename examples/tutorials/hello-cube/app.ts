@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl, UniformStore, NumberArray, ShaderUniformType, loadImage} from '@luma.gl/core';
+import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
+import {glsl, Texture, UniformStore, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -10,6 +11,88 @@ const INFO_HTML = `\
 <p>
 Drawing a textured cube
 </p>
+`;
+
+export const title = 'Rotating Cube';
+export const description = 'Shows rendering a basic triangle.';
+
+const WGSL_SHADER = /* WGSL */ `\
+struct Uniforms {
+  modelViewProjectionMatrix : mat4x4<f32>,
+};
+
+@binding(0) @group(0) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) texCoords : vec2<f32>
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragUV : vec2<f32>,
+  @location(1) fragPosition: vec4<f32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix * inputs.positions;
+  outputs.fragUV = inputs.texCoords;
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return inputs.fragPosition;
+}
+`;
+
+// GLSL
+
+export const VS_GLSL = glsl`\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+} app;
+
+layout(location=0) in vec3 positions;
+layout(location=1) in vec2 texCoords;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  fragUV = texCoords;
+  fragPosition = 0.5 * (vec4(positions, 1.) + vec4(1., 1., 1., 1.));
+}
+`;
+
+export const FS_GLSL = glsl`\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+
+uniform sampler2D uTexture;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+} app;
+
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+  fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));
+}
 `;
 
 type AppUniforms = {
@@ -21,42 +104,6 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
     mvpMatrix: 'mat4x4<f32>'
   }
 };
-
-const vs = glsl`\
-#version 300 es
-#define SHADER_NAME cube-vs
-
-uniform appUniforms {
-  mat4 uMVP;
-} app;
-
-// CUBE GEOMETRY 
-layout(location=0) in vec3 positions;
-layout(location=1) in vec2 texCoords;
-
-out vec2 fragUV;
-
-void main(void) {
-  gl_Position = app.uMVP * vec4(positions, 1.0);
-  fragUV = texCoords;
-}
-`;
-
-const fs = glsl`\
-#version 300 es
-#define SHADER_NAME cube-fs
-precision highp float;
-
-uniform sampler2D uTexture;
-
-in vec2 fragUV;
-
-layout (location=0) out vec4 fragColor;
-
-void main(void) {
-  fragColor = texture(uTexture, vec2(fragUV.x, 1.0 - fragUV.y));
-}
-`;
 
 const eyePosition = [0, 0, 5];
 
@@ -73,6 +120,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     const texture = device.createTexture({
+      usage: Texture.TEXTURE & Texture.COPY_DST,
       data: loadImage('vis-logo.png'),
       mipmaps: true,
       sampler: device.createSampler({
@@ -83,12 +131,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.model = new Model(device, {
-      vs,
-      fs,
+      id: 'rotating-cube',
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
       geometry: new CubeGeometry({indices: false}),
       bindings: {
-        uTexture: texture,
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app')
+        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        uTexture: texture
       },
       parameters: {
         depthWriteEnabled: true,

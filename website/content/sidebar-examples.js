@@ -19,21 +19,12 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Portable',
-      items: [
-        'portable/hello-triangle',
-        'portable/rotating-cube',
-        // "portable/textured-cube",
-        'portable/two-cubes',
-        'portable/instanced-cubes'
-      ]
-    },
-    {
-      type: 'category',
       label: 'Tutorials',
       items: [
         'tutorials/hello-triangle',
         'tutorials/hello-cube',
+        'tutorials/two-cubes',
+        'tutorials/instanced-cubes',
         'tutorials/lighting',
         'tutorials/hello-instancing',
         'tutorials/shader-modules',

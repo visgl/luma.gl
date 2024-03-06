@@ -10128,9 +10128,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle":
+"luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle-geometry":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle"
+  resolution: "luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle-geometry"
   dependencies:
     "@luma.gl/core": "npm:9.0.0-beta.7"
     "@luma.gl/engine": "npm:9.0.0-beta.7"
@@ -10240,9 +10240,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-webgpu-hello-triangle@workspace:examples/portable/triangle":
+"luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/portable/triangle"
+  resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle"
   dependencies:
     "@luma.gl/core": "npm:9.0.0-beta.7"
     "@luma.gl/engine": "npm:9.0.0-beta.7"
@@ -10254,9 +10254,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-webgpu-instance-uniforms@workspace:examples/portable/instanced-cubes":
+"luma.gl-examples-webgpu-instance-uniforms@workspace:examples/tutorials/hello-instanced-cubes":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-instance-uniforms@workspace:examples/portable/instanced-cubes"
+  resolution: "luma.gl-examples-webgpu-instance-uniforms@workspace:examples/tutorials/hello-instanced-cubes"
   dependencies:
     "@luma.gl/core": "npm:9.0.0-beta.7"
     "@luma.gl/engine": "npm:9.0.0-beta.7"
@@ -10268,9 +10268,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-webgpu-rotating-cube@workspace:examples/portable/rotating-cube":
+"luma.gl-examples-webgpu-rotating-cube@workspace:examples/wip/rotating-cube":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-rotating-cube@workspace:examples/portable/rotating-cube"
+  resolution: "luma.gl-examples-webgpu-rotating-cube@workspace:examples/wip/rotating-cube"
   dependencies:
     "@luma.gl/core": "npm:9.0.0-beta.7"
     "@luma.gl/engine": "npm:9.0.0-beta.7"
@@ -10296,9 +10296,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-webgpu-two-cubes@workspace:examples/portable/two-cubes":
+"luma.gl-examples-webgpu-two-cubes@workspace:examples/tutorials/hello-two-cubes":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-two-cubes@workspace:examples/portable/two-cubes"
+  resolution: "luma.gl-examples-webgpu-two-cubes@workspace:examples/tutorials/hello-two-cubes"
   dependencies:
     "@luma.gl/core": "npm:9.0.0-beta.7"
     "@luma.gl/engine": "npm:9.0.0-beta.7"

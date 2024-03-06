@@ -951,7 +951,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.gl.bindTexture(this.target, this.handle);
     for (const [pname, pvalue] of Object.entries(parameters)) {
-      const param = Number(pname) as GL.TEXTURE_MIN_LOD | GL.TEXTURE_MAX_LOD;
+      const param = Number(pname) as keyof GLSamplerParameters;
       const value = pvalue;
 
       // Apparently there are integer/float conversion issues requires two parameter setting functions in JavaScript.
@@ -961,7 +961,12 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
         case GL.TEXTURE_MAX_LOD:
           this.gl.texParameterf(this.target, param, value);
           break;
-
+        case GL.TEXTURE_MAX_ANISOTROPY_EXT:
+          // We have to query feature before using it
+          if (this.device.features.has('texture-filterable-anisotropic-webgl')) {
+            this.gl.texParameteri(this.target, param, value);
+          }
+          break;
         default:
           this.gl.texParameteri(this.target, param, value);
           break;
