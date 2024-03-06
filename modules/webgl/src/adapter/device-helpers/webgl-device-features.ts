@@ -47,8 +47,12 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   protected extensions: GLExtensions;
   protected testedFeatures = new Set<DeviceFeature>();
 
-  constructor(gl: WebGL2RenderingContext, extensions: GLExtensions) {
-    super();
+  constructor(
+    gl: WebGL2RenderingContext,
+    extensions: GLExtensions,
+    disabledFeatures: Partial<Record<DeviceFeature, boolean>>
+  ) {
+    super([], disabledFeatures);
     this.gl = gl;
     this.extensions = extensions;
     // TODO - is this really needed?
@@ -71,6 +75,10 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   }
 
   override has(feature: DeviceFeature): boolean {
+    if (this.disabledFeatures[feature]) {
+      return false;
+    }
+
     // We have already tested this feature
     if (!this.testedFeatures.has(feature)) {
       this.testedFeatures.add(feature);
@@ -86,6 +94,18 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
     }
     return this.features.has(feature);
   }
+
+  // FOR DEVICE
+
+  initializeFeatures() {
+    // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const feature of this) {
+      // WebGL extensions are initialized by requesting them
+    }
+  }
+
+  // IMPLEMENTATION
 
   /** Extract all WebGL features */
   protected getWebGLFeature(feature: DeviceFeature): boolean {
