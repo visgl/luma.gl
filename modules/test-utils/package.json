@@ -36,20 +36,15 @@
     "pre-build": "echo test utils has no bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^9.0.0-beta.4",
-    "@luma.gl/engine": "^9.0.0-beta.4",
-    "@luma.gl/shadertools": "^9.0.0-beta.4",
-    "@luma.gl/webgl": "^9.0.0-beta.4",
-    "@luma.gl/webgpu": "^9.0.0-beta.4"
-  },
-  "devDependencies": {
-    "@luma.gl/core": "9.0.0-beta.7",
-    "@luma.gl/engine": "9.0.0-beta.7",
-    "@luma.gl/webgl": "9.0.0-beta.7",
-    "@luma.gl/webgpu": "9.0.0-beta.7"
+    "@luma.gl/core": "^9.0.0-beta",
+    "@luma.gl/engine": "^9.0.0-beta",
+    "@luma.gl/shadertools": "^9.0.0-beta",
+    "@luma.gl/webgl": "^9.0.0-beta",
+    "@luma.gl/webgpu": "^9.0.0-beta"
   },
   "dependencies": {
-    "@probe.gl/env": "^4.0.2"
+    "@probe.gl/env": "^4.0.2",
+    "@probe.gl/stats": "^4.0.2"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

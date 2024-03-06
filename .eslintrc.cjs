@@ -17,7 +17,6 @@ module.exports = getESLintConfig({
 
     rules: {
       'no-unused-expressions': 'warn',
-      'import/no-unresolved': 1,
       'no-console': 1,
       'no-continue': ['warn'],
       'callback-return': 0,
@@ -52,8 +51,8 @@ module.exports = getESLintConfig({
 
           'consistent-return': 0, // We use typescript noImplicitReturn
           'default-case': 0, // We rely on typescript
-          'import/no-unresolved': 0,
-          'import/no-extraneous-dependencies': 0,
+          'import/no-unresolved': 'error',
+          'import/no-extraneous-dependencies': 'error',
           'no-unused-expressions': 'warn',
           '@typescript-eslint/no-empty-function': 0,
           '@typescript-eslint/no-misused-promises': 0,
@@ -71,9 +70,6 @@ module.exports = getESLintConfig({
             'warn',
             {vars: 'all', args: 'none', ignoreRestSiblings: false}
           ],
-          // We still have some issues with import resolution
-          'import/named': 0,
-          // 'import/no-extraneous-dependencies': ['warn'],
           // Warn instead of error
           // 'max-params': ['warn'],
           // 'no-undef': ['warn'],
@@ -99,7 +95,7 @@ module.exports = getESLintConfig({
       // This means lint will not find the imported files and generate false warnings
       {
         // scripts use devDependencies
-        files: ['**/test/**/*.js', '**/scripts/**/*.js', '*.config.js', '*.config.local.js'],
+        files: ['**/test/**/*.ts', '**/test/**/*.js', '**/scripts/**/*.js', '*.config.ts', '*.config.js', '*.config.local.js'],
         rules: {
           'import/no-unresolved': 0,
           'import/no-extraneous-dependencies': 0

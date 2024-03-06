@@ -3,8 +3,8 @@
 // @ts-nocheck
 /* eslint-disable no-console */
 
-import updateSprites from './update-sprites.wgsl?raw';
-import sprites from './sprites.wgsl?raw';
+import updateSprites from './update-sprites.wgsl?raw'; // eslint-disable-line
+import sprites from './sprites.wgsl?raw'; // eslint-disable-line
 import {Buffer} from '@luma.gl/core';
 // import { RenderPipelineParameters} from '@luma.gl/core';
 import {Model, WebGPUDevice} from '@luma.gl/webgpu';

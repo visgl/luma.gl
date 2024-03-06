@@ -8,12 +8,15 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@loaders.gl/core": "^4.0.4",
     "@loaders.gl/gltf": "^4.0.4",
     "@luma.gl/core": "9.0.0-beta.7",
     "@luma.gl/engine": "9.0.0-beta.7",
+    "@luma.gl/gltf": "9.0.0-beta.7",
     "@luma.gl/shadertools": "9.0.0-beta.7",
     "@luma.gl/webgl": "9.0.0-beta.7",
-    "@luma.gl/webgpu": "9.0.0-beta.7"
+    "@luma.gl/webgpu": "9.0.0-beta.7",
+    "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

@@ -35,7 +35,7 @@ export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
 
 // Geometries
-export type {GeometryProps} from './geometry/geometry';
+export type {GeometryProps, GeometryAttribute} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
 export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
