@@ -66,7 +66,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
       });
 
-      model.updateModuleSettings({lightSources});
+      // model.updateModuleSettings({lightSources});
       model.draw(renderPass);
     });
     renderPass.end();
@@ -102,7 +102,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const lightSources: LightingProps = {
+export const lightSources: LightingProps = {
   ambientLight: {
     color: [255, 133, 133],
     intensity: 1,

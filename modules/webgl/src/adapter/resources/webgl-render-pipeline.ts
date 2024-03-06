@@ -12,7 +12,6 @@ import {GL} from '@luma.gl/constants';
 import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
-import {splitUniformsAndBindings} from '../../utils/split-uniforms-and-bindings';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
 import {WebGLDevice} from '../webgl-device';
@@ -273,11 +272,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   // DEPRECATED METHODS
 
   override setUniformsWebGL(uniforms: Record<string, UniformValue>) {
-    const {bindings} = splitUniformsAndBindings(uniforms);
-    Object.keys(bindings).forEach(name => {
+    Object.keys(uniforms).forEach(name => {
       log.warn(
         `Unsupported value "${JSON.stringify(
-          bindings[name]
+          uniforms[name]
         )}" used in setUniforms() for key ${name}. Use setBindings() instead?`
       )();
     });
