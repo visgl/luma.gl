@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType} from '../../gpu-type-utils/shader-types';
-import type {UniformValue} from '../../adapter/types/types';
+import type {ShaderUniformType} from '../gpu-type-utils/shader-types';
+import type {UniformValue} from '../adapter/types/types';
 import {
   ShaderLayout,
   UniformInfo,
   UniformBufferBindingLayout
-} from '../../adapter/types/shader-layout';
-import {arrayEqual, arrayCopy} from '../../utils/array-equal';
+} from '../adapter/types/shader-layout';
+import {arrayEqual, arrayCopy} from '../utils/array-equal';
 
 /**
  * A uniform block holds values of the of uniform values for one uniform block / buffer.

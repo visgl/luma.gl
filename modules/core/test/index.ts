@@ -16,4 +16,4 @@ import './adapter-utils/format-compiler-log.spec';
 import './adapter/canvas-context.spec';
 
 // portable - uniform buffers
-import './portable/uniform-buffers/uniform-buffer-layout.spec';
+import './portable/uniform-buffer-layout.spec';

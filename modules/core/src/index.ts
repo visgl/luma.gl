@@ -70,9 +70,9 @@ export {QuerySet} from './adapter/resources/query-set';
 export type {CompilerMessage} from './adapter/types/compiler-message';
 
 // PORTABLE API - UNIFORM BUFFERS
-export {UniformBufferLayout} from './portable/uniform-buffers/uniform-buffer-layout';
-export {UniformBlock} from './portable/uniform-buffers/uniform-block';
-export {UniformStore} from './portable/uniform-buffers/uniform-store';
+export {UniformBufferLayout} from './portable/uniform-buffer-layout';
+export {UniformBlock} from './portable/uniform-block';
+export {UniformStore} from './portable/uniform-store';
 
 // API TYPES
 // export type {AccessorObject} from './adapter/types/accessor';
