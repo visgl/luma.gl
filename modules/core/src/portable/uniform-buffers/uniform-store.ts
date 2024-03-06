@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType} from '../../type-utils/shader-types';
+import type {ShaderUniformType} from '../../gpu-type-utils/shader-types';
 import type {UniformValue} from '../../adapter/types/types';
 import type {Device} from '../../adapter/device';
 import {Buffer} from '../../adapter/resources/buffer';

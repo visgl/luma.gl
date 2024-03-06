@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TypedArray} from '@math.gl/types';
 import type {
   DeviceProps,
   DeviceInfo,
@@ -11,8 +12,7 @@ import type {
   VertexArrayProps,
   Framebuffer,
   Buffer,
-  Texture,
-  TypedArray
+  Texture
 } from '@luma.gl/core';
 import {Device, CanvasContext, log, uid} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';

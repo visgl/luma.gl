@@ -7,16 +7,9 @@
 // - [ ] cube texture init params
 // - [ ] video (external) textures
 
-import {
-  Device,
-  TextureProps,
-  TextureViewProps,
-  Sampler,
-  SamplerProps,
-  SamplerParameters,
-  TypedArray
-} from '@luma.gl/core';
-import {Texture, log, loadImage, isObjectEmpty} from '@luma.gl/core';
+import {TypedArray} from '@math.gl/types';
+import {Device, Texture, Sampler, SamplerProps, SamplerParameters} from '@luma.gl/core';
+import {TextureProps, TextureViewProps, log, loadImage, isObjectEmpty} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {

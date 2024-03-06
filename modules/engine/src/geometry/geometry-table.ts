@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray, VertexFormat} from '@luma.gl/core';
+import type {TypedArray} from '@math.gl/core';
+import type {VertexFormat} from '@luma.gl/core';
 
 /** Holds one geometry */
 export type GeometryTable = {

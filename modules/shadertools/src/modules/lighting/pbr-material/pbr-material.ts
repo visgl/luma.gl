@@ -4,7 +4,8 @@
 
 /* eslint-disable camelcase */
 
-import type {NumberArray, Texture} from '@luma.gl/core';
+import type {NumberArray} from '@math.gl/types';
+import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';

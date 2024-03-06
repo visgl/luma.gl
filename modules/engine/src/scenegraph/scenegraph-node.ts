@@ -1,15 +1,15 @@
-import {uid, NumberArray} from '@luma.gl/core';
-import {Vector3, Matrix4} from '@math.gl/core';
+import {uid} from '@luma.gl/core';
+import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
 
 /** Properties for creating a new Scenegraph */
 export type ScenegraphNodeProps = {
   id?: string;
   /** whether to display the object at all */
   display?: boolean;
-  matrix?: NumberArray;
-  position?: NumberArray;
-  rotation?: NumberArray;
-  scale?: NumberArray;
+  matrix?: NumericArray;
+  position?: NumericArray;
+  rotation?: NumericArray;
+  scale?: NumericArray;
   update?: boolean;
 };
 

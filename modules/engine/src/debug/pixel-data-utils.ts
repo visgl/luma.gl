@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray} from '@luma.gl/core';
+import {TypedArray} from '@math.gl/core';
 
 /**
  * Flip rows (can be used on arrays returned from `Framebuffer.readPixels`)

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, Buffer, VertexArrayProps, TypedArray, NumberArray} from '@luma.gl/core';
+import type {TypedArray, NumericArray} from '@math.gl/types';
+import type {Device, Buffer, VertexArrayProps} from '@luma.gl/core';
 import {VertexArray, getScratchArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getBrowser} from '@probe.gl/env';
@@ -12,9 +13,6 @@ import {WEBGLBuffer} from '../resources/webgl-buffer';
 
 import {getGLFromVertexType} from '../converters/vertex-formats';
 import {fillArray} from '../../utils/fill-array';
-
-// import {AccessorObject} from '../..';
-// import {getGLFromVertexType} from '../converters/vertex-formats';
 
 /** VertexArrayObject wrapper */
 export class WEBGLVertexArray extends VertexArray {
@@ -261,7 +259,7 @@ export class WEBGLVertexArray extends VertexArray {
  * TODO - convert Arrays based on known type? (read type from accessor, don't assume Float32Array)
  * TODO - handle single values for size 1 attributes?
  */
-function normalizeConstantArrayValue(arrayValue: NumberArray) {
+function normalizeConstantArrayValue(arrayValue: NumericArray) {
   if (Array.isArray(arrayValue)) {
     return new Float32Array(arrayValue);
   }
@@ -271,7 +269,7 @@ function normalizeConstantArrayValue(arrayValue: NumberArray) {
 /**
  *
  */
-function compareConstantArrayValues(v1: NumberArray, v2: NumberArray): boolean {
+function compareConstantArrayValues(v1: NumericArray, v2: NumericArray): boolean {
   if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
     return false;
   }

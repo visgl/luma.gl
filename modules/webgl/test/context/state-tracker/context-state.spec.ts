@@ -5,10 +5,10 @@
 import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
+import type {TypedArray} from '@math.gl/types';
 import type {GLParameters} from '@luma.gl/constants';
 import {GL} from '@luma.gl/constants';
 
-import type {TypedArray} from '@luma.gl/core';
 import {
   getGLParameters,
   setGLParameters,

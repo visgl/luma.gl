@@ -7,7 +7,7 @@ import type {
   ColorTextureFormat,
   DepthStencilTextureFormat,
   TextureFormat
-} from '../../type-utils/texture-formats';
+} from '../../gpu-type-utils/texture-formats';
 import type {Buffer} from '../resources/buffer';
 import type {Texture} from '../resources/texture'; // TextureView...
 

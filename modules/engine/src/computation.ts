@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@luma.gl/core';
 import type {DeviceFeature, ComputePipelineProps, Shader, Binding} from '@luma.gl/core';
 import {Device, Buffer, ComputePipeline, ComputePass, UniformStore} from '@luma.gl/core';
-import {log, uid, isNumberArray} from '@luma.gl/core';
+import {log, uid} from '@luma.gl/core';
 import {getTypedArrayFromDataType} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from './shader-inputs';
 import {PipelineFactory} from './lib/pipeline-factory';
 import {ShaderFactory} from './lib/shader-factory';
@@ -233,7 +233,9 @@ export class Computation {
     // TODO better way to extract bindings
     const keys = Object.keys(uniforms).filter(k => {
       const uniform = uniforms[k];
-      return !isNumberArray(uniform) && typeof uniform !== 'number' && typeof uniform !== 'boolean';
+      return (
+        !isNumericArray(uniform) && typeof uniform !== 'number' && typeof uniform !== 'boolean'
+      );
     });
     const bindings: Record<string, Binding> = {};
     for (const k of keys) {
