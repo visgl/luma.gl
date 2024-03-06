@@ -83,6 +83,9 @@ export class Geometry {
 
       // Move indices to separate field
       if (attributeName === 'indices') {
+        if (this.indices) {
+          throw new Error('Multiple indices detected');
+        }
         this.indices = attribute;
       } else {
         this.attributes[attributeName] = attribute;

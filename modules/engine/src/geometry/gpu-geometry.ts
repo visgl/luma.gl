@@ -42,9 +42,11 @@ export class GPUGeometry {
 
     this.bufferLayout = props.bufferLayout || [];
 
-    // if (this.indices) {
-    //   assert(this.indices.usage === Buffer.INDEX);
-    // }
+    if (this.indices) {
+      if (!(this.indices.usage & Buffer.INDEX)) {
+        throw new Error('Index buffer must have INDEX usage');
+      }
+    }
   }
 
   destroy(): void {

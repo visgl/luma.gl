@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, cast} from '@luma.gl/core';
+import {Device, Texture, TextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
@@ -638,7 +638,7 @@ test.skip('WebGL#Texture3D construct/delete', t => {
 // HELPERS
 
 function getParameter(texture: Texture, pname: number): any {
-  const webglTexture = cast<WEBGLTexture>(texture);
+  const webglTexture = texture as WEBGLTexture;
   webglTexture.gl.bindTexture(webglTexture.target, webglTexture.handle);
   const value = webglTexture.gl.getTexParameter(webglTexture.target, pname);
   webglTexture.gl.bindTexture(webglTexture.target, null);
