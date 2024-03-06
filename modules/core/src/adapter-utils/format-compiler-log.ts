@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompilerMessage} from './compiler-message';
+import type {CompilerMessage} from '../adapter/types/compiler-message';
 
 /** @returns annotated errors or warnings */
 export function formatCompilerLog(
