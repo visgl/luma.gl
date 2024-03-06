@@ -166,6 +166,10 @@ The remaining draw options are passed directly to `Program.draw()`:
 - `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
 - `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
 
+Returns
+
+- `boolean` - `true` if the model was drawn, `false` if not (normally because resources were still being loaded). If false is returned, then the application should attempt to draw again next frame.
+
 ### `setVertexCount(): void`
 
 Sets the number of vertices
