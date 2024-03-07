@@ -16,6 +16,7 @@ import './adapter/type-utils/vertex-format-from-attribute.spec';
 
 // adapter
 import './adapter/canvas-context.spec';
+import './adapter/luma.spec';
 
 // uniforms
 import './lib/uniforms/uniform-buffer-layout.spec';

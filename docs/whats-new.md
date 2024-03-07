@@ -8,6 +8,10 @@ Target Date: Q2 2024
 
 - Production quality (non-experimental) WebGPU backend.
 
+**@luma.gl/core**
+
+- new [`luma.attachDevice()`](/docs/api-reference/core/luma#attachdevice) API - A `Device` can now be [attached to `WebGL2RenderingContext` or `GPUDevice`] without importing `WebGLDevice`.
+
 ## Version 9.0
 
 Target Date: Feb 2024
