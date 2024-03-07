@@ -366,7 +366,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     color += calculateFinalColor(pbrInfo, lighting_uAmbientLight.color);
 
     // Apply directional light
-    for(int i = 0,  i < lighting_uDirectionalLightCount, i++) {
+    for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
       if (i < lighting_uDirectionalLightCount) {
         PBRInfo_setDirectionalLight(pbrInfo, lighting_uDirectionalLight[i].direction);
         color += calculateFinalColor(pbrInfo, lighting_uDirectionalLight[i].color);
@@ -374,7 +374,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     }
 
     // Apply point light
-    for(int i = 0, i < lighting_uPointLightCount, i++) {
+    for(int i = 0; i < lighting_uPointLightCount; i++) {
       if (i < lighting_uPointLightCount) {
         PBRInfo_setPointLight(pbrInfo, lighting_uPointLight[i]);
         float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
