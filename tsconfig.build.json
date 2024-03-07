@@ -8,13 +8,11 @@
   "references": [
     {"path": "modules/constants"},
     {"path": "modules/core"},
-    {"path": "modules/core-tests"},
     {"path": "modules/engine"},
     {"path": "modules/gltf"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"},
     {"path": "modules/webgpu"}
-    // {"path": "modules/experimental"}
   ]
 }

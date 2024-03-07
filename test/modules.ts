@@ -10,7 +10,6 @@ import '@luma.gl/shadertools/test';
 
 // DEVICE INDEPENDENT TESTS
 import '@luma.gl/core/test';
-import '@luma.gl/core-tests/test';
 
 // WEBGL ADAPTER TESTS
 import '@luma.gl/webgl/test';
