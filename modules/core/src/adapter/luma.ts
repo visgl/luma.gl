@@ -150,7 +150,9 @@ export class luma {
 }
 
 /** Convert a list of devices to a map */
-function getDeviceMap(deviceClasses?: any[] /* : typeof Device */): Map<string, typeof Device> | null {
+function getDeviceMap(
+  deviceClasses?: any[] /* : typeof Device */
+): Map<string, typeof Device> | null {
   if (!deviceClasses || deviceClasses?.length === 0) {
     return null;
   }
