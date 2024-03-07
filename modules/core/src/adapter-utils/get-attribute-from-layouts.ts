@@ -230,31 +230,3 @@ function getAttributeFromAttributesList(
 
   return null;
 }
-
-/**
- * Merges an provided shader layout into a base shader layout
- * In WebGL, this allows the auto generated shader layout to be overridden by the application
- * Typically to change the format of the vertex attributes (from float32x4 to uint8x4 etc).
- * @todo Drop this? Aren't all use cases covered by mergeBufferLayout()?
- */
-export function mergeShaderLayout(
-  baseLayout: ShaderLayout,
-  overrideLayout: ShaderLayout
-): ShaderLayout {
-  // Deep clone the base layout
-  const mergedLayout: ShaderLayout = {
-    ...baseLayout,
-    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
-  };
-  // Merge the attributes
-  for (const attribute of overrideLayout?.attributes || []) {
-    const baseAttribute = mergedLayout.attributes.find(attr => attr.name === attribute.name);
-    if (!baseAttribute) {
-      log.warn(`shader layout attribute ${attribute.name} not present in shader`);
-    } else {
-      baseAttribute.type = attribute.type || baseAttribute.type;
-      baseAttribute.stepMode = attribute.stepMode || baseAttribute.stepMode;
-    }
-  }
-  return mergedLayout;
-}

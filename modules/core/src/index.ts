@@ -165,8 +165,7 @@ export {uid} from './utils/uid';
 
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
-export {mergeShaderLayout} from './adapter-utils/get-attribute-from-layouts';
-export {splitUniformsAndBindings} from './adapter-utils/is-uniform-value';
+export {splitUniformsAndBindings} from './adapter-utils/split-uniforms-and-bindings';
 
 export type {
   CopyBufferToBufferOptions,
