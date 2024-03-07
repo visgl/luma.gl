@@ -1,4 +1,5 @@
-import {isUniformValue, splitUniformsAndBindings} from '@luma.gl/core';
+import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
+import {splitUniformsAndBindings} from '@luma.gl/core';
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
 import {webglDevice as device} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';

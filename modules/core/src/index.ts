@@ -160,16 +160,13 @@ export {makeRandomNumberGenerator} from './utils/random';
 
 export {log} from './utils/log';
 export {uid} from './utils/uid';
-export {isObjectEmpty} from './utils/is-object-empty';
 
 // ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
 
-export {isUniformValue, splitUniformsAndBindings} from './adapter-utils/is-uniform-value';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
-export {
-  getAttributeInfosFromLayouts,
-  mergeShaderLayout
-} from './adapter-utils/get-attribute-from-layouts';
+export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+export {mergeShaderLayout} from './adapter-utils/get-attribute-from-layouts';
+export {splitUniformsAndBindings} from './adapter-utils/is-uniform-value';
 
 export type {
   CopyBufferToBufferOptions,

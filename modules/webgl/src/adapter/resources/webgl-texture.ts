@@ -9,7 +9,7 @@
 
 import {TypedArray} from '@math.gl/types';
 import {Device, Texture, Sampler, SamplerProps, SamplerParameters} from '@luma.gl/core';
-import {TextureProps, TextureViewProps, log, loadImage, isObjectEmpty} from '@luma.gl/core';
+import {TextureProps, TextureViewProps, log, loadImage} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
@@ -935,11 +935,6 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
    * Sets sampler parameters on texture
    */
   _setSamplerParameters(parameters: GLSamplerParameters): void {
-    // NPOT parameters may populate an empty object
-    if (isObjectEmpty(parameters)) {
-      return;
-    }
-
     logParameters(parameters);
 
     this.gl.bindTexture(this.target, this.handle);

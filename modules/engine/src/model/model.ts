@@ -9,7 +9,7 @@ import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.g
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';
 import {RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
-import {log, uid, isObjectEmpty, splitUniformsAndBindings} from '@luma.gl/core';
+import {log, uid, splitUniformsAndBindings} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -834,4 +834,16 @@ function getAttributeNames(bufferLayout: BufferLayout): string[] {
   return bufferLayout.attributes
     ? bufferLayout.attributes?.map(layout => layout.attribute)
     : [bufferLayout.name];
+}
+
+/** Returns true if given object is empty, false otherwise. */
+function isObjectEmpty(obj: object): boolean {
+  let isEmpty = true;
+  // @ts-ignore key is unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const key in obj) {
+    isEmpty = false;
+    break;
+  }
+  return isEmpty;
 }
