@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Matrix4, Vector3} from '@math.gl/core';
 import {log} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';

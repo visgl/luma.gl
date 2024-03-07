@@ -1,6 +1,10 @@
-import {uid} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Vector3} from '@math.gl/core';
 import {Geometry} from '../geometry/geometry';
+import {uid} from '../utils/uid';
 
 /* eslint-disable comma-spacing, max-statements, complexity */
 

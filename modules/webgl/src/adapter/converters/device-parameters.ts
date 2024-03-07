@@ -2,16 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {
-  Device,
-  Parameters,
-  CompareFunction,
-  StencilOperation,
-  log,
-  isObjectEmpty,
-  BlendOperation,
-  BlendFactor
-} from '@luma.gl/core';
+import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
+import {Device, log, Parameters} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import type {GLBlendEquation, GLBlendFunction, GLParameters} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
@@ -411,4 +403,16 @@ function map(parameter: string, value: any, valueMap: Record<string, any>): any 
 
 function mapBoolean(parameter: string, value: boolean): boolean {
   return value;
+}
+
+/** Returns true if given object is empty, false otherwise. */
+function isObjectEmpty(obj: object): boolean {
+  let isEmpty = true;
+  // @ts-ignore key is unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const key in obj) {
+    isEmpty = false;
+    break;
+  }
+  return isEmpty;
 }

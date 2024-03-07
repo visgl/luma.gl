@@ -18,8 +18,14 @@ export type RenderPassProps = ResourceProps & {
   framebuffer?: Framebuffer | null;
   /** Control viewport, scissor rect, blend constant and stencil ref */
   parameters?: RenderPassParameters;
+
+  // TODO - API needs to be able to control multiple render targets
+
   /** Clear value for color attachment, or `load` to preserve the previous value */
   clearColor?: NumberArray | false;
+  /** Whether to disable / discard the output of the rasterizer */
+  discard?: boolean;
+
   /** Clear value for depth attachment, or `load` to preserve the previous value */
   clearDepth?: number | false;
   /** Clear value for stencil attachment, or `load` to preserve the previous value */
@@ -28,8 +34,6 @@ export type RenderPassProps = ResourceProps & {
   depthReadOnly?: boolean;
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
-  /** Whether to disable / discard the output of the rasterizer */
-  discard?: boolean;
 
   /** QuerySet to write begin/end timestamps to */
   occlusionQuerySet?: QuerySet;

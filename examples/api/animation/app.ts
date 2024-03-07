@@ -10,10 +10,10 @@ import {
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-import {makeRandomNumberGenerator} from '@luma.gl/core';
+import {makeRandomGenerator} from '@luma.gl/engine';
 
 // Ensure repeatable rendertests
-const random = makeRandomNumberGenerator();
+const random = makeRandomGenerator();
 
 const INFO_HTML = `\
 Key frame animation based on multiple hierarchical timelines.

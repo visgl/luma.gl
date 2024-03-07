@@ -1,4 +1,8 @@
-import {isUniformValue, splitUniformsAndBindings} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
 import {webglDevice as device} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
@@ -14,24 +18,5 @@ test('isUniformValue', t => {
 
   t.notOk(isUniformValue(new WEBGLTexture(device, {})), 'WEBGLTexture is not a uniform value');
   t.notOk(isUniformValue(new WEBGLSampler(device, {})), 'WEBGLSampler is not a uniform value');
-  t.end();
-});
-
-test('splitUniformsAndBindings', t => {
-  const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
-    array: [1, 2, 3, 4],
-    boolean: true,
-    float32array: new Float32Array([1, 2, 3, 4]),
-    number: 123,
-    sampler: new WEBGLSampler(device, {}),
-    texture: new WEBGLTexture(device, {})
-  };
-  const {bindings, uniforms} = splitUniformsAndBindings(mixed);
-  t.deepEquals(Object.keys(bindings), ['sampler', 'texture'], 'bindings correctly extracted');
-  t.deepEquals(
-    Object.keys(uniforms),
-    ['array', 'boolean', 'float32array', 'number'],
-    'bindings correctly extracted'
-  );
   t.end();
 });

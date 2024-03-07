@@ -4,7 +4,7 @@
 
 import type {DeviceFeature, ComputePipelineProps, Shader, Binding} from '@luma.gl/core';
 import {Device, Buffer, ComputePipeline, ComputePass, UniformStore} from '@luma.gl/core';
-import {log, uid} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 import {getTypedArrayFromDataType} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
@@ -12,6 +12,7 @@ import {TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from './shader-inputs';
 import {PipelineFactory} from './lib/pipeline-factory';
 import {ShaderFactory} from './lib/shader-factory';
+import {uid} from './utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
 const LOG_DRAW_PRIORITY = 2;

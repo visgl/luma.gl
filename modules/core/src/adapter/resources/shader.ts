@@ -100,7 +100,10 @@ export abstract class Shader extends Resource<ShaderProps> {
 
   // PRIVATE
 
-  /** In-browser UI logging of errors */
+  /**
+   * In-browser UI logging of errors
+   * TODO - this HTML formatting code should not be in Device, should be pluggable
+   */
   protected _displayShaderLog(messages: readonly CompilerMessage[]): void {
     // Return if under Node.js / incomplete `document` polyfills
     if (typeof document === 'undefined' || !document?.createElement) {

@@ -1,11 +1,7 @@
-import {glsl, NumberArray, loadImage} from '@luma.gl/core';
-import {
-  AnimationLoopTemplate,
-  AnimationProps,
-  Model,
-  CubeGeometry,
-  _ShaderInputs
-} from '@luma.gl/engine';
+import {glsl, NumberArray} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
+import {_ShaderInputs, loadImage} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 

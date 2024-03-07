@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {RenderPass} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 import {Model} from '../model/model';

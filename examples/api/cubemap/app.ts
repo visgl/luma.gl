@@ -1,10 +1,11 @@
-import {Device, loadImage, glsl} from '@luma.gl/core';
+import {Device, glsl} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
   CubeGeometry,
   Model,
-  ModelProps
+  ModelProps,
+  loadImage
 } from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 

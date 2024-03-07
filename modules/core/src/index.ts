@@ -66,20 +66,17 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
-// PORTABLE API - COMPILER LOG
-export type {CompilerMessage} from './adapter/types/compiler-message';
-
 // PORTABLE API - UNIFORM BUFFERS
 export {UniformBufferLayout} from './portable/uniform-buffer-layout';
 export {UniformBlock} from './portable/uniform-block';
 export {UniformStore} from './portable/uniform-store';
 
 // API TYPES
-// export type {AccessorObject} from './adapter/types/accessor';
+export type {CompilerMessage} from './adapter/types/compiler-message';
+
+export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
+
 export type {
-  Parameters,
-  PrimitiveTopology,
-  IndexFormat,
   CullMode,
   FrontFace,
   RasterizationParameters,
@@ -94,7 +91,7 @@ export type {
   RenderPipelineParameters
 } from './adapter/types/parameters';
 
-export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/types';
+export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/attachments';
 
 export type {
   ShaderLayout,
@@ -112,64 +109,40 @@ export type {
   VaryingBinding
 } from './adapter/types/shader-layout';
 
-export type {UniformValue} from './adapter/types/types';
+export type {UniformValue} from './adapter/types/uniforms';
 
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
+export type {NumberArray} from './types';
 export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from './gpu-type-utils/texture-formats';
 export type {
   ShaderDataType,
   ShaderAttributeType,
   ShaderUniformType
 } from './gpu-type-utils/shader-types';
+export type {
+  TextureFormat,
+  ColorTextureFormat,
+  DepthStencilTextureFormat
+} from './gpu-type-utils/texture-formats';
 
-// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY INTERNAL
+// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
 
 export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
 export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
 export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
 export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
-export {
-  getDataTypeFromTypedArray,
-  getTypedArrayFromDataType,
-  getVertexFormatFromAttribute
-} from './gpu-type-utils/vertex-format-from-attribute';
+export {getDataTypeFromTypedArray} from './gpu-type-utils/vertex-format-from-attribute';
+export {getTypedArrayFromDataType} from './gpu-type-utils/vertex-format-from-attribute';
+export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-attribute';
 
-// GENERAL EXTERNAL UTILS - FOR APPLICATIONS
+// GENERAL EXPORTS - FOR APPLICATIONS
 
-export type {NumberArray} from './types';
-
+export type {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?
 /** GLSL syntax highlighting: glsl`...` Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal */
 export const glsl = (x: TemplateStringsArray) => `${x}`;
 
-export {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?
-export {setPathPrefix, loadImage, loadImageBitmap} from './utils/load-file';
-export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
-export {makeRandomNumberGenerator} from './utils/random';
-
-//
-// INTERNAL
-//
-
-// GENERAL INTERNAL UTILS - for use in other luma.gl modules only
-
-export {log} from './utils/log';
-export {uid} from './utils/uid';
-export {isObjectEmpty} from './utils/is-object-empty';
-
 // ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
-
-export {isUniformValue, splitUniformsAndBindings} from './adapter-utils/is-uniform-value';
-export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
-export {
-  getAttributeInfosFromLayouts,
-  mergeShaderLayout
-} from './adapter-utils/get-attribute-from-layouts';
 
 export type {
   CopyBufferToBufferOptions,
@@ -177,3 +150,10 @@ export type {
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
 } from './adapter/resources/command-encoder';
+
+export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
+export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
+
+// INTERNAL UTILS - for use in other luma.gl modules only
+export {log} from './utils/log';

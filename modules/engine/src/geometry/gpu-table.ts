@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /*
 export function getAttributeLayoutsFromGeometry(geometry: Geometry) {
   const layouts: Record<string, {}> = {};

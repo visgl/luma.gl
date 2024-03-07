@@ -1,4 +1,4 @@
-import {uid} from '@luma.gl/core';
+import {uid} from '@luma.gl/core/utils/uid';
 import test from 'tape-promise/tape';
 
 test('Utils#uid', t => {

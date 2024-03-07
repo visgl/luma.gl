@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {KeyFrames} from '@luma.gl/engine';
 import test from 'tape-promise/tape';
 

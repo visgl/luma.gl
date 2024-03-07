@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Device, Shader, ShaderProps} from '@luma.gl/core';
 
 /** Manages a cached pool of Shaders for reuse. */

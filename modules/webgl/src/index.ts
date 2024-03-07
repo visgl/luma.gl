@@ -16,7 +16,6 @@ export {WebGLDevice} from './adapter/webgl-device';
 export {WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
 // WebGL Resource classes
-export {WebGLResource, WebGLResource as WEBGLResource} from './adapter/objects/webgl-resource';
 export {WEBGLBuffer} from './adapter/resources/webgl-buffer';
 export {WEBGLTexture} from './adapter/resources/webgl-texture';
 // export {WEBGLExternalTexture} from './adapter/resources/webgl-external-texture';
@@ -45,10 +44,6 @@ export {setDeviceParameters, withDeviceParameters} from './adapter/converters/de
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
 export {convertGLToTextureFormat} from './adapter/converters/texture-formats';
-
-// Internal WebGL classes
-export type {RenderbufferProps as _RenderbufferProps} from './adapter/objects/webgl-renderbuffer';
-export {WEBGLRenderbuffer as _WEBGLRenderbuffer} from './adapter/objects/webgl-renderbuffer';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';

@@ -3,8 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
-import {glsl, Texture, UniformStore, loadImage} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
+import {glsl, Texture, UniformStore} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, CubeGeometry, loadImage} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `\

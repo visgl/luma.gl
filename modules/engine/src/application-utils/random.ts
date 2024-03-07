@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /** Creates a deterministic pseudorandom number generator */
-export function makeRandomNumberGenerator(): () => number {
+export function makeRandomGenerator(): () => number {
   let s = 1;
   let c = 1;
   return () => {

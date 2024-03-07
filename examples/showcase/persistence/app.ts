@@ -1,7 +1,13 @@
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
-import {UniformStore, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
+import {UniformStore, Framebuffer, glsl} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Geometry, SphereGeometry, Model} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Geometry,
+  SphereGeometry,
+  Model,
+  makeRandomGenerator
+} from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -269,7 +275,7 @@ void main(void) {
 }
 `;
 
-const random = makeRandomNumberGenerator();
+const random = makeRandomGenerator();
 
 const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;

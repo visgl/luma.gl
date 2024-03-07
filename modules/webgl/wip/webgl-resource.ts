@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, ResourceProps} from '@luma.gl/core';
-import {Resource, uid} from '@luma.gl/core';
+import {Resource} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 
@@ -32,7 +32,7 @@ export abstract class WebGLResource<Props extends ResourceProps> extends Resourc
     const {id} = props || {};
     this.gl = gl;
     this.gl2 = gl;
-    this.id = id || uid(this.constructor.name);
+    this.id = id || this.constructor.name;
 
     // Set the handle
     // If handle was provided, use it, otherwise create a new handle

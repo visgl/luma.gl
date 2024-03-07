@@ -1,5 +1,9 @@
-import {uid} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Geometry} from '../geometry/geometry';
+import {uid} from '../utils/uid';
 // import type {GeometryType} from '../geometry/geometry-type';
 
 export type CubeGeometryProps = {

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {luma} from '@luma.gl/core';
 import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
