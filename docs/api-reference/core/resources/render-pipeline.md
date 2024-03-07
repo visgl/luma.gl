@@ -192,7 +192,7 @@ Deletes resources held by pipeline. Note: Does not currently delete shaders (to 
 Main parameters
 
 - `uniforms`=`{}` - a map of uniforms that will be set just before the draw call (and remain set after the call).
-- `bindings`=`{}` - a map of texture `Sampler`s that will be bound before the draw call.
+- `bindings`=`{}` - a map of `TextureViews`, `Samplers` and uniform `Buffers` that will be bound before the draw call.
 - `parameters` - temporary gl settings to be applied to this draw call.
 - `transformFeedback`=`null` - optional `TransformFeedback` object containing buffers that will receive the output of the transform feedback operation.
 

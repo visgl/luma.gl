@@ -203,14 +203,16 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable() || vertexCount === 0) {
+    if (!this._areTexturesRenderable()) {
       log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
+      //  Note: false means that the app needs to redraw the pipeline again.
       return false;
     }
 
     // (isInstanced && instanceCount === 0)
     // if (vertexCount === 0) {
     //   log.info(2, `RenderPipeline:${this.id}.draw() aborted - no vertices to draw`)();
+    //   Note: false means that the app needs to redraw the pipeline again.
     //   return true;
     // }
 
