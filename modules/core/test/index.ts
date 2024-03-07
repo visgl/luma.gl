@@ -25,6 +25,7 @@ import './adapter/helpers/parse-shader-compiler-log.spec';
 
 import './adapter/device.spec';
 import './adapter/canvas-context.spec';
+import './adapter/luma.spec';
 
 // Resources
 import './adapter/texture-formats.spec';

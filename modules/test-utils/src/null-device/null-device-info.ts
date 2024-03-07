@@ -4,14 +4,14 @@
 
 import type {DeviceInfo} from '@luma.gl/core';
 
-export const NullDeviceInfo: DeviceInfo = {
-  type: 'webgl',
+export const NullDeviceInfo = {
+  type: 'unknown',
   gpu: 'software',
   gpuType: 'unknown',
   gpuBackend: 'unknown',
-  vendor: '',
+  vendor: 'no one',
   renderer: 'none',
   version: '1.0',
-  shadingLanguage: 'glsl' as const,
+  shadingLanguage: 'glsl',
   shadingLanguageVersion: 300
-} as const;
+} as const satisfies DeviceInfo;

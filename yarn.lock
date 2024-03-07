@@ -3284,19 +3284,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/core-tests@workspace:modules/core-tests":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/core-tests@workspace:modules/core-tests"
-  dependencies:
-    "@luma.gl/core": "npm:9.0.0-beta.7"
-    "@luma.gl/engine": "npm:9.0.0-beta.7"
-    "@luma.gl/shadertools": "npm:9.0.0-beta.7"
-    "@luma.gl/test-utils": "npm:9.0.0-beta.7"
-    "@luma.gl/webgl": "npm:9.0.0-beta.7"
-    "@luma.gl/webgpu": "npm:9.0.0-beta.7"
-  languageName: unknown
-  linkType: soft
-
 "@luma.gl/core@npm:9.0.0-beta.7, @luma.gl/core@workspace:modules/core":
   version: 0.0.0-use.local
   resolution: "@luma.gl/core@workspace:modules/core"
@@ -3347,7 +3334,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/test-utils@npm:9.0.0-beta.7, @luma.gl/test-utils@workspace:modules/test-utils":
+"@luma.gl/test-utils@workspace:modules/test-utils":
   version: 0.0.0-use.local
   resolution: "@luma.gl/test-utils@workspace:modules/test-utils"
   dependencies:
