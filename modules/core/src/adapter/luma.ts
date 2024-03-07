@@ -9,7 +9,7 @@ import {StatsManager} from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
-let deviceMap = new Map<string, typeof Device>();
+const deviceMap = new Map<string, typeof Device>();
 
 /** Properties for creating a new device */
 export type CreateDeviceProps = DeviceProps & {
@@ -44,7 +44,9 @@ export class luma {
   static log: Log = log;
 
   static registerDevices(deviceClasses: any[] /* : typeof Device */): void {
-    deviceMap = getDeviceMap(deviceClasses);
+    for (const deviceClass of deviceClasses) {
+      deviceMap.set(deviceClass.type, deviceClass);
+    }
   }
 
   static getAvailableDevices(): string[] {
@@ -148,7 +150,10 @@ export class luma {
 }
 
 /** Convert a list of devices to a map */
-function getDeviceMap(deviceClasses: any[] /* : typeof Device */): Map<string, typeof Device> {
+function getDeviceMap(deviceClasses?: any[] /* : typeof Device */): Map<string, typeof Device> | null {
+  if (!deviceClasses || deviceClasses?.length === 0) {
+    return null;
+  }
   const map = new Map<string, typeof Device>();
   for (const deviceClass of deviceClasses) {
     // assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);

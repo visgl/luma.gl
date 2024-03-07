@@ -13,3 +13,20 @@ test('luma#attachDevice', async t => {
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
   t.end();
 });
+
+test('luma#createDevice', async t => {
+  const device = await luma.createDevice({type: 'unknown', devices: [NullDevice]});
+  t.equal(device.type, 'unknown', 'info.vendor ok');
+  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
+  t.equal(device.info.renderer, 'none', 'info.renderer ok');
+  t.end();
+});
+
+test('luma#registerDevices', async t => {
+  luma.registerDevices([NullDevice]);
+  const device = await luma.createDevice({type: 'unknown'});
+  t.equal(device.type, 'unknown', 'info.vendor ok');
+  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
+  t.equal(device.info.renderer, 'none', 'info.renderer ok');
+  t.end();
+});
