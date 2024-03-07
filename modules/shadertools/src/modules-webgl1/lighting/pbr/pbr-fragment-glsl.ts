@@ -13,14 +13,6 @@
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 export const fs = glsl`\
-#if defined(USE_TEX_LOD) && !defined(FEATURE_GLSL_TEXTURE_LOD)
-# error PBR fragment shader: Texture LOD is not available
-#endif
-
-#if !defined(HAS_TANGENTS) && !defined(FEATURE_GLSL_DERIVATIVES)
-# error PBR fragment shader: Derivatives are not available
-#endif
-
 precision highp float;
 
 uniform bool pbr_uUnlit;

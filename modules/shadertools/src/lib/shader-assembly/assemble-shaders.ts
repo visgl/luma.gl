@@ -5,7 +5,7 @@
 import {glsl} from '../glsl-utils/highlight';
 import {resolveModules} from './resolve-modules';
 import {PlatformInfo} from './platform-info';
-import {getPlatformShaderDefines, getVersionDefines} from './platform-defines';
+import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
@@ -196,7 +196,6 @@ export function assembleWGSLShader(platformInfo: PlatformInfo, options: Assemble
   // ${getShaderNameDefine({id, source, type})}
   // ${getShaderType(type)}
   // ${getPlatformShaderDefines(platformInfo)}
-  // ${getVersionDefines(platformInfo)}
   // ${getApplicationDefines(allDefines)}
   // ${isVertex ? '' : FRAGMENT_SHADER_PROLOGUE}
   // `
@@ -342,7 +341,6 @@ ${sourceVersionDirective}
 ${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
 ${getPlatformShaderDefines(platformInfo)}
-${getVersionDefines(platformInfo)}
 ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 
 // ----- APPLICATION DEFINES -------------------------
