@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core-tests",
-  "version": "9.0.0-beta.7",
+  "version": "9.0.0-beta.8",
   "description": "luma.gl internal test module",
   "license": "MIT",
   "type": "module",
@@ -36,12 +36,12 @@
     "pre-build": "echo test utils has no bundle"
   },
   "devDependencies": {
-    "@luma.gl/core": "9.0.0-beta.7",
-    "@luma.gl/engine": "9.0.0-beta.7",
-    "@luma.gl/shadertools": "9.0.0-beta.7",
-    "@luma.gl/test-utils": "9.0.0-beta.7",
-    "@luma.gl/webgl": "9.0.0-beta.7",
-    "@luma.gl/webgpu": "9.0.0-beta.7"
+    "@luma.gl/core": "9.0.0-beta.8",
+    "@luma.gl/engine": "9.0.0-beta.8",
+    "@luma.gl/shadertools": "9.0.0-beta.8",
+    "@luma.gl/test-utils": "9.0.0-beta.8",
+    "@luma.gl/webgl": "9.0.0-beta.8",
+    "@luma.gl/webgpu": "9.0.0-beta.8"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

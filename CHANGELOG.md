@@ -1,5 +1,11 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.8
+
+- Fix pre-built bundle setup (#2004)
+- chore: Audit package dependencies (#1995)
+- (origin/9.0-release) fix: unbreak Model.setBufferLayout (#1997)
+
 ### v9.0.0-beta.7
 
 - feat(webgl): Fine-grained extension control (#1993)
