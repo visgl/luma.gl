@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // ClipSpace
 import {Device, glsl} from '@luma.gl/core';
 import {Model, ModelProps} from '../model/model';

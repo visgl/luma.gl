@@ -1,5 +1,9 @@
-import {uid} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {TruncatedConeGeometry} from './truncated-cone-geometry';
+import {uid} from '../utils/uid';
 
 export type CylinderGeometryProps = {
   id?: string;

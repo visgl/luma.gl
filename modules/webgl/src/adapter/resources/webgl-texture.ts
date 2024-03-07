@@ -9,7 +9,7 @@
 
 import {TypedArray} from '@math.gl/types';
 import {Device, Texture, Sampler, SamplerProps, SamplerParameters} from '@luma.gl/core';
-import {TextureProps, TextureViewProps, log, loadImage} from '@luma.gl/core';
+import {TextureProps, TextureViewProps, log} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
@@ -199,7 +199,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     // Signature: new Texture2D(gl, {data: url})
     if (typeof this.props?.data === 'string') {
-      Object.assign(this.props, {data: loadImage(this.props.data)});
+      throw new Error('Texture2D does not support url data');
     }
 
     this.initialize(this.props);

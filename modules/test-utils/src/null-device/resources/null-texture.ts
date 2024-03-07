@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {TextureProps, Sampler, SamplerProps, TextureViewProps} from '@luma.gl/core';
-import {Texture, loadImage} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
 import {NullDevice} from '../null-device';
 import {NullSampler} from './null-sampler';
 import {NullTextureView} from './null-texture-view';
@@ -21,7 +21,7 @@ export class NullTexture extends Texture<TextureProps> {
 
     // Signature: new Texture2D(gl, {data: url})
     if (typeof this.props?.data === 'string') {
-      Object.assign(this.props, {data: loadImage(this.props.data)});
+      throw new Error('Texture2D: Loading textures from URLs is not supported');
     }
 
     this.initialize(this.props);

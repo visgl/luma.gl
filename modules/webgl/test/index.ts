@@ -26,9 +26,6 @@ import './context/state-tracker/context-state.spec';
 import './adapter/webgl-device.spec';
 import './adapter/webgl-canvas-context.spec';
 
-import './adapter/objects/webgl-renderbuffer.spec';
-// import './adapter/objects/webgl-vertex-array-object.spec';
-
 // Resources, WebGL-specific APIs
 import './adapter/resources/webgl-buffer.spec';
 import './adapter/resources/webgl-vertex-array.spec';

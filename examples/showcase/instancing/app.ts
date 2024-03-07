@@ -1,8 +1,9 @@
 //
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
-import {Device, Framebuffer, makeRandomNumberGenerator, glsl} from '@luma.gl/core';
+import {Device, Framebuffer, glsl} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
+import {makeRandomGenerator} from '@luma.gl/engine';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -16,7 +17,7 @@ single GPU draw call using instanced vertex attributes.
 
 // INSTANCE CUBE
 
-const random = makeRandomNumberGenerator();
+const random = makeRandomGenerator();
 
 // WGSL
 

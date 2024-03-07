@@ -30,7 +30,7 @@ import type {
   QuerySet,
   QuerySetProps
 } from '@luma.gl/core';
-import {Device, DeviceFeatures, CanvasContext, log, uid} from '@luma.gl/core';
+import {Device, DeviceFeatures, CanvasContext, log} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
@@ -136,7 +136,7 @@ export class WebGPUDevice extends Device {
     adapterInfo: GPUAdapterInfo,
     props: DeviceProps
   ) {
-    super({...props, id: props.id || uid('webgpu-device')});
+    super({...props, id: props.id || 'webgpu-device'});
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;

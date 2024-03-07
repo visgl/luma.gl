@@ -9,7 +9,7 @@ import type {
   VertexArray,
   VertexArrayProps
 } from '@luma.gl/core';
-import {Device, CanvasContext, uid, DeviceFeatures} from '@luma.gl/core';
+import {Device, CanvasContext, DeviceFeatures} from '@luma.gl/core';
 
 import type {
   BufferProps,
@@ -70,7 +70,7 @@ export class NullDevice extends Device {
   }
 
   constructor(props: DeviceProps) {
-    super({...props, id: props.id || uid('dummy-device')});
+    super({...props, id: props.id || 'null-device'});
 
     this.canvasContext = new NullCanvasContext(this, props);
     this.lost = new Promise(resolve => {});

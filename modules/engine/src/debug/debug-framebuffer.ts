@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {Framebuffer, Texture} from '@luma.gl/core';
 // import {copyTextureToImage} from '../debug/copy-texture-to-image';
 

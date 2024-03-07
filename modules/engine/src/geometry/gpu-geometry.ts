@@ -1,6 +1,11 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
-import {Device, Buffer, uid, getVertexFormatFromAttribute} from '@luma.gl/core';
+import {Device, Buffer, getVertexFormatFromAttribute} from '@luma.gl/core';
 import type {Geometry} from '../geometry/geometry';
+import {uid} from '../utils/uid';
 
 export type GPUGeometryProps = {
   id?: string;

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // luma.gl Engine API
 
 // Animation
@@ -55,6 +59,10 @@ export type {SphereGeometryProps} from './geometries/sphere-geometry';
 export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
+
+// Application Utilities
+export {makeRandomGenerator} from './application-utils/random';
+export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
 
 // EXPERIMENTAL
 export type {ShaderModuleInputs} from './shader-inputs';

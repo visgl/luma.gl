@@ -1,5 +1,6 @@
-import {Buffer, Texture, loadImageBitmap, glsl} from '@luma.gl/core';
-import {Model, CubeGeometry, AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
+import {Buffer, Texture, glsl} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {Model, CubeGeometry, AnimationLoopTemplate, loadImageBitmap} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Rotating Cube';

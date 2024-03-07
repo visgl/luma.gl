@@ -1,5 +1,9 @@
-import {uid} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
+import {uid} from '../utils/uid';
 
 /** Properties for creating a new Scenegraph */
 export type ScenegraphNodeProps = {

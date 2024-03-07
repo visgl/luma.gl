@@ -14,7 +14,7 @@ import type {
   Buffer,
   Texture
 } from '@luma.gl/core';
-import {Device, CanvasContext, log, uid} from '@luma.gl/core';
+import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {
   popContextState,
@@ -188,7 +188,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   //
 
   constructor(props: DeviceProps) {
-    super({...props, id: props.id || uid('webgl-device')});
+    super({...props, id: props.id || 'webgl-device'});
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderUniformType} from '../gpu-type-utils/shader-types';
-import type {UniformValue} from '../adapter/types/types';
+import type {UniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
 import {Buffer} from '../adapter/resources/buffer';
 import {log} from '../utils/log';

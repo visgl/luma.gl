@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {UniformValue} from '../types/types';
+import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';

@@ -1,11 +1,12 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
-import {makeRandomNumberGenerator, glsl} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {glsl} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, makeRandomGenerator} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
-const random = makeRandomNumberGenerator();
+const random = makeRandomGenerator();
 
 const INFO_HTML = `
 <p>

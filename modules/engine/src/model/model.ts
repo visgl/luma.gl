@@ -9,7 +9,7 @@ import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.g
 import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
 import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';
 import {RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
-import {log, uid, splitUniformsAndBindings} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -23,6 +23,8 @@ import {ShaderFactory} from '../lib/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
+import {uid} from '../utils/uid';
+import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;

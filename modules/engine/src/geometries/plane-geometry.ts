@@ -1,6 +1,10 @@
-import {uid} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Geometry} from '../geometry/geometry';
 import {unpackIndexedGeometry} from '../geometry/geometry-utils';
+import {uid} from '../utils/uid';
 
 export type PlaneGeometryProps = {
   id?: string;

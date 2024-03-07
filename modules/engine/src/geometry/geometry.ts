@@ -4,7 +4,7 @@
 
 import type {TypedArray} from '@math.gl/core';
 import type {PrimitiveTopology} from '@luma.gl/core';
-import {uid} from '@luma.gl/core';
+import {uid} from '../utils/uid';
 
 export type GeometryProps = {
   id?: string;

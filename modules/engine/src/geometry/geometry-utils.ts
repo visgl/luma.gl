@@ -1,4 +1,6 @@
-// import type {Geometry} from './geometry';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 export function unpackIndexedGeometry(geometry: any) {
   const {indices, attributes} = geometry;

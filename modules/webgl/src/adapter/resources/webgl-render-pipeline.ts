@@ -5,13 +5,14 @@
 import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
 import type {ShaderLayout} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, splitUniformsAndBindings, log} from '@luma.gl/core';
+import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {getShaderLayout} from '../helpers/get-shader-layout';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
+import {splitUniformsAndBindings} from '../../utils/split-uniforms-and-bindings';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
 import {WebGLDevice} from '../webgl-device';

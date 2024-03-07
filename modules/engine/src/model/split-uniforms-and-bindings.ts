@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue} from '../adapter/types/types';
-import type {Binding} from '../adapter/types/shader-layout';
-import {isUniformValue} from './is-uniform-value';
+import type {UniformValue, Binding} from '@luma.gl/core';
+import {isNumericArray} from '@math.gl/types';
+
+export function isUniformValue(value: unknown): boolean {
+  return isNumericArray(value) !== null || typeof value === 'number' || typeof value === 'boolean';
+}
 
 type UniformsAndBindings = {
   bindings: Record<string, Binding>;
