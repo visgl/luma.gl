@@ -3,6 +3,7 @@ const {getESLintConfig} = require('ocular-dev-tools/configuration');
 // Make any changes to default config here
 module.exports = getESLintConfig({
   overrides: {
+    parser: '',
     parserOptions: {
       project: ['./tsconfig.json']
     },

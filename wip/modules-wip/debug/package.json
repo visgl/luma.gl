@@ -41,7 +41,7 @@
   "dependencies": {
     "@luma.gl/constants": "9.0.0-alpha.29",
     "@math.gl/core": "4.0.0-alpha.4",
-    "@probe.gl/env": "^4.0.2",
+    "@probe.gl/env": "^4.0.8",
     "glsl-transpiler": "^1.8.5"
   },
   "peerDependencies": {
