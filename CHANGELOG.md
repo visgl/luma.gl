@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.10
+
+- webgl: Check for WEBGLTextureView, not WEBGLTexture (#2014)
+
 ### v9.0.0-beta.9
 
 - shadertools: Remove getVersionDefines (#2012)
