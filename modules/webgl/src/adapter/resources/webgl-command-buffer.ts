@@ -153,7 +153,9 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     const webglBuffer = destination as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
-    const sourceParams = getWebGLTextureParameters(framebuffer.texture.props.format);
+    const sourceParams = getWebGLTextureParameters(
+      framebuffer.colorAttachments[0].texture.props.format
+    );
     const sourceFormat = sourceParams.dataFormat;
     const sourceType = sourceParams.type;
 
