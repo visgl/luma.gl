@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+### v9.0.0-beta.9
+
+- shadertools: Remove getVersionDefines (#2012)
+
 ### v9.0.0-beta.8
 
 - Fix pre-built bundle setup (#2004)
