@@ -17,7 +17,7 @@
     "@luma.gl/shadertools": "9.0.0-alpha.29",
     "@luma.gl/webgl": "9.0.0-alpha.29",
     "@math.gl/core": "4.0.0-alpha.4",
-    "@probe.gl/stats-widget": "^4.0.0"
+    "@probe.gl/stats-widget": "^4.0.8"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
