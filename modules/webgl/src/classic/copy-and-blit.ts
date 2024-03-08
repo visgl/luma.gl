@@ -5,7 +5,6 @@
 import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {WEBGLTextureView} from '../adapter/resources/webgl-texture-view';
 import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
@@ -52,7 +51,7 @@ export function readPixelsToArray(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   // assert(framebuffer);
-  const {gl, handle} = framebuffer as WEBGLFramebuffer;
+  const {gl, handle} = framebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
@@ -66,9 +65,7 @@ export function readPixelsToArray(
 
   // Deduce the type from color attachment if not provided.
   sourceType =
-    sourceType ||
-    (framebuffer.colorAttachments[attachment] as WEBGLTextureView)?.texture?.type ||
-    GL.UNSIGNED_BYTE;
+    sourceType || framebuffer.colorAttachments[attachment]?.texture?.type || GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
@@ -122,7 +119,7 @@ export function readPixelsToBuffer(
   sourceHeight = sourceHeight || framebuffer.height;
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const webglFramebuffer = framebuffer;
 
   // deduce type if not available.
   sourceType = sourceType || GL.UNSIGNED_BYTE;
@@ -194,7 +191,7 @@ export function copyToTexture(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   // assert(framebuffer);
-  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const webglFramebuffer = framebuffer;
   const {device, handle} = webglFramebuffer;
   const isSubCopy =
     typeof targetX !== 'undefined' ||
@@ -274,20 +271,20 @@ export function copyToTexture(
 }
 
 function getFramebuffer(source: Texture | Framebuffer): {
-  framebuffer: Framebuffer;
+  framebuffer: WEBGLFramebuffer;
   deleteFramebuffer: boolean;
 } {
   if (!(source instanceof Framebuffer)) {
     return {framebuffer: toFramebuffer(source), deleteFramebuffer: true};
   }
-  return {framebuffer: source, deleteFramebuffer: false};
+  return {framebuffer: source as WEBGLFramebuffer, deleteFramebuffer: false};
 }
 
 /**
  * Wraps a given texture into a framebuffer object, that can be further used
  * to read data from the texture object.
  */
-export function toFramebuffer(texture: Texture, props?: FramebufferProps): Framebuffer {
+export function toFramebuffer(texture: Texture, props?: FramebufferProps): WEBGLFramebuffer {
   const {device, width, height, id} = texture;
   const framebuffer = device.createFramebuffer({
     ...props,
@@ -296,7 +293,7 @@ export function toFramebuffer(texture: Texture, props?: FramebufferProps): Frame
     height,
     colorAttachments: [texture]
   });
-  return framebuffer;
+  return framebuffer as WEBGLFramebuffer;
 }
 
 function getPixelArray(

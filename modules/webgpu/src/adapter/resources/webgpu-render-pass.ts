@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPassProps, RenderPassParameters, Binding, Framebuffer} from '@luma.gl/core';
+import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/core';
 import {Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
-import {WebGPUTextureView} from './webgpu-texture-view';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
+import {WebGPUFramebuffer} from './webgpu-framebuffer';
 
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
@@ -21,7 +21,9 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer = props.framebuffer || device.canvasContext.getCurrentFramebuffer();
+    const framebuffer =
+      (props.framebuffer as WebGPUFramebuffer) || device.canvasContext.getCurrentFramebuffer();
+
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
 
     const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
@@ -161,7 +163,7 @@ export class WebGPURenderPass extends RenderPass {
    * Partial render pass descriptor. Used by WebGPURenderPass.
    * @returns attachments fields of a renderpass descriptor.
    */
-  protected getRenderPassDescriptor(framebuffer: Framebuffer): GPURenderPassDescriptor {
+  protected getRenderPassDescriptor(framebuffer: WebGPUFramebuffer): GPURenderPassDescriptor {
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: []
     };
@@ -172,12 +174,12 @@ export class WebGPURenderPass extends RenderPass {
       colorClearValue: this.props.clearColor || [0, 0, 0, 0],
       storeOp: this.props.discard ? 'discard' : 'store',
       // ...colorAttachment,
-      view: (colorAttachment as WebGPUTextureView).handle
+      view: colorAttachment.handle
     }));
 
     if (framebuffer.depthStencilAttachment) {
       renderPassDescriptor.depthStencilAttachment = {
-        view: (framebuffer.depthStencilAttachment as WebGPUTextureView).handle
+        view: framebuffer.depthStencilAttachment.handle
       };
       const {depthStencilAttachment} = renderPassDescriptor;
 
