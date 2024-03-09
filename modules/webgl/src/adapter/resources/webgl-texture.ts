@@ -12,10 +12,7 @@ import {Device, Texture, Sampler, SamplerProps, SamplerParameters} from '@luma.g
 import {TextureProps, TextureViewProps, log} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
-import {
-  getTextureFormatWebGL,
-  getTextureFormatBytesPerPixel
-} from '../converters/texture-formats';
+import {getTextureFormatWebGL, getTextureFormatBytesPerPixel} from '../converters/texture-formats';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
