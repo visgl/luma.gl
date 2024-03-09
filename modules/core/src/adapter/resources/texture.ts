@@ -186,14 +186,14 @@ export abstract class Texture extends Resource<TextureProps> {
   loaded: boolean = false;
 
   /** Check if data is an external image */
-  static isExternalImage(data: unknown): ExternalImage | null {
+  static isExternalImage(data: unknown): data is ExternalImage {
     return isExternalImage(data);
   }
 
   /** Check if texture data is a typed array */
-  static isTextureLevelData(image: TextureData): TextureLevelData | null {
-    const data = (image as TextureLevelData)?.data;
-    return ArrayBuffer.isView(data) ? (image as TextureLevelData) : null;
+  static isTextureLevelData(data: TextureData): data is TextureLevelData {
+    const typedArray = (data as TextureLevelData)?.data;
+    return ArrayBuffer.isView(typedArray);
   }
 
   /** Determine size (width and height) of provided image data */
@@ -304,14 +304,14 @@ export abstract class Texture extends Resource<TextureProps> {
 // HELPER METHODS
 
 /** Check if data is an external image */
-function isExternalImage(data: unknown): ExternalImage | null {
-  const isExternalImage =
+function isExternalImage(data: unknown): data is ExternalImage {
+  return (
     (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
     (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
     (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
     (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
-    (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement);
-  return isExternalImage ? (data as ExternalImage) : null;
+    (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
+  );
 }
 
 /** Determine size (width and height) of provided image data */
@@ -348,9 +348,8 @@ function getTextureDataSize(
   if (Array.isArray(data)) {
     return Texture.getTextureDataSize(data[0]);
   }
-  const externalImage = Texture.isExternalImage(data);
-  if (externalImage) {
-    return Texture.getExternalImageSize(externalImage);
+  if (Texture.isExternalImage(data)) {
+    return Texture.getExternalImageSize(data);
   }
   if (data && typeof data === 'object' && data.constructor === Object) {
     const untypedData = data as unknown as Record<string, number>;

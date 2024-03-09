@@ -361,7 +361,6 @@ export class Model {
       // Any caching needs to be done inside the pipeline functions
       // TODO this is a busy initialized check for all bindings every frame
       const syncBindings = this._getBindings();
-      console.log(syncBindings);
       this.pipeline.setBindings(syncBindings);
       if (!isObjectEmpty(this.uniforms)) {
         this.pipeline.setUniformsWebGL(this.uniforms);

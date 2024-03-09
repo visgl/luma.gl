@@ -10,8 +10,8 @@ import {TypedArray, NumberArray} from '../types';
  * @returns input as TypedArray, or null
  * @todo this should be provided by @math.gl/types
  */
-export function isTypedArray(value: unknown): TypedArray | null {
-  return ArrayBuffer.isView(value) && !(value instanceof DataView) ? (value as TypedArray) : null;
+export function isTypedArray(value: unknown): value is TypedArray {
+  return ArrayBuffer.isView(value) && !(value instanceof DataView);
 }
 
 /**
@@ -20,9 +20,9 @@ export function isTypedArray(value: unknown): TypedArray | null {
  * @returns input as NumberArray, or null
  * @todo this should be provided by @math.gl/types
  */
-export function isNumberArray(value: unknown): NumberArray | null {
+export function isNumberArray(value: unknown): value is NumberArray {
   if (Array.isArray(value)) {
-    return value.length === 0 || typeof value[0] === 'number' ? (value as number[]) : null;
+    return value.length === 0 || typeof value[0] === 'number';
   }
   return isTypedArray(value);
 }

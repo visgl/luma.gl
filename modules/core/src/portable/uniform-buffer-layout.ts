@@ -86,8 +86,7 @@ export class UniformBufferLayout {
         // single value -> just set it
         typedArray[offset] = Number(value);
       } else {
-        const numericArray = isNumberArray(value);
-        if (!numericArray) {
+        if (!isNumberArray(value)) {
           log.warn(
             `Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`
           )();
@@ -96,7 +95,7 @@ export class UniformBufferLayout {
         }
         // vector/matrix -> copy the supplied (typed) array, starting from offset
         // TODO: we should limit or check size in case the supplied data overflows
-        typedArray.set(numericArray, offset);
+        typedArray.set(value, offset);
       }
     }
 

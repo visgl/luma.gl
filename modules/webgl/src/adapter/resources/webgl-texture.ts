@@ -619,16 +619,14 @@ export class WEBGLTexture extends Texture {
     //   return;
     // }
 
-    const imageSource = Texture.isExternalImage(textureData);
-    if (imageSource) {
-      copyCPUImageToMipLevel(this.device.gl, imageSource, {...this, depth, level});
+    if (Texture.isExternalImage(textureData)) {
+      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level});
       return;
     }
 
     // @ts-expect-error
-    const textureLevelData = Texture.isTextureLevelData(textureData);
-    if (textureLevelData) {
-      copyCPUDataToMipLevel(this.device.gl, textureLevelData.data, {
+    if (Texture.isTextureLevelData(textureData)) {
+      copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
         level
