@@ -43,7 +43,7 @@ export {setDeviceParameters, withDeviceParameters} from './adapter/converters/de
 
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
-export {convertGLToTextureFormat} from './adapter/converters/texture-formats';
+// export {convertGLToTextureFormat} from './adapter/converters/texture-formats';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';

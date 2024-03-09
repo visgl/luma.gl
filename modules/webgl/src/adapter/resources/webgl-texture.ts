@@ -13,8 +13,7 @@ import {TextureProps, TextureViewProps, log} from '@luma.gl/core';
 import {GL, GLSamplerParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {
-  convertTextureFormatToGL,
-  getWebGLTextureParameters,
+  getTextureFormatWebGL,
   getTextureFormatBytesPerPixel
 } from '../converters/texture-formats';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
@@ -270,7 +269,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let {width, height, dataFormat, type, compressed = false} = props;
     const {depth = 0} = props;
 
-    const glFormat = convertTextureFormatToGL(props.format);
+    const glFormat = getTextureFormatWebGL(props.format).internalFormat;
 
     // Deduce width and height
     ({width, height, compressed, dataFormat, type} = this._deduceParameters({
@@ -726,8 +725,8 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
     let {width, height, dataFormat, type, compressed} = opts;
 
     // Deduce format and type from format
-    const parameters = getWebGLTextureParameters(format);
-    dataFormat = dataFormat || parameters.dataFormat;
+    const parameters = getTextureFormatWebGL(format);
+    dataFormat = dataFormat || parameters.format;
     type = type || parameters.type;
     compressed = compressed || parameters.compressed;
 
@@ -882,19 +881,19 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
 
     this.gl.bindTexture(this.target, this.handle);
 
-    const webglTextureFormat = getWebGLTextureParameters(format);
+    const webglTextureFormat = getTextureFormatWebGL(format);
 
     withGLParameters(this.gl, parameters, () => {
       if (ArrayBuffer.isView(data)) {
         this.gl.texImage3D(
           this.target,
           level,
-          webglTextureFormat.format,
+          webglTextureFormat.internalFormat,
           width,
           height,
           depth,
           0 /* border, must be 0 */,
-          webglTextureFormat.dataFormat,
+          webglTextureFormat.format,
           webglTextureFormat.type, // dataType: getWebGL,
           data
         );

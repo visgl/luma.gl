@@ -44,6 +44,24 @@ export type GLTextureCubeMapTarget =
   | GL.TEXTURE_CUBE_MAP_POSITIVE_Z
   | GL.TEXTURE_CUBE_MAP_NEGATIVE_Z;
 
+/** Texel data formats for gl.texSubImage() */
+export type GLTexelDataFormat =
+  | GL.ALPHA // Discards the red, green and blue components and reads the alpha component.
+  | GL.RGB // Discards the alpha components and reads the red, green and blue components.
+  | GL.RGBA // Red, green, blue and alpha components are read from the color buffer.
+  | GL.LUMINANCE // Each color component is a luminance component, alpha is 1.0.
+  | GL.LUMINANCE_ALPHA // Each component is a luminance/alpha component.
+  | GL.SRGB
+  // | GL.SRGB_ALPHA_EXT
+  | GL.RED
+  | GL.RG
+  | GL.RED_INTEGER
+  | GL.RG_INTEGER
+  | GL.RGB_INTEGER
+  | GL.RGBA_INTEGER
+  | GL.DEPTH_COMPONENT
+  | GL.DEPTH_STENCIL;
+
 /** Rendering primitives. Constants passed to drawElements() or drawArrays() to specify what kind of primitive to render. */
 export type GLPrimitiveTopology =
   | GL.POINTS
@@ -65,14 +83,20 @@ export type GLDataType =
   | GL.UNSIGNED_BYTE
   | GL.BYTE
   | GL.SHORT
-  | GL.INT;
+  | GL.INT
+  | GL.HALF_FLOAT;
 
 /** Pixel Data Type */
 export type GLPixelType =
   | GLDataType
   | GL.UNSIGNED_SHORT_5_6_5
   | GL.UNSIGNED_SHORT_4_4_4_4
-  | GL.UNSIGNED_SHORT_5_5_5_1;
+  | GL.UNSIGNED_SHORT_5_5_5_1
+  | GL.UNSIGNED_INT_2_10_10_10_REV
+  | GL.UNSIGNED_INT_10F_11F_11F_REV
+  | GL.UNSIGNED_INT_5_9_9_9_REV
+  | GL.UNSIGNED_INT_24_8
+  | GL.FLOAT_32_UNSIGNED_INT_24_8_REV;
 
 /** Uniform Type */
 export type GLUniformType = GLSamplerType | GLCompositeType;
@@ -281,15 +305,36 @@ export type GLValueParameters = {
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]?: GLStencilOp;
   [GL.VIEWPORT]?: [number, number, number, number] | NumberArray;
 
+  [GL.READ_FRAMEBUFFER_BINDING]?: Framebuffer | null;
+
   [GL.PACK_ALIGNMENT]?: number;
+  [GL.PACK_ROW_LENGTH]?: number;
+  [GL.PACK_SKIP_PIXELS]?: number;
+  [GL.PACK_SKIP_ROWS]?: number;
+
   [GL.UNPACK_ALIGNMENT]?: number;
   [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
+  [GL.UNPACK_ROW_LENGTH]?: number;
+  [GL.UNPACK_IMAGE_HEIGHT]?: number;
+  [GL.UNPACK_SKIP_PIXELS]?: number;
+  [GL.UNPACK_SKIP_ROWS]?: number;
+  [GL.UNPACK_SKIP_IMAGES]?: number;
+};
+
+export type GLPackParameters = {
+  [GL.PACK_ALIGNMENT]?: number;
   [GL.PACK_ROW_LENGTH]?: number;
   [GL.PACK_SKIP_PIXELS]?: number;
   [GL.PACK_SKIP_ROWS]?: number;
-  [GL.READ_FRAMEBUFFER_BINDING]?: Framebuffer | null;
+};
+
+export type GLUnpackParameters = {
+  [GL.UNPACK_ALIGNMENT]?: number;
+  [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
+  [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
+  [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
   [GL.UNPACK_ROW_LENGTH]?: number;
   [GL.UNPACK_IMAGE_HEIGHT]?: number;
   [GL.UNPACK_SKIP_PIXELS]?: number;

@@ -1,6 +1,11 @@
 import React, {FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
-import {Device, luma, setPathPrefix} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
+import {Device, luma} from '@luma.gl/core';
+import {
+  AnimationLoopTemplate,
+  AnimationLoop,
+  makeAnimationLoop,
+  setPathPrefix
+} from '@luma.gl/engine';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
