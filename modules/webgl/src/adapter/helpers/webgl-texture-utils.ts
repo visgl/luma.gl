@@ -97,7 +97,7 @@ export function initializeTextureStorage(
 ): void {
   const {dimension, width, height, depth = 0} = options;
   const {glInternalFormat} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = options.glTarget; // getCubeTargetWebGL(options.glTarget, dimension, depth);
   switch (dimension) {
     case '2d-array':
     case '3d':

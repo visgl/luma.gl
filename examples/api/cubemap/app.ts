@@ -22,6 +22,7 @@ surface
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = glsl`\
+#version 300 es
 in vec3 positions;
 
 uniform mat4 uModel;
@@ -36,6 +37,7 @@ void main(void) {
 }
 `;
     const fs = glsl`\
+#version 300 es
 precision highp float;
 
 uniform samplerCube uTextureCube;
@@ -44,7 +46,7 @@ out vec4 fragColor;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  fragColor = textureCube(uTextureCube, normalize(vPosition));
+  fragColor = texture(uTextureCube, normalize(vPosition));
 }
 `;
 
@@ -55,6 +57,7 @@ void main(void) {
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     const vs = glsl`\
+#version 300 es
 in vec3 positions;
 in vec3 normals;
 in vec2 texCoords;
@@ -75,6 +78,7 @@ void main(void) {
 }
 `;
     const fs = glsl`\
+#version 300 es
 precision highp float;
 
 uniform sampler2D uTexture;
@@ -84,13 +88,14 @@ uniform vec3 uEyePosition;
 in vec3 vPosition;
 in vec3 vNormal;
 in vec2 vUV;
+out vec4 fragColor;
 
 void main(void) {
   vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - uEyePosition), vNormal);
-  vec4 reflectedColor = textureCube(uTextureCube, reflectedDir);
+  vec4 reflectedColor = texture(uTextureCube, reflectedDir);
 
-  gl_FragColor = color * reflectedColor;
+  fragColor = color; //  * reflectedColor;
 }
 `;
     super(device, {...props, geometry: new CubeGeometry(), vs, fs});

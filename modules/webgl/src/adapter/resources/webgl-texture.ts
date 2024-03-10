@@ -389,7 +389,9 @@ export class WEBGLTexture extends Texture {
     if (this.props.dimension !== '3d') {
       throw new Error(this.id);
     }
-    throw new Error('setTexture3DData not implemented.');
+    if (ArrayBuffer.isView(data)) {
+      copyCPUDataToMipLevel(this.device.gl, data, this);
+    }
   }
 
   /**
