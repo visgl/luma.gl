@@ -112,18 +112,6 @@ export class NullTexture extends Texture {
     return this;
   }
 
-  resize(options: {height: number; width: number; mipmaps?: boolean}): this {
-    const {height, width, mipmaps = false} = options;
-    if (width !== this.width || height !== this.height) {
-      return this.initialize({
-        width,
-        height,
-        mipmaps
-      });
-    }
-    return this;
-  }
-
   setImageData(options: {data?: any; width?: number; height?: number}) {
     this.trackDeallocatedMemory('Texture');
 

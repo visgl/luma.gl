@@ -97,7 +97,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     for (let i = 0; i < TEXTURE_DIMENSIONS; ++i) {
       for (let j = 0; j < TEXTURE_DIMENSIONS; ++j) {
         for (let k = 0; k < TEXTURE_DIMENSIONS; ++k) {
-          const noiseLevel = noise(i / NOISE_DIMENSIONS, j / NOISE_DIMENSIONS, k / NOISE_DIMENSIONS);
+          const noiseLevel = noise(
+            i / NOISE_DIMENSIONS,
+            j / NOISE_DIMENSIONS,
+            k / NOISE_DIMENSIONS
+          );
           textureData[textureIndex++] = (0.5 + 0.5 * noiseLevel) * 255;
         }
       }
@@ -160,7 +164,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1]
       // clearDepth: true
     });
-    console.log(this.cloud.shaderLayout);
+
     this.cloud.setUniforms({
       uTime: tick / 100,
       uMVP: this.mvpMat

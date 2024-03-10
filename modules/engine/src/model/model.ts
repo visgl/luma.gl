@@ -620,7 +620,7 @@ export class Model {
     // Extract actual textures from async textures. If not loaded, null
     return Object.entries(this.bindings).reduce<Record<string, Binding>>((acc, [name, binding]) => {
       if (binding instanceof AsyncTexture) {
-        if (binding.initialized) {
+        if (binding.isReady) {
           acc[name] = binding.texture;
         }
       } else {

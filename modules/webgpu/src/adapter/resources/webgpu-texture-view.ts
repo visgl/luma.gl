@@ -21,7 +21,6 @@ import type {WebGPUTexture} from './webgpu-texture';
   format: string;
 */
 
-
 export type WebGPUTextureViewProps = TextureViewProps & {
   handle?: GPUTextureView;
 };

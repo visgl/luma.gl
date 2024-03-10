@@ -96,7 +96,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   /**
    * Attachment resize is expected to be a noop if size is same
-   */
+   *
   protected override resizeAttachments(width: number, height: number): this {
     // for default framebuffer, just update the stored size
     if (this.handle === null) {
@@ -116,13 +116,14 @@ export class WEBGLFramebuffer extends Framebuffer {
     // TODO Not clear that this is better than default destroy/create implementation
 
     for (const colorAttachment of this.colorAttachments) {
-      colorAttachment.texture.resize({width, height});
+      colorAttachment.texture.clone({width, height});
     }
     if (this.depthStencilAttachment) {
       this.depthStencilAttachment.texture.resize({width, height});
     }
     return this;
   }
+  */
 
   /** Attach one attachment */
   protected _attachTexture(attachmentPoint: GL, textureView: WEBGLTextureView): void {

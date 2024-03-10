@@ -383,49 +383,6 @@ test.skip('WebGL2#Texture setSubImageData', t => {
   t.end();
 });
 
-/*
-test.skip('WebGL2#Texture resize', (t) => {
-  let texture = webglDevice.createTexture({
-    data: null,
-    width: 2,
-    height: 2,
-    mipmaps: true
-  });
-
-  texture.resize({
-    width: 4,
-    height: 4,
-    mipmaps: true
-  });
-
-  t.ok(texture.mipmaps, 'mipmaps should set to true for POT.');
-
-  texture.resize({
-    width: 3,
-    height: 3,
-    mipmaps: true
-  });
-
-  t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing to NPOT.');
-
-  texture = webglDevice.createTexture({
-    data: null,
-    width: 2,
-    height: 2,
-    mipmaps: true
-  });
-
-  texture.resize({
-    width: 4,
-    height: 4
-  });
-
-  t.notOk(texture.mipmaps, 'mipmaps should set to false when resizing.');
-
-  t.end();
-});
-*/
-
 test.skip('WebGL2#Texture generateMipmap', t => {
   let texture = webglDevice.createTexture({
     data: null,
@@ -495,29 +452,6 @@ test.skip('Texture#construct/delete', t => {
   t.ok(texture instanceof Texture, 'Texture repeated delete successful');
 
   t.end();
-});
-
-test.skip('Texture#async constructor', t => {
-  let texture = webglDevice.createTexture();
-  t.ok(texture instanceof Texture, 'Synchronous Texture construction successful');
-  t.equal(texture.loaded, true, 'Sync Texture marked as loaded');
-  texture.destroy();
-
-  let loadCompleted;
-  const loadPromise = new Promise(resolve => {
-    loadCompleted = resolve; // eslint-disable-line
-  });
-  texture = new Texture(gl, loadPromise);
-  t.ok(texture instanceof Texture, 'Asynchronous Texture construction successful');
-  t.equal(texture.loaded, false, 'Async Texture initially marked as not loaded');
-
-  loadPromise.then(() => {
-    t.equal(texture.loaded, true, 'Async Texture marked as loaded on promise completion');
-    t.end();
-  });
-
-  // @ts-expect-error
-  loadCompleted(null);
 });
 
 test.skip('Texture#buffer update', t => {

@@ -403,7 +403,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     for (const [, texture] of Object.entries(this.bindings)) {
       if (texture instanceof WEBGLTexture) {
         texture.update();
-        // texturesRenderable = texturesRenderable && texture.loaded;
       }
     }
 

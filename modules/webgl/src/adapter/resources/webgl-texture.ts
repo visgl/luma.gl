@@ -192,7 +192,7 @@ export class WEBGLTexture extends Texture {
     let {width, height} = props;
 
     if (!width || !height) {
-      const textureSize = Texture.getTextureDataSize(data);
+      const textureSize = this.getTextureDataSize(data);
       width = textureSize?.width || 1;
       height = textureSize?.height || 1;
     }
@@ -241,9 +241,6 @@ export class WEBGLTexture extends Texture {
     //     lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
     //   };
     // }
-
-    // This property is checked by draw(). The texture won't render until it is fully initialized
-    this.loaded = true;
   }
 
   /*
@@ -255,8 +252,6 @@ export class WEBGLTexture extends Texture {
 
     // @ts-expect-error
     this.setCubeMapData(props).then(() => {
-      this.loaded = true;
-
       // TODO - should genMipmap() be called on the cubemap or on the faces?
       // TODO - without generateMipmap() cube textures do not work at all!!! Why?
       if (mipmaps) {
@@ -302,24 +297,6 @@ export class WEBGLTexture extends Texture {
 
     const parameters = convertSamplerParametersToWebGL(samplerProps);
     this._setSamplerParameters(parameters);
-  }
-
-  /**
-   * If size has changed, reinitializes with current format
-   * @note note clears image and mipmaps
-   */
-  resize(options: {height: number; width: number; mipmaps?: boolean}): void {
-    const {height, width, mipmaps = false} = options;
-    if (width !== this.width || height !== this.height) {
-      this.initialize({
-        width,
-        height,
-        format: this.format,
-        // type: this.type,
-        // dataFormat: this.dataFormat,
-        mipmaps
-      });
-    }
   }
 
   /** Update external texture (video frame or canvas) */
@@ -627,7 +604,7 @@ export class WEBGLTexture extends Texture {
     }
 
     // @ts-expect-error
-    if (Texture.isTextureLevelData(textureData)) {
+    if (this.isTextureLevelData(textureData)) {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,

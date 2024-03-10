@@ -178,13 +178,6 @@ export abstract class Texture extends Resource<TextureProps> {
   /** "Time" of last update. Monotonically increasing timestamp */
   updateTimestamp: number;
 
-  /**
-   * Set to true as soon as texture has been initialized.
-   * RenderPipeline.draw() checks the loaded flag of all textures.
-   * Textures that are still loading from promises have not been initialized with valid data
-   */
-  loaded: boolean = false;
-
   /** Check if data is an external image */
   static isExternalImage(data: unknown): data is ExternalImage {
     return (
@@ -194,12 +187,6 @@ export abstract class Texture extends Resource<TextureProps> {
       (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
       (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
     );
-  }
-
-  /** Check if texture data is a typed array */
-  static isTextureLevelData(data: TextureData): data is TextureLevelData {
-    const typedArray = (data as TextureLevelData)?.data;
-    return ArrayBuffer.isView(typedArray);
   }
 
   /** Determine size (width and height) of provided image data */
@@ -220,8 +207,14 @@ export abstract class Texture extends Resource<TextureProps> {
     return null;
   }
 
+  /** Check if texture data is a typed array */
+  isTextureLevelData(data: TextureData): data is TextureLevelData {
+    const typedArray = (data as TextureLevelData)?.data;
+    return ArrayBuffer.isView(typedArray);
+  }
+
   /** Get the size of the texture described by the provided TextureData */
-  static getTextureDataSize(
+  getTextureDataSize(
     data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
   ): {width: number; height: number} | null {
     if (!data) {
@@ -232,7 +225,7 @@ export abstract class Texture extends Resource<TextureProps> {
     }
     // Recurse into arrays (array of miplevels)
     if (Array.isArray(data)) {
-      return Texture.getTextureDataSize(data[0]);
+      return this.getTextureDataSize(data[0]);
     }
     if (Texture.isExternalImage(data)) {
       return Texture.getExternalImageSize(data);
@@ -245,12 +238,12 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   /** Calculate the number of mip levels for a texture of width and height */
-  static getMipLevelCount(width: number, height: number): number {
+  getMipLevelCount(width: number, height: number): number {
     return Math.floor(Math.log2(Math.max(width, height))) + 1;
   }
 
   /** Convert luma.gl cubemap face constants to depth index */
-  static getCubeFaceDepth(face: TextureCubeFace): number {
+  getCubeFaceDepth(face: TextureCubeFace): number {
     // prettier-ignore
     switch (face) {
         case '+X': return  0;
@@ -276,7 +269,7 @@ export abstract class Texture extends Resource<TextureProps> {
 
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
-      const size = Texture.getTextureDataSize(this.props.data);
+      const size = this.getTextureDataSize(this.props.data);
       this.width = size?.width || 1;
       this.height = size?.height || 1;
     }
@@ -292,7 +285,7 @@ export abstract class Texture extends Resource<TextureProps> {
     // TODO - Should we clamp to 1-getMipLevelCount?
     this.mipLevels =
       this.props.mipLevels === 'pyramid'
-        ? Texture.getMipLevelCount(this.width, this.height)
+        ? this.getMipLevelCount(this.width, this.height)
         : this.props.mipLevels || 1;
 
     // TODO - perhaps this should be set on async write completion?
