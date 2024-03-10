@@ -50,8 +50,6 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     super(device, props, Framebuffer.defaultProps);
     this.width = this.props.width;
     this.height = this.props.height;
-    // NOTE: call from subclass constructor as we cannot call overridden methods here (subclass not yet constructed)
-    // this.autoCreateAttachmentTextures();
   }
 
   /**

@@ -187,7 +187,13 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Check if data is an external image */
   static isExternalImage(data: unknown): data is ExternalImage {
-    return isExternalImage(data);
+    return (
+      (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
+      (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+      (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
+      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
+      (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
+    );
   }
 
   /** Check if texture data is a typed array */
@@ -197,15 +203,45 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   /** Determine size (width and height) of provided image data */
-  static getExternalImageSize(data: ExternalImage): {width: number; height: number} {
-    return getExternalImageSize(data);
+  static getExternalImageSize(data: ExternalImage): {width: number; height: number} | null {
+    if (
+      (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
+      (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
+      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement)
+    ) {
+      return {width: data.width, height: data.height};
+    }
+    if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
+      return {width: data.naturalWidth, height: data.naturalHeight};
+    }
+    if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
+      return {width: data.videoWidth, height: data.videoHeight};
+    }
+    return null;
   }
 
   /** Get the size of the texture described by the provided TextureData */
   static getTextureDataSize(
     data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
   ): {width: number; height: number} | null {
-    return getTextureDataSize(data);
+    if (!data) {
+      return null;
+    }
+    if (ArrayBuffer.isView(data)) {
+      return null;
+    }
+    // Recurse into arrays (array of miplevels)
+    if (Array.isArray(data)) {
+      return Texture.getTextureDataSize(data[0]);
+    }
+    if (Texture.isExternalImage(data)) {
+      return Texture.getExternalImageSize(data);
+    }
+    if (data && typeof data === 'object' && data.constructor === Object) {
+      const untypedData = data as unknown as Record<string, number>;
+      return {width: untypedData.width, height: untypedData.height};
+    }
+    throw new Error('texture size deduction failed');
   }
 
   /** Calculate the number of mip levels for a texture of width and height */
@@ -268,92 +304,4 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   abstract setSampler(sampler?: Sampler | SamplerProps): void;
-
-  /**  */
-  abstract setTexture1DData(data: Texture1DData): void;
-  abstract setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void;
-  abstract setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void;
-  abstract setTextureCubeData(data: TextureCubeData, depth?: number): void;
-  abstract setTextureArrayData(data: TextureArrayData): void;
-  abstract setTextureCubeArrayData(data: TextureCubeArrayData): void;
-
-  /**
-   * @param {*} pixels, data -
-   *  null - create empty texture of specified format
-   *  Typed array - init from image data in typed array
-   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
-   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
-   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
-   *  HTMLVideoElement - Creates video texture. Auto width/height
-   *
-   * @param  x - xOffset from where texture to be updated
-   * @param  y - yOffset from where texture to be updated
-   * @param  width - width of the sub image to be updated
-   * @param  height - height of the sub image to be updated
-   * @param  level - mip level to be updated
-   * @param {GLenum} format - internal format of image data.
-   * @param {GLenum} type
-   *  - format of array (autodetect from type) or
-   *  - (WEBGL2) format of buffer or ArrayBufferView
-   * @param {GLenum} dataFormat - format of image data.
-   * @param {Number} offset - (WEBGL2) offset from start of buffer
-   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
-   */
-}
-
-// HELPER METHODS
-
-/** Check if data is an external image */
-function isExternalImage(data: unknown): data is ExternalImage {
-  return (
-    (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
-    (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
-    (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
-    (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
-    (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
-  );
-}
-
-/** Determine size (width and height) of provided image data */
-function getExternalImageSize(data: ExternalImage): {width: number; height: number} | null {
-  if (typeof ImageData !== 'undefined' && data instanceof ImageData) {
-    return {width: data.width, height: data.height};
-  }
-  if (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) {
-    return {width: data.width, height: data.height};
-  }
-  if (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) {
-    return {width: data.naturalWidth, height: data.naturalHeight};
-  }
-  if (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) {
-    return {width: data.width, height: data.height};
-  }
-  if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
-    return {width: data.videoWidth, height: data.videoHeight};
-  }
-  return null;
-}
-
-/** Get the size of the texture described by the provided TextureData */
-function getTextureDataSize(
-  data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
-): {width: number; height: number} | null {
-  if (!data) {
-    return null;
-  }
-  if (ArrayBuffer.isView(data)) {
-    return null;
-  }
-  // Recurse into arrays (array of miplevels)
-  if (Array.isArray(data)) {
-    return Texture.getTextureDataSize(data[0]);
-  }
-  if (Texture.isExternalImage(data)) {
-    return Texture.getExternalImageSize(data);
-  }
-  if (data && typeof data === 'object' && data.constructor === Object) {
-    const untypedData = data as unknown as Record<string, number>;
-    return {width: untypedData.width, height: untypedData.height};
-  }
-  throw new Error('texture size deduction failed');
 }

@@ -37,6 +37,28 @@ export type WebGLSetTextureOptions = {
   byteLength?: number;
 };
 
+/**
+ * @param {*} pixels, data -
+ *  null - create empty texture of specified format
+ *  Typed array - init from image data in typed array
+ *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+ *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+ *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+ *  HTMLVideoElement - Creates video texture. Auto width/height
+ *
+ * @param  x - xOffset from where texture to be updated
+ * @param  y - yOffset from where texture to be updated
+ * @param  width - width of the sub image to be updated
+ * @param  height - height of the sub image to be updated
+ * @param  level - mip level to be updated
+ * @param {GLenum} format - internal format of image data.
+ * @param {GLenum} type
+ *  - format of array (autodetect from type) or
+ *  - (WEBGL2) format of buffer or ArrayBufferView
+ * @param {GLenum} dataFormat - format of image data.
+ * @param {Number} offset - (WEBGL2) offset from start of buffer
+ * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+ */
 export type WebGLCopyTextureOptions = {
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   level?: number;
