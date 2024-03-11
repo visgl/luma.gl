@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {ShaderAssembler, PlatformInfo, glsl, picking, dirlight} from '@luma.gl/shadertools';
 

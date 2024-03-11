@@ -101,6 +101,7 @@ export function assembleShaderWGSL(options: AssembleShaderOptions): {
 
 /**
  * Injects dependent shader module sources into pair of main vertex/fragment shader sources for WGSL
+ * @todo - Do we want to support WGSL shader pairs or standardize on unified shaders?
  */
 export function assembleShaderPairWGSL(options: AssembleShaderOptions): {
   vs: string;

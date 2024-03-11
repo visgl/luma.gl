@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 // copied from rollup-plugin-glslify
 export function minifyShader(code) {
   let needNewline = false;

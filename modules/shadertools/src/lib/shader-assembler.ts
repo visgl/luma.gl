@@ -11,6 +11,7 @@ import {
   assembleShaderPairWGSL,
   assembleShaderPairGLSL
 } from './shader-assembly/assemble-shaders';
+import {preprocess} from './preprocessor/preprocessor';
 
 /**
  * A stateful version of `assembleShaders` that can be used to assemble shaders.
@@ -81,13 +82,16 @@ export class ShaderAssembler {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const options = selectShaders(props);
-    const assembled = assembleShaderWGSL({
+    const {source, getUniforms} = assembleShaderWGSL({
       platformInfo: props.platformInfo,
       ...options,
       modules,
       hookFunctions
     });
-    return {...assembled, modules};
+    // WGSL does not have built-in preprocessing support (just compile time constants)
+    const preprocessedSource =
+      props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source) : source;
+    return {source: preprocessedSource, getUniforms, modules};
   }
 
   /**

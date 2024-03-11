@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {glsl} from '@luma.gl/shadertools';
 
 type TranspilationTestCase = {

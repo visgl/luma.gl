@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import test from 'tape-promise/tape';
 import {ShaderLayout} from '@luma.gl/core';
 import {getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
