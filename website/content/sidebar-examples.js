@@ -23,9 +23,10 @@ const sidebars = {
       items: [
         'tutorials/hello-triangle',
         'tutorials/hello-cube',
+        'tutorials/lighting',
+        'tutorials/hello-gltf',
         'tutorials/two-cubes',
         'tutorials/instanced-cubes',
-        'tutorials/lighting',
         'tutorials/hello-instancing',
         'tutorials/shader-modules',
         'tutorials/shader-hooks'
