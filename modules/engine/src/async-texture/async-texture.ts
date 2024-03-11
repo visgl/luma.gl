@@ -60,7 +60,7 @@ export class AsyncTexture {
   isReady: boolean = false;
   destroyed: boolean = false;
 
-  protected resolveReady : () => void;
+  protected resolveReady: () => void;
   protected rejectReady: (error: Error) => void;
 
   constructor(device: Device, props: AsyncTextureProps) {
@@ -77,7 +77,7 @@ export class AsyncTexture {
         resolve();
       };
       this.rejectReady = reject;
-    })
+    });
 
     this.initAsync(props);
   }

@@ -54,7 +54,6 @@ layout(0) positions: vec4; // in vec4 POSITION;
   }
 `;
 
-
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
 const vs = glsl`\
