@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 /* eslint-disable camelcase, no-console, no-undef */
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';

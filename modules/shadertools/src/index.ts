@@ -41,6 +41,7 @@ export {generateShaderForModule} from './lib/shader-generator/generate-shader';
 export {capitalize} from './lib/shader-generator/utils/capitalize';
 
 // TEST EXPORTS - Do not use in production applications
+export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleShaderPairGLSL} from './lib/shader-assembly/assemble-shaders';
 export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
 export {combineInjects} from './lib/shader-assembly/shader-injections';

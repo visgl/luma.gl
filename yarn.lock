@@ -3279,9 +3279,9 @@ __metadata:
   resolution: "@luma.gl/core@workspace:modules/core"
   dependencies:
     "@math.gl/types": "npm:^4.0.0"
-    "@probe.gl/env": "npm:^4.0.2"
-    "@probe.gl/log": "npm:^4.0.2"
-    "@probe.gl/stats": "npm:^4.0.2"
+    "@probe.gl/env": "npm:^4.0.8"
+    "@probe.gl/log": "npm:^4.0.8"
+    "@probe.gl/stats": "npm:^4.0.8"
     "@types/offscreencanvas": "npm:^2019.6.4"
   languageName: unknown
   linkType: soft
@@ -3293,8 +3293,8 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.0.0-beta.7"
     "@math.gl/core": "npm:^4.0.0"
     "@math.gl/types": "npm:^4.0.0"
-    "@probe.gl/log": "npm:^4.0.2"
-    "@probe.gl/stats": "npm:^4.0.2"
+    "@probe.gl/log": "npm:^4.0.8"
+    "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta
   languageName: unknown
@@ -3328,8 +3328,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/test-utils@workspace:modules/test-utils"
   dependencies:
-    "@probe.gl/env": "npm:^4.0.2"
-    "@probe.gl/stats": "npm:^4.0.2"
+    "@probe.gl/env": "npm:^4.0.8"
+    "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta
     "@luma.gl/engine": ^9.0.0-beta
@@ -3345,7 +3345,7 @@ __metadata:
   dependencies:
     "@luma.gl/constants": "npm:9.0.0-beta.7"
     "@math.gl/types": "npm:^4.0.0"
-    "@probe.gl/env": "npm:^4.0.2"
+    "@probe.gl/env": "npm:^4.0.8"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta
   languageName: unknown
@@ -3355,7 +3355,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
-    "@probe.gl/env": "npm:^4.0.2"
+    "@probe.gl/env": "npm:^4.0.8"
     "@webgpu/types": "npm:^0.1.34"
   peerDependencies:
     "@luma.gl/core": ^9.0.0-beta
@@ -3626,17 +3626,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@probe.gl/bench@npm:^4.0.2":
-  version: 4.0.5
-  resolution: "@probe.gl/bench@npm:4.0.5"
+"@probe.gl/bench@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/bench@npm:4.0.9"
   dependencies:
-    "@babel/runtime": "npm:^7.0.0"
-    "@probe.gl/log": "npm:4.0.5"
-  checksum: 10c0/24a78623c09b7144a6ded142cae89da8cf0ef2d777415f5373cef2beb2982c77f4cc6a221ed5a279494c2717a47bc6b7c7df9b5fccb6ab6dc0ae505a30bd65ba
+    "@probe.gl/log": "npm:4.0.9"
+  checksum: 10c0/1291df8e56fa5b2a1ef81030d13fd15ae4aa8f152e734449ef46a0965f4aa57fcfac2768c3fa0045b4ba60068ccc265fde037b56dd74619da351c819dfe42609
   languageName: node
   linkType: hard
 
-"@probe.gl/env@npm:4.0.5, @probe.gl/env@npm:^4.0.2":
+"@probe.gl/env@npm:4.0.5":
   version: 4.0.5
   resolution: "@probe.gl/env@npm:4.0.5"
   dependencies:
@@ -3654,13 +3653,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@probe.gl/log@npm:4.0.5, @probe.gl/log@npm:^4.0.2":
-  version: 4.0.5
-  resolution: "@probe.gl/log@npm:4.0.5"
-  dependencies:
-    "@babel/runtime": "npm:^7.0.0"
-    "@probe.gl/env": "npm:4.0.5"
-  checksum: 10c0/b137ccf8b37482c4a1423f8f0bda45d4127cf91c92e06e96bd36eca25f54992627a8f159c1dd6abd28e4ad69d1cb8f1bb59a2de84d943259cfa39309f7dc34fc
+"@probe.gl/env@npm:4.0.9, @probe.gl/env@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/env@npm:4.0.9"
+  checksum: 10c0/c6fcd1742aea014d15fe36a6cf0724d7faf3eeda27856978d87c1658b26ceaefc86254b011de65de35c1dfc0e3074fdbeaef5fd4362a05541a5e46b880e4024f
   languageName: node
   linkType: hard
 
@@ -3674,14 +3670,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@probe.gl/stats-widget@npm:^4.0.2":
+"@probe.gl/log@npm:4.0.9, @probe.gl/log@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/log@npm:4.0.9"
+  dependencies:
+    "@probe.gl/env": "npm:4.0.9"
+  checksum: 10c0/23521b46fdda80470d8b38d70c62d77f3b50257a63b3e7660655936593cf5f54ec7f1e2b0a36e8ecb7635c7fd45280bb66bd379a3e58afbde99f23d46f43c112
+  languageName: node
+  linkType: hard
+
+"@probe.gl/log@npm:^4.0.2":
   version: 4.0.5
-  resolution: "@probe.gl/stats-widget@npm:4.0.5"
+  resolution: "@probe.gl/log@npm:4.0.5"
   dependencies:
     "@babel/runtime": "npm:^7.0.0"
+    "@probe.gl/env": "npm:4.0.5"
+  checksum: 10c0/b137ccf8b37482c4a1423f8f0bda45d4127cf91c92e06e96bd36eca25f54992627a8f159c1dd6abd28e4ad69d1cb8f1bb59a2de84d943259cfa39309f7dc34fc
+  languageName: node
+  linkType: hard
+
+"@probe.gl/stats-widget@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/stats-widget@npm:4.0.9"
   peerDependencies:
     "@probe.gl/stats": ^4.0.0
-  checksum: 10c0/2a73d9c0607533dd996d22f622b76af230ac7f9ad0b3b880b035a87c7a4551d9a53e064fac7d4a1ee91be02da912218fae2a9f40c312015e3e14b25c9e12e7ca
+  checksum: 10c0/ed36a1998c5a50454ecfeff1e40c3091cf45a0f519ac9ed35853d64e4c92eb34538c7a7719a691081fab7fce027c93bc68b10946f00e1c540a874138524daefa
   languageName: node
   linkType: hard
 
@@ -3694,20 +3707,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@probe.gl/test-utils@npm:^4.0.2":
-  version: 4.0.5
-  resolution: "@probe.gl/test-utils@npm:4.0.5"
-  dependencies:
-    "@babel/runtime": "npm:^7.0.0"
-    "@probe.gl/log": "npm:4.0.5"
-    "@types/pngjs": "npm:^6.0.1"
-    pixelmatch: "npm:^4.0.2"
-  peerDependencies:
-    puppeteer: ">=19"
-  peerDependenciesMeta:
-    puppeteer:
-      optional: true
-  checksum: 10c0/32a6520c65b00fb475556dbc7bd85f23ffe4c8388696fa3cc219cd6211baacd9313cbef6eff42e74b392bd08a9479691315f4bf641a740e869ff0976f8ada1c4
+"@probe.gl/stats@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/stats@npm:4.0.9"
+  checksum: 10c0/23c205232a45941b13d1e87efe060d81f3a09339b0294991fc9fdf6dd9d090a9e6c79cccf23ce8f09e5c14aa44ef128836639490df22729a13214b0ff3c7cd80
   languageName: node
   linkType: hard
 
@@ -3725,6 +3728,22 @@ __metadata:
     puppeteer:
       optional: true
   checksum: 10c0/ea0bb25360c926f0268c5557630328ff93aa8d3d2c7659de6634b5d59e8ed2f809a5e1b07f4e9065fe7138c3c9e8b277d128276f780f645bde957a457d703f49
+  languageName: node
+  linkType: hard
+
+"@probe.gl/test-utils@npm:^4.0.8":
+  version: 4.0.9
+  resolution: "@probe.gl/test-utils@npm:4.0.9"
+  dependencies:
+    "@probe.gl/log": "npm:4.0.9"
+    "@types/pngjs": "npm:^6.0.1"
+    pixelmatch: "npm:^4.0.2"
+  peerDependencies:
+    puppeteer: ">=19"
+  peerDependenciesMeta:
+    puppeteer:
+      optional: true
+  checksum: 10c0/48417f72babc0a4f32bce974fb4f803f785145912d01d8ad4dad8ad88f07b27d93388f8ffb5214a5aec8998acdb3b31c44732f8a86745de0bca1cd725f867430
   languageName: node
   linkType: hard
 
@@ -10095,10 +10114,10 @@ __metadata:
     "@loaders.gl/core": "npm:^4.1.0"
     "@loaders.gl/gltf": "npm:^4.1.0"
     "@loaders.gl/polyfills": "npm:^4.1.0"
-    "@probe.gl/bench": "npm:^4.0.2"
-    "@probe.gl/stats": "npm:^4.0.2"
-    "@probe.gl/stats-widget": "npm:^4.0.2"
-    "@probe.gl/test-utils": "npm:^4.0.2"
+    "@probe.gl/bench": "npm:^4.0.8"
+    "@probe.gl/stats": "npm:^4.0.8"
+    "@probe.gl/stats-widget": "npm:^4.0.8"
+    "@probe.gl/test-utils": "npm:^4.0.8"
     "@types/offscreencanvas": "npm:^2019.6.4"
     "@types/tape-promise": "npm:^4.0.1 "
     eslint-plugin-tree-shaking: "npm:^1.9.2"

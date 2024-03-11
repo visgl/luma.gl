@@ -7,6 +7,9 @@ import './lib/glsl-utils/get-shader-info.spec';
 import './lib/glsl-utils/shader-utils.spec';
 
 // shader transpilation
+import './lib/preprocessor/preprocessor.spec';
+
+// shader transpilation
 import './lib/shader-transpiler/transpile-shader.spec';
 
 // shader generation
