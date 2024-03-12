@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-animation",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.0",
-    "@luma.gl/engine": "9.0.0",
-    "@luma.gl/shadertools": "9.0.0",
-    "@luma.gl/webgl": "9.0.0",
+    "@luma.gl/core": "9.0.1",
+    "@luma.gl/engine": "9.0.1",
+    "@luma.gl/shadertools": "9.0.1",
+    "@luma.gl/webgl": "9.0.1",
     "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {

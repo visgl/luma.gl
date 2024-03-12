@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "gl-constants": "^1.0.0",
-    "luma.gl": "^8.1.0-beta.1"
+    "luma.gl": "^8.1.0"
   },
   "devDependencies": {
     "babel-core": "^6.24.1",

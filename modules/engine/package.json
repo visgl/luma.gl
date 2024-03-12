@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -40,13 +40,13 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^9.0.0-beta"
+    "@luma.gl/core": "^9.0.0"
   },
   "dependencies": {
-    "@luma.gl/shadertools": "9.0.0",
+    "@luma.gl/shadertools": "9.0.1",
     "@math.gl/core": "^4.0.0",
     "@probe.gl/log": "^4.0.2",
     "@probe.gl/stats": "^4.0.2"
   },
-  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+  "gitHead": "a87ee4e72dbfcb9e4786aa823b9ac516f0031723"
 }
