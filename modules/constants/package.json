@@ -43,5 +43,5 @@
     "build-dev-bundle": "ocular-bundle ./src/index.ts --output=dist/dist.dev.js --env=dev",
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
-  "gitHead": "a87ee4e72dbfcb9e4786aa823b9ac516f0031723"
+  "gitHead": "aec74bc1ad62bdc66a05aa3ef795d49ad7810f22"
 }

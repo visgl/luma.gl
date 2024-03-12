@@ -43,5 +43,5 @@
     "@probe.gl/env": "^4.0.2",
     "@webgpu/types": "^0.1.34"
   },
-  "gitHead": "a87ee4e72dbfcb9e4786aa823b9ac516f0031723"
+  "gitHead": "aec74bc1ad62bdc66a05aa3ef795d49ad7810f22"
 }
