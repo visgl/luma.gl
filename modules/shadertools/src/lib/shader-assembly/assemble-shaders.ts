@@ -138,7 +138,8 @@ export function assembleGLSLShaderPair(
     }),
     fs: assembleShaderGLSL(options.platformInfo, {
       ...options,
-      source: fs, // TODO - remove the !
+      // @ts-expect-error
+      source: fs,
       stage: 'fragment',
       modules
     }),
