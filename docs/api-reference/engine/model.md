@@ -13,7 +13,7 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 
 The `Model` class integrates with 
 - The `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
-- The `Geometry` classes - accepts a [`Mesh`] or a [`Geometry`](/docs/modules/engine/api-reference/geometry) instance, plus any additional attributes for instanced rendering)
+- The `Geometry` classes - accepts a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
 ## Usage
 

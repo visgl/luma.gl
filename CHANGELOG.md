@@ -1,5 +1,9 @@
 # luma.gl CHANGELOG
 
+## v9.0.0
+
+- Major new release that includes WebGPU support
+
 ### v9.0.0-beta.10
 
 - webgl: Check for WEBGLTextureView, not WEBGLTexture (#2014)
