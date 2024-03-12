@@ -132,22 +132,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs,
       geometry: new CubeGeometry(),
       modules: [phongMaterial],
-      moduleSettings: {
-        // material: {
-        //   specularColor: [255, 255, 255]
-        // },
-        // lights: [
-        //   {
-        //     type: 'ambient',
-        //     color: [255, 255, 255]
-        //   },
-        //   {
-        //     type: 'point',
-        //     color: [255, 255, 255],
-        //     position: [1, 2, 1]
-        //   }
-        // ]
-      },
+      // moduleSettings: {
+      // material: {
+      //   specularColor: [255, 255, 255]
+      // },
+      // lights: [
+      //   {
+      //     type: 'ambient',
+      //     color: [255, 255, 255]
+      //   },
+      //   {
+      //     type: 'point',
+      //     color: [255, 255, 255],
+      //     position: [1, 2, 1]
+      //   }
+      // ]
+      // },
       bindings: {
         uTexture: texture,
         app: this.uniformStore.getManagedUniformBuffer(device, 'app'),

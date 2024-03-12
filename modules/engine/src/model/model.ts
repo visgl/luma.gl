@@ -23,7 +23,6 @@ import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
-import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
 import {ShaderInputs} from '../shader-inputs';
 // import type {AsyncTextureProps} from '../async-texture/async-texture';
@@ -72,9 +71,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   transformFeedback?: TransformFeedback;
 
-  /** Mapped uniforms for shadertool modules */
-  moduleSettings?: Record<string, Record<string, any>>;
-
   /** Show shader source in browser? */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
 
@@ -105,7 +101,6 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
-    moduleSettings: undefined!,
     geometry: null,
     indexBuffer: null,
     attributes: {},
@@ -179,7 +174,6 @@ export class Model {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
-  private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
@@ -218,16 +212,15 @@ export class Model {
     if (isWebGPU && this.props.source) {
       // WGSL
       this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
-      const {source, getUniforms} = this.props.shaderAssembler.assembleShader({
+      const {source} = this.props.shaderAssembler.assembleShader({
         platformInfo,
         ...this.props,
         modules
       });
       this.source = source;
-      this._getModuleUniforms = getUniforms;
     } else {
       // GLSL
-      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
+      const {vs, fs} = this.props.shaderAssembler.assembleShaderPair({
         platformInfo,
         ...this.props,
         modules
@@ -235,7 +228,6 @@ export class Model {
 
       this.vs = vs;
       this.fs = fs;
-      this._getModuleUniforms = getUniforms;
     }
 
     this.vertexCount = this.props.vertexCount;
@@ -294,10 +286,6 @@ export class Model {
     }
     if (props.uniforms) {
       this.setUniforms(props.uniforms);
-    }
-    if (props.moduleSettings) {
-      log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-      this.updateModuleSettings(props.moduleSettings);
     }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
@@ -600,17 +588,6 @@ export class Model {
       Object.assign(this.uniforms, uniforms);
     }
     this.setNeedsRedraw('uniforms');
-  }
-
-  /**
-   * @deprecated Updates shader module settings (which results in uniforms being set)
-   */
-  updateModuleSettings(props: Record<string, any>): void {
-    log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
-    this.setNeedsRedraw('moduleSettings');
   }
 
   // Internal methods
