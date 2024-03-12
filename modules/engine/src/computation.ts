@@ -135,7 +135,7 @@ export class Computation {
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
-    const {source, getUniforms} = this.props.shaderAssembler.assembleShader({
+    const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules

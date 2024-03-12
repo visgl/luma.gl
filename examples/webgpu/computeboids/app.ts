@@ -18,10 +18,8 @@ is used to draw instanced particles.';
 
 /** Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  wgsl: {
-    updateSprites,
-    sprites
-  }
+  updateSprites,
+  sprites
 };
 
 const NUM_PARTICLES = 150;

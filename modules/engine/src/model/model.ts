@@ -218,7 +218,7 @@ export class Model {
     if (isWebGPU && this.props.source) {
       // WGSL
       this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
-      const {source, getUniforms} = this.props.shaderAssembler.assembleShader({
+      const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules
@@ -227,7 +227,7 @@ export class Model {
       this._getModuleUniforms = getUniforms;
     } else {
       // GLSL
-      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleShaderPair({
+      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
         platformInfo,
         ...this.props,
         modules

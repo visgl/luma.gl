@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {webglDevice} from '@luma.gl/test-utils';
-import {assembleShaderPairGLSL, picking, fp64, pbr, glsl, PlatformInfo} from '@luma.gl/shadertools';
+import {assembleGLSLShaderPair, picking, fp64, pbr, glsl, PlatformInfo} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
@@ -263,13 +263,13 @@ void main(void) {
 }
 `;
 
-test('assembleShaderPairGLSL#import', t => {
-  t.ok(assembleShaderPairGLSL !== undefined, 'assembleShaderPairGLSL import successful');
+test('assembleGLSLShaderPair#import', t => {
+  t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
   t.end();
 });
 
-test('assembleShaderPairGLSL#version_directive', t => {
-  const assembleResult = assembleShaderPairGLSL({
+test('assembleGLSLShaderPair#version_directive', t => {
+  const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -289,7 +289,7 @@ test('assembleShaderPairGLSL#version_directive', t => {
   t.end();
 });
 
-test('assembleShaderPairGLSL#getUniforms', t => {
+test('assembleGLSLShaderPair#getUniforms', t => {
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -297,7 +297,7 @@ test('assembleShaderPairGLSL#getUniforms', t => {
   let assembleResult;
 
   // Without shader modules
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300
@@ -318,7 +318,7 @@ test('assembleShaderPairGLSL#getUniforms', t => {
     dependencies: [picking]
   };
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -331,8 +331,8 @@ test('assembleShaderPairGLSL#getUniforms', t => {
   t.end();
 });
 
-test('assembleShaderPairGLSL#defines', t => {
-  const assembleResult = assembleShaderPairGLSL({
+test('assembleGLSLShaderPair#defines', t => {
+  const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -345,7 +345,7 @@ test('assembleShaderPairGLSL#defines', t => {
   t.end();
 });
 
-test('assembleShaderPairGLSL#shaderhooks', t => {
+test('assembleGLSLShaderPair#shaderhooks', t => {
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
     {
@@ -376,7 +376,7 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
     }
   };
 
-  let assembleResult = assembleShaderPairGLSL({
+  let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -409,7 +409,7 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
     'regex injection code not included in fragment shader without module'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -444,7 +444,7 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
     'regex injection code included in fragment shader with module'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -470,7 +470,7 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
     'argument injection code injected in the correct order'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -488,7 +488,7 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
     'module injection code injected in the correct order'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -506,8 +506,8 @@ test('assembleShaderPairGLSL#shaderhooks', t => {
   t.end();
 });
 
-test('assembleShaderPairGLSL#injection order', t => {
-  let assembleResult = assembleShaderPairGLSL({
+test('assembleGLSLShaderPair#injection order', t => {
+  let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
@@ -528,7 +528,7 @@ test('assembleShaderPairGLSL#injection order', t => {
     'Hook functions have access to injected variables.'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
@@ -545,8 +545,8 @@ test('assembleShaderPairGLSL#injection order', t => {
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleShaderPairGLSL#transpilation', t => {
-  let assembleResult = assembleShaderPairGLSL({
+test.skip('assembleGLSLShaderPair#transpilation', t => {
+  let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
@@ -564,7 +564,7 @@ test.skip('assembleShaderPairGLSL#transpilation', t => {
     'assemble GLSL300 + picking and transpile to GLSL100'
   );
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_2,
     fs: FS_GLSL_300_2,
@@ -580,7 +580,7 @@ test.skip('assembleShaderPairGLSL#transpilation', t => {
   // TODO - this doesn't work in headless gl
   if (isBrowser() && extension) {
     t.comment(JSON.stringify(extension));
-    assembleResult = assembleShaderPairGLSL({
+    assembleResult = assembleGLSLShaderPair({
       platformInfo: getInfo(webglDevice),
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK
@@ -592,7 +592,7 @@ test.skip('assembleShaderPairGLSL#transpilation', t => {
     );
   }
 
-  assembleResult = assembleShaderPairGLSL({
+  assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,

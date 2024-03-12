@@ -63,7 +63,7 @@ const FS_300 = glsl`\
 test('ShaderAssembler#hooks', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  const preHookShaders = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const preHookShaders = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
   shaderAssembler.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
   shaderAssembler.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
@@ -71,7 +71,7 @@ test('ShaderAssembler#hooks', t => {
     footer: 'color.a *= 1.2;\n'
   });
 
-  const assemblyResults = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const assemblyResults = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
   t.ok(preHookShaders !== assemblyResults, 'Adding hooks changes hash');
 
@@ -88,7 +88,7 @@ test('ShaderAssembler#hooks', t => {
     picking
   );
 
-  const noModuleProgram = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const noModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
   t.ok(preHookShaders !== noModuleProgram, 'Adding hooks changes hash');
 
@@ -110,7 +110,7 @@ test('ShaderAssembler#hooks', t => {
     'injection code not included in fragment shader without module'
   );
 
-  const modulesProgram = shaderAssembler.assembleShaderPair({
+  const modulesProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -142,7 +142,7 @@ test('ShaderAssembler#hooks', t => {
     'hook footer injected after injection code'
   );
 
-  const injectedShaders = shaderAssembler.assembleShaderPair({
+  const injectedShaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -157,7 +157,7 @@ test('ShaderAssembler#hooks', t => {
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
 
-  const injectDefineProgram1 = shaderAssembler.assembleShaderPair({
+  const injectDefineProgram1 = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -166,7 +166,7 @@ test('ShaderAssembler#hooks', t => {
     }
   });
 
-  const injectDefineProgram2 = shaderAssembler.assembleShaderPair({
+  const injectDefineProgram2 = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -183,9 +183,9 @@ test('ShaderAssembler#hooks', t => {
 test('ShaderAssembler#defaultModules', t => {
   const shaderAssembler = new ShaderAssembler();
 
-  const program = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const program = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  const preDefaultModuleProgram = shaderAssembler.assembleShaderPair({
+  const preDefaultModuleProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -196,8 +196,8 @@ test('ShaderAssembler#defaultModules', t => {
 
   shaderAssembler.addDefaultModule(dirlight);
 
-  const defaultModuleProgram = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
-  const moduleProgram = shaderAssembler.assembleShaderPair({
+  const defaultModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
+  const moduleProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
@@ -215,7 +215,7 @@ test('ShaderAssembler#defaultModules', t => {
 
   shaderAssembler.removeDefaultModule(dirlight);
 
-  const noDefaultModuleProgram = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const noDefaultModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
   t.ok(program.fs === noDefaultModuleProgram.fs, 'Default module was removed');
   t.ok(moduleProgram.fs !== noDefaultModuleProgram.fs, 'Default module was removed');
@@ -223,7 +223,7 @@ test('ShaderAssembler#defaultModules', t => {
   // Reset program manager
 
   shaderAssembler.addDefaultModule(dirlight);
-  const uncachedProgram = shaderAssembler.assembleShaderPair({platformInfo, vs, fs});
+  const uncachedProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
   const defaultModuleSource = uncachedProgram.fs;
 
   // TODO - this deep equal thing doesn't make sense due to getUniforms
