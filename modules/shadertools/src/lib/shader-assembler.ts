@@ -4,12 +4,11 @@
 
 import type {ShaderModule} from './shader-module/shader-module';
 import {ShaderModuleInstance} from './shader-module/shader-module-instance';
-import {selectShaders, AssembleShaderProps} from './shader-assembly/select-shaders';
 import {
+  AssembleShaderProps,
   GetUniformsFunc,
-  assembleShaderWGSL,
-  assembleShaderPairWGSL,
-  assembleShaderPairGLSL
+  assembleWGSLShader,
+  assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
 import {preprocess} from './preprocessor/preprocessor';
 
@@ -69,22 +68,20 @@ export class ShaderAssembler {
   }
 
   /**
-   * Assemble a pair of shaders into a single shader program
+   * Assemble a WGSL unified shader
    * @param platformInfo
    * @param props
    * @returns
    */
-  assembleShader(props: AssembleShaderProps): {
+  assembleWGSLShader(props: AssembleShaderProps): {
     source: string;
     getUniforms: GetUniformsFunc;
     modules: ShaderModuleInstance[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const options = selectShaders(props);
-    const {source, getUniforms} = assembleShaderWGSL({
-      platformInfo: props.platformInfo,
-      ...options,
+    const {source, getUniforms} = assembleWGSLShader({
+      ...props,
       modules,
       hookFunctions
     });
@@ -100,20 +97,15 @@ export class ShaderAssembler {
    * @param props
    * @returns
    */
-  assembleShaderPair(props: AssembleShaderProps): {
+  assembleGLSLShaderPair(props: AssembleShaderProps): {
     vs: string;
     fs: string;
     getUniforms: GetUniformsFunc;
     modules: ShaderModuleInstance[];
   } {
-    const options = selectShaders(props);
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const {platformInfo} = props;
-    const isWGSL = props.platformInfo.shaderLanguage === 'wgsl';
-    const assembled = isWGSL
-      ? assembleShaderPairWGSL({platformInfo, ...options, modules, hookFunctions})
-      : assembleShaderPairGLSL({platformInfo, ...options, modules, hookFunctions});
+    const assembled = assembleGLSLShaderPair({...props, modules, hookFunctions});
 
     return {...assembled, modules};
   }

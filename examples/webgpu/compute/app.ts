@@ -14,8 +14,7 @@ export const description = 'A pure GPU compute shader for matrix multiplication'
 
 /** Provide both GLSL and WGSL shaders */
 const SHADERS = {
-  wgsl: {
-    compute: `
+  compute: `
     @block struct Matrix {
       size : vec2<f32>;
       numbers: array<f32>;
@@ -46,7 +45,6 @@ const SHADERS = {
       resultMatrix.numbers[index] = result;
     }
   `
-  }
 };
 
 async function init(canvas: HTMLCanvasElement) {

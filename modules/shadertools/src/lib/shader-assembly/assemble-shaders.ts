@@ -28,19 +28,24 @@ const FRAGMENT_SHADER_PROLOGUE = glsl`\
 precision highp float;
 `;
 
-export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
+/**
+ * Options for `ShaderAssembler.assembleShaders()`
+ */
+export type AssembleShaderProps = AssembleShaderOptions & {
+  platformInfo: PlatformInfo;
+  /** WGSL: single shader source. */
+  source?: string | null;
+  /** GLSL vertex shader source. */
+  vs?: string | null;
+  /** GLSL fragment shader source. */
+  fs?: string | null;
+};
 
 export type AssembleShaderOptions = {
   /** information about the platform (which shader language & version, extensions etc.) */
   platformInfo: PlatformInfo;
   /** Inject shader id #defines */
   id?: string;
-  /** Single WGSL shader */
-  source?: string;
-  /** Vertex shader */
-  vs?: string;
-  /** Fragment shader */
-  fs?: string;
   /** Modules to be injected */
   modules?: (ShaderModule | ShaderModuleInstance)[];
   /** Defines to be injected */
@@ -75,6 +80,8 @@ type AssembleStageOptions = {
   log?: any;
 };
 
+export type HookFunction = {hook: string; header: string; footer: string; signature?: string};
+
 /**
  * getUniforms function returned from the shader module system
  */
@@ -83,13 +90,18 @@ export type GetUniformsFunc = (opts: Record<string, any>) => Record<string, any>
 /**
  * Inject a list of shader modules into a single shader source for WGSL
  */
-export function assembleShaderWGSL(options: AssembleShaderOptions): {
+export function assembleWGSLShader(
+  options: AssembleShaderOptions & {
+    /** Single WGSL shader */
+    source?: string;
+  }
+): {
   source: string;
   getUniforms: GetUniformsFunc;
 } {
   const modules = resolveModules(options.modules || []);
   return {
-    source: assembleWGSLShader(options.platformInfo, {
+    source: assembleShaderWGSL(options.platformInfo, {
       ...options,
       source: options.source,
       stage: 'vertex',
@@ -100,37 +112,16 @@ export function assembleShaderWGSL(options: AssembleShaderOptions): {
 }
 
 /**
- * Injects dependent shader module sources into pair of main vertex/fragment shader sources for WGSL
- * @todo - Do we want to support WGSL shader pairs or standardize on unified shaders?
- */
-export function assembleShaderPairWGSL(options: AssembleShaderOptions): {
-  vs: string;
-  fs: string;
-  getUniforms: GetUniformsFunc;
-} {
-  const modules = resolveModules(options.modules || []);
-
-  return {
-    vs: assembleWGSLShader(options.platformInfo, {
-      ...options,
-      source: options.vs,
-      stage: 'vertex',
-      modules
-    }),
-    fs: assembleWGSLShader(options.platformInfo, {
-      ...options,
-      source: options.fs,
-      stage: 'fragment',
-      modules
-    }),
-    getUniforms: assembleGetUniforms(modules)
-  };
-}
-
-/**
  * Injects dependent shader module sources into pair of main vertex/fragment shader sources for GLSL
  */
-export function assembleShaderPairGLSL(options: AssembleShaderOptions): {
+export function assembleGLSLShaderPair(
+  options: AssembleShaderOptions & {
+    /** Vertex shader */
+    vs?: string;
+    /** Fragment shader */
+    fs?: string;
+  }
+): {
   vs: string;
   fs: string;
   getUniforms: GetUniformsFunc;
@@ -139,13 +130,13 @@ export function assembleShaderPairGLSL(options: AssembleShaderOptions): {
   const modules = resolveModules(options.modules || []);
 
   return {
-    vs: assembleGLSLShader(options.platformInfo, {
+    vs: assembleShaderGLSL(options.platformInfo, {
       ...options,
       source: vs,
       stage: 'vertex',
       modules
     }),
-    fs: assembleGLSLShader(options.platformInfo, {
+    fs: assembleShaderGLSL(options.platformInfo, {
       ...options,
       source: fs,
       stage: 'fragment',
@@ -162,7 +153,7 @@ export function assembleShaderPairGLSL(options: AssembleShaderOptions): {
  * @param options
  * @returns
  */
-export function assembleWGSLShader(platformInfo: PlatformInfo, options: AssembleStageOptions) {
+export function assembleShaderWGSL(platformInfo: PlatformInfo, options: AssembleStageOptions) {
   const {
     // id,
     source,
@@ -280,7 +271,7 @@ export function assembleWGSLShader(platformInfo: PlatformInfo, options: Assemble
  * @param options
  * @returns
  */
-function assembleGLSLShader(
+function assembleShaderGLSL(
   platformInfo: PlatformInfo,
   options: {
     id?: string;
