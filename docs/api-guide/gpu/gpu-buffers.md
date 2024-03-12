@@ -6,7 +6,7 @@
 The ability to copy memory between CPU, buffers and textures
 
 | Dimension             | WebGPU | WebGL2 | Description                                           |
-| --------------------- | ------ | ------ | ----------------------------------------------------- |  |
+| --------------------- | ------- | ------- | ----------------------------------------------------- |
 | `writeBuffer`         | ✅      | ✅      | Read a buffer synchronously                           |
 | `readBuffer (sync)`   | ❌      | ✅      | Read a buffer synchronously                           |
 | `readBuffer (async)`  | ✅      | ❌ \*   | Read a buffer asynchronously                          |
