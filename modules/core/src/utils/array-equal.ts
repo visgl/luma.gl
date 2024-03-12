@@ -9,12 +9,12 @@ export function arrayEqual(a: unknown, b: unknown, limit: number = 16) {
   if (a !== b) {
     return false;
   }
-  const arrayA = isNumberArray(a);
-  if (!arrayA) {
+  const arrayA = a;
+  const arrayB = b;
+  if (!isNumberArray(arrayA)) {
     return false;
   }
-  const arrayB = isNumberArray(b);
-  if (arrayB && arrayA.length === arrayB.length) {
+  if (isNumberArray(arrayB) && arrayA.length === arrayB.length) {
     for (let i = 0; i < arrayA.length; ++i) {
       if (arrayB[i] !== arrayA[i]) {
         return false;
@@ -26,9 +26,8 @@ export function arrayEqual(a: unknown, b: unknown, limit: number = 16) {
 
 /** Copy a value */
 export function arrayCopy<T>(a: T): T {
-  const numberArray = isNumberArray(a);
-  if (numberArray) {
-    return numberArray.slice() as T;
+  if (isNumberArray(a)) {
+    return a.slice() as T;
   }
   return a;
 }

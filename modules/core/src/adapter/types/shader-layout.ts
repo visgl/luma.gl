@@ -63,32 +63,6 @@ export type AttributeDeclaration = {
 
 // BINDING LAYOUTS
 
-/*
-type Binding = {
-  binding: number;
-  visibility: number;
-
-  buffer?: {
-    type?: 'uniform' | 'storage' | 'read-only-storage';
-    hasDynamicOffset?: false;
-    minBindingSize?: number;
-  };
-
-  // type = sampler
-  samplerType?: 'filtering' | 'non-filtering' | 'comparison';
-
-  // type = texture
-  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-  multisampled?: boolean;
-
-  // type = storage
-  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  access: 'read-only' | 'write-only';
-  format: string;
-};
-*/
-
 /** ShaderLayout for bindings */
 export type BindingDeclaration =
   | UniformBufferBindingLayout

@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
 import {GLTFInstantiator, GLTFInstantiatorOptions} from './gltf-instantiator';

@@ -3,16 +3,25 @@
 // Copyright (c) vis.gl contributors
 
 import type {TextureProps, Sampler, SamplerProps, TextureViewProps} from '@luma.gl/core';
+import type {
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from '@luma.gl/core';
+
 import {Texture} from '@luma.gl/core';
 import {NullDevice} from '../null-device';
 import {NullSampler} from './null-sampler';
 import {NullTextureView} from './null-texture-view';
 
-export class NullTexture extends Texture<TextureProps> {
+export class NullTexture extends Texture {
   readonly device: NullDevice;
 
-  sampler!: NullSampler;
-  view!: NullTextureView;
+  sampler: NullSampler;
+  view: NullTextureView;
 
   constructor(device: NullDevice, props: TextureProps) {
     super(device, props);
@@ -38,6 +47,30 @@ export class NullTexture extends Texture<TextureProps> {
 
   createView(props: TextureViewProps): NullTextureView {
     return new NullTextureView(this.device, {...props, texture: this});
+  }
+
+  setTexture1DData(data: Texture1DData): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeData(data: TextureCubeData, depth?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureArrayData(data: TextureArrayData): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeArrayData(data: TextureCubeArrayData): void {
+    throw new Error('not implemented');
   }
 
   initialize(props: TextureProps = {}): this {
@@ -76,18 +109,6 @@ export class NullTexture extends Texture<TextureProps> {
       this.sampler = new NullSampler(this.device, sampler);
     }
 
-    return this;
-  }
-
-  resize(options: {height: number; width: number; mipmaps?: boolean}): this {
-    const {height, width, mipmaps = false} = options;
-    if (width !== this.width || height !== this.height) {
-      return this.initialize({
-        width,
-        height,
-        mipmaps
-      });
-    }
     return this;
   }
 

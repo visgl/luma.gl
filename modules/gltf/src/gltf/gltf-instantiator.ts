@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GeometryAttribute, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
@@ -5,6 +9,7 @@ import {Matrix4} from '@math.gl/core';
 import {GLTFAnimator} from './gltf-animator';
 import {createGLTFModel} from './create-gltf-model';
 import type {PBREnvironment} from '../pbr/pbr-environment';
+import {convertGLDrawModeToTopology} from './gl-utils';
 
 export type GLTFInstantiatorOptions = {
   modelOptions?: Partial<ModelProps>;
@@ -197,48 +202,5 @@ export class GLTFInstantiator {
     // (NEAREST_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR,
     // LINEAR_MIPMAP_NEAREST, or LINEAR_MIPMAP_LINEAR).
     return false;
-  }
-}
-
-// NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
-// `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
-// conflicts with the `babel-plugin-inline-webgl-constants` plugin.
-enum GLEnum {
-  POINTS = 0x0,
-  LINES = 0x1,
-  LINE_LOOP = 0x2,
-  LINE_STRIP = 0x3,
-  TRIANGLES = 0x4,
-  TRIANGLE_STRIP = 0x5,
-  TRIANGLE_FAN = 0x6
-}
-
-export function convertGLDrawModeToTopology(
-  drawMode:
-    | GLEnum.POINTS
-    | GLEnum.LINES
-    | GLEnum.LINE_STRIP
-    | GLEnum.LINE_LOOP
-    | GLEnum.TRIANGLES
-    | GLEnum.TRIANGLE_STRIP
-    | GLEnum.TRIANGLE_FAN
-): PrimitiveTopology {
-  switch (drawMode) {
-    case GLEnum.POINTS:
-      return 'point-list';
-    case GLEnum.LINES:
-      return 'line-list';
-    case GLEnum.LINE_STRIP:
-      return 'line-strip';
-    case GLEnum.LINE_LOOP:
-      return 'line-loop-webgl';
-    case GLEnum.TRIANGLES:
-      return 'triangle-list';
-    case GLEnum.TRIANGLE_STRIP:
-      return 'triangle-strip';
-    case GLEnum.TRIANGLE_FAN:
-      return 'triangle-fan-webgl';
-    default:
-      throw new Error(drawMode);
   }
 }

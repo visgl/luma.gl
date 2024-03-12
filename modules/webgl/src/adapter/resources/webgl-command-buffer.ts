@@ -15,7 +15,7 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
-import {getWebGLTextureParameters} from '../converters/texture-formats';
+import {getTextureFormatWebGL} from '../converters/texture-formats';
 
 type CopyBufferToBufferCommand = {
   name: 'copy-buffer-to-buffer';
@@ -153,10 +153,10 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     const webglBuffer = destination as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
-    const sourceParams = getWebGLTextureParameters(
+    const sourceParams = getTextureFormatWebGL(
       framebuffer.colorAttachments[0].texture.props.format
     );
-    const sourceFormat = sourceParams.dataFormat;
+    const sourceFormat = sourceParams.format;
     const sourceType = sourceParams.type;
 
     // if (!target) {

@@ -2,6 +2,7 @@
 export {
   HelloTriangleExample,
   HelloCubeExample,
+  HelloGLTFExample,
   LightingExample,
   HelloInstancingExample,
   InstancedTransformExample,

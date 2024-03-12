@@ -1,33 +1,79 @@
-import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {Device, RenderPipelineParameters, log, glsl} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 
-// TODO rename attributes to POSITION/NORMAL etc
-// See gpu-geometry.ts: getAttributeBuffersFromGeometry()
-const vs = `
-#pragma vscode_glsllint_stage: vert
-#if (__VERSION__ < 300)
-  #define _attr attribute
-#else
-  #define _attr in
-#endif
-
-  // _attr vec4 POSITION;
-  _attr vec4 positions;
+const SHADER = /* WGSL */ `
+layout(0) positions: vec4; // in vec4 POSITION;
 
   #ifdef HAS_NORMALS
-    // _attr vec4 NORMAL;
-    _attr vec4 normals;
+    in vec4 normals; // in vec4 NORMAL;
   #endif
 
   #ifdef HAS_TANGENTS
-    _attr vec4 TANGENT;
+    in vec4 TANGENT;
   #endif
 
   #ifdef HAS_UV
-    // _attr vec2 TEXCOORD_0;
-    _attr vec2 texCoords;
+    // in vec2 TEXCOORD_0;
+    in vec2 texCoords;
+  #endif
+
+@vertex
+  void main(void) {
+    vec4 _NORMAL = vec4(0.);
+    vec4 _TANGENT = vec4(0.);
+    vec2 _TEXCOORD_0 = vec2(0.);
+
+    #ifdef HAS_NORMALS
+      _NORMAL = normals;
+    #endif
+
+    #ifdef HAS_TANGENTS
+      _TANGENT = TANGENT;
+    #endif
+
+    #ifdef HAS_UV
+      _TEXCOORD_0 = texCoords;
+    #endif
+
+    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = u_MVPMatrix * positions;
+  }
+
+@fragment
+  out vec4 fragmentColor;
+
+  void main(void) {
+    vec3 pos = pbr_vPosition;
+    fragmentColor = pbr_filterColor(vec4(1.0));
+  }
+`;
+
+// TODO rename attributes to POSITION/NORMAL etc
+// See gpu-geometry.ts: getAttributeBuffersFromGeometry()
+const vs = glsl`\
+#version 300 es
+
+  // in vec4 POSITION;
+  in vec4 positions;
+
+  #ifdef HAS_NORMALS
+    // in vec4 NORMAL;
+    in vec4 normals;
+  #endif
+
+  #ifdef HAS_TANGENTS
+    in vec4 TANGENT;
+  #endif
+
+  #ifdef HAS_UV
+    // in vec2 TEXCOORD_0;
+    in vec2 texCoords;
   #endif
 
   void main(void) {
@@ -52,13 +98,9 @@ const vs = `
   }
 `;
 
-const fs = `
-#pragma vscode_glsllint_stage: frag
-#if (__VERSION__ < 300)
-  #define fragmentColor gl_FragColor
-#else
+const fs = glsl`\
+#version 300 es
   out vec4 fragmentColor;
-#endif
 
   void main(void) {
     vec3 pos = pbr_vPosition;
@@ -97,12 +139,13 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const modelProps: ModelProps = {
     id,
+    source: SHADER,
+    vs,
+    fs,
     geometry,
     topology: geometry.topology,
     vertexCount,
     modules: [pbr],
-    vs: addVersionToShader(device, vs),
-    fs: addVersionToShader(device, fs),
     ...modelOptions,
 
     bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
@@ -113,8 +156,4 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const model = new Model(device, modelProps);
   return new ModelNode({managedResources, model});
-}
-
-function addVersionToShader(device: Device, source: string): string {
-  return `#version 300 es\n${source}`;
 }

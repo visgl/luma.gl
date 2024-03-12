@@ -76,11 +76,11 @@ export class WEBGLShader extends Shader {
     // Sync case - slower, but advantage is that it throws in the constructor, making break on error more useful
     if (!this.device.features.has('compilation-status-async-webgl')) {
       this._getCompilationStatus();
+      // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
+      this.debugShader();
       if (this.compilationStatus === 'error') {
         throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
       }
-      // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
-      this.debugShader();
       return;
     }
 

@@ -32,19 +32,13 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Describes the attributes and bindings exposed by the pipeline shader(s). */
   shaderLayout?: ShaderLayout | null;
-  /**
-   * Describes the buffers accepted by this pipeline and how they are mapped to shader attributes.
-   * A default mapping of one buffer per attribute is always created.
-   */
+  /** Describes the buffers accepted by this pipeline and how they are mapped to shader attributes. */
   bufferLayout?: BufferLayout[]; // Record<string, Omit<BufferLayout, 'name'>
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: PrimitiveTopology;
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
-
-  // Can be changed after creation
-  // TODO make pipeline immutable? these could be supplied to draw as parameters, in WebGPU they are set on the render pass
 
   /** Number of vertices */
   vertexCount?: number;

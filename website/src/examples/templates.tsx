@@ -19,6 +19,7 @@ import PersistenceApp from '../../../examples/showcase/persistence/app';
 import HelloCubeApp from '../../../examples/tutorials/hello-cube/app';
 import HelloInstancingApp from '../../../examples/tutorials/hello-instancing/app';
 import HelloTriangleApp from '../../../examples/tutorials/hello-triangle-geometry/app';
+import HelloGLTFApp from '../../../examples/tutorials/hello-gltf/app';
 import LightingApp from '../../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../../examples/tutorials/shader-hooks/app';
 import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
@@ -151,6 +152,15 @@ export const InstancedTransformExample: React.FC = () => (
 
 export const LightingExample: React.FC = () => (
   <LumaExample id="lighting" directory="tutorials" template={LightingApp} config={exampleConfig} />
+);
+
+export const HelloGLTFExample: React.FC = () => (
+  <LumaExample
+    id="hello-gltf"
+    directory="tutorials"
+    template={HelloGLTFApp}
+    config={exampleConfig}
+  />
 );
 
 export const ShaderHooksExample: React.FC = () => (

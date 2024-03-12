@@ -17,7 +17,6 @@ import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {ShaderInputs} from '../shader-inputs';
 import {PipelineFactory} from '../lib/pipeline-factory';
 import {ShaderFactory} from '../lib/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
@@ -26,10 +25,14 @@ import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
 import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
+import {ShaderInputs} from '../shader-inputs';
+// import type {AsyncTextureProps} from '../async-texture/async-texture';
+import {AsyncTexture} from '../async-texture/async-texture';
+
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
 
-export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
+export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
   vs: string | null;
   fs: string | null;
@@ -42,6 +45,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
+
+  bindings?: Record<string, Binding | AsyncTexture>;
 
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
@@ -150,7 +155,7 @@ export class Model {
   /** Constant-valued attributes */
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
-  bindings: Record<string, Binding> = {};
+  bindings: Record<string, Binding | AsyncTexture> = {};
   /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
   uniforms: Record<string, UniformValue> = {};
 
@@ -354,7 +359,9 @@ export class Model {
 
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
-      this.pipeline.setBindings(this.bindings);
+      // TODO this is a busy initialized check for all bindings every frame
+      const syncBindings = this._getBindings();
+      this.pipeline.setBindings(syncBindings);
       if (!isObjectEmpty(this.uniforms)) {
         this.pipeline.setUniformsWebGL(this.uniforms);
       }
@@ -495,7 +502,7 @@ export class Model {
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
-  setBindings(bindings: Record<string, Binding>): void {
+  setBindings(bindings: Record<string, Binding | AsyncTexture>): void {
     Object.assign(this.bindings, bindings);
     this.setNeedsRedraw('bindings');
   }
@@ -608,6 +615,21 @@ export class Model {
 
   // Internal methods
 
+  /** Get texture / texture view from any async textures */
+  _getBindings(): Record<string, Binding> {
+    // Extract actual textures from async textures. If not loaded, null
+    return Object.entries(this.bindings).reduce<Record<string, Binding>>((acc, [name, binding]) => {
+      if (binding instanceof AsyncTexture) {
+        if (binding.isReady) {
+          acc[name] = binding.texture;
+        }
+      } else {
+        acc[name] = binding;
+      }
+      return acc;
+    }, {});
+  }
+
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
   _getBindingsUpdateTimestamp(): number {
     let timestamp = 0;
@@ -616,6 +638,11 @@ export class Model {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
       } else if (binding instanceof Buffer || binding instanceof Texture) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
+      } else if (binding instanceof AsyncTexture) {
+        timestamp = binding.texture
+          ? Math.max(timestamp, binding.texture.updateTimestamp)
+          : // The texture will become available in the future
+            Infinity;
       } else if (!(binding instanceof Sampler)) {
         timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
       }
@@ -695,6 +722,9 @@ export class Model {
         bufferLayout: this.bufferLayout,
         topology: this.topology,
         parameters: this.parameters,
+        // TODO - why set bindings here when we reset them every frame?
+        // Should we expose a BindGroup abstraction?
+        bindings: this._getBindings(),
         vs,
         fs
       });

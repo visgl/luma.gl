@@ -1,14 +1,15 @@
-import {Device, SamplerProps, Texture} from '@luma.gl/core';
-import {loadImageTexture} from '@loaders.gl/textures';
+// luma.gl, MIT license
 
-type TextureCube = Texture;
+import {Device, SamplerProps} from '@luma.gl/core';
+import {AsyncTexture} from '@luma.gl/engine';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
 export type PBREnvironment = {
   /** Bi-directional Reflectance Distribution Function (BRDF) lookup table */
-  brdfLutTexture: Texture;
-  diffuseEnvSampler: TextureCube;
-  specularEnvSampler: TextureCube;
+  brdfLutTexture: AsyncTexture;
+  diffuseEnvSampler: AsyncTexture;
+  specularEnvSampler: AsyncTexture;
 };
 
 export type PBREnvironmentProps = {
@@ -19,7 +20,7 @@ export type PBREnvironmentProps = {
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
-  const brdfLutTexture = device.createTexture({
+  const brdfLutTexture = new AsyncTexture(device, {
     id: 'brdfLUT',
     sampler: {
       wrapS: 'clamp-to-edge',
@@ -80,16 +81,17 @@ function makeCube(
     getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
     sampler: SamplerProps;
   }
-): TextureCube {
+): AsyncTexture {
   const data = {};
   FACES.forEach(face => {
     data[String(face)] = getTextureForFace(face);
   });
-  return device.createTexture({
+  return new AsyncTexture(device, {
     id,
     dimension: 'cube',
     mipmaps: false,
     sampler,
+    // @ts-expect-error
     data
   });
 }

@@ -26,9 +26,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.device = device;
     this.loadGLTF('Avocado');
-    const modelSelector = document.getElementById('model-select');
 
-    modelSelector.addEventListener('change', e => {
+    const modelSelector = document.getElementById('model-select');
+    modelSelector?.addEventListener('change', e => {
       this.loadGLTF((e.target as HTMLSelectElement).value);
     });
   }

@@ -390,10 +390,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   _areTexturesRenderable() {
     let texturesRenderable = true;
 
+    for (const bindingInfo of this.shaderLayout.bindings) {
+      if (
+        !this.bindings[bindingInfo.name] &&
+        !this.bindings[bindingInfo.name.replace(/Uniforms$/, '')]
+      ) {
+        log.warn(`Binding ${bindingInfo.name} not found in ${this.id}`)();
+        texturesRenderable = false;
+      }
+    }
+
     for (const [, texture] of Object.entries(this.bindings)) {
       if (texture instanceof WEBGLTexture) {
         texture.update();
-        texturesRenderable = texturesRenderable && texture.loaded;
       }
     }
 
@@ -474,7 +483,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           }
 
           gl.activeTexture(GL.TEXTURE0 + textureUnit);
-          gl.bindTexture(texture.target, texture.handle);
+          gl.bindTexture(texture.glTarget, texture.handle);
           // gl.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;

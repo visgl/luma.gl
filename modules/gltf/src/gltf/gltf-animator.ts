@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {log} from '@luma.gl/core';
 import {Matrix4, Quaternion} from '@math.gl/core';
 

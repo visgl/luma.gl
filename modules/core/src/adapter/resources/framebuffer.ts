@@ -50,8 +50,6 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     super(device, props, Framebuffer.defaultProps);
     this.width = this.props.width;
     this.height = this.props.height;
-    // NOTE: call from subclass constructor as we cannot call overridden methods here (subclass not yet constructed)
-    // this.autoCreateAttachmentTextures();
   }
 
   /**
@@ -138,7 +136,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     for (let i = 0; i < this.colorAttachments.length; ++i) {
       if (this.colorAttachments[i]) {
         const resizedTexture = this.device._createTexture({
-          ...this.colorAttachments[i].props,
+          ...this.colorAttachments[i].texture.props,
           width,
           height
         });
@@ -150,7 +148,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
 
     if (this.depthStencilAttachment) {
       const resizedTexture = this.device._createTexture({
-        ...this.depthStencilAttachment.props,
+        ...this.depthStencilAttachment.texture.props,
         width,
         height
       });

@@ -10,9 +10,6 @@ import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {getDepthStencilAttachmentWebGL} from '../converters/texture-formats';
 
-// TODO - for now we don't see a usage for renderbuffers in WebGL 2.
-// import {WEBGLRenderbuffer} from '../objects/webgl-renderbuffer';
-
 export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
 /** luma.gl Framebuffer, WebGL implementation  */
@@ -50,12 +47,12 @@ export class WEBGLFramebuffer extends Framebuffer {
         const attachment = this.colorAttachments[i];
         const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
         if (attachment) {
-          this._attachOne(attachmentPoint, attachment);
+          this._attachTexture(attachmentPoint, attachment);
         }
       }
 
       if (this.depthStencilAttachment) {
-        this._attachOne(
+        this._attachTexture(
           getDepthStencilAttachmentWebGL(this.depthStencilAttachment.props.format),
           this.depthStencilAttachment
         );
@@ -99,7 +96,7 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   /**
    * Attachment resize is expected to be a noop if size is same
-   */
+   *
   protected override resizeAttachments(width: number, height: number): this {
     // for default framebuffer, just update the stored size
     if (this.handle === null) {
@@ -119,51 +116,23 @@ export class WEBGLFramebuffer extends Framebuffer {
     // TODO Not clear that this is better than default destroy/create implementation
 
     for (const colorAttachment of this.colorAttachments) {
-      colorAttachment.texture.resize({width, height});
+      colorAttachment.texture.clone({width, height});
     }
     if (this.depthStencilAttachment) {
       this.depthStencilAttachment.texture.resize({width, height});
     }
     return this;
   }
+  */
 
   /** Attach one attachment */
-  protected _attachOne(attachmentPoint: GL, attachment: Attachment): WEBGLTexture {
+  protected _attachTexture(attachmentPoint: GL, textureView: WEBGLTextureView): void {
     // if (attachment instanceof WEBGLRenderbuffer) {
     //   this._attachWEBGLRenderbuffer(attachmentPoint, attachment);
     //   return attachment;
     // }
-    if (Array.isArray(attachment)) {
-      const [texture, layer = 0, level = 0] = attachment;
-      this._attachTexture(attachmentPoint, texture as unknown as WEBGLTexture, layer, level);
-      return texture as unknown as WEBGLTexture;
-    }
-    if (attachment instanceof WEBGLTexture) {
-      this._attachTexture(attachmentPoint, attachment, 0, 0);
-      return attachment;
-    }
-    if (attachment instanceof WEBGLTextureView) {
-      const textureView = attachment;
-      this._attachTexture(
-        attachmentPoint,
-        textureView.texture,
-        textureView.props.baseMipLevel,
-        textureView.props.baseArrayLayer
-      );
-      return attachment.texture;
-    }
-    throw new Error('attach');
+    this._attachTextureView(attachmentPoint, textureView);
   }
-
-  // TODO - we do not seem to need render buffers in WebGL 2
-  // protected _attachWEBGLRenderbuffer(attachment: GL, renderbuffer: WEBGLRenderbuffer): void {
-  //   this.gl.framebufferRenderbuffer(
-  //     GL.FRAMEBUFFER,
-  //     attachment,
-  //     GL.RENDERBUFFER,
-  //     renderbuffer.handle
-  //   );
-  // }
 
   /**
    * @param attachment
@@ -171,20 +140,18 @@ export class WEBGLFramebuffer extends Framebuffer {
    * @param layer = 0 - index into WEBGLTextureArray and Texture3D or face for `TextureCubeMap`
    * @param level = 0 - mipmapLevel
    */
-  protected _attachTexture(
-    attachment: GL,
-    texture: WEBGLTexture,
-    layer: number,
-    level: number
-  ): void {
+  protected _attachTextureView(attachment: GL, textureView: WEBGLTextureView): void {
     const {gl} = this.device;
+    const {texture} = textureView;
+    const level = textureView.props.baseMipLevel;
+    const layer = textureView.props.baseArrayLayer;
 
-    gl.bindTexture(texture.target, texture.handle);
+    gl.bindTexture(texture.glTarget, texture.handle);
 
-    switch (texture.target) {
+    switch (texture.glTarget) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.glTarget, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:
@@ -201,7 +168,7 @@ export class WEBGLFramebuffer extends Framebuffer {
         throw new Error('Illegal texture type');
     }
 
-    gl.bindTexture(texture.target, null);
+    gl.bindTexture(texture.glTarget, null);
   }
 }
 

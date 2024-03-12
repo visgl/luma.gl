@@ -32,13 +32,18 @@ const fs = glsl`\
 #version 300 es
 precision highp float;
 precision lowp sampler3D;
-in vec3 vUV;
+
 uniform sampler3D uTexture;
 uniform float uTime;
+
+in vec3 vUV;
 out vec4 fragColor;
+
 void main() {
-  float alpha = texture(uTexture, vUV + vec3(0.0, 0.0, uTime)).r * 0.1;
-  fragColor = vec4(fract(vUV) * alpha, alpha);
+  vec4 sampleColor = texture(uTexture, vUV + vec3(0.0, 0.0, uTime));
+  float alpha = sampleColor.r * 0.01;
+  fragColor = vec4(fract(vUV) * alpha, alpha * 0.3);
+  // fragColor = vec4(fract(uTime), 0., 0., 1.);
 }`;
 
 const NEAR = 0.1;
@@ -61,10 +66,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     // CREATE POINT CLOUD
-    const DIMENSIONS = 128;
+    const DIMENSIONS = 32;
     const INCREMENT = 1 / DIMENSIONS;
 
-    const positionData = new Float32Array(DIMENSIONS * DIMENSIONS * DIMENSIONS * 3);
+    const positionData = new Float32Array(DIMENSIONS ** 3 * 3);
     let positionIndex = 0;
     let x = -0.5;
     for (let i = 0; i < DIMENSIONS; ++i) {
@@ -87,46 +92,42 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // CREATE 3D TEXTURE
     const TEXTURE_DIMENSIONS = 16;
     const NOISE_DIMENSIONS = TEXTURE_DIMENSIONS * 0.07;
-    const textureData = new Uint8Array(
-      TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS * TEXTURE_DIMENSIONS
-    );
+    const textureData = new Uint8Array(TEXTURE_DIMENSIONS ** 3);
     let textureIndex = 0;
     for (let i = 0; i < TEXTURE_DIMENSIONS; ++i) {
       for (let j = 0; j < TEXTURE_DIMENSIONS; ++j) {
         for (let k = 0; k < TEXTURE_DIMENSIONS; ++k) {
-          textureData[textureIndex++] =
-            (0.5 + 0.5 * noise(i / NOISE_DIMENSIONS, j / NOISE_DIMENSIONS, k / NOISE_DIMENSIONS)) *
-            255;
+          const noiseLevel = noise(
+            i / NOISE_DIMENSIONS,
+            j / NOISE_DIMENSIONS,
+            k / NOISE_DIMENSIONS
+          );
+          textureData[textureIndex++] = (0.5 + 0.5 * noiseLevel) * 255;
         }
       }
     }
 
     const texture = device.createTexture({
       dimension: '3d',
+      data: textureData,
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
-      data: textureData,
       format: 'r8unorm',
-      mipmaps: true,
+      // mipmaps: true,
       sampler: {
-        magFilter: 'linear',
-        minFilter: 'linear',
-        mipmapFilter: 'linear'
+        magFilter: 'nearest',
+        minFilter: 'nearest',
+        mipmapFilter: 'nearest'
       }
     });
-
-    // setParameters(device, {
-    //   // TODO these should be set on the model, but doesn't work...
-    //   blend: true,
-    //   blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
-    // });
 
     this.cloud = new Model(device, {
       vs,
       fs,
       topology: 'point-list',
       vertexCount: positionData.length / 3,
+      bufferLayout: [{name: 'position', format: 'float32x3'}],
       attributes: {
         position: positionBuffer
       },
@@ -137,9 +138,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         uView: this.viewMat
       },
       parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal',
         blendColorOperation: 'add',
         blendColorSrcFactor: 'one',
         blendColorDstFactor: 'one-minus-src-alpha'
+        //   // TODO these should be set on the model, but doesn't work...
+        //   blend: true,
+        //   blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
       }
     });
   }
@@ -158,6 +164,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1]
       // clearDepth: true
     });
+
     this.cloud.setUniforms({
       uTime: tick / 100,
       uMVP: this.mvpMat

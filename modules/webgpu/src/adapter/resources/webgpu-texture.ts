@@ -1,8 +1,23 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// luma.gl, MIT license
+import type {
+  // Device,
+  TextureProps,
+  TextureViewProps,
+  Sampler,
+  SamplerProps,
+  // TextureFormat,
+  // TextureCubeFace,
+  // ExternalImage,
+  // TextureLevelData,
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
 
-import {Texture, TextureProps, TextureViewProps, Sampler, SamplerProps} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
@@ -113,14 +128,19 @@ export class WebGPUTexture extends Texture {
       size: {
         width,
         height,
-        depthOrArrayLayers: this.props.depth
+        depthOrArrayLayers: this.depth
       },
       usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
-      dimension: BASE_DIMENSIONS[this.props.dimension],
-      format: getWebGPUTextureFormat(this.props.format),
-      mipLevelCount: this.props.mipLevels,
+      dimension: BASE_DIMENSIONS[this.dimension],
+      format: getWebGPUTextureFormat(this.format),
+      mipLevelCount: this.mipLevels,
       sampleCount: this.props.samples
     });
+  }
+
+  /** @deprecated - intention is to use the createView public API */
+  createGPUTextureView(): GPUTextureView {
+    return this.handle.createView({label: this.id});
   }
 
   /**
@@ -131,6 +151,30 @@ export class WebGPUTexture extends Texture {
     this.sampler =
       sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
     return this;
+  }
+
+  setTexture1DData(data: Texture1DData): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeData(data: TextureCubeData, depth?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureArrayData(data: TextureArrayData): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeArrayData(data: TextureCubeArrayData): void {
+    throw new Error('not implemented');
   }
 
   setData(options: {data: any}) {

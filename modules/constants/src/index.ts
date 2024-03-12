@@ -9,6 +9,7 @@ export {GL} from './webgl-constants';
 export type {
   GLTextureTarget,
   GLTextureCubeMapTarget,
+  GLTexelDataFormat,
   GLPrimitiveTopology,
   GLPrimitive,
   GLDataType,
@@ -22,6 +23,8 @@ export type {
   GLStencilOp,
   GLSamplerParameters,
   GLValueParameters,
+  GLPackParameters,
+  GLUnpackParameters,
   GLFunctionParameters,
   GLParameters,
   GLLimits,

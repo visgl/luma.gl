@@ -60,9 +60,7 @@ export class WEBGLRenderPass extends RenderPass {
     const glParameters: GLParameters = {};
 
     // Framebuffers are specified using parameters in WebGL
-    if (this.props.framebuffer) {
-      glParameters.framebuffer = this.props.framebuffer;
-    }
+    glParameters.framebuffer = this.props.framebuffer || null;
 
     if (this.props.depthReadOnly) {
       glParameters.depthMask = !this.props.depthReadOnly;

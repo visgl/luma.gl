@@ -4,7 +4,7 @@
 
 import type {TextureFormat, DeviceFeature} from '@luma.gl/core';
 import {decodeTextureFormat} from '@luma.gl/core';
-import {GL, GLExtensions} from '@luma.gl/constants';
+import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './vertex-formats';
 
@@ -123,9 +123,8 @@ type Format = {
   /** If not supported on WebGPU */
   wgpu?: false;
 
-  types?: number[];
-
-  dataFormat?: GL;
+  types?: GLPixelType[];
+  dataFormat?: GLTexelDataFormat;
   /** Depth and stencil format attachment points. If set, needs to be a Renderbuffer unless depthTexture is set  */
   attachment?: GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT;
   /** if depthTexture is set this is a depth/stencil format that can be set to a texture  */
@@ -190,7 +189,6 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
 
   'rg16uint': {gl: GL.RG16UI, b: 4, c: 1, bpp: 4},
   'rg16sint': {gl: GL.RG16I, b: 4, c: 2, bpp: 4},
-  // When using a WebGL 2 context and the EXT_color_buffer_float WebGL2 extension
   'rg16float': {gl: GL.RG16F, bpp: 4, b: 4, c: 2, render: float16_renderable, filter: float16_filterable, rb: true},
   'rg16unorm-webgl': {gl: GL.RG16_EXT, b:2, c:2, render: norm16_renderable},
   'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT, b:2, c:2, render: snorm16_renderable},
@@ -488,32 +486,6 @@ export function isRenderbufferFormatSupported(
   return isTextureFormatSupported(gl, format, extensions) && TEXTURE_FORMATS[format]?.rb;
 }
 
-/**
- * Map WebGL texture formats (GL constants) to WebGPU-style TextureFormat strings
- */
-export function convertGLToTextureFormat(format: GL | TextureFormat): TextureFormat {
-  if (typeof format === 'string') {
-    return format;
-  }
-  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
-  if (!entry) {
-    throw new Error(`Unknown texture format ${format}`);
-  }
-  return entry[0] as TextureFormat;
-}
-
-/**
- * Map WebGPU style texture format strings to GL constants
- */
-export function convertTextureFormatToGL(format: TextureFormat): GL | undefined {
-  const formatInfo = TEXTURE_FORMATS[format];
-  const webglFormat = formatInfo?.gl;
-  if (webglFormat === undefined) {
-    throw new Error(`Unsupported texture format ${format}`);
-  }
-  return webglFormat;
-}
-
 /** Checks if a texture format is supported */
 export function getTextureFormatSupport(
   gl: WebGL2RenderingContext,
@@ -601,13 +573,18 @@ export function isTextureFormatRenderable(
 }
 
 /** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
-export function getWebGLTextureParameters(format: TextureFormat) {
+export function getTextureFormatWebGL(format: TextureFormat): {
+  internalFormat: GL;
+  format: GLTexelDataFormat;
+  type: GLPixelType;
+  compressed: boolean;
+} {
   const formatData = TEXTURE_FORMATS[format];
   const webglFormat = convertTextureFormatToGL(format);
   const decoded = decodeTextureFormat(format);
   return {
-    format: webglFormat,
-    dataFormat:
+    internalFormat: webglFormat,
+    format:
       formatData?.dataFormat ||
       getWebGLPixelDataFormat(decoded.format, decoded.integer, decoded.normalized, webglFormat),
     // depth formats don't have a type
@@ -632,21 +609,21 @@ export function getDepthStencilAttachmentWebGL(
 /** TODO - VERY roundabout legacy way of calculating bytes per pixel */
 export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
   // TODO remove webgl1 support
-  const params = getWebGLTextureParameters(format);
+  const params = getTextureFormatWebGL(format);
   // NOTE(Tarek): Default to RGBA bytes
-  const channels = DATA_FORMAT_CHANNELS[params.dataFormat] || 4;
+  const channels = DATA_FORMAT_CHANNELS[params.format] || 4;
   const channelSize = TYPE_SIZES[params.type] || 1;
   return channels * channelSize;
 }
 
 // DATA TYPE HELPERS
 
-function getWebGLPixelDataFormat(
+export function getWebGLPixelDataFormat(
   dataFormat: string,
   integer: boolean,
   normalized: boolean,
   format: GL
-): GL {
+): GLTexelDataFormat {
   // WebGL1 formats use same internalFormat
   if (format === GL.RGBA || format === GL.RGB) {
     return format;
@@ -660,3 +637,29 @@ function getWebGLPixelDataFormat(
     default: return GL.RGBA;
   }
 }
+
+/**
+ * Map WebGPU style texture format strings to GL constants
+ */
+function convertTextureFormatToGL(format: TextureFormat): GL | undefined {
+  const formatInfo = TEXTURE_FORMATS[format];
+  const webglFormat = formatInfo?.gl;
+  if (webglFormat === undefined) {
+    throw new Error(`Unsupported texture format ${format}`);
+  }
+  return webglFormat;
+}
+
+/**
+ * Map WebGL texture formats (GL constants) to WebGPU-style TextureFormat strings
+export function convertGLToTextureFormat(format: GL | TextureFormat): TextureFormat {
+  if (typeof format === 'string') {
+    return format;
+  }
+  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
+  if (!entry) {
+    throw new Error(`Unknown texture format ${format}`);
+  }
+  return entry[0] as TextureFormat;
+}
+ */
