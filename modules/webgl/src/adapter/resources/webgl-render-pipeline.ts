@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {RenderPipelineProps, RenderPipelineParameters, PrimitiveTopology} from '@luma.gl/core';
 import type {ShaderLayout, UniformValue, Binding} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, log} from '@luma.gl/core';
@@ -156,6 +156,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   draw(options: {
     renderPass: RenderPass;
     parameters?: RenderPipelineParameters;
+    topology?: PrimitiveTopology;
     vertexArray: VertexArray;
     vertexCount?: number;
     indexCount?: number;
@@ -169,6 +170,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const {
       renderPass,
       parameters = this.props.parameters,
+      topology = this.props.topology,
       vertexArray,
       vertexCount,
       // indexCount,
@@ -180,7 +182,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       transformFeedback
     } = options;
 
-    const glDrawMode = getGLDrawMode(this.props.topology);
+    const glDrawMode = getGLDrawMode(topology);
     const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
     const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
     const isInstanced: boolean = Number(instanceCount) > 0;
@@ -223,39 +225,34 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
 
-    withDeviceAndGLParameters(
-      this.device,
-      parameters,
-      webglRenderPass.glParameters,
-      () => {
-        if (isIndexed && isInstanced) {
-          this.device.gl.drawElementsInstanced(
-            glDrawMode,
-            vertexCount || 0, // indexCount?
-            glIndexType,
-            firstVertex,
-            instanceCount || 0
-          );
-          // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
-          //   this.device.gldrawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
-        } else if (isIndexed) {
-          this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
-        } else if (isInstanced) {
-          this.device.gl.drawArraysInstanced(
-            glDrawMode,
-            firstVertex,
-            vertexCount || 0,
-            instanceCount || 0
-          );
-        } else {
-          this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
-        }
-
-        if (transformFeedback) {
-          transformFeedback.end();
-        }
+    withDeviceAndGLParameters(this.device, parameters, webglRenderPass.glParameters, () => {
+      if (isIndexed && isInstanced) {
+        this.device.gl.drawElementsInstanced(
+          glDrawMode,
+          vertexCount || 0, // indexCount?
+          glIndexType,
+          firstVertex,
+          instanceCount || 0
+        );
+        // } else if (isIndexed && this.device.isWebGL2 && !isNaN(start) && !isNaN(end)) {
+        //   this.device.gldrawRangeElements(glDrawMode, start, end, vertexCount, glIndexType, offset);
+      } else if (isIndexed) {
+        this.device.gl.drawElements(glDrawMode, vertexCount || 0, glIndexType, firstVertex); // indexCount?
+      } else if (isInstanced) {
+        this.device.gl.drawArraysInstanced(
+          glDrawMode,
+          firstVertex,
+          vertexCount || 0,
+          instanceCount || 0
+        );
+      } else {
+        this.device.gl.drawArrays(glDrawMode, firstVertex, vertexCount || 0);
       }
-    );
+
+      if (transformFeedback) {
+        transformFeedback.end();
+      }
+    });
 
     vertexArray.unbindAfterRender(renderPass);
 
