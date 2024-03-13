@@ -57,8 +57,8 @@ export class WEBGLVertexArray extends VertexArray {
   /**
   // Set (bind/unbind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER or null. Constants not supported
-   * 
-   * @param elementBuffer 
+   *
+   * @param elementBuffer
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
@@ -68,12 +68,12 @@ export class WEBGLVertexArray extends VertexArray {
     }
     // In WebGL The GL.ELEMENT_ARRAY_BUFFER_BINDING is stored on the VertexArrayObject
     this.device.gl.bindVertexArray(this.handle);
-    // TODO - this initial binding does not seem to take effect? see bindBeforeRender()
     this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer ? buffer.handle : null);
-    // log.log(1, 'VertexArray.setIndexBuffer', indexBuffer)();
-    // log.log(1, `Binding vertex array ${this.id}`, buffer?.id)();
 
     this.indexBuffer = buffer;
+
+    // Unbind to prevent unintended changes to the VAO.
+    this.device.gl.bindVertexArray(null);
   }
 
   /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
@@ -97,9 +97,6 @@ export class WEBGLVertexArray extends VertexArray {
       // Attaches ARRAY_BUFFER with specified buffer format to location
       this.device.gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
     }
-    // Clear binding - keeping it may cause [.WebGL-0x12804417100]
-    // GL_INVALID_OPERATION: A transform feedback buffer that would be written to is also bound to a non-transform-feedback target
-    this.device.gl.bindBuffer(GL.ARRAY_BUFFER, null);
 
     // Mark as non-constant
     this.device.gl.enableVertexAttribArray(location);
@@ -107,6 +104,9 @@ export class WEBGLVertexArray extends VertexArray {
     this.device.gl.vertexAttribDivisor(location, divisor || 0);
 
     this.attributes[location] = buffer;
+
+    // Unbind to prevent unintended changes to the VAO.
+    this.device.gl.bindVertexArray(null);
   }
 
   /** Set a location in vertex attributes array to a constant value, disables the location */
@@ -115,26 +115,14 @@ export class WEBGLVertexArray extends VertexArray {
     this.attributes[location] = value;
   }
 
-  init = false;
-
   override bindBeforeRender(): void {
     this.device.gl.bindVertexArray(this.handle);
-    // TODO - the initial bind does not seem to take effect.
-    if (!this.init) {
-      // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
-      const webglBuffer = this.indexBuffer as WEBGLBuffer;
-      this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
-      this.init = true;
-    }
     this._applyConstantAttributes();
   }
 
   override unbindAfterRender(): void {
-    // log.log(1, `Unbinding vertex array ${this.id}`)();
-    // TODO technically this is not necessary, but we might be interfacing
-    // with code that does not use vertex array objects
+    // Unbind to prevent unintended changes to the VAO.
     this.device.gl.bindVertexArray(null);
-    // this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
   }
 
   // Internal methods
