@@ -4,6 +4,7 @@
   "exclude": ["node_modules", "test"],
   "compilerOptions": {
     "strict": true,
+    "strictNullChecks": true,
     "noImplicitAny": true,
     "composite": true,
     "rootDir": "src",

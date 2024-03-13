@@ -1,9 +1,13 @@
-import {noise, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {noise, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('noise#build/uniform', t => {
-  normalizeShaderModule(noise);
-  const uniforms = noise.getUniforms();
+  const noiseModule = new ShaderModuleInstance(noise);
+  const uniforms = noiseModule.getUniforms({}, {});
 
   t.ok(uniforms, 'noise module build is ok');
   t.equal(uniforms.amount, 0.5, 'noise amount uniform is ok');

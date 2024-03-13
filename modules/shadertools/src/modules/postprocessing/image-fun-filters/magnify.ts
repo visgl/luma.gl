@@ -47,7 +47,7 @@ export type MagnifyProps = {
 /**
  * Magnify - display a circle with magnify effect applied to surrounding the pixels given position
  */
-export const magnify: ShaderPass<MagnifyProps, MagnifyProps> = {
+export const magnify = {
   name: 'magnify',
   uniformTypes: {
     screenXY: 'vec2<f32>',
@@ -66,4 +66,4 @@ export const magnify: ShaderPass<MagnifyProps, MagnifyProps> = {
   },
   fs,
   passes: [{sampler: true}]
-};
+} as const satisfies ShaderPass<MagnifyProps, MagnifyProps>;

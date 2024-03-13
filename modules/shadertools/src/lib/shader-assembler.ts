@@ -82,6 +82,8 @@ export class ShaderAssembler {
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
     const {source, getUniforms} = assembleWGSLShader({
       ...props,
+      // @ts-expect-error
+      source: props.source,
       modules,
       hookFunctions
     });
@@ -105,7 +107,15 @@ export class ShaderAssembler {
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const assembled = assembleGLSLShaderPair({...props, modules, hookFunctions});
+    const assembled = assembleGLSLShaderPair({
+      ...props,
+      // @ts-expect-error
+      vs: props.vs,
+      // @ts-expect-error
+      fs: props.fs,
+      modules,
+      hookFunctions
+    });
 
     return {...assembled, modules};
   }

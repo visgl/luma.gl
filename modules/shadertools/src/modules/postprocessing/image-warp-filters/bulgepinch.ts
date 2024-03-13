@@ -50,8 +50,9 @@ export type BulgePinchProps = {
  * Bulge / Pinch -
  * Bulges or pinches the image in a circle.
  */
-export const bulgePinch: ShaderPass<BulgePinchProps, BulgePinchProps> = {
+export const bulgePinch = {
   name: 'bulgePinch',
+  dependencies: [warp],
   fs,
   uniformTypes: {
     center: 'vec2<f32>',
@@ -63,6 +64,5 @@ export const bulgePinch: ShaderPass<BulgePinchProps, BulgePinchProps> = {
     radius: {value: 200, min: 1, softMax: 600},
     strength: {value: 0.5, min: -1, max: 1}
   },
-  dependencies: [warp],
   passes: [{sampler: true}]
-};
+} as const satisfies ShaderPass<BulgePinchProps, BulgePinchProps>;

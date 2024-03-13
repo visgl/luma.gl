@@ -80,8 +80,9 @@ export type TiltShiftProps = {
  * angle. The image is then blurred with a blur radius that starts at zero
  * on the line and increases further from the line.
  */
-export const tiltShift: ShaderPass<TiltShiftProps, TiltShiftProps> = {
+export const tiltShift = {
   name: 'tiltShift',
+  dependencies: [random],
   uniformTypes: {
     blurRadius: 'f32',
     gradientRadius: 'f32',
@@ -100,9 +101,8 @@ export const tiltShift: ShaderPass<TiltShiftProps, TiltShiftProps> = {
     {sampler: true, uniforms: {invert: false}},
     {sampler: true, uniforms: {invert: true}}
   ],
-  dependencies: [random],
   fs
-};
+} as const satisfies ShaderPass<TiltShiftProps, TiltShiftProps>;
 
 /*
 function tiltShift(startX, startY, endX, endY, blurRadius, gradientRadius) {

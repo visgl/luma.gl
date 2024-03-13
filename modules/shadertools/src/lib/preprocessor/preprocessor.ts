@@ -20,7 +20,7 @@ export function preprocess(source: string, options?: PreprocessorOptions): strin
     const matchEnd = line.match(ENDIF_REGEXP);
     if (matchIf) {
       currentDefine = matchIf[1];
-      conditional = options?.defines?.[currentDefine];
+      conditional = Boolean(options?.defines?.[currentDefine]);
     } else if (matchEnd) {
       conditional = true;
     } else if (conditional) {

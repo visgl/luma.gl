@@ -53,8 +53,9 @@ export type SwirlProps = {
 /**
  * Warps a circular region of the image in a swirl.
  */
-export const swirl: ShaderPass<SwirlProps, SwirlProps> = {
+export const swirl = {
   name: 'swirl',
+  dependencies: [warp],
   fs,
   uniformTypes: {
     center: 'vec2<f32>',
@@ -66,6 +67,5 @@ export const swirl: ShaderPass<SwirlProps, SwirlProps> = {
     radius: {value: 200, min: 1, softMax: 600},
     angle: {value: 3, softMin: -25, softMax: 25}
   },
-  dependencies: [warp],
   passes: [{sampler: true}]
-};
+} as const satisfies ShaderPass<SwirlProps, SwirlProps>;

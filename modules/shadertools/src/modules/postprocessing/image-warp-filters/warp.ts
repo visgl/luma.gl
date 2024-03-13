@@ -20,8 +20,8 @@ vec4 warp_sampleColor(sampler2D source, vec2 texSize, vec2 coord) {
 
 export type WarpProps = {};
 
-export const warp: ShaderPass<WarpProps, WarpProps> = {
+export const warp = {
   name: 'warp',
   passes: [],
   fs
-};
+} as const satisfies ShaderPass<WarpProps, WarpProps>;

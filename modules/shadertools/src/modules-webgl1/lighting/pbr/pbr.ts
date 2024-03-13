@@ -18,5 +18,6 @@ export const pbr = {
   defines: {
     LIGHTING_FRAGMENT: 1
   },
-  dependencies: [lights]
+  dependencies: [lights],
+  getUniforms: (props: any) => props
 };

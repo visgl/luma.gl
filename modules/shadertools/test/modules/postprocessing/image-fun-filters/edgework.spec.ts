@@ -1,9 +1,13 @@
-import {edgeWork, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {edgeWork, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('edgeWork#build/uniform', t => {
-  normalizeShaderModule(edgeWork);
-  const uniforms = edgeWork.getUniforms();
+  const edgeWorkModule = new ShaderModuleInstance(edgeWork);
+  const uniforms = edgeWorkModule.getUniforms({}, {});
 
   t.ok(uniforms, 'edgeWork module build is ok');
   t.equal(uniforms.radius, 2, 'edgeWork radius uniform is ok');

@@ -1,9 +1,13 @@
-import {ink, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {ink, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('ink#build/uniform', t => {
-  normalizeShaderModule(ink);
-  const uniforms = ink.getUniforms();
+  const inkModule = new ShaderModuleInstance(ink);
+  const uniforms = inkModule.getUniforms({}, {});
 
   t.ok(uniforms, 'ink module build is ok');
   t.equal(uniforms.strength, 0.25, 'ink strength uniform is ok');

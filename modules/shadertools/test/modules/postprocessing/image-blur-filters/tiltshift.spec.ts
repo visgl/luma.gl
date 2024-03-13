@@ -1,9 +1,13 @@
-import {tiltShift, normalizeShaderModule} from '@luma.gl/shadertools';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {tiltShift, ShaderModuleInstance} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('tiltShift#build/uniform', t => {
-  normalizeShaderModule(tiltShift);
-  const uniforms = tiltShift.getUniforms();
+  const tiltShiftModule = new ShaderModuleInstance(tiltShift);
+  const uniforms = tiltShiftModule.getUniforms({}, {});
 
   t.ok(uniforms, 'tiltShift module build is ok');
   t.equal(uniforms.blurRadius, 15, 'tiltShift blurRadius uniform is ok');

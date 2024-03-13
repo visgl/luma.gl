@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {glsl} from '../../../lib/glsl-utils/highlight';
+import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 const fs = glsl`\
 float random(vec3 scale, float seed) {
@@ -15,4 +16,4 @@ float random(vec3 scale, float seed) {
 export const random = {
   name: 'random',
   fs
-};
+} as const satisfies ShaderModule<{}, {}>;

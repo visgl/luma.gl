@@ -13,7 +13,7 @@ const MAX_LIGHTS = 5;
 const COLOR_FACTOR = 255.0;
 
 /** Shader type field for lights */
-enum LIGHT_TYPE {
+export enum LIGHT_TYPE {
   POINT = 0,
   DIRECTIONAL = 1
 }
@@ -67,15 +67,8 @@ export type LightingUniforms = {
 };
 
 /** UBO ready lighting module */
-export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
+export const lighting = {
   name: 'lighting',
-  vs: lightingUniforms,
-  fs: lightingUniforms,
-
-  getUniforms(props?: LightingProps, prevUniforms?: LightingUniforms): LightingUniforms {
-    return getUniforms(props);
-  },
-
   defines: {
     MAX_LIGHTS
   },
@@ -102,8 +95,14 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
     // TODO - could combine direction and attenuation
     lightDirection: [1, 1, 1],
     lightAttenuation: [1, 1, 1]
-  }
-};
+  },
+  vs: lightingUniforms,
+  fs: lightingUniforms,
+
+  props: {} as Required<LightingProps>,
+  uniforms: {} as LightingUniforms,
+  getUniforms
+} as const satisfies ShaderModule<LightingProps, LightingUniforms>;
 
 function getUniforms(
   props?: LightingProps,

@@ -43,7 +43,7 @@ test('ShaderInputs#picking', t => {
 
 test('ShaderInputs#picking prop merge', t => {
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
-  const expected = {...picking.defaultUniforms};
+  const expected = {...picking.defaultUniforms} as typeof picking.uniforms;
   t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'defaults set');
 
   shaderInputs.setProps({picking: {highlightColor: [255, 0, 255]}});
