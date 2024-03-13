@@ -18,7 +18,7 @@ export type ShaderAttributeTypeInfo = {
   /** Whether this data type is signed */
   signed: boolean;
   /** The simplest vertex format that matches the shader attribute's data type */
-  defaultVertexFormat?: VertexFormat;
+  defaultVertexFormat: VertexFormat;
 };
 
 /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */

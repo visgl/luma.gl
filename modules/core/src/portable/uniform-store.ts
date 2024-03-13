@@ -95,7 +95,8 @@ export class UniformStore<
   /** Get formatted binary memory that can be uploaded to a buffer */
   getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
     const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
-    return this.uniformBufferLayouts.get(uniformBufferName)?.getData(uniformValues)!;
+    // @ts-ignore
+    return this.uniformBufferLayouts.get(uniformBufferName)?.getData(uniformValues);
   }
 
   /**
@@ -132,7 +133,8 @@ export class UniformStore<
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
     // this.updateUniformBuffers();
-    return this.uniformBuffers.get(uniformBufferName)!;
+    // @ts-ignore
+    return this.uniformBuffers.get(uniformBufferName);
   }
 
   /** Updates all uniform buffers where values have changed */

@@ -97,7 +97,10 @@ function getAttributeInfoFromLayouts(
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: BufferAttributeInfo | null = getAttributeFromBufferLayout(bufferLayout, name);
+  const bufferMapping: BufferAttributeInfo | null = getAttributeFromBufferLayout(
+    bufferLayout,
+    name
+  );
 
   // TODO should no longer happen
   if (!shaderDeclaration) {
@@ -106,7 +109,7 @@ function getAttributeInfoFromLayouts(
   }
 
   const attributeTypeInfo = decodeShaderAttributeType(shaderDeclaration.type);
-  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat!;
+  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat;
   const vertexFormatInfo = decodeVertexFormat(vertexFormat);
 
   return {
