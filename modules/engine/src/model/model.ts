@@ -55,8 +55,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
   attributes?: Record<string, Buffer>;
   /**   */
   constantAttributes?: Record<string, TypedArray>;
-  /** Some applications intentionally supply unused attributes */
-  ignoreUnknownAttributes?: boolean;
+
+  /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
+  disableWarnings?: boolean;
 
   /** @internal For use with {@link TransformFeedback}, WebGL only. */
   varyings?: string[];
@@ -109,8 +110,8 @@ export class Model {
     transformFeedback: undefined,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
 
-    debugShaders: undefined,
-    ignoreUnknownAttributes: undefined
+    debugShaders: undefined!,
+    disableWarnings: undefined!
   };
 
   readonly device: Device;
@@ -265,16 +266,12 @@ export class Model {
     if (props.instanceCount) {
       this.setInstanceCount(props.instanceCount);
     }
-    // @ts-expect-error
-    if (props.indices) {
-      throw new Error('Model.props.indices removed. Use props.indexBuffer');
-    }
     if (props.indexBuffer) {
       this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
       this.setAttributes(props.attributes, {
-        ignoreUnknownAttributes: props.ignoreUnknownAttributes
+        disableWarnings: props.disableWarnings
       });
     }
     if (props.constantAttributes) {
@@ -350,7 +347,7 @@ export class Model {
 
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
-      this.pipeline.setBindings(this.bindings);
+      this.pipeline.setBindings(this.bindings, {disableWarnings: this.props.disableWarnings});
       if (!isObjectEmpty(this.uniforms)) {
         this.pipeline.setUniformsWebGL(this.uniforms);
       }
@@ -517,10 +514,7 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(
-    buffers: Record<string, Buffer>,
-    options?: {ignoreUnknownAttributes?: boolean}
-  ): void {
+  setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
@@ -545,7 +539,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && (options?.ignoreUnknownAttributes || this.props.ignoreUnknownAttributes)) {
+      if (!set && !(options?.disableWarnings || this.props.disableWarnings)) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
@@ -562,12 +556,15 @@ export class Model {
    * is read from the context's global constant value for that attribute location.
    * @param constantAttributes
    */
-  setConstantAttributes(attributes: Record<string, TypedArray>): void {
+  setConstantAttributes(
+    attributes: Record<string, TypedArray>,
+    options?: {disableWarnings?: boolean}
+  ): void {
     for (const [attributeName, value] of Object.entries(attributes)) {
       const attributeInfo = this._attributeInfos[attributeName];
       if (attributeInfo) {
         this.vertexArray.setConstantWebGL(attributeInfo.location, value);
-      } else {
+      } else if (!(options?.disableWarnings || this.props.disableWarnings)) {
         log.warn(
           `Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`
         )();
@@ -638,9 +635,9 @@ export class Model {
 
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
-    this.setIndexBuffer(gpuGeometry.indices);
-    this.setAttributes(gpuGeometry.attributes, {ignoreUnknownAttributes: true});
-    this.setAttributes(attributes, {ignoreUnknownAttributes: this.props.ignoreUnknownAttributes});
+    this.setIndexBuffer(gpuGeometry.indices || null);
+    this.setAttributes(gpuGeometry.attributes, {disableWarnings: true});
+    this.setAttributes(attributes, {disableWarnings: this.props.disableWarnings});
 
     this.setNeedsRedraw('geometry attributes');
   }

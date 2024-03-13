@@ -103,7 +103,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Bindings include: textures, samplers and uniform buffers
    * @todo needed for portable model
    */
-  setBindings(bindings: Record<string, Binding>): void {
+  setBindings(bindings: Record<string, Binding>, options?: {disableWarnings?: boolean}): void {
     // if (log.priority >= 2) {
     //   checkUniformValues(uniforms, this.id, this._uniformSetters);
     // }
@@ -121,9 +121,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         const validBindings = this.shaderLayout.bindings
           .map(binding => `"${binding.name}"`)
           .join(', ');
-        log.warn(
-          `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
-        )();
+        if (options?.disableWarnings) {
+          log.warn(
+            `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
+          )();
+        }
         continue; // eslint-disable-line no-continue
       }
       if (!value) {

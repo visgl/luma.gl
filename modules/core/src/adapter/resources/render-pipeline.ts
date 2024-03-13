@@ -107,7 +107,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   }
 
   /** Set bindings (stored on pipeline and set before each call) */
-  abstract setBindings(bindings: Record<string, Binding>): void;
+  abstract setBindings(
+    bindings: Record<string, Binding>,
+    options?: {disableWarnings?: boolean}
+  ): void;
 
   /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
   abstract draw(options: {
