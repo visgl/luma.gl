@@ -46,6 +46,7 @@ export class BufferTransform {
 
     this.transformFeedback = this.device.createTransformFeedback({
       layout: this.model.pipeline.shaderLayout,
+      // @ts-expect-error TODO
       buffers: props.feedbackBuffers
     });
 
@@ -88,6 +89,9 @@ export class BufferTransform {
 
   readAsync(varyingName: string): Promise<Uint8Array> {
     const result = this.getBuffer(varyingName);
+    if (!result) {
+      throw new Error('BufferTransform#getBuffer');
+    }
     if (result instanceof Buffer) {
       return result.readAsync();
     }

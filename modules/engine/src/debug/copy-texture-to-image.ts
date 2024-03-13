@@ -60,9 +60,12 @@ export function copyTextureToDataUrl(
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Failed to create context');
+  }
 
   // Copy the pixels to a 2D canvas
-  const imageData = context.createImageData(width, height);
+  const imageData = context?.createImageData(width, height);
   imageData.data.set(data);
   context.putImageData(imageData, 0, 0);
 

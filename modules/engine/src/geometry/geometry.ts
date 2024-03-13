@@ -134,14 +134,14 @@ export class Geometry {
     return this;
   }
 
-  _calculateVertexCount(attributes: GeometryAttributes, indices: GeometryAttribute): number {
+  _calculateVertexCount(attributes: GeometryAttributes, indices?: GeometryAttribute): number {
     if (indices) {
       return indices.value.length;
     }
     let vertexCount = Infinity;
     for (const attribute of Object.values(attributes)) {
       const {value, size, constant} = attribute;
-      if (!constant && value && size >= 1) {
+      if (!constant && value && size !== undefined && size >= 1) {
         vertexCount = Math.min(vertexCount, value.length / size);
       }
     }

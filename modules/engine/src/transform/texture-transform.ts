@@ -111,7 +111,7 @@ export class TextureTransform {
     return targetTexture;
   }
 
-  getFramebuffer(): Framebuffer {
+  getFramebuffer(): Framebuffer | undefined {
     const currentResources = this.bindings[this.currentIndex];
     return currentResources.framebuffer;
   }
@@ -134,6 +134,7 @@ export class TextureTransform {
       binding = {
         sourceBuffers: {},
         sourceTextures: {},
+        // @ts-expect-error
         targetTexture: null
       };
     }

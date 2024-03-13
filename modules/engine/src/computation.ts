@@ -84,15 +84,18 @@ export class Computation {
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding> = {};
 
-  /** The underlying GPU "program". @note May be recreated if parameters change */
+  /** The underlying GPU pipeline. */
   pipeline: ComputePipeline;
-  /** the underlying compiled compute shader */
-  shader: Shader;
+  /** Assembled compute shader source */
   source: string;
+  /** the underlying compiled compute shader */
+  // @ts-ignore Set in function called from constructor
+  shader: Shader;
 
   /** ShaderInputs instance */
   shaderInputs: ShaderInputs;
 
+  // @ts-ignore Set in function called from constructor
   _uniformStore: UniformStore;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
@@ -118,6 +121,7 @@ export class Computation {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
+    // @ts-ignore TODO - fix up typing?
     this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
     this.setShaderInputs(this.shaderInputs);
 
@@ -143,7 +147,7 @@ export class Computation {
     });
 
     this.source = source;
-
+    // @ts-ignore
     this._getModuleUniforms = getUniforms;
 
     // Create the pipeline
