@@ -61,12 +61,8 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   }
 
   *[Symbol.iterator](): IterableIterator<DeviceFeature> {
-    for (const feature of Object.keys(WEBGL_FEATURES) as DeviceFeature[]) {
-      if (this.has(feature)) {
-        yield feature;
-      }
-    }
-    for (const feature of Object.keys(TEXTURE_FEATURES) as DeviceFeature[]) {
+    const features = this.getFeatures();
+    for (const feature of features) {
       if (this.has(feature)) {
         yield feature;
       }
@@ -98,14 +94,19 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   // FOR DEVICE
 
   initializeFeatures() {
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const feature of this) {
-      // WebGL extensions are initialized by requesting them
+    // Initialize all features by checking them.
+    // Except WEBGL_polygon_mode since Chrome logs ugly console warnings
+    const features = this.getFeatures().filter(feature => feature !== 'polygon-mode-webgl');
+    for (const feature of features) {
+      this.has(feature);
     }
   }
 
   // IMPLEMENTATION
+
+  getFeatures() {
+    return [...Object.keys(WEBGL_FEATURES), ...Object.keys(TEXTURE_FEATURES)] as DeviceFeature[];
+  }
 
   /** Extract all WebGL features */
   protected getWebGLFeature(feature: DeviceFeature): boolean {
