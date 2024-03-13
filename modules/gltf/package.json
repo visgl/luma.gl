@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltf",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "description": "glTF support for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@loaders.gl/textures": "^4.1.0",
-    "@luma.gl/shadertools": "9.0.1",
+    "@luma.gl/shadertools": "9.0.2",
     "@math.gl/core": "^4.0.0"
   },
   "gitHead": "aec74bc1ad62bdc66a05aa3ef795d49ad7810f22"

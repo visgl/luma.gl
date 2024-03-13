@@ -1,8 +1,28 @@
 # luma.gl CHANGELOG
 
+## v9
+
+Major new release that includes WebGPU support
+
+## v9.0.2
+
+- fix(webgl): Pair calls to bind/unbind VAO (#2032)
+- chore(webgl): Avoid WEBGL_polygon_mode extension warning (#2029)
+- chore(engine): Refine Model.props.disableWarnings (#2031)
+- chore: remove broken website publishing workflow (#2030)
+- fix(webgl): unbind buffer after setting attribute (#2023)
+- feat(core): luma.attachDevice() (#2013)
+- CNAME
+- chore: Post publish checkin
+
+## v9.0.1
+
+- No change, fix release
+
 ## v9.0.0
 
-- Major new release that includes WebGPU support
+- fix(webgl): Reduce console flood (#2021)
+- chore: Remove DeviceTabs
 
 ### v9.0.0-beta.10
 
