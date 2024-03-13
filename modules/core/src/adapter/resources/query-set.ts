@@ -27,8 +27,8 @@ export type QuerySetProps = ResourceProps & {
 export abstract class QuerySet extends Resource<QuerySetProps> {
   static override defaultProps: Required<QuerySetProps> = {
     ...Resource.defaultProps,
-    type: undefined,
-    count: undefined
+    type: undefined!,
+    count: undefined!
   };
 
   get [Symbol.toStringTag](): string {

@@ -96,7 +96,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
 
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, RenderPipeline.defaultProps);
-    this.shaderLayout = this.props.shaderLayout;
+    this.shaderLayout = this.props.shaderLayout!;
     this.bufferLayout = this.props.bufferLayout || [];
   }
 

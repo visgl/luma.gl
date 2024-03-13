@@ -64,11 +64,10 @@ export function getAttributeInfosFromLayouts(
 ): Record<string, AttributeInfo> {
   const attributeInfos: Record<string, AttributeInfo> = {};
   for (const attribute of shaderLayout.attributes) {
-    attributeInfos[attribute.name] = getAttributeInfoFromLayouts(
-      shaderLayout,
-      bufferLayout,
-      attribute.name
-    );
+    const attributeInfo = getAttributeInfoFromLayouts(shaderLayout, bufferLayout, attribute.name);
+    if (attributeInfo) {
+      attributeInfos[attribute.name] = attributeInfo;
+    }
   }
   return attributeInfos;
 }
@@ -98,7 +97,10 @@ function getAttributeInfoFromLayouts(
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: BufferAttributeInfo = getAttributeFromBufferLayout(bufferLayout, name);
+  const bufferMapping: BufferAttributeInfo | null = getAttributeFromBufferLayout(
+    bufferLayout,
+    name
+  );
 
   // TODO should no longer happen
   if (!shaderDeclaration) {
@@ -124,7 +126,7 @@ function getAttributeInfoFromLayouts(
     normalized: vertexFormatInfo.normalized,
     // integer is a property of the shader declaration
     integer: attributeTypeInfo.integer,
-    stepMode: bufferMapping?.stepMode || shaderDeclaration.stepMode,
+    stepMode: bufferMapping?.stepMode || shaderDeclaration.stepMode || 'vertex',
     byteOffset: bufferMapping?.byteOffset || 0,
     byteStride: bufferMapping?.byteStride || 0
   };
@@ -211,6 +213,7 @@ function getAttributeFromAttributesList(
     if (typeof bufferLayout.byteStride !== 'number') {
       for (const attributeMapping of bufferLayout.attributes || []) {
         const info = decodeVertexFormat(attributeMapping.format);
+        // @ts-ignore
         byteStride += info.byteLength;
       }
     }
@@ -223,6 +226,7 @@ function getAttributeFromAttributesList(
         stepMode: bufferLayout.stepMode,
         vertexFormat: attributeMapping.format,
         byteOffset: attributeMapping.byteOffset,
+        // @ts-ignore
         byteStride
       };
     }

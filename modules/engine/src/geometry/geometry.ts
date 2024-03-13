@@ -19,7 +19,7 @@ export type GeometryProps = {
     | 'triangle-fan-webgl';
   /** Auto calculated from attributes if not provided */
   vertexCount?: number;
-  attributes?: Record<string, GeometryAttribute | TypedArray>;
+  attributes: Record<string, GeometryAttribute | TypedArray>;
   indices?: GeometryAttribute | TypedArray;
 };
 

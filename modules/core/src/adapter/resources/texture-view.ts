@@ -29,13 +29,13 @@ export type TextureViewProps = ResourceProps & {
 export abstract class TextureView extends Resource<TextureViewProps> {
   static override defaultProps: Required<TextureViewProps> = {
     ...Resource.defaultProps,
-    format: undefined,
-    dimension: undefined,
+    format: undefined!,
+    dimension: undefined!,
     aspect: 'all',
     baseMipLevel: 0,
-    mipLevelCount: undefined,
+    mipLevelCount: undefined!,
     baseArrayLayer: 0,
-    arrayLayerCount: undefined
+    arrayLayerCount: undefined!
   };
 
   abstract texture: Texture;

@@ -28,10 +28,10 @@ export type ComputePipelineProps = ResourceProps & {
 export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   static override defaultProps: Required<ComputePipelineProps> = {
     ...Resource.defaultProps,
-    shader: undefined,
-    entryPoint: undefined,
+    shader: undefined!,
+    entryPoint: undefined!,
     constants: {},
-    shaderLayout: undefined
+    shaderLayout: undefined!
   };
 
   override get [Symbol.toStringTag](): string {

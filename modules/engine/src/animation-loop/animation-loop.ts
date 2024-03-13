@@ -342,7 +342,7 @@ export class AnimationLoop {
     // end callback
 
     // Submit commands (necessary on WebGPU)
-    this.device.submit();
+    this.device?.submit();
   }
 
   _clearNeedsRedraw(): void {

@@ -49,9 +49,13 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
     super(device, props, VertexArray.defaultProps);
     this.maxVertexAttributes = device.limits.maxVertexAttributes;
     this.attributes = new Array(this.maxVertexAttributes).fill(null);
+    const {shaderLayout, bufferLayout} = props.renderPipeline || {};
+    if (!shaderLayout || !bufferLayout) {
+      throw new Error('VertexArray');
+    }
     this.attributeInfos = getAttributeInfosByLocation(
-      props.renderPipeline.shaderLayout,
-      props.renderPipeline.bufferLayout,
+      shaderLayout,
+      bufferLayout,
       this.maxVertexAttributes
     );
   }

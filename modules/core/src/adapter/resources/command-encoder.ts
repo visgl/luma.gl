@@ -133,7 +133,7 @@ export type CommandEncoderProps = ResourceProps & {
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   static override defaultProps: Required<CommandEncoderProps> = {
     ...Resource.defaultProps,
-    measureExecutionTime: undefined
+    measureExecutionTime: undefined!
   };
 
   override get [Symbol.toStringTag](): string {

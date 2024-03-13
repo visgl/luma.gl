@@ -269,6 +269,7 @@ export abstract class Texture extends Resource<TextureProps> {
 
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
+      // @ts-ignore
       const size = this.getTextureDataSize(this.props.data);
       this.width = size?.width || 1;
       this.height = size?.height || 1;

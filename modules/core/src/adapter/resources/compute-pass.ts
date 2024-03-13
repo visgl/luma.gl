@@ -20,9 +20,9 @@ export type ComputePassProps = ResourceProps & {
 export abstract class ComputePass extends Resource<ComputePassProps> {
   static override defaultProps: Required<ComputePassProps> = {
     ...Resource.defaultProps,
-    timestampQuerySet: undefined,
-    beginTimestampIndex: undefined,
-    endTimestampIndex: undefined
+    timestampQuerySet: undefined!,
+    beginTimestampIndex: undefined!,
+    endTimestampIndex: undefined!
   };
 
   override get [Symbol.toStringTag](): string {

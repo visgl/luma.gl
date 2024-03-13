@@ -32,7 +32,7 @@ export class UniformBlock<
     shaderLayout?: ShaderLayout;
     uniformTypes?: Record<keyof TUniforms, Record<string, ShaderUniformType>>;
   }) {
-    this.name = props?.name;
+    this.name = props?.name || 'unnamed';
 
     // TODO - Extract uniform layout from the shaderLayout object
     if (props?.name && props?.shaderLayout) {
