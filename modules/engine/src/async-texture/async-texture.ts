@@ -52,16 +52,20 @@ type AsyncTextureData = AsyncTextureProps['data'];
 export class AsyncTexture {
   readonly device: Device;
 
+  // TODO - should we type these as possibly `null`? It will make usage harder?
+  // @ts-expect-error
   texture: Texture;
+  // @ts-expect-error
   sampler: Sampler;
+  // @ts-expect-error
   view: TextureView;
 
   readonly ready: Promise<void>;
   isReady: boolean = false;
   destroyed: boolean = false;
 
-  protected resolveReady: () => void;
-  protected rejectReady: (error: Error) => void;
+  protected resolveReady: () => void = () => {};
+  protected rejectReady: (error: Error) => void = () => {};
 
   constructor(device: Device, props: AsyncTextureProps) {
     this.device = device;
@@ -107,6 +111,7 @@ export class AsyncTexture {
   destroy(): void {
     if (this.texture) {
       this.texture.destroy();
+      // @ts-expect-error
       this.texture = null;
     }
     this.destroyed = true;

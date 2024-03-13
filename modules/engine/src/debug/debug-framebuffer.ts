@@ -58,17 +58,19 @@ export function debugFramebuffer(
   // ctx.drawImage(image, 0, 0);
 
   const color = fbo.device.readPixelsToArrayWebGL(fbo);
-  const imageData = ctx.createImageData(fbo.width, fbo.height);
-  // Full map
-  const offset = 0;
-  // if (color.some((v) => v > 0)) {
-  //   console.error('THERE IS NON-ZERO DATA IN THE FBO!');
-  // }
-  for (let i = 0; i < color.length; i += 4) {
-    imageData.data[offset + i + 0] = color[i + 0] * rgbaScale;
-    imageData.data[offset + i + 1] = color[i + 1] * rgbaScale;
-    imageData.data[offset + i + 2] = color[i + 2] * rgbaScale;
-    imageData.data[offset + i + 3] = opaque ? 255 : color[i + 3] * rgbaScale;
+  const imageData = ctx?.createImageData(fbo.width, fbo.height);
+  if (imageData) {
+    // Full map
+    const offset = 0;
+    // if (color.some((v) => v > 0)) {
+    //   console.error('THERE IS NON-ZERO DATA IN THE FBO!');
+    // }
+    for (let i = 0; i < color.length; i += 4) {
+      imageData.data[offset + i + 0] = color[i + 0] * rgbaScale;
+      imageData.data[offset + i + 1] = color[i + 1] * rgbaScale;
+      imageData.data[offset + i + 2] = color[i + 2] * rgbaScale;
+      imageData.data[offset + i + 3] = opaque ? 255 : color[i + 3] * rgbaScale;
+    }
+    ctx?.putImageData(imageData, 0, 0);
   }
-  ctx.putImageData(imageData, 0, 0);
 }

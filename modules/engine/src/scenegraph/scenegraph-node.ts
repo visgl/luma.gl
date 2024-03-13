@@ -184,9 +184,9 @@ export class ScenegraphNode {
   */
 
   _setScenegraphNodeProps(props: ScenegraphNodeProps): void {
-    if ('display' in props) {
-      this.display = props.display;
-    }
+    // if ('display' in props) {
+    //   this.display = props.display;
+    // }
 
     if ('position' in props) {
       this.setPosition(props.position);

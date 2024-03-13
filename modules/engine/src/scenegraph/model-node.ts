@@ -32,10 +32,6 @@ export class ModelNode extends ScenegraphNode {
     this.setProps(props);
   }
 
-  override getBounds(): [number[], number[]] | null {
-    return this.bounds;
-  }
-
   override destroy(): void {
     if (this.model) {
       this.model.destroy();
@@ -46,8 +42,12 @@ export class ModelNode extends ScenegraphNode {
     this.managedResources = [];
   }
 
+  override getBounds(): [number[], number[]] | null {
+    return this.bounds;
+  }
+
   // Expose model methods
-  draw(renderPass?: RenderPass) {
+  draw(renderPass: RenderPass) {
     // Return value indicates if something was actually drawn
     return this.model.draw(renderPass);
   }

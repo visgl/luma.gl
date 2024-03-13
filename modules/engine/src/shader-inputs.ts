@@ -46,6 +46,7 @@ export class ShaderInputs<
    * The map of modules
    * @todo should should this include the resolved dependencies?
    */
+  // @ts-expect-error Fix typings
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}>;
 
   /** Stores the uniform values for each module */
@@ -59,6 +60,7 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
+  // @ts-expect-error Fix typings
   constructor(modules: {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}) {
     // TODO - get all dependencies from modules
     const allModules = _resolveModules(Object.values(modules));
@@ -92,7 +94,7 @@ export class ShaderInputs<
   setProps(props: Partial<{[P in keyof ShaderPropsT]?: Partial<ShaderPropsT[P]>}>): void {
     for (const name of Object.keys(props)) {
       const moduleName = name as keyof ShaderPropsT;
-      const moduleProps = props[moduleName];
+      const moduleProps = props[moduleName] || {};
       const module = this.modules[moduleName];
       if (!module) {
         // Ignore props for unregistered modules

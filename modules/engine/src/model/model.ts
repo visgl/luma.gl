@@ -97,7 +97,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 export class Model {
   static defaultProps: Required<ModelProps> = {
     ...RenderPipeline.defaultProps,
-    source: null,
+    source: undefined!,
     vs: null,
     fs: null,
     id: 'unnamed',
@@ -115,17 +115,20 @@ export class Model {
     shaderInputs: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
-    transformFeedback: undefined,
+    transformFeedback: undefined!,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
 
-    debugShaders: undefined,
-    ignoreUnknownAttributes: undefined
+    debugShaders: undefined!,
+    ignoreUnknownAttributes: undefined!
   };
 
   readonly device: Device;
   readonly id: string;
+  // @ts-expect-error assigned in function called from constructor
   readonly source: string;
+  // @ts-expect-error assigned in function called from constructor
   readonly vs: string;
+  // @ts-expect-error assigned in function called from constructor
   readonly fs: string;
   readonly pipelineFactory: PipelineFactory;
   readonly shaderFactory: ShaderFactory;
@@ -173,8 +176,9 @@ export class Model {
   pipeline: RenderPipeline;
 
   /** ShaderInputs instance */
+  // @ts-expect-error Assigned in function called by constructor
   shaderInputs: ShaderInputs;
-
+  // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
 
   _attributeInfos: Record<string, AttributeInfo> = {};
@@ -201,6 +205,7 @@ export class Model {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
+    // @ts-expect-error Fix typings
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
     // Setup shader assembler
@@ -208,6 +213,7 @@ export class Model {
 
     // Extract modules from shader inputs if not supplied
     const modules =
+      // @ts-expect-error shaderInputs is assigned in setShaderInputs above.
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
     const isWebGPU = this.device.type === 'webgpu';
@@ -224,6 +230,7 @@ export class Model {
         modules
       });
       this.source = source;
+      // @ts-expect-error
       this._getModuleUniforms = getUniforms;
     } else {
       // GLSL
@@ -235,6 +242,7 @@ export class Model {
 
       this.vs = vs;
       this.fs = fs;
+      // @ts-expect-error
       this._getModuleUniforms = getUniforms;
     }
 
@@ -377,7 +385,7 @@ export class Model {
         vertexCount: this.vertexCount,
         instanceCount: this.instanceCount,
         indexCount,
-        transformFeedback: this.transformFeedback
+        transformFeedback: this.transformFeedback || undefined
       });
     } finally {
       this._logDrawCallEnd();
@@ -669,7 +677,7 @@ export class Model {
 
     // TODO - delete previous geometry?
     this.vertexCount = gpuGeometry.vertexCount;
-    this.setIndexBuffer(gpuGeometry.indices);
+    this.setIndexBuffer(gpuGeometry.indices || null);
     this.setAttributes(gpuGeometry.attributes, {ignoreUnknownAttributes: true});
     this.setAttributes(attributes, {ignoreUnknownAttributes: this.props.ignoreUnknownAttributes});
 
@@ -800,13 +808,13 @@ export class Model {
   _getAttributeDebugTable(): Record<string, Record<string, unknown>> {
     const table: Record<string, Record<string, unknown>> = {};
     for (const [name, attributeInfo] of Object.entries(this._attributeInfos)) {
+      const values = this.vertexArray.attributes[attributeInfo.location];
       table[attributeInfo.location] = {
         name,
         type: attributeInfo.shaderType,
-        values: this._getBufferOrConstantValues(
-          this.vertexArray.attributes[attributeInfo.location],
-          attributeInfo.bufferDataType
-        )
+        values: values
+          ? this._getBufferOrConstantValues(values, attributeInfo.bufferDataType)
+          : 'null'
       };
     }
     if (this.vertexArray.indexBuffer) {

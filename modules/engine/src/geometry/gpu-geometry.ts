@@ -70,7 +70,7 @@ export class GPUGeometry {
   }
 
   getIndexes(): Buffer | null {
-    return this.indices;
+    return this.indices || null;
   }
 
   _calculateVertexCount(positions: Buffer): number {
@@ -128,9 +128,15 @@ export function getAttributeBuffersFromGeometry(
         name = 'colors';
         break;
     }
-    attributes[name] = device.createBuffer({data: attribute.value, id: `${attributeName}-buffer`});
-    const {value, size, normalized} = attribute;
-    bufferLayout.push({name, format: getVertexFormatFromAttribute(value, size, normalized)});
+    if (attribute) {
+      attributes[name] = device.createBuffer({
+        data: attribute.value,
+        id: `${attributeName}-buffer`
+      });
+      const {value, size, normalized} = attribute;
+      // @ts-expect-error
+      bufferLayout.push({name, format: getVertexFormatFromAttribute(value, size, normalized)});
+    }
   }
 
   const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices);

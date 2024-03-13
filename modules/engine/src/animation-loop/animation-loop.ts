@@ -356,14 +356,16 @@ export class AnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeAnimationProps(): void {
-    if (!this.device) {
+    const canvas = this.device?.canvasContext?.canvas;
+
+    if (!this.device || !canvas) {
       throw new Error('loop');
     }
     this.animationProps = {
       animationLoop: this,
 
       device: this.device,
-      canvas: this.device?.canvasContext?.canvas,
+      canvas,
       timeline: this.timeline,
 
       // Initial values
