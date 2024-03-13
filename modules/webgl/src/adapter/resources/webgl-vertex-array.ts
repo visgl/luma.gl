@@ -57,8 +57,8 @@ export class WEBGLVertexArray extends VertexArray {
   /**
   // Set (bind/unbind) an elements buffer, for indexed rendering.
   // Must be a Buffer bound to GL.ELEMENT_ARRAY_BUFFER or null. Constants not supported
-   * 
-   * @param elementBuffer 
+   *
+   * @param elementBuffer
    */
   setIndexBuffer(indexBuffer: Buffer | null): void {
     const buffer = indexBuffer as WEBGLBuffer;
@@ -115,17 +115,10 @@ export class WEBGLVertexArray extends VertexArray {
     this.attributes[location] = value;
   }
 
-  init = false;
-
   override bindBeforeRender(): void {
     this.device.gl.bindVertexArray(this.handle);
-    // TODO - the initial bind does not seem to take effect.
-    if (!this.init) {
-      // log.log(1, `Binding vertex array ${this.id}`, this.indexBuffer?.id)();
-      const webglBuffer = this.indexBuffer as WEBGLBuffer;
-      this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
-      this.init = true;
-    }
+    const webglBuffer = this.indexBuffer as WEBGLBuffer;
+    this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, webglBuffer?.handle || null);
     this._applyConstantAttributes();
   }
 
@@ -134,7 +127,7 @@ export class WEBGLVertexArray extends VertexArray {
     // TODO technically this is not necessary, but we might be interfacing
     // with code that does not use vertex array objects
     this.device.gl.bindVertexArray(null);
-    // this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+    this.device.gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
   }
 
   // Internal methods
