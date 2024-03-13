@@ -7,24 +7,14 @@ import {Device, RenderPipeline, ComputePipeline} from '@luma.gl/core';
 
 export type PipelineFactoryProps = RenderPipelineProps;
 
+type RenderPipelineCacheItem = {pipeline: RenderPipeline; useCount: number};
+type ComputePipelineCacheItem = {pipeline: ComputePipeline; useCount: number};
+
 /**
  * Efficiently creates / caches pipelines
  */
 export class PipelineFactory {
   static defaultProps: Required<PipelineFactoryProps> = {...RenderPipeline.defaultProps};
-
-  readonly device: Device;
-
-  private _hashCounter: number = 0;
-  private readonly _hashes: Record<string, number> = {};
-  private readonly _renderPipelineCache: Record<
-    string,
-    {pipeline: RenderPipeline; useCount: number}
-  > = {};
-  private readonly _computePipelineCache: Record<
-    string,
-    {pipeline: ComputePipeline; useCount: number}
-  > = {};
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
@@ -33,8 +23,17 @@ export class PipelineFactory {
     return device._lumaData.defaultPipelineFactory as PipelineFactory;
   }
 
+  readonly device: Device;
+  readonly destroyPolicy: 'unused' | 'never';
+
+  private _hashCounter: number = 0;
+  private readonly _hashes: Record<string, number> = {};
+  private readonly _renderPipelineCache: Record<string, RenderPipelineCacheItem> = {};
+  private readonly _computePipelineCache: Record<string, ComputePipelineCacheItem> = {};
+
   constructor(device: Device) {
     this.device = device;
+    this.destroyPolicy = device.props._factoryDestroyPolicy;
   }
 
   /** Return a RenderPipeline matching props. Reuses a similar pipeline if already created. */
@@ -80,8 +79,10 @@ export class PipelineFactory {
       pipeline instanceof ComputePipeline ? this._computePipelineCache : this._renderPipelineCache;
     cache[hash].useCount--;
     if (cache[hash].useCount === 0) {
-      cache[hash].pipeline.destroy();
-      delete cache[hash];
+      if (this.destroyPolicy === 'unused') {
+        cache[hash].pipeline.destroy();
+        delete cache[hash];
+      }
     }
   }
 

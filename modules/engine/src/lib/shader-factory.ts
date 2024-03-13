@@ -8,19 +8,20 @@ import {Device, Shader, ShaderProps} from '@luma.gl/core';
 export class ShaderFactory {
   static readonly defaultProps: Required<ShaderProps> = {...Shader.defaultProps};
 
-  public readonly device: Device;
-
-  private readonly _cache: Record<string, {shader: Shader; useCount: number}> = {};
-
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
     device._lumaData.defaultShaderFactory ||= new ShaderFactory(device);
     return device._lumaData.defaultShaderFactory as ShaderFactory;
   }
 
+  public readonly device: Device;
+  readonly destroyPolicy: 'unused' | 'never';
+  private readonly _cache: Record<string, {shader: Shader; useCount: number}> = {};
+
   /** @internal */
   constructor(device: Device) {
     this.device = device;
+    this.destroyPolicy = device.props._factoryDestroyPolicy;
   }
 
   /** Requests a {@link Shader} from the cache, creating a new Shader only if necessary. */
@@ -47,8 +48,10 @@ export class ShaderFactory {
     if (cacheEntry) {
       cacheEntry.useCount--;
       if (cacheEntry.useCount === 0) {
-        delete this._cache[key];
-        cacheEntry.shader.destroy();
+        if (this.destroyPolicy === 'unused') {
+          delete this._cache[key];
+          cacheEntry.shader.destroy();
+        }
       }
     }
   }
