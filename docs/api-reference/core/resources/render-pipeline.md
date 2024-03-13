@@ -112,10 +112,8 @@ Describes how primitives (points, lines or triangles) are formed from vertexes.
 | `'point-list'`         | ✅     | ✅      | Each vertex defines a point primitive.                                                                 |
 | `'line-list'`          | ✅     | ✅      | Each consecutive pair of two vertices defines a line primitive.                                        |
 | `'line-strip'`         | ✅     | ✅      | Each vertex after the first defines a line primitive between it and the previous vertex.               |
-| `'line-loop-webgl'`    | ✅     | ❌      | As `line-strip`, connects the last vertex back to the first.                                           |
 | `'triangle-list'`      | ✅     | ✅      | Each consecutive triplet of three vertices defines a triangle primitive.                               |
 | `'triangle-strip'`     | ✅     | ✅      | Each vertex after the first two defines a triangle primitive between it and the previous two vertices. |
-| `'triangle-fan-webgl'` | ✅     | ❌      | A set of connected triangles that share one central vertex.                                            |
 
 
 ## Members

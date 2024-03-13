@@ -124,11 +124,11 @@ WebGL APIs [`gl.endTransformFeedback`](https://developer.mozilla.org/en-US/docs/
 
 ## Enumerations
 
-| Primitive Mode | Compatible Topology                                     |
-| -------------- | ------------------------------------------------------- |
-| `GL.POINTS`    | `point-list`                                            |
-| `GL.LINES`     | `line-list`, `line-strip`, `line-loop-webgl`            |
-| `GL.TRIANGLES` | `triangle-list`, `triangle-strip`, `triangle-fan-webgl` |
+| Primitive Mode | Compatible Topology               |
+| -------------- | --------------------------------- |
+| `GL.POINTS`    | `point-list`                      |
+| `GL.LINES`     | `line-list`, `line-strip`         |
+| `GL.TRIANGLES` | `triangle-list`, `triangle-strip` |
 
 ## Limits
 
