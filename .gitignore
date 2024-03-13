@@ -25,8 +25,10 @@ package-lock.json
 lerna-debug.log
 
 */**/yarn.lock
-yarn-error.log
 !website/yarn.lock
+
+*/**/.yarn/*
+*/**/yarn-error.log
 
 .yarn/*
 !.yarn/cache
@@ -35,7 +37,6 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-
 
 .project
 .DS_Store

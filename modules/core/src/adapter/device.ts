@@ -219,24 +219,26 @@ export type DeviceProps = {
   /** Error handling */
   onError?: (error: Error) => unknown;
 
-  // DEBUG SETTINGS
+  // @deprecated Attach to existing context. Rename to handle? Use Device.attach?
+  gl?: WebGL2RenderingContext | null;
 
+  // DEBUG SETTINGS
   /** WebGL: Instrument WebGL2RenderingContext (at the expense of performance) */
   debug?: boolean;
   /** Break on WebGL functions matching these strings */
   break?: string[];
   /** WebGL: Initialize the SpectorJS WebGL debugger */
   spector?: boolean;
+
+  // EXPERIMENTAL SETTINGS
+  /** Set to false to disable WebGL state management instrumentation: TODO- Unclear if still supported / useful */
+  manageState?: boolean;
   /** Initialize all features on startup */
   initalizeFeatures?: boolean;
   /** Disable specific features */
   disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
-
-  /** TODO- Unclear if still supported: Set to false to disable WebGL state management instrumentation */
-  manageState?: boolean;
-
-  // @deprecated Attach to existing context. Rename to handle? Use Device.attach?
-  gl?: WebGL2RenderingContext | null;
+  /** Never destroy cached shaders and pipelines */
+  _factoryDestroyPolicy?: 'unused' | 'never';
 };
 
 /**
@@ -250,17 +252,12 @@ export abstract class Device {
     manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
-
     requestMaxLimits: true,
-    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-    spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
-    break: [],
 
-    // TODO - Change these after confirming things work as expected
-    initalizeFeatures: true,
-    disabledFeatures: {
-      'compilation-status-async-webgl': true
-    },
+    // Callbacks
+    onError: (error: Error) => log.error(error.message),
+
+    gl: null,
 
     // alpha: undefined,
     // depth: undefined,
@@ -270,10 +267,16 @@ export abstract class Device {
     // preserveDrawingBuffer: undefined,
     // failIfMajorPerformanceCaveat: undefined
 
-    gl: null,
+    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
+    spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
+    break: (log.get('break') as string[]) || [],
 
-    // Callbacks
-    onError: (error: Error) => log.error(error.message)
+    // TODO - Change these after confirming things work as expected
+    initalizeFeatures: true,
+    disabledFeatures: {
+      'compilation-status-async-webgl': true
+    },
+    _factoryDestroyPolicy: 'unused'
   };
 
   get [Symbol.toStringTag](): string {
