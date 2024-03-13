@@ -46,5 +46,5 @@
     "@probe.gl/stats": "^4.0.2",
     "@types/offscreencanvas": "^2019.6.4"
   },
-  "gitHead": "aec74bc1ad62bdc66a05aa3ef795d49ad7810f22"
+  "gitHead": "e6ff30f654d907e93a0754e82b2e430ea98db033"
 }
