@@ -64,11 +64,7 @@ export function getAttributeInfosFromLayouts(
 ): Record<string, AttributeInfo> {
   const attributeInfos: Record<string, AttributeInfo> = {};
   for (const attribute of shaderLayout.attributes) {
-    const attributeInfo = getAttributeInfoFromLayouts(
-      shaderLayout,
-      bufferLayout,
-      attribute.name
-    );
+    const attributeInfo = getAttributeInfoFromLayouts(shaderLayout, bufferLayout, attribute.name);
     if (attributeInfo) {
       attributeInfos[attribute.name] = attributeInfo;
     }
@@ -101,7 +97,7 @@ function getAttributeInfoFromLayouts(
   name: string
 ): AttributeInfo | null {
   const shaderDeclaration = getAttributeFromShaderLayout(shaderLayout, name);
-  const bufferMapping: BufferAttributeInfo = getAttributeFromBufferLayout(bufferLayout, name)!;
+  const bufferMapping: BufferAttributeInfo | null = getAttributeFromBufferLayout(bufferLayout, name);
 
   // TODO should no longer happen
   if (!shaderDeclaration) {
@@ -110,7 +106,7 @@ function getAttributeInfoFromLayouts(
   }
 
   const attributeTypeInfo = decodeShaderAttributeType(shaderDeclaration.type);
-  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat;
+  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat!;
   const vertexFormatInfo = decodeVertexFormat(vertexFormat);
 
   return {

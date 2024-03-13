@@ -132,7 +132,7 @@ export class UniformStore<
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
     // this.updateUniformBuffers();
-    return this.uniformBuffers.get(uniformBufferName) as Buffer;
+    return this.uniformBuffers.get(uniformBufferName)!;
   }
 
   /** Updates all uniform buffers where values have changed */
@@ -159,8 +159,8 @@ export class UniformStore<
       // This clears the needs redraw flag
       const uniformBufferData = this.getUniformBufferData(uniformBufferName);
 
-      const uniformBuffer = this.uniformBuffers.get(uniformBufferName) as Buffer;
-      uniformBuffer.write(uniformBufferData);
+      const uniformBuffer = this.uniformBuffers.get(uniformBufferName);
+      uniformBuffer?.write(uniformBufferData);
 
       // logging - TODO - don't query the values unnecessarily
       const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms();
