@@ -10,14 +10,7 @@ import {uid} from '../utils/uid';
 export type GPUGeometryProps = {
   id?: string;
   /** Determines how vertices are read from the 'vertex' attributes */
-  topology:
-    | 'point-list'
-    | 'line-list'
-    | 'line-strip'
-    | 'line-loop-webgl'
-    | 'triangle-list'
-    | 'triangle-strip'
-    | 'triangle-fan-webgl';
+  topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
   /** Auto calculated from attributes if not provided */
   vertexCount: number;
   bufferLayout: BufferLayout[];

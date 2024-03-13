@@ -20,12 +20,8 @@ export type PrimitiveTopology =
   | 'point-list'
   | 'line-list'
   | 'line-strip'
-  /** @deprecated */
-  | 'line-loop-webgl'
   | 'triangle-list'
-  | 'triangle-strip'
-  /** @deprecated */
-  | 'triangle-fan-webgl';
+  | 'triangle-strip';
 
 export type IndexFormat = 'uint16' | 'uint32';
 

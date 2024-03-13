@@ -10,6 +10,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v9.1
+
+**@luma.gl/core**
+
+- `RenderPipeline.topology`: `line-loop-webgl` and `triangle-fan-webgl` topologies are no longer supported. Rebuild your geometries using `triangle-strip` and `line-list`.
+
 ## Upgrading to v9.0
 
 luma.gl v9 is a major modernization of the luma.gl API, with many breaking changes, so the upgrade notes for this release are unusually long. To facilitate porting to the v9 release we have also provided a

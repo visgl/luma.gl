@@ -32,10 +32,8 @@ export function convertGLDrawModeToTopology(
     case GLEnum.POINTS: return 'point-list';
     case GLEnum.LINES: return 'line-list';
     case GLEnum.LINE_STRIP: return 'line-strip';
-    case GLEnum.LINE_LOOP: return 'line-loop-webgl';
     case GLEnum.TRIANGLES: return 'triangle-list';
     case GLEnum.TRIANGLE_STRIP: return 'triangle-strip';
-    case GLEnum.TRIANGLE_FAN: return 'triangle-fan-webgl';
-    default: throw new Error(drawMode);
+    default: throw new Error(String(drawMode));
   }
 }

@@ -78,17 +78,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     // Merge provided layout with introspected layout
     this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
-
-    // WebGPU has more restrictive topology support than WebGL
-    switch (this.props.topology) {
-      case 'triangle-fan-webgl':
-      case 'line-loop-webgl':
-        log.warn(
-          `Primitive topology ${this.props.topology} is deprecated and will be removed in v9.1`
-        );
-        break;
-      default:
-    }
   }
 
   override destroy(): void {
