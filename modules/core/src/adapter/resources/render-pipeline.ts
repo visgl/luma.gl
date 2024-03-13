@@ -110,6 +110,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   abstract draw(options: {
     /** Render pass to draw into (targeting screen or framebuffer) */
     renderPass?: RenderPass;
+    /** Parameters to be set before draw call. Note that most parameters can only be overridden in WebGL. */
+    parameters?: RenderPipelineParameters;
     /** vertex attributes */
     vertexArray: VertexArray;
     /** Number of "rows" in index buffer */

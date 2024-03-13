@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
-import type {ShaderLayout} from '@luma.gl/core';
+import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
+import type {ShaderLayout, UniformValue, Binding} from '@luma.gl/core';
 import type {RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
@@ -155,7 +155,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    */
   draw(options: {
     renderPass: RenderPass;
-    /** vertex attributes */
+    parameters?: RenderPipelineParameters;
     vertexArray: VertexArray;
     vertexCount?: number;
     indexCount?: number;
@@ -168,6 +168,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }): boolean {
     const {
       renderPass,
+      parameters = this.props.parameters,
       vertexArray,
       vertexCount,
       // indexCount,
@@ -224,7 +225,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     withDeviceAndGLParameters(
       this.device,
-      this.props.parameters,
+      parameters,
       webglRenderPass.glParameters,
       () => {
         if (isIndexed && isInstanced) {

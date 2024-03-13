@@ -384,7 +384,11 @@ export class Model {
         vertexCount: this.vertexCount,
         instanceCount: this.instanceCount,
         indexCount,
-        transformFeedback: this.transformFeedback || undefined
+        transformFeedback: this.transformFeedback || undefined,
+        // WebGL shares underlying cached pipelines even for models that have different parameters, 
+        // so we must provide our unique parameters to each draw
+        // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+        parameters: this.parameters
       });
     } finally {
       this._logDrawCallEnd();
