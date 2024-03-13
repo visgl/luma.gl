@@ -58,7 +58,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   static override defaultProps: Required<RenderPassProps> = {
     ...Resource.defaultProps,
     framebuffer: null,
-    parameters: undefined,
+    parameters: undefined!,
     clearColor: [0, 0, 0, 0],
     clearDepth: 1,
     clearStencil: 0,
@@ -66,10 +66,10 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     stencilReadOnly: false,
     discard: false,
 
-    occlusionQuerySet: undefined,
-    timestampQuerySet: undefined,
-    beginTimestampIndex: undefined,
-    endTimestampIndex: undefined
+    occlusionQuerySet: undefined!,
+    timestampQuerySet: undefined!,
+    beginTimestampIndex: undefined!,
+    endTimestampIndex: undefined!
   };
 
   override get [Symbol.toStringTag](): string {

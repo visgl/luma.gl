@@ -70,7 +70,7 @@ export class Computation {
     shaderFactory: undefined!,
     shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
 
-    debugShaders: undefined
+    debugShaders: undefined!
   };
 
   readonly device: Device;
@@ -118,7 +118,8 @@ export class Computation {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
-    this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
+    this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
+    this.setShaderInputs(this.shaderInputs);
 
     // Support WGSL shader layout introspection
     // TODO - Don't modify props!!

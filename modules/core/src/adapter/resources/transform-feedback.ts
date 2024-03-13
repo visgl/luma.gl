@@ -35,7 +35,7 @@ export abstract class TransformFeedback extends Resource<TransformFeedbackProps>
     return 'TransformFeedback';
   }
 
-  constructor(device: Device, props?: TransformFeedbackProps) {
+  constructor(device: Device, props: TransformFeedbackProps) {
     super(device, props, TransformFeedback.defaultProps);
   }
 

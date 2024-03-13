@@ -50,8 +50,8 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
     this.maxVertexAttributes = device.limits.maxVertexAttributes;
     this.attributes = new Array(this.maxVertexAttributes).fill(null);
     this.attributeInfos = getAttributeInfosByLocation(
-      props.renderPipeline.shaderLayout,
-      props.renderPipeline.bufferLayout,
+      this.props.renderPipeline?.shaderLayout!,
+      this.props.renderPipeline?.bufferLayout!,
       this.maxVertexAttributes
     );
   }

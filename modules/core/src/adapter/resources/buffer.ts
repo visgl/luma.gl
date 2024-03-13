@@ -107,17 +107,17 @@ export abstract class Buffer extends Resource<BufferProps> {
     byteOffset: number,
     byteLength: number
   ): void {
-    const buffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const arrayBuffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
     const debugDataLength = Math.min(
       data ? data.byteLength : byteLength,
       Buffer.DEBUG_DATA_MAX_LENGTH
     );
-    if (data === null) {
+    if (arrayBuffer === null) {
       this.debugData = new ArrayBuffer(debugDataLength);
-    } else if (byteOffset === 0 && byteLength === data.byteLength) {
-      this.debugData = buffer.slice(0, debugDataLength);
+    } else if (byteOffset === 0 && byteLength === arrayBuffer.byteLength) {
+      this.debugData = arrayBuffer.slice(0, debugDataLength);
     } else {
-      this.debugData = buffer.slice(byteOffset, byteOffset + debugDataLength);
+      this.debugData = arrayBuffer.slice(byteOffset, byteOffset + debugDataLength);
     }
   }
 }

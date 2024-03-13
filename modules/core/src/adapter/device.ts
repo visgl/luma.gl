@@ -131,7 +131,7 @@ export class DeviceFeatures {
   }
 
   has(feature: DeviceFeature): boolean {
-    return !this.disabledFeatures[feature] && this.features.has(feature);
+    return !this.disabledFeatures?.[feature] && this.features.has(feature);
   }
 }
 

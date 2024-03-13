@@ -79,7 +79,7 @@ export class UniformStore<
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>
   ): void {
     for (const [blockName, uniformValues] of Object.entries(uniforms)) {
-      this.uniformBlocks.get(blockName).setUniforms(uniformValues);
+      this.uniformBlocks.get(blockName)?.setUniforms(uniformValues);
       // We leverage logging in updateUniformBuffers(), even though slightly less efficient
       // this.updateUniformBuffer(blockName);
     }
@@ -89,13 +89,13 @@ export class UniformStore<
 
   /** Get the required minimum length of the uniform buffer */
   getUniformBufferByteLength(uniformBufferName: keyof TPropGroups): number {
-    return this.uniformBufferLayouts.get(uniformBufferName).byteLength;
+    return this.uniformBufferLayouts.get(uniformBufferName)?.byteLength || 0;
   }
 
   /** Get formatted binary memory that can be uploaded to a buffer */
   getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
-    const uniformValues = this.uniformBlocks.get(uniformBufferName).getAllUniforms();
-    return this.uniformBufferLayouts.get(uniformBufferName).getData(uniformValues);
+    const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
+    return this.uniformBufferLayouts.get(uniformBufferName)?.getData(uniformValues)!;
   }
 
   /**
@@ -132,7 +132,7 @@ export class UniformStore<
       this.uniformBuffers.set(uniformBufferName, uniformBuffer);
     }
     // this.updateUniformBuffers();
-    return this.uniformBuffers.get(uniformBufferName);
+    return this.uniformBuffers.get(uniformBufferName) as Buffer;
   }
 
   /** Updates all uniform buffers where values have changed */
@@ -154,16 +154,16 @@ export class UniformStore<
     const uniformBuffer = this.uniformBuffers.get(uniformBufferName);
 
     let reason: false | string = false;
-    if (uniformBuffer && uniformBlock.needsRedraw) {
+    if (uniformBuffer && uniformBlock?.needsRedraw) {
       reason ||= uniformBlock.needsRedraw;
       // This clears the needs redraw flag
       const uniformBufferData = this.getUniformBufferData(uniformBufferName);
 
-      const uniformBuffer = this.uniformBuffers.get(uniformBufferName);
+      const uniformBuffer = this.uniformBuffers.get(uniformBufferName) as Buffer;
       uniformBuffer.write(uniformBufferData);
 
       // logging - TODO - don't query the values unnecessarily
-      const uniformValues = this.uniformBlocks.get(uniformBufferName).getAllUniforms();
+      const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms();
       log.log(
         4,
         `Writing to uniform buffer ${String(uniformBufferName)}`,

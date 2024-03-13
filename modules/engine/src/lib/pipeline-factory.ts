@@ -93,7 +93,7 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   private _hashRenderPipeline(props: RenderPipelineProps): string {
-    const vsHash = this._getHash(props.vs.source);
+    const vsHash = this._getHash(props.vs?.source!);
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
 
     // WebGL specific

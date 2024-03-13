@@ -35,7 +35,7 @@ export abstract class Shader extends Resource<ShaderProps> {
   static override defaultProps: Required<ShaderProps> = {
     ...Resource.defaultProps,
     language: 'auto',
-    stage: undefined,
+    stage: undefined!,
     source: '',
     sourceMap: null,
     entryPoint: 'main',
@@ -134,9 +134,7 @@ ${htmlLog}
     document.body.appendChild(button);
 
     const errors = document.getElementsByClassName('luma-compiler-log-error');
-    if (errors[0]?.scrollIntoView) {
-      errors[0].scrollIntoView();
-    }
+    errors[0]?.scrollIntoView();
 
     // TODO - add a small embedded copy button (instead of main button)
     button.onclick = () => {

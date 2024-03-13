@@ -244,12 +244,12 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   polygonMode: 'fill',
   polygonOffsetLine: false,
 
-  clipDistance0: undefined,
-  clipDistance1: undefined,
-  clipDistance2: undefined,
-  clipDistance3: undefined,
-  clipDistance4: undefined,
-  clipDistance5: undefined,
-  clipDistance6: undefined,
-  clipDistance7: undefined
+  clipDistance0: undefined!,
+  clipDistance1: undefined!,
+  clipDistance2: undefined!,
+  clipDistance3: undefined!,
+  clipDistance4: undefined!,
+  clipDistance5: undefined!,
+  clipDistance6: undefined!,
+  clipDistance7: undefined!
 };

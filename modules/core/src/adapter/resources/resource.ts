@@ -22,7 +22,7 @@ export abstract class Resource<Props extends ResourceProps> {
   static defaultProps: Required<ResourceProps> = {
     id: 'undefined',
     handle: undefined,
-    userData: undefined
+    userData: undefined!
   };
 
   abstract get [Symbol.toStringTag](): string;
@@ -39,7 +39,7 @@ export abstract class Resource<Props extends ResourceProps> {
   /** For resources that allocate GPU memory */
   private allocatedBytes: number = 0;
   /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
-  private _attachedResources = new Set<Resource<unknown>>();
+  private _attachedResources = new Set<Resource<ResourceProps>>();
 
   /**
    * Create a new Resource. Called from Subclass
@@ -91,21 +91,21 @@ export abstract class Resource<Props extends ResourceProps> {
    * Attaches a resource. Attached resources are auto destroyed when this resource is destroyed
    * Called automatically when sub resources are auto created but can be called by application
    */
-  attachResource(resource: Resource<unknown>): void {
+  attachResource(resource: Resource<ResourceProps>): void {
     this._attachedResources.add(resource);
   }
 
   /**
    * Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
    */
-  detachResource(resource: Resource<unknown>): void {
+  detachResource(resource: Resource<ResourceProps>): void {
     this._attachedResources.delete(resource);
   }
 
   /**
    * Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
    */
-  destroyAttachedResource(resource: Resource<unknown>): void {
+  destroyAttachedResource(resource: Resource<ResourceProps>): void {
     if (this._attachedResources.delete(resource)) {
       resource.destroy();
     }
@@ -117,7 +117,7 @@ export abstract class Resource<Props extends ResourceProps> {
       resource.destroy();
     }
     // don't remove while we are iterating
-    this._attachedResources = new Set<Resource<unknown>>();
+    this._attachedResources = new Set<Resource<ResourceProps>>();
   }
 
   // PROTECTED METHODS
