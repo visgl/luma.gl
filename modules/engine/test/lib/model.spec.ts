@@ -172,14 +172,26 @@ test('Model#topology', async t => {
       fragmentEntryPoint: 'fragmentMain'
     });
 
-    t.equal(model.pipeline.props.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+    t.equal(model.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+    if (device.type === 'webgpu') {
+      // Cached model in WebGL can have a different topology
+      t.equal(
+        model.pipeline.props.topology,
+        'triangle-list',
+        'Pipeline has triangle-list topology'
+      );
+    }
 
     model.setTopology('line-strip');
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
     model.draw(renderPass);
 
-    t.equal(model.pipeline.props.topology, 'line-strip', 'Pipeline has line-strip topology');
+    t.equal(model.topology, 'line-strip', 'Pipeline has line-strip topology');
+    if (device.type === 'webgpu') {
+      // Cached model in WebGL can have a different topology
+      t.equal(model.pipeline.props.topology, 'line-strip', 'Pipeline has triangle-list topology');
+    }
 
     renderPass.end();
     device.submit();

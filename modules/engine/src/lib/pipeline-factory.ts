@@ -104,9 +104,10 @@ export class PipelineFactory {
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     switch (this.device.type) {
-      // case 'webgl':
-      // WebGL is more dynamic
-      // return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
+      case 'webgl':
+        // WebGL is more dynamic
+        return `${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
+
       default:
         // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
