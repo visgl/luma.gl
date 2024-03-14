@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.3 - Mar 14, 2024
+
+- No change, fix release
+
 ## v9.0.2
 
 - fix(webgl): Pair calls to bind/unbind VAO (#2032)

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgpu",
-  "version": "9.0.2",
+  "version": "9.0.3",
   "description": "WebGPU adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
