@@ -390,7 +390,6 @@ export class Model {
         // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
         parameters: this.parameters,
         topology: this.topology
-
       });
     } finally {
       this._logDrawCallEnd();

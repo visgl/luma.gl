@@ -175,7 +175,11 @@ test('Model#topology', async t => {
     t.equal(model.topology, 'triangle-list', 'Pipeline has triangle-list topology');
     if (device.type === 'webgpu') {
       // Cached model in WebGL can have a different topology
-      t.equal(model.pipeline.props.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+      t.equal(
+        model.pipeline.props.topology,
+        'triangle-list',
+        'Pipeline has triangle-list topology'
+      );
     }
 
     model.setTopology('line-strip');
