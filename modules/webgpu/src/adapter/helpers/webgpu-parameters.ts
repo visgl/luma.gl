@@ -19,12 +19,12 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
 
 function addDepthStencilFront(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
   const depthStencil = addDepthStencil(descriptor);
-  return depthStencil.stencilFront as GPUStencilFaceState;
+  return depthStencil.stencilFront;
 }
 
 function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
   const depthStencil = addDepthStencil(descriptor);
-  return depthStencil.stencilBack as GPUStencilFaceState;
+  return depthStencil.stencilBack;
 }
 
 /**
