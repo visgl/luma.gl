@@ -6,6 +6,7 @@ import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
+import type {TextureFormat} from '../gpu-type-utils/texture-formats';
 
 const isPage: boolean = isBrowser() && typeof document !== 'undefined';
 const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
@@ -59,6 +60,11 @@ export abstract class CanvasContext {
   readonly htmlCanvas?: HTMLCanvasElement;
   readonly offscreenCanvas?: OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
+
+  /** Format of returned textures: "bgra8unorm", "rgba8unorm" */
+  abstract readonly format: TextureFormat;
+  /** Default stencil format for depth textures */
+  abstract readonly depthStencilFormat: TextureFormat;
 
   width: number = 1;
   height: number = 1;

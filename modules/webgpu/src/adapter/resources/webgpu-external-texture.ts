@@ -24,6 +24,7 @@ export class WebGPUExternalTexture extends ExternalTexture {
         source: props.source,
         colorSpace: props.colorSpace
       });
+    // @ts-expect-error
     this.sampler = null;
   }
 

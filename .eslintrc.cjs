@@ -161,10 +161,10 @@ module.exports = getESLintConfig({
           "GPUColorTargetState": true,
           "GPUBindGroupEntry": true,
           "GPUTextureFormat": true,
-          "GPUBufferUsage": true,
           "GPUVertexFormat": true,
           "GPURenderPassDescriptor": true,
-          "GPUComputePassTimestampWrites": true
+          "GPUComputePassTimestampWrites": true,
+          "GPUStencilFaceState": true,
         }
       }
     ],

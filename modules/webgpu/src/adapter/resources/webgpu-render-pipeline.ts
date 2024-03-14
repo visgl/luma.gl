@@ -51,6 +51,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
+    // @ts-expect-error
     this.handle = null;
   }
 
@@ -114,7 +115,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Return a bind group created by setBindings */
   _getBindGroup() {
-    if (this.props.shaderLayout.bindings.length === 0) {
+    if (this.shaderLayout.bindings.length === 0) {
       return null;
     }
 
@@ -125,12 +126,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // TODO what if bindings change? We need to rebuild the bind group!
     this._bindGroup =
       this._bindGroup ||
-      getBindGroup(
-        this.device.handle,
-        this._bindGroupLayout,
-        this.props.shaderLayout,
-        this._bindings
-      );
+      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
 
     return this._bindGroup;
   }
@@ -143,7 +139,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const vertex: GPUVertexState = {
       module: (this.props.vs as WebGPUShader).handle,
       entryPoint: this.props.vertexEntryPoint || 'main',
-      buffers: getVertexBufferLayout(this.props.shaderLayout, this.props.bufferLayout)
+      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
     // Set up the fragment stage
@@ -153,7 +149,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       targets: [
         {
           // TODO exclamation mark hack!
-          format: getWebGPUTextureFormat(this.device?.canvasContext?.format)
+          format: getWebGPUTextureFormat(this.device.getCanvasContext().format)
         }
       ]
     };
@@ -184,7 +180,7 @@ _setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
   for (let i = 0; i < buffers.length; ++i) {
     const buffer = cast<WebGPUBuffer>(buffers[i]);
     if (!buffer) {
-      const attribute = this.props.shaderLayout.attributes.find(
+      const attribute = this.shaderLayout.attributes.find(
         (attribute) => attribute.location === i
       );
       throw new Error(

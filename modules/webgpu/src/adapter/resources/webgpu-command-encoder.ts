@@ -83,10 +83,10 @@ export class WebGPUCommandEncoder extends CommandEncoder {
         // aspect: options.aspect
       },
       {
-        // TODO exclamation mark hack
-        width: options.extent[0],
-        height: options.extent[1],
-        depthOrArrayLayers: options.extent[2]
+        // @ts-ignore
+        width: options.extent?.[0],
+        height: options.extent?.[1],
+        depthOrArrayLayers: options.extent?.[2]
       }
     );
   }
@@ -138,10 +138,10 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     const webgpuBuffer = destination as WebGPUBuffer;
     this.handle.resolveQuerySet(
       webgpuQuerySet.handle,
-      options.firstQuery || 0,
-      options.queryCount || querySet.props.count - (options.firstQuery || 0),
+      options?.firstQuery || 0,
+      options?.queryCount || querySet.props.count - (options?.firstQuery || 0),
       webgpuBuffer.handle,
-      options.destinationOffset || 0
+      options?.destinationOffset || 0
     );
   }
 }

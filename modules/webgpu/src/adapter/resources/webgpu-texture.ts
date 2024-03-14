@@ -100,7 +100,7 @@ export class WebGPUTexture extends Texture {
     this.sampler =
       props.sampler instanceof WebGPUSampler
         ? props.sampler
-        : new WebGPUSampler(this.device, props.sampler);
+        : new WebGPUSampler(this.device, props.sampler || {});
 
     // TODO - To support texture arrays we need to create custom views...
     // But we are not ready to expose TextureViews to the public API.

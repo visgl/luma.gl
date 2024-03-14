@@ -55,12 +55,7 @@ export class WebGPUComputePipeline extends ComputePipeline {
     // Set up the bindings
     this._bindGroup =
       this._bindGroup ||
-      getBindGroup(
-        this.device.handle,
-        this._bindGroupLayout,
-        this.props.shaderLayout,
-        this._bindings
-      );
+      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
 
     return this._bindGroup;
   }
