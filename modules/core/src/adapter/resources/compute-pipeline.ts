@@ -39,9 +39,12 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   }
 
   hash: string = '';
+  /** The merged shader layout */
+  shaderLayout: ComputeShaderLayout;
 
   constructor(device: Device, props: ComputePipelineProps) {
     super(device, props, ComputePipeline.defaultProps);
+    this.shaderLayout = props.shaderLayout!;
   }
 
   /**

@@ -58,6 +58,7 @@ export class WebGPUComputePass extends ComputePass {
    * TODO - still some API confusion - does this method go here or on the pipeline?
    */
   setBindings(bindings: Binding[]): void {
+    // @ts-expect-error
     const bindGroup = this._webgpuPipeline._getBindGroup();
     this.handle.setBindGroup(0, bindGroup);
   }

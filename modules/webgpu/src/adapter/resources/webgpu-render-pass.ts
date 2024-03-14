@@ -22,7 +22,7 @@ export class WebGPURenderPass extends RenderPass {
     super(device, props);
     this.device = device;
     const framebuffer =
-      (props.framebuffer as WebGPUFramebuffer) || device.canvasContext.getCurrentFramebuffer();
+      (props.framebuffer as WebGPUFramebuffer) || device.getCanvasContext().getCurrentFramebuffer();
 
     const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
 
@@ -40,6 +40,10 @@ export class WebGPURenderPass extends RenderPass {
             endOfPassWriteIndex: props.endTimestampIndex
           } as GPUComputePassTimestampWrites)
         : undefined;
+    }
+
+    if (!device.commandEncoder) {
+      throw new Error('commandEncoder not available');
     }
 
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);

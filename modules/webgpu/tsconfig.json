@@ -4,15 +4,14 @@
   "exclude": ["node_modules"],
   "compilerOptions": {
     "typeRoots": ["../../node_modules/@webgpu/types"],
-    "noImplicitAny": false,
-    "strictNullChecks": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
   },
   "references": [
     {"path": "../core"},
-    {"path": "../constants"},
-    {"path": "../engine"}
+    {"path": "../constants"}
   ]
 }

@@ -43,7 +43,7 @@ export function getBindGroup(
 export function getShaderLayoutBinding(
   shaderLayout: ComputeShaderLayout,
   bindingName: string
-): BindingDeclaration {
+): BindingDeclaration | null {
   const bindingLayout = shaderLayout.bindings.find(
     binding =>
       binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase()
@@ -51,7 +51,7 @@ export function getShaderLayoutBinding(
   if (!bindingLayout) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }
-  return bindingLayout;
+  return bindingLayout || null;
 }
 
 /**

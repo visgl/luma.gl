@@ -99,12 +99,21 @@ export class WebGPUDevice extends Device {
     const requiredLimits: Record<string, number> = {};
 
     if (props.requestMaxLimits) {
+      // Require all features
       requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
-      for (const key in adapter.limits) {
-        requiredLimits[key] = adapter.limits[key];
+
+      // Require all limits
+      // Filter out chrome specific keys (avoid crash)
+      const limits = Object.keys(adapter.limits).filter(
+        key => !['minSubgroupSize', 'maxSubgroupSize'].includes(key)
+      );
+      for (const key of limits) {
+        const limit = key as keyof GPUSupportedLimits;
+        const value = adapter.limits[limit];
+        if (typeof value === 'number') {
+          requiredLimits[limit] = value;
+        }
       }
-      delete requiredLimits.minSubgroupSize;
-      delete requiredLimits.maxSubgroupSize;
     }
 
     const gpuDevice = await adapter.requestDevice({

@@ -36,6 +36,9 @@ export function getVertexBufferLayout(
     // TODO verify that all stepModes for one buffer are the same
     let stepMode: 'vertex' | 'instance' = 'vertex';
     let byteStride = 0;
+    // @ts-ignore
+    const format: VertexFormat = mapping.format;
+
     // interleaved mapping {..., attributes: [{...}, ...]}
     if (mapping.attributes) {
       // const arrayStride = mapping.byteStride; TODO
@@ -43,16 +46,19 @@ export function getVertexBufferLayout(
         const attributeName = attributeMapping.attribute;
         const attributeLayout = findAttributeLayout(shaderLayout, attributeName, usedAttributes);
 
+        // @ts-ignore
+        const location: number = attributeLayout?.location;
+
         stepMode =
-          attributeLayout.stepMode ||
-          (attributeLayout.name.startsWith('instance') ? 'instance' : 'vertex');
+          attributeLayout?.stepMode ||
+          (attributeLayout?.name.startsWith('instance') ? 'instance' : 'vertex');
         vertexAttributes.push({
           format: getWebGPUVertexFormat(attributeMapping.format || mapping.format),
           offset: attributeMapping.byteOffset,
-          shaderLocation: attributeLayout.location
+          shaderLocation: location
         });
 
-        byteStride += decodeVertexFormat(mapping.format).byteLength;
+        byteStride += decodeVertexFormat(format).byteLength;
       }
       // non-interleaved mapping (just set offset and stride)
     } else {
@@ -60,13 +66,13 @@ export function getVertexBufferLayout(
       if (!attributeLayout) {
         continue; // eslint-disable-line no-continue
       }
-      byteStride = decodeVertexFormat(mapping.format).byteLength;
+      byteStride = decodeVertexFormat(format).byteLength;
 
       stepMode =
         attributeLayout.stepMode ||
         (attributeLayout.name.startsWith('instance') ? 'instance' : 'vertex');
       vertexAttributes.push({
-        format: getWebGPUVertexFormat(mapping.format),
+        format: getWebGPUVertexFormat(format),
         // We only support 0 offset for non-interleaved buffer layouts
         offset: 0,
         shaderLocation: attributeLayout.location
@@ -114,7 +120,7 @@ export function getBufferSlots(
   for (const mapping of bufferLayout) {
     // interleaved mapping {..., attributes: [{...}, ...]}
     if ('attributes' in mapping) {
-      for (const interleaved of mapping.attributes) {
+      for (const interleaved of mapping.attributes || []) {
         usedAttributes.add(interleaved.attribute);
       }
       // non-interleaved mapping (just set offset and stride)
@@ -143,7 +149,7 @@ function findAttributeLayout(
   shaderLayout: ShaderLayout,
   name: string,
   attributeNames: Set<string>
-): AttributeDeclaration {
+): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute => attribute.name === name);
   if (!attribute) {
     log.warn(`Unknown attribute ${name}`)();

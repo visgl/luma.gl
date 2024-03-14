@@ -22,7 +22,7 @@ export class WebGPUVertexArray extends VertexArray {
   readonly handle: never;
 
   // Create a VertexArray
-  constructor(device: WebGPUDevice, props?: VertexArrayProps) {
+  constructor(device: WebGPUDevice, props: VertexArrayProps) {
     super(device, props);
     this.device = device;
   }
@@ -60,6 +60,7 @@ export class WebGPUVertexArray extends VertexArray {
       log.warn('setting index buffer', webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType)();
       webgpuRenderPass.handle.setIndexBuffer(
         webgpuIndexBuffer?.handle,
+        // @ts-expect-error TODO - we must enforce type
         webgpuIndexBuffer?.indexType
       );
     }

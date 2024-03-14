@@ -17,6 +17,16 @@ function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStenc
   return descriptor.depthStencil;
 }
 
+function addDepthStencilFront(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
+  const depthStencil = addDepthStencil(descriptor);
+  return depthStencil.stencilFront as GPUStencilFaceState;
+}
+
+function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStencilFaceState {
+  const depthStencil = addDepthStencil(descriptor);
+  return depthStencil.stencilBack as GPUStencilFaceState;
+}
+
 /**
  * Supports for luma.gl's flat parameter space
  * Populates the corresponding sub-objects in a GPURenderPipelineDescriptor
@@ -112,9 +122,10 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     value: any,
     descriptor: GPURenderPipelineDescriptor
   ) => {
-    const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront.compare = value;
-    depthStencil.stencilBack.compare = value;
+    const stencilFront = addDepthStencilFront(descriptor);
+    const stencilBack = addDepthStencilBack(descriptor);
+    stencilFront.compare = value;
+    stencilBack.compare = value;
   },
 
   stencilPassOperation: (
@@ -122,9 +133,10 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     value: any,
     descriptor: GPURenderPipelineDescriptor
   ) => {
-    const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront.passOp = value;
-    depthStencil.stencilBack.passOp = value;
+    const stencilFront = addDepthStencilFront(descriptor);
+    const stencilBack = addDepthStencilBack(descriptor);
+    stencilFront.passOp = value;
+    stencilBack.passOp = value;
   },
 
   stencilFailOperation: (
@@ -132,9 +144,10 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     value: any,
     descriptor: GPURenderPipelineDescriptor
   ) => {
-    const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront.failOp = value;
-    depthStencil.stencilBack.failOp = value;
+    const stencilFront = addDepthStencilFront(descriptor);
+    const stencilBack = addDepthStencilBack(descriptor);
+    stencilFront.failOp = value;
+    stencilBack.failOp = value;
   },
 
   stencilDepthFailOperation: (
@@ -142,9 +155,10 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     value: any,
     descriptor: GPURenderPipelineDescriptor
   ) => {
-    const depthStencil = addDepthStencil(descriptor);
-    depthStencil.stencilFront.depthFailOp = value;
-    depthStencil.stencilBack.depthFailOp = value;
+    const stencilFront = addDepthStencilFront(descriptor);
+    const stencilBack = addDepthStencilBack(descriptor);
+    stencilFront.depthFailOp = value;
+    stencilBack.depthFailOp = value;
   },
 
   // MULTISAMPLE
@@ -288,6 +302,7 @@ function setParameters(
 }
 
 function addColorState(descriptor: GPURenderPipelineDescriptor): GPUColorTargetState[] {
+  // @ts-ignore
   descriptor.fragment.targets = descriptor.fragment?.targets || [];
   if (!Array.isArray(descriptor.fragment?.targets)) {
     throw new Error('colorstate');
