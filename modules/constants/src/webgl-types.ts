@@ -368,7 +368,7 @@ export type GLFunctionParameters = {
   colorMask?: [boolean, boolean, boolean, boolean] | boolean[];
 
   cull?: boolean;
-  cullFace?: GLCullFaceMode;
+  cullFace?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
 
   depthTest?: boolean;
   depthFunc?: GLFunction;
@@ -610,13 +610,15 @@ type EXT_depth_clamp = {
 type WEBGL_provoking_vertex = {
   // Constants in GL enum
   /** Set the provoking vertex */
-  provokingVertexWEBGL(provokeMode: GLProvokingVertex): void;
+  provokingVertexWEBGL(
+    provokeMode: GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL
+  ): void;
 };
 
 /** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
 type WEBGL_polygon_mode = {
   /** Set polygon mode of face to fill or line */
-  polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GLPolygonMode): void;
+  polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GL.LINE_WEBGL | GL.FILL_WEBGL): void;
 };
 
 /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */
