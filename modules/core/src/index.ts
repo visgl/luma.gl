@@ -103,7 +103,9 @@ export type {
   ColorParameters,
   MultisampleParameters,
   RenderPassParameters,
-  RenderPipelineParameters
+  RenderPipelineParameters,
+  PolygonMode,
+  ProvokingVertex
 } from './adapter/types/parameters';
 
 export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/attachments';

@@ -206,6 +206,10 @@ export type GLStencilOp =
   | GL.DECR_WRAP
   | GL.INVERT;
 
+export type GLPolygonMode = GL.FILL_WEBGL | GL.LINE_WEBGL;
+export type GLCullFaceMode = GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
+export type GLProvokingVertex = GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL;
+
 /** Parameters for textures and samplers */
 export type GLSamplerParameters = {
   /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. */
@@ -364,7 +368,7 @@ export type GLFunctionParameters = {
   colorMask?: [boolean, boolean, boolean, boolean] | boolean[];
 
   cull?: boolean;
-  cullFace?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
+  cullFace?: GLCullFaceMode;
 
   depthTest?: boolean;
   depthFunc?: GLFunction;
@@ -606,15 +610,13 @@ type EXT_depth_clamp = {
 type WEBGL_provoking_vertex = {
   // Constants in GL enum
   /** Set the provoking vertex */
-  provokingVertexWEBGL(
-    provokeMode: GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL
-  ): void;
+  provokingVertexWEBGL(provokeMode: GLProvokingVertex): void;
 };
 
 /** WEBGL_polygon_mode https://registry.khronos.org/webgl/extensions/WEBGL_polygon_mode/ */
 type WEBGL_polygon_mode = {
   /** Set polygon mode of face to fill or line */
-  polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GL.LINE_WEBGL | GL.FILL_WEBGL): void;
+  polygonModeWEBGL(face: GL.FRONT | GL.BACK, mode: GLPolygonMode): void;
 };
 
 /** WEBGL_clip_cull_distance https://registry.khronos.org/webgl/extensions/WEBGL_clip_cull_distance/ */

@@ -27,6 +27,8 @@ export type IndexFormat = 'uint16' | 'uint32';
 
 export type CullMode = 'none' | 'front' | 'back';
 export type FrontFace = 'ccw' | 'cw';
+export type PolygonMode = 'fill' | 'line';
+export type ProvokingVertex = 'first' | 'last';
 
 // Rasterization Parameters
 

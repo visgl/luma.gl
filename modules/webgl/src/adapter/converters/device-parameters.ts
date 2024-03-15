@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
-import {Device, log, Parameters} from '@luma.gl/core';
-import {GL, GLFunction} from '@luma.gl/constants';
+import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
+import {GL, GLFunction, GLPolygonMode, GLProvokingVertex} from '@luma.gl/constants';
 import type {GLBlendEquation, GLBlendFunction, GLParameters, GLStencilOp} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
@@ -156,10 +156,14 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     const ext = extensions.WEBGL_provoking_vertex;
 
     if (parameters.provokingVertex) {
-      const vertex = map('provokingVertex', parameters.provokingVertex, {
-        first: GL.FIRST_VERTEX_CONVENTION_WEBGL,
-        last: GL.LAST_VERTEX_CONVENTION_WEBGL
-      });
+      const vertex = map<ProvokingVertex, GLProvokingVertex>(
+        'provokingVertex',
+        parameters.provokingVertex,
+        {
+          first: GL.FIRST_VERTEX_CONVENTION_WEBGL,
+          last: GL.LAST_VERTEX_CONVENTION_WEBGL
+        }
+      );
       ext?.provokingVertexWEBGL(vertex);
     }
   }
@@ -169,9 +173,9 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     const ext = extensions.WEBGL_polygon_mode;
 
     if (parameters.polygonMode) {
-      const mode = map('polygonMode', parameters.provokingVertex, {
+      const mode = map<PolygonMode, GLPolygonMode>('polygonMode', parameters.polygonMode, {
         fill: GL.FILL_WEBGL,
-        lint: GL.LINE_WEBGL
+        line: GL.LINE_WEBGL
       });
       ext?.polygonModeWEBGL(GL.FRONT, mode);
       ext?.polygonModeWEBGL(GL.BACK, mode);
