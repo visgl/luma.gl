@@ -4,8 +4,8 @@
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
 import {Device, log, Parameters} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
-import type {GLBlendEquation, GLBlendFunction, GLParameters} from '@luma.gl/constants';
+import {GL, GLFunction} from '@luma.gl/constants';
+import type {GLBlendEquation, GLBlendFunction, GLParameters, GLStencilOp} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
@@ -323,8 +323,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     });
 */
 
-export function convertCompareFunction(parameter: string, value: CompareFunction): GL {
-  return map(parameter, value, {
+export function convertCompareFunction(parameter: string, value: CompareFunction): GLFunction {
+  return map<CompareFunction, GLFunction>(parameter, value, {
     never: GL.NEVER,
     less: GL.LESS,
     equal: GL.EQUAL,
@@ -336,8 +336,8 @@ export function convertCompareFunction(parameter: string, value: CompareFunction
   });
 }
 
-export function convertToCompareFunction(parameter: string, value: GL): CompareFunction {
-  return map(parameter, value, {
+export function convertToCompareFunction(parameter: string, value: GLFunction): CompareFunction {
+  return map<GLFunction, CompareFunction>(parameter, value, {
     [GL.NEVER]: 'never',
     [GL.LESS]: 'less',
     [GL.EQUAL]: 'equal',
@@ -350,7 +350,7 @@ export function convertToCompareFunction(parameter: string, value: GL): CompareF
 }
 
 function convertStencilOperation(parameter: string, value: StencilOperation): GL {
-  return map(parameter, value, {
+  return map<StencilOperation, GLStencilOp>(parameter, value, {
     keep: GL.KEEP,
     zero: GL.ZERO,
     replace: GL.REPLACE,
@@ -366,17 +366,17 @@ function convertBlendOperationToEquation(
   parameter: string,
   value: BlendOperation
 ): GLBlendEquation {
-  return map(parameter, value, {
+  return map<BlendOperation, GLBlendEquation>(parameter, value, {
     add: GL.FUNC_ADD,
     subtract: GL.FUNC_SUBTRACT,
     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,
     min: GL.MIN,
     max: GL.MAX
-  } as Record<BlendOperation, GLBlendEquation>);
+  });
 }
 
 function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GLBlendFunction {
-  return map(parameter, value, {
+  return map<BlendFactor, GLBlendFunction>(parameter, value, {
     one: GL.ONE,
     zero: GL.ZERO,
     'src-color': GL.SRC_COLOR,
@@ -386,15 +386,20 @@ function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GL
     'src-alpha': GL.SRC_ALPHA,
     'one-minus-src-alpha': GL.ONE_MINUS_SRC_ALPHA,
     'dst-alpha': GL.DST_ALPHA,
-    'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA
-  } as Record<BlendFactor, GLBlendFunction>);
+    'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA,
+    'src-alpha-saturated': GL.SRC_ALPHA_SATURATE,
+    'constant-color': GL.CONSTANT_COLOR,
+    'one-minus-constant-color': GL.ONE_MINUS_CONSTANT_COLOR,
+    'constant-alpha': GL.CONSTANT_ALPHA,
+    'one-minus-constant-alpha': GL.ONE_MINUS_CONSTANT_ALPHA
+  });
 }
 
 function message(parameter: string, value: any): string {
   return `Illegal parameter ${value} for ${parameter}`;
 }
 
-function map(parameter: string, value: any, valueMap: Record<string, any>): any {
+function map<K extends string | number, V>(parameter: string, value: K, valueMap: Record<K, V>): V {
   if (!(value in valueMap)) {
     throw new Error(message(parameter, value));
   }

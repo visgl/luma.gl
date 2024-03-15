@@ -130,8 +130,10 @@ export type BlendFactor =
   | 'dst-alpha'
   | 'one-minus-dst-alpha'
   | 'src-alpha-saturated'
-  | 'blend-color'
-  | 'one-minus-blend-color';
+  | 'constant-color'
+  | 'one-minus-constant-color'
+  | 'constant-alpha'
+  | 'one-minus-constant-alpha';
 
 /** BlendOperation defines the algorithm used to combine source and destination blend factors: */
 export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
