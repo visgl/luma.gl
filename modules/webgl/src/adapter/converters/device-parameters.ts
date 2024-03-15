@@ -4,8 +4,16 @@
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
 import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
-import {GL, GLFunction, GLPolygonMode, GLProvokingVertex} from '@luma.gl/constants';
-import type {GLBlendEquation, GLBlendFunction, GLParameters, GLStencilOp} from '@luma.gl/constants';
+import {GL} from '@luma.gl/constants';
+import type {
+  GLBlendEquation,
+  GLBlendFunction,
+  GLFunction,
+  GLParameters,
+  GLPolygonMode,
+  GLProvokingVertex,
+  GLStencilOp
+} from '@luma.gl/constants';
 import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
