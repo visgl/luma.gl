@@ -25,5 +25,7 @@ export type {
   GLFunctionParameters,
   GLParameters,
   GLLimits,
-  GLExtensions
+  GLExtensions,
+  GLPolygonMode,
+  GLProvokingVertex
 } from './webgl-types';

@@ -31,6 +31,8 @@ export type IndexFormat = 'uint16' | 'uint32';
 
 export type CullMode = 'none' | 'front' | 'back';
 export type FrontFace = 'ccw' | 'cw';
+export type PolygonMode = 'fill' | 'line';
+export type ProvokingVertex = 'first' | 'last';
 
 // Rasterization Parameters
 
@@ -134,8 +136,10 @@ export type BlendFactor =
   | 'dst-alpha'
   | 'one-minus-dst-alpha'
   | 'src-alpha-saturated'
-  | 'blend-color'
-  | 'one-minus-blend-color';
+  | 'constant-color'
+  | 'one-minus-constant-color'
+  | 'constant-alpha'
+  | 'one-minus-constant-alpha';
 
 /** BlendOperation defines the algorithm used to combine source and destination blend factors: */
 export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
