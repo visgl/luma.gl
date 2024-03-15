@@ -206,6 +206,10 @@ export type GLStencilOp =
   | GL.DECR_WRAP
   | GL.INVERT;
 
+export type GLPolygonMode = GL.FILL_WEBGL | GL.LINE_WEBGL;
+export type GLCullFaceMode = GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
+export type GLProvokingVertex = GL.FIRST_VERTEX_CONVENTION_WEBGL | GL.LAST_VERTEX_CONVENTION_WEBGL;
+
 /** Parameters for textures and samplers */
 export type GLSamplerParameters = {
   /** Sets the wrap parameter for texture coordinate  to either GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, or GL_REPEAT. */
