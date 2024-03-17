@@ -40,7 +40,11 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.autoCreateAttachmentTextures();
 
       /** Attach from a map of attachments */
-      this.gl.bindFramebuffer(GL.FRAMEBUFFER, this.handle);
+      // @ts-expect-error
+      const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
+        GL.FRAMEBUFFER,
+        this.handle
+      );
 
       // Walk the attachments
       for (let i = 0; i < this.colorAttachments.length; ++i) {
@@ -67,7 +71,7 @@ export class WEBGLFramebuffer extends Framebuffer {
         }
       }
 
-      this.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+      this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
     }
   }
 
