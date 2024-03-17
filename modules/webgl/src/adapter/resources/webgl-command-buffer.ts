@@ -153,6 +153,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
   const {framebuffer, destroyFramebuffer} = getFramebuffer(source);
+  let prevHandle: WebGLFramebuffer | null | undefined;
   try {
     const webglBuffer = destination as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
@@ -170,7 +171,8 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     // }
 
     device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
-    device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
+    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
+    prevHandle = device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
 
     device.gl.readPixels(
       origin[0],
@@ -183,7 +185,10 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     );
   } finally {
     device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
-    device.gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+    // prevHandle may be unassigned if the try block failed before binding
+    if (prevHandle !== undefined) {
+      device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+    }
 
     if (destroyFramebuffer) {
       framebuffer.destroy();
@@ -218,12 +223,15 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   const {
     /** Texture to copy to/from. */
     source,
-    /**  Mip-map level of the texture to copy to/from. (Default 0) */
-    // mipLevel = 0,
+    /**  Mip-map level of the texture to copy to (Default 0) */
+    destinationMipLevel = 0,
     /** Defines which aspects of the texture to copy to/from. */
     // aspect = 'all',
-    /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
+    /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
     origin = [0, 0],
+
+    /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
+    destinationOrigin = [0, 0],
 
     /** Texture to copy to/from. */
     destination
@@ -237,93 +245,72 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
 
   let {
     width = options.destination.width,
-    height = options.destination.width
+    height = options.destination.height
     // depthOrArrayLayers = 0
   } = options;
 
-  const destinationMipmaplevel = 0;
-  const destinationInternalFormat = GL.RGBA;
-
   const {framebuffer, destroyFramebuffer} = getFramebuffer(source);
   const [sourceX, sourceY] = origin;
+  const [destinationX, destinationY, destinationZ] = destinationOrigin;
 
-  const isSubCopy = false;
-  // typeof destinationX !== 'undefined' ||
-  // typeof destinationY !== 'undefined' ||
-  // typeof destinationZ !== 'undefined';
-
-  // destinationX = destinationX || 0;
-  // destinationY = destinationY || 0;
-  // destinationZ = destinationZ || 0;
-  device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
+  // @ts-expect-error native bindFramebuffer is overridden by our state tracker
+  const prevHandle: WebGLFramebuffer | null = device.gl.bindFramebuffer(
+    GL.FRAMEBUFFER,
+    framebuffer.handle
+  );
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
 
-  let texture = null;
+  let texture: WEBGLTexture = null;
   let textureTarget: GL;
   if (destination instanceof WEBGLTexture) {
     texture = destination;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
     texture.bind(0);
-    textureTarget = texture.destination;
+    textureTarget = texture.target;
   } else {
-    throw new Error('whoops');
-    //  textureTarget = destination;
+    throw new Error('invalid destination');
   }
 
-  if (!isSubCopy) {
-    device.gl.copyTexImage2D(
-      textureTarget,
-      destinationMipmaplevel,
-      destinationInternalFormat,
-      sourceX,
-      sourceY,
-      width,
-      height,
-      0 /* border must be 0 */
-    );
-  } else {
-    // switch (textureTarget) {
-    //   case GL.TEXTURE_2D:
-    //   case GL.TEXTURE_CUBE_MAP:
-    //     device.gl.copyTexSubImage2D(
-    //       textureTarget,
-    //       destinationMipmaplevel,
-    //       destinationX,
-    //       destinationY,
-    //       sourceX,
-    //       sourceY,
-    //       width,
-    //       height
-    //     );
-    //     break;
-    //   case GL.TEXTURE_2D_ARRAY:
-    //   case GL.TEXTURE_3D:
-    //     device.gl.copyTexSubImage3D(
-    //       textureTarget,
-    //       destinationMipmaplevel,
-    //       destinationX,
-    //       destinationY,
-    //       destinationZ,
-    //       sourceX,
-    //       sourceY,
-    //       width,
-    //       height
-    //     );
-    //     break;
-    //   default:
-    // }
+  switch (textureTarget) {
+    case GL.TEXTURE_2D:
+    case GL.TEXTURE_CUBE_MAP:
+      device.gl.copyTexSubImage2D(
+        textureTarget,
+        destinationMipLevel,
+        destinationX,
+        destinationY,
+        sourceX,
+        sourceY,
+        width,
+        height
+      );
+      break;
+    case GL.TEXTURE_2D_ARRAY:
+    case GL.TEXTURE_3D:
+      device.gl.copyTexSubImage3D(
+        textureTarget,
+        destinationMipLevel,
+        destinationX,
+        destinationY,
+        destinationZ,
+        sourceX,
+        sourceY,
+        width,
+        height
+      );
+      break;
+    default:
   }
+
   if (texture) {
     texture.unbind();
   }
-  // ts-expect-error
-  // device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+  device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
   if (destroyFramebuffer) {
     framebuffer.destroy();
   }
-  return texture;
 }
 
 // Returns number of components in a specific readPixels WebGL format
