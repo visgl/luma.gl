@@ -183,6 +183,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     );
   } finally {
     device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+    // prevHandle may be unassigned if the try block failed before binding
     if (prevHandle !== undefined) {
       device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
     }

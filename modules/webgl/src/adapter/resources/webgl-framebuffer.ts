@@ -40,7 +40,7 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.autoCreateAttachmentTextures();
 
       /** Attach from a map of attachments */
-      // @ts-expect-error
+      // @ts-expect-error native bindFramebuffer is overridden by our state tracker
       const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
         GL.FRAMEBUFFER,
         this.handle
