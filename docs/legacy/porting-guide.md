@@ -316,7 +316,12 @@ The following table shows mappings from luma v8 WebGL parameters to luma v9 WebG
 | [`stencilOp`][stencilop] /  `GL.STENCIL_PASS_DEPTH_PASS` | `stencilPassOperation`             |                                        | **`'keep'`**                      |
 | [`stencilOp`][stencilop] / `GL.STENCIL_PASS_DEPTH_FAIL`  | `stencilDepthFailOperation`        |                                        | **`'keep'`**                      |
 | [`stencilOp`][stencilop] / `GL.STENCIL_FAIL`             | `stencilFailOperation`             |                                        | **`'keep'`**                      |
-| [`stencilOpSeparate`][stencilopseparate]                 | ]                                  | N/                                     |
+| [`stencilOpSeparate`][stencilopseparate]                 |                                    |                                        |                                   |
+| **Sampler Parameters**                                   |
+| `magFilter` / `GL.TEXTURE_MAG_FILTER` *                  | `magFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |               | `'linear'`, `'nearest'`, ...      |
+| `minFilter` / `GL.TEXTURE_MIN_FILTER` *                  | `minFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |               | `'linear'`, `'nearest'`, ...      |
+
+\* Note that the `magFilter`, `minFilter`, and `mipmapFilter` parameters accept only `'nearest'` and `'linear'` as values. To disable use of mipmaps on a texture that includes them, set `lodMaxClamp` to zero.
 
 ---
 
