@@ -31,13 +31,13 @@ But there are also explicit features such as command queues, bind groups and ren
 
 ## WebGL compatibility
 
-The WebGPU designers had many challenging goals, however backwards compatibility WebGL was  clearly not among them. While this was likely This lack of backwards is quite significant. And it is not just a simple matter of essentially the same APIs being arbitrarily renamed, but the structure of the API is  different and the behavior of objects (immutability etc) does invalidate many reasonable assumptions made by WebGL applications. 
+The WebGPU designers had many challenging goals, however backwards compatibility WebGL was  clearly not among them. While this was likely This lack of backwards is quite significant. And it is not just a simple matter of essentially the same APIs being arbitrarily renamed, but the structure of the API is different and the behavior of objects (immutability etc) does invalidate many reasonable assumptions made by WebGL applications. 
 
 ## Breaking changes
 
-The luma.gl API with its focus on providing direct access to the GPU and the GPU API is perhaps impacted more by the incompatibilities between the WebGPU and the WebGL APIs thatn other  WebGL frameworks that tend to provide higher-level, game-engine type abstractions in their APIs (such as a "renderer" class). 
+The luma.gl API with its focus on providing direct access to the GPU and the GPU API is perhaps impacted more by the incompatibilities between the WebGPU and the WebGL APIs than other WebGL frameworks that tend to provide higher-level, game-engine type abstractions in their APIs (such as a "renderer" class). 
 
-To be sure, the effort required to support WebGPU is big in both cases, but sometimes the required implementation changes in other frameworks can perhapsw be hidden inside their abstractions, and avoid breaking API changes, whereas in luma.gl, we have to expose the change and break some APIs.
+To be sure, the effort required to support WebGPU is big in both cases, but sometimes the required implementation changes in other frameworks can perhaps be hidden inside their abstractions, and avoid breaking API changes, whereas in luma.gl, we have to expose the change and break some APIs.
 
 ## Differences
 
