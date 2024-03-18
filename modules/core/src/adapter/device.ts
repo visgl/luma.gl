@@ -476,6 +476,11 @@ export abstract class Device {
     throw new Error('not implemented');
   }
 
+  /** @deprecated - will be removed - should use for debugging only */
+  resetWebGL(): void {
+    throw new Error('not implemented');
+  }
+
   timestamp: number = 0;
 
   /** A monotonic counter for tracking buffer and texture updates */
