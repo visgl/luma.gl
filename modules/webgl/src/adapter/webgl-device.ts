@@ -62,7 +62,11 @@ import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
 
 import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
-import {setGLParameters, getGLParameters} from '../context/parameters/unified-parameter-api';
+import {
+  setGLParameters,
+  getGLParameters,
+  resetGLParameters
+} from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {clear} from '../classic/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
@@ -410,6 +414,11 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     stencil?: any;
   }): void {
     clear(this, options);
+  }
+
+  override resetWebGL(): void {
+    log.warn('WebGLDevice.resetWebGL is deprecated, use only for debugging')();
+    resetGLParameters(this.gl);
   }
 
   //
