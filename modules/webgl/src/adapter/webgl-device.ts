@@ -417,6 +417,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   override resetWebGL(): void {
+    log.warn('WebGLDevice.resetWebGL is deprecated, use only for debugging')();
     resetGLParameters(this.gl);
   }
 
