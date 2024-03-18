@@ -4,6 +4,11 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.4 - Mar 18, 2024
+
+- feat(core): Add missing blend factors, restrict types in device-parameters (#2040)
+- fix(webgl) texture to texture copy; framebuffer state leak (#2042)
+
 ## v9.0.3 - Mar 14, 2024
 
 - No change, fix release

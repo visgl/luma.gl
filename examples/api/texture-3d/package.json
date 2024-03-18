@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-texture-3d",
-  "version": "9.0.3",
+  "version": "9.0.4",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.3",
-    "@luma.gl/engine": "9.0.3",
-    "@luma.gl/shadertools": "9.0.3",
-    "@luma.gl/webgl": "9.0.3",
+    "@luma.gl/core": "9.0.4",
+    "@luma.gl/engine": "9.0.4",
+    "@luma.gl/shadertools": "9.0.4",
+    "@luma.gl/webgl": "9.0.4",
     "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {
