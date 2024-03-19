@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "9.0.4",
+  "version": "9.0.5",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "@luma.gl/core": "^9.0.0"
   },
   "dependencies": {
-    "@luma.gl/shadertools": "9.0.4",
+    "@luma.gl/shadertools": "9.0.5",
     "@math.gl/core": "^4.0.0",
     "@probe.gl/log": "^4.0.2",
     "@probe.gl/stats": "^4.0.2"

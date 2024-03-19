@@ -4,6 +4,12 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.5 - Mar 19, 2024
+
+- Do not reset scissorTest in WEBGLRenderPass (#2045)
+- fix(webgl): withParametersWebGL return value (#2044)
+- feat(webgl): Add device.resetWebGL() for debugging (#2037)
+
 ## v9.0.4 - Mar 18, 2024
 
 - feat(core): Add missing blend factors, restrict types in device-parameters (#2040)

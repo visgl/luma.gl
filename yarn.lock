@@ -3278,7 +3278,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/constants@npm:9.0.1, @luma.gl/constants@workspace:modules/constants":
+"@luma.gl/constants@npm:9.0.4, @luma.gl/constants@workspace:modules/constants":
   version: 0.0.0-use.local
   resolution: "@luma.gl/constants@workspace:modules/constants"
   languageName: unknown
@@ -3288,16 +3288,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/core-tests@workspace:modules/core-tests"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/test-utils": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/test-utils": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
   languageName: unknown
   linkType: soft
 
-"@luma.gl/core@npm:9.0.1, @luma.gl/core@workspace:modules/core":
+"@luma.gl/core@npm:9.0.4, @luma.gl/core@workspace:modules/core":
   version: 0.0.0-use.local
   resolution: "@luma.gl/core@workspace:modules/core"
   dependencies:
@@ -3309,11 +3309,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/engine@npm:9.0.1, @luma.gl/engine@workspace:modules/engine":
+"@luma.gl/engine@npm:9.0.4, @luma.gl/engine@workspace:modules/engine":
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
-    "@luma.gl/shadertools": "npm:9.0.1"
+    "@luma.gl/shadertools": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     "@probe.gl/log": "npm:^4.0.2"
     "@probe.gl/stats": "npm:^4.0.2"
@@ -3322,12 +3322,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gltf@npm:9.0.1, @luma.gl/gltf@workspace:modules/gltf":
+"@luma.gl/gltf@npm:9.0.4, @luma.gl/gltf@workspace:modules/gltf":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
     "@loaders.gl/textures": "npm:^4.1.0"
-    "@luma.gl/shadertools": "npm:9.0.1"
+    "@luma.gl/shadertools": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
   peerDependencies:
     "@luma.gl/core": ^9.0.0
@@ -3335,7 +3335,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/shadertools@npm:9.0.1, @luma.gl/shadertools@workspace:modules/shadertools":
+"@luma.gl/shadertools@npm:9.0.4, @luma.gl/shadertools@workspace:modules/shadertools":
   version: 0.0.0-use.local
   resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
   dependencies:
@@ -3346,7 +3346,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/test-utils@npm:9.0.1, @luma.gl/test-utils@workspace:modules/test-utils":
+"@luma.gl/test-utils@npm:9.0.4, @luma.gl/test-utils@workspace:modules/test-utils":
   version: 0.0.0-use.local
   resolution: "@luma.gl/test-utils@workspace:modules/test-utils"
   dependencies:
@@ -3361,18 +3361,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgl@npm:9.0.1, @luma.gl/webgl@workspace:modules/webgl":
+"@luma.gl/webgl@npm:9.0.4, @luma.gl/webgl@workspace:modules/webgl":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
-    "@luma.gl/constants": "npm:9.0.1"
+    "@luma.gl/constants": "npm:9.0.4"
     "@probe.gl/env": "npm:^4.0.2"
   peerDependencies:
     "@luma.gl/core": ^9.0.0
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgpu@npm:9.0.1, @luma.gl/webgpu@workspace:modules/webgpu":
+"@luma.gl/webgpu@npm:9.0.4, @luma.gl/webgpu@workspace:modules/webgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
@@ -10058,10 +10058,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-animation@workspace:examples/api/animation"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10072,11 +10072,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-cubemap@workspace:examples/api/cubemap"
   dependencies:
-    "@luma.gl/constants": "npm:9.0.1"
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/constants": "npm:9.0.4"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10087,10 +10087,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10103,12 +10103,12 @@ __metadata:
   dependencies:
     "@loaders.gl/core": "npm:^4.0.4"
     "@loaders.gl/gltf": "npm:^4.0.4"
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/gltf": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/gltf": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10119,10 +10119,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-instancing-high@workspace:examples/tutorials/hello-instancing"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
   languageName: unknown
@@ -10132,11 +10132,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
   languageName: unknown
@@ -10146,11 +10146,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-instancing@workspace:examples/showcase/instancing"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10161,10 +10161,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-lighting@workspace:examples/tutorials/lighting"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10175,10 +10175,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10189,10 +10189,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
   languageName: unknown
@@ -10202,10 +10202,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-shader-modules@workspace:examples/tutorials/shader-modules"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
   languageName: unknown
@@ -10215,10 +10215,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgl": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgl": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10229,10 +10229,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-computeboids@workspace:examples/webgpu/computeboids"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10244,10 +10244,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/portable/triangle"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10258,10 +10258,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-instance-uniforms@workspace:examples/portable/instanced-cubes"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10272,10 +10272,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-rotating-cube@workspace:examples/portable/rotating-cube"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10286,10 +10286,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-textured-cube@workspace:examples/webgpu/textured-cube"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
@@ -10300,10 +10300,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-two-cubes@workspace:examples/portable/two-cubes"
   dependencies:
-    "@luma.gl/core": "npm:9.0.1"
-    "@luma.gl/engine": "npm:9.0.1"
-    "@luma.gl/shadertools": "npm:9.0.1"
-    "@luma.gl/webgpu": "npm:9.0.1"
+    "@luma.gl/core": "npm:9.0.4"
+    "@luma.gl/engine": "npm:9.0.4"
+    "@luma.gl/shadertools": "npm:9.0.4"
+    "@luma.gl/webgpu": "npm:9.0.4"
     "@math.gl/core": "npm:^4.0.0"
     typescript: "npm:^5.3.0"
     vite: "npm:^5.0.0"
