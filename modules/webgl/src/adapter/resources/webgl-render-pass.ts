@@ -81,8 +81,8 @@ export class WEBGLRenderPass extends RenderPass {
         glParameters.viewport = parameters.viewport;
       }
     }
-    glParameters.scissorTest = Boolean(parameters.scissorRect);
     if (parameters.scissorRect) {
+      glParameters.scissorTest = true;
       glParameters.scissor = parameters.scissorRect;
     }
     if (parameters.blendConstant) {
