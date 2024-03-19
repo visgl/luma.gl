@@ -412,7 +412,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
   }
 
   override withParametersWebGL(parameters: any, func: any): any {
-    withGLParameters(this.gl, parameters, func);
+    return withGLParameters(this.gl, parameters, func);
   }
 
   override clearWebGL(options?: {
