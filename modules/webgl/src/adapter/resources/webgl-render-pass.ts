@@ -95,6 +95,9 @@ export class WEBGLRenderPass extends RenderPass {
       // Does this work?
       parameters[GL.STENCIL_REF] = parameters.stencilReference;
     }
+    if (parameters.colorMask) {
+      glParameters.colorMask = parameters.colorMask;
+    }
 
     this.glParameters = glParameters;
 

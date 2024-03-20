@@ -180,6 +180,9 @@ export type RenderPassParameters = {
   blendConstant?: number[]; // GPUColor
   /** Stencil operation "replace" sets the value to stencilReference */
   stencilReference?: number; // GPUStencilValue
+
+  /** Sets mask for channels (RGBA) to render/clear **/
+  colorMask?: boolean[];
 };
 
 export type RenderPipelineParameters = RasterizationParameters &
