@@ -4,6 +4,12 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.6 - Mar 21, 2024
+
+- webgl: Support colorMask in RenderPass (#2046)
+- fix: Support sharing cached Pipelines with different parameters/topology in WebGL (#2034)
+- fix(webgl): show shader debug message on compilation error (#2047)
+
 ## v9.0.5 - Mar 19, 2024
 
 - Do not reset scissorTest in WEBGLRenderPass (#2045)
