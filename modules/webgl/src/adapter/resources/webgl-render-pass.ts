@@ -17,8 +17,7 @@ const GL_STENCIL_BUFFER_BIT = 0x00000400;
 const GL_COLOR_BUFFER_BIT = 0x00004000;
 
 const GL_COLOR = 0x1800;
-const {RED, GREEN, BLUE, ALPHA} = GPUColorWrite;
-const COLOR_CHANNELS = [RED, GREEN, BLUE, ALPHA];
+const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
