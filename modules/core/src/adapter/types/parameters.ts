@@ -184,6 +184,9 @@ export type RenderPassParameters = {
   blendConstant?: number[]; // GPUColor
   /** Stencil operation "replace" sets the value to stencilReference */
   stencilReference?: number; // GPUStencilValue
+
+  /** Bitmask controlling which channels are are written to when drawing/clearing. defaulting to 0xF */
+  colorMask?: number;
 };
 
 export type RenderPipelineParameters = RasterizationParameters &
