@@ -17,6 +17,7 @@ const GL_STENCIL_BUFFER_BIT = 0x00000400;
 const GL_COLOR_BUFFER_BIT = 0x00004000;
 
 const GL_COLOR = 0x1800;
+const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
@@ -94,6 +95,12 @@ export class WEBGLRenderPass extends RenderPass {
       // parameters.stencilFunc = [func, ref, mask];
       // Does this work?
       parameters[GL.STENCIL_REF] = parameters.stencilReference;
+    }
+
+    if (parameters.colorMask) {
+      glParameters.colorMask = COLOR_CHANNELS.map(channel =>
+        Boolean(channel & parameters.colorMask)
+      );
     }
 
     this.glParameters = glParameters;
