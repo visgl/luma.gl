@@ -159,11 +159,11 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
 
   // WEBGL EXTENSIONS
 
-  if (device.features.has('provoking-vertex-webgl')) {
-    const extensions = webglDevice.getExtension('WEBGL_provoking_vertex');
-    const ext = extensions.WEBGL_provoking_vertex;
+  if (parameters.provokingVertex) {
+    if (device.features.has('provoking-vertex-webgl')) {
+      const extensions = webglDevice.getExtension('WEBGL_provoking_vertex');
+      const ext = extensions.WEBGL_provoking_vertex;
 
-    if (parameters.provokingVertex) {
       const vertex = map<ProvokingVertex, GLProvokingVertex>(
         'provokingVertex',
         parameters.provokingVertex,
@@ -176,21 +176,22 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     }
   }
 
-  if (device.features.has('polygon-mode-webgl')) {
-    const extensions = webglDevice.getExtension('WEBGL_polygon_mode');
-    const ext = extensions.WEBGL_polygon_mode;
+  if (parameters.polygonMode || parameters.polygonOffsetLine) {
+    if (device.features.has('polygon-mode-webgl')) {
+      if (parameters.polygonMode) {
+        const extensions = webglDevice.getExtension('WEBGL_polygon_mode');
+        const ext = extensions.WEBGL_polygon_mode;
+        const mode = map<PolygonMode, GLPolygonMode>('polygonMode', parameters.polygonMode, {
+          fill: GL.FILL_WEBGL,
+          line: GL.LINE_WEBGL
+        });
+        ext?.polygonModeWEBGL(GL.FRONT, mode);
+        ext?.polygonModeWEBGL(GL.BACK, mode);
+      }
 
-    if (parameters.polygonMode) {
-      const mode = map<PolygonMode, GLPolygonMode>('polygonMode', parameters.polygonMode, {
-        fill: GL.FILL_WEBGL,
-        line: GL.LINE_WEBGL
-      });
-      ext?.polygonModeWEBGL(GL.FRONT, mode);
-      ext?.polygonModeWEBGL(GL.BACK, mode);
-    }
-
-    if (parameters.polygonOffsetLine) {
-      gl.enable(GL.POLYGON_OFFSET_LINE_WEBGL);
+      if (parameters.polygonOffsetLine) {
+        gl.enable(GL.POLYGON_OFFSET_LINE_WEBGL);
+      }
     }
   }
 
