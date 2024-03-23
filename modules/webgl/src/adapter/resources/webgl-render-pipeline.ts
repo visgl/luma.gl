@@ -110,7 +110,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         const validBindings = this.shaderLayout.bindings
           .map(binding => `"${binding.name}"`)
           .join(', ');
-        if (options?.disableWarnings) {
+        if (!options?.disableWarnings) {
           log.warn(
             `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
           )();
