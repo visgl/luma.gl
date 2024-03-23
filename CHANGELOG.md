@@ -4,6 +4,12 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.7 - Mar 23, 2024
+
+- Avoid querying WebGL extension unless needed (#2050)
+- Disable warning about updateModuleSettings (#2049)
+- fix(webgl): disableWarnings option (#2048)
+
 ## v9.0.6 - Mar 21, 2024
 
 - webgl: Support colorMask in RenderPass (#2046)
