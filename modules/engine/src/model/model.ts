@@ -270,9 +270,7 @@ export class Model {
       this.setIndexBuffer(props.indexBuffer);
     }
     if (props.attributes) {
-      this.setAttributes(props.attributes, {
-        disableWarnings: props.disableWarnings
-      });
+      this.setAttributes(props.attributes);
     }
     if (props.constantAttributes) {
       this.setConstantAttributes(props.constantAttributes);
@@ -544,7 +542,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && !(options?.disableWarnings || this.props.disableWarnings)) {
+      if (!set && !(options?.disableWarnings ?? this.props.disableWarnings)) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
@@ -569,7 +567,7 @@ export class Model {
       const attributeInfo = this._attributeInfos[attributeName];
       if (attributeInfo) {
         this.vertexArray.setConstantWebGL(attributeInfo.location, value);
-      } else if (!(options?.disableWarnings || this.props.disableWarnings)) {
+      } else if (!(options?.disableWarnings ?? this.props.disableWarnings)) {
         log.warn(
           `Model "${this.id}: Ignoring constant supplied for unknown attribute "${attributeName}"`
         )();
