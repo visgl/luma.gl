@@ -282,7 +282,7 @@ export class Model {
       this.setUniforms(props.uniforms);
     }
     if (props.moduleSettings) {
-      log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
+      // log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
       this.updateModuleSettings(props.moduleSettings);
     }
     if (props.transformFeedback) {
