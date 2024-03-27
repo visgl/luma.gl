@@ -11,7 +11,6 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
 import {getGLFromVertexType} from '../converters/vertex-formats';
-// import {AccessorObject} from '../..';
 // import {getGLFromVertexType} from '../converters/vertex-formats';
 
 /** VertexArrayObject wrapper */

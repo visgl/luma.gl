@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray, TypedArrayConstructor} from '../..';
+import {TypedArray, TypedArrayConstructor} from '../../types';
 import {VertexFormat} from '../types/vertex-formats';
 
 // import {DataType} from '../types/vertex-formats';
