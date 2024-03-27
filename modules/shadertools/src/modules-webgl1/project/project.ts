@@ -4,7 +4,7 @@
 
 import {Matrix4} from '@math.gl/core';
 import {glsl} from '../../lib/glsl-utils/highlight';
-import {ShaderModule} from '../..';
+import {ShaderModule} from '../../lib/shader-module/shader-module';
 
 type ProjectionProps = {
   modelMatrix?: readonly number[];
