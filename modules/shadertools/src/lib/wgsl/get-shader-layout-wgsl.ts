@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderAttributeType, ShaderLayout, log} from '@luma.gl/core';
-import {WgslReflect} from '../../libs/wgsl-reflect/wgsl_reflect.module.js';
+import {WgslReflect} from 'wgsl_reflect';
 
 /**
  * Parse a ShaderLayout from WGSL shader source code.
@@ -23,10 +23,10 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
 
   for (const uniform of parsedWGSL.uniforms) {
     const members = [];
-    for (const member of uniform.type.members) {
+    for (const attribute of (uniform.type as any)?.members || []) {
       members.push({
-        name: member.name,
-        type: getType(member.type)
+        name: attribute.name,
+        type: getType(attribute.type)
       });
     }
 
@@ -53,7 +53,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
 
       shaderLayout.attributes.push({
         name: wgslAttribute.name,
-        location: wgslAttribute.location,
+        location: Number(wgslAttribute.location),
         type
       });
     }
