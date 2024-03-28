@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.8 - Mar 28, 2024
+
+- fix(shadertools): Fix ../.. imports (#2054)
+
 ## v9.0.7 - Mar 23, 2024
 
 - Avoid querying WebGL extension unless needed (#2050)
