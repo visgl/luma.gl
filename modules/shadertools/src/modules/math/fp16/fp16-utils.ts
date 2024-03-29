@@ -9,8 +9,10 @@ import {clamp} from '@math.gl/core';
 
 /** Pre-calculated tables for float16 conversion */
 type Float16Tables = {
+  // float32 to float16 helpers
   baseTable: Uint32Array;
   shiftTable: Uint32Array;
+  // float16 to float32 helpers
   mantissaTable: Uint32Array;
   exponentTable: Uint32Array;
   offsetTable: Uint32Array;
@@ -44,8 +46,8 @@ export function toHalfFloat(val: number): number {
 
 /**
  * float16 to float32
- * @param val 
- * @returns 
+ * @param val
+ * @returns
  */
 export function fromHalfFloat(val: number): number {
   float16Tables ||= generateFloat16Tables();
@@ -149,11 +151,5 @@ function generateFloat16Tables(): Float16Tables {
     }
   }
 
-  return {
-    baseTable: baseTable,
-    shiftTable: shiftTable,
-    mantissaTable: mantissaTable,
-    exponentTable: exponentTable,
-    offsetTable: offsetTable
-  };
+  return {baseTable, shiftTable, mantissaTable, exponentTable, offsetTable};
 }
