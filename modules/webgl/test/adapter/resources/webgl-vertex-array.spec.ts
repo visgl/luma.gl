@@ -10,7 +10,7 @@ import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
 // TODO(v9): Fix and re-enable test.
 test.skip('WEBGLVertexArray#divisors', t => {
-  // @ts-expect-error
+  // @ts-ignore
   const vertexArray = new WEBGLVertexArray(device);
 
   const maxVertexAttributes = device.limits.maxVertexAttributes;
@@ -81,7 +81,7 @@ test.skip('WEBGLVertexArray#enable', t => {
 
 // TODO(v9): Fix and re-enable test.
 test.skip('WEBGLVertexArray#getConstantBuffer', t => {
-  // @ts-expect-error
+  // @ts-ignore
   const vertexArray = new WEBGLVertexArray(device);
 
   let buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as WEBGLBuffer;
