@@ -2532,6 +2532,7 @@ __metadata:
   dependencies:
     "@math.gl/core": "npm:^4.0.0"
     "@math.gl/types": "npm:^4.0.0"
+    wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
     "@luma.gl/core": ^9.0.0
   languageName: unknown
@@ -13161,6 +13162,13 @@ __metadata:
   version: 3.0.1
   resolution: "webidl-conversions@npm:3.0.1"
   checksum: 10c0/5612d5f3e54760a797052eb4927f0ddc01383550f542ccd33d5238cfd65aeed392a45ad38364970d0a0f4fea32e1f4d231b3d8dac4a3bdd385e5cf802ae097db
+  languageName: node
+  linkType: hard
+
+"wgsl_reflect@npm:^1.0.1":
+  version: 1.0.8
+  resolution: "wgsl_reflect@npm:1.0.8"
+  checksum: 10c0/e3a02a83fb2aa9fd9e8c17d68fd40aa3d08a247089eca7e4144438170d5d199d9339fd3e1e6481eb398e501d0cd335332f1443604f31a2461b00719716a2113a
   languageName: node
   linkType: hard
 
