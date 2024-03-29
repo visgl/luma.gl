@@ -51,12 +51,13 @@ export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/r
 // EXPERIMENTAL WGSL
 export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
 
-// SHADER MODULES - WEBGL1 VERSION
-
-// utils
+// data utils
+export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
+export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';
 
 // math libraries
 export {random} from './modules/math/random/random';
+
 export {fp32} from './modules/math/fp32/fp32';
 // export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
