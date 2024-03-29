@@ -98,10 +98,10 @@ export class WEBGLTexture extends Texture {
   readonly gl: WebGL2RenderingContext;
   handle: WebGLTexture;
 
-  sampler: WEBGLSampler = undefined; // TODO - currently unused in WebGL
-  view: WEBGLTextureView = undefined;
+  sampler: WEBGLSampler = undefined; // TODO - currently unused in WebGL. Create dummy sampler?
+  view: WEBGLTextureView = undefined; // TODO - currently unused in WebGL. Create dummy view?
 
-  mipmaps: boolean = undefined;
+  mipmaps: boolean = false;
 
   /**
    * @note `target` cannot be modified by bind:
@@ -140,11 +140,11 @@ export class WEBGLTexture extends Texture {
     video: HTMLVideoElement;
     parameters: any;
     lastTime: number;
-  };
+  } | null = null;
 
   constructor(device: Device, props: TextureProps) {
     // Note: Clear out `props.data` so that we don't hold a reference to any big memory chunks
-    super(device, {...Texture.defaultProps, ...props, data: undefined});
+    super(device, {...Texture.defaultProps, ...props, data: undefined!});
 
     this.device = device as WebGLDevice;
     this.gl = this.device.gl;
@@ -226,7 +226,7 @@ export class WEBGLTexture extends Texture {
       }
     }
 
-    this.mipmaps = props.mipmaps;
+    this.mipmaps = Boolean(props.mipmaps);
 
     if (this.mipmaps) {
       this.generateMipmap();
@@ -633,7 +633,7 @@ export class WEBGLTexture extends Texture {
     return textureUnit;
   }
 
-  unbind(textureUnit?: number): number {
+  unbind(textureUnit?: number): number | undefined {
     const {gl} = this;
 
     if (textureUnit !== undefined) {

@@ -71,7 +71,7 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   }
 
   override has(feature: DeviceFeature): boolean {
-    if (this.disabledFeatures[feature]) {
+    if (this.disabledFeatures?.[feature]) {
       return false;
     }
 

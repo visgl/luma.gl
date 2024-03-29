@@ -48,6 +48,6 @@ export class WebGLDeviceLimits extends DeviceLimits {
     if (this.limits[parameter] === undefined) {
       this.limits[parameter] = this.gl.getParameter(parameter);
     }
-    return this.limits[parameter];
+    return this.limits[parameter] || 0;
   }
 }

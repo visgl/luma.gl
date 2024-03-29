@@ -112,7 +112,7 @@ export function trackContextState(
     log?: any;
   }
 ): WebGL2RenderingContext {
-  const {enable = true, copyState} = options;
+  const {enable = true, copyState} = options || {};
   // assert(copyState !== undefined);
   // @ts-expect-error
   if (!gl.state) {

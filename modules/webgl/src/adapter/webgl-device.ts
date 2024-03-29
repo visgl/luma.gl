@@ -340,7 +340,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   private renderPass: WEBGLRenderPass | null = null;
 
-  override createCommandEncoder(props?: CommandEncoderProps): WEBGLCommandEncoder {
+  override createCommandEncoder(props: CommandEncoderProps = {}): WEBGLCommandEncoder {
     return new WEBGLCommandEncoder(this, props);
   }
 
