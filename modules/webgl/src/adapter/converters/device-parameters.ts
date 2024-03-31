@@ -280,35 +280,39 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   // COLOR STATE
 
   if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
-    gl.enable(GL.BLEND);
+    if (parameters.blendColorOperation === 'none' || parameters.blendAlphaOperation === 'none') {
+      gl.disable(GL.BLEND);
+    } else {
+      gl.enable(GL.BLEND);
 
-    const colorEquation = convertBlendOperationToEquation(
-      'blendColorOperation',
-      parameters.blendColorOperation || 'add'
-    );
-    const alphaEquation = convertBlendOperationToEquation(
-      'blendAlphaOperation',
-      parameters.blendAlphaOperation || 'add'
-    );
-    gl.blendEquationSeparate(colorEquation, alphaEquation);
+      const colorEquation = convertBlendOperationToEquation(
+        'blendColorOperation',
+        parameters.blendColorOperation || 'add'
+      );
+      const alphaEquation = convertBlendOperationToEquation(
+        'blendAlphaOperation',
+        parameters.blendAlphaOperation || 'add'
+      );
+      gl.blendEquationSeparate(colorEquation, alphaEquation);
 
-    const colorSrcFactor = convertBlendFactorToFunction(
-      'blendColorSrcFactor',
-      parameters.blendColorSrcFactor || 'one'
-    );
-    const colorDstFactor = convertBlendFactorToFunction(
-      'blendColorDstFactor',
-      parameters.blendColorDstFactor || 'zero'
-    );
-    const alphaSrcFactor = convertBlendFactorToFunction(
-      'blendAlphaSrcFactor',
-      parameters.blendAlphaSrcFactor || 'one'
-    );
-    const alphaDstFactor = convertBlendFactorToFunction(
-      'blendAlphaDstFactor',
-      parameters.blendAlphaDstFactor || 'zero'
-    );
-    gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
+      const colorSrcFactor = convertBlendFactorToFunction(
+        'blendColorSrcFactor',
+        parameters.blendColorSrcFactor || 'one'
+      );
+      const colorDstFactor = convertBlendFactorToFunction(
+        'blendColorDstFactor',
+        parameters.blendColorDstFactor || 'zero'
+      );
+      const alphaSrcFactor = convertBlendFactorToFunction(
+        'blendAlphaSrcFactor',
+        parameters.blendAlphaSrcFactor || 'one'
+      );
+      const alphaDstFactor = convertBlendFactorToFunction(
+        'blendAlphaDstFactor',
+        parameters.blendAlphaDstFactor || 'zero'
+      );
+      gl.blendFuncSeparate(colorSrcFactor, colorDstFactor, alphaSrcFactor, alphaDstFactor);
+    }
   }
 }
 
@@ -376,9 +380,9 @@ function convertStencilOperation(parameter: string, value: StencilOperation): GL
 
 function convertBlendOperationToEquation(
   parameter: string,
-  value: BlendOperation
+  value: Exclude<BlendOperation, 'none'>
 ): GLBlendEquation {
-  return map<BlendOperation, GLBlendEquation>(parameter, value, {
+  return map<Exclude<BlendOperation, 'none'>, GLBlendEquation>(parameter, value, {
     add: GL.FUNC_ADD,
     subtract: GL.FUNC_SUBTRACT,
     'reverse-subtract': GL.FUNC_REVERSE_SUBTRACT,

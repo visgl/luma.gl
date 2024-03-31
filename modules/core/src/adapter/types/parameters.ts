@@ -138,7 +138,7 @@ export type BlendFactor =
   | 'one-minus-constant-alpha';
 
 /** BlendOperation defines the algorithm used to combine source and destination blend factors: */
-export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
+export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max' | 'none';
 
 /* Color parameters are set on the RenderPipeline */
 export type ColorParameters = {
