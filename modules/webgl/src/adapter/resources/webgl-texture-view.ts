@@ -12,8 +12,7 @@ import {WEBGLTexture} from './webgl-texture';
 export class WEBGLTextureView extends TextureView {
   readonly device: WebGLDevice;
   readonly gl: WebGL2RenderingContext;
-  readonly handle: WebGLTexture;
-
+  readonly handle: null; // Does not have a WebGL representation
   readonly texture: WEBGLTexture;
 
   constructor(device: Device, props: TextureViewProps & {texture: WEBGLTexture}) {
@@ -22,7 +21,6 @@ export class WEBGLTextureView extends TextureView {
     this.device = device as WebGLDevice;
     this.gl = this.device.gl;
     this.handle = null;
-
     this.texture = props.texture;
   }
 }

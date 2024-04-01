@@ -59,12 +59,7 @@ export async function loadWebGLDeveloperTools(): Promise<void> {
 export function makeDebugContext(
   gl: WebGL2RenderingContext,
   props: DebugContextProps = {}
-): WebGL2RenderingContext | null {
-  // Return null to ensure we don't try to create a context in this case (TODO what case is that?)
-  if (!gl) {
-    return null;
-  }
-
+): WebGL2RenderingContext {
   return props.debug ? getDebugContext(gl, props) : getRealContext(gl);
 }
 

@@ -33,10 +33,10 @@ export class WEBGLVertexArray extends VertexArray {
   }
 
   // Create a VertexArray
-  constructor(device: WebGLDevice, props?: VertexArrayProps) {
+  constructor(device: WebGLDevice, props: VertexArrayProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.device.gl.createVertexArray();
+    this.handle = this.device.gl.createVertexArray()!;
   }
 
   override destroy(): void {

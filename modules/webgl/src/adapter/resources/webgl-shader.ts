@@ -44,15 +44,15 @@ export class WEBGLShader extends Shader {
     return this.getCompilationInfoSync();
   }
 
-  override getCompilationInfoSync() {
+  override getCompilationInfoSync(): readonly CompilerMessage[] {
     const log = this.device.gl.getShaderInfoLog(this.handle);
-    return parseShaderCompilerLog(log);
+    return log ? parseShaderCompilerLog(log) : [];
   }
 
   override getTranslatedSource(): string | null {
     const extensions = this.device.getExtension('WEBGL_debug_shaders');
     const ext = extensions.WEBGL_debug_shaders;
-    return ext?.getTranslatedShaderSource(this.handle);
+    return ext?.getTranslatedShaderSource(this.handle) || null;
   }
 
   // PRIVATE METHODS

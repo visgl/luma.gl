@@ -9,6 +9,7 @@ import {WEBGLFramebuffer} from '../adapter/resources/webgl-framebuffer';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../adapter/resources/webgl-buffer';
+import {WEBGLTexture} from '../adapter/resources/webgl-texture';
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.
@@ -204,15 +205,17 @@ export function copyToTexture(
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
   // assert(target);
-  let texture = null;
+  let texture: WEBGLTexture | null = null;
   let textureTarget: GL;
-  if (target instanceof Texture) {
+  if (target instanceof WEBGLTexture) {
     texture = target;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
-    texture.bind(0);
+    texture?.bind(0);
+    // @ts-ignore
     textureTarget = texture.target;
   } else {
+    // @ts-ignore
     textureTarget = target;
   }
 

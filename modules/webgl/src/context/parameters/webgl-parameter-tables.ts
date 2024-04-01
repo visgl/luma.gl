@@ -100,7 +100,7 @@ const pixelStorei = (gl: WebGL2RenderingContext, value: number | boolean, key: G
 
 const bindFramebuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
   const target = key === GL.FRAMEBUFFER_BINDING ? GL.DRAW_FRAMEBUFFER : GL.READ_FRAMEBUFFER;
-  return gl.bindFramebuffer(target, value);
+  return gl.bindFramebuffer(target, value as WebGLFramebuffer);
 };
 
 const bindBuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
@@ -113,7 +113,7 @@ const bindBuffer = (gl: WebGL2RenderingContext, value: unknown, key: GL) => {
   };
   const glTarget = bindingMap[key];
 
-  gl.bindBuffer(glTarget, value);
+  gl.bindBuffer(glTarget as number, value as WebGLBuffer | null);
 };
 
 // Utility
@@ -304,7 +304,7 @@ export const GL_PARAMETER_SETTERS = {
     gl.polygonOffset(...value),
 
   sampleCoverage: (gl: WebGL2RenderingContext, value: [number, boolean?]) =>
-    gl.sampleCoverage(...value),
+    gl.sampleCoverage(value[0], value[1] || false),
 
   scissorTest: (gl: WebGL2RenderingContext, value) =>
     value ? gl.enable(GL.SCISSOR_TEST) : gl.disable(GL.SCISSOR_TEST),
