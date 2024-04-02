@@ -38,9 +38,6 @@ export class WEBGLRenderPass extends RenderPass {
 
   end(): void {
     popContextState(this.device.gl);
-    if (this.props.framebuffer) {
-      setGLParameters(this.device.gl, {framebuffer: null});
-    }
     // should add commands to CommandEncoder.
   }
 
@@ -57,7 +54,7 @@ export class WEBGLRenderPass extends RenderPass {
    * Maps RenderPass parameters to GL parameters
    */
   setParameters(parameters: RenderPassParameters = {}): void {
-    const glParameters: GLParameters = {};
+    const glParameters: GLParameters = {...this.glParameters};
 
     // Framebuffers are specified using parameters in WebGL
     if (this.props.framebuffer) {
