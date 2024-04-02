@@ -95,10 +95,10 @@ void picking_setPickingColor(vec3 pickingColor) {
     // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
     picking_vRGBcolor_Avalid.a = float(picking_isColorValid(pickingColor));
 
-    // if (!bool(picking.isAttribute)) {
-    // Stores the picking color so that the fragment shader can render it during picking
-    picking_vRGBcolor_Avalid.rgb = pickingColor;
-    // }
+    if (!bool(picking.isAttribute)) {
+      // Stores the picking color so that the fragment shader can render it during picking
+      picking_vRGBcolor_Avalid.rgb = pickingColor;
+    }
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
     picking_vRGBcolor_Avalid.a = float(isVertexHighlighted(pickingColor));
