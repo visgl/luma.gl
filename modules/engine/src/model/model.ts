@@ -595,7 +595,7 @@ export class Model {
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
   updateModuleSettings(props: Record<string, any>): void {
-    log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
+    // log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
     const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
     Object.assign(this.uniforms, uniforms);
