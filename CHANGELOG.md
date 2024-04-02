@@ -4,6 +4,14 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.9 - Apr 1, 2024
+
+- fix(build): inlined version off by 1 (#2064)
+- fix(webgl): enable polygon offset with depthBias (#2063)
+- fix(webgl): Render pass parameter handling (#2062)
+- fix(shadertools) attribute picking regression (#2059)
+- Disable more warnings about updateModuleSettings (#2060)
+
 ## v9.0.8 - Mar 28, 2024
 
 - fix(shadertools): Fix ../.. imports (#2054)
