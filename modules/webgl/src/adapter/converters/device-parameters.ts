@@ -150,6 +150,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.depthBias !== undefined) {
+    gl.enable(GL.POLYGON_OFFSET_FILL);
     gl.polygonOffset(parameters.depthBias, parameters.depthBiasSlopeScale || 0);
   }
 
