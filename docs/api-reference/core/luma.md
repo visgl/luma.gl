@@ -112,8 +112,16 @@ luma.gl favors WebGPU over WebGL devices, whenever WebGPU is available.
 ### `luma.attachDevice()`
 
 ```ts
-luma.attachDevice(handle: WebGLRenderingContext | GPUDevice, devices: unknown[])
+luma.attachDevice(handle: WebGLRenderingContext | GPUDevice, devices: unknown[]);
 ```
+
+### `luma.enforceWebGL2()`
+
+```ts
+luma.enforceWebGL2(enforce: boolean = true);
+```
+
+Overrides `HTMLCanvasElement.prototype.getContext` to force using WebGL2 for all WebGL1 contexts. Reversible with `luma.enforceWebGL2(false);`
 
 ## Remarks
 

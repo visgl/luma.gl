@@ -149,6 +149,28 @@ export class luma {
       'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.'
     );
   }
+
+  static enforceWebGL2(enforce: boolean = true): void {
+    const prototype = HTMLCanvasElement.prototype as any;
+    if (!enforce && prototype.originalGetContext) {
+      // Reset the original getContext function
+      prototype.getContext = prototype.originalGetContext;
+      prototype.originalGetContext = undefined;
+    }
+
+    // Store the original getContext function
+    prototype.originalGetContext = prototype.getContext;
+
+    // Override the getContext function
+    prototype.getContext = function (contextId: string, options?: WebGLContextAttributes) {
+      // Attempt to force WebGL2 for all WebGL1 contexts
+      if (contextId === 'webgl' || contextId === 'experimental-webgl') {
+        return this.originalGetContext('webgl2', options);
+      }
+      // For any other type, return the original context
+      return this.originalGetContext(contextId, options);
+    };
+  }
 }
 
 /** Convert a list of devices to a map */
