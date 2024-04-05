@@ -5,10 +5,28 @@ The [`luma`](/docs/api-reference/core/luma) namespace provides luma.gl applicati
 with the ability to register GPU Device backends and create `Device` class instances
 using the registered backends.
 
-The returned [`Device`](/docs/api-reference/core/device) instances provides luma.gl applications 
-with further access to the GPU. 
+The returned [`Device`](/docs/api-reference/core/device) instances provides 
+luma.gl applications with a complete GPU API. 
 
 ## Device Registration
+
+The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
+
+One or more GPU backend modules must be imported from a corresponding 
+GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+
+## Usage
+
+To register a device backend, import the corresponding device backend module and then call `luma.registerDevices()`
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {WebGLDevice} from '@luma.gl/webgl';
+luma.registerDevices([WebGLDevice]);
+```
+
+It is possible to register more than one device to create an application
+that can work in both WebGL and WebGPU environments. 
 
 ```typescript
 import {luma} from '@luma.gl/core';
@@ -17,16 +35,7 @@ import {WebGPUDevice} from '@luma.gl/webgl';
 luma.registerDevices([WebGLDevice, WebGPUDevice]);
 ```
 
-It is possible to register more than one device to create an application
-that can work in both WebGL and WebGPU environments. 
-
-The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
-
-One or more GPU backend modules must be also be imported from a corresponding GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
-
-## Usage
-
-Create a WebGL2 context, auto creating a canvas
+Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 
 ```typescript
 import {luma} from '@luma.gl/core';
@@ -92,12 +101,15 @@ const webgpuDevice = luma.createDevice({
 ### `luma.registerDevices()`
 
 ```typescript
-luma.registerDevices(devices: Device[]): void;
+luma.registerDevices(devices: (typeof Device)[]): void;
 ```
 
-Registers one or more devices so that they can be used to create `Device` instances against
-that GPU backend. They will be available to `luma.createDevice()` and `luma.attachDevice()` calls.
-Enables separation of the code that registers backends from the code that creates devices.
+Registers one or more devices (device constructors) so that they can be used 
+to create `Device` instances against that GPU backend. The registered device types
+will be available to `luma.createDevice()` and `luma.attachDevice()` calls.
+
+`luma.registerDevices()` enables separation of the application code that 
+registers GPU backends from the application code that creates devices.
 
 ### `luma.createDevice()`
 
@@ -105,15 +117,45 @@ Enables separation of the code that registers backends from the code that create
 luma.createDevice({type, ...DeviceProps});
 ```
 
-To enable of this, the application create a `Device` using the `'best-available'` adapter.
+To create a Device instance, the application calls `luma.createDevice()`.
 
+- `type`: `'webgl' \| 'webgpu' \| 'best-available'`
+
+Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
 luma.gl favors WebGPU over WebGL devices, whenever WebGPU is available.
+
+Note: A device type is available if:
+1. The backend module has been registered
+2. The browser supports that GPU API
 
 ### `luma.attachDevice()`
 
 ```ts
-luma.attachDevice(handle: WebGLRenderingContext | GPUDevice, devices: unknown[])
+luma.attachDevice(handle: WebGL2RenderingContext | GPUDevice, devices: unknown[]);
 ```
+
+A luma.gl Device can be attached to an externally created `WebGL2RenderingContext` or `GPUDevice`.
+This allows applications to use the luma.gl API to "interleave" rendering with other GPU libraries.
+
+If you need to attach a luma.gl `Device` to a WebGL 1 `WebGLRenderingContext`, see `luma.enforceWebGL2()`.
+
+
+### `luma.enforceWebGL2()`
+
+```ts
+luma.enforceWebGL2(enforce: boolean = true);
+```
+
+Overrides `HTMLCanvasElement.prototype.getContext()` to return WebGL2 contexts even when WebGL1 context are requested. Reversible with `luma.enforceWebGL2(false);`
+
+Since luma.gl only supports WebGL2 contexts (`WebGL2RenderingContext`), it is not possible to call`luma.attachDevice()` on a WebGL1 context (`WebGLRenderingContext`).
+
+This becomes a problem when using luma.gl with a WebGL library that always creates WebGL1 contexts (such as Mapbox GL JS v1).
+Calling `luma.enforceWebGL2()` before initializing the external library makes that library create a WebGL2 context, that luma.gl can then attach a Device to.
+
+:::caution
+Since WebGL2 is a essentially a superset of WebGL1, a library written for WebGL 1 will often still work with a WebGL 2 context. However there may be issues if the external library relies on WebGL1 extensions that are not available in WebGL2. To make a WebGL 2 context support WebGL1-only extensions, those extensions would also need to be emulated on top of the WebGL 2 API, and this is not currently done.
+:::
 
 ## Remarks
 
