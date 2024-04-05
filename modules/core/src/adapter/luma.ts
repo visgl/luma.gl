@@ -156,6 +156,7 @@ export class luma {
       // Reset the original getContext function
       prototype.getContext = prototype.originalGetContext;
       prototype.originalGetContext = undefined;
+      return;
     }
 
     // Store the original getContext function
