@@ -44,7 +44,7 @@
     "@luma.gl/engine": "^9.0.0"
   },
   "dependencies": {
-    "@loaders.gl/textures": "^4.1.0",
+    "@loaders.gl/textures": "^4.2.0",
     "@luma.gl/shadertools": "9.0.9",
     "@math.gl/core": "^4.0.0"
   },
