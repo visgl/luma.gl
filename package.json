@@ -42,9 +42,9 @@
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
-    "@loaders.gl/core": "^4.1.0",
-    "@loaders.gl/gltf": "^4.1.0",
-    "@loaders.gl/polyfills": "^4.1.0",
+    "@loaders.gl/core": "^4.2.0",
+    "@loaders.gl/gltf": "^4.2.0",
+    "@loaders.gl/polyfills": "^4.2.0",
     "@probe.gl/bench": "^4.0.8",
     "@probe.gl/stats": "^4.0.8",
     "@probe.gl/stats-widget": "^4.0.8",
