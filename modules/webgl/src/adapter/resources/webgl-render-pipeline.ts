@@ -185,7 +185,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
     const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
-    const isInstanced: boolean = Number(instanceCount) > 0;
+    // Note that we sometimes get called with 0 instances
+    const isInstanced: boolean = Number(instanceCount) >= 0;
 
     // If we are using async linking, we need to wait until linking completes
     if (this.linkStatus !== 'success') {
