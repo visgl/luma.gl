@@ -72,7 +72,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     parameters: {},
 
     vertexCount: 0,
-    instanceCount: 0,
+    instanceCount: undefined,
 
     bindings: {},
     uniforms: {}

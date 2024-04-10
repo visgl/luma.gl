@@ -149,8 +149,8 @@ export class Model {
 
   /** Vertex count */
   vertexCount: number;
-  /** instance count */
-  instanceCount: number = 0;
+  /** instance count. `undefined` means not instanced */
+  instanceCount: number | undefined = undefined;
 
   /** Index buffer */
   indexBuffer: Buffer | null = null;
