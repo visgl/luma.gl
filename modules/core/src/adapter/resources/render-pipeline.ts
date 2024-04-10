@@ -40,10 +40,12 @@ export type RenderPipelineProps = ResourceProps & {
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
-  /** Number of vertices */
-  vertexCount?: number;
-  /** Number of instances */
-  instanceCount?: number;
+  // /** Use instanced rendering? */
+  // isInstanced?: boolean;
+  // /** Number of instances */
+  // instanceCount?: number;
+  // /** Number of vertices */
+  // vertexCount?: number;
 
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
@@ -71,8 +73,9 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     topology: 'triangle-list',
     parameters: {},
 
-    vertexCount: 0,
-    instanceCount: undefined,
+    // isInstanced: false,
+    // instanceCount: 0,
+    // vertexCount: 0,
 
     bindings: {},
     uniforms: {}
@@ -116,12 +119,14 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     topology?: PrimitiveTopology;
     /** vertex attributes */
     vertexArray: VertexArray;
-    /** Number of "rows" in index buffer */
-    indexCount?: number;
-    /** Number of "rows" in 'vertex' buffers */
-    vertexCount?: number;
+    /** Use instanced rendering? */
+    isInstanced?: boolean;
     /** Number of "rows" in 'instance' buffers */
     instanceCount?: number;
+    /** Number of "rows" in 'vertex' buffers */
+    vertexCount?: number;
+    /** Number of "rows" in index buffer */
+    indexCount?: number;
     /** First vertex to draw from */
     firstVertex?: number;
     /** First index to draw from */
