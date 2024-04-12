@@ -52,7 +52,7 @@ function makeInstancedCube(gl) {
   const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
   return new Cube(gl, {
-    isInstanced: 1,
+    isInstanced: true,
     instanceCount: SIDE * SIDE,
     attributes: {
       instanceOffsets: {value: offsets, size: 2, divisor: 1},

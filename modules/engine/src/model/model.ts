@@ -38,17 +38,20 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
-
+  /** Bindings */
+  bindings?: Record<string, Binding>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
   /** Geometry */
   geometry?: GPUGeometry | Geometry | null;
 
-  /** Vertex count */
-  vertexCount?: number;
+  /** @deprecated Use instanced rendering? Will be auto-detected in 9.1 */
+  isInstanced?: boolean;
   /** instance count */
   instanceCount?: number;
+  /** Vertex count */
+  vertexCount?: number;
 
   indexBuffer?: Buffer | null;
   /** @note this is really a map of buffers, not a map of attributes */
@@ -104,6 +107,10 @@ export class Model {
     constantAttributes: {},
     varyings: [],
 
+    isInstanced: undefined!,
+    instanceCount: 0,
+    vertexCount: 0,
+
     shaderInputs: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
@@ -135,10 +142,12 @@ export class Model {
 
   // Dynamic properties
 
+  /** Use instanced rendering */
+  isInstanced: boolean | undefined = undefined;
+  /** instance count. `undefined` means not instanced */
+  instanceCount: number = 0;
   /** Vertex count */
   vertexCount: number;
-  /** instance count */
-  instanceCount: number = 0;
 
   /** Index buffer */
   indexBuffer: Buffer | null = null;
@@ -260,11 +269,15 @@ export class Model {
     }
 
     // Apply any dynamic settings that will not trigger pipeline change
-    if (props.vertexCount) {
-      this.setVertexCount(props.vertexCount);
+    if (props.isInstanced) {
+      this.isInstanced = props.isInstanced;
     }
+
     if (props.instanceCount) {
       this.setInstanceCount(props.instanceCount);
+    }
+    if (props.vertexCount) {
+      this.setVertexCount(props.vertexCount);
     }
     if (props.indexBuffer) {
       this.setIndexBuffer(props.indexBuffer);
@@ -358,6 +371,7 @@ export class Model {
       drawSuccess = this.pipeline.draw({
         renderPass,
         vertexArray: this.vertexArray,
+        isInstanced: this.isInstanced,
         vertexCount: this.vertexCount,
         instanceCount: this.instanceCount,
         indexCount,
@@ -454,6 +468,20 @@ export class Model {
   // Update dynamic fields
 
   /**
+   * Updates the instance count (used in draw calls)
+   * @note Any attributes with stepMode=instance need to be at least this big
+   */
+  setInstanceCount(instanceCount: number): void {
+    this.instanceCount = instanceCount;
+    // luma.gl examples don't set props.isInstanced and rely on auto-detection
+    // but deck.gl sets instanceCount even for models that are not instanced.
+    if (this.isInstanced === undefined && instanceCount > 0) {
+      this.isInstanced = true;
+    }
+    this.setNeedsRedraw('instanceCount');
+  }
+
+  /**
    * Updates the vertex count (used in draw calls)
    * @note Any attributes with stepMode=vertex need to be at least this big
    */
@@ -462,15 +490,7 @@ export class Model {
     this.setNeedsRedraw('vertexCount');
   }
 
-  /**
-   * Updates the instance count (used in draw calls)
-   * @note Any attributes with stepMode=instance need to be at least this big
-   */
-  setInstanceCount(instanceCount: number): void {
-    this.instanceCount = instanceCount;
-    this.setNeedsRedraw('instanceCount');
-  }
-
+  /** Set the shader inputs */
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
@@ -482,6 +502,7 @@ export class Model {
     this.setNeedsRedraw('shaderInputs');
   }
 
+  /** Update uniform buffers from the model's shader inputs */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
     // TODO - this is already tracked through buffer/texture update times?
