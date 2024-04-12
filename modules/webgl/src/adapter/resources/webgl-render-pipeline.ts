@@ -158,6 +158,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     parameters?: RenderPipelineParameters;
     topology?: PrimitiveTopology;
     vertexArray: VertexArray;
+    isInstanced?: boolean;
     vertexCount?: number;
     indexCount?: number;
     instanceCount?: number;
@@ -175,6 +176,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       vertexCount,
       // indexCount,
       instanceCount,
+      isInstanced = false,
       firstVertex = 0,
       // firstIndex,
       // firstInstance,
@@ -185,7 +187,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     const glDrawMode = getGLDrawMode(topology);
     const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
     const glIndexType = (vertexArray.indexBuffer as WEBGLBuffer)?.glIndexType;
-    const isInstanced: boolean = Number(instanceCount) > 0;
+    // Note that we sometimes get called with 0 instances
 
     // If we are using async linking, we need to wait until linking completes
     if (this.linkStatus !== 'success') {

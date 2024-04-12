@@ -47,16 +47,8 @@ export class NullRenderPipeline extends RenderPipeline {
     instanceCount?: number;
   }): boolean {
     const {renderPass, vertexArray} = options;
-
-    // const isIndexed: boolean = Boolean(vertexArray.indexBuffer);
-    // const isInstanced: boolean = Number(instanceCount) > 0;
-
     vertexArray.bindBeforeRender(renderPass);
-
-    // TODO - verify buffer size
-
     vertexArray.unbindAfterRender(renderPass);
-
     return true;
   }
 }
