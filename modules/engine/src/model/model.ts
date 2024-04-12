@@ -53,7 +53,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Geometry */
   geometry?: GPUGeometry | Geometry | null;
 
-  /** Use instanced rendering?  */
+  /** @deprecated Use instanced rendering? Will be auto-detected in 9.1 */
   isInstanced?: boolean;
   /** instance count */
   instanceCount?: number;
@@ -285,8 +285,9 @@ export class Model {
 
     // Apply any dynamic settings that will not trigger pipeline change
     if (props.isInstanced) {
-      this.setInstanced(props.isInstanced);
+      this.isInstanced = props.isInstanced;
     }
+
     if (props.instanceCount) {
       this.setInstanceCount(props.instanceCount);
     }
@@ -485,18 +486,13 @@ export class Model {
 
   // Update dynamic fields
 
-  /** Specify whether instanced rendering should be used */
-  setInstanced(isInstanced: boolean = true): void {
-    this.isInstanced = isInstanced;
-    this.setNeedsRedraw('instanced');
-  }
-
   /**
    * Updates the instance count (used in draw calls)
    * @note Any attributes with stepMode=instance need to be at least this big
    */
   setInstanceCount(instanceCount: number): void {
     this.instanceCount = instanceCount;
+    // luma.gl examples don't set props.isInstanced
     if (instanceCount > 0) {
       this.isInstanced = true;
     }
