@@ -114,7 +114,7 @@ export class Model {
     constantAttributes: {},
     varyings: [],
 
-    isInstanced: false,
+    isInstanced: undefined!,
     instanceCount: 0,
     vertexCount: 0,
 
@@ -153,7 +153,7 @@ export class Model {
   // Dynamic properties
 
   /** Use instanced rendering */
-  isInstanced: boolean = false;
+  isInstanced: boolean | undefined = undefined;
   /** instance count. `undefined` means not instanced */
   instanceCount: number = 0;
   /** Vertex count */
@@ -492,8 +492,9 @@ export class Model {
    */
   setInstanceCount(instanceCount: number): void {
     this.instanceCount = instanceCount;
-    // luma.gl examples don't set props.isInstanced
-    if (instanceCount > 0) {
+    // luma.gl examples don't set props.isInstanced and rely on auto-detection
+    // but deck.gl sets instanceCount even for models that are not instanced.
+    if (this.isInstanced === undefined && instanceCount > 0) {
       this.isInstanced = true;
     }
     this.setNeedsRedraw('instanceCount');
