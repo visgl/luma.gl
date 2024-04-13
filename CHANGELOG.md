@@ -4,6 +4,13 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.10 - Apr 12, 2024
+
+- fix(webgl): Support instanceCount=0 in draw() (#2070)
+- add(core) enforceWebGL2 (#2067)
+- fix(webgl): Check fs shader status in weblg-render-pipeline (#2066)
+- chore: Bump to loaders.gl@4.2.0 (#2068) (#2069)
+
 ## v9.0.9 - Apr 1, 2024
 
 - fix(build): inlined version off by 1 (#2064)
