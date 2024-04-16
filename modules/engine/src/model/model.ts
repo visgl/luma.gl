@@ -269,7 +269,7 @@ export class Model {
     }
 
     // Apply any dynamic settings that will not trigger pipeline change
-    if (props.isInstanced) {
+    if ('isInstanced' in props) {
       this.isInstanced = props.isInstanced;
     }
 
