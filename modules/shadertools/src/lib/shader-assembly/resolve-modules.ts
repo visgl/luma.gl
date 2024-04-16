@@ -38,6 +38,11 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
     .map(name => moduleMap[name]);
 }
 
+type AbstractModule = {
+  name: string;
+  dependencies: AbstractModule[];
+};
+
 /**
  * Recursively checks module dependencies to calculate dependency level of each module.
  *
@@ -48,10 +53,10 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
  * @return - Map of module name to its level
  */
 // Adds another level of dependencies to the result map
-export function getDependencyGraph(options: {
-  modules: ShaderModuleInstance[];
+export function getDependencyGraph<T extends AbstractModule>(options: {
+  modules: T[];
   level: number;
-  moduleMap: Record<string, ShaderModuleInstance>;
+  moduleMap: Record<string, T>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;
