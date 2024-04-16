@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.11 - Apr 15, 2024
+
+- fix(engine) Model handling props.isInstanced: false (#2072)
+
 ## v9.0.10 - Apr 12, 2024
 
 - fix(webgl): Support instanceCount=0 in draw() (#2070)

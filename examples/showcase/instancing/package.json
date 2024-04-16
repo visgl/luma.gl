@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-instancing",
-  "version": "9.0.10",
+  "version": "9.0.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,11 +9,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.0.10",
-    "@luma.gl/engine": "9.0.10",
-    "@luma.gl/shadertools": "9.0.10",
-    "@luma.gl/webgl": "9.0.10",
-    "@luma.gl/webgpu": "9.0.10",
+    "@luma.gl/core": "9.0.11",
+    "@luma.gl/engine": "9.0.11",
+    "@luma.gl/shadertools": "9.0.11",
+    "@luma.gl/webgl": "9.0.11",
+    "@luma.gl/webgpu": "9.0.11",
     "@math.gl/core": "^4.0.0"
   },
   "devDependencies": {
