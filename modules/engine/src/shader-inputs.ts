@@ -68,13 +68,14 @@ export class ShaderInputs<
       false
     );
     for (const resolvedModule of resolvedModules) {
-      // @ts-ignore
+      // @ts-expect-error Fix typings
       modules[resolvedModule.name] = resolvedModule;
     }
 
     log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
+    // @ts-expect-error Fix typings
     this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Texture | Sampler>>;
