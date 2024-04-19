@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from './shader-module/shader-module';
-import {ShaderModuleInstance} from './shader-module/shader-module-instance';
+import {instantiateShaderModules} from './shader-module/instantiate-shader-modules';
 import {
   AssembleShaderProps,
   GetUniformsFunc,
@@ -76,7 +76,7 @@ export class ShaderAssembler {
   assembleWGSLShader(props: AssembleShaderProps): {
     source: string;
     getUniforms: GetUniformsFunc;
-    modules: ShaderModuleInstance[];
+    modules: ShaderModule[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
@@ -103,7 +103,7 @@ export class ShaderAssembler {
     vs: string;
     fs: string;
     getUniforms: GetUniformsFunc;
-    modules: ShaderModuleInstance[];
+    modules: ShaderModule[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
@@ -123,8 +123,8 @@ export class ShaderAssembler {
   /**
    * Dedupe and combine with default modules
    */
-  _getModuleList(appModules: (ShaderModule | ShaderModuleInstance)[] = []): ShaderModuleInstance[] {
-    const modules = new Array<ShaderModule | ShaderModuleInstance>(
+  _getModuleList(appModules: (ShaderModule | ShaderModule)[] = []): ShaderModule[] {
+    const modules = new Array<ShaderModule | ShaderModule>(
       this._defaultModules.length + appModules.length
     );
     const seen: Record<string, boolean> = {};
@@ -148,6 +148,6 @@ export class ShaderAssembler {
 
     modules.length = count;
 
-    return ShaderModuleInstance.instantiateModules(modules);
+    return instantiateShaderModules(modules);
   }
 }

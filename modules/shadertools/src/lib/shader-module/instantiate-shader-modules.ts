@@ -5,10 +5,11 @@
 import type {ShaderModule, ShaderModuleDeprecation} from './shader-module';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import {ShaderModuleInstance} from '../..';
 
 export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[] {
   return modules.map((module: ShaderModule) => {
-    if (module.instantiated) {
+    if (module.instance) {
       return;
     }
 
@@ -16,22 +17,50 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       uniformPropTypes = {},
       getUniforms,
       deprecations = [],
-      defines = {},
+      // defines = {},
       inject = {}
     } = module;
 
-    // module.getModuleUniforms = getUniforms!;
-    // module.deprecations = _parseDeprecationDefinitions(deprecations);
-    module.defines = defines;
-    module.injections = normalizeInjections(inject);
+    const instance: Required<ShaderModuleInstance>['instance'] = {
+      dependencies: instantiateShaderModules(module.dependencies || []),
+      injections: normalizeInjections(inject),
+      deprecations: parseDeprecationDefinitions(deprecations),
+      getModuleUniforms: getUniforms!
+    };
 
     if (uniformPropTypes) {
-      // module.uniforms = makePropValidators(uniformPropTypes);
+      instance.uniforms = makePropValidators(uniformPropTypes);
     }
 
-    module.instantiated = true;
-    module.dependencies = instantiateShaderModules(module.dependencies || []);
+    instance.getUniforms = function getUniforms(
+      userProps: Record<string, any>,
+      uniforms: Record<string, any>
+    ): Record<string, any> {
+      // @ts-ignore
+      const self: ShaderModule = this;
+      if (self.instance?.getModuleUniforms) {
+        return self.getModuleUniforms(userProps, uniforms);
+      }
+      // Build uniforms from the uniforms array
+      return getValidatedProperties(userProps, this.uniforms, this.name);
+    }.bind(module);
+
+    module.instance = instance;
+
     return module;
+  });
+}
+
+// Warn about deprecated uniforms or functions
+export function checkModuleDeprecations(shaderSource: string, shaderModule: ShaderModule, log: any): void {
+  shaderModule.deprecations?.forEach(def => {
+    if (def.regex?.test(shaderSource)) {
+      if (def.deprecated) {
+        log.deprecated(def.old, def.new)();
+      } else {
+        log.removed(def.old, def.new)();
+      }
+    }
   });
 }
 
@@ -65,21 +94,23 @@ export class ShaderModuleInstance {
       }
     });
   }
+*/
 
-  _parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
-    deprecations.forEach(def => {
-      switch (def.type) {
-        case 'function':
-          def.regex = new RegExp(`\\b${def.old}\\(`);
-          break;
-        default:
-          def.regex = new RegExp(`${def.type} ${def.old};`);
-      }
-    });
+function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
+  deprecations.forEach(def => {
+    switch (def.type) {
+      case 'function':
+        def.regex = new RegExp(`\\b${def.old}\\(`);
+        break;
+      default:
+        def.regex = new RegExp(`${def.type} ${def.old};`);
+    }
+  });
 
-    return deprecations;
-  }
+  return deprecations;
+}
 
+/*
   _defaultGetUniforms(opts: Record<string, any> = {}): Record<string, any> {
     const uniforms: Record<string, any> = {};
     const propTypes = this.uniforms;

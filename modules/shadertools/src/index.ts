@@ -43,7 +43,7 @@ export {capitalize} from './lib/shader-generator/utils/capitalize';
 // TEST EXPORTS - Do not use in production applications
 export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
-export {ShaderModuleInstance as _ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
+export {instantiateShaderModules as _instantiateShaderModules} from './lib/shader-module/shader-module-instance';
 export {combineInjects} from './lib/shader-assembly/shader-injections';
 export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';

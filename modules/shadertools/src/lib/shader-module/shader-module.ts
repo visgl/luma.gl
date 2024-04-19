@@ -54,18 +54,19 @@ export type ShaderModule<
 
   /** Internal */
   normalized?: boolean;
+  /** The instance field contains information that is generated at run-time */
   instance?: {
+    dependencies: ShaderModule[];
     propValidators?: Record<string, PropValidator>;
     getModuleUniforms: Function;
-    // dependencies: ShaderModuleInstance[];
-    // deprecations: ShaderModuleDeprecation[];
-    // defines: Record<string, string | number>;
+    deprecations: ShaderModuleDeprecation[];
+    defines: Record<string, string | number>;
     injections: {
       vertex: Record<string, ShaderInjection>;
       fragment: Record<string, ShaderInjection>;
-    };
-    // uniforms: Record<string, PropValidator> = {};
-    // uniformTypes: Record<string, PropValidator> = {};
+    }
+    uniforms: Record<string, PropValidator>;
+    uniformTypes: Record<string, PropValidator>;
   }
 };
 
