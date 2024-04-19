@@ -5,7 +5,7 @@
 import {NumberArray} from '@math.gl/types';
 import {UniformFormat} from '../../types';
 import {PropType, PropValidator} from '../filters/prop-types';
-
+import {ShaderInjection} from '../shader-assembly/shader-injections';
 
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
@@ -54,18 +54,19 @@ export type ShaderModule<
 
   /** Internal */
   normalized?: boolean;
-  instantiated?: boolean;
-  propValidators?: Record<string, PropValidator>;
-  getModuleUniforms: Function;
-  // dependencies: ShaderModuleInstance[];
-  // deprecations: ShaderModuleDeprecation[];
-  // defines: Record<string, string | number>;
-  injections: {
-    vertex: Record<string, ShaderInjection>;
-    fragment: Record<string, ShaderInjection>;
-  };
-  // uniforms: Record<string, PropValidator> = {};
-  // uniformTypes: Record<string, PropValidator> = {};
+  instance?: {
+    propValidators?: Record<string, PropValidator>;
+    getModuleUniforms: Function;
+    // dependencies: ShaderModuleInstance[];
+    // deprecations: ShaderModuleDeprecation[];
+    // defines: Record<string, string | number>;
+    injections: {
+      vertex: Record<string, ShaderInjection>;
+      fragment: Record<string, ShaderInjection>;
+    };
+    // uniforms: Record<string, PropValidator> = {};
+    // uniformTypes: Record<string, PropValidator> = {};
+  }
 };
 
 /** Use to generate deprecations when shader module is used */

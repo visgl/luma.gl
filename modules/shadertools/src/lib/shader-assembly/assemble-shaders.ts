@@ -9,7 +9,7 @@ import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
-import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
+import {instantiateShaderModule} from '../shader-module/instantiate-shader-modules';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
