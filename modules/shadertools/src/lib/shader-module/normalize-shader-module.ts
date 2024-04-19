@@ -3,14 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from './shader-module';
-import {ShaderModuleInstance} from './shader-module-instance';
+import {instantiateShaderModules} from './instantiate-shader-modules';
 
 export function normalizeShaderModule(module: ShaderModule): ShaderModule {
   if (!module.normalized) {
     module.normalized = true;
     if (module.uniformPropTypes && !module.getUniforms) {
-      const shaderModule = new ShaderModuleInstance(module);
-      module.getUniforms = shaderModule.getUniforms.bind(shaderModule);
+      instantiateShaderModules([module]);
+      // @ts-expect-error
+      module.instance.getUniforms = shaderModule.instance.getUniforms.bind(shaderModule);
     }
   }
   return module;

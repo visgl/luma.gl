@@ -3,15 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from '../shader-module/shader-module';
-import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
+import {instantiateShaderModules} from '../shader-module/instantiate-shader-modules';
 
 /**
  * Instantiate shader modules and esolve any dependencies
  */
 export function resolveModules(
-  modules: (ShaderModule | ShaderModuleInstance)[]
-): ShaderModuleInstance[] {
-  const instances = ShaderModuleInstance.instantiateModules(modules);
+  modules: ShaderModule[]
+): ShaderModule[] {
+  const instances = instantiateShaderModules(modules);
   return getShaderDependencies(instances);
 }
 
@@ -27,8 +27,8 @@ export function resolveModules(
  * @param modules - Array of modules (inline modules or module names)
  * @return - Array of modules
  */
-function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleInstance[] {
-  const moduleMap: Record<string, ShaderModuleInstance> = {};
+function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
+  const moduleMap: Record<string, ShaderModule> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
 
@@ -49,9 +49,9 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
  */
 // Adds another level of dependencies to the result map
 export function getDependencyGraph(options: {
-  modules: ShaderModuleInstance[];
+  modules: ShaderModule[];
   level: number;
-  moduleMap: Record<string, ShaderModuleInstance>;
+  moduleMap: Record<string, ShaderModule>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;

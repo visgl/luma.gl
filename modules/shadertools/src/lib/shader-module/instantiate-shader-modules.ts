@@ -3,14 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule, ShaderModuleDeprecation} from './shader-module';
-import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
-import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
-import {ShaderModuleInstance} from '../..';
+import {makePropValidators, getValidatedProperties} from '../filters/prop-types';
+import {normalizeInjections} from '../shader-assembly/shader-injections';
 
 export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[] {
   return modules.map((module: ShaderModule) => {
     if (module.instance) {
-      return;
+      return module;
     }
 
     const {
@@ -21,7 +20,8 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       inject = {}
     } = module;
 
-    const instance: Required<ShaderModuleInstance>['instance'] = {
+    // @ts-expect-error
+    const instance: Required<ShaderModule>['instance'] = {
       dependencies: instantiateShaderModules(module.dependencies || []),
       injections: normalizeInjections(inject),
       deprecations: parseDeprecationDefinitions(deprecations),
@@ -32,6 +32,7 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       instance.uniforms = makePropValidators(uniformPropTypes);
     }
 
+    // @ts-expect-error
     instance.getUniforms = function getUniforms(
       userProps: Record<string, any>,
       uniforms: Record<string, any>
@@ -39,9 +40,11 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       // @ts-ignore
       const self: ShaderModule = this;
       if (self.instance?.getModuleUniforms) {
+        // @ts-expect-error
         return self.getModuleUniforms(userProps, uniforms);
       }
       // Build uniforms from the uniforms array
+      // @ts-expect-error
       return getValidatedProperties(userProps, this.uniforms, this.name);
     }.bind(module);
 
@@ -65,7 +68,7 @@ export function checkModuleDeprecations(shaderSource: string, shaderModule: Shad
 }
 
 /** An initialized ShaderModule, ready to use with `assembleShaders()` *
-export class ShaderModuleInstance {
+ShaderModuleInstance {
   name: string;
   vs?: string;
   fs?: string;
@@ -81,20 +84,8 @@ export class ShaderModuleInstance {
   getDefines(): Record<string, string | number> {
     return this.defines;
   }
-
-  // Warn about deprecated uniforms or functions
-  checkDeprecations(shaderSource: string, log: any): void {
-    this.deprecations.forEach(def => {
-      if (def.regex?.test(shaderSource)) {
-        if (def.deprecated) {
-          log.deprecated(def.old, def.new)();
-        } else {
-          log.removed(def.old, def.new)();
-        }
-      }
-    });
-  }
 */
+
 
 function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
   deprecations.forEach(def => {

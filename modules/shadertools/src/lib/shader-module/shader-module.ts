@@ -15,7 +15,7 @@ export type UniformInfo = {
 
 /**
  * A shader module definition object
- * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
+ * @note Needs to be initialized with `instantiateShaderModules`
  */
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
@@ -28,7 +28,12 @@ export type ShaderModule<
   uniforms?: UniformsT;
 
   name: string;
+
+  /** WGSL code */
+  source?: string;
+  /** GLSL fragment shader code */
   fs?: string;
+  /** GLSL vertex shader code */
   vs?: string;
 
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */

@@ -16,7 +16,6 @@ export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
 export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
 export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
-export {ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
 
 // ShaderAssembler
 export {ShaderAssembler} from './lib/shader-assembler';
@@ -43,7 +42,7 @@ export {capitalize} from './lib/shader-generator/utils/capitalize';
 // TEST EXPORTS - Do not use in production applications
 export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
-export {instantiateShaderModules as _instantiateShaderModules} from './lib/shader-module/shader-module-instance';
+export {instantiateShaderModules as _instantiateShaderModules} from './lib/shader-module/instantiate-shader-modules';
 export {combineInjects} from './lib/shader-assembly/shader-injections';
 export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';

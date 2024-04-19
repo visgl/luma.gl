@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ink, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {ink, instantiateShaderModule} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('ink#build/uniform', t => {
-  const inkModule = new ShaderModuleInstance(ink);
+  const inkModule = instantiateShaderModule(ink);
   const uniforms = inkModule.getUniforms({}, {});
 
   t.ok(uniforms, 'ink module build is ok');

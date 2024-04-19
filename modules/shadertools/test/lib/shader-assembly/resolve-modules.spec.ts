@@ -4,7 +4,8 @@
 
 import test from 'tape-promise/tape';
 import {
-  _ShaderModuleInstance as ShaderModuleInstance,
+  ShaderModule,
+  _instantiateShaderModules,
   _resolveModules as resolveModules,
   _getDependencyGraph as getDependencyGraph
 } from '@luma.gl/shadertools';
@@ -56,7 +57,7 @@ test('ShaderModules#getShaderDependencies', t => {
 test('ShaderModules#getDependencyGraph', t => {
   const moduleDepth = {};
   getDependencyGraph({
-    modules: ShaderModuleInstance.instantiateModules([project64, project]),
+    modules: instantiateShaderModules([project64, project]),
     level: 0,
     moduleMap: {},
     moduleDepth

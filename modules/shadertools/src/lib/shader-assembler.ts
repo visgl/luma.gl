@@ -123,8 +123,8 @@ export class ShaderAssembler {
   /**
    * Dedupe and combine with default modules
    */
-  _getModuleList(appModules: (ShaderModule | ShaderModule)[] = []): ShaderModule[] {
-    const modules = new Array<ShaderModule | ShaderModule>(
+  _getModuleList(appModules: ShaderModule[] = []): ShaderModule[] {
+    const modules = new Array<ShaderModule>(
       this._defaultModules.length + appModules.length
     );
     const seen: Record<string, boolean> = {};

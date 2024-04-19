@@ -5,16 +5,17 @@
 // @ts-nocheck
 
 import test from 'tape-promise/tape';
-import {normalizeShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {normalizeShaderModule, ShaderModule} from '@luma.gl/shadertools';
+import {instantiateShaderModules} from '../../../dist/lib/shader-module/instantiate-shader-modules';
 // import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
 
-test('ShaderModuleInstance', t => {
-  let shaderModule = new ShaderModuleInstance({name: 'empty-shader-module', uniformTypes: {}});
+test('ShaderModule', t => {
+  let shaderModule = instantiateShaderModules([{name: 'empty-shader-module', uniformTypes: {}}]);
 
   t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
   t.ok(shaderModule.getModuleSource('fragment'), 'returns frqgment shader');
 
-  shaderModule = new ShaderModuleInstance({
+  shaderModule = new ShaderModule({
     name: 'test-shader-module',
     uniformTypes: {},
     vs: `
@@ -35,15 +36,15 @@ varying float vClipped;
   t.end();
 });
 
-test('ShaderModuleInstance#checkDeprecations', t => {
-  const shaderModule = new ShaderModuleInstance({
+test('ShaderModule#checkDeprecations', t => {
+  const shaderModule = instantiateShaderModules([{
     name: 'test-shader-module',
     uniformTypes: {},
     deprecations: [
       {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
       {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
     ]
-  });
+  }]);
   const testShader = `
 uniform vec4 viewMatrix;
 attribute vec3 instancePositions;
