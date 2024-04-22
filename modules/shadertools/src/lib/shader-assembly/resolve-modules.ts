@@ -8,9 +8,7 @@ import {instantiateShaderModules} from '../shader-module/instantiate-shader-modu
 /**
  * Instantiate shader modules and esolve any dependencies
  */
-export function resolveModules(
-  modules: ShaderModule[]
-): ShaderModule[] {
+export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
   const instances = instantiateShaderModules(modules);
   return getShaderDependencies(instances);
 }

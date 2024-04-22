@@ -31,8 +31,12 @@ export type VibranceProps = {
   amount?: number;
 };
 
+export type VibranceUniforms = VibranceProps;
+
 /** Vibrance - Modifies the saturation of desaturated colors, leaving saturated colors unmodified. */
 export const vibrance = {
+  props: {} as VibranceProps,
+  uniforms: {} as VibranceUniforms,
   name: 'vibrance',
   uniformPropTypes: {
     amount: {value: 0, min: -1, max: 1}

@@ -8,7 +8,10 @@ import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
-import {instantiateShaderModules, checkModuleDeprecations} from '../shader-module/instantiate-shader-modules';
+import {
+  instantiateShaderModules,
+  checkModuleDeprecations
+} from '../shader-module/instantiate-shader-modules';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
@@ -386,7 +389,7 @@ ${getApplicationDefines(allDefines)}
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
-    const injections = module.instance!.injections[stage];
+    const injections = module.instance?.injections[stage] || {};
     for (const key in injections) {
       const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {

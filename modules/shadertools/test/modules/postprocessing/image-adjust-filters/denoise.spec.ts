@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {denoise, _instantiateShaderModules} from '@luma.gl/shadertools';
+import {denoise, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('denoise#build/uniform', t => {
-  _instantiateShaderModules([denoise]);
-  const denoiseModule = new ShaderModuleInstance(denoise);
-  const uniforms = denoiseModule.getUniforms({}, {});
+  const uniforms = getShaderModuleUniforms(denoise, {}, {});
 
   t.ok(uniforms, 'denoise module build is ok');
   t.equal(uniforms.strength, 0.5, 'denoise strength uniform is ok');

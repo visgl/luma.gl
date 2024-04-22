@@ -35,11 +35,16 @@ export type NoiseProps = {
   amount?: number;
 };
 
+export type NoiseUniforms = NoiseProps;
+
 /**
  * Noise
  * Adds black and white noise to the image.
  */
 export const noise = {
+  props: {} as NoiseProps,
+  uniforms: {} as NoiseUniforms,
+
   name: 'noise',
   uniformTypes: {
     amount: 'f32'

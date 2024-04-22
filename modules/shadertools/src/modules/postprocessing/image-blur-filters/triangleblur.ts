@@ -55,6 +55,8 @@ export type TriangleBlurProps = {
   delta?: number[];
 };
 
+export type TriangleBlurUniforms = TriangleBlurProps;
+
 /**
  * @filter       Triangle Blur
  * @description  This is the most basic blur filter, which convolves the image with a
@@ -62,6 +64,9 @@ export type TriangleBlurProps = {
  *               perpendicular triangle filters.
  */
 export const triangleBlur = {
+  props: {} as TriangleBlurProps,
+  uniforms: {} as TriangleBlurUniforms,
+
   name: 'triangleBlur',
   uniformTypes: {
     radius: 'f32',

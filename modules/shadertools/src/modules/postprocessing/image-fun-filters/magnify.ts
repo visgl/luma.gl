@@ -44,6 +44,8 @@ export type MagnifyProps = {
   borderColor?: number[];
 };
 
+export type MagnifyUniforms = MagnifyProps;
+
 /**
  * Magnify - display a circle with magnify effect applied to surrounding the pixels given position
  */

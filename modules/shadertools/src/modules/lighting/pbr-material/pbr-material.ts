@@ -15,35 +15,35 @@ import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
 
 export type PBRMaterialProps = PBRMaterialBindings & {
-  unlit: boolean;
+  unlit?: boolean;
 
   // Base color map
-  baseColorMapEnabled: boolean;
-  baseColorFactor: Readonly<Vector4 | NumberArray>;
+  baseColorMapEnabled?: boolean;
+  baseColorFactor?: Readonly<Vector4 | NumberArray>;
 
-  normalMapEnabled: boolean;
-  normalScale: number; // #ifdef HAS_NORMALMAP
+  normalMapEnabled?: boolean;
+  normalScale?: number; // #ifdef HAS_NORMALMAP
 
-  emissiveMapEnabled: boolean;
-  emissiveFactor: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
+  emissiveMapEnabled?: boolean;
+  emissiveFactor?: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
 
-  metallicRoughnessValues: Readonly<Vector2 | NumberArray>;
-  metallicRoughnessMapEnabled: boolean;
+  metallicRoughnessValues?: Readonly<Vector2 | NumberArray>;
+  metallicRoughnessMapEnabled?: boolean;
 
-  occlusionMapEnabled: boolean;
-  occlusionStrength: number; // #ifdef HAS_OCCLUSIONMAP
+  occlusionMapEnabled?: boolean;
+  occlusionStrength?: number; // #ifdef HAS_OCCLUSIONMAP
 
-  alphaCutoffEnabled: boolean;
-  alphaCutoff: number; // #ifdef ALPHA_CUTOFF
+  alphaCutoffEnabled?: boolean;
+  alphaCutoff?: number; // #ifdef ALPHA_CUTOFF
 
   // IBL
-  IBLenabled: boolean;
-  scaleIBLAmbient: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
+  IBLenabled?: boolean;
+  scaleIBLAmbient?: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
 
   // debugging flags used for shader output of intermediate PBR variables
   // #ifdef PBR_DEBUG
-  scaleDiffBaseMR: Readonly<Vector4 | NumberArray>;
-  scaleFGDSpec: Readonly<Vector4 | NumberArray>;
+  scaleDiffBaseMR?: Readonly<Vector4 | NumberArray>;
+  scaleFGDSpec?: Readonly<Vector4 | NumberArray>;
 };
 
 /** Non-uniform block bindings for pbr module */
@@ -56,41 +56,41 @@ type PBRMaterialBindings = {
   occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
   // IBL Samplers
-  diffuseEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
-  specularEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
+  diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
   brdfLUT?: Texture | null; // #ifdef USE_IBL
 };
 
 export type PBRMaterialUniforms = {
-  unlit: boolean;
+  unlit?: boolean;
 
   // Base color map
-  baseColorMapEnabled: boolean;
-  baseColorFactor: Readonly<Vector4 | NumberArray>;
+  baseColorMapEnabled?: boolean;
+  baseColorFactor?: Readonly<Vector4 | NumberArray>;
 
-  normalMapEnabled: boolean;
-  normalScale: number; // #ifdef HAS_NORMALMAP
+  normalMapEnabled?: boolean;
+  normalScale?: number; // #ifdef HAS_NORMALMAP
 
-  emissiveMapEnabled: boolean;
-  emissiveFactor: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
+  emissiveMapEnabled?: boolean;
+  emissiveFactor?: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
 
-  metallicRoughnessValues: Readonly<Vector2 | NumberArray>;
-  metallicRoughnessMapEnabled: boolean;
+  metallicRoughnessValues?: Readonly<Vector2 | NumberArray>;
+  metallicRoughnessMapEnabled?: boolean;
 
-  occlusionMapEnabled: boolean;
-  occlusionStrength: number; // #ifdef HAS_OCCLUSIONMAP
+  occlusionMapEnabled?: boolean;
+  occlusionStrength?: number; // #ifdef HAS_OCCLUSIONMAP
 
-  alphaCutoffEnabled: boolean;
-  alphaCutoff: number; // #ifdef ALPHA_CUTOFF
+  alphaCutoffEnabled?: boolean;
+  alphaCutoff?: number; // #ifdef ALPHA_CUTOFF
 
   // IBL
-  IBLenabled: boolean;
-  scaleIBLAmbient: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
+  IBLenabled?: boolean;
+  scaleIBLAmbient?: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
 
   // debugging flags used for shader output of intermediate PBR variables
   // #ifdef PBR_DEBUG
-  scaleDiffBaseMR: Readonly<Vector4 | NumberArray>;
-  scaleFGDSpec: Readonly<Vector4 | NumberArray>;
+  scaleDiffBaseMR?: Readonly<Vector4 | NumberArray>;
+  scaleFGDSpec?: Readonly<Vector4 | NumberArray>;
 };
 
 /**
@@ -98,9 +98,14 @@ export type PBRMaterialUniforms = {
  * Physically Based Shading of a microfacet surface defined by a glTF material.
  */
 export const pbrMaterial = {
+  props: {} as PBRMaterialProps,
+  uniforms: {} as PBRMaterialUniforms,
+
   name: 'pbr',
+  dependencies: [lighting],
   vs,
   fs,
+
   defines: {
     LIGHTING_FRAGMENT: 1,
     HAS_NORMALMAP: 0,
@@ -112,6 +117,7 @@ export const pbrMaterial = {
     USE_IBL: 0,
     PBR_DEBUG: 0
   },
+
   uniformTypes: {
     // Material is unlit
     unlit: 'i32',
@@ -144,6 +150,7 @@ export const pbrMaterial = {
     scaleDiffBaseMR: 'vec4<f32>',
     scaleFGDSpec: 'vec4<f32>'
   },
+
   bindings: {
     baseColorSampler: {type: 'texture', location: 8}, // #ifdef HAS_BASECOLORMAP
     normalSampler: {type: 'texture', location: 9}, // #ifdef HAS_NORMALMAP
@@ -154,6 +161,5 @@ export const pbrMaterial = {
     diffuseEnvSampler: {type: 'texture', location: 13}, // #ifdef USE_IBL (samplerCube)
     specularEnvSampler: {type: 'texture', location: 14}, // #ifdef USE_IBL (samplerCube)
     brdfLUT: {type: 'texture', location: 15} // #ifdef USE_IBL
-  },
-  dependencies: [lighting]
+  }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms>;

@@ -45,12 +45,17 @@ export type DenoiseProps = {
   strength?: number;
 };
 
+export type DenoiseUniforms = DenoiseProps;
+
 /**
  * Denoise -
  * Smooths over grainy noise in dark images using an 9x9 box filter
  * weighted by color intensity, similar to a bilateral filter.
  */
 export const denoise = {
+  props: {} as DenoiseProps,
+  uniforms: {} as DenoiseUniforms,
+
   name: 'denoise',
   uniformTypes: {
     strength: 'f32'
@@ -61,4 +66,4 @@ export const denoise = {
   },
   fs,
   passes: [{sampler: true}, {sampler: true}]
-} as const satisfies ShaderPass<DenoiseProps>;
+} as const satisfies ShaderPass<DenoiseProps, DenoiseUniforms>;

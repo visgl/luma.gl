@@ -20,12 +20,12 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       inject = {}
     } = module;
 
-    // @ts-expect-error
     const instance: Required<ShaderModule>['instance'] = {
       dependencies: instantiateShaderModules(module.dependencies || []),
       injections: normalizeInjections(inject),
       deprecations: parseDeprecationDefinitions(deprecations),
-      getModuleUniforms: getUniforms!
+      // @ts-expect-error
+      getModuleUniforms: getUniforms
     };
 
     if (uniformPropTypes) {
@@ -38,6 +38,7 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
       uniforms: Record<string, any>
     ): Record<string, any> {
       // @ts-ignore
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self: ShaderModule = this;
       if (self.instance?.getModuleUniforms) {
         // @ts-expect-error
@@ -55,7 +56,11 @@ export function instantiateShaderModules(modules: ShaderModule[]): ShaderModule[
 }
 
 // Warn about deprecated uniforms or functions
-export function checkModuleDeprecations(shaderSource: string, shaderModule: ShaderModule, log: any): void {
+export function checkModuleDeprecations(
+  shaderSource: string,
+  shaderModule: ShaderModule,
+  log: any
+): void {
   shaderModule.deprecations?.forEach(def => {
     if (def.regex?.test(shaderSource)) {
       if (def.deprecated) {
@@ -67,12 +72,7 @@ export function checkModuleDeprecations(shaderSource: string, shaderModule: Shad
   });
 }
 
-/** An initialized ShaderModule, ready to use with `assembleShaders()` *
-ShaderModuleInstance {
-  name: string;
-  vs?: string;
-  fs?: string;
-  
+/**
   getUniforms(userProps: Record<string, any>, uniforms: Record<string, any>): Record<string, any> {
     if (this.getModuleUniforms) {
       return this.getModuleUniforms(userProps, uniforms);
@@ -80,12 +80,7 @@ ShaderModuleInstance {
     // Build uniforms from the uniforms array
     return getValidatedProperties(userProps, this.uniforms, this.name);
   }
-
-  getDefines(): Record<string, string | number> {
-    return this.defines;
-  }
 */
-
 
 function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
   deprecations.forEach(def => {

@@ -23,7 +23,7 @@ export type ShaderModule<
   BindingsT extends Record<string, unknown> = {}
 > = {
   /** Used for type inference not for values */
-  props?: Required<PropsT>;
+  props?: PropsT;
   /** Used for type inference, not currently used for values */
   uniforms?: UniformsT;
 
@@ -69,10 +69,10 @@ export type ShaderModule<
     injections: {
       vertex: Record<string, ShaderInjection>;
       fragment: Record<string, ShaderInjection>;
-    }
+    };
     uniforms: Record<string, PropValidator>;
     uniformTypes: Record<string, PropValidator>;
-  }
+  };
 };
 
 /** Use to generate deprecations when shader module is used */
@@ -87,7 +87,11 @@ export type ShaderModuleDeprecation = {
 /** Convert module props to uniforms */
 export function getShaderModuleUniforms<
   ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
->(module: ShaderModuleT, props: ShaderModuleT['props']): ShaderModuleT['uniforms'] {
+>(
+  module: ShaderModuleT,
+  props: ShaderModuleT['props'],
+  oldUniforms?: ShaderModuleT['uniforms']
+): ShaderModuleT['uniforms'] {
   const uniforms = {...module.defaultUniforms};
   if (module.getUniforms) {
     // @ts-expect-error

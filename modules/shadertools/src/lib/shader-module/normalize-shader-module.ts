@@ -11,7 +11,7 @@ export function normalizeShaderModule(module: ShaderModule): ShaderModule {
     if (module.uniformPropTypes && !module.getUniforms) {
       instantiateShaderModules([module]);
       // @ts-expect-error
-      module.instance.getUniforms = shaderModule.instance.getUniforms.bind(shaderModule);
+      module.instance.getUniforms = module.instance.getUniforms.bind(module);
     }
   }
   return module;

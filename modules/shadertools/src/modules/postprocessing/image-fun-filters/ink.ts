@@ -49,6 +49,8 @@ export type InkProps = {
   strength?: number;
 };
 
+export type InkUniforms = InkProps;
+
 /**
  * Ink -
  * Simulates outlining the image in ink by darkening edges stronger than a
@@ -56,13 +58,17 @@ export type InkProps = {
  * copies of the image, each blurred using a blur of a different radius.
  */
 export const ink = {
+  props: {} as InkProps,
+  uniforms: {} as InkUniforms,
+
   name: 'ink',
+  fs,
+
   uniformTypes: {
     strength: 'f32'
   },
   uniformPropTypes: {
     strength: {value: 0.25, min: 0, softMax: 1}
   },
-  fs,
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<InkProps, InkProps>;

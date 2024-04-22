@@ -37,14 +37,16 @@ varying float vClipped;
 });
 
 test('ShaderModule#checkDeprecations', t => {
-  const shaderModule = instantiateShaderModules([{
-    name: 'test-shader-module',
-    uniformTypes: {},
-    deprecations: [
-      {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
-      {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
-    ]
-  }]);
+  const shaderModule = instantiateShaderModules([
+    {
+      name: 'test-shader-module',
+      uniformTypes: {},
+      deprecations: [
+        {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
+        {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
+      ]
+    }
+  ]);
   const testShader = `
 uniform vec4 viewMatrix;
 attribute vec3 instancePositions;

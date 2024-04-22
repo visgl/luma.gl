@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {dotScreen, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {dotScreen, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('dotScreen#build/uniform', t => {
-  const dotScreenModule = new ShaderModuleInstance(dotScreen);
-  const uniforms = dotScreenModule.getUniforms({}, {});
+  const uniforms = getShaderModuleUniforms(dotScreen, {}, {});
 
   t.ok(uniforms, 'dotScreen module build is ok');
   t.deepEqual(uniforms.center, [0.5, 0.5], 'dotScreen center uniform is ok');

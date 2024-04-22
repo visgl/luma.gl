@@ -46,11 +46,16 @@ export type BulgePinchProps = {
   strength?: number;
 };
 
+export type BulgePinchUniforms = BulgePinchProps;
+
 /**
  * Bulge / Pinch -
  * Bulges or pinches the image in a circle.
  */
 export const bulgePinch = {
+  props: {} as BulgePinchProps,
+  uniforms: {} as BulgePinchUniforms,
+
   name: 'bulgePinch',
   dependencies: [warp],
   fs,

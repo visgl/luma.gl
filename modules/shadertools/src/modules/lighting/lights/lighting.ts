@@ -68,7 +68,11 @@ export type LightingUniforms = {
 
 /** UBO ready lighting module */
 export const lighting = {
+  props: {} as LightingProps,
+  uniforms: {} as LightingUniforms,
+
   name: 'lighting',
+
   defines: {
     MAX_LIGHTS
   },
@@ -99,8 +103,6 @@ export const lighting = {
   vs: lightingUniforms,
   fs: lightingUniforms,
 
-  props: {} as Required<LightingProps>,
-  uniforms: {} as LightingUniforms,
   getUniforms
 } as const satisfies ShaderModule<LightingProps, LightingUniforms>;
 

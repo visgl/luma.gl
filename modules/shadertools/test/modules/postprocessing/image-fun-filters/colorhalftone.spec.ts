@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {colorHalftone, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {colorHalftone, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('colorHalftone#build/uniform', t => {
-  const colorHalftoneModule = new ShaderModuleInstance(colorHalftone);
-  const uniforms = colorHalftoneModule.getUniforms({}, {});
+  const uniforms = getShaderModuleUniforms(colorHalftone, {}, {});
 
   t.ok(uniforms, 'colorHalftone module build is ok');
   t.deepEqual(uniforms.center, [0.5, 0.5], 'colorHalftone center uniform is ok');

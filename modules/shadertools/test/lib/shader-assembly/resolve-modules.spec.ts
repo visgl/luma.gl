@@ -4,7 +4,6 @@
 
 import test from 'tape-promise/tape';
 import {
-  ShaderModule,
   _instantiateShaderModules,
   _resolveModules as resolveModules,
   _getDependencyGraph as getDependencyGraph
@@ -57,7 +56,7 @@ test('ShaderModules#getShaderDependencies', t => {
 test('ShaderModules#getDependencyGraph', t => {
   const moduleDepth = {};
   getDependencyGraph({
-    modules: instantiateShaderModules([project64, project]),
+    modules: _instantiateShaderModules([project64, project]),
     level: 0,
     moduleMap: {},
     moduleDepth

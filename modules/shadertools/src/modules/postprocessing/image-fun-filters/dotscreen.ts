@@ -44,12 +44,17 @@ export type DotScreenProps = {
   size?: number;
 };
 
+export type DotScreenUniforms = DotScreenProps;
+
 /**
  * Dot Screen -
  * Simulates a black and white halftone rendering of the image by multiplying
  * pixel values with a rotated 2D sine wave pattern.
  */
 export const dotScreen = {
+  props: {} as DotScreenProps,
+  uniforms: {} as DotScreenUniforms,
+
   name: 'dotScreen',
   uniformTypes: {
     center: 'vec2<f32>',

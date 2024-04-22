@@ -69,6 +69,8 @@ export type TiltShiftProps = {
   invert?: number;
 };
 
+export type TiltShiftUniforms = TiltShiftProps;
+
 /**
  * Tilt Shift
  * Simulates the shallow depth of field normally encountered in close-up
@@ -81,6 +83,9 @@ export type TiltShiftProps = {
  * on the line and increases further from the line.
  */
 export const tiltShift = {
+  props: {} as TiltShiftProps,
+  uniforms: {} as TiltShiftUniforms,
+
   name: 'tiltShift',
   dependencies: [random],
   uniformTypes: {

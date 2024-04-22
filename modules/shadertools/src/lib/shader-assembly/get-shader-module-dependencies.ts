@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 // import type {ShaderModule} from '../shader-module/shader-module';
-// import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
 type AbstractModule = {
   name: string;
