@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderModule} from '../shader-module/shader-module';
-import {instantiateShaderModules} from '../shader-module/instantiate-shader-modules';
+import { ShaderModule } from './shader-module';
+import {initializeShaderModules} from '../shader-module/shader-module';
 
-/**
- * Instantiate shader modules and esolve any dependencies
- */
-export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
-  const instances = instantiateShaderModules(modules);
-  return getShaderDependencies(instances);
-}
+// import type {ShaderModule} from '../shader-module/shader-module';
+
+type AbstractModule = {
+  name: string;
+  dependencies?: AbstractModule[];
+};
 
 /**
  * Takes a list of shader module names and returns a new list of
@@ -25,15 +24,17 @@ export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
  * @param modules - Array of modules (inline modules or module names)
  * @return - Array of modules
  */
-function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
-  const moduleMap: Record<string, ShaderModule> = {};
+export function getShaderModuleDependencies<T extends AbstractModule>(modules: T[]): T[] {
+  const moduleMap: Record<string, T> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
 
   // Return a reverse sort so that dependencies come before the modules that use them
-  return Object.keys(moduleDepth)
+  const dependencies = Object.keys(moduleDepth)
     .sort((a, b) => moduleDepth[b] - moduleDepth[a])
     .map(name => moduleMap[name]);
+  initializeShaderModules(dependencies);
+  return dependencies;
 }
 
 /**
@@ -46,10 +47,10 @@ function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
  * @return - Map of module name to its level
  */
 // Adds another level of dependencies to the result map
-export function getDependencyGraph(options: {
-  modules: ShaderModule[];
+export function getDependencyGraph<T extends AbstractModule>(options: {
+  modules: T[];
   level: number;
-  moduleMap: Record<string, ShaderModule>;
+  moduleMap: Record<string, T>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;
@@ -73,7 +74,36 @@ export function getDependencyGraph(options: {
   }
 }
 
-export const TEST_EXPORTS = {
-  getShaderDependencies,
-  getDependencyGraph
-};
+/**
+ * Instantiate shader modules and resolve any dependencies
+ * @deprecated Use getShaderDpendencies
+ */
+export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
+  return getShaderDependencies(modules);
+}
+
+/**
+ * Takes a list of shader module names and returns a new list of
+ * shader module names that includes all dependencies, sorted so
+ * that modules that are dependencies of other modules come first.
+ *
+ * If the shader glsl code from the returned modules is concatenated
+ * in the reverse order, it is guaranteed that all functions be resolved and
+ * that all function and variable definitions come before use.
+ *
+ * @param modules - Array of modules (inline modules or module names)
+ * @return - Array of modules
+ */
+export function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
+  const moduleMap: Record<string, ShaderModule> = {};
+  const moduleDepth: Record<string, number> = {};
+  getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
+
+  // Return a reverse sort so that dependencies come before the modules that use them
+  modules = Object.keys(moduleDepth)
+    .sort((a, b) => moduleDepth[b] - moduleDepth[a])
+    .map(name => moduleMap[name]);
+  initializeShaderModules(modules);
+  return modules;
+
+}

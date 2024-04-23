@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck
-
 import test from 'tape-promise/tape';
-import {normalizeShaderModule, ShaderModule} from '@luma.gl/shadertools';
-import {instantiateShaderModules} from '../../../dist/lib/shader-module/instantiate-shader-modules';
-// import {} from '@luma.gl/shadertools/lib/shader-module/shader-module-instance';
+import type {ShaderModule} from '@luma.gl/shadertools';
+import {initializeShaderModule, checkShaderModuleDeprecations} from '@luma.gl/shadertools';
+import {getShaderModuleSource} from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
-  let shaderModule = instantiateShaderModules([{name: 'empty-shader-module', uniformTypes: {}}]);
+  debugger;
+  let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
 
-  t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
-  t.ok(shaderModule.getModuleSource('fragment'), 'returns frqgment shader');
+  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
+  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
 
-  shaderModule = new ShaderModule({
+  shaderModule = {
     name: 'test-shader-module',
     uniformTypes: {},
     vs: `
@@ -26,27 +25,27 @@ varying float vClipped;
     fs: `
 varying float vClipped;
 `
-  });
+  };
+  initializeShaderModule(shaderModule);
 
-  t.ok(shaderModule.getModuleSource('vertex'), 'returns vertex shader');
-  t.ok(shaderModule.getModuleSource('fragment'), 'returns fragment shader');
+  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
+  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
   // @ts-expect-error
-  t.throws(() => shaderModule.getModuleSource(''), 'unknown shader type');
+  t.throws(() => getShaderModuleSource(shaderModule, ''), 'unknown shader type');
 
   t.end();
 });
 
-test('ShaderModule#checkDeprecations', t => {
-  const shaderModule = instantiateShaderModules([
-    {
-      name: 'test-shader-module',
-      uniformTypes: {},
-      deprecations: [
-        {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
-        {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
-      ]
-    }
-  ]);
+test('checkShader', t => {
+  const shaderModule = {
+    name: 'test-shader-module',
+    uniformTypes: {},
+    deprecations: [
+      {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
+      {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
+    ]
+  };
+  initializeShaderModule(shaderModule);
   const testShader = `
 uniform vec4 viewMatrix;
 attribute vec3 instancePositions;
@@ -70,7 +69,7 @@ void main() {
     }
   };
 
-  shaderModule.checkDeprecations(testShader, log);
+  checkShaderModuleDeprecations(shaderModule, testShader, log);
 
   t.deepEqual(
     log.deprecatedCalled[0],
@@ -82,7 +81,7 @@ void main() {
   t.end();
 });
 
-test('normalizeShaderModule', t => {
+test('initializeShaderModule', t => {
   const moduleDef = {
     name: 'test-shader-module',
     uniformPropTypes: {
@@ -95,7 +94,7 @@ test('normalizeShaderModule', t => {
   };
 
   // @ts-expect-error
-  const module = normalizeShaderModule(moduleDef);
+  const module = initializeShaderModule(moduleDef);
 
   // @ts-expect-error
   t.deepEqual(module.getUniforms(), {

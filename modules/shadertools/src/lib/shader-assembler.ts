@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from './shader-module/shader-module';
-import {instantiateShaderModules} from './shader-module/instantiate-shader-modules';
+import {initializeShaderModules} from './shader-module/shader-module';
 import {
   AssembleShaderProps,
   GetUniformsFunc,
@@ -146,6 +146,7 @@ export class ShaderAssembler {
 
     modules.length = count;
 
-    return instantiateShaderModules(modules);
+    initializeShaderModules(modules);
+    return modules;
   }
 }

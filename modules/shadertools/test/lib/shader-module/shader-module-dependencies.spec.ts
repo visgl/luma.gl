@@ -4,8 +4,8 @@
 
 import test from 'tape-promise/tape';
 import {
-  _instantiateShaderModules,
-  _resolveModules as resolveModules,
+  initializeShaderModules,
+  _resolveModules,
   _getDependencyGraph as getDependencyGraph
 } from '@luma.gl/shadertools';
 
@@ -30,13 +30,13 @@ const project64 = {
 };
 
 test('ShaderModules#import', t => {
-  t.ok(resolveModules !== undefined, 'resolveModules import successful');
+  t.ok(_resolveModules !== undefined, '_resolveModules import successful');
   t.ok(getDependencyGraph !== undefined, 'getDependencyGraph import successful');
   t.end();
 });
 
 test('ShaderModules#getShaderDependencies', t => {
-  const result = resolveModules([project64, project]);
+  const result = _resolveModules([project64, project]);
   t.deepEqual(
     result.map(module => module.name),
     [fp32.name, project.name, fp64.name, project64.name],
@@ -45,7 +45,7 @@ test('ShaderModules#getShaderDependencies', t => {
 
   t.throws(
     // @ts-expect-error
-    () => resolveModules(['project64']),
+    () => _resolveModules(['project64']),
     /deprecated.+project64/,
     'Useful message for deprecated usage'
   );
@@ -55,8 +55,10 @@ test('ShaderModules#getShaderDependencies', t => {
 
 test('ShaderModules#getDependencyGraph', t => {
   const moduleDepth = {};
+  const modules = [project64, project];
+  initializeShaderModules(modules);
   getDependencyGraph({
-    modules: _instantiateShaderModules([project64, project]),
+    modules,
     level: 0,
     moduleMap: {},
     moduleDepth

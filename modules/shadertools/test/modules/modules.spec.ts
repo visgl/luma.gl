@@ -4,7 +4,7 @@
 
 import test from 'tape-promise/tape';
 
-import {_instantiateShaderModules, getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {initializeShaderModule, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import * as imports from '@luma.gl/shadertools';
 
 const shaderModules = {};
@@ -25,7 +25,7 @@ test('shadertools#module imports are defined', t => {
 });
 
 function verifyShaderModule(t, module) {
-  _instantiateShaderModules(module);
+  initializeShaderModule(module);
   t.ok(module, `${module.name} imported`);
 
   const uniforms = getShaderModuleUniforms(module, {}, {});

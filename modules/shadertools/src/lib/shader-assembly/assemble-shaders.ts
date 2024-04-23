@@ -3,15 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {glsl} from '../glsl-utils/highlight';
-import {getShaderModuleDependencies} from './get-shader-module-dependencies';
+import {getShaderModuleDependencies} from '../shader-module/shader-module-dependencies';
 import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
-import {
-  instantiateShaderModules,
-  checkModuleDeprecations
-} from '../shader-module/instantiate-shader-modules';
+import {checkShaderModuleDeprecations} from '../shader-module/shader-module';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
@@ -102,8 +99,8 @@ export function assembleWGSLShader(
   source: string;
   getUniforms: GetUniformsFunc;
 } {
-  const rawModules = getShaderModuleDependencies(options.modules || []);
-  const modules = instantiateShaderModules(rawModules);
+  const modules = getShaderModuleDependencies(options.modules || []);
+
   return {
     source: assembleShaderWGSL(options.platformInfo, {
       ...options,
@@ -131,8 +128,7 @@ export function assembleGLSLShaderPair(
   getUniforms: GetUniformsFunc;
 } {
   const {vs, fs} = options;
-  const rawModules = getShaderModuleDependencies(options.modules || []);
-  const modules = instantiateShaderModules(rawModules);
+  const modules = getShaderModuleDependencies(options.modules || []);
 
   return {
     vs: assembleShaderGLSL(options.platformInfo, {
@@ -233,9 +229,9 @@ export function assembleShaderWGSL(platformInfo: PlatformInfo, options: Assemble
 
   for (const module of modulesToInject) {
     if (log) {
-      module.checkDeprecations(coreSource, log);
+      checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const moduleSource = getModuleSource(module, stage);
+    const moduleSource = getShaderModuleSource(module, stage);
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
@@ -383,9 +379,9 @@ ${getApplicationDefines(allDefines)}
 
   for (const module of modules) {
     if (log) {
-      checkModuleDeprecations(coreSource, module, log);
+      checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const moduleSource = getModuleSource(module, stage);
+    const moduleSource = getShaderModuleSource(module, stage);
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
@@ -480,7 +476,10 @@ function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): stri
 }
 
 /** Extracts the source code chunk for the specified shader type from the named shader module */
-function getModuleSource(module: ShaderModule, stage: 'vertex' | 'fragment' | 'wgsl'): string {
+export function getShaderModuleSource(
+  module: ShaderModule,
+  stage: 'vertex' | 'fragment' | 'wgsl'
+): string {
   let moduleSource;
   switch (stage) {
     case 'vertex':
@@ -496,6 +495,9 @@ function getModuleSource(module: ShaderModule, stage: 'vertex' | 'fragment' | 'w
       assert(false);
   }
 
+  if (!module.name) {
+    debugger;
+  }
   const moduleName = module.name.toUpperCase().replace(/[^0-9a-z]/gi, '_');
   return `\
 // ----- MODULE ${module.name} ---------------

@@ -12,17 +12,25 @@ export {glsl} from './lib/glsl-utils/highlight';
 
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
+// ShaderModules
+
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
-export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
-export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
+
+export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
+export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
+export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
+export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+
+export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
+
+export {resolveModules as _resolveModules} from './lib/shader-module/shader-module-dependencies';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
 export {ShaderAssembler} from './lib/shader-assembler';
-
-export {normalizeShaderModule} from './lib/shader-module/normalize-shader-module';
-export {instantiateShaderModules as _instantiateShaderModules} from './lib/shader-module/instantiate-shader-modules';
-export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
+export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
+export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
 
 // SHADER HELPERS
 
@@ -45,8 +53,6 @@ export {capitalize} from './lib/shader-generator/utils/capitalize';
 export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
 export {combineInjects} from './lib/shader-assembly/shader-injections';
-export {resolveModules as _resolveModules} from './lib/shader-assembly/resolve-modules';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-assembly/resolve-modules';
 
 // EXPERIMENTAL WGSL
 export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
