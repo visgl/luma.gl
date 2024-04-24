@@ -16,6 +16,13 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - `RenderPipeline.topology`: `line-loop-webgl` and `triangle-fan-webgl` topologies are no longer supported. Rebuild your geometries using `triangle-strip` and `line-list`.
 
+**@luma.gl/shadertools**
+
+- `ShaderModuleInstance` type has been removed. Use `ShaderModule` instead. 
+  - `initializeShaderModule()` now store initialized information on the original shader module structure, and can be called multiple times.
+  - `moduleInstance.getUniforms()` is removed. Use `getShaderModuleUniforms(module, ...)` instead.
+  - `getDependencyGraph()` is private. Use `getShaderModuleDependencies(module)` instead.
+
 ## Upgrading to v9.0
 
 luma.gl v9 is a major modernization of the luma.gl API, with many breaking changes, so the upgrade notes for this release are unusually long. To facilitate porting to the v9 release we have also provided a

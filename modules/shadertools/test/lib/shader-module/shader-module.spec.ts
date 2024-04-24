@@ -5,10 +5,9 @@
 import test from 'tape-promise/tape';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {initializeShaderModule, checkShaderModuleDeprecations} from '@luma.gl/shadertools';
-import {getShaderModuleSource} from '@luma.gl/shadertools';
+import {getShaderModuleUniforms, getShaderModuleSource} from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
-  debugger;
   let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
 
   t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
@@ -82,36 +81,38 @@ void main() {
 });
 
 test('initializeShaderModule', t => {
-  const moduleDef = {
+  const module: ShaderModule = {
     name: 'test-shader-module',
     uniformPropTypes: {
+      // @ts-expect-error
       center: [0.5, 0.5],
       strength: {type: 'number', value: 0.3, min: 0, max: 1},
+      // @ts-expect-error
       enabled: false,
+      // @ts-ignore
       sampler: null,
       range: {value: new Float32Array([0, 1]), private: true}
     }
   };
 
-  // @ts-expect-error
-  const module = initializeShaderModule(moduleDef);
+  initializeShaderModule(module);
 
-  // @ts-expect-error
-  t.deepEqual(module.getUniforms(), {
+  let uniforms = getShaderModuleUniforms(module, {});
+  t.deepEqual(uniforms, {
     center: [0.5, 0.5],
     strength: 0.3,
     enabled: false,
     sampler: null,
     range: [0, 1]
-  });
+    });
 
+  uniforms = getShaderModuleUniforms(module, {
+    center: new Float32Array([0, 0]),
+    sampler: {},
+    range: [0, 2]
+  });
   t.deepEqual(
-    // @ts-expect-error
-    module.getUniforms({
-      center: new Float32Array([0, 0]),
-      sampler: {},
-      range: [0, 2]
-    }),
+     uniforms,
     {
       center: [0, 0],
       strength: 0.3,
@@ -121,12 +122,9 @@ test('initializeShaderModule', t => {
     }
   );
 
-  // @ts-expect-error
-  t.throws(() => module.getUniforms({strength: -1}), 'invalid uniform');
-  // @ts-expect-error
-  t.throws(() => module.getUniforms({strength: 2}), 'invalid uniform');
-  // @ts-expect-error
-  t.throws(() => module.getUniforms({center: 0.5}), 'invalid uniform');
+  t.throws(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform');
+  t.throws(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform');
+  t.throws(() => getShaderModuleUniforms(module, {center: 0.5}), 'invalid uniform');
 
   t.end();
 });

@@ -23,7 +23,7 @@ Properties for a Shader
 | Field         | Type                                                   | Description                                    |
 | ------------- | ------------------------------------------------------ | ---------------------------------------------- |
 | `id`          | `string`                                               | name/identifier (for debugging)                |
-| `stage`       | 'vertex' \| 'fragment' \| 'compute'                    | Required by WebGL and GLSL transpiler          |
+| `stage`       | 'vertex' \| 'fragment' \| 'compute'                    | Required by WebGL                              |
 | `source`      | `string`                                               | Shader source code                             |
 | `sourceMap?`  | `string`                                               | WebGPU only                                    |
 | `language?`   | 'glsl' \| 'wgsl'                                       | wgsl in WebGPU only                            |

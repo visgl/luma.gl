@@ -385,7 +385,7 @@ ${getApplicationDefines(allDefines)}
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
-    const injections = module.instance?.injections[stage] || {};
+    const injections = module.instance?.normalizedInjections[stage] || {};
     for (const key in injections) {
       const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {

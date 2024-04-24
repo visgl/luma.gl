@@ -5,7 +5,6 @@ The `Computation` class is a high-level class in the luma.gl API. It brings toge
 `Computation` manages the following responsibilities:
 - **bindings** these can reference textures and uniform buffers
 - **shader module injection**
-- **shader transpilation****
 - **debugging** - Detailed debug logging of draw calls
 
 The `Computation` class integrates with 

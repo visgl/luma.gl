@@ -71,7 +71,7 @@ test('ShaderModules#getDependencyGraph', t => {
       [fp64.name]: 1,
       [project64.name]: 0
     },
-    'Module dependecny is correct'
+    'Module dependency is correct'
   );
   t.end();
 });

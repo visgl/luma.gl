@@ -61,17 +61,13 @@ export type ShaderModule<
 
   /** The instance field contains information that is generated at run-time */
   instance?: {
-    dependencies: ShaderModule[];
     propValidators?: Record<string, PropValidator>;
-    getModuleUniforms: Function;
-    deprecations: ShaderModuleDeprecation[];
-    defines: Record<string, string | number>;
-    injections: {
+    parsedDeprecations: ShaderModuleDeprecation[];
+
+    normalizedInjections: {
       vertex: Record<string, ShaderInjection>;
       fragment: Record<string, ShaderInjection>;
     };
-    uniforms: Record<string, PropValidator>;
-    uniformTypes: Record<string, PropValidator>;
   };
 };
 
@@ -99,43 +95,21 @@ export function initializeShaderModule(module: ShaderModule): void {
 
   const {
     uniformPropTypes = {},
-    getUniforms,
     deprecations = [],
     // defines = {},
     inject = {}
   } = module;
 
   const instance: Required<ShaderModule>['instance'] = {
-    dependencies: module.dependencies || [],
-    injections: normalizeInjections(inject),
-    deprecations: parseDeprecationDefinitions(deprecations),
-    // @ts-expect-error
-    getModuleUniforms: getUniforms
+    normalizedInjections: normalizeInjections(inject),
+    parsedDeprecations: parseDeprecationDefinitions(deprecations),
   };
 
   if (uniformPropTypes) {
-    instance.uniforms = makePropValidators(uniformPropTypes);
+    instance.propValidators = makePropValidators(uniformPropTypes);
   }
 
-  // @ts-expect-error
-  instance.getUniforms = function getUniforms(
-    userProps: Record<string, any>,
-    uniforms: Record<string, any>
-  ): Record<string, any> {
-    // @ts-ignore
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self: ShaderModule = this;
-    if (self.instance?.getModuleUniforms) {
-      // @ts-expect-error
-      return self.getModuleUniforms(userProps, uniforms);
-    }
-    // Build uniforms from the uniforms array
-    // @ts-expect-error
-    return getValidatedProperties(userProps, this.uniforms, this.name);
-  }.bind(module);
-
    module.instance = instance;
-   module.getUniforms = module.instance.getModuleUniforms.bind(module);
 }
 
 /** Convert module props to uniforms */
@@ -146,60 +120,21 @@ export function getShaderModuleUniforms<
   props: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
 ): ShaderModuleT['uniforms'] {
-  const uniforms = {...module.defaultUniforms};
+  initializeShaderModule(module);
+
+  const uniforms = oldUniforms || {...module.defaultUniforms};
+  // If module has a getUniforms function, use it
   if (module.getUniforms) {
-    // @ts-expect-error
-    Object.assign(props, module.getUniforms(props));
-  } else {
-    Object.assign(uniforms, props);
+    return module.getUniforms(props, uniforms);
   }
-  return uniforms;
+
+  // Build uniforms from the uniforms array
+  // @ts-expect-error
+  return getValidatedProperties(props, module.instance?.propValidators, module.name);
 }
 
-// Warn about deprecated uniforms or functions
-export function checkShaderModuleDeprecations(
-  shaderModule: ShaderModule,
-  shaderSource: string,
-  log: any
-): void {
-  shaderModule.deprecations?.forEach(def => {
-    if (def.regex?.test(shaderSource)) {
-      if (def.deprecated) {
-        log.deprecated(def.old, def.new)();
-      } else {
-        log.removed(def.old, def.new)();
-      }
-    }
-  });
-}
 
-/**
-  getUniforms(userProps: Record<string, any>, uniforms: Record<string, any>): Record<string, any> {
-    if (this.getModuleUniforms) {
-      return this.getModuleUniforms(userProps, uniforms);
-    }
-    // Build uniforms from the uniforms array
-    return getValidatedProperties(userProps, this.uniforms, this.name);
-  }
-*/
-
-// HELPERS
-
-function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
-  deprecations.forEach(def => {
-    switch (def.type) {
-      case 'function':
-        def.regex = new RegExp(`\\b${def.old}\\(`);
-        break;
-      default:
-        def.regex = new RegExp(`${def.type} ${def.old};`);
-    }
-  });
-
-  return deprecations;
-}
-
-/*
+/* TODO this looks like it was unused code
   _defaultGetUniforms(opts: Record<string, any> = {}): Record<string, any> {
     const uniforms: Record<string, any> = {};
     const propTypes = this.uniforms;
@@ -220,3 +155,35 @@ function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
   }
 }
 */
+// Warn about deprecated uniforms or functions
+export function checkShaderModuleDeprecations(
+  shaderModule: ShaderModule,
+  shaderSource: string,
+  log: any
+): void {
+  shaderModule.deprecations?.forEach(def => {
+    if (def.regex?.test(shaderSource)) {
+      if (def.deprecated) {
+        log.deprecated(def.old, def.new)();
+      } else {
+        log.removed(def.old, def.new)();
+      }
+    }
+  });
+}
+
+// HELPERS
+
+function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
+  deprecations.forEach(def => {
+    switch (def.type) {
+      case 'function':
+        def.regex = new RegExp(`\\b${def.old}\\(`);
+        break;
+      default:
+        def.regex = new RegExp(`${def.type} ${def.old};`);
+    }
+  });
+
+  return deprecations;
+}

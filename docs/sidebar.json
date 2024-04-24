@@ -54,8 +54,7 @@
         "type": "category",
         "label": "Shader Programming",
         "items": [
-          "api-guide/shaders/shader-modules",
-          "api-guide/shaders/shader-transpilation"
+          "api-guide/shaders/shader-modules"
         ]
       },
       {
