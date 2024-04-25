@@ -56,7 +56,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
 
   end(): void {
     this.gl.endTransformFeedback();
-    if (!this.bindOnUse) {
+    if (this.bindOnUse) {
       this._unbindBuffers();
     }
     this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, null);

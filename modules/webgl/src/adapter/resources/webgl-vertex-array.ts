@@ -96,6 +96,9 @@ export class WEBGLVertexArray extends VertexArray {
       // Attaches ARRAY_BUFFER with specified buffer format to location
       this.device.gl.vertexAttribPointer(location, size, type, normalized, stride, offset);
     }
+    // Clear binding - keeping it may cause [.WebGL-0x12804417100]
+    // GL_INVALID_OPERATION: A transform feedback buffer that would be written to is also bound to a non-transform-feedback target
+    this.device.gl.bindBuffer(GL.ARRAY_BUFFER, null);
 
     // Mark as non-constant
     this.device.gl.enableVertexAttribArray(location);
