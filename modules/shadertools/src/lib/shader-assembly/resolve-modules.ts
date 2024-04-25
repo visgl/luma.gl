@@ -6,14 +6,33 @@ import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderModuleInstance} from '../shader-module/shader-module-instance';
 
 /**
- * Instantiate shader modules and esolve any dependencies
+ * Resolve any dependencies and optionally instantiate modules
  */
 export function resolveModules(
   modules: (ShaderModule | ShaderModuleInstance)[]
-): ShaderModuleInstance[] {
-  const instances = ShaderModuleInstance.instantiateModules(modules);
-  return getShaderDependencies(instances);
+): ShaderModuleInstance[];
+export function resolveModules(
+  modules: (ShaderModule | ShaderModuleInstance)[],
+  instantiate: true
+): ShaderModuleInstance[];
+export function resolveModules(modules: ShaderModule[], instantiate: false): ShaderModule[];
+export function resolveModules(
+  modules: ShaderModuleInstance[],
+  instantiate: false
+): ShaderModuleInstance[];
+export function resolveModules(
+  modules: (ShaderModule | ShaderModuleInstance)[],
+  instantiate: boolean = true
+): (ShaderModule | ShaderModuleInstance)[] {
+  return getShaderDependencies(
+    instantiate === false ? modules : ShaderModuleInstance.instantiateModules(modules)
+  );
 }
+
+type AbstractModule = {
+  name: string;
+  dependencies?: AbstractModule[];
+};
 
 /**
  * Takes a list of shader module names and returns a new list of
@@ -27,8 +46,8 @@ export function resolveModules(
  * @param modules - Array of modules (inline modules or module names)
  * @return - Array of modules
  */
-function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleInstance[] {
-  const moduleMap: Record<string, ShaderModuleInstance> = {};
+function getShaderDependencies<T extends AbstractModule>(modules: T[]): T[] {
+  const moduleMap: Record<string, T> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
 
@@ -48,10 +67,10 @@ function getShaderDependencies(modules: ShaderModuleInstance[]): ShaderModuleIns
  * @return - Map of module name to its level
  */
 // Adds another level of dependencies to the result map
-export function getDependencyGraph(options: {
-  modules: ShaderModuleInstance[];
+export function getDependencyGraph<T extends AbstractModule>(options: {
+  modules: T[];
   level: number;
-  moduleMap: Record<string, ShaderModuleInstance>;
+  moduleMap: Record<string, T>;
   moduleDepth: Record<string, number>;
 }) {
   const {modules, level, moduleMap, moduleDepth} = options;
