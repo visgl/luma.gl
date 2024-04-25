@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray, NumberArray} from '../types';
+import type {TypedArray, NumberArray} from '../types';
 
 /**
  * Check is an array is a typed array

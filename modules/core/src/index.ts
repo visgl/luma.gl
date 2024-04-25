@@ -130,7 +130,7 @@ export type {UniformValue} from './adapter/types/uniforms';
 
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
-export type {NumberArray} from './types';
+export type {NumberArray, TypedArray, TypedArrayConstructor} from './types';
 export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
 export type {
   ShaderDataType,
