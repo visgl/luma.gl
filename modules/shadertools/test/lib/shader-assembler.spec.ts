@@ -75,18 +75,17 @@ test('ShaderAssembler#hooks', t => {
 
   t.ok(preHookShaders !== assemblyResults, 'Adding hooks changes hash');
 
-  const pickingInjection = Object.assign(
-    {
-      inject: {
-        'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-        'fs:LUMAGL_fragmentColor': {
-          injection: 'color = picking_filterColor(color);',
-          order: Number.POSITIVE_INFINITY
-        }
+  const pickingInjection = {
+    ...picking,
+    instance: undefined,
+    inject: {
+      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+      'fs:LUMAGL_fragmentColor': {
+        injection: 'color = picking_filterColor(color);',
+        order: Number.POSITIVE_INFINITY
       }
-    },
-    picking
-  );
+    }
+  };
 
   const noModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
