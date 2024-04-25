@@ -345,6 +345,20 @@ test('assembleGLSLShaderPair#defines', t => {
   t.end();
 });
 
+/** Note that */
+const pickingInject = {
+  ...picking,
+  instance: undefined,
+  inject: {
+    'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
+    'fs:LUMAGL_fragmentColor': {
+      injection: 'color = picking_filterColor(color);',
+      order: Number.POSITIVE_INFINITY
+    },
+    'fs:#main-end': 'fragmentColor = picking_filterColor(fragmentColor);'
+  }
+};
+
 test('assembleGLSLShaderPair#shaderhooks', t => {
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
@@ -354,20 +368,6 @@ test('assembleGLSLShaderPair#shaderhooks', t => {
       footer: 'color.a *= 1.2;\n'
     }
   ];
-
-  const pickingInject = Object.assign(
-    {
-      inject: {
-        'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-        'fs:LUMAGL_fragmentColor': {
-          injection: 'color = picking_filterColor(color);',
-          order: Number.POSITIVE_INFINITY
-        },
-        'fs:#main-end': 'fragmentColor = picking_filterColor(fragmentColor);'
-      }
-    },
-    picking
-  );
 
   const testInject = {
     name: 'test-injection',
@@ -425,6 +425,7 @@ test('assembleGLSLShaderPair#shaderhooks', t => {
     assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
     'hook function injected into fragment shader'
   );
+
   t.ok(
     assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1,
     'injection code included in vertex shader with module'

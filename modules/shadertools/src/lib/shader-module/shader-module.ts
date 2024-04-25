@@ -102,14 +102,14 @@ export function initializeShaderModule(module: ShaderModule): void {
 
   const instance: Required<ShaderModule>['instance'] = {
     normalizedInjections: normalizeInjections(inject),
-    parsedDeprecations: parseDeprecationDefinitions(deprecations),
+    parsedDeprecations: parseDeprecationDefinitions(deprecations)
   };
 
   if (uniformPropTypes) {
     instance.propValidators = makePropValidators(uniformPropTypes);
   }
 
-   module.instance = instance;
+  module.instance = instance;
 }
 
 /** Convert module props to uniforms */
@@ -132,7 +132,6 @@ export function getShaderModuleUniforms<
   // @ts-expect-error
   return getValidatedProperties(props, module.instance?.propValidators, module.name);
 }
-
 
 /* TODO this looks like it was unused code
   _defaultGetUniforms(opts: Record<string, any> = {}): Record<string, any> {

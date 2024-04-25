@@ -496,7 +496,7 @@ export function getShaderModuleSource(
   }
 
   if (!module.name) {
-    debugger;
+    throw new Error('Shader module must have a name');
   }
   const moduleName = module.name.toUpperCase().replace(/[^0-9a-z]/gi, '_');
   return `\

@@ -104,23 +104,20 @@ test('initializeShaderModule', t => {
     enabled: false,
     sampler: null,
     range: [0, 1]
-    });
+  });
 
   uniforms = getShaderModuleUniforms(module, {
     center: new Float32Array([0, 0]),
     sampler: {},
     range: [0, 2]
   });
-  t.deepEqual(
-     uniforms,
-    {
-      center: [0, 0],
-      strength: 0.3,
-      enabled: false,
-      sampler: {},
-      range: [0, 1]
-    }
-  );
+  t.deepEqual(uniforms, {
+    center: [0, 0],
+    strength: 0.3,
+    enabled: false,
+    sampler: {},
+    range: [0, 1]
+  });
 
   t.throws(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform');
   t.throws(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform');

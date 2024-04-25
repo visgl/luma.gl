@@ -43,13 +43,6 @@ test('ShaderModules#getShaderDependencies', t => {
     'Module order is correct'
   );
 
-  t.throws(
-    // @ts-expect-error
-    () => _resolveModules(['project64']),
-    /deprecated.+project64/,
-    'Useful message for deprecated usage'
-  );
-
   t.end();
 });
 

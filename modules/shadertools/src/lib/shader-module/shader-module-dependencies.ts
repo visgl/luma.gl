@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { ShaderModule } from './shader-module';
+import {ShaderModule} from './shader-module';
 import {initializeShaderModules} from '../shader-module/shader-module';
 
 // import type {ShaderModule} from '../shader-module/shader-module';
@@ -25,6 +25,7 @@ type AbstractModule = {
  * @return - Array of modules
  */
 export function getShaderModuleDependencies<T extends AbstractModule>(modules: T[]): T[] {
+  initializeShaderModules(modules);
   const moduleMap: Record<string, T> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
@@ -75,14 +76,6 @@ export function getDependencyGraph<T extends AbstractModule>(options: {
 }
 
 /**
- * Instantiate shader modules and resolve any dependencies
- * @deprecated Use getShaderDpendencies
- */
-export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
-  return getShaderDependencies(modules);
-}
-
-/**
  * Takes a list of shader module names and returns a new list of
  * shader module names that includes all dependencies, sorted so
  * that modules that are dependencies of other modules come first.
@@ -95,6 +88,7 @@ export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
  * @return - Array of modules
  */
 export function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
+  initializeShaderModules(modules);
   const moduleMap: Record<string, ShaderModule> = {};
   const moduleDepth: Record<string, number> = {};
   getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
@@ -105,5 +99,14 @@ export function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
     .map(name => moduleMap[name]);
   initializeShaderModules(modules);
   return modules;
+}
 
+// DEPRECATED
+
+/**
+ * Instantiate shader modules and resolve any dependencies
+ * @deprecated Use getShaderDpendencies
+ */
+export function resolveModules(modules: ShaderModule[]): ShaderModule[] {
+  return getShaderDependencies(modules);
 }

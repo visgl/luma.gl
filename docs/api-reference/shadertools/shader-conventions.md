@@ -1,5 +1,10 @@
 # Shader Modules
 
+:::caution
+This describes informal conventions that luma.gl applies to its shaders. 
+It is still a work in progress/
+:::
+
 ## Uniform Blocks
 
 Shader modules are built around a set of well-defined uniform interface blocks.
@@ -22,4 +27,4 @@ by adding the `passes` field to a shader module.
 
 ### Defining your own Shader Modules
 
-It is critical that the order and types of declarations of uniforms match those in the shader.
+It is important that the order and types of declarations of uniforms match those in the shader.

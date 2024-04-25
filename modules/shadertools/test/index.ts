@@ -21,7 +21,6 @@ import './lib/shader-transpiler/transpile-shader.spec';
 // shader generation
 import './lib/generator/generate-shader.spec';
 
-
 // SHADER ASSEMBLY
 
 import './lib/shader-assembly/inject-shader.spec';

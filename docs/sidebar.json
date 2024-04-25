@@ -135,7 +135,6 @@
             "type": "category",
             "label": "Shader Modules",
             "items": [
-              "api-reference/shadertools/shader-modules",
               "api-reference/shadertools/shader-modules/fp32",
               "api-reference/shadertools/shader-modules/fp64",
               "api-reference/shadertools/shader-modules/pbr-material",
@@ -151,6 +150,7 @@
             "items": ["api-reference/shadertools/shader-passes/image-processing"]
           },
           "api-reference/shadertools/README",
+          "api-reference/shadertools/shader-module",
           "api-reference/shadertools/shader-assembler",
           "api-reference/shadertools/shader-info"
         ]
