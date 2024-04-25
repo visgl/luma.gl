@@ -58,6 +58,8 @@ export type ColorHalftoneProps = {
   size?: number;
 };
 
+export type ColorHalftoneUniforms = ColorHalftoneProps;
+
 /**
  * Color Halftone -
  * Simulates a CMYK halftone rendering of the image by multiplying pixel values
@@ -65,6 +67,9 @@ export type ColorHalftoneProps = {
  * and black.
  */
 export const colorHalftone = {
+  props: {} as ColorHalftoneProps,
+  uniforms: {} as ColorHalftoneUniforms,
+
   name: 'colorHalftone',
   uniformTypes: {
     center: 'vec2<f32>',

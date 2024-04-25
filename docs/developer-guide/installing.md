@@ -42,7 +42,7 @@ const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 
 - `engine`: High-level constructs such as `Model`, `AnimationLoop` and `Geometry` that allow a developer to work without worrying about rendering pipeline details.
 - `webgl`: Wrapper classes around WebGL objects such as `Program`, `Buffer`, `VertexArray` that allow a developer to manager the rendering pipeline directly but with a more convenient API.
-- `shadertools`: A system for modularizing and composing GLSL shader code.
+- `shadertools`: A system for modularizing and composing shader code.
 - `debug`: Tooling to aid in debugging.
 
 

@@ -36,7 +36,7 @@ const colorShaderModule = {
 };
 ```
 
-A shader module is essentially just some GLSL code that will be inserted into our vertex and fragment shaders. They're usually used to define functions that implement generic functionality that can be reused in different programs. In this case, we're defining one to simply pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
+A shader module essentially just contains some shader code fragments that will be inserted into our vertex and fragment shaders. They're usually used to define functions that implement generic functionality that can be reused in different programs. In this case, we're defining one to simply pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
 
 Now let's update our vertex and fragment shaders to use the module functions:
 

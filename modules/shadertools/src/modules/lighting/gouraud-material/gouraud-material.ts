@@ -18,6 +18,9 @@ export type GouraudMaterialUniforms = {
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
 export const gouraudMaterial = {
+  props: {} as GouraudMaterialProps,
+  uniforms: {} as GouraudMaterialUniforms,
+
   name: 'gouraud-lighting',
   // Note these are switched between phong and gouraud
   vs: GOURAUD_VS,
@@ -38,6 +41,7 @@ export const gouraudMaterial = {
     shininess: 32,
     specularColor: [0.15, 0.15, 0.15]
   },
+
   getUniforms(props: GouraudMaterialProps): GouraudMaterialUniforms {
     return {...gouraudMaterial.defaultUniforms, ...props};
   }

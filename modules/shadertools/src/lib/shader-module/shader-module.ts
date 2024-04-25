@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray} from '@math.gl/types';
-import {UniformFormat} from '../../types';
-import {PropType} from '../filters/prop-types';
+import type {NumberArray} from '@math.gl/types';
+import type {UniformFormat} from '../../types';
+import {PropType, PropValidator} from '../filters/prop-types';
+import {ShaderInjection} from '../shader-assembly/shader-injections';
+import {makePropValidators, getValidatedProperties} from '../filters/prop-types';
+import {normalizeInjections} from '../shader-assembly/shader-injections';
 
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
@@ -14,7 +17,7 @@ export type UniformInfo = {
 
 /**
  * A shader module definition object
- * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
+ * @note Needs to be initialized with `initializeShaderModules`
  */
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
@@ -22,12 +25,17 @@ export type ShaderModule<
   BindingsT extends Record<string, unknown> = {}
 > = {
   /** Used for type inference not for values */
-  props?: Required<PropsT>;
+  props?: PropsT;
   /** Used for type inference, not currently used for values */
   uniforms?: UniformsT;
 
   name: string;
+
+  /** WGSL code */
+  source?: string;
+  /** GLSL fragment shader code */
   fs?: string;
+  /** GLSL vertex shader code */
   vs?: string;
 
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
@@ -51,8 +59,16 @@ export type ShaderModule<
   /** Information on deprecated properties */
   deprecations?: ShaderModuleDeprecation[];
 
-  /** Internal */
-  normalized?: boolean;
+  /** The instance field contains information that is generated at run-time */
+  instance?: {
+    propValidators?: Record<string, PropValidator>;
+    parsedDeprecations: ShaderModuleDeprecation[];
+
+    normalizedInjections: {
+      vertex: Record<string, ShaderInjection>;
+      fragment: Record<string, ShaderInjection>;
+    };
+  };
 };
 
 /** Use to generate deprecations when shader module is used */
@@ -64,16 +80,109 @@ export type ShaderModuleDeprecation = {
   deprecated?: boolean;
 };
 
+// SHNDER MODULE API
+
+export function initializeShaderModules(modules: ShaderModule[]): void {
+  modules.map((module: ShaderModule) => initializeShaderModule(module));
+}
+
+export function initializeShaderModule(module: ShaderModule): void {
+  if (module.instance) {
+    return;
+  }
+
+  initializeShaderModules(module.dependencies || []);
+
+  const {
+    uniformPropTypes = {},
+    deprecations = [],
+    // defines = {},
+    inject = {}
+  } = module;
+
+  const instance: Required<ShaderModule>['instance'] = {
+    normalizedInjections: normalizeInjections(inject),
+    parsedDeprecations: parseDeprecationDefinitions(deprecations)
+  };
+
+  if (uniformPropTypes) {
+    instance.propValidators = makePropValidators(uniformPropTypes);
+  }
+
+  module.instance = instance;
+}
+
 /** Convert module props to uniforms */
 export function getShaderModuleUniforms<
   ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
->(module: ShaderModuleT, props: ShaderModuleT['props']): ShaderModuleT['uniforms'] {
-  const uniforms = {...module.defaultUniforms};
+>(
+  module: ShaderModuleT,
+  props: ShaderModuleT['props'],
+  oldUniforms?: ShaderModuleT['uniforms']
+): ShaderModuleT['uniforms'] {
+  initializeShaderModule(module);
+
+  const uniforms = oldUniforms || {...module.defaultUniforms};
+  // If module has a getUniforms function, use it
   if (module.getUniforms) {
-    // @ts-expect-error
-    Object.assign(props, module.getUniforms(props));
-  } else {
-    Object.assign(uniforms, props);
+    return module.getUniforms(props, uniforms);
   }
-  return uniforms;
+
+  // Build uniforms from the uniforms array
+  // @ts-expect-error
+  return getValidatedProperties(props, module.instance?.propValidators, module.name);
+}
+
+/* TODO this looks like it was unused code
+  _defaultGetUniforms(opts: Record<string, any> = {}): Record<string, any> {
+    const uniforms: Record<string, any> = {};
+    const propTypes = this.uniforms;
+
+    for (const key in propTypes) {
+      const propDef = propTypes[key];
+      if (key in opts && !propDef.private) {
+        if (propDef.validate) {
+          assert(propDef.validate(opts[key], propDef), `${this.name}: invalid ${key}`);
+        }
+        uniforms[key] = opts[key];
+      } else {
+        uniforms[key] = propDef.value;
+      }
+    }
+
+    return uniforms;
+  }
+}
+*/
+// Warn about deprecated uniforms or functions
+export function checkShaderModuleDeprecations(
+  shaderModule: ShaderModule,
+  shaderSource: string,
+  log: any
+): void {
+  shaderModule.deprecations?.forEach(def => {
+    if (def.regex?.test(shaderSource)) {
+      if (def.deprecated) {
+        log.deprecated(def.old, def.new)();
+      } else {
+        log.removed(def.old, def.new)();
+      }
+    }
+  });
+}
+
+// HELPERS
+
+function parseDeprecationDefinitions(deprecations: ShaderModuleDeprecation[]) {
+  deprecations.forEach(def => {
+    switch (def.type) {
+      case 'function':
+        def.regex = new RegExp(`\\b${def.old}\\(`);
+        break;
+      default:
+        def.regex = new RegExp(`${def.type} ${def.old};`);
+    }
+  });
+
+  return deprecations;
 }

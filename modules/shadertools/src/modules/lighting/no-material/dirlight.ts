@@ -58,10 +58,14 @@ vec4 dirlight_filterColor(vec4 color) {
  * Cheap lighting - single directional light, single dot product, one uniform
  */
 export const dirlight = {
+  props: {} as DirlightProps,
+  uniforms: {} as DirlightUniforms,
+
   name: 'dirlight',
   dependencies: [],
   vs: VS_GLSL,
   fs: FS_GLSL,
+
   // fragmentInputs: [
   //   {
   //     name: 'dirlight_vNormal',
@@ -74,8 +78,6 @@ export const dirlight = {
   defaultUniforms: {
     lightDirection: new Float32Array([1, 1, 2])
   },
-  props: {} as Required<DirlightProps>,
-  uniforms: {} as DirlightUniforms,
   getUniforms
 } as const satisfies ShaderModule<DirlightProps, DirlightUniforms>;
 

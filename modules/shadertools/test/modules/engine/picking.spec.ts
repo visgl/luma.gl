@@ -6,7 +6,7 @@ import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
-import {picking, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
 
@@ -58,7 +58,7 @@ const TEST_CASES = [
 ];
 
 test('picking#getUniforms', t => {
-  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
+  t.deepEqual(getShaderModuleUniforms(picking, {}, {}), {}, 'Empty input');
 
   t.deepEqual(
     picking.getUniforms({
@@ -212,10 +212,10 @@ test.skip('picking#picking_setPickingColor', async t => {
     vertexCount
   });
 
-  const pickingModule = new ShaderModuleInstance(picking);
   await Promise.all(
     TEST_CASES.map(async testCase => {
-      const uniforms = pickingModule.getUniforms(
+      const uniforms = getShaderModuleUniforms(
+        picking,
         {
           highlightedObjectColor: testCase.highlightedObjectColor,
           // @ts-expect-error

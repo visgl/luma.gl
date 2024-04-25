@@ -32,13 +32,18 @@ export type VignetteProps = {
   amount?: number;
 };
 
+export type VignetteUniforms = VignetteProps;
+
 /**
  * Vignette -
  * Adds a simulated lens edge darkening effect.
  */
 export const vignette = {
+  props: {} as VignetteProps,
+  uniforms: {} as VignetteUniforms,
+
   name: 'vignette',
-  fs,
+
   uniformTypes: {
     radius: 'f32',
     amount: 'f32'
@@ -47,5 +52,8 @@ export const vignette = {
     radius: {value: 0.5, min: 0, max: 1},
     amount: {value: 0.5, min: 0, max: 1}
   },
-  passes: [{filter: true}]
+
+  passes: [{filter: true}],
+
+  fs
 } as const satisfies ShaderPass<VignetteProps, VignetteProps>;

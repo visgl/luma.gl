@@ -23,7 +23,7 @@ import {AnimationLoop, Transform, Model} from '@luma.gl/engine';
 import {Buffer, clear} from '@luma.gl/webgl';
 ```
 
-Then we'll define our shaders, which we'll write in GLSL ES 3.0 since we're using WebGL 2:
+Then we'll define our shaders:
 
 ```typescript
 const transformVs = `\
@@ -69,7 +69,7 @@ void main() {
 `;
 ```
 
-Internally, we'll be using two separate programs, one for transform feedback and the other for rendering, so we define shaders for both. By default, the `Transform` class will skip rasterization and doesn't require a fragment shader since transform feedback is an operation on vertex data. We define a vertex shader for a transform feedback pass that simply rotates each vertex by 2 degrees in the xy-plane. The rendering vertex and fragment shaders are identical to the ones used in the [Hello Triangle](/docs/tutorials/hello-triangle) tutorial aside from being written in GLSL ES 3.0.
+Internally, we'll be using two separate programs, one for transform feedback and the other for rendering, so we define shaders for both. By default, the `Transform` class will skip rasterization and doesn't require a fragment shader since transform feedback is an operation on vertex data. We define a vertex shader for a transform feedback pass that simply rotates each vertex by 2 degrees in the xy-plane. The rendering vertex and fragment shaders are identical to the ones used in the [Hello Triangle](/docs/tutorials/hello-triangle) tutorial.
 
 In `onInitialize`, we create our `Transform` instance:
 

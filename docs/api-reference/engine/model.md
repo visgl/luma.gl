@@ -8,7 +8,6 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **bindings** these can reference textures and uniform buffers
 - **uniforms** WebGL only uniforms
 - **shader module injection**
-- **shader transpilation****
 - **debugging** - Detailed debug logging of draw calls
 
 The `Model` class integrates with 

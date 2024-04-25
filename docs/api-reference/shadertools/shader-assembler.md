@@ -86,7 +86,7 @@ Generate the final vertex and fragment shader source that can be compiled to cre
 - composes base vertex and fragment shader source with source from shader modules
 - resolves hook functions and injections
 
-Takes the source code of a vertex shader and a fragment shader, and a list of modules, defines, etc. Outputs resolved source code for both shaders, after adding prologue, adding defines, importing and transpiling modules, and injecting any shader fragments).
+Takes the source code of a vertex shader and a fragment shader, and a list of modules, defines, etc. Outputs resolved source code for both shaders, after adding prologue, adding defines, and importing modules, and injecting any shader fragments).
 
 Returns:
 
@@ -189,10 +189,3 @@ new Model(gl, {
   }
 });
 ```
-
-## Transpilation
-
-If the platformInfo specifies that GLSL 1.0 is required, `assembleShaders` will attempt to transpile GLSL 3.0 shaders to GLSL ES 1.0. 
-
-See the user guide for more details.
-

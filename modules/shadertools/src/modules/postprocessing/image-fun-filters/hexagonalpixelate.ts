@@ -62,12 +62,17 @@ export type HexagonalPixelateProps = {
   scale?: number;
 };
 
+export type HexagonalPixelateUniforms = HexagonalPixelateProps;
+
 /**
  * Hexagonal Pixelate
  * Renders the image using a pattern of hexagonal tiles. Tile colors
  * are nearest-neighbor sampled from the centers of the tiles.
  */
 export const hexagonalPixelate = {
+  props: {} as HexagonalPixelateProps,
+  uniforms: {} as HexagonalPixelateUniforms,
+
   name: 'hexagonalPixelate',
   uniformTypes: {
     center: 'vec2<f32>',

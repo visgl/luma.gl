@@ -15,7 +15,6 @@ Shader Modules
 - A Shader Pass system allowing simple description and chaining of post processing effects.
 - A props to uniforms mapping system
 - A selection of shader modules and shader passes
-- A GLSL Version Transpiler (transpiles between GLSL ES 3.00, GLSL ES 1.00).
 
 ### Shader Injections
 

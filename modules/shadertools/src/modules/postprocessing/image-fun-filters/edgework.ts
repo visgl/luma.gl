@@ -75,19 +75,26 @@ export type EdgeWorkProps = {
   delta?: number;
 };
 
+export type EdgeWorkUniforms = EdgeWorkProps;
+
 /**
  * Edge Work -
  * Picks out different frequencies in the image by subtracting two
  * copies of the image blurred with different radii.
  */
 export const edgeWork = {
+  props: {} as EdgeWorkProps,
+  uniforms: {} as EdgeWorkProps,
+
   name: 'edgeWork',
+  dependencies: [random],
+  fs,
+
   uniformPropTypes: {
     radius: {value: 2, min: 1, softMax: 50},
     delta: {value: [1, 0], private: true}
   },
-  fs,
-  dependencies: [random],
+
   passes: [
     {
       // @ts-expect-error

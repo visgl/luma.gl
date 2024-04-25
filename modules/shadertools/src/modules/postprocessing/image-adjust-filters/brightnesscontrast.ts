@@ -32,6 +32,8 @@ export type BrightnessContrastProps = {
   contrast?: number;
 };
 
+export type BrightnessContrastUniforms = BrightnessContrastProps;
+
 /**
  * Brightness / Contrast -
  * Provides additive brightness and multiplicative contrast control.
@@ -39,6 +41,9 @@ export type BrightnessContrastProps = {
  * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
 export const brightnessContrast = {
+  props: {} as BrightnessContrastProps,
+  uniforms: {} as BrightnessContrastUniforms,
+
   name: 'brightnessContrast',
   uniformTypes: {
     brightness: 'f32',

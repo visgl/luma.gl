@@ -5,8 +5,8 @@
 import type {ShaderModule, UniformValue} from './shader-module';
 
 /**
- * A shaderpass is a shader module with additional information
- * on how to run
+ * A ShaderPass is a ShaderModule that can be run "standalone" (e.g. post processing effects)
+ * It adds additional information on how to run the module in one or more passes.
  */
 export type ShaderPass<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
@@ -15,6 +15,7 @@ export type ShaderPass<
   passes: ShaderPassData[];
 };
 
+/** Information on how to run a specific pass */
 type ShaderPassData = {
   sampler?: boolean;
   filter?: boolean;

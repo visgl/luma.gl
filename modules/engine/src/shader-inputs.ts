@@ -5,7 +5,7 @@
 import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
-import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
@@ -63,7 +63,7 @@ export class ShaderInputs<
   // @ts-expect-error Fix typings
   constructor(modules: {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}) {
     // TODO - get all dependencies from modules
-    const allModules = _resolveModules(Object.values(modules));
+    const allModules = getShaderModuleDependencies(Object.values(modules));
     log.log(
       1,
       'Creating ShaderInputs with modules',
@@ -126,7 +126,7 @@ export class ShaderInputs<
    * Return the map of modules
    * @todo should should this include the resolved dependencies?
    */
-  getModules(): ShaderModuleInstance[] {
+  getModules(): ShaderModule[] {
     return Object.values(this.modules);
   }
 

@@ -46,9 +46,11 @@ export type HueSaturationProps = {
   /** -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
    * and 1 is 180 degree rotation in the positive direction) */
   hue?: number;
-  /** @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast) */
+  /** -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast) */
   saturation?: number;
 };
+
+export type HueSaturationUniforms = HueSaturationProps;
 
 /**
  * Hue / Saturation
@@ -60,7 +62,12 @@ export type HueSaturationProps = {
  * or away from the average color channel value.
  */
 export const hueSaturation = {
+  props: {} as HueSaturationProps,
+  uniforms: {} as HueSaturationUniforms,
+
   name: 'hueSaturation',
+  fs,
+
   uniformTypes: {
     hue: 'f32',
     saturation: 'f32'
@@ -69,6 +76,5 @@ export const hueSaturation = {
     hue: {value: 0, min: -1, max: 1},
     saturation: {value: 0, min: -1, max: 1}
   },
-  fs,
   passes: [{filter: true}]
 } as const satisfies ShaderPass<HueSaturationProps>;

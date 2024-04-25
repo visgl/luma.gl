@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {tiltShift, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {tiltShift, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import test from 'tape-promise/tape';
 
 test('tiltShift#build/uniform', t => {
-  const tiltShiftModule = new ShaderModuleInstance(tiltShift);
-  const uniforms = tiltShiftModule.getUniforms({}, {});
+  const uniforms = getShaderModuleUniforms(tiltShift, {}, {});
 
   t.ok(uniforms, 'tiltShift module build is ok');
   t.equal(uniforms.blurRadius, 15, 'tiltShift blurRadius uniform is ok');
