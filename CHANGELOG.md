@@ -1,5 +1,13 @@
 # luma.gl CHANGELOG
 
+### v9.1.0-alpha.2
+
+- fix(webgl): reset buffer binding in WEBGLVertexArray.setBuffer (#2075)
+- chore(shadertools): Remove ShaderModuleInstance class (#2074)
+- Revert "shadertools: Resolve dependencies in ShaderInputs (#2073)" (#2078)
+- shadertools: Resolve dependencies in ShaderInputs (#2073)
+- fix(core): Add back pure type exports (#2077)
+
 ### v9.1.0-alpha.1
 
 - Add luma namespace to docs (#2076)

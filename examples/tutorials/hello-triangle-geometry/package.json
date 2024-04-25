@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-triangle",
-  "version": "9.1.0-alpha.1",
+  "version": "9.1.0-alpha.2",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.1.0-alpha.1",
-    "@luma.gl/engine": "9.1.0-alpha.1",
-    "@luma.gl/shadertools": "9.1.0-alpha.1",
-    "@luma.gl/webgl": "9.1.0-alpha.1",
-    "@luma.gl/webgpu": "9.1.0-alpha.1"
+    "@luma.gl/core": "9.1.0-alpha.2",
+    "@luma.gl/engine": "9.1.0-alpha.2",
+    "@luma.gl/shadertools": "9.1.0-alpha.2",
+    "@luma.gl/webgl": "9.1.0-alpha.2",
+    "@luma.gl/webgpu": "9.1.0-alpha.2"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
