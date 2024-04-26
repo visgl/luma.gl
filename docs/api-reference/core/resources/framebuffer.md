@@ -78,17 +78,15 @@ model2.draw({renderPass: screenRenderPass, ...});
 
 ### Framebuffer Attachment Values
 
-:::info
-This system is expected to be replaced with a `TextureView` class in a future release.
-:::
-
 The following values can be provided for each attachment point
 
-- `Texture` - attaches at mipmapLevel 0 of the supplied `Texture2D`.
-- [`Texture`, 0, mipmapLevel] - attaches the specified mipmapLevel from the supplied `Texture2D`, or cubemap face. The second element in the array must be `0`.
-- [`Texture` (cube), face (number), mipmapLevel=0 (number)] - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level.
-- [`Texture`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture2DArray`, at the specified mipmap level.
-- [`Texture3D`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
+- `Texture` - attaches at mipmapLevel 0 (the the supplied `Texture`'s default `TextureView`.
+- `TextureView`
+   - `2d`: attaches the specified mipmapLevel from the supplied `Texture`, or cubemap face. The second element in the array must be `0`.
+   - `cube`: face (depth), mipmapLevel=0 - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level.
+   - `2d-array`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture`, at the specified mipmap level.
+   - `3d`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
+  
 ## Framebuffer Attachments
 
 A `Framebuffer` holds:
@@ -118,47 +116,31 @@ This data loss is usually a non-issue as resizes are usually performed between r
 | `colorAttachments`        | `ColorAttachment\|Texture[]`        | Array of render target textures.     |
 | `depthStencilAttachment?` | `DepthStencilAttachment\|Texture[]` | Depth/stencil texture.               |
 
-### `ColorAttachment`
-
-Framebuffer attachments lets the user specify the textures that will be used for a RenderPass, 
-together with some additional options for how to clear color textures.
-
-| Property    | Type                   | Description                                                                                                    |
-| ----------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `texture`     | `Texture`              | Describes the texture subresource that will be output to for this color attachment.                            |
-| `clearValue`? | `number[]`             | Value to clear to prior to executing the render pass. Default: [0, 0, 0, 0]. Ignored if loadOp is not "clear". |
-| `loadOp`?     | `'load'`, `'clear'`    | Load operation to perform on texture prior to executing the render pass. Default: 'clear'.                     |
-| `storeOp`?    | `'store'`, `'discard'` | The store operation to perform on texture after executing the render pass. Default: 'store'.                   |
-
-- Clearing can be disabled by setting `loadOp='load'` however this may have a small performance cost as GPUs are optimized for clearing.
-- WebGL does not support setting `storeOp: 'discard'` for just some attachments, it is all or nothing.
-
-### `DepthStencilAttachment`
-
- Framebuffer attachments lets the user specify the depth stencil texture that will be used for a RenderPass, 
- together with some additional options for how to clear depth and stencil buffers.
- 
- | Property             | Type                   | Description                                                                                                    |
- | -------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
- | `texture`            | `Texture`              | Describes the texture subresource that will be output to and read from for this depth/stencil attachment.      |
- | `depthClearValue`?   | `number`               | Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0.      |
- | `depthLoadOp`?       | `'load'`, `'clear'`    | Load operation to perform on depth component prior to executing the render pass. Default 'clear'.    |
- | `depthStoreOp`?      | `'store'`, `'discard'` | Store operation` to perform on depth component after executing the render pass. Default 'store'.               |
- | `depthReadOnly`?     | `boolean`              | Depth component is read only.                                                               |
- | `stencilClearValue`? | `number `              | Value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear". |
- | `stencilLoadOp`?     | `'clear'`, `'load'`    | Load operation to perform on stencil component prior to executing the render pass. Prefer clearing. |
- | `stencilStoreOp`?    | `'store'`, `'discard'` | Store operation to perform on stencil component after executing the render pass.                               |
- | `stencilReadOnly`?   | `boolean`              | Stencil component is read only.                                                             |
-
-- Clearing can be disabled by setting `loadOp='load'` however this may have a small performance cost as GPUs are optimized for clearing.
-- WebGL does not support setting `storeOp: 'discard'` for just some attachments, it is all or nothing.
-
 ## Members
 
 - `device`: `Device` - holds a reference to the `Device` that created this `Framebuffer`.
 - `handle`: `unknown` - WebGL: holds the underlying `WebGLFramebuffer`. No underlying object on WebGPU.
 - `props`: `FramebufferProps` - holds a copy of the `FramebufferProps` used to create this `Buffer`.
 
+### `colorAttachments`
+
+```ts
+colorAttachments: TextureView)[]
+```
+
+Framebuffer attachments lets the user specify the textures that will be used for a RenderPass, 
+together with some additional options for how to clear color textures.
+
+
+### `DepthStencilAttachment`
+
+```ts
+depthStencilAttachments: TextureView[]
+```
+
+ Framebuffer attachments lets the user specify the depth stencil texture that will be used for a RenderPass, 
+ together with some additional options for how to clear depth and stencil buffers.
+ 
 ## Methods
 
 ### constructor
@@ -187,11 +169,11 @@ Note the `framebuffer.resize()` method has been designed so that it can be calle
 
 ## Remarks
 
-WebGPU
+**WebGPU**
 - The `Framebuffer` class is a pure luma.gl class as this concept does not exist natively in WebGPU (attachment information has to be provided through the `GPURenderPassDescriptor` `colorAttachments` and the `depthStencilAttachment` fields every frame when a render pass is created).`.
 - `resize()` will destroy and recreate textures (meaning the the underlying `GPUTexture` / `GPUTextureView` handles are no longer the same after a `resize()`
 
-WebGL
-- The `Framebuffer` class wraps the `WebGLFramebuffer` object exists, see e.g. [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)
+**WebGL**
+- The `Framebuffer` class wraps the `WebGLFramebuffer` object, see e.g. [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)
   and [Framebuffer Object](https://www.khronos.org/opengl/wiki/Framebuffer_Object) in the OpenGL Wiki.
 - `resize()` will erase the current content of any attachments, but not actually recreate them (The underlying`WebGLTexture` handles are not changed).

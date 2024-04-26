@@ -87,15 +87,19 @@
           "api-reference/core/shader-layout",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",
+          "api-reference/core/resources/compute-pass",
           "api-reference/core/resources/compute-pipeline",
           "api-reference/core/resources/framebuffer",
+          "api-reference/core/resources/render-pass",
           "api-reference/core/resources/render-pipeline",
           "api-reference/core/resources/sampler",
           "api-reference/core/resources/shader",
           "api-reference/core/shader-logs",
           "api-reference/core/resources/texture",
-          "api-reference/core/resources/vertex-array",
-          "api-reference/core/resources/query-set"
+          "api-reference/core/resources/texture-view",
+          "api-reference/core/resources/transform-feedback",
+          "api-reference/core/resources/query-set",
+          "api-reference/core/resources/vertex-array"
         ]
       },
       {

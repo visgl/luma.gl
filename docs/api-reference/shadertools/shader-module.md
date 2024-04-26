@@ -3,7 +3,7 @@
 In luma.gl, reusable shader modules are defined by objects that conform to the `ShaderModule` type.
 For more information see [Shader Module System Guide](/docs/api-guide/shaders/shader-modules).
 
-`ShaderModule`s are used by the luma.gl [shader assembler](.shader-module). The shader assembler imports chunks of reusable shader code from the module into your shader program source code.
+`ShaderModule`s are used by the luma.gl [shader assembler](./shader-assembler). The shader assembler imports chunks of reusable shader code from the module into your shader program source code.
 
 ## Usage
 

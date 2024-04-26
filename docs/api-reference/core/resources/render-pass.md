@@ -49,13 +49,25 @@ Depth and stencil buffers are also cleared to default values:
 
 ### `RenderPassProps`
 
-| Property        | Type                 | Default        | Description                                               |
-| --------------- | -------------------- | -------------- | --------------------------------------------------------- |
-| `framebuffer?`  | `Framebuffer`        |                | Provides render target textures and depth/stencil texture |
-| `parameters?`   | `Parameters`         |                | GPU pipeline parameters                                   |
-| `clearColor?`   | `number[]`, `'load'` | `[0, 0, 0, 0]` |                                                           |
-| `clearDepth?`   | `number`, `'load'`   | `1`            |                                                           |
-| `clearStencil?` | `number`, `'load'`   | `0`            |                                                           |
+| Property             | Type                   | Default        | Description                                                                                               |
+| -------------------- | ---------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `framebuffer?`       | `Framebuffer`          |  N/A              | Provides render target textures and depth/stencil texture                                                 |
+| `parameters?`        | `Parameters`           |                | GPU pipeline parameters                                                                                   |
+| `clearColor?`        | `number[] \| false`    | `[0, 0, 0, 0]` |                                                                                                           |
+| `loadOp`?            | `'load'`, `'clear'`    | `'clear'`      | Load operation to perform on texture prior to executing the render pass. Default: 'clear'.                |
+| `storeOp`?           | `'store'`, `'discard'` | `'store'`      | The store operation to perform on texture after executing the render pass. Default: 'store'.              |
+| `depthClearValue`?   | `number`               | `1`            | Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0. |
+| `depthLoadOp`?       | `'load'`, `'clear'`    |                | Load operation to perform on depth component prior to executing the render pass. Default 'clear'.         |
+| `depthStoreOp`?      | `'store'`, `'discard'` |                | Store operation` to perform on depth component after executing the render pass. Default 'store'.          |
+| `depthReadOnly`?     | `boolean`              |                | Depth component is read only.                                                                             |
+| `stencilClearValue`? | `number `              |                | Value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear".      |
+| `stencilLoadOp`?     | `'clear'`, `'load'`    |                | Load operation to perform on stencil component prior to executing the render pass. Prefer clearing.       |
+| `stencilStoreOp`?    | `'store'`, `'discard'` |                | Store operation to perform on stencil component after executing the render pass.                          |
+| `stencilReadOnly`?   | `boolean`              |                | Stencil component is read only.                                                                           |
+
+- Clearing can be disabled by setting `loadOp='load'` however this may have a small performance cost as GPUs are optimized for clearing.
+- WebGL does not support setting `storeOp: 'discard'` for just some attachments, it is all or nothing.
+- Currently luma.gl doesn't support specifying per-rendertarget properties
 
 ## Members
 
