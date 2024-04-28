@@ -10,6 +10,13 @@ import {StatsManager} from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
+declare global {
+  // eslint-disable-next-line no-var
+  var luma: Luma;
+}
+
+const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
+
 const ERROR_MESSAGE =
   'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
 
@@ -43,10 +50,38 @@ export class Luma {
   /** Global stats for all devices */
   readonly stats: StatsManager = lumaStats;
 
-  /** Global log */
+  /**
+   * Global log
+   *
+   * Assign luma.log.level in console to control logging: \
+   * 0: none, 1: minimal, 2: verbose, 3: attribute/uniforms, 4: gl logs
+   * luma.log.break[], set to gl funcs, luma.log.profile[] set to model names`;
+   */
   readonly log: Log = log;
 
+  /** Version of luma.gl */
+  readonly VERSION: string =
+    // Version detection using build plugin
+    // @ts-expect-error no-undef
+    typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'running from source';
+
   protected preregisteredAdapters = new Map<string, Adapter>();
+
+  constructor() {
+    if (globalThis.luma) {
+      if (globalThis.luma.VERSION !== this.VERSION) {
+        log.error(`Found luma.gl ${globalThis.luma.VERSION} while initialzing ${this.VERSION}`)();
+        log.error(`'yarn why @luma.gl/core' can help identify the source of the conflict`)();
+        throw new Error(`luma.gl - multiple versions detected: see console log`);
+      }
+
+      log.error('This version of luma.gl has already been initialized')();
+    }
+
+    log.log(1, `${this.VERSION} - ${STARTUP_MESSAGE}`)();
+
+    globalThis.luma = this;
+  }
 
   registerAdapters(adapters: Adapter[]): void {
     for (const deviceClass of adapters) {

@@ -52,7 +52,7 @@ export function initializeSpectorJS(props?: SpectorProps) {
     log.probe(LOG_LEVEL, 'SPECTOR found and initialized')();
     spector = new globalThis.SPECTOR.Spector();
     if (globalThis.luma) {
-      globalThis.luma.spector = spector;
+      (globalThis.luma as any).spector = spector;
     }
   }
 

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-export {VERSION} from './init';
-
 // MAIN API ACCESS POINT
 export {luma} from './adapter/luma';
 
