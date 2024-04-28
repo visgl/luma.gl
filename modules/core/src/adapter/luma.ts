@@ -13,8 +13,6 @@ import {log} from '../utils/log';
 const ERROR_MESSAGE =
   'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
 
-const preregisteredAdapters = new Map<string, Adapter>();
-
 /** Properties for creating a new device */
 export type CreateDeviceProps = DeviceProps & {
   /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
@@ -25,7 +23,8 @@ export type CreateDeviceProps = DeviceProps & {
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
 export type AttachDeviceProps = DeviceProps & {
   /** Externally created WebGL context or WebGPU device */
-  handle: WebGL2RenderingContext; // | GPUDevice;
+  handle: unknown; // WebGL2RenderingContext | GPUDevice | null;
+  /** List of adapters. Will also search any pre-registered adapterss */
   adapters?: Adapter[];
 };
 
@@ -34,28 +33,30 @@ export type AttachDeviceProps = DeviceProps & {
  * Register WebGPU and/or WebGL adapters (controls application bundle size)
  * Run-time selection of the first available Device
  */
-export class luma {
+export class Luma {
   static defaultProps: Required<CreateDeviceProps> = {
     ...Device.defaultProps,
     type: 'best-available',
     adapters: undefined!
   };
 
-  /** Global stats for all adapters */
-  static stats: StatsManager = lumaStats;
+  /** Global stats for all devices */
+  readonly stats: StatsManager = lumaStats;
 
   /** Global log */
-  static log: Log = log;
+  readonly log: Log = log;
 
-  static registerAdapters(adapters: Adapter[]): void {
+  protected preregisteredAdapters = new Map<string, Adapter>();
+
+  registerAdapters(adapters: Adapter[]): void {
     for (const deviceClass of adapters) {
-      preregisteredAdapters.set(deviceClass.type, deviceClass);
+      this.preregisteredAdapters.set(deviceClass.type, deviceClass);
     }
   }
 
   /** Get type strings for supported Devices */
-  static getSupportedAdapters(adapters: Adapter[] = []): string[] {
-    const adapterMap = getAdapterMap(adapters);
+  getSupportedAdapters(adapters: Adapter[] = []): string[] {
+    const adapterMap = this.getAdapterMap(adapters);
     return Array.from(adapterMap)
       .map(([, adapter]) => adapter)
       .filter(adapter => adapter.isSupported?.())
@@ -63,8 +64,8 @@ export class luma {
   }
 
   /** Get type strings for best available Device */
-  static getBestAvailableAdapter(adapters: Adapter[] = []): 'webgpu' | 'webgl' | null {
-    const adapterMap = getAdapterMap(adapters);
+  getBestAvailableAdapter(adapters: Adapter[] = []): 'webgpu' | 'webgl' | null {
+    const adapterMap = this.getAdapterMap(adapters);
     if (adapterMap.get('webgpu')?.isSupported?.()) {
       return 'webgpu';
     }
@@ -74,27 +75,27 @@ export class luma {
     return null;
   }
 
-  static setDefaultDeviceProps(props: CreateDeviceProps): void {
-    Object.assign(luma.defaultProps, props);
+  setDefaultDeviceProps(props: CreateDeviceProps): void {
+    Object.assign(Luma.defaultProps, props);
   }
 
   /** Creates a device. Asynchronously. */
-  static async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
-    props = {...luma.defaultProps, ...props};
+  async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
+    props = {...Luma.defaultProps, ...props};
 
     // Should be handled by attach device
     // if (props.gl) {
     //   props.type = 'webgl';
     // }
 
-    const adapterMap = getAdapterMap(props.adapters);
+    const adapterMap = this.getAdapterMap(props.adapters);
 
     let type: string = props.type || '';
     if (type === 'best-available') {
-      type = luma.getBestAvailableAdapter(props.adapters) || type;
+      type = this.getBestAvailableAdapter(props.adapters) || type;
     }
 
-    const adapters = getAdapterMap(props.adapters) || adapterMap;
+    const adapters = this.getAdapterMap(props.adapters) || adapterMap;
 
     const adapter = adapters.get(type);
     const device = await adapter?.create?.(props);
@@ -106,8 +107,8 @@ export class luma {
   }
 
   /** Attach to an existing GPU API handle (WebGL2RenderingContext or GPUDevice). */
-  static async attachDevice(props: AttachDeviceProps): Promise<Device> {
-    const adapters = getAdapterMap(props.adapters);
+  async attachDevice(props: AttachDeviceProps): Promise<Device> {
+    const adapters = this.getAdapterMap(props.adapters);
 
     // WebGL
     let type = '';
@@ -142,7 +143,7 @@ export class luma {
    * Used when attaching luma to a context from an external library does not support creating WebGL2 contexts.
    * (luma can only attach to WebGL2 contexts).
    */
-  static enforceWebGL2(enforce: boolean = true): void {
+  enforceWebGL2(enforce: boolean = true): void {
     const prototype = HTMLCanvasElement.prototype as any;
     if (!enforce && prototype.originalGetContext) {
       // Reset the original getContext function
@@ -168,7 +169,7 @@ export class luma {
 
   /** Convert a list of adapters to a map */
   protected getAdapterMap(adapters: Adapter[] = []): Map<string, Adapter> {
-    const map = new Map(preregisteredAdapters);
+    const map = new Map(this.preregisteredAdapters);
     for (const adapter of adapters) {
       map.set(adapter.type, adapter);
     }
@@ -178,23 +179,20 @@ export class luma {
   // DEPRECATED
 
   /** @deprecated Use registerAdapters */
-  static registerDevices(deviceClasses: any[]): void {
+  registerDevices(deviceClasses: any[]): void {
     log.warn('luma.registerDevices() is deprecated, use luma.registerAdapters() instead');
     for (const deviceClass of deviceClasses) {
       const adapter = deviceClass.adapter as Adapter;
       if (adapter) {
-        preregisteredAdapters.set(adapter.type, adapter);
+        this.preregisteredAdapters.set(adapter.type, adapter);
       }
     }
   }
 }
 
-/** Convert a list of adapters to a map */
-function getAdapterMap(adapters: Adapter[] = []): Map<string, Adapter> {
-  const map = new Map<string, Adapter>(preregisteredAdapters);
-  for (const deviceClass of adapters) {
-    // assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
-    map.set(deviceClass.type, deviceClass);
-  }
-  return map;
-}
+/**
+ * Entry point to the luma.gl GPU abstraction
+ * Register WebGPU and/or WebGL adapters (controls application bundle size)
+ * Run-time selection of the first available Device
+ */
+export const luma = new Luma();
