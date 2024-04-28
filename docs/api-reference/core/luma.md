@@ -96,30 +96,46 @@ const webgpuDevice = luma.createDevice({
 });
 ```
 
-## Methods
+## Types
 
-### `luma.registerDevices()`
+### `CreateDeviceProps`
 
-```typescript
-luma.registerDevices(devices: (typeof Device)[]): void;
+Properties for creating a new device
+
+```ts
+type CreateDeviceProps = DeviceProps & {
+  /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
+  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+  /** List of device types. Will also search any pre-registered device backends */
+  devices?: DeviceFactory[];
+}
 ```
 
-Registers one or more devices (device constructors) so that they can be used 
-to create `Device` instances against that GPU backend. The registered device types
-will be available to `luma.createDevice()` and `luma.attachDevice()` calls.
+### `AttachDeviceProps`
 
-`luma.registerDevices()` enables separation of the application code that 
-registers GPU backends from the application code that creates devices.
+Properties for attaching an existing WebGL context or WebGPU device to a new luma Device.
+
+```ts
+export type AttachDeviceProps = DeviceProps & {
+  /** Externally created WebGL context or WebGPU device */
+  handle: WebGL2RenderingContext | GPUDevice | null;
+  /** List of device types. Will also search any pre-registered device backends */
+  devices?: DeviceFactory[];
+};
+```
+
+## Methods
 
 ### `luma.createDevice()`
 
 ```typescript
-luma.createDevice({type, ...DeviceProps});
+luma.createDevice({type, devices, ...deviceProps}: CreateDeviceProps);
 ```
 
 To create a Device instance, the application calls `luma.createDevice()`.
 
 - `type`: `'webgl' \| 'webgpu' \| 'best-available'`
+- `devices`: list of `Device` backend classes. Can be omitted if `luma.registerDevices()` has been called.
 
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
 luma.gl favors WebGPU over WebGL devices, whenever WebGPU is available.
@@ -131,14 +147,30 @@ Note: A device type is available if:
 ### `luma.attachDevice()`
 
 ```ts
-luma.attachDevice(handle: WebGL2RenderingContext | GPUDevice, devices: unknown[]);
+luma.attachDevice({handle: WebGL2RenderingContext | GPUDevice, devices, ...}: AttachDeviceProps);
 ```
 
 A luma.gl Device can be attached to an externally created `WebGL2RenderingContext` or `GPUDevice`.
 This allows applications to use the luma.gl API to "interleave" rendering with other GPU libraries.
 
-If you need to attach a luma.gl `Device` to a WebGL 1 `WebGLRenderingContext`, see `luma.enforceWebGL2()`.
+- `handle` - The externally created `WebGL2RenderingContext` or `GPUDevice` that should be attached to a luma `Device`.
+- `devices` - list of `Device` backend classes. Can be omitted if `luma.registerDevices()` has been called.
 
+Note that while you cannot directly attach a luma.gl `Device` to a WebGL 1 `WebGLRenderingContext`, you may be able to work around it using `luma.enforceWebGL2()`.
+
+### `luma.registerDevices()`
+
+```typescript
+luma.registerDevices(devices?: (typeof Device)[]): void;
+```
+
+Registers one or more devices (device constructors) so that they can be used 
+to create `Device` instances against that GPU backend. The registered device types
+will be available to `luma.createDevice()` and `luma.attachDevice()` calls.
+
+`luma.registerDevices()` enables separation of the application code that 
+registers GPU backends from the application code that creates devices,
+so that device types do not have to be provided at `Device` create or attach time.
 
 ### `luma.enforceWebGL2()`
 

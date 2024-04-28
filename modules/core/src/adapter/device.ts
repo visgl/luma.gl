@@ -242,6 +242,17 @@ export type DeviceProps = {
 };
 
 /**
+ * Create and attach devices for a specific backend. Currently static methods on each device
+ */
+export interface DeviceFactory {
+  // new (props: DeviceProps): Device; Constructor isn't used
+  type: string;
+  isSupported(): boolean;
+  create(props: DeviceProps): Promise<Device>;
+  attach?(handle: unknown): Device;
+}
+
+/**
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {

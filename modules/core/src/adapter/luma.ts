@@ -4,25 +4,28 @@
 
 import type {Log} from '@probe.gl/log';
 import type {DeviceProps} from './device';
-import {Device} from './device';
+import {Device, DeviceFactory} from './device';
 import {StatsManager} from '../utils/stats-manager';
 import {lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
-const deviceMap = new Map<string, typeof Device>();
+const ERROR_MESSAGE =
+  'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
+
+const deviceMap = new Map<string, DeviceFactory>();
 
 /** Properties for creating a new device */
 export type CreateDeviceProps = DeviceProps & {
   /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
-  devices?: any[];
+  devices?: DeviceFactory[];
 };
 
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
 export type AttachDeviceProps = DeviceProps & {
   /** Externally created WebGL context or WebGPU device */
   handle: WebGL2RenderingContext; // | GPUDevice;
-  devices?: any[];
+  devices?: DeviceFactory[];
 };
 
 /**
@@ -43,7 +46,7 @@ export class luma {
   /** Global log */
   static log: Log = log;
 
-  static registerDevices(deviceClasses: any[] /* : typeof Device */): void {
+  static registerDevices(deviceClasses: DeviceFactory[]): void {
     for (const deviceClass of deviceClasses) {
       deviceMap.set(deviceClass.type, deviceClass);
     }
@@ -64,6 +67,18 @@ export class luma {
     );
   }
 
+  /** Get type strings for best available Device */
+  static getBestAvailableDeviceType(devices: DeviceFactory[] = []): 'webgpu' | 'webgl' | null {
+    const deviceMap = getDeviceMap(devices);
+    if (deviceMap.get('webgpu')?.isSupported?.()) {
+      return 'webgpu';
+    }
+    if (deviceMap.get('webgl')?.isSupported?.()) {
+      return 'webgl';
+    }
+    return null;
+  }
+
   static setDefaultDeviceProps(props: CreateDeviceProps): void {
     Object.assign(luma.defaultProps, props);
   }
@@ -74,9 +89,10 @@ export class luma {
 
     // WebGL
     if (props.handle instanceof WebGL2RenderingContext) {
-      const WebGLDevice = devices.get('webgl') as any;
-      if (WebGLDevice) {
-        return (await WebGLDevice.attach(props.handle)) as Device;
+      const Device = devices.get('webgl');
+      const device = Device?.attach?.(null);
+      if (device) {
+        return device;
       }
     }
 
@@ -90,15 +106,14 @@ export class luma {
 
     // null
     if (props.handle === null) {
-      const UnknownDevice = devices.get('unknown') as any;
-      if (UnknownDevice) {
-        return (await UnknownDevice.attach(null)) as Device;
+      const Device = devices.get('unknown');
+      const device = Device?.attach?.(null);
+      if (device) {
+        return device;
       }
     }
 
-    throw new Error(
-      'Failed to attach device. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.'
-    );
+    throw new Error(ERROR_MESSAGE);
   }
 
   /** Creates a device. Asynchronously. */
@@ -110,46 +125,25 @@ export class luma {
 
     const devices = getDeviceMap(props.devices) || deviceMap;
 
-    let WebGPUDevice;
-    let WebGLDevice;
-    switch (props.type) {
-      case 'webgpu':
-        WebGPUDevice = devices.get('webgpu') as any;
-        if (WebGPUDevice) {
-          return await WebGPUDevice.create(props);
-        }
-        break;
-
-      case 'webgl':
-        WebGLDevice = devices.get('webgl') as any;
-        if (WebGLDevice) {
-          return await WebGLDevice.create(props);
-        }
-        break;
-
-      case 'unknown':
-        const UnknownDevice = devices.get('unknown') as any;
-        if (UnknownDevice) {
-          return await UnknownDevice.create(props);
-        }
-        break;
-
-      case 'best-available':
-        WebGPUDevice = devices.get('webgpu') as any;
-        if (WebGPUDevice?.isSupported?.()) {
-          return await WebGPUDevice.create(props);
-        }
-        WebGLDevice = devices.get('webgl') as any;
-        if (WebGLDevice?.isSupported?.()) {
-          return await WebGLDevice.create(props);
-        }
-        break;
+    let type: string = props.type || '';
+    if (type === 'best-available') {
+      type = luma.getBestAvailableDeviceType(props.devices) || type;
     }
-    throw new Error(
-      'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.'
-    );
+
+    const Device = devices.get(type);
+    const device = await Device?.create?.(props);
+    if (device) {
+      return device;
+    }
+
+    throw new Error(ERROR_MESSAGE);
   }
 
+  /**
+   * Override `HTMLCanvasContext.getCanvas()` to always create WebGL2 contexts.
+   * Used when attaching luma to a context from an external library does not support creating WebGL2 contexts.
+   * (luma can only attach to WebGL2 contexts).
+   */
   static enforceWebGL2(enforce: boolean = true): void {
     const prototype = HTMLCanvasElement.prototype as any;
     if (!enforce && prototype.originalGetContext) {
@@ -175,13 +169,8 @@ export class luma {
 }
 
 /** Convert a list of devices to a map */
-function getDeviceMap(
-  deviceClasses?: any[] /* : typeof Device */
-): Map<string, typeof Device> | null {
-  if (!deviceClasses || deviceClasses?.length === 0) {
-    return null;
-  }
-  const map = new Map<string, typeof Device>();
+function getDeviceMap(deviceClasses: DeviceFactory[] = []): Map<string, DeviceFactory> {
+  const map = new Map<string, DeviceFactory>(deviceMap);
   for (const deviceClass of deviceClasses) {
     // assert(deviceClass.type && deviceClass.isSupported && deviceClass.create);
     map.set(deviceClass.type, deviceClass);
