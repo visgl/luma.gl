@@ -9,7 +9,7 @@ import type {
   VertexArray,
   VertexArrayProps
 } from '@luma.gl/core';
-import {Device, CanvasContext, DeviceFeatures} from '@luma.gl/core';
+import {Device, DeviceFeatures} from '@luma.gl/core';
 
 import type {
   BufferProps,
@@ -50,7 +50,6 @@ export class NullDevice extends Device {
   static isSupported(): boolean {
     return true;
   }
-  static type: string = 'unknown';
   readonly type = 'unknown';
   features: DeviceFeatures = new DeviceFeatures([], this.props.disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
@@ -58,20 +57,6 @@ export class NullDevice extends Device {
 
   readonly canvasContext: NullCanvasContext;
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-
-  static attach(handle: null): NullDevice {
-    return new NullDevice({});
-  }
-
-  static async create(props: DeviceProps = {}): Promise<NullDevice> {
-    // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
-    // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
-    if (typeof props.canvas === 'string') {
-      await CanvasContext.pageLoaded;
-    }
-
-    return new NullDevice(props);
-  }
 
   constructor(props: DeviceProps) {
     super({...props, id: props.id || 'null-device'});

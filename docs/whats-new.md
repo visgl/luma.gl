@@ -10,8 +10,10 @@ Target Date: Q2 2024
 
 **@luma.gl/core**
 
-- `Texture` class has been refactored. Textures no longer accept promises, use `AsyncTexture` class instead.
+- New `Adapter` class - A dedicated `Device` factory is exported by each specific backend (e.g. WebGPU or WebGL).
+- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Now register adapters rather than devices.
 - New [`luma.attachDevice()`](/docs/api-reference/core/luma#lumaattachdevice) method - A `Device` can now be attached to a `WebGL2RenderingContext` without calling `WebGLDevice.attach()`.
+- `Texture`: Textures no longer accept promises, use `AsyncTexture` class instead.
 
 **@luma.gl/engine**
 

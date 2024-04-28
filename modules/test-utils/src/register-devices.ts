@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerDevices([WebGLDevice, WebGPUDevice]);
+luma.registerAdapters([webgl2Adapter, webgpuAdapter]);

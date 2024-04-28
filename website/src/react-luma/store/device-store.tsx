@@ -1,10 +1,10 @@
 import {create} from 'zustand';
 
 import {luma, Device} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerDevices([WebGLDevice, WebGPUDevice]);
+luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
 
 export type Store = {
   device?: Device;

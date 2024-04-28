@@ -1,10 +1,10 @@
 <!doctype html>
 <script type="module">
   import {luma} from '@luma.gl/core';
-  import {WebGLDevice} from '@luma.gl/webgl';
+  import {webgl2Adapter} from '@luma.gl/webgl';
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AppAnimationLoop from './app.ts';
-  luma.registerDevices([WebGLDevice]);
+  luma.reagisterAdapters([webgl2Adapter]);
   const animationLoop = makeAnimationLoop(AppAnimationLoop);
   animationLoop.start();
 </script>

@@ -13,8 +13,8 @@ import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
-import {loadSpectorJS, initializeSpectorJS} from '../context/debug/spector';
-import {loadWebGLDeveloperTools, makeDebugContext} from '../context/debug/webgl-developer-tools';
+import {initializeSpectorJS} from '../context/debug/spector';
+import {makeDebugContext} from '../context/debug/webgl-developer-tools';
 import {
   isTextureFormatSupported,
   isTextureFormatRenderable,
@@ -67,16 +67,11 @@ import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {clear} from '../classic/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
-const LOG_LEVEL = 1;
-
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
   //
   // Public `Device` API
   //
-
-  /** type of this device */
-  static readonly type: string = 'webgl';
 
   /** type of this device */
   readonly type = 'webgl';
@@ -92,87 +87,6 @@ export class WebGLDevice extends Device {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
-
-  //
-  // Static methods, expected to be present by `luma.createDevice()`
-  //
-
-  /** Check if WebGL 2 is available */
-  static isSupported(): boolean {
-    return typeof WebGL2RenderingContext !== 'undefined';
-  }
-
-  /**
-   * Get a device instance from a GL context
-   * Creates and instruments the device if not already created
-   * @param gl
-   * @returns
-   */
-  static attach(gl: Device | WebGL2RenderingContext): WebGLDevice {
-    if (gl instanceof WebGLDevice) {
-      return gl;
-    }
-    // @ts-expect-error
-    if (gl?.device instanceof Device) {
-      // @ts-expect-error
-      return gl.device as WebGLDevice;
-    }
-    if (!isWebGL(gl)) {
-      throw new Error('Invalid WebGL2RenderingContext');
-    }
-    return new WebGLDevice({gl: gl as WebGL2RenderingContext});
-  }
-
-  static async create(props: DeviceProps = {}): Promise<WebGLDevice> {
-    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
-
-    const promises: Promise<unknown>[] = [];
-
-    // Load webgl and spector debug scripts from CDN if requested
-    if (props.debug) {
-      promises.push(loadWebGLDeveloperTools());
-    }
-
-    if (props.spector) {
-      promises.push(loadSpectorJS());
-    }
-
-    // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
-    // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
-    if (typeof props.canvas === 'string') {
-      promises.push(CanvasContext.pageLoaded);
-    }
-
-    // Wait for all the loads to settle before creating the context.
-    // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
-    const results = await Promise.allSettled(promises);
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        log.error(`Failed to initialize debug libraries ${result.reason}`)();
-      }
-    }
-
-    log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
-
-    // @ts-expect-error
-    if (props.gl?.device) {
-      log.warn('reattaching existing device')();
-      return WebGLDevice.attach(props.gl);
-    }
-
-    const device = new WebGLDevice(props);
-
-    // Log some debug info about the newly created context
-    const message = `\
-Created ${device.type}${device.debug ? ' debug' : ''} context: \
-${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContext.id}`;
-    log.probe(LOG_LEVEL, message)();
-    log.table(LOG_LEVEL, device.info)();
-
-    log.groupEnd(LOG_LEVEL)();
-
-    return device;
-  }
 
   //
   // Public API
@@ -534,15 +448,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
   }
-}
-
-/** Check if supplied parameter is a WebGL2RenderingContext */
-function isWebGL(gl: any): boolean {
-  if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
-    return true;
-  }
-  // Look for debug contexts, headless gl etc
-  return Boolean(gl && Number.isFinite(gl._version));
 }
 
 /** Set constant float array attribute */

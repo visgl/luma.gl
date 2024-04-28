@@ -11,6 +11,9 @@ export {PerformanceTestRunner} from './performance-test-runner';
 export {webglDevice, webgpuDevice} from './create-test-device';
 export {getTestDevices} from './create-test-device';
 export {createTestDevice, createTestContext} from './create-test-device';
+
+export {nullAdapter, NullAdapter} from './null-device/null-adapter';
+
 export {NullDevice} from './null-device/null-device';
 
 // UTILS

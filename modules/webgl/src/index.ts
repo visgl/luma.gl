@@ -12,6 +12,10 @@
 export type {WebGLDeviceLimits} from './adapter/device-helpers/webgl-device-limits';
 
 // WebGL adapter classes
+export {webgl2Adapter} from './adapter/webgl-adapter';
+export type {WebGLAdapter} from './adapter/webgl-adapter';
+
+// WebGL Device classes
 export {WebGLDevice} from './adapter/webgl-device';
 export {WebGLCanvasContext} from './adapter/webgl-canvas-context';
 
