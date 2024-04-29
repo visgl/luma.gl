@@ -8,9 +8,8 @@ import {createTestDevice} from '@luma.gl/test-utils';
 import type {WebGLDevice} from '@luma.gl/webgl';
 
 import {
+  WebGLStateTracker,
   trackContextState,
-  pushContextState,
-  popContextState,
   getGLParameters,
   setGLParameters,
   resetGLParameters,
@@ -30,14 +29,13 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 const device = createTestDevice({debug: true}) as WebGLDevice;
 
-test('WebGLState#imports', t => {
+test('WebGLStateTracker#imports', t => {
+  t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
   t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
-  t.ok(typeof pushContextState === 'function', 'trackContextState imported OK');
-  t.ok(typeof popContextState === 'function', 'trackContextState imported OK');
   t.end();
 });
 
-test('WebGLState#trackContextState', t => {
+test('WebGLStateTracker#trackContextState', t => {
   const {gl} = device;
   t.doesNotThrow(
     () => trackContextState(gl, {copyState: false}),
@@ -46,7 +44,7 @@ test('WebGLState#trackContextState', t => {
   t.end();
 });
 
-test('WebGLState#push & pop', t => {
+test('WebGLStateTracker#push & pop', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -62,7 +60,7 @@ test('WebGLState#push & pop', t => {
     );
   }
 
-  pushContextState(gl);
+  device.pushState();
 
   // Set custom values and verify.
   setGLParameters(gl, ENUM_STYLE_SETTINGS_SET1);
@@ -76,7 +74,7 @@ test('WebGLState#push & pop', t => {
     );
   }
 
-  pushContextState(gl);
+  device.pushState();
 
   // Set custom values and verify
   setGLParameters(gl, ENUM_STYLE_SETTINGS_SET2);
@@ -90,7 +88,7 @@ test('WebGLState#push & pop', t => {
   }
 
   // Pop and verify values restore to previous state
-  popContextState(gl);
+  device.popState();
   parameters = getGLParameters(gl);
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
@@ -102,7 +100,7 @@ test('WebGLState#push & pop', t => {
     );
   }
 
-  popContextState(gl);
+  device.popState();
   parameters = getGLParameters(gl);
 
   for (const key in GL_PARAMETER_DEFAULTS) {
@@ -117,7 +115,7 @@ test('WebGLState#push & pop', t => {
   t.end();
 });
 
-test('WebGLState#gl API', t => {
+test('WebGLStateTracker#gl API', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -133,7 +131,7 @@ test('WebGLState#gl API', t => {
     );
   }
 
-  pushContextState(gl);
+  device.pushState();
 
   // TODO: test gl calls for compsite setters too (may be just call all gl calls).
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
@@ -159,7 +157,7 @@ test('WebGLState#gl API', t => {
     }
   }
 
-  popContextState(gl);
+  device.popState();
   parameters = getGLParameters(gl);
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
@@ -173,12 +171,12 @@ test('WebGLState#gl API', t => {
   t.end();
 });
 
-test('WebGLState#intercept gl calls', t => {
+test('WebGLStateTracker#intercept gl calls', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
 
-  pushContextState(gl);
+  device.pushState();
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -199,7 +197,7 @@ test('WebGLState#intercept gl calls', t => {
   gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
   t.is(getGLParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
 
-  popContextState(gl);
+  device.popState();
   const parameters = getGLParameters(gl);
 
   // Verify default values.
@@ -216,7 +214,7 @@ test('WebGLState#intercept gl calls', t => {
   t.end();
 });
 
-test('WebGLState#not cached parameters', t => {
+test('WebGLStateTracker#not cached parameters', t => {
   const {gl} = device;
 
   resetGLParameters(gl);

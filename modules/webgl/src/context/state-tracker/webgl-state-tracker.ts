@@ -146,27 +146,6 @@ export function trackContextState(
   return gl;
 }
 
-/**
- * Saves current WebGL context state onto an internal per-context stack
- */
-export function pushContextState(gl: WebGL2RenderingContext): void {
-  let glState = WebGLStateTracker.get(gl);
-  if (!glState) {
-    trackContextState(gl, {copyState: false});
-    glState = WebGLStateTracker.get(gl);
-  }
-  glState.push();
-}
-
-/**
- * Restores previously saved WebGL context state
- */
-export function popContextState(gl: WebGL2RenderingContext): void {
-  const glState = WebGLStateTracker.get(gl);
-  // assert(glState);
-  glState.pop();
-}
-
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
 /**

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GLParameters, setGLParameters} from '../parameters/unified-parameter-api';
-import {pushContextState, popContextState} from './webgl-state-tracker';
+import {WebGLStateTracker} from './webgl-state-tracker';
 
 /**
  * Execute a function with a set of temporary WebGL parameter overrides
@@ -25,7 +25,8 @@ export function withGLParameters(
 
   const {nocatch = true} = parameters;
 
-  pushContextState(gl);
+  const webglState = WebGLStateTracker.get(gl);
+  webglState.push();
   setGLParameters(gl, parameters);
 
   // Setup is done, call the function
@@ -34,13 +35,13 @@ export function withGLParameters(
   if (nocatch) {
     // Avoid try catch to minimize stack size impact for safe execution paths
     value = func(gl);
-    popContextState(gl);
+    webglState.pop();
   } else {
     // Wrap in a try-catch to ensure that parameters are restored on exceptions
     try {
       value = func(gl);
     } finally {
-      popContextState(gl);
+      webglState.pop();
     }
   }
 

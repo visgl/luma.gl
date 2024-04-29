@@ -49,12 +49,7 @@ export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-
 
 // DEPRECATED TEST EXPORTS
 // State tracking
-export {
-  WebGLStateTracker,
-  trackContextState,
-  pushContextState,
-  popContextState
-} from './context/state-tracker/webgl-state-tracker';
+export {WebGLStateTracker, trackContextState} from './context/state-tracker/webgl-state-tracker';
 
 export {
   resetGLParameters,

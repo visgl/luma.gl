@@ -7,12 +7,7 @@ import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@
 import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
-import {
-  WebGLStateTracker,
-  popContextState,
-  pushContextState,
-  trackContextState
-} from '../context/state-tracker/webgl-state-tracker';
+import {WebGLStateTracker, trackContextState} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
@@ -462,12 +457,14 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
   /** Save current WebGL context state onto an internal stack */
   pushState(): void {
-    pushContextState(this.gl);
+    const webglState = WebGLStateTracker.get(this.gl);
+    webglState.push();
   }
 
   /** Restores previously saved context state */
   popState(): void {
-    popContextState(this.gl);
+    const webglState = WebGLStateTracker.get(this.gl);
+    webglState.pop();
   }
 
   /**
