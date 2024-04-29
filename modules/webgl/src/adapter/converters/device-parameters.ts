@@ -14,7 +14,6 @@ import type {
   GLProvokingVertex,
   GLStencilOp
 } from '@luma.gl/constants';
-import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
 
@@ -41,13 +40,13 @@ export function withDeviceAndGLParameters<T = unknown>(
 
   // Wrap in a try-catch to ensure that parameters are restored on exceptions
   const webglDevice = device as WebGLDevice;
-  pushContextState(webglDevice.gl);
+  webglDevice.pushState();
   try {
     setDeviceParameters(device, parameters);
     setGLParameters(webglDevice.gl, glParameters);
     return func(device);
   } finally {
-    popContextState(webglDevice.gl);
+    webglDevice.popState();
   }
 }
 
@@ -72,12 +71,12 @@ export function withGLParameters<T = unknown>(
 
   // Wrap in a try-catch to ensure that parameters are restored on exceptions
   const webglDevice = device as WebGLDevice;
-  pushContextState(webglDevice.gl);
+  webglDevice.pushState();
   try {
     setGLParameters(webglDevice.gl, parameters);
     return func(device);
   } finally {
-    popContextState(webglDevice.gl);
+    webglDevice.popState();
   }
 }
 
@@ -99,15 +98,14 @@ export function withDeviceParameters<T = unknown>(
     return func(device);
   }
 
-  // Wrap in a try-catch to ensure that parameters are restored on exceptions
-  // @ts-expect-error
-  pushContextState(device.gl);
+  // Wrap in a try-catch to ensure that parameters are restored on exceptions'
+  const webglDevice = device as WebGLDevice;
+  webglDevice.pushState();
   try {
     setDeviceParameters(device, parameters);
     return func(device);
   } finally {
-    // @ts-expect-error
-    popContextState(device.gl);
+    webglDevice.popState();
   }
 }
 

@@ -2,37 +2,43 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// Support for listening to context state changes and intercepting state queries
-// NOTE: this system does not handle buffer bindings
+import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
+import {deepArrayEqual} from './deep-array-equal';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
   NON_CACHE_PARAMETERS
 } from '../parameters/webgl-parameter-tables';
-import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
-import {deepArrayEqual} from './deep-array-equal';
 
-// HELPER CLASS - GLState
+// HELPER CLASS - WebGLStateTracker
 
-/* eslint-disable no-shadow */
-class GLState {
+/**
+ * Support for listening to context state changes and intercepting state queries
+ * NOTE: this system does not handle buffer bindings
+ */
+export class WebGLStateTracker {
+  static get(gl: WebGL2RenderingContext): WebGLStateTracker {
+    // @ts-expect-error
+    return gl.state as WebGLStateTracker;
+  }
+
   gl: WebGL2RenderingContext;
   program: unknown = null;
   stateStack: object[] = [];
   enable = true;
-  cache: Record<string, any>;
+  cache: Record<string, any> = null!;
   log;
+
+  protected initialized = false;
 
   constructor(
     gl: WebGL2RenderingContext,
-    {
-      copyState = false, // Copy cache from params (slow) or initialize from WebGL defaults (fast)
-      log = () => {} // Logging function, called when gl parameter change calls are actually issued
-    } = {}
+    props?: {
+      log; // Logging function, called when gl parameter change calls are actually issued
+    }
   ) {
     this.gl = gl;
-    this.cache = copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
-    this.log = log;
+    this.log = props?.log || (() => {});
 
     this._updateCache = this._updateCache.bind(this);
     Object.seal(this);
@@ -49,6 +55,38 @@ class GLState {
     setGLParameters(this.gl, oldValues);
     // Don't pop until we have reset parameters (to make sure other "stack frames" are not affected)
     this.stateStack.pop();
+  }
+
+  /**
+   * Initialize WebGL state caching on a context
+   * can be called multiple times to enable/disable
+   *
+   * @note After calling this function, context state will be cached
+   * .push() and .pop() will be available for saving,
+   * temporarily modifying, and then restoring state.
+   */
+  trackState(gl: WebGL2RenderingContext, options?: {copyState?: boolean}): void {
+    this.cache = options.copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
+
+    if (this.initialized) {
+      throw new Error('WebGLStateTracker');
+    }
+    this.initialized = true;
+
+    // @ts-expect-error
+    this.gl.state = this;
+
+    installProgramSpy(gl);
+
+    // intercept all setter functions in the table
+    for (const key in GL_HOOKED_SETTERS) {
+      const setter = GL_HOOKED_SETTERS[key];
+      installSetterSpy(gl, key, setter);
+    }
+
+    // intercept all getter functions in the table
+    installGetterOverride(gl, 'getParameter');
+    installGetterOverride(gl, 'isEnabled');
   }
 
   /**
@@ -89,83 +127,6 @@ class GLState {
   }
 }
 
-function getContextState(gl: WebGL2RenderingContext): GLState {
-  // @ts-expect-error
-  return gl.state as GLState;
-}
-
-// PUBLIC API
-
-/**
- * Initialize WebGL state caching on a context
- * can be called multiple times to enable/disable
- *
- * @note After calling this function, context state will be cached
- * gl.state.push() and gl.state.pop() will be available for saving,
- * temporarily modifying, and then restoring state.
- */
-export function trackContextState(
-  gl: WebGL2RenderingContext,
-  options?: {
-    enable?: boolean;
-    copyState?: boolean;
-    log?: any;
-  }
-): WebGL2RenderingContext {
-  const {enable = true, copyState} = options || {};
-  // assert(copyState !== undefined);
-  // @ts-expect-error
-  if (!gl.state) {
-    // @ts-ignore
-    // const {polyfillContext} = global_;
-    // if (polyfillContext) {
-    //   polyfillContext(gl);
-    // }
-
-    // Create a state cache
-    // @ts-expect-error
-    gl.state = new GLState(gl, {copyState});
-
-    installProgramSpy(gl);
-
-    // intercept all setter functions in the table
-    for (const key in GL_HOOKED_SETTERS) {
-      const setter = GL_HOOKED_SETTERS[key];
-      installSetterSpy(gl, key, setter);
-    }
-
-    // intercept all getter functions in the table
-    installGetterOverride(gl, 'getParameter');
-    installGetterOverride(gl, 'isEnabled');
-  }
-
-  const glState = getContextState(gl);
-  glState.enable = enable;
-
-  return gl;
-}
-
-/**
- * Saves current WebGL context state onto an internal per-context stack
- */
-export function pushContextState(gl: WebGL2RenderingContext): void {
-  let glState = getContextState(gl);
-  if (!glState) {
-    trackContextState(gl, {copyState: false});
-    glState = getContextState(gl);
-  }
-  glState.push();
-}
-
-/**
- * Restores previously saved WebGL context state
- */
-export function popContextState(gl: WebGL2RenderingContext): void {
-  const glState = getContextState(gl);
-  // assert(glState);
-  glState.pop();
-}
-
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT
 
 /**
@@ -185,7 +146,7 @@ function installGetterOverride(gl: WebGL2RenderingContext, functionName: string)
       return originalGetterFunc(pname);
     }
 
-    const glState = getContextState(gl);
+    const glState = WebGLStateTracker.get(gl);
     if (!(pname in glState.cache)) {
       // WebGL limits are not prepopulated in the cache, call the original getter when first queried.
       glState.cache[pname] = originalGetterFunc(pname);
@@ -229,7 +190,7 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   gl[functionName] = function set(...params) {
     // Update the value
     // Call the setter with the state cache and the params so that it can store the parameters
-    const glState = getContextState(gl);
+    const glState = WebGLStateTracker.get(gl);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const {valueChanged, oldValue} = setter(glState._updateCache, ...params);
 
@@ -257,7 +218,7 @@ function installProgramSpy(gl: WebGL2RenderingContext): void {
   const originalUseProgram = gl.useProgram.bind(gl);
 
   gl.useProgram = function useProgramLuma(handle) {
-    const glState = getContextState(gl);
+    const glState = WebGLStateTracker.get(gl);
     if (glState.program !== handle) {
       originalUseProgram(handle);
       glState.program = handle;

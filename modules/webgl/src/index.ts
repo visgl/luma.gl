@@ -43,17 +43,12 @@ export {setDeviceParameters, withDeviceParameters} from './adapter/converters/de
 
 // HELPERS - EXPERIMENTAL
 export {getShaderLayout} from './adapter/helpers/get-shader-layout';
+export {WebGLStateTracker} from './context/state-tracker/webgl-state-tracker';
 
 // TEST EXPORTS
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
 
 // DEPRECATED TEST EXPORTS
-// State tracking
-export {
-  trackContextState,
-  pushContextState,
-  popContextState
-} from './context/state-tracker/track-context-state';
 
 export {
   resetGLParameters,
