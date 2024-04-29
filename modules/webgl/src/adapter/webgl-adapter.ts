@@ -59,8 +59,8 @@ export class WebGLAdapter extends Adapter {
       promises.push(loadWebGLDeveloperTools());
     }
 
-    if (props.spector) {
-      promises.push(loadSpectorJS());
+    if (props.debugWithSpectorJS) {
+      promises.push(loadSpectorJS(props));
     }
 
     // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
