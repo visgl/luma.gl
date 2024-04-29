@@ -19,7 +19,7 @@ export function makeAnimationLoop(
 ): AnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
-  const device = props?.device || luma.createDevice();
+  const device = props?.device || luma.createDevice({id: 'animation-loop'});
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({

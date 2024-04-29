@@ -13,6 +13,7 @@ import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
+import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
 import {
@@ -20,6 +21,7 @@ import {
   isTextureFormatRenderable,
   isTextureFormatFilterable
 } from './converters/texture-formats';
+import {uid} from '../utils/uid';
 
 // WebGL classes
 import type {
@@ -88,12 +90,26 @@ export class WebGLDevice extends Device {
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
 
+  /** WebGL2 context. */
+  readonly gl: WebGL2RenderingContext;
+  readonly debug: boolean = false;
+
+  /** State used by luma.gl classes: TODO - move to canvasContext*/
+  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+
+  /** State used by luma.gl classes - TODO - not used? */
+  readonly _extensions: GLExtensions = {};
+  _polyfilled: boolean = false;
+
+  /** Instance of Spector.js (if initialized) */
+  spectorJS: Spector;
+
   //
   // Public API
   //
 
   constructor(props: DeviceProps) {
-    super({...props, id: props.id || 'webgl-device'});
+    super({...props, id: props.id || uid('webgl-device')});
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
@@ -110,8 +126,7 @@ export class WebGLDevice extends Device {
       this._resolveContextLost = resolve;
     });
 
-    let gl: WebGL2RenderingContext | null = props.gl || null;
-    gl ||= createBrowserContext(this.canvasContext.canvas, {
+    this.handle = createBrowserContext(this.canvasContext.canvas, {
       ...props,
       onContextLost: (event: Event) =>
         this._resolveContextLost?.({
@@ -119,18 +134,22 @@ export class WebGLDevice extends Device {
           message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
         })
     });
+    this.gl = this.handle;
 
-    if (!gl) {
+    if (!this.handle) {
       throw new Error('WebGL context creation failed');
     }
 
-    this.handle = gl;
-    this.gl = gl;
+    // Add spector debug instrumentation to context
+    // We need to trust spector integration to decide if spector should be initialized
+    // We also run spector instrumentation first, otherwise spector can clobber luma instrumentation.
+    this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
+    // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
-    // luma Device fields
+    // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
     this.features = new WebGLDeviceFeatures(this.gl, this._extensions, this.props.disabledFeatures);
@@ -146,16 +165,12 @@ export class WebGLDevice extends Device {
     });
     glState.trackState(this.gl, {copyState: false});
 
-    // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
+    // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
     if (props.debug) {
       this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
-    }
-
-    if (props.spector) {
-      this.spectorJS = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
     }
   }
 
@@ -331,20 +346,6 @@ export class WebGLDevice extends Device {
   //
   // WebGL-only API (not part of `Device` API)
   //
-
-  /** WebGL2 context. */
-  readonly gl: WebGL2RenderingContext;
-  readonly debug: boolean = false;
-
-  /** State used by luma.gl classes: TODO - move to canvasContext*/
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-
-  /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: GLExtensions = {};
-  _polyfilled: boolean = false;
-
-  /** Instance of Spector.js (if initialized) */
-  spectorJS: unknown;
 
   /**
    * Triggers device (or WebGL context) loss.

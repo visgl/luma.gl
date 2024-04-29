@@ -53,7 +53,6 @@ export {WebGLStateTracker} from './context/state-tracker/webgl-state-tracker';
 export {TEXTURE_FORMATS as _TEXTURE_FORMATS} from './adapter/converters/texture-formats';
 
 // DEPRECATED TEST EXPORTS
-
 export {
   resetGLParameters,
   setGLParameters,
