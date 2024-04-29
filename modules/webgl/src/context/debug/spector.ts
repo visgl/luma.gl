@@ -19,7 +19,7 @@ const DEFAULT_SPECTOR_PROPS: SpectorProps = {
 };
 
 // https://github.com/BabylonJS/Spector.js#basic-usage
-const SPECTOR_CDN_URL = 'https://spectorcdn.babylonjs.com/spector.bundle.js';
+const SPECTOR_CDN_URL = 'https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js';
 const LOG_LEVEL = 1;
 
 let spector: any = null;

@@ -105,7 +105,7 @@ export class luma {
 
   /** Creates a device. Asynchronously. */
   static async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
-    props = {...Device.defaultProps, ...props};
+    props = {...luma.defaultProps, ...props};
     if (props.gl) {
       props.type = 'webgl';
     }
