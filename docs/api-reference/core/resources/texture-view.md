@@ -1,4 +1,4 @@
-## TextureView
+# TextureView
 
 A `TextureView` is a view onto some subset of the texture subresources defined by a particular `Texture`.
 
