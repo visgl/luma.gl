@@ -18,7 +18,7 @@ import './adapter/helpers/webgl-topology-utils.spec';
 // state-tracker
 import './context/state-tracker/deep-array-equal.spec';
 import './context/state-tracker/set-parameters.spec';
-import './context/state-tracker/track-context-state.spec';
+import './context/state-tracker/webgl-state-tracker.spec';
 import './context/state-tracker/context-state.spec';
 
 // ADAPTER

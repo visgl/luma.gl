@@ -8,7 +8,7 @@ import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
-import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
+import {pushContextState, popContextState} from '../../context/state-tracker/webgl-state-tracker';
 import {WEBGLQuerySet} from './webgl-query-set';
 
 // Should collapse during minification

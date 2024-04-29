@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GLParameters, setGLParameters} from '../parameters/unified-parameter-api';
-import {pushContextState, popContextState} from './track-context-state';
+import {pushContextState, popContextState} from './webgl-state-tracker';
 
 /**
  * Execute a function with a set of temporary WebGL parameter overrides

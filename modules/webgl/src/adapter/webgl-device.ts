@@ -8,10 +8,11 @@ import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {
+  WebGLStateTracker,
   popContextState,
   pushContextState,
   trackContextState
-} from '../context/state-tracker/track-context-state';
+} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';

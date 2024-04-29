@@ -14,7 +14,7 @@ import type {
   GLProvokingVertex,
   GLStencilOp
 } from '@luma.gl/constants';
-import {pushContextState, popContextState} from '../../context/state-tracker/track-context-state';
+import {pushContextState, popContextState} from '../../context/state-tracker/webgl-state-tracker';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
 
