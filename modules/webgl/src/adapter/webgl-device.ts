@@ -229,6 +229,10 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
+    if (props.spector) {
+      this.spectorJS = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
+    }
+
     // luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
@@ -254,10 +258,6 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
-    }
-
-    if (props.spector) {
-      this.spectorJS = initializeSpectorJS({...this.props, canvas: this.handle.canvas});
     }
   }
 

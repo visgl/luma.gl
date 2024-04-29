@@ -253,7 +253,7 @@ export abstract class Device {
 
     requestMaxLimits: true,
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-    spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
+    spector: Boolean(log.get('spector') || log.get('spectorjs')), // Initialize the SpectorJS WebGL debugger
     break: [],
 
     // TODO - Change these after confirming things work as expected
