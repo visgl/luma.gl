@@ -4,10 +4,10 @@
 
 import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 
 test('WebGLDevice#lost (Promise)', async t => {
-  const device = await WebGLDevice.create();
+  const device = await webgl2Adapter.create();
 
   // Wrap in a promise to make sure tape waits for us
   await new Promise<void>(async resolve => {

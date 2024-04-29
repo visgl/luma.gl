@@ -15,6 +15,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 **@luma.gl/core**
 
 - `RenderPipeline.topology`: `line-loop-webgl` and `triangle-fan-webgl` topologies are no longer supported. Rebuild your geometries using `triangle-strip` and `line-list`.
+- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Now register adapters rather than devices.
+- `Texture`: Textures no longer accept promises, use `AsyncTexture` class instead.
 
 **@luma.gl/shadertools**
 

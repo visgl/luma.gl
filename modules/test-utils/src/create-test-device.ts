@@ -4,8 +4,8 @@
 
 import type {Device, DeviceProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
+import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 
 const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
   width: 1,
@@ -23,8 +23,8 @@ export function createTestContext(opts: Record<string, any> = {}): WebGL2Renderi
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
     props = {...CONTEXT_DEFAULTS, ...props, debug: true};
-    // We dont use luma.createDevice since this tests current expect this context to be created synchronously
-    return new WebGLDevice(props);
+    // TODO - We dont use luma.createDevice since this function currently expect the context to be created synchronously
+    return webgl2Adapter.createSync(props);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);
@@ -50,7 +50,8 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
     try {
       webgpuDevice = (await luma.createDevice({
         id: 'webgpu-test-device',
-        type: 'webgpu'
+        type: 'webgpu',
+        adapters: [webgpuAdapter]
       })) as WebGPUDevice;
     } catch (error) {
       log.error(String(error))();
@@ -58,7 +59,8 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
     try {
       webglDeviceAsync = (await luma.createDevice({
         id: 'webgl-test-device',
-        type: 'webgl'
+        type: 'webgl',
+        adapters: [webgl2Adapter]
       })) as WebGLDevice;
     } catch (error) {
       log.error(String(error))();

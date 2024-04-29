@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {NullDevice} from '@luma.gl/test-utils';
+import {nullAdapter, NullDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 
 test('luma#attachDevice', async t => {
-  const device = await luma.attachDevice({handle: null, devices: [NullDevice]});
+  const device = await luma.attachDevice({handle: null, adapters: [nullAdapter]});
   t.equal(device.type, 'unknown', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
@@ -15,7 +15,7 @@ test('luma#attachDevice', async t => {
 });
 
 test('luma#createDevice', async t => {
-  const device = await luma.createDevice({type: 'unknown', devices: [NullDevice]});
+  const device = await luma.createDevice({type: 'unknown', adapters: [nullAdapter]});
   t.equal(device.type, 'unknown', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
@@ -29,6 +29,20 @@ test('luma#registerDevices', async t => {
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
   t.end();
+});
+
+test('luma#getSupportedDevices', async t => {
+  luma.registerDevices([NullDevice]);
+  const types = luma.getSupportedAdapters();
+  t.ok(types.includes('unknown'), 'null device is supported');
+});
+
+test('luma#getBestAvailableDeviceType', async t => {
+  luma.registerDevices([NullDevice]);
+  // Somewhat dummy test, as tests rely on test utils registering webgl and webgpu devices
+  // But they might not be supported on all devices.
+  const types = luma.getBestAvailableAdapter();
+  t.ok(typeof types === 'string', 'doesnt crash');
 });
 
 // To suppress @typescript-eslint/unbound-method

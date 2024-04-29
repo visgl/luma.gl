@@ -1,5 +1,9 @@
 # GPU Initialization
 
+## Adapter
+
+An `Adapter` is a factory for `Device` instances for a specific backend (e.g. WebGPU or WebGL).
+
 ## Device
 
 The [`Device`](/docs/api-reference/core/device) class provides luma.gl applications with access to the GPU. 
@@ -22,31 +26,7 @@ A `CanvasContext` takes care of:
 - canvas resizing
 - device pixel ratio calculations
 
-## Usage
-
-Create a `Device` using the best available registered backend, 
-specifying an existing canvas to initialize the default `CanvasContext`.
-
-```typescript
-import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
-
-luma.registerDevices([WebGLDevice]);
-const device = luma.createDevice({canvas: ...});
-```
-
-Create a WebGL 2 device, auto creating a canvas.
-
-```typescript
-import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-
-luma.registerDevices([WebGLDevice]);
-const webglDevice = luma.createDevice({type: 'webgl'});
-```
-
-## Registering Device Backends
+## Registering Backend Adapters
 
 The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
 
@@ -62,9 +42,9 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerDevices([WebGPUDevice]);
+luma.registerAdapters([webgpuAdapter]);
 const device = await luma.createDevice({type: 'webgpu', canvas: ...});
 ```
 
@@ -83,7 +63,7 @@ import {luma} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl';
 import {WebGPUDevice} from '@luma.gl/webgpu';
 
-luma.registerDevices([WebGLDevice, WebGPUDevice]);
+luma.registerAdapters([WebGLDevice, WebGPUDevice]);
 
 const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 ```
