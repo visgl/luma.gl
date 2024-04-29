@@ -20,7 +20,7 @@ export class WebGLStateTracker {
   static get(gl: WebGL2RenderingContext): WebGLStateTracker {
     // @ts-expect-error
     return gl.state as WebGLStateTracker;
-  }  
+  }
 
   gl: WebGL2RenderingContext;
   program: unknown = null;
