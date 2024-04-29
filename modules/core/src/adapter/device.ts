@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {VERSION} from '../init';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
@@ -299,8 +298,6 @@ export abstract class Device {
   get [Symbol.toStringTag](): string {
     return 'Device';
   }
-
-  static VERSION = VERSION;
 
   constructor(props: DeviceProps) {
     this.props = {...Device.defaultProps, ...props};

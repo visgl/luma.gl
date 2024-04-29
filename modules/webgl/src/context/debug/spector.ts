@@ -58,7 +58,7 @@ export function initializeSpectorJS(props: SpectorProps): Spector | null {
     const {Spector} = globalThis.SPECTOR as any;
     spector = new Spector();
     if (globalThis.luma) {
-      globalThis.luma.spector = spector;
+      (globalThis.luma as any).spector = spector;
     }
   }
 
