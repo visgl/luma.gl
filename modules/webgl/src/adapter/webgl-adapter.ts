@@ -4,7 +4,7 @@
 
 import {Adapter, Device, DeviceProps, CanvasContext, log} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
-import {loadSpectorJS} from '../context/debug/spector';
+import {loadSpectorJS, DEFAULT_SPECTOR_PROPS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools} from '../context/debug/webgl-developer-tools';
 
 const LOG_LEVEL = 1;
@@ -15,6 +15,10 @@ export class WebGLAdapter extends Adapter {
 
   constructor() {
     super();
+
+    // Add spector default props to device default props, so that runtime settings are observed
+    Device.defaultProps = {...Device.defaultProps, ...DEFAULT_SPECTOR_PROPS};
+
     // @ts-ignore DEPRECATED For backwards compatibility luma.registerDevices
     WebGLDevice.adapter = this;
   }

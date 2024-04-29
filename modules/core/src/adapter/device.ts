@@ -227,8 +227,11 @@ export type DeviceProps = {
   debug?: boolean;
   /** Break on WebGL functions matching these strings */
   break?: string[];
+
   /** WebGL: Initialize the SpectorJS WebGL debugger */
-  spector?: boolean;
+  debugWithSpectorJS?: boolean;
+  /** SpectorJS URL. Override if CDN is down or different SpectorJS version is desired */
+  spectorUrl?: string;
 
   // EXPERIMENTAL SETTINGS
   /** Set to false to disable WebGL state management instrumentation: TODO- Unclear if still supported / useful */
@@ -279,8 +282,11 @@ export abstract class Device {
     // failIfMajorPerformanceCaveat: undefined
 
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-    spector: Boolean(log.get('spector')), // Initialize the SpectorJS WebGL debugger
     break: (log.get('break') as string[]) || [],
+
+    // WebGL specific debugging
+    debugWithSpectorJS: undefined!,
+    spectorUrl: undefined!,
 
     // TODO - Change these after confirming things work as expected
     initalizeFeatures: true,
