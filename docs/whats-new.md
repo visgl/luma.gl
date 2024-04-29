@@ -10,10 +10,11 @@ Target Date: Q2 2024
 
 **@luma.gl/core**
 
-- New `Adapter` class - A dedicated `Device` factory is exported by each specific backend (e.g. WebGPU or WebGL).
-- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Now register adapters rather than devices.
-- New [`luma.attachDevice()`](/docs/api-reference/core/luma#lumaattachdevice) method - A `Device` can now be attached to a `WebGL2RenderingContext` without calling `WebGLDevice.attach()`.
-- `Texture`: Textures no longer accept promises, use `AsyncTexture` class instead.
+| Updated API              | Status     | Replacement                                                                                  |
+| ------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
+| `luma.registerDevices()` | Deprecated | Use [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) instead. |
+| `WebGLDevice.attach()`   | Deprecated | Use [`luma.attachDevice()`](/docs/api-reference/core/luma#lumaattachdevice) instead .        |
+| `Texture` promise data   | Removed    | Use `AsyncTexture` class instead.                                                            |
 
 **@luma.gl/engine**
 
