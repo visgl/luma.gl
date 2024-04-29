@@ -15,7 +15,7 @@ type SpectorProps = {
 };
 
 const DEFAULT_SPECTOR_PROPS: SpectorProps = {
-  spector: log.get('spector') || log.get('inspect')
+  spector: log.get('spector') || log.get('spectorjs')
 };
 
 // https://github.com/BabylonJS/Spector.js#basic-usage
