@@ -9,7 +9,6 @@ import type {WebGLDevice} from '@luma.gl/webgl';
 
 import {
   WebGLStateTracker,
-  trackContextState,
   getGLParameters,
   setGLParameters,
   resetGLParameters,
@@ -31,18 +30,17 @@ const device = createTestDevice({debug: true}) as WebGLDevice;
 
 test('WebGLStateTracker#imports', t => {
   t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
-  t.ok(typeof trackContextState === 'function', 'trackContextState imported OK');
   t.end();
 });
 
-test('WebGLStateTracker#trackContextState', t => {
-  const {gl} = device;
-  t.doesNotThrow(
-    () => trackContextState(gl, {copyState: false}),
-    'trackContextState call succeeded'
-  );
-  t.end();
-});
+// test.skip('WebGLStateTracker#trackContextState', t => {
+//   const {gl} = device;
+//   t.doesNotThrow(
+//     () => trackContextState(gl, {copyState: false}),
+//     'trackContextState call succeeded'
+//   );
+//   t.end();
+// });
 
 test('WebGLStateTracker#push & pop', t => {
   const {gl} = device;

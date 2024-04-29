@@ -26,19 +26,19 @@ export class WebGLStateTracker {
   program: unknown = null;
   stateStack: object[] = [];
   enable = true;
-  cache: Record<string, any>;
+  cache: Record<string, any> = null!;
   log;
+
+  protected initialized = false;
 
   constructor(
     gl: WebGL2RenderingContext,
-    {
-      copyState = false, // Copy cache from params (slow) or initialize from WebGL defaults (fast)
-      log = () => {} // Logging function, called when gl parameter change calls are actually issued
-    } = {}
+    props?: {
+      log; // Logging function, called when gl parameter change calls are actually issued
+    }
   ) {
     this.gl = gl;
-    this.cache = copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
-    this.log = log;
+    this.log = props?.log || (() => {});
 
     this._updateCache = this._updateCache.bind(this);
     Object.seal(this);
@@ -55,6 +55,38 @@ export class WebGLStateTracker {
     setGLParameters(this.gl, oldValues);
     // Don't pop until we have reset parameters (to make sure other "stack frames" are not affected)
     this.stateStack.pop();
+  }
+
+  /**
+   * Initialize WebGL state caching on a context
+   * can be called multiple times to enable/disable
+   *
+   * @note After calling this function, context state will be cached
+   * .push() and .pop() will be available for saving,
+   * temporarily modifying, and then restoring state.
+   */
+  trackState(gl: WebGL2RenderingContext, options?: {copyState?: boolean}): void {
+    this.cache = options.copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
+
+    if (this.initialized) {
+      throw new Error('WebGLStateTracker');
+    }
+    this.initialized = true;
+
+    // @ts-expect-error
+    this.gl.state = this;
+
+    installProgramSpy(gl);
+
+    // intercept all setter functions in the table
+    for (const key in GL_HOOKED_SETTERS) {
+      const setter = GL_HOOKED_SETTERS[key];
+      installSetterSpy(gl, key, setter);
+    }
+
+    // intercept all getter functions in the table
+    installGetterOverride(gl, 'getParameter');
+    installGetterOverride(gl, 'isEnabled');
   }
 
   /**
@@ -93,57 +125,6 @@ export class WebGLStateTracker {
 
     return {valueChanged, oldValue};
   }
-}
-
-// PUBLIC API
-
-/**
- * Initialize WebGL state caching on a context
- * can be called multiple times to enable/disable
- *
- * @note After calling this function, context state will be cached
- * gl.state.push() and gl.state.pop() will be available for saving,
- * temporarily modifying, and then restoring state.
- */
-export function trackContextState(
-  gl: WebGL2RenderingContext,
-  options?: {
-    enable?: boolean;
-    copyState?: boolean;
-    log?: any;
-  }
-): WebGL2RenderingContext {
-  const {enable = true, copyState} = options || {};
-  // assert(copyState !== undefined);
-  // @ts-expect-error
-  if (!gl.state) {
-    // @ts-ignore
-    // const {polyfillContext} = global_;
-    // if (polyfillContext) {
-    //   polyfillContext(gl);
-    // }
-
-    // Create a state cache
-    // @ts-expect-error
-    gl.state = new WebGLStateTracker(gl, {copyState});
-
-    installProgramSpy(gl);
-
-    // intercept all setter functions in the table
-    for (const key in GL_HOOKED_SETTERS) {
-      const setter = GL_HOOKED_SETTERS[key];
-      installSetterSpy(gl, key, setter);
-    }
-
-    // intercept all getter functions in the table
-    installGetterOverride(gl, 'getParameter');
-    installGetterOverride(gl, 'isEnabled');
-  }
-
-  const glState = WebGLStateTracker.get(gl);
-  glState.enable = enable;
-
-  return gl;
 }
 
 // HELPER FUNCTIONS - INSTALL GET/SET INTERCEPTORS (SPYS) ON THE CONTEXT

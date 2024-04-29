@@ -7,7 +7,7 @@ import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@
 import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
-import {WebGLStateTracker, trackContextState} from '../context/state-tracker/webgl-state-tracker';
+import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
@@ -227,13 +227,10 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
     this.canvasContext.resize();
 
     // Install context state tracking
-    // @ts-expect-error - hidden parameters
-    const {enable = true, copyState = false} = props;
-    trackContextState(this.gl, {
-      enable,
-      copyState,
+    const glState = new WebGLStateTracker(this.gl, {
       log: (...args: any[]) => log.log(1, ...args)()
     });
+    glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add debug instrumentation to the context, force log level to at least 1
     if (props.debug) {
