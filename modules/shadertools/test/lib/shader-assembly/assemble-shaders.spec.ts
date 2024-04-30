@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {webglDevice} from '@luma.gl/test-utils';
-import {assembleGLSLShaderPair, picking, fp64, pbr, glsl, PlatformInfo} from '@luma.gl/shadertools';
+import {assembleGLSLShaderPair, picking, fp64, pbr, PlatformInfo} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
@@ -19,7 +19,7 @@ function getInfo(device: Device): PlatformInfo {
   };
 }
 
-const VS_GLSL_300 = glsl`\
+const VS_GLSL_300 = /* glsl */ `\
 #version 300 es
 
 in vec4 positions;
@@ -29,7 +29,7 @@ void main(void) {
 }
 `;
 
-const FS_GLSL_300 = glsl`\
+const FS_GLSL_300 = /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -41,7 +41,7 @@ void main(void) {
 }
 `;
 
-const VS_GLSL_300_2 = glsl`\
+const VS_GLSL_300_2 = /* glsl */ `\
 #version 300 es
 
 in vec4 positions;
@@ -72,7 +72,7 @@ void main(void) {
 }
 `;
 
-const FS_GLSL_300_2 = glsl`\
+const FS_GLSL_300_2 = /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -92,7 +92,7 @@ void main(void) {
 // deck.gl mesh layer shaders
 // TODO - broken tests
 
-const VS_GLSL_300_DECK = glsl`\
+const VS_GLSL_300_DECK = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME simple-mesh-layer-vs
 
@@ -137,7 +137,7 @@ void main(void) {
 }
 `;
 
-const FS_GLSL_300_DECK = glsl`\
+const FS_GLSL_300_DECK = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME simple-mesh-layer-fs
 
@@ -170,7 +170,7 @@ void main(void) {
 }
 `;
 
-const VS_GLSL_300_GLTF = glsl`\
+const VS_GLSL_300_GLTF = /* glsl */ `\
 #version 300 es
 
 #if (__VERSION__ < 300)
@@ -215,7 +215,7 @@ const VS_GLSL_300_GLTF = glsl`\
   }
 `;
 
-const FS_GLSL_300_GLTF = glsl`\
+const FS_GLSL_300_GLTF = /* glsl */ `\
 #version 300 es
 
   out vec4 fragmentColor;
@@ -238,7 +238,7 @@ const TEST_MODULE = {
   }
 };
 
-const VS_GLSL_300_MODULES = glsl`\
+const VS_GLSL_300_MODULES = /* glsl */ `\
 #version 300 es
 
 in float floatAttribute;
@@ -250,7 +250,7 @@ void main(void) {
 }
 `;
 
-const FS_GLSL_300_MODULES = glsl`\
+const FS_GLSL_300_MODULES = /* glsl */ `\
 #version 300 es
 precision highp float;
 

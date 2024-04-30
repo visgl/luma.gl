@@ -156,8 +156,6 @@ export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-
 // GENERAL EXPORTS - FOR APPLICATIONS
 
 export type {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?
-/** GLSL syntax highlighting: glsl`...` Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal */
-export const glsl = (x: TemplateStringsArray) => `${x}`;
 
 // ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
 
@@ -170,7 +168,7 @@ export type {
 
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
-export {getScratchArrayBuffer, getScratchArray} from './utils/array-utils-flat';
+export {getScratchArray} from './utils/array-utils-flat';
 
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';

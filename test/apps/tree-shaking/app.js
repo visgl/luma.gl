@@ -58,7 +58,7 @@ function makeInstancedCube(gl) {
       instanceOffsets: {value: offsets, size: 2, divisor: 1},
       instanceColors: {value: colors, size: 3, divisor: 1}
     },
-    vs: glsl`\
+    vs: /* glsl */ `\
 attribute vec3 positions;
 attribute vec3 normals;
 attribute vec2 instanceOffsets;
@@ -81,7 +81,7 @@ void main(void) {
   color = instanceColors;
 }
 `,
-    fs: glsl`\
+    fs: /* glsl */ `\
 precision highp float;
 
 varying vec3 color;

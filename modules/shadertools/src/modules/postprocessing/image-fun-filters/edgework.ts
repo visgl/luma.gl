@@ -3,10 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {random} from '../../math/random/random';
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform edgeWorkUniforms {
   float radius;
   vec2 delta;

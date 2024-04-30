@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const GOURAUD_VS = glsl`\
+export const GOURAUD_VS = /* glsl */ `\
 uniform materialUniforms {
   uniform float ambient;
   uniform float diffuse;
@@ -13,7 +11,7 @@ uniform materialUniforms {
 } material;
 `;
 
-export const GOURAUD_FS = glsl`\
+export const GOURAUD_FS = /* glsl */ `\
 uniform materialUniforms {
   uniform float ambient;
   uniform float diffuse;

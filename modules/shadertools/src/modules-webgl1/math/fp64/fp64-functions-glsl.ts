@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const fp64functionShader = glsl`\
+export const fp64functionShader = /* glsl */ `\
 const vec2 E_FP64 = vec2(2.7182817459106445e+00, 8.254840366817007e-08);
 const vec2 LOG2_FP64 = vec2(0.6931471824645996e+00, -1.9046542121259336e-09);
 const vec2 PI_FP64 = vec2(3.1415927410125732, -8.742278012618954e-8);

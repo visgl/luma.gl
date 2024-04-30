@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
 // import {ShaderModule} from '../../types';
 
-const fp32shader = glsl`\
+const fp32shader = /* glsl */ `\
 #ifdef LUMA_FP32_TAN_PRECISION_WORKAROUND
 
 // All these functions are for substituting tan() function from Intel GPU only

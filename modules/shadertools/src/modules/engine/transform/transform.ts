@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-const vs = glsl`\
+const vs = /* glsl */ `\
 attribute float transform_elementID;
 
 // returns half of pixel size, used to move the pixel position to center of the pixel.

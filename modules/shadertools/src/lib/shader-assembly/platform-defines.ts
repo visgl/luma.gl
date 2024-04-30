@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../glsl-utils/highlight';
 import {PlatformInfo} from './platform-info';
 
 /** Adds defines to help identify GPU architecture / platform */
 export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
   switch (platformInfo?.gpu.toLowerCase()) {
     case 'apple':
-      return glsl`\
+      return /* glsl */ `\
 #define APPLE_GPU
 // Apple optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -19,14 +18,14 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 `;
 
     case 'nvidia':
-      return glsl`\
+      return /* glsl */ `\
 #define NVIDIA_GPU
 // Nvidia optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
 `;
 
     case 'intel':
-      return glsl`\
+      return /* glsl */ `\
 #define INTEL_GPU
 // Intel optimizes away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1
@@ -38,7 +37,7 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
 
     case 'amd':
       // AMD Does not eliminate fp64 code
-      return glsl`\
+      return /* glsl */ `\
 #define AMD_GPU
 `;
 
@@ -46,7 +45,7 @@ export function getPlatformShaderDefines(platformInfo: PlatformInfo): string {
       // We don't know what GPU it is, could be that the GPU driver or
       // browser is not implementing UNMASKED_RENDERER constant and not
       // reporting a correct name
-      return glsl`\
+      return /* glsl */ `\
 #define DEFAULT_GPU
 // Prevent driver from optimizing away the calculation necessary for emulated fp64
 #define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1

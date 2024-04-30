@@ -1,4 +1,4 @@
-import {glsl, Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 const INFO_HTML = `
@@ -19,7 +19,7 @@ void main() {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 
 in vec3 vColor;

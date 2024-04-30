@@ -3,10 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // Do a 9x9 bilateral box filter
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform denoiseUniforms {
   float strength;
 } noise;

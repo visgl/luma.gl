@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import type {NumberArray} from '../../../types';
 import {project} from '../../project/project';
 
@@ -26,7 +25,7 @@ function getUniforms(opts: DirlightOptions = DEFAULT_MODULE_OPTIONS): Record<str
   return uniforms;
 }
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform vec3 dirlight_uLightDirection;
 
 /*

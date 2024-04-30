@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '@luma.gl/shadertools';
-
 type TranspilationTestCase = {
   title: string;
   stage: 'vertex' | 'fragment';
@@ -22,7 +20,7 @@ export const TRANSPILATION_TEST_CASES: TranspilationTestCase[] = [
     stage: 'vertex',
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
-    GLSL_300: glsl`\
+    GLSL_300: /* glsl */ `\
 #version 300 es
 
 in vec4 positions;
@@ -49,7 +47,7 @@ void main(void) {
 `,
 
     // transpiled 300 version should have correct `texure()` syntax
-    GLSL_300_TRANSPILED: glsl`\
+    GLSL_300_TRANSPILED: /* glsl */ `\
 #version 300 es
 
 in vec4 positions;
@@ -75,7 +73,7 @@ void main(void) {
 }
 `,
 
-    GLSL_100: glsl`\
+    GLSL_100: /* glsl */ `\
 #version 100
 
 attribute vec4 positions;
@@ -106,7 +104,7 @@ void main(void) {
     stage: 'fragment',
 
     // 300 version should use 'textureCube()'' instead of 'texture()'
-    GLSL_300: glsl`\
+    GLSL_300: /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -131,7 +129,7 @@ void main(void) {
 `,
 
     // transpiled 300 version should have correct `texure()` syntax
-    GLSL_300_TRANSPILED: glsl`\
+    GLSL_300_TRANSPILED: /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -155,7 +153,7 @@ void main(void) {
 }
 `,
 
-    GLSL_100: glsl`\
+    GLSL_100: /* glsl */ `\
 #version 100
 
 precision highp float;
@@ -183,7 +181,7 @@ void main(void) {
 export const COMPILATION_TEST_CASES = [
   {
     title: 'textureCube',
-    VS_300_VALID: glsl`\
+    VS_300_VALID: /* glsl */ `\
 #version 300 es
 
 in vec4 positions;
@@ -201,7 +199,7 @@ void main(void) {
 }
 `,
 
-    FS_300_VALID: glsl`\
+    FS_300_VALID: /* glsl */ `\
 #version 300 es
 
 precision highp float;

@@ -1,4 +1,4 @@
-import {glsl, Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 const INFO_HTML = `
@@ -7,14 +7,14 @@ Instanced triangles using luma.gl's high-level API
 
 const colorShaderModule = {
   name: 'color',
-  vs: glsl`\
+  vs: /* glsl */ `\
 out vec3 color_vColor;
 
 void color_setColor(vec3 color) {
   color_vColor = color;
 }
   `,
-  fs: glsl`\
+  fs: /* glsl */ `\
 in vec3 color_vColor;
 
 vec3 color_getColor() {
@@ -43,7 +43,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     );
 
     this.model = new Model(device, {
-      vs: glsl`\
+      vs: /* glsl */ `\
 #version 300 es
 in vec2 position;
 in vec3 instanceColor;
@@ -54,7 +54,7 @@ void main() {
   gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
 }
       `,
-      fs: glsl`\
+      fs: /* glsl */ `\
 #version 300 es
 out vec4 fragColor;
 void main() {

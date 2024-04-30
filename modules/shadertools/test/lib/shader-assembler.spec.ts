@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {ShaderAssembler, PlatformInfo, glsl, picking, dirlight} from '@luma.gl/shadertools';
+import {ShaderAssembler, PlatformInfo, picking, dirlight} from '@luma.gl/shadertools';
 
 const platformInfo: PlatformInfo = {
   type: 'webgl',
@@ -13,7 +13,7 @@ const platformInfo: PlatformInfo = {
   features: new Set()
 };
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 in vec4 positions;
 void main(void) {
@@ -21,7 +21,7 @@ void main(void) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 out vec4 fragmentColor;
@@ -31,7 +31,7 @@ void main(void) {
 `;
 
 /*
-const VS_300 = glsl`\
+const VS_300 = /* glsl *`\
 #version 300 es
 
   in vec4 positions;
@@ -45,7 +45,7 @@ const VS_300 = glsl`\
   }
 `;
 
-const FS_300 = glsl`\
+const FS_300 = /* glsl *`\
 #version 300 es
   precision highp float;
 

@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray} from '../../../types';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 // cyan color
@@ -50,7 +49,7 @@ export type PickingUniforms = {
   highlightColor?: NumberArray;
 };
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 uniform pickingUniforms {
   float isActive;
   float isAttribute;
@@ -124,7 +123,7 @@ void picking_setPickingAttribute(vec3 value) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform pickingUniforms {
   float isActive;
   float isAttribute;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, RenderPipelineParameters, log, glsl} from '@luma.gl/core';
+import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbr} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
@@ -56,7 +56,7 @@ layout(0) positions: vec4; // in vec4 POSITION;
 
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 
   // in vec4 POSITION;
@@ -98,7 +98,7 @@ const vs = glsl`\
   }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
   out vec4 fragmentColor;
 

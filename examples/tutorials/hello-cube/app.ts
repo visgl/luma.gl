@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
-import {glsl, Texture, UniformStore} from '@luma.gl/core';
+import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry, loadImage, AsyncTexture} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
@@ -53,7 +53,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 // GLSL
 
-export const VS_GLSL = glsl`\
+export const VS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-vs
 
@@ -74,7 +74,7 @@ void main() {
 }
 `;
 
-export const FS_GLSL = glsl`\
+export const FS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;

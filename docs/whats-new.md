@@ -10,11 +10,7 @@ Target Date: Q2 2024
 
 **@luma.gl/core**
 
-| Updated API              | Status     | Replacement                                                                                  |
-| ------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
-| `luma.registerDevices()` | Deprecated | Use [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) instead. |
-| `WebGLDevice.attach()`   | Deprecated | Use [`luma.attachDevice()`](/docs/api-reference/core/luma#lumaattachdevice) instead .        |
-| `Texture` promise data   | Removed    | Use `AsyncTexture` class instead.                                                            |
+- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
 
 **@luma.gl/engine**
 

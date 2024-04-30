@@ -1,4 +1,4 @@
-import {Device, glsl} from '@luma.gl/core';
+import {Device} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -21,7 +21,7 @@ surface
 
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = glsl`\
+    const vs = /* glsl */ `\
 #version 300 es
 in vec3 positions;
 
@@ -36,7 +36,7 @@ void main(void) {
   vPosition = positions;
 }
 `;
-    const fs = glsl`\
+    const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -56,7 +56,7 @@ void main(void) {
 
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = glsl`\
+    const vs = /* glsl */ `\
 #version 300 es
 in vec3 positions;
 in vec3 normals;
@@ -77,7 +77,7 @@ void main(void) {
   vUV = texCoords;
 }
 `;
-    const fs = glsl`\
+    const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 

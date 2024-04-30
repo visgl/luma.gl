@@ -3,14 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {
-  getQualifierDetails,
-  getPassthroughFS,
-  typeToChannelSuffix,
-  typeToChannelCount,
-  convertToVec4,
-  glsl
-} from '@luma.gl/shadertools';
+import {getQualifierDetails, getPassthroughFS, convertToVec4} from '@luma.gl/shadertools';
+import {typeToChannelSuffix, typeToChannelCount} from '@luma.gl/shadertools';
 
 type channelCount = 1 | 2 | 3 | 4;
 
@@ -64,7 +58,7 @@ test('shader-utils#getPassthroughFS', t => {
       input: 'myInput',
       inputChannels: 1 as channelCount,
       output: 'myOutput',
-      expected: glsl`\
+      expected: /* glsl */ `\
 #version 300 es
 in float myInput;
 out vec4 myOutput;

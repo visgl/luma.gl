@@ -1,6 +1,6 @@
 //
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
-import {Device, Framebuffer, glsl} from '@luma.gl/core';
+import {Device, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
 import {makeRandomGenerator} from '@luma.gl/engine';
@@ -95,7 +95,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 // GLSL
 
-const VS_GLSL = glsl`\
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
@@ -130,7 +130,7 @@ void main(void) {
 }
 `;
 
-const FS_GLSL = glsl`\
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 

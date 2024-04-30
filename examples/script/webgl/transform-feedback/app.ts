@@ -1,4 +1,4 @@
-import {glsl, Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {BufferTransform} from '@luma.gl/engine';
 
@@ -8,7 +8,7 @@ Animation via transform feedback.
 
 const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
 
-const transformVs = glsl`\
+const transformVs = /* glsl */ `\
 #version 300 es
 #define SIN2 0.03489949
 #define COS2 0.99939082
@@ -25,7 +25,7 @@ void main() {
 }
 `;
 
-const renderVs = glsl`\
+const renderVs = /* glsl */ `\
 #version 300 es
 
 in vec2 position;
@@ -38,7 +38,7 @@ void main() {
 }
 `;
 
-const renderFs = glsl`\
+const renderFs = /* glsl */ `\
 #version 300 es
 precision highp float;
 

@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray} from '@math.gl/types';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
@@ -32,7 +31,7 @@ fn dirlight_filterColor(color: vec4<f32>, dirlightInputs): vec4<f32> {
 }
 `;
 
-const VS_GLSL = glsl`\
+const VS_GLSL = /* glsl */ `\
 out vec3 dirlight_vNormal;
 
 void dirlight_setNormal(vec3 normal) {
@@ -40,7 +39,7 @@ void dirlight_setNormal(vec3 normal) {
 }
 `;
 
-const FS_GLSL = glsl`\
+const FS_GLSL = /* glsl */ `\
 uniform dirlightUniforms {
   vec3 lightDirection;
 } dirlight;

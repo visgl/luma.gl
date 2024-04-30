@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, glsl} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -51,7 +51,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 // GLSL
 
-const VS_GLSL = glsl`\
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-vs
 
@@ -72,7 +72,7 @@ void main() {
 }
 `;
 
-const FS_GLSL = glsl`\
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;

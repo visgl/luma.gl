@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import {glsl} from '../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../lib/shader-module/shader-module';
 
 type ProjectionProps = {
@@ -51,7 +50,7 @@ function getUniforms(opts: ProjectionProps = DEFAULT_MODULE_OPTIONS, prevUniform
   return uniforms;
 }
 
-const common = glsl`\
+const common = /* glsl */ `\
 varying vec4 project_vPositionWorld;
 varying vec3 project_vNormalWorld;
 

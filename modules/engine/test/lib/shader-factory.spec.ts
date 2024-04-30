@@ -5,16 +5,15 @@
 import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
-import {glsl} from '@luma.gl/core';
 import {ShaderFactory} from '@luma.gl/engine';
 
-const vs1 = glsl`\
+const vs1 = /* glsl */ `\
 void main(void) {
   gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
 }
 `;
 
-const vs2 = glsl`\
+const vs2 = /* glsl */ `\
 void main(void) {
   gl_Position = vec4(10.0, 10.0, 10.0, 10.0);
 }

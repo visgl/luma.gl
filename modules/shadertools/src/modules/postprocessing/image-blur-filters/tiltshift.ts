@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 import {random} from '../..//math/random/random';
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform tiltShiftUniforms {
   float blurRadius;
   float gradientRadius;

@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from './lib/glsl-utils/highlight';
-
-export const MODULE_INJECTORS_VS = glsl`\
+export const MODULE_INJECTORS_VS = /* glsl */ `\
 #ifdef MODULE_LOGDEPTH
   logdepth_adjustPosition(gl_Position);
 #endif
 `;
 
-export const MODULE_INJECTORS_FS = glsl`\
+export const MODULE_INJECTORS_FS = /* glsl */ `\
 #ifdef MODULE_MATERIAL
   gl_FragColor = material_filterColor(gl_FragColor);
 #endif
