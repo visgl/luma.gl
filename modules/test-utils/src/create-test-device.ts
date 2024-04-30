@@ -23,8 +23,8 @@ export function createTestContext(opts: Record<string, any> = {}): WebGL2Renderi
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
     props = {...CONTEXT_DEFAULTS, ...props, debug: true};
-    // TODO - We dont use luma.createDevice since this function currently expect the context to be created synchronously
-    return webgl2Adapter.createSync(props);
+    // TODO - We dont use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
+    return new WebGLDevice(props);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);

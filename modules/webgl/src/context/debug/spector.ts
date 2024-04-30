@@ -28,19 +28,20 @@ declare global {
   var SPECTOR: Spector;
 }
 
-export const DEFAULT_SPECTOR_PROPS: SpectorProps = {
+export const DEFAULT_SPECTOR_PROPS: Required<SpectorProps> = {
   debugWithSpectorJS: log.get('spector') || log.get('spectorjs'),
   // https://github.com/BabylonJS/Spector.js#basic-usage
   // https://forum.babylonjs.com/t/spectorcdn-is-temporarily-off/48241
   // spectorUrl: 'https://spectorcdn.babylonjs.com/spector.bundle.js';
-  spectorUrl: 'https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js'
+  spectorUrl: 'https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js',
+  gl: undefined!
 };
 
 /** Loads spector from CDN if not already installed */
-export async function loadSpectorJS(props: SpectorProps): Promise<void> {
-  if (!globalThis.SPECTOR && props.debugWithSpectorJS) {
+export async function loadSpectorJS(props: {spectorUrl?: string}): Promise<void> {
+  if (!globalThis.SPECTOR) {
     try {
-      await loadScript(props.spectorUrl);
+      await loadScript(props.spectorUrl || DEFAULT_SPECTOR_PROPS.spectorUrl);
     } catch (error) {
       log.warn(String(error));
     }

@@ -65,6 +65,8 @@ export class Luma {
     // @ts-expect-error no-undef
     typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'running from source';
 
+  spector: unknown;
+
   protected preregisteredAdapters = new Map<string, Adapter>();
 
   constructor() {
@@ -165,7 +167,7 @@ export class Luma {
     }
 
     const adapter = adapters.get(type);
-    const device = adapter?.attach?.(null);
+    const device = await adapter?.attach?.(null);
     if (device) {
       return device;
     }
