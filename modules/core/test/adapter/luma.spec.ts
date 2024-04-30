@@ -31,18 +31,18 @@ test('luma#registerDevices', async t => {
   t.end();
 });
 
-test('luma#getSupportedDevices', async t => {
-  luma.registerDevices([NullDevice]);
+test('luma#getSupportedAdapters', async t => {
+  luma.registerAdapters([nullAdapter]);
   const types = luma.getSupportedAdapters();
   t.ok(types.includes('unknown'), 'null device is supported');
 });
 
 test('luma#getBestAvailableDeviceType', async t => {
-  luma.registerDevices([NullDevice]);
+  luma.registerAdapters([nullAdapter]);
   // Somewhat dummy test, as tests rely on test utils registering webgl and webgpu devices
   // But they might not be supported on all devices.
   const types = luma.getBestAvailableAdapter();
-  t.ok(typeof types === 'string', 'doesnt crash');
+  t.ok(typeof types === 'string', 'does not crash');
 });
 
 // To suppress @typescript-eslint/unbound-method

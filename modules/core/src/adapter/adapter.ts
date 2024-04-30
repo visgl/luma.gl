@@ -11,5 +11,5 @@ export abstract class Adapter {
   abstract type: string;
   abstract isSupported(): boolean;
   abstract create(props: DeviceProps): Promise<Device>;
-  abstract attach?(handle: unknown): Device;
+  abstract attach?(handle: unknown): Promise<Device>;
 }

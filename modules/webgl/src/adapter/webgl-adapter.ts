@@ -34,7 +34,7 @@ export class WebGLAdapter extends Adapter {
    * @param gl
    * @returns
    */
-  attach(gl: Device | WebGL2RenderingContext): WebGLDevice {
+  async attach(gl: Device | WebGL2RenderingContext): Promise<WebGLDevice> {
     if (gl instanceof WebGLDevice) {
       return gl;
     }
@@ -80,20 +80,6 @@ export class WebGLAdapter extends Adapter {
 
     log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
 
-    const device = this.createSync(props);
-    log.groupEnd(LOG_LEVEL)();
-
-    return device;
-  }
-
-  /** Create or attach device synchronously. Not supported for all devices. */
-  createSync(props: DeviceProps = {}): WebGLDevice {
-    // @ts-expect-error
-    if (props.gl?.device) {
-      log.warn('reattaching existing device')();
-      return this.attach(props.gl);
-    }
-
     const device = new WebGLDevice(props);
 
     // Log some debug info about the newly created context
@@ -102,6 +88,8 @@ Created ${device.type}${device.debug ? ' debug' : ''} context: \
 ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContext.id}`;
     log.probe(LOG_LEVEL, message)();
     log.table(LOG_LEVEL, device.info)();
+
+    log.groupEnd(LOG_LEVEL)();
 
     return device;
   }

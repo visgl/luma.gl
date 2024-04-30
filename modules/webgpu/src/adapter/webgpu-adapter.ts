@@ -5,6 +5,8 @@
 import {Adapter, DeviceProps, CanvasContext, log} from '@luma.gl/core';
 import {WebGPUDevice} from './webgpu-device';
 
+// / <reference types="@webgpu/types" />
+
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
@@ -83,7 +85,7 @@ export class WebGPUAdapter extends Adapter {
     return device;
   }
 
-  attach(handle: GPUDevice): WebGPUDevice {
+  async attach(handle: GPUDevice): Promise<WebGPUDevice> {
     throw new Error('WebGPUAdapter.attach() not implemented');
   }
 }
