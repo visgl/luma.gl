@@ -15,10 +15,8 @@ jobs:
         node-version: [18]
 
     steps:
-      - uses: actions/checkout@v4.1.1
-      - uses: volta-cli/action@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4.0.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: volta-cli/action@2d68418f32546fd191eb666e232b321d5726484d # v4.1.1
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
@@ -38,6 +36,6 @@ jobs:
           yarn test-ci
 
       - name: Coveralls
-        uses: coverallsapp/github-action@master
+        uses: coverallsapp/github-action@09b709cf6a16e30b0808ba050c7a6e8a5ef13f8d # v1.2.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
