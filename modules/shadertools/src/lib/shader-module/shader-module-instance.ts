@@ -6,6 +6,7 @@ import {assert} from '../utils/assert';
 import {makePropValidators, getValidatedProperties, PropValidator} from '../filters/prop-types';
 import {ShaderModule, ShaderModuleDeprecation} from './shader-module';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import {UniformFormat} from '../../types';
 
 let index = 1;
 
@@ -23,7 +24,7 @@ export class ShaderModuleInstance {
     fragment: Record<string, ShaderInjection>;
   };
   uniforms: Record<string, PropValidator> = {};
-  uniformTypes: Record<string, PropValidator> = {};
+  uniformTypes: Record<string, UniformFormat> = {};
 
   static instantiateModules(
     modules: (ShaderModule | ShaderModuleInstance)[]
@@ -60,6 +61,7 @@ export class ShaderModuleInstance {
       vs,
       fs,
       dependencies = [],
+      uniformTypes = {},
       uniformPropTypes = {},
       getUniforms,
       deprecations = [],
@@ -76,6 +78,7 @@ export class ShaderModuleInstance {
     this.deprecations = this._parseDeprecationDefinitions(deprecations);
     this.defines = defines;
     this.injections = normalizeInjections(inject);
+    this.uniformTypes = uniformTypes;
 
     if (uniformPropTypes) {
       this.uniforms = makePropValidators(uniformPropTypes);

@@ -6,6 +6,7 @@ import test from 'tape-promise/tape';
 import {picking} from '../../shadertools/src/index';
 // import {_ShaderInputs as ShaderInputs} from '@luma.gl/engine';
 import {ShaderInputs} from '../src/shader-inputs';
+import {ShaderModule} from '@luma.gl/shadertools';
 
 test('ShaderInputs#picking', t => {
   const shaderInputsUntyped = new ShaderInputs({picking});
@@ -58,6 +59,35 @@ test('ShaderInputs#picking prop merge', t => {
     shaderInputs.moduleUniforms.picking,
     expected,
     'Only highlight object and highlight active updated'
+  );
+
+  t.end();
+});
+
+test('ShaderInputs#dependencies', t => {
+  type CustomProps = {color: number[]};
+  const custom: ShaderModule<CustomProps> = {
+    name: 'custom',
+    dependencies: [picking],
+    uniformTypes: {color: 'vec3<f32>'},
+    uniformPropTypes: {color: {value: [0, 0, 0]}}
+  };
+
+  const shaderInputs = new ShaderInputs<{
+    custom: CustomProps;
+    picking: typeof picking.props;
+  }>({custom});
+  t.deepEqual(Object.keys(shaderInputs.modules), ['custom', 'picking']);
+
+  shaderInputs.setProps({
+    custom: {color: [255, 0, 0]},
+    picking: {highlightedObjectColor: [1, 2, 3]}
+  });
+  t.deepEqual(shaderInputs.moduleUniforms.custom.color, [255, 0, 0], 'custom color updated');
+  t.deepEqual(
+    shaderInputs.moduleUniforms.picking.highlightedObjectColor,
+    [1, 2, 3],
+    'highlight object color updated'
   );
 
   t.end();

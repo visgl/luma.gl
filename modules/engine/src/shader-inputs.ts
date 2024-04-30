@@ -59,17 +59,20 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
-  constructor(modules: {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}) {
-    // TODO - get all dependencies from modules
-    const allModules = _resolveModules(Object.values(modules));
-    log.log(
-      1,
-      'Creating ShaderInputs with modules',
-      allModules.map(m => m.name)
-    )();
+  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModuleInputs<ShaderPropsT[P]>}) {
+    // Extract modules with dependencies
+    const resolvedModules = _resolveModules(
+      Object.values(modules).filter(module => module.dependencies)
+    );
+    for (const resolvedModule of resolvedModules) {
+      // @ts-ignore
+      modules[resolvedModule.name] = resolvedModule;
+    }
+
+    log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
-    this.modules = modules;
+    this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Texture | Sampler>>;
 
