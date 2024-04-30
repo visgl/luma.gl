@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {nullAdapter} from '@luma.gl/test-utils';
+import {nullAdapter, NullDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 
 test('luma#attachDevice', async t => {
@@ -22,7 +22,16 @@ test('luma#createDevice', async t => {
   t.end();
 });
 
-test('luma#getSupportedAdapterss', async t => {
+test('luma#registerDevices', async t => {
+  luma.registerDevices([NullDevice]);
+  const device = await luma.createDevice({type: 'unknown'});
+  t.equal(device.type, 'unknown', 'info.vendor ok');
+  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
+  t.equal(device.info.renderer, 'none', 'info.renderer ok');
+  t.end();
+});
+
+test('luma#getSupportedAdapters', async t => {
   luma.registerAdapters([nullAdapter]);
   const types = luma.getSupportedAdapters();
   t.ok(types.includes('unknown'), 'null device is supported');
