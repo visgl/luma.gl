@@ -3,10 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 import {warp} from './warp';
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform swirlUniforms {
   float radius;
   float angle;

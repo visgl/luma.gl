@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const fp64arithmeticShader = glsl`\
+export const fp64arithmeticShader = /* glsl */ `\
 uniform float ONE;
 
 /*

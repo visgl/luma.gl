@@ -5,10 +5,10 @@
 import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
-import {glsl, Buffer} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
-const VS = glsl`\
+const VS = /* glsl */ `\
 #version 300 es
 in float inValue;
 out float outValue;
@@ -18,7 +18,7 @@ void main()
 }
 `;
 
-const FS = glsl`\
+const FS = /* glsl */ `\
 #version 300 es
 in float outValue;
 out vec4 fragmentColor;

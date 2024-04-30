@@ -3,10 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 
 // TODO pass texCoord to angle
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform colorHalftoneUniforms {
   vec2 center;
   float angle;

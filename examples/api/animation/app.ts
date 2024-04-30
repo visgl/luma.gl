@@ -1,4 +1,4 @@
-import {glsl, UniformStore, ShaderUniformType} from '@luma.gl/core';
+import {UniformStore, ShaderUniformType} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -40,7 +40,7 @@ const app: {uniformTypes: Record<string, ShaderUniformType>} = {
   }
 };
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
@@ -65,7 +65,7 @@ void main(void) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 
 precision highp float;

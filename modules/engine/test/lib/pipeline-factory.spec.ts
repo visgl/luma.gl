@@ -5,19 +5,18 @@
 import test from 'tape-promise/tape';
 import {webglDevice} from '@luma.gl/test-utils';
 
-import {glsl} from '@luma.gl/core';
 import {PipelineFactory} from '@luma.gl/engine';
 
 // TODO - this doesn't test that parameters etc are properly cached
 
-const vsSource = glsl`\
+const vsSource = /* glsl */ `\
 attribute vec4 positions;
 
 void main(void) {
   gl_Position = positions;
 }
 `;
-const fsSource = glsl`\
+const fsSource = /* glsl */ `\
 precision highp float;
 
 void main(void) {

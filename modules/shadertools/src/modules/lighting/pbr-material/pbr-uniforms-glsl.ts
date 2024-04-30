@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const pbrMaterialUniforms = glsl`\
+export const pbrMaterialUniforms = /* glsl */ `\
 uniform Projection {
   // Projection
   vec3 u_Camera;

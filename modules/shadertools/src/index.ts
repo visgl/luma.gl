@@ -8,8 +8,6 @@
  * Marks GLSL shaders for syntax highlighting: glsl`...`
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
-export {glsl} from './lib/glsl-utils/highlight';
-
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
 // ShaderModules

@@ -1,8 +1,7 @@
 // import {ShaderModule} from '../../types';
-import {glsl} from '../../lib/glsl-utils/highlight';
 
 // TODO - reuse normal from geometry module
-const vs = glsl`\
+const vs = /* glsl */ `\
 varying vec4 geometry_vPosition;
 varying vec3 geometry_vNormal;
 
@@ -19,7 +18,7 @@ void geometry_setPosition(vec3 position) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 varying vec4 geometry_vPosition;
 varying vec3 geometry_vNormal;
 

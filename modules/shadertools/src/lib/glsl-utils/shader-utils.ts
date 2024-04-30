@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from './highlight';
-
-const FS_GLES = glsl`\
+const FS_GLES = /* glsl */ `\
 out vec4 transform_output;
 void main() {
   transform_output = vec4(0);

@@ -3,9 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 uniform dotScreenUniforms {
   vec2 center;
   float angle;

@@ -57,7 +57,7 @@
 
           const colors = new Float32Array(SIDE * SIDE * 3).map(() => Math.random() * 0.75 + 0.25);
 
-          const vs = glsl`\
+          const vs = /* glsl */`\
       in float instanceSizes;
       in vec3 positions;
       in vec3 normals;
@@ -87,7 +87,7 @@
         gl_Position = uProjection * uView * (uModel * vec4(positions * instanceSizes, 1.0) + offset);
       }
       `;
-          const fs = glsl`\
+          const fs = /* glsl */`\
       precision highp float;
 
       in vec3 color;

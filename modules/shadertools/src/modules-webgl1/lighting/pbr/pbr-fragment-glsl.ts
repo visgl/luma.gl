@@ -10,9 +10,8 @@
 //
 
 // TODO - better do the checks outside of shader
-import {glsl} from '../../../lib/glsl-utils/highlight';
 
-export const fs = glsl`\
+export const fs = /* glsl */ `\
 precision highp float;
 
 uniform bool pbr_uUnlit;

@@ -12,18 +12,27 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v9.1
 
+Some deprectations and minor breaking changes are necessary as WebGPU support is built out.
+
 **@luma.gl/core**
 
-- `RenderPipeline.topology`: `line-loop-webgl` and `triangle-fan-webgl` topologies are no longer supported. Rebuild your geometries using `triangle-strip` and `line-list`.
-- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Now register adapters rather than devices.
-- `Texture`: Textures no longer accept promises, use `AsyncTexture` class instead.
+| Updated API                    | Status     | Replacement                                                                                  |
+| ------------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
+| `luma.registerDevices()`       | Deprecated | Use [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) instead. |
+| `Texture.props.data` (Promise) | Changed    | Textures no longer accept promises, use `AsyncTexture` class instead.                        |
+| `triangle-fan-webgl`           | Removed    | Rebuild your geometries using `triangle-strip`.                                              |
+| `line-loop-webgl`              | Removed    | Rebuild your geometries`line-list`.                                                          |
+| `glsl` template string         | Removed    | Enable syntax highlighting in vscode using `/* glsl */` comment instead                      |
 
 **@luma.gl/shadertools**
 
-- `ShaderModuleInstance` type has been removed. Use `ShaderModule` instead. 
-  - `initializeShaderModule()` now store initialized information on the original shader module structure, and can be called multiple times.
-  - `moduleInstance.getUniforms()` is removed. Use `getShaderModuleUniforms(module, ...)` instead.
-  - `getDependencyGraph()` is private. Use `getShaderModuleDependencies(module)` instead.
+| Updated API                          | Status   | Replacement                                                             |
+| ------------------------------------ | -------- | ----------------------------------------------------------------------- |
+| `ShaderModuleInstance`               | Removed  | Type has been removed. Use `ShaderModule` instead.                      |
+| `initializeShaderModule()`           | Changed  | Stores initialized information on the original shader module object.    |
+| `ShaderModuleInstance.getUniforms()` | Removed | Use `getShaderModuleUniforms(module, ...)` instead.                     |
+| `getDependencyGraph()`               | Removed  | Use `getShaderModuleDependencies(module)` instead.                      |
+| `glsl` template string               | Removed  | Enable syntax highlighting in vscode using `/* glsl */` comment instead |
 
 ## Upgrading to v9.0
 

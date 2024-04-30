@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../glsl-utils/highlight';
 import {getShaderModuleDependencies} from '../shader-module/shader-module-dependencies';
 import {PlatformInfo} from './platform-info';
 import {getPlatformShaderDefines} from './platform-defines';
@@ -24,7 +23,7 @@ const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
  * Precision prologue to inject before functions are injected in shader
  * TODO - extract any existing prologue in the fragment source and move it up...
  */
-const FRAGMENT_SHADER_PROLOGUE = glsl`\
+const FRAGMENT_SHADER_PROLOGUE = /* glsl */ `\
 precision highp float;
 `;
 

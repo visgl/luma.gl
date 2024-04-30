@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const PHONG_VS = glsl`\
+export const PHONG_VS = /* glsl */ `\
 uniform phongMaterialUniforms {
   uniform float ambient;
   uniform float diffuse;
@@ -13,7 +11,7 @@ uniform phongMaterialUniforms {
 } material;
 `;
 
-export const PHONG_FS = glsl`\
+export const PHONG_FS = /* glsl */ `\
 uniform phongMaterialUniforms {
   uniform float ambient;
   uniform float diffuse;

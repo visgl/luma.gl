@@ -1,5 +1,5 @@
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
-import {UniformStore, Framebuffer, glsl} from '@luma.gl/core';
+import {UniformStore, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -79,7 +79,7 @@ fn fragmentMain(inputs: FragmentInputs) -> [[location(0)]] vec4<f32> {
 }
 `;
 
-const SPHERE_VS = glsl`\
+const SPHERE_VS = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
@@ -102,7 +102,7 @@ void main(void) {
 }
 `;
 
-const SPHERE_FS = glsl`\
+const SPHERE_FS = /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -183,7 +183,7 @@ struct FragmentInputs {
 }
 `;
 
-const SCREEN_QUAD_VS = glsl`\
+const SCREEN_QUAD_VS = /* glsl */ `\
 #version 300 es
 
 in vec2 aPosition;
@@ -193,7 +193,7 @@ void main(void) {
 }
 `;
 
-const SCREEN_QUAD_FS = glsl`\
+const SCREEN_QUAD_FS = /* glsl */ `\
 #version 300 es
 
 precision highp float;
@@ -253,7 +253,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
 }
 `;
 
-const PERSISTENCE_FS = glsl`\
+const PERSISTENCE_FS = /* glsl */ `\
 #version 300 es
 
 precision highp float;

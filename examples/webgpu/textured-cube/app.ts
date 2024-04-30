@@ -1,4 +1,4 @@
-import {Buffer, glsl} from '@luma.gl/core';
+import {Buffer} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   Model,
@@ -52,7 +52,7 @@ fn fragmentMain(@location(0) fragUV: vec2<f32>,
 
 // GLSL
 
-const VS_GLSL = glsl`\
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-vs
 
@@ -75,7 +75,7 @@ void main() {
 }
 `;
 
-const FS_GLSL = glsl`\
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 #define SHADER_NAME cube-fs
 precision highp float;

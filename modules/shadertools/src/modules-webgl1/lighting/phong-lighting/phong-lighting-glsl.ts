@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-export const lightingShader = glsl`\
+export const lightingShader = /* glsl */ `\
 
 uniform float lighting_uAmbient;
 uniform float lighting_uDiffuse;

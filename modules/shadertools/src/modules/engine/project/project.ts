@@ -4,7 +4,6 @@
 
 import {NumericArray as NumberArray, Matrix4, Vector3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const IDENTITY_MATRIX: Readonly<NumberArray> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -70,7 +69,7 @@ function getUniforms(
  * @note varyings must match vertex shader
  * @note project module uses unprefixed uniforms to match conventions
  */
-const vs = glsl`\
+const vs = /* glsl */ `\
 varying vec4 project_vPositionWorld;
 varying vec3 project_vNormalWorld;
 
@@ -132,7 +131,7 @@ vec4 project_to_clipspace(vec3 position) {
  * Functions to get the position and normal from the vertex shader
  * @note varyings must match vertex shader
  */
-const fs = glsl`\
+const fs = /* glsl */ `\
 varying vec4 project_vPositionWorld;
 varying vec3 project_vNormalWorld;
 

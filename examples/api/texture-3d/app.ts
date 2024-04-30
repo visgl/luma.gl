@@ -1,6 +1,5 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
-import {glsl} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, makeRandomGenerator} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
@@ -15,7 +14,7 @@ Volumetric 3D noise visualized using a <b>3D texture</b>.
 Uses the luma.gl <code>Texture3D</code> class.
 `;
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 in vec3 position;
 
@@ -28,7 +27,7 @@ void main() {
   gl_PointSize = 2.0;
 }`;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 precision lowp sampler3D;

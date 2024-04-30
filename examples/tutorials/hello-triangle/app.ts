@@ -1,4 +1,3 @@
-import {glsl} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 export const title = 'Hello Triangle';
@@ -18,7 +17,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 `;
 
 /** Provide both GLSL and WGSL shaders */
-const VS_GLSL = glsl`\
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
 void main() {
@@ -26,7 +25,7 @@ void main() {
 }
 `;
 
-const FS_GLSL = glsl`\
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 layout(location = 0) out vec4 outColor;

@@ -1,4 +1,4 @@
-import {glsl, NumberArray} from '@luma.gl/core';
+import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
 import {_ShaderInputs, loadImage, AsyncTexture} from '@luma.gl/engine';
@@ -11,7 +11,7 @@ Drawing a phong-shaded cube
 </p>
 `;
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
@@ -36,7 +36,7 @@ void main(void) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 
