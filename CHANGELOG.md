@@ -4,6 +4,11 @@
 
 Major new release that includes WebGPU support
 
+## v9.0.12 - Apr 30, 2024
+
+- fix(shadertools) Resolve dependencies in ShaderInputs (#2073)
+- fix(webgl): Fix spector integration (9.0-release) (#2088)
+
 ## v9.0.11 - Apr 15, 2024
 
 - fix(engine) Model handling props.isInstanced: false (#2072)
