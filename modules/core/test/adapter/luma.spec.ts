@@ -51,7 +51,8 @@ interface TestHTMLCanvasElement {
   originalGetContext?: (contextId: any, options?: unknown) => unknown;
 }
 
-test('luma#enforceWebGL2', async t => {
+test.only('luma#enforceWebGL2', async t => {
+  debugger
   const prototype = HTMLCanvasElement.prototype as unknown as TestHTMLCanvasElement;
 
   // Setup mock getContext

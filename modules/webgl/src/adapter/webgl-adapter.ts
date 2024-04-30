@@ -4,6 +4,7 @@
 
 import {Adapter, Device, DeviceProps, CanvasContext, log} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
+import {enforceWebGL2} from '../context/polyfills/polyfill-webgl1-extensions';
 import {loadSpectorJS, DEFAULT_SPECTOR_PROPS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools} from '../context/debug/webgl-developer-tools';
 
@@ -26,6 +27,11 @@ export class WebGLAdapter extends Adapter {
   /** Check if WebGL 2 is available */
   isSupported(): boolean {
     return typeof WebGL2RenderingContext !== 'undefined';
+  }
+
+  /** Force any created WebGL contexts to be WebGL2 contexts, polyfilled with WebGL1 extensions */
+  enforceWebGL2(enable: boolean): void {
+    enforceWebGL2(enable);
   }
 
   /**

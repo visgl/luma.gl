@@ -176,32 +176,16 @@ export class Luma {
   }
 
   /**
-   * Override `HTMLCanvasContext.getCanvas()` to always create WebGL2 contexts.
-   * Used when attaching luma to a context from an external library does not support creating WebGL2 contexts.
-   * (luma can only attach to WebGL2 contexts).
+   * Override `HTMLCanvasContext.getCanvas()` to always create WebGL2 contexts with additional WebGL1 compatibility.
+   * Useful when attaching luma to a context from an external library does not support creating WebGL2 contexts.
    */
-  enforceWebGL2(enforce: boolean = true): void {
-    const prototype = HTMLCanvasElement.prototype as any;
-    if (!enforce && prototype.originalGetContext) {
-      // Reset the original getContext function
-      prototype.getContext = prototype.originalGetContext;
-      prototype.originalGetContext = undefined;
-      return;
+  enforceWebGL2(enforce: boolean = true, adapters: Adapter[] = []): void {
+    const adapterMap = this.getAdapterMap(adapters);
+    const webgl2Adapter = adapterMap.get('webgl');
+    if (!webgl2Adapter) {
+      log.warn('enforceWebGL2: webgl adapter not found')();
     }
-
-    // Store the original getContext function
-    prototype.originalGetContext = prototype.getContext;
-
-    // Override the getContext function
-    prototype.getContext = function (contextId: string, options?: WebGLContextAttributes) {
-      // Attempt to force WebGL2 for all WebGL1 contexts
-      if (contextId === 'webgl' || contextId === 'experimental-webgl') {
-        const context = this.originalGetContext('webgl2', options);
-        return context;
-      }
-      // For any other type, return the original context
-      return this.originalGetContext(contextId, options);
-    };
+    (webgl2Adapter as any)?.enforceWebGL2?.(enforce);
   }
 
   /** Convert a list of adapters to a map */
