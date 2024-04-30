@@ -122,6 +122,7 @@ export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {
   };
 
   // Override gl.getExtension
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const originalGetExtension = gl.getExtension;
   gl.getExtension = function (extensionName: string) {
     const ext = originalGetExtension.call(gl, extensionName);
@@ -138,6 +139,7 @@ export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {
   };
 
   // Override gl.getSupportedExtensions
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const originalGetSupportedExtensions = gl.getSupportedExtensions;
   gl.getSupportedExtensions = function (): string[] | null {
     const extensions = originalGetSupportedExtensions.apply(gl) || [];
