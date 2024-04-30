@@ -2,20 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Adapter, DeviceProps, CanvasContext, log} from '@luma.gl/core';
-import {WebGPUDevice} from './webgpu-device';
-
+// eslint-ignore
+// prettier-ignore
 // / <reference types="@webgpu/types" />
+
+import {Adapter, DeviceProps, CanvasContext, log} from '@luma.gl/core';
+import type {WebGPUDevice} from './webgpu-device';
 
 export class WebGPUAdapter extends Adapter {
   /** type of device's created by this adapter */
   readonly type: WebGPUDevice['type'] = 'webgpu';
-
-  constructor() {
-    super();
-    // @ts-ignore For backwards compatibility luma.registerDevices
-    WebGPUDevice.adapter = this;
-  }
 
   /** Check if WebGPU is available */
   isSupported(): boolean {
@@ -24,10 +20,9 @@ export class WebGPUAdapter extends Adapter {
 
   async create(props: DeviceProps): Promise<WebGPUDevice> {
     if (!navigator.gpu) {
-      throw new Error(
-        'WebGPU not available. Open in Chrome Canary and turn on chrome://flags/#enable-unsafe-webgpu'
-      );
+      throw new Error('WebGPU not available. Recent Chrome browsers should work.');
     }
+
     log.groupCollapsed(1, 'WebGPUDevice created')();
     const adapter = await navigator.gpu.requestAdapter({
       powerPreference: 'high-performance'
@@ -73,6 +68,8 @@ export class WebGPUAdapter extends Adapter {
       await CanvasContext.pageLoaded;
       log.probe(1, 'DOM is loaded')();
     }
+
+    const {WebGPUDevice} = await import('./webgpu-device');
 
     const device = new WebGPUDevice(props, gpuDevice, adapter, adapterInfo);
 

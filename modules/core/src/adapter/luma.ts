@@ -212,19 +212,6 @@ export class Luma {
     }
     return map;
   }
-
-  // DEPRECATED
-
-  /** @deprecated Use registerAdapters */
-  registerDevices(deviceClasses: any[]): void {
-    log.warn('luma.registerDevices() is deprecated, use luma.registerAdapters() instead');
-    for (const deviceClass of deviceClasses) {
-      const adapter = deviceClass.adapter as Adapter;
-      if (adapter) {
-        this.preregisteredAdapters.set(adapter.type, adapter);
-      }
-    }
-  }
 }
 
 /**

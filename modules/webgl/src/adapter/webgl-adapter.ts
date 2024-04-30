@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {WebGLDevice} from './webgl-device';
 import {Adapter, Device, DeviceProps, CanvasContext, log} from '@luma.gl/core';
-import {WebGLDevice} from './webgl-device';
 import {loadSpectorJS, DEFAULT_SPECTOR_PROPS} from '../context/debug/spector';
 import {loadWebGLDeveloperTools} from '../context/debug/webgl-developer-tools';
 
@@ -15,12 +15,8 @@ export class WebGLAdapter extends Adapter {
 
   constructor() {
     super();
-
     // Add spector default props to device default props, so that runtime settings are observed
     Device.defaultProps = {...Device.defaultProps, ...DEFAULT_SPECTOR_PROPS};
-
-    // @ts-ignore DEPRECATED For backwards compatibility luma.registerDevices
-    WebGLDevice.adapter = this;
   }
 
   /** Check if WebGL 2 is available */
@@ -35,11 +31,12 @@ export class WebGLAdapter extends Adapter {
    * @returns
    */
   async attach(gl: Device | WebGL2RenderingContext): Promise<WebGLDevice> {
+    const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
       return gl;
     }
     // @ts-expect-error
-    if (gl?.device instanceof Device) {
+    if (gl?.device instanceof WebGLDevice) {
       // @ts-expect-error
       return gl.device as WebGLDevice;
     }
@@ -50,6 +47,8 @@ export class WebGLAdapter extends Adapter {
   }
 
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
+    const {WebGLDevice} = await import('./webgl-device');
+
     log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
 
     const promises: Promise<unknown>[] = [];
