@@ -138,10 +138,13 @@ export type BlendFactor =
   | 'one-minus-constant-alpha';
 
 /** BlendOperation defines the algorithm used to combine source and destination blend factors: */
-export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max' | 'none';
+export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
 
 /* Color parameters are set on the RenderPipeline */
 export type ColorParameters = {
+  /** Enable blending */
+  blend?: boolean;
+
   /** Defines the operation used to calculate the values written to the target attachment components. */
   blendColorOperation?: BlendOperation;
   /** Defines the operation to be performed on values from the fragment shader. */
@@ -229,6 +232,7 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   sampleAlphaToCoverageEnabled: false,
 
   // Color and blend parameters
+  blend: false,
 
   blendColorOperation: 'add',
   blendColorSrcFactor: 'one',
