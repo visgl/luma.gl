@@ -4,23 +4,27 @@
 
 Major new release that includes WebGPU support
 
-## v9.0.12 - Apr 30, 2024
+### 9.0.13 - May 10, 2024
+
+- fix(webgl): reset buffer binding in WEBGLVertexArray.setBuffer (#2075)
+
+### 9.0.12 - Apr 30, 2024
 
 - fix(shadertools) Resolve dependencies in ShaderInputs (#2073)
 - fix(webgl): Fix spector integration (9.0-release) (#2088)
 
-## v9.0.11 - Apr 15, 2024
+### 9.0.11 - Apr 15, 2024
 
 - fix(engine) Model handling props.isInstanced: false (#2072)
 
-## v9.0.10 - Apr 12, 2024
+### 9.0.10 - Apr 12, 2024
 
 - fix(webgl): Support instanceCount=0 in draw() (#2070)
 - add(core) enforceWebGL2 (#2067)
 - fix(webgl): Check fs shader status in weblg-render-pipeline (#2066)
 - chore: Bump to loaders.gl@4.2.0 (#2068) (#2069)
 
-## v9.0.9 - Apr 1, 2024
+### 9.0.9 - Apr 1, 2024
 
 - fix(build): inlined version off by 1 (#2064)
 - fix(webgl): enable polygon offset with depthBias (#2063)
@@ -28,38 +32,38 @@ Major new release that includes WebGPU support
 - fix(shadertools) attribute picking regression (#2059)
 - Disable more warnings about updateModuleSettings (#2060)
 
-## v9.0.8 - Mar 28, 2024
+### 9.0.8 - Mar 28, 2024
 
 - fix(shadertools): Fix ../.. imports (#2054)
 
-## v9.0.7 - Mar 23, 2024
+### 9.0.7 - Mar 23, 2024
 
 - Avoid querying WebGL extension unless needed (#2050)
 - Disable warning about updateModuleSettings (#2049)
 - fix(webgl): disableWarnings option (#2048)
 
-## v9.0.6 - Mar 21, 2024
+### 9.0.6 - Mar 21, 2024
 
 - webgl: Support colorMask in RenderPass (#2046)
 - fix: Support sharing cached Pipelines with different parameters/topology in WebGL (#2034)
 - fix(webgl): show shader debug message on compilation error (#2047)
 
-## v9.0.5 - Mar 19, 2024
+### 9.0.5 - Mar 19, 2024
 
 - Do not reset scissorTest in WEBGLRenderPass (#2045)
 - fix(webgl): withParametersWebGL return value (#2044)
 - feat(webgl): Add device.resetWebGL() for debugging (#2037)
 
-## v9.0.4 - Mar 18, 2024
+### 9.0.4 - Mar 18, 2024
 
 - feat(core): Add missing blend factors, restrict types in device-parameters (#2040)
 - fix(webgl) texture to texture copy; framebuffer state leak (#2042)
 
-## v9.0.3 - Mar 14, 2024
+### 9.0.3 - Mar 14, 2024
 
 - No change, fix release
 
-## v9.0.2
+### 9.0.2
 
 - fix(webgl): Pair calls to bind/unbind VAO (#2032)
 - chore(webgl): Avoid WEBGL_polygon_mode extension warning (#2029)
@@ -70,11 +74,11 @@ Major new release that includes WebGPU support
 - CNAME
 - chore: Post publish checkin
 
-## v9.0.1
+### 9.0.1
 
 - No change, fix release
 
-## v9.0.0
+### 9.0.0
 
 - fix(webgl): Reduce console flood (#2021)
 - chore: Remove DeviceTabs
@@ -312,12 +316,12 @@ Major new release that includes WebGPU support
 - feat(core): Add UniformValue type for .setUniforms() etc (#1792)
 - chore: Upgrade dependencies (#1793)
 
-## v9.0.0-alpha.31
+### 9.0.0-alpha.31
 
 - chore(core): Clean up buffer map
 - chore(core): default props cleanup (#1791)
 
-## v9.0.0-alpha.30
+### 9.0.0-alpha.30
 
 - fixe(core) boolean uniform fix (#1789)
 - docs: consolidation (#1787)
@@ -325,42 +329,42 @@ Major new release that includes WebGPU support
 - chore(core): Rename api to core (#1783)
 - docs: website examples (#1782)
 
-## v9.0.0-alpha.29
+### 9.0.0-alpha.29
 
 - feat(webgl): Implement ShaderLayout.bufferLayout in webgl (#1780)
 - feat(engine): model cleanup (#1779)
 
-## v9.0.0-alpha.28
+### 9.0.0-alpha.28
 
 N/A Failed publish.
 
-## v9.0.0-alpha.27
+### 9.0.0-alpha.27
 
 - fix(engine) Workaround for deck.gl attribute access (#1778)
 - Update device.md
 - Update device.md with minor clarifications
 - Update device.md to cover device registration
 
-## v9.0.0-alpha.26
+### 9.0.0-alpha.26
 
 - fix: Indices attribute workaround (#1776)
 - fix(webgl): Fix WebGLCanvasContext.resize() (#1775)
 - feat(webgl): Add legacy copyToTExture to unblock deck picking pass (#1774)
 
-## v9.0.0-alpha.25
+### 9.0.0-alpha.25
 
 - Export legacy BufferWithAccessor (#1773)
 - build(deps): bump word-wrap from 1.2.3 to 1.2.4 (#1767)
 - feat(constants): Drop default export to improve ES module compatibility (#1772)
 - chore(engine): Move Scenegraph classes into engine (#1771)
 
-## v9.0.0-alpha.24
+### 9.0.0-alpha.24
 
 - chore: Selected legacy webgl exports for deck.gl (#1769)
 - chore: Upgrade typescript and WebGPU typings (#1768)
 - fix: 🐛 Fix issue with setting 0 or false values (#1766)
 
-## v9.0.0-alpha.23
+### 9.0.0-alpha.23
 
 - build(deps): bump semver from 5.7.1 to 5.7.2 (#1763)
 - fix #1760 - Modify to call "setImageData3D" method even if "2d-array" in addition to "3d" (#1765)
@@ -370,23 +374,23 @@ N/A Failed publish.
 - build(deps-dev): bump vite from 3.2.6 to 3.2.7 (#1754)
 - docs: Reorganize v9 docs (#1753)
 
-## v9.0.0-alpha.21
+### 9.0.0-alpha.21
 
 - chore: Remove default exports (#1750)
 
-## v9.0.0-alpha.20
+### 9.0.0-alpha.20
 
-## v9.0.0-alpha.19
+### 9.0.0-alpha.19
 
-## v9.0.0-alpha.18
+### 9.0.0-alpha.18
 
 - fix(webgl-legacy): unbreak deck.gl build (#1748)
 
-## v9.0.0-alpha.17
+### 9.0.0-alpha.17
 
 - feat: Switch to ES modules (#1745)
 
-## v9.0.0-alpha.16
+### 9.0.0-alpha.16
 
 - chore: Bump probe@4.0.0 on master (#1730)
 - chore: export .d.ts types instead of .ts from package.json (#1737)
@@ -394,22 +398,22 @@ N/A Failed publish.
 - chore: Clean up build (#1743)
 - Add getBounds() to ScenegraphNode (#1733)
 
-## v9.0.0-alpha.15
+### 9.0.0-alpha.15
 
 - chore: Bump to probe.gl@4.0.0-alpha.1 (#1728)
 - chore: Bump math.gl@4.0.0-alpha.1 (#1727)
 
-## v9.0.0-alpha.14
+### 9.0.0-alpha.14
 
 - fix(webgl): Fixes for deck.gl integration (#1725)
 
-## v9.0.0-alpha.13
+### 9.0.0-alpha.13
 
 - chore: Remove WebGL specific exports from core (#1724)
 - feat: Export GL from @luma.gl/webgl-legacy. Update examples (#1723)
 - feat: GLSL/WGSL syntax highlighting (#1722)
 
-## v9.0.0-alpha.12
+### 9.0.0-alpha.12
 
 - chore(shadertools): restore fp64 tests (#1721)
 - chore: Active more typescript checks (#1720)
@@ -430,14 +434,14 @@ N/A Failed publish.
 - build(deps): bump qs from 6.5.2 to 6.5.3 (#1709)
 - chore: More small fixes for deck.gl v9 (#1708)
 
-## v9.0.0-alpha.11
+### 9.0.0-alpha.11
 
 - chore: Refactor device pixel handling into CanvasContext (#1706)
 - chore(test-utils): Clean up test utils (#1707)
 - docs: Improve v9 upgrade guide (#1705)
 - chore(gltools): Allow `Device` to be passed to context and renderbuffer APIs (#1704)
 
-## v9.0.0-alpha.10
+### 9.0.0-alpha.10
 
 - chore(gltools/webgl): Support `Device` parameter in more places (#1695)
 - chore(webgl): Accept `Device` in all parameter functions (#1696)
@@ -449,7 +453,7 @@ N/A Failed publish.
 
 - chore: Minor fixes for deck.gl
 
-## v9.0.0-alpha.8
+### 9.0.0-alpha.8
 
 - chore(gltools): Add missing fields to Transform types (#1693)
 - chore(webgl): handle added topologies (#1692)
@@ -458,12 +462,12 @@ N/A Failed publish.
 - feat(webgl): Implement WebGPU style `lost` promise for WebGLDevice. (#1689)
 - chore(webgpu): strict typescript (part 1) (#1688)
 
-## v9.0.0-alpha.7
+### 9.0.0-alpha.7
 
 - chore(engine): strict typescript (#1686)
 - chore: various type fixes addressing deck.gl integration (#1685)
 
-## v9.0.0-alpha.6
+### 9.0.0-alpha.6
 
 - chore(webgl): strict typescript part 1 (#1683)
 - chore(shadertools): enable "strict" typescript checking (#1682)
@@ -474,7 +478,7 @@ N/A Failed publish.
 - chore: Various typescript fixes (#1677)
 - chore: Fix examples (#1676)
 
-## v9.0.0-alpha.5
+### 9.0.0-alpha.5
 
 - chore: bump to loaders.gl@3.2.12 (#1675)
 - chore: bump to math.gl@v3.6 (#1674)
@@ -629,57 +633,59 @@ N/A Failed publish.
 - chore: bump lerna.json to 8.6.0-alpha.0 (#1480)
 - Bump probe.gl and loaders.gl (#1479)
 
-## v8.5.1
+## v8
+
+### 8.5.1
 
 - chore: bump loaders.gl and probe.gl (#1478)
 - bump: math.gl@3.5.0 (#1477)
 
-## v8.5.0
+### 8.5.0
 
 - Bump dependencies to beta (#1476)
 - Transpile gl_FragColor in fragment shader from ES 1.00 to 3.00 (#1475)
 - Fix constants bundle namespace (#1469)
 
-## v8.5.0-alpha.2
+### 8.5.0-alpha.2
 
 - Shadertools: add magnify effect (#1464)
 - gltf: support compressed textures (#1461)
 - gltf: export GLTFMaterialParser (#1462)
 - chore(typescript): minor typescript changes (#1459)
 
-## v8.5.0-alpha.1
+### 8.5.0-alpha.1
 
 - Change build targets (#1455)
 - Bump loaders dependency to 3.0.0-alpha (#1456)
 
-## v8.4.4
+### 8.4.4
 
 - Fix isWebGL check on non-instrumented context (#1454)
 
-## v8.4.3
+### 8.4.3
 
 - exposed webgl context state from animation loop (#1453)
 
-## v8.4.2
+### 8.4.2
 
 - feat(shadertools): GLSL transpilation improvements (#1451)
 
-## v8.4.1
+### 8.4.1
 
 - Fix peerDependencies of packages (#1447)
 - Fix shader module injection order (#1449)
 
-## v8.4.0
+### 8.4.0
 
 - Fix video texture error when video is still loading (#1443)
 - do not set Texture data until the first frame of a video is loaded (#1445)
 
-## v8.4.0-beta.2
+### 8.4.0-beta.2
 
 - Callbacks for onContextLost / onContextRestored events (#1441)
 - Fix AnimationLoop drawing buffer resize (#1442)
 
-## v8.4.0-beta.1
+### 8.4.0-beta.1
 
 - Improved engine typings (#1438)
 - chore(webgl): typescript typing improvements (#1437)
@@ -696,53 +702,53 @@ N/A Failed publish.
 - Fix shader compilation test failures (#1423)
 - Make sure animationLoop's onError catches context creation errors (#1419)
 
-## v8.4.0-alpha.1
+### 8.4.0-alpha.1
 
 - Texture supports continuous update from HTMLVideoElement (#1418)
 
-## v8.3.0
+### 8.3.0
 
-## v8.3.0-beta.1
+### 8.3.0-beta.1
 
 - Support for PBR material.unlit (#1405)
 - webgl: Add typescript types (#1403)
 
-## v8.2.0
+### 8.2.0
 
 - Fix bug when a model is deleted multiple times (#1390)
 
-## v8.2.0-beta.1
+### 8.2.0-beta.1
 
 - gltf: Remove DracoLoader import (#1386)
 - bump math.gl and loaders.gl (#1388)
 
-## v8.1.3
+### 8.1.3
 
 - Fix peerDependencies (#1384)
 
-## v8.1.2
+### 8.1.2
 
 - Picking module: normalize highlight color (#1379)
 - Add onError prop to AnimationLoop (#1377)
 
-## v8.1.1
+### 8.1.1
 
 - Fix error handling in createGLContext (#1375)
 
-## v8.1.0
+### 8.1.0
 
 - Bump deps (#1372)
 
-## v8.1.0-beta.3
+### 8.1.0-beta.3
 
 - Limit shader variable hoisting to injected declararions (#1371)
 
-## v8.1.0-beta.2
+### 8.1.0-beta.2
 
 - Use 32-bit indices in SphereGeometry if there are enough vertices (#1369)
 - Bump deps (#1365)
 
-## v8.1.0-beta.1
+### 8.1.0-beta.1
 
 - Assemble shader variables to top of source (#1363)
 - GPU Accelerated Point In Polygon Test (#1360)
@@ -752,13 +758,13 @@ N/A Failed publish.
 - Fix model and program logging (#1355)
 - Allow size and offset to be set when constructing buffer (#1354)
 
-## v8.1.0-alpha.2
+### 8.1.0-alpha.2
 
 - Delete VAO when vertex array is deleted (#1353)
 - Fix SphereGeometry indices (#1352)
 - Fix broken link (#1346)
 
-## v8.1.0-alpha.1
+### 8.1.0-alpha.1
 
 - Only use texture LOD in GLTF if supported. (#1347)
 - Fix transpilation (#1344)
@@ -767,40 +773,40 @@ N/A Failed publish.
 - Fix overwriting of page load promise (#1338)
 - VAO polyfill (#1334)
 
-## v8.0.0-beta.4
+### 8.0.0-beta.4
 
 - Bump math.gl and probe.gl to the latest production versions (#1320)
 
-## v8.0.0-beta.3
+### 8.0.0-beta.3
 
 - Small optimizations to texture checks and program updates (#1317)
 - Bump loaders.gl to 2.0-beta (#1318)
 
-## v8.0.0-beta.2
+### 8.0.0-beta.2
 
 - Export fp64-arithmetic shader module (#1309)
 - Upgrade probe.gl (#1310)
 
-## v8.0.0-beta.1
+### 8.0.0-beta.1
 
 - Reduce core to modules used by deck.gl (#1303)
 
-## v8.0.0-alpha.11
+### 8.0.0-alpha.11
 
 - Reduce core to modules used by deck.gl (#1303)
 - Rename addons to experimental (#1302)
 - Set parameters assert (#1301)
 
-## v8.0.0-alpha.10
+### 8.0.0-alpha.10
 
 - New module injection api (#1300)
 - Move context creation/query functions to gltools (#1299)
 
-## v8.0.0-alpha.7
+### 8.0.0-alpha.7
 
 - ClipSpace, getParameters, resolveModules fixes (#1297)
 
-## v8.0.0-alpha.6
+### 8.0.0-alpha.6
 
 - Remove unpackFlipY option from Texture (#1295)
 - Shadertools cleanup (#1296)
@@ -808,19 +814,19 @@ N/A Failed publish.
 - Simplify and optimize state tracking (#1293)
 - DevicePixelRatio: Handle invalid client sizes and remove custom width/height support. (#1290)
 
-## v8.0.0-alpha.5
+### 8.0.0-alpha.5
 
 - Fix deps, simplify materials (#1292)
 
-## v8.0.0-alpha.3
+### 8.0.0-alpha.3
 
 - Fix deps, simplify materials (#1292)
 
-## v8.0.0-alpha.3
+### 8.0.0-alpha.3
 
 - Update docs and examples (#1291)
 
-## v8.0.0-alpha.2
+### 8.0.0-alpha.2
 
 - Module refactor (#1288)
 - Fix usage with rollup (#1266)
@@ -840,25 +846,27 @@ N/A Failed publish.
 - Improve startup time of stress test app
 - Stress test (#1271)
 
-## v7.4.0-alpha.2
+## v7
+
+### 7.4.0-alpha.2
 
 - DevicePixelRatio: Cache canvas size to avoid expensive setting on each frame (#1269)
 - WebGL Features: add caching (#1270)
 
-## v7.4.0-alpha.1
+### 7.4.0-alpha.1
 
 - Add attribute picking to the picking module (#1268)
 
-## v7.3.0
+### 7.3.0
 
 - Update links
 - Fix inlined version in published package (#1262)
 
-## v7.3.0-beta.3
+### 7.3.0-beta.3
 
 - Bump to latest probe version (#1260)
 
-## v7.3.0-beta.3
+### 7.3.0-beta.3
 
 - Update checking support for rendering to float textures (#1257)
 - What's new typo
@@ -867,19 +875,19 @@ N/A Failed publish.
 - Program sharing perf in what's new (#1255)
 - Add new Transform test case (#1246)
 
-## v7.3.0-beta.2
+### 7.3.0-beta.2
 
 - Bump probe.gl version (#1245)
 - Don't set VertexArrayObject.isDefaultArray (#1247)
 
-## v7.3.0-beta.1
+### 7.3.0-beta.1
 
 - Cleanup VAO fix and test (#1243)
 - Fix loaders.gl link in docs (#1242)
 - Do to clear the VertexArray elements buffer when unbind… (#1238)
 - Fix getting started button on gatsby site (#1241)
 
-## v7.3.0-alpha.9
+### 7.3.0-alpha.9
 
 - Bump math.gl, loaders.gl and probe.gl versions (#1240)
 - Updated examples link in npm start command (#1237)
@@ -887,7 +895,7 @@ N/A Failed publish.
 - Handle cases when canvas is not defined (#1236)
 - Make sure getModuleUniforms is updated on program change. (#1235)
 
-## v7.3.0-alpha.8
+### 7.3.0-alpha.8
 
 - Tranform Refactor: fix regressions (#1234)
 - Add support for specifying custom device pixel ratio. (#1155)
@@ -896,34 +904,34 @@ N/A Failed publish.
 - Transform refactor (#1221)
 - dev-tools: Bump to 0.0.29 (#1232)
 
-## v7.3.0-alpha.7
+### 7.3.0-alpha.7
 
 - Transform: Fix update of Buffers and elementCount. (#1224)
 - point docs to release branch (#1229)
 - update website fonts (#1227)
 - Fix Framebuffer isSupported test (#1228)
 
-## v7.3.0-alpha.6
+### 7.3.0-alpha.6
 
 - Program manager updates (#1226)
 - RFC: Transform Refactor (#1219)
 - Remove program diffing from program manager (#1225)
 
-## v7.3.0-alpha.5
+### 7.3.0-alpha.5
 
 - Program manager updates (#1226)
 - RFC: Transform Refactor (#1219)
 - Remove program diffing from program manager (#1225)
 
-## v7.3.0-alpha.5
+### 7.3.0-alpha.5
 
 - Fix double program release in base model (#1223)
 
-## v7.3.0-alpha.4
+### 7.3.0-alpha.4
 
 - Program manager fixes (#1222)
 
-## v7.3.0-alpha.3
+### 7.3.0-alpha.3
 
 - Fix program manager default module insertion (#1220)
 - Ensure timeline handles are always truthy. (#1217)
@@ -931,21 +939,21 @@ N/A Failed publish.
 - Avoid crashes in debug log on very small buffers (#1214)
 - webgl: Avoid crashing debug log if attribute is null (#1213)
 
-## v7.3.0-alpha.2
+### 7.3.0-alpha.2
 
 - Implement program manager (#1199)
 - Add log to detect un-supported features (#1212)
 - Add EXT_float_blend to feature table (#1210)
 - babel-plugin-inline-webgl-constants@1.01
 
-## v7.3.0-alpha.1
+### 7.3.0-alpha.1
 
 - Add Timeline.isFinished method (#1200)
 - Fix resource leaks in Framebuffer and multipass classes (#1202)
 - Gltf tests (#1204)
 - add DOUBLE to gl constants (#1207)
 
-## v7.2.0
+### 7.2.0
 
 - Bump loaders.gl to 1.2.0 (#1198)
 - Doc: update urls to point to 7.2-release branch (#1197)
@@ -955,12 +963,12 @@ N/A Failed publish.
 - Fix gatsby website home page (#1192)
 - Bump ocular-gatsby@1.0.0-alpha.46 (#1191)
 
-## v7.2.0-beta.1
+### 7.2.0-beta.1
 
 - webgl-state-tracker tests (#1187)
 - Remove diffImagePixels from gpgpu (#1186)
 
-## v7.2.0-alpha.6
+### 7.2.0-alpha.6
 
 - Transform: fix resource leak (#1188)
 - Clean up model classes (#1185)
@@ -968,13 +976,13 @@ N/A Failed publish.
 - Allow animation loop to run with headless gl (#1183)
 - remove addEvents from addons (#1180
 
-## v7.2.0-alpha.5
+### 7.2.0-alpha.5
 
 - Transform : Texture API Changes (custom FS and fix clear) (#1182)
 - Fixed Broken Link (#1177)
 - Remove addEvents from examples (#1179)
 
-## v7.2.0-alpha.4
+### 7.2.0-alpha.4
 
 - fix lighting module color format (#1174)
 - Core: Add unit tests (transfromutils and multipass)
@@ -983,7 +991,7 @@ N/A Failed publish.
 - Clean up shader module tests (#1170)
 - Debug module tests & bug fixes (#1169)
 
-## v7.2.0-alpha.3
+### 7.2.0-alpha.3
 
 - New getDefaultShaderModules API (#1168)
 - Fxaa (#1164)
@@ -994,18 +1002,18 @@ N/A Failed publish.
 - fix texture2D type/dataFormat inference (#1159)
 - remove Texture class's hasFloatTexture property (#1161)
 
-## v7.2.0-alpha.2
+### 7.2.0-alpha.2
 
 - Support ImageBitmap in Texture (#1153)
 - Fix injected declarations (#1152)
 
-## v7.2.0-alpha.1
+### 7.2.0-alpha.1
 
 - Fix mipmap generation (#1148)
 - Upgrade ocular-dev-tools (#1145)
 - Ugly hack to fix headless.gl depency issue without breakages (#1143)
 
-## v7.1.0
+### 7.1.0
 
 - Fix deprecation and texture in lesson 16 (#1141)
 - Fix mouse controls for gltf example on safari (#1138)
@@ -1018,12 +1026,12 @@ N/A Failed publish.
 - Documentation for v7.1 (#1132)
 - Fix image loading paths in gatsby website examples (#1122)
 
-## v7.1.0-alpha.6
+### 7.1.0-alpha.6
 
 - Consolidate injection APIs (#1130)
 - Fix deprecated Buffer API usage (#1131)
 
-## v7.1.0-alpha.5
+### 7.1.0-alpha.5
 
 - glfx API audit and documentation (#1128)
 - Update ocular version
@@ -1033,14 +1041,14 @@ N/A Failed publish.
 - Remove out of date entries and cleanup table of contents config for ocular-gatsby site. (#1119)
 - rename modules folder to shader-modules (#1118)
 
-## v7.1.0-alpha.4
+### 7.1.0-alpha.4
 
 - Implementation of shader module code injection (#1110)
 - Fix dependency versions (#1116)
 - Upgrade browser testing setup (#1117)
 - Bump ocular-gatsby (#1115)
 
-## v7.1.0-alpha.2
+### 7.1.0-alpha.2
 
 - Keyframes implementation (#1113)
 - Fix for chromium GLSL compiler issue (#1114)
@@ -1059,22 +1067,22 @@ N/A Failed publish.
 - Migrate build badge from travis-ci.org to travis-ci.com. (#1098)
 - Fix dependencies
 
-## v7.1.0-alpha.1
+### 7.1.0-alpha.1
 
 - Implementation of Timeline RFC (#1093)
 - Check for navigator before accessing (#1095)
 
 # 7.0 Pre-releases
 
-## v7.0.0-rc.2
+### 7.0.0-rc.2
 
 - Fix gltf loader (#1066)
 
-## v7.0.0-beta.8
+### 7.0.0-beta.8
 
 - Fix isWebGL2 methods. (#1053)
 
-## v7.0.0-beta.7
+### 7.0.0-beta.7
 
 - Get rid of accessor warnings that are always triggered. (#1051)
 - Vertex count for constant attribute geos with no indices (#1052)
@@ -1091,17 +1099,17 @@ N/A Failed publish.
 - Implementation: VR Display (#1032)
 - Fix Histopyramid Unit tests, eanble Transform Unit test. (#1037)
 
-## v7.0.0-beta.6
+### 7.0.0-beta.6
 
 - don't need enable lighting flag with only material (#1035)
 
-## v7.0.0-beta.5 - Apr 4, 2019
+### 7.0.0-beta.5 - Apr 4, 2019
 
 - Model handles geometry with constant attributes (#1034)
 - glTF Loader: Allow to async return after all resources are loaded (#1029)
 - Gatsby update (#1030)
 
-## v7.0.0-beta.4 - Apr 3, 2019
+### 7.0.0-beta.4 - Apr 3, 2019
 
 - Fix attribute handling for matrices (#1033)
 - docs (#1031)
@@ -1109,15 +1117,15 @@ N/A Failed publish.
 - Fix lessons (#1028)
 - Add managedResources to ModelNode (#1022)
 
-## v7.0.0-beta.3 - Apr 2, 2019
+### 7.0.0-beta.3 - Apr 2, 2019
 
 - Fix overly strict peer dependencies (#1026)
 
-## v7.0.0-beta.2 - Apr 2, 2019
+### 7.0.0-beta.2 - Apr 2, 2019
 
 - move @luma.gl/core to peerDependencies (#1023)
 
-## v7.0.0-beta.1 - Apr 1, 2019
+### 7.0.0-beta.1 - Apr 1, 2019
 
 - s/onInitailize/onInitialize (#1020)
 - Delete old buffers when auto-created in Model (#1016)
@@ -1128,12 +1136,12 @@ N/A Failed publish.
 - Initial round of fixes (#1013)
 - Create GLTFScenegraphLoader and change example to use it (#1012)
 
-## v7.0.0-alpha.20 - Mar 28, 2019
+### 7.0.0-alpha.20 - Mar 28, 2019
 
 - glTF geometries (#1003)
 - Clean up root (#1001)
 
-## v7.0.0-alpha.19 - Mar 27, 2019
+### 7.0.0-alpha.19 - Mar 27, 2019
 
 - Remove geometry scenegraph nodes (#1010)
 - Restore model id (#1011)
@@ -1144,7 +1152,7 @@ N/A Failed publish.
 - Add some test plumbing for coverage (#986)
 - Models don't create buffers (#1005)
 
-## v7.0.0-alpha.18 - Mar 15, 2019
+### 7.0.0-alpha.18 - Mar 15, 2019
 
 - WebVR VRAnimationLoop (#941)
 - Add CubeTexture LOD support (#987)
@@ -1162,12 +1170,12 @@ N/A Failed publish.
 - Track GPU memory usage (#984)
 - Update Scenegraph docs (#988)
 
-## v7.0.0-alpha.17 - Mar 15, 2019
+### 7.0.0-alpha.17 - Mar 15, 2019
 
 - remove duplicated uniforms (#989)
 - Proposal: Unified lights array (#948)
 
-## v7.0.0-alpha.16 - Mar 15, 2019
+### 7.0.0-alpha.16 - Mar 15, 2019
 
 - Fix TextureCube using promises as data (#926)
 - glTF/PBR: Add ability to switch between IBL and Regular Lights (#985)
@@ -1182,7 +1190,7 @@ N/A Failed publish.
 - Texture3D (#978)
 - Add needsRedraw reasons to waitForRender and toDataURL (#974)
 
-## v7.0.0-alpha.15 - Mar 12, 2019
+### 7.0.0-alpha.15 - Mar 12, 2019
 
 - Fix bug in snapshot test runner (#968)
 - Move waitForRender resolve into core render loop. Use for toDataURL (#971)
@@ -1197,7 +1205,7 @@ N/A Failed publish.
 - Move tests for each module into `modules/<submodule>/test` (#960)
 - Replace dev scripts with ocular-dev-tools (#956)
 
-## v7.0.0-alpha.14 - Mar 11, 2019
+### 7.0.0-alpha.14 - Mar 11, 2019
 
 - Ensure that externally created contexts are polyfilled, tracked (#954)
 - Add support for mat attribute types (#959)
@@ -1210,7 +1218,7 @@ N/A Failed publish.
 - glTF: Handle alpha mask and blend (#945)
 - Don't create no-op Promises for queries (#942)
 
-## v7.0.0-alpha.13 - Mar 1, 2019
+### 7.0.0-alpha.13 - Mar 1, 2019
 
 - new default material parameters (#940)
 - Capturing canvas contents (#937)
@@ -1226,7 +1234,7 @@ N/A Failed publish.
 - glTF: Make PBR work with GLSL 3.0 (WebGL 2.0) (#916)
 - [test-utils] Refactor TestRenderer (#922)
 
-## v7.0.0-alpha.12 - Feb 20, 2019
+### 7.0.0-alpha.12 - Feb 20, 2019
 
 - use "lightSources" in module parameters (#920)
 - glTF: Add PBR debug options and ability to drag-and-drop GLB files (#914)
@@ -1238,20 +1246,20 @@ N/A Failed publish.
 - fix TextureCube binding, add example to demonstrate (#901)
 - modify blending of highlight color and object color (#912)
 
-## v7.0.0-alpha.11 - Feb 13, 2019
+### 7.0.0-alpha.11 - Feb 13, 2019
 
 - Add headless browser test (#904)
 - New @luma.gl/effects module (#892)
 
-## v7.0.0-alpha.10 - Feb 12, 2019
+### 7.0.0-alpha.10 - Feb 12, 2019
 
 - add missing deps to modules/core/package.json
 
-## v7.0.0-alpha.9 - Feb 11, 2019
+### 7.0.0-alpha.9 - Feb 11, 2019
 
 - fix issue in modules/main/package.json
 
-## v7.0.0-alpha.8 - Feb 11, 2019
+### 7.0.0-alpha.8 - Feb 11, 2019
 
 - New @luma.gl/webgl-state-tracker module (#888)
 - Integrate GLTF example in website
@@ -1264,22 +1272,22 @@ N/A Failed publish.
 - Async Textures (#876)
 - Create custom eslint rule to detect wrong probe.gl logger usage (#873)
 
-## v7.0.0-alpha.7 - Jan 16, 2019
+### 7.0.0-alpha.7 - Jan 16, 2019
 
 - add new lighting glsl API and better check for lighting_uEnabled. (#856)
 
-## v7.0.0-alpha.6 - Jan 16, 2019
+### 7.0.0-alpha.6 - Jan 16, 2019
 
 - Fix parameter forwarding in loadTextures (#853)
 
-## v7.0.0-alpha.5 - Jan 16, 2019
+### 7.0.0-alpha.5 - Jan 16, 2019
 
 - disable lighting by default (#852)
 - Forward shadertools exports (temporarily) to avoid breaking deck.gl (#851)
 - Add tests for missing attribute components (#850)
 - Move shadertools to separate module (#847)
 
-## v7.0.0-alpha.4 - Jan 14, 2019
+### 7.0.0-alpha.4 - Jan 14, 2019
 
 - Attribute enhancements (#846)
 - lighting docs (#841)
@@ -1288,7 +1296,7 @@ N/A Failed publish.
 - Transform: rename buffer params (#843)
 - Fix deprecated constant export (#840)
 
-## v7.0.0-alpha.3 - Jan 7, 2019
+### 7.0.0-alpha.3 - Jan 7, 2019
 
 - restrict scope of glsl comment remove plugin (#839)
 - phong lighting module and new lighting classes (#836)
@@ -1309,7 +1317,7 @@ N/A Failed publish.
 - Move API Tracing to debug module (#818)
 - Move shader module test util into debug submodule (#817)
 
-## 7.0.0-alpha.2 - Dec 17, 2018
+### 7.0.0-alpha.2 - Dec 17, 2018
 
 - Transform: fix Inject option (#812)
 - Add reference to Histopyramid paper (#811)
@@ -1323,7 +1331,7 @@ N/A Failed publish.
 - Add support for copyTexSubImage2D, misc fixes (#801)
 - IE browser WA: disable adding draw_buffers extension to shader source (#794)
 
-## 7.0.0-alpha.1 - Nov 29, 2018
+### 7.0.0-alpha.1 - Nov 29, 2018
 
 - add shortcut for uniform parse (#796)
 - Dof example (#769)
@@ -1331,7 +1339,9 @@ N/A Failed publish.
 - move custom babel plugin to dev-modules (#791)
 - Fix inline version in published builds (#790)
 
-## 6.2.0-alpha.1 - Sep 25
+## v6
+
+### 6.2.0-alpha.1 - Sep 25
 
 - Transform: user parameters for viewport (#738)
 - Part- 2 Transform: Texture support: add source destination texture support (#729)
@@ -1371,9 +1381,9 @@ N/A Failed publish.
 - loaders.gl@0.3.2
 - loaders.gl@0.3.1
 
-## 6.1.0 - Sep 6
+### 6.1.0 - Sep 6
 
-## 6.1.0-alpha.3 - Aug 7
+### 6.1.0-alpha.3 - Aug 7
 
 - picking shader module: Add Transform based unit tests (#636)
 - Animation fixes (#637)
@@ -1383,12 +1393,12 @@ N/A Failed publish.
 - Rename export: \_Transform to Transform (#624)
 - FP64: Unit tests using `Transform` (#631)
 
-## 6.1.0-alpha.2 - Aug 1
+### 6.1.0-alpha.2 - Aug 1
 
 - Fix scripts for new module structure (#633)
 - Fix test-fast script
 
-## 6.1.0-alpha.1 - July 31
+### 6.1.0-alpha.1 - July 31
 
 - Bump math.gl to 2.1.0-alpha (#629)
 - Improve bundle size metrics (#627)
@@ -1399,12 +1409,12 @@ N/A Failed publish.
 - Add roadmap documents (#619)
 - Correct MDN link for blendFuncSeparate in docs (#617)
 
-## 6.0.0 - July 18
+### 6.0.0 - July 18
 
 - Update attribute docs (#613)
 - Update luma.gl version to ^6.0.0 in examples (#614)
 
-## 6.0.0-rc.1 - July 17
+### 6.0.0-rc.1 - July 17
 
 - Fix NPOT warnings (#611)
 - deck.gl v6 cleanup (#605)
@@ -1412,37 +1422,37 @@ N/A Failed publish.
 - Fix: set constant attributes every time VertexArray is bound (#604)
 - Update URLs to point to 6.0-release branch (#603)
 
-## 6.0.0-beta.3 - July 12
+### 6.0.0-beta.3 - July 12
 
 - Fix: convert boolean uniforms to Numbers (#602)
 
-## 6.0.0-beta.2 - July 11
+### 6.0.0-beta.2 - July 11
 
 - Fix multi-model render bug (#600)
 - Update whats-new doc (#595)
 - Fix: Uniform setting (#594)
 
-## 6.0.0-beta.1 - July 3
+### 6.0.0-beta.1 - July 3
 
 - Buffer: add getElementCount (#592)
 - Fix example (#593)
 - Buffer: Remove reference to data (#588)
 - Transform: Improve swap buffers (#586)
 
-## 6.0.0-alpha.7 - June 27
+### 6.0.0-alpha.7 - June 27
 
 - Fix shader injection (#587)
 - Transform updates (#585)
 
-## 6.0.0-alpha.6 - June 27
+### 6.0.0-alpha.6 - June 27
 
 - Fix constant attribute bug (#584)
 
-## 6.0.0-alpha.5 - June 27
+### 6.0.0-alpha.5 - June 27
 
 - Fix buffer reuse (#582)
 
-## 6.0.0-alpha.4 - June 27
+### 6.0.0-alpha.4 - June 27
 
 - `unbindModels` param in `Model.transform` and `Transform.run` (#581)
 - VertexArray.unbindBuffers(). Constant attribute logging, (#579)
@@ -1450,11 +1460,11 @@ N/A Failed publish.
 - various bug minor fixes (#578)
 - Uniform animation (experimental) (#575
 
-## 6.0.0-alpha.3 - June 25
+### 6.0.0-alpha.3 - June 25
 
 - Fixes for deck.gl (#577)
 
-## 6.0.0-alpha.2 - June 25
+### 6.0.0-alpha.2 - June 25
 
 - Upgrade to math.gl@2.0.0
 - Model, AnimationLoop - Code reorganization (#574)
@@ -1472,7 +1482,7 @@ N/A Failed publish.
 - Code cleanup (#559)
 - Doc Improvements (#558)
 
-## 6.0.0-alpha.1 - June 13
+### 6.0.0-alpha.1 - June 13
 
 - Fix log when using External buffer (#551)
 - Code reorganization (#552)
@@ -1494,16 +1504,18 @@ N/A Failed publish.
 - Move shadertools files into submodule structure (#529)
 - Remove GL_ES define (#526)
 
-## 5.3.0-alpha.4 - May 21
+## v5
+
+### 5.3.0-alpha.4 - May 21
 
 - Port fp64 utils from deck.gl (#518)
 - Allow non-buffer supplied to Transform's sourceBuffers (#519)
 
-## 5.3.0-alpha.3 - May 16
+### 5.3.0-alpha.3 - May 16
 
 - Add Attribute class (#514)
 
-## 5.3.0-alpha.2 - May 14
+### 5.3.0-alpha.2 - May 14
 
 - Fix some docs typos (#512)
 - Collect WebGL context code into one directory (#511)
@@ -1512,11 +1524,11 @@ N/A Failed publish.
 - Add off screen rendering example (PR 2/2) (#454)
 - update what's new release date
 
-## 5.3.0-alpha.1 - April 23
+### 5.3.0-alpha.1 - April 23
 
 - Add discard too picking.js fragment shader (#509)
 
-## 5.2.0-beta.2 - April 16
+### 5.2.0-beta.2 - April 16
 
 - Upgrade math.gl and probe.gl to official (non-alpha) versions
 - VertexArray: move private methods to end of class (#498)
@@ -1527,60 +1539,60 @@ N/A Failed publish.
 - fix a typo in README (#489)
 - Delete duplicate file (#486)
 
-## 5.2.0-alpha.12 - April 2
+### 5.2.0-alpha.12 - April 2
 
 - Fixes to electron support, debug mode and AnimationLoop (#483)
 - PickingModule: picking_filterColor method (#464)
 - Add AnimationLoopProxy class (#453)
 - Clean up debug mode (#481)
 
-## 5.2.0-alpha.11 - April 1
+### 5.2.0-alpha.11 - April 1
 
 - babel 7
 
-## 5.2.0-alpha.10 - Mar 29
+### 5.2.0-alpha.10 - Mar 29
 
 - Integrate test-browser with "git commit" (#468)
 - Fix Uniform Buffer binding (#473)
 
-## 5.2.0-alpha.9 - Mar 27
+### 5.2.0-alpha.9 - Mar 27
 
 - Allow null uniforms (#472)
 - Add metrics collection (#466)
 
-## 5.2.0-alpha.8 - Mar 26
+### 5.2.0-alpha.8 - Mar 26
 
 - Do not delete Program objects while being cached. (#467)
 - WebGL2 : Add asynchronous mode for readPixels using PBOs. (#450)
 
-## 5.2.0-alpha.7 - Mar 22
+### 5.2.0-alpha.7 - Mar 22
 
 - Don't throw on missing headless-gl.
 
-## 5.2.0-alpha.6 - Mar 22
+### 5.2.0-alpha.6 - Mar 22
 
 - Temporarily disable babel minify until issues are resolved
 
-## 5.2.0-alpha.5 - Mar 22
+### 5.2.0-alpha.5 - Mar 22
 
 - Fix babel-minify breakage in uniform verification
 
-## 5.2.0-alpha.4 - Mar 21
+### 5.2.0-alpha.4 - Mar 21
 
 - Publish minified luma.gl
 
-## 5.2.0-alpha.3 - Mar 21
+### 5.2.0-alpha.3 - Mar 21
 
 - esnext distribution
 - math.gl 1.1.0
 
-## 5.2.0-alpha.3 - Mar 3
+### 5.2.0-alpha.3 - Mar 3
 
 - Update TF demo to use new Transform class (#433)
 - Transform: Add updateBuffers method (#418)
 - Fixed crash caused by wrong utils folder path (#431)
 
-## 5.2.0-alpha.2 - Feb 27
+### 5.2.0-alpha.2 - Feb 27
 
 - Fix exports (#428)
 - Create pull_request_template.md
@@ -1590,15 +1602,15 @@ N/A Failed publish.
 - Fix a crash: model.geometry is optional (#424)
 - Fix array uniform setting (#422)
 
-## 5.2.0-alpha.1 - Feb 26
+### 5.2.0-alpha.1 - Feb 26
 
 - Fix a crash when Model object created without geometry. (#419)
 - New method AnimationLoop.setProps to avoid breaking apps (#414)
 - update math version
 
-## 5.1.0 - Feb 14
+### 5.1.0 - Feb 14
 
-## 5.0.0 - Dec 21
+### 5.0.0 - Dec 21
 
 - Update links to point to 5.0-release branch
 - Do not mark `needsRedraw` unless something changed (#376)
@@ -1606,17 +1618,19 @@ N/A Failed publish.
 - Fix `model.render` inconsistencies (#375)
 - Fix generic attribute support (#374)
 
-## 5.0.0-beta.1 - Dec 18
+### 5.0.0-beta.1 - Dec 18
 
 - Remove deprecated API (#373)
 
-## 4.1.0-beta.2 - Dec 12
+## v4
+
+### 4.1.0-beta.2 - Dec 12
 
 - Enable Intel Tan shader WA for default GPU (#368)
 - Improve perf of uniform setters (#370)
 - Remove deprecated api usage (#367)
 
-## 4.1.0-beta.1 - Nov 30
+### 4.1.0-beta.1 - Nov 30
 
 - Add buildkite (#356)
 - Cleanup: remove un-used picking code (#366)
@@ -1626,7 +1640,7 @@ N/A Failed publish.
 - Program: Enhancements to attribute/uniform locations map setup. (#361)
 - Fix AnimationLoop stop method (#360)
 
-## 4.1.0-alpha.9 - Nov 20
+### 4.1.0-alpha.9 - Nov 20
 
 - 4.1 API Audit (picking module, useDevicePixels) (#355)
 - ShaderCache: Add support for Program objets. (#352)
@@ -1634,35 +1648,35 @@ N/A Failed publish.
 - Make fp64 tests work under `tape` (#351)
 - Remove context in logging. Fix formatting in shader errors (#348)
 
-## 4.1.0-alpha.8 - Oct 29
+### 4.1.0-alpha.8 - Oct 29
 
 - Fix the fp64 platform define (#344)
 - Disable picking uniform warnings for now. (#342)
 
-## 4.1.0-alpha.7 - Oct 12
+### 4.1.0-alpha.7 - Oct 12
 
 - Fix duplicate console warnings (#341)
 
-## 4.1.0-alpha.6 - Oct 11
+### 4.1.0-alpha.6 - Oct 11
 
 - Add moduleSettings parameter to Model.draw (#337)
 - Fix performance regression in picking flow (#339)
 - Copy enhanced Picking module from deck.gl (#338)
 - Fix browser test for TransformFeedback (#336)
 
-## 4.1.0-alpha.5 - Oct 3
+### 4.1.0-alpha.5 - Oct 3
 
 - Fix example framebuffer usage and conditionally add shader extension (#330)
 - Fix `TransformFeedback.isSupported` bug (#333)
 - Fix priority of missing uniforms log (#334)
 
-## 4.1.0-alpha.4 - Oct 2
+### 4.1.0-alpha.4 - Oct 2
 
 - Framebuffer binding fixes (#323)
 - Shadowmap example, Delete unused files (#325)
 - Prevent animation loop from creating unused framebuffer (#326)
 
-## 4.1.0-alpha.3 - Sep 27
+### 4.1.0-alpha.3 - Sep 27
 
 - Fix Framebuffer.clear (#321)
 - Add context management support for framebuffer binding. (#319)
@@ -1680,7 +1694,7 @@ N/A Failed publish.
 - Lesson 10 for loading a game world
 - Wire up ShaderCache in Model class to avoid re-compilaiton of same shaders. (#301)
 
-## 4.1.0-alpha.2 - Aug 28
+### 4.1.0-alpha.2 - Aug 28
 
 Debug improvements
 
@@ -1691,38 +1705,38 @@ Debug improvements
 - unify middle columns in attribute table (location and type/size/vert column)
 - reduce #lines of log from queryTimer (model.js) - enabled for all when seer is active
 
-## 4.1.0-alpha.1 - Aug 10
+### 4.1.0-alpha.1 - Aug 10
 
 - Add SphericalCoordinates and export Euler (#295)
 
-## 4.0.1
+### 4.0.1
 
 - Wire up ShaderCache in Model class to avoid re-compilaiton of same shader (#301)
 
-## 4.0.0-beta.6
+### 4.0.0-beta.6
 
 - Call assembleShaders always (#270)
 - Remove invalid assert on GL.POINTS (#268)
 - Fix the WebGL context creation issue on Safari (#267)
 
-## 4.0.0-beta.5
+### 4.0.0-beta.5
 
 - Fix Shader Module dependency ordering (#266)
 - API Audit - change 'settings' to 'parameters' (#264)
 - Remove duplicate docs for faature management (#265)
 
-## 4.0.0-beta.4
+### 4.0.0-beta.4
 
 - Parameters: draw(`settings`) renamed to `parameters`
 - Shader Modules: Move fp32 and fp64 from deck.gl
 - WEBSITE: Remove/Retitle examples
 
-## 4.0.0-beta.3
+### 4.0.0-beta.3
 
 - Export feature detection functions (#260)
 - Improve shadertools docs (#258)
 
-## 4.0.0-beta.2
+### 4.0.0-beta.2
 
 - FIX: Shader error parsing, shadertools export fix
 - Changes to Picking module & fix Picking example (#256)
@@ -1731,7 +1745,7 @@ Debug improvements
 - Fix picking color encoding. (#252)
 - Fix picking module & add FB unit tests. (#251)
 
-## 4.0.0-beta.1
+### 4.0.0-beta.1
 
 - Canvas and Drawing Buffer API fixes
 - Reduce size of gl-matrix dependencies
@@ -1746,7 +1760,7 @@ Debug improvements
 - WEBSITE: Webpack configuration consolidation
 - WEBSITE: Framework links
 
-## 4.0.0-alpha.14
+### 4.0.0-alpha.14
 
 - v4 Capability Management API finalization
 - New Shader Module refactor
@@ -1759,22 +1773,22 @@ Debug improvements
 - Move non-working examples to wip folder
 - Rename demo folder to website
 
-## 4.0.0-alpha.13
+### 4.0.0-alpha.13
 
 - Un-deprecate `scenegraph` module (except `Scene`), merge with `core` module.
 - `shadertools` module no longer experimental
 - uniform support
 
-## 4.0.0-alpha.12
+### 4.0.0-alpha.12
 
 - FIX: Seer integration
 
-## 4.0.0-alpha.11
+### 4.0.0-alpha.11
 
 - State and Parameter support
 - Many fixes to examples
 
-## 4.0.0-alpha.10
+### 4.0.0-alpha.10
 
 - FIX: Framebuffer resize & add unit test (#200)
 - Add the pixel parameter back in texture class for compatibility with v3 (#198)
@@ -1782,15 +1796,15 @@ Debug improvements
 - FIX: Lesson 08 (#196)
 - FIX: Lesson 07 (#194)
 
-## 4.0.0-alpha.9
+### 4.0.0-alpha.9
 
 - FIX: Some leftover export fix and storage mode fix (#192)
 
-## 4.0.0-alpha.8
+### 4.0.0-alpha.8
 
 - FIX: Remove duplicate export that fails tests in other repos (#191)
 
-## 4.0.0-alpha.7
+### 4.0.0-alpha.7
 
 - FIX: Fix the texture storage mode settings (#189)
 - FIX: examples/lessons (#188)
@@ -1799,22 +1813,22 @@ Debug improvements
 - Size improvements to transpiled code (dist)
 - Tree-shaking improvements - carefully avoid dependencies that defeat tree shaking (#185)
 
-## 4.0.0-alpha.6
+### 4.0.0-alpha.6
 
 - Fix framebuffer creation error AGAIN (#183)
 - NEW: `UniformBufferLayout` class
 
-## 4.0.0-alpha.4
+### 4.0.0-alpha.4
 
 - Remove null params given to Float32Array constructor (#176)
 - Fix framebuffer creation error (#177)
 
-## 4.0.0-alpha.3
+### 4.0.0-alpha.3
 
 - bump seer
 - remove duplicate info from readme
 
-## 4.0.0-alpha.2
+### 4.0.0-alpha.2
 
 - Reorgnize files (#168)
 - Transform feedback improvement (#165)
@@ -1827,7 +1841,7 @@ Debug improvements
 - seer integration
 - Add coverage support (#155)
 
-## 4.0.0-alpha.1
+### 4.0.0-alpha.1
 
 - Refactor WebGL classes using new `Resource` base class
 - `Resource.getParameters` for ease of debugging
@@ -1838,8 +1852,6 @@ Debug improvements
 - Check compilation and linking status only with debug WebGL context (#144)
 - Add benchmarking scaffolding and a benchmark test for Program constructor (#142)
 - Docs update (#137)
-
-# Official releases
 
 ## v3
 
@@ -1853,7 +1865,7 @@ Theme: Pure ES6 Codebase/Build tooling improvements
 
 - Add CORS setting to allow loading image from a different domain
 
-## 3.0.0
+### 3.0.0
 
 Codebase/Build tooling improvements
 
@@ -1876,6 +1888,53 @@ Breaking Changes:
 - BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
   and into `packages`. This allows luma.gl to drop a number of big dependencies.
   The node IO code may be published as a separate module later.
+
+### 3.0.0-beta.9
+
+- FIX: Additional fix for regression in geometry constructor
+
+### 3.0.0-beta.8
+
+- FIX: Regression in geometry constructor (support deprecated mode)
+- FIX: Initialization of global and startup logging
+- FIX: Ensure framebuffer resize logging is not visible by default
+
+### 3.0.0-beta.7
+
+- Bump version to avoid confusion with older incorrectly numbered beta versions
+- Replace wildcard exports with named exports in index.js
+- Remove all Work In Progress Examples - Focus on working code
+- Multiple examples now work standalone
+
+### 3.0.0-beta.3
+
+- ES6 Conformant code base: stage-2 extensions removed
+- Experimental tree-shaking support: dist and dist-es6 directories
+- Webpack based build
+
+### 3.0.0-beta1 - 3.0.0-beta6 obsolete, folded into master
+
+### 3.0.0-alpha.4
+
+- Performance query using EXT_disjoint_timer_query #121
+
+### 3.0.0-alpha.3
+
+- Changed from `husky` to `pre-commit`
+- Removed `autobind-decorator` dependency
+
+### 3.0.0-alpha2
+
+- `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
+- `probe` moved to `/experimental`
+
+### 3.0.0-alpha1
+
+- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
+  and into `packages`. This allows luma.gl to drop a number of big dependencies.
+  The node IO code may be published as a separate module later.
+
+## v2
 
 ### 2.10.4
 
@@ -2008,54 +2067,9 @@ Breaking Changes:
 
 ### 2.0.0 - Major API refactoring
 
-### 1.0.1 - Initial release.
+## v1
 
-# Prereleases
+### 1.0.1 - Initial release.
 
 Note: Unfortunately 3.0.0-beta6 was published without beta tag and takes
 precedence when using wildcard installs.
-
-### 3.0.0-beta.9
-
-- FIX: Additional fix for regression in geometry constructor
-
-### 3.0.0-beta.8
-
-- FIX: Regression in geometry constructor (support deprecated mode)
-- FIX: Initialization of global and startup logging
-- FIX: Ensure framebuffer resize logging is not visible by default
-
-### 3.0.0-beta.7
-
-- Bump version to avoid confusion with older incorrectly numbered beta versions
-- Replace wildcard exports with named exports in index.js
-- Remove all Work In Progress Examples - Focus on working code
-- Multiple examples now work standalone
-
-### 3.0.0-beta.3
-
-- ES6 Conformant code base: stage-2 extensions removed
-- Experimental tree-shaking support: dist and dist-es6 directories
-- Webpack based build
-
-### 3.0.0-beta1 - 3.0.0-beta6 obsolete, folded into master
-
-### 3.0.0-alpha.4
-
-- Performance query using EXT_disjoint_timer_query #121
-
-### 3.0.0-alpha.3
-
-- Changed from `husky` to `pre-commit`
-- Removed `autobind-decorator` dependency
-
-### 3.0.0-alpha2
-
-- `shader-modules`, `shader-tools`, `shaders` shader module system added to `/experimental`
-- `probe` moved to `/experimental`
-
-### 3.0.0-alpha1
-
-- BREAKING CHANGE: Move node IO (loadImage etc) out of main src tree
-  and into `packages`. This allows luma.gl to drop a number of big dependencies.
-  The node IO code may be published as a separate module later.

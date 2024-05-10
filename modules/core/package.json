@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "9.0.12",
+  "version": "9.0.13",
   "description": "The luma.gl core Device API",
   "license": "MIT",
   "type": "module",
