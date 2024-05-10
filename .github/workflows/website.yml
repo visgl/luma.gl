@@ -38,7 +38,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          yarn bootstrap
+          yarn
           (cd website && yarn)
 
       - name: Build website
