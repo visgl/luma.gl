@@ -97,6 +97,7 @@ test('TextureTransform#texture', async t => {
     bindings: {uSampler: inputTexture},
     parameters: {
       depthCompare: 'always',
+      bled: true,
       blendColorOperation: 'add',
       blendColorSrcFactor: 'one',
       blendColorDstFactor: 'one'
