@@ -57,38 +57,42 @@ test('luma#enforceWebGL2', async t => {
   // Setup mock getContext
   const originalGetContext = prototype.getContext;
   prototype.getContext = function (contextId: any, options?: unknown) {
-    return contextId;
+    return `${contextId}-mock`;
   };
   // Revert mock test completes.
   t.teardown(() => {
     prototype.getContext = originalGetContext;
   });
 
-  t.equal(prototype.getContext('webgl'), 'webgl', 'getContext webgl ok');
+  t.equal(prototype.getContext('webgl'), 'webgl-mock', 'mocked getContext webgl ok');
   t.equal(
     prototype.getContext('experimental-webgl'),
-    'experimental-webgl',
-    'getContext experimental-webgl ok'
+    'experimental-webgl-mock',
+    'mocked getContext experimental-webgl ok'
   );
-  t.equal(prototype.getContext('webgl2'), 'webgl2', 'getContext webgl2 ok');
+  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'mocked getContext webgl2 ok');
 
   luma.enforceWebGL2();
 
   t.true(prototype.originalGetContext, 'originalGetContext ok');
-  t.equal(prototype.getContext('webgl'), 'webgl2', 'getContext enforce webgl2 ok');
-  t.equal(prototype.getContext('experimental-webgl'), 'webgl2', 'getContext enforce webgl2 ok');
-  t.equal(prototype.getContext('webgl2'), 'webgl2', 'getContext webgl2 ok');
+  t.equal(prototype.getContext('webgl'), 'webgl2-mock', 'getContext enforce webgl2 ok');
+  t.equal(
+    prototype.getContext('experimental-webgl'),
+    'webgl2-mock',
+    'getContext enforce webgl2 ok'
+  );
+  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'getContext webgl2 ok');
 
   luma.enforceWebGL2(false);
 
   t.false(prototype.originalGetContext, 'originalGetContext ok');
-  t.equal(prototype.getContext('webgl'), 'webgl', 'getContext revert webgl ok');
+  t.equal(prototype.getContext('webgl'), 'webgl-mock', 'mocked getContext revert webgl ok');
   t.equal(
     prototype.getContext('experimental-webgl'),
-    'experimental-webgl',
-    'getContext revert experimental-webgl ok'
+    'experimental-webgl-mock',
+    'mocked getContext revert experimental-webgl ok'
   );
-  t.equal(prototype.getContext('webgl2'), 'webgl2', 'getContext webgl2 ok');
+  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'mocked getContext webgl2 ok');
 
   t.end();
 });
