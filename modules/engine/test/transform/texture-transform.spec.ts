@@ -48,6 +48,7 @@ test('TextureTransform#attribute', async t => {
     vertexCount: 6,
     parameters: {
       depthCompare: 'always',
+      blend: true,
       blendColorOperation: 'add',
       blendColorSrcFactor: 'one',
       blendColorDstFactor: 'one'
