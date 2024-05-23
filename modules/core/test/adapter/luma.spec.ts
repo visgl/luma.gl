@@ -76,7 +76,11 @@ test('luma#enforceWebGL2', async t => {
 
   t.true(prototype.originalGetContext, 'originalGetContext ok');
   t.equal(prototype.getContext('webgl'), 'webgl2-mock', 'getContext enforce webgl2 ok');
-  t.equal(prototype.getContext('experimental-webgl'), 'webgl2-mock', 'getContext enforce webgl2 ok');
+  t.equal(
+    prototype.getContext('experimental-webgl'),
+    'webgl2-mock',
+    'getContext enforce webgl2 ok'
+  );
   t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'getContext webgl2 ok');
 
   luma.enforceWebGL2(false);

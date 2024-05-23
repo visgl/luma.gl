@@ -125,7 +125,7 @@ luma.createDevice({type, adapters, ...deviceProps}: CreateDeviceProps);
 To create a Device instance, the application calls `luma.createDevice()`.
 
 - `type`: `'webgl' \| 'webgpu' \| 'best-available'`
-- `adapters`: list of `Adapter` backend adapters. Can be omitted if `luma.registerAdapters()` has been called.
+- `adapters`: list of `Adapter` instances providing support for different GPU backends. Can be omitted if `luma.registerAdapters()` has been called.
 
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
 luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
