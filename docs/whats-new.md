@@ -11,6 +11,7 @@ Target Date: Q2 2024
 **@luma.gl/core**
 
 - New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
+- New `Parameters.blend` - Provides explicit control over color blending activation.
 
 **@luma.gl/engine**
 

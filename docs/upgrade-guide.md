@@ -23,16 +23,17 @@ Some deprectations and minor breaking changes are necessary as WebGPU support is
 | `triangle-fan-webgl`           | Removed    | Rebuild your geometries using `triangle-strip`.                                              |
 | `line-loop-webgl`              | Removed    | Rebuild your geometries`line-list`.                                                          |
 | `glsl` template string         | Removed    | Enable syntax highlighting in vscode using `/* glsl */` comment instead                      |
+| `Parameters.blend`             | New        | Explicit control over color blending                                                         |
 
 **@luma.gl/shadertools**
 
-| Updated API                          | Status   | Replacement                                                             |
-| ------------------------------------ | -------- | ----------------------------------------------------------------------- |
-| `ShaderModuleInstance`               | Removed  | Type has been removed. Use `ShaderModule` instead.                      |
-| `initializeShaderModule()`           | Changed  | Stores initialized information on the original shader module object.    |
+| Updated API                          | Status  | Replacement                                                             |
+| ------------------------------------ | ------- | ----------------------------------------------------------------------- |
+| `ShaderModuleInstance`               | Removed | Type has been removed. Use `ShaderModule` instead.                      |
+| `initializeShaderModule()`           | Changed | Stores initialized information on the original shader module object.    |
 | `ShaderModuleInstance.getUniforms()` | Removed | Use `getShaderModuleUniforms(module, ...)` instead.                     |
-| `getDependencyGraph()`               | Removed  | Use `getShaderModuleDependencies(module)` instead.                      |
-| `glsl` template string               | Removed  | Enable syntax highlighting in vscode using `/* glsl */` comment instead |
+| `getDependencyGraph()`               | Removed | Use `getShaderModuleDependencies(module)` instead.                      |
+| `glsl` template string               | Removed | Enable syntax highlighting in vscode using `/* glsl */` comment instead |
 
 ## Upgrading to v9.0
 

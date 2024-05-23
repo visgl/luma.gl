@@ -278,19 +278,18 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   // },
 
   // COLOR STATE
-  if (parameters.blend === true) {
-    gl.enable(GL.BLEND);
-  } else if (parameters.blend === false) {
-    gl.disable(GL.BLEND);
+  switch (parameters.blend) {
+    case true:
+      gl.enable(GL.BLEND);
+      break;
+    case false:
+      gl.disable(GL.BLEND);
+      break;
+    default:
+    // leave WebGL blend state unchanged if `parameters.blend` is not set
   }
-  // leave unchanged if `parameters.blend` is not set
 
   if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
-    if (parameters.blend === undefined) {
-      // Turn on blending unless explicitly disabled
-      gl.enable(GL.BLEND);
-    }
-
     const colorEquation = convertBlendOperationToEquation(
       'blendColorOperation',
       parameters.blendColorOperation || 'add'
