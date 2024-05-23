@@ -278,10 +278,18 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   // },
 
   // COLOR STATE
+  switch (parameters.blend) {
+    case true:
+      gl.enable(GL.BLEND);
+      break;
+    case false:
+      gl.disable(GL.BLEND);
+      break;
+    default:
+    // leave WebGL blend state unchanged if `parameters.blend` is not set
+  }
 
   if (parameters.blendColorOperation || parameters.blendAlphaOperation) {
-    gl.enable(GL.BLEND);
-
     const colorEquation = convertBlendOperationToEquation(
       'blendColorOperation',
       parameters.blendColorOperation || 'add'

@@ -48,6 +48,7 @@ test('TextureTransform#attribute', async t => {
     vertexCount: 6,
     parameters: {
       depthCompare: 'always',
+      blend: true,
       blendColorOperation: 'add',
       blendColorSrcFactor: 'one',
       blendColorDstFactor: 'one'
@@ -96,6 +97,7 @@ test('TextureTransform#texture', async t => {
     bindings: {uSampler: inputTexture},
     parameters: {
       depthCompare: 'always',
+      blend: true,
       blendColorOperation: 'add',
       blendColorSrcFactor: 'one',
       blendColorDstFactor: 'one'

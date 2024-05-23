@@ -15,6 +15,7 @@ All parameters listed in a single table
 | `scissor`                   | `RenderPass.setParameters()`   | Specifying scissor rect size                                         |                                   | `gl.scissor()`             |
 | `clearColor`                | `RenderPass(colorAttachments)` |                                                                      |                                   | `gl.clearColor()`          |
 | **Blending**                |
+| `blend`                     | `RenderPipeline(targets)`      | Enabled blending                                                     | `true`, `false`, `undefined`      | `gl.enable(GL.BLEND)`      |
 | `blendConstant`             |                                | Color used by blend factors `constant`, `one-minus-constant`         |
 | `blendColor`                | `RenderPass.setParameters()`   |
 | `blendEquation`             | `RenderPipeline(targets})`     |
